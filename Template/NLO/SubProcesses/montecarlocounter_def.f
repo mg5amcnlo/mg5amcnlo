@@ -22,9 +22,10 @@ c is the number of color flows at Born level
       logical isspecial,isspecial0
       common/cisspecial/isspecial
       logical spec_case
-c
-      ipartners=0
-      colorflow=0d0
+      ipartners(0)=0
+      do i=1,nexternal-1
+         colorflow(i,0)=0
+      enddo
 c ipartners(0): number of particles that can be colour or anticolour partner 
 c   of the father, the Born-level particle to which i_fks and j_fks are 
 c   attached. If one given particle is the colour/anticolour partner of
@@ -261,47 +262,16 @@ c
       subroutine xmcsubt_wrap(pp,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
-      include 'madfks_mcatnlo.inc'
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
-      double precision xmc,xrealme,gfactsf,gfactcl,probne,xmctmp
+      double precision xmc,xrealme,gfactsf,gfactcl,probne
       double precision xmcxsec(nexternal),z(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
 
-      include "born_nhel.inc"
-      integer npartner,cflows
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial
-      common/cisspecial/isspecial
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
-
-      double precision xkern(2),xkernazi(2),factor
-      double precision bornbars(max_bcol),bornbarstilde(max_bcol)
-      double precision emscwgt(nexternal)
-
 c True MC subtraction term
-      first_MCcnt_call=.true.
-      is_pt_hard=.false.
-      xmcxsec=0d0
-      do cflows=1,max_bcol
-         if(is_pt_hard)cycle
-         do npartner=1,ipartners(0)
-            if(is_pt_hard)cycle
-            factor=1d0
-            call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
-     &           bornbars,bornbarstilde,npartner)
-            if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).eq.0)factor=0d0
-            xmcxsec(npartner)=xmcxsec(npartner)+factor*
-     &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
-     &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
-         enddo
-      enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,probne)
+      call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
+     #                   xmc,nofpartners,lzone,flagmc,z,xmcxsec)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 
@@ -369,12 +339,11 @@ c
       end
 
 
-      
+
 c Main routine for MC counterterms
 
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
-     &     bornbars,bornbarstilde,npartner)
+     &                   wgt,nofpartners,lzone,flagmc,z,xmcxsec)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -391,7 +360,7 @@ c Main routine for MC counterterms
       double precision pp(0:3,nexternal),gfactsf,gfactcl,probne,wgt
       double precision xi_i_fks,y_ij_fks,xm12,xm22
       double precision xmcxsec(nexternal)
-      integer nofpartners,cflows
+      integer nofpartners
       logical lzone(nexternal),flagmc,limit,non_limit
 
       double precision emsca_bare,ptresc,rrnd,ref_scale,
@@ -399,14 +368,12 @@ c Main routine for MC counterterms
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
-      double precision emscav_tmp(nexternal)
-      common/cemscav_tmp/emscav_tmp
 
       double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
-      integer i,j,npartner,ileg,N_p
+      integer i,j,npartner,cflows,ileg,N_p
       double precision tk,uk,q1q,q2q,E0sq(nexternal),x,yi,yj,xij,ap,Q,
      & s,w1,w2,beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,gfactazi,
      & gfunction,bogus_probne_fun,
@@ -414,7 +381,6 @@ c Main routine for MC counterterms
      & zHW6,xiHW6,xjacHW6_xiztoxy,zHWPP,xiHWPP,xjacHWPP_xiztoxy,zPY6Q,
      & xiPY6Q,xjacPY6Q_xiztoxy,zPY6PT,xiPY6PT,xjacPY6PT_xiztoxy,zPY8,
      & xiPY8,xjacPY8_xiztoxy,wcc
-      common/cqMC/qMC
 
       common/cscaleminmax/xm12,ileg
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -489,16 +455,13 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1d0/2d0)
       parameter (vca=3d0)
 
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
-
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
       include "pmass.inc"
 
-c Initialise if first time
-      if(.not.first_MCcnt_call)goto 222
+c Initialise
       flagmc   = .false.
+      wgt      = 0d0
       ztmp     = 0d0
       xitmp    = 0d0
       xjactmp  = 0d0
@@ -580,7 +543,6 @@ c than the jets at the Born, hence no need to include the MC counter
 c terms when the radiation is hard.
       if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
          emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-         is_pt_hard=.true.
          return
       endif
 
@@ -602,11 +564,9 @@ c Shower variables
          xitmp=xiPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
          xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
       endif
-      
-      first_MCcnt_call=.false.
- 222  continue
+
 c Main loop over colour partners
-c      do npartner=1,ipartners(0)
+      do npartner=1,ipartners(0)
 
          E0sq(npartner)=dot(p_born(0,fksfather),p_born(0,ipartners(npartner)))
          if(E0sq(npartner).lt.0d0)then
@@ -913,7 +873,6 @@ c
                   endif
                endif
             endif
-            emscav_tmp=emscav
 
         else
 c Dead zone
@@ -924,88 +883,39 @@ c Dead zone
               emscwgt(npartner)=0d0
            endif
         endif
-c
-        xkern=xkern*gfactsf*wcc
-        xkernazi=xkernazi*gfactazi*gfactsf*wcc
 
+        born_red=0d0
+        born_red_tilde=0d0
+        do i=1,2
+           xkern(i)=xkern(i)*gfactsf*wcc
+           xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
+        enddo
+        do cflows=1,colorflow(npartner,0)
+           born_red=born_red+bornbars(colorflow(npartner,cflows))
+           born_red_tilde=born_red_tilde+bornbarstilde(colorflow(npartner,cflows))
+        enddo
+c Change here, to include also xkern(2)!
+        xmcxsec(npartner)=xkern(1)*born_red+xkernazi(1)*born_red_tilde
+        if(dampMCsubt)xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
+        wgt=wgt+xmcxsec(npartner)
+
+        if(xmcxsec(npartner).lt.0d0)then
+           write(*,*)'Fatal error in xmcsubt'
+           write(*,*)npartner,xmcxsec(npartner)
+           stop
+        endif
 c End of loop over colour partners
-c      enddo
-
-      return
-      end
-
-
-      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,probne)
-      implicit none
-      include "born_nhel.inc"
-      include 'nFKSconfigs.inc'
-      include 'nexternal.inc'
-      include 'madfks_mcatnlo.inc'
-
-      double precision emsca_bare,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
-      double precision emscwgt(nexternal),emscav(nexternal)
-      integer jpartner,mpartner
-      logical emscasharp
-
-      double precision emsca
-      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-
-      common/cqMC/qMC
-
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial
-      common/cisspecial/isspecial
-
-      integer fksfather
-      common/cfksfather/fksfather
-
-      double precision ran2,iseed
-      external ran2
-      logical extra
-
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
-     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
-      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-
-      integer npartner
-      double precision emscav_tmp(nexternal)
-      common/cemscav_tmp/emscav_tmp
-
-      double precision xmcxsec(nexternal),probne,wgt
-      logical lzone(nexternal)
-
-      integer i
-
-c     Input check
-      if(xmcxsec(npartner).lt.0d0)then
-         write(*,*)'Fatal error in complete_xmcsubt'
-         write(*,*)npartner,xmcxsec(npartner)
-         stop
-      endif
-
-c     compute MC cross section
-      wgt=0d0
-      do npartner=1,ipartners(0)
-         wgt=wgt+xmcxsec(npartner)
       enddo
 
-c     Assign emsca on statistical basis
+c Assign emsca on statistical basis
       if(dampMCsubt.and.wgt.gt.1d-30)then
         rrnd=ran2()
-        wgt11=0d0
+        wgt1=0d0
         jpartner=0
         do npartner=1,ipartners(0)
            if(lzone(npartner).and.jpartner.eq.0)then
-              wgt11=wgt11+xmcxsec(npartner)
-              if(wgt11.ge.rrnd*wgt)then
+              wgt1=wgt1+xmcxsec(npartner)
+              if(wgt1.ge.rrnd*wgt)then
                  jpartner=ipartners(npartner)
                  mpartner=npartner
               endif
@@ -1015,10 +925,11 @@ c     Assign emsca on statistical basis
            write(*,*)'Error in xmcsubt: emsca unweighting failed'
            stop
         else
-           emsca=emscav_tmp(mpartner)
+           emsca=emscav(mpartner)
         endif
       endif
       if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+
 c Additional information for LHE
       if(AddInfoLHE)then
          fksfather_lhe(nFKSprocess)=fksfather
@@ -1048,7 +959,8 @@ c min() avoids troubles if ran2()=1
       return
       end
 
-      
+
+
       subroutine get_mbar(p,y_ij_fks,ileg,bornbars,bornbarstilde)
 c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).

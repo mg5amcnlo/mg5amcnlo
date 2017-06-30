@@ -351,20 +351,6 @@ c respectively.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-
-      include "born_nhel.inc"
-      integer npartner,cflows
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial
-      common/cisspecial/isspecial
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
-
-      double precision xkern(2),xkernazi(2),factor
-      double precision bornbars(max_bcol),bornbarstilde(max_bcol)
-      double precision emscwgt(nexternal)
-
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
@@ -379,29 +365,8 @@ c respectively.
          sevmc = sevmc*ffact
       endif
       if (sevmc.eq.0d0) return
-
-c -- call to MC counterterm functions
-      first_MCcnt_call=.true.
-      is_pt_hard=.false.
-      xmcxsec=0d0
-      do cflows=1,max_bcol
-         if(is_pt_hard)cycle
-         do npartner=1,ipartners(0)
-            if(is_pt_hard)cycle
-            factor=1d0
-            call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
-     &           nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt,
-     &           bornbars,bornbarstilde,npartner)
-            if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).eq.0)factor=0d0
-            xmcxsec(npartner)=xmcxsec(npartner)+factor*
-     &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
-     &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
-         enddo
-      enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,probne)
-c -- end of call to MC counterterm functions
-
+      call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
+     $             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
       if(ileg.gt.4 .or. ileg.lt.1)then
          write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
