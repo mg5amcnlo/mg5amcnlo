@@ -23,8 +23,14 @@ c is the number of color flows at Born level
       common/cisspecial/isspecial
       logical spec_case
 c
-      ipartners=0
-      colorflow=0d0
+      do i=0,nexternal-1
+         ipartners(i)=0
+      enddo
+      do i=1,nexternal-1
+         do j=0,max_bcol
+            colorflow(i,j)=0
+         enddo
+      enddo
 c ipartners(0): number of particles that can be colour or anticolour partner 
 c   of the father, the Born-level particle to which i_fks and j_fks are 
 c   attached. If one given particle is the colour/anticolour partner of
@@ -264,7 +270,7 @@ c
       include 'madfks_mcatnlo.inc'
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
-      double precision xmc,xrealme,gfactsf,gfactcl,probne,xmctmp
+      double precision xmc,xrealme,gfactsf,gfactcl,probne
       double precision xmcxsec(nexternal),z(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
