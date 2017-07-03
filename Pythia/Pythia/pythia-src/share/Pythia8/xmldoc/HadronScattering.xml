@@ -1,0 +1,223 @@
+<chapter name="Hadron Scattering"> 
+ 
+<h2>Hadron Scattering</h2> 
+ 
+This page describes a few simple hadron (re)scattering models. 
+They are intended to take into account 
+that the overlap of multiple strings at low transverse dimensions 
+is likely to lead to some collective effects, not unlike those 
+observed in heavy-ion collisions, even if not quite as pronounced. 
+Specifically, it is assumed that the hadrons produced can scatter 
+against each other on the way out, before the fragmenting system 
+has had time to expand enough that the hadrons get free. Thereby 
+heavier particles are shifted to higher transverse momenta, at the 
+expense of the lighter ones. 
+ 
+<p/> 
+The main switch on/off switch for rescattering is 
+<code>HadronLevel:HadronScatter</code>, which by the default is off, 
+since all models are rather simplistic and have to be used 
+with some caution. Currently there are three different options available: 
+ 
+<modepick name="HadronScatter:mode" default="0" 
+min="0" max="2"> 
+The first two options are variations of the same model, whereas 
+option 2 respresents a different model. 
+<option value="0"> The new model, based on separation in rapidity 
+as described in <ref>Fis16</ref>. 
+Further options are found <a href="#HadScatNew1">here</a>. 
+</option> 
+<option value="1"> The new model, based on separation in rapidity 
+and azimuthal angle as described in <ref>Fis16</ref>. Further options 
+are found  <a href="#HadScatNew2">here</a>. 
+</option> 
+<option value="2"> The old model. Further options are found 
+<a href="#HadScatOld">here</a>. 
+<note>Warning:</note> Option 2 is still at an experimental level, 
+and should not be used unless you know what you are doing. 
+</option> 
+</modepick> 
+ 
+<h3>The New Model for Hadron Scattering</h3> 
+ 
+Within the new modle, there are two options available for how hadron 
+pairs are found: 
+ 
+<a name="HadScatNew1"></a> 
+<h4>Rapidity based</h4> 
+This corresponds to <code>HadronScatter:mode = 0</code>. 
+<p/> 
+Probe all hadron pairs with an invariant mass <ei> m<sub>inv</sub> &lt; 
+(m<sup>2</sup><sub>1</sub>+p<sup>2</sup><sub>Max</sub>)<sup>1/2</sup> + 
+(m<sup>2</sup><sub>2</sub>+p<sup>2</sup><sub>Max</sub>)<sup>1/2</sup></ei> 
+with the parameter <ei>p<sub>Max</sub></ei> 
+<parm name="HadronScatter:pMax" default="0.5" min="0.1" max="1000000.0"> 
+</parm> 
+<br/> 
+If a hadron pair passes this cut, the scattering probability for hadrons of 
+different strings is <ei>P<sub>DS</sub>(&#x394y) = 
+P<sup>max</sup><sub>DS</sub>(1 - &#x394y/&#x394y<sup>max</sup>)</ei> 
+with rapidity difference <ei>&#x394y</ei> of the hadron pair and the 
+parameters <ei>&#x394y<sup>max</sup></ei> 
+<parm name="HadronScatter:yDiffMax" default="1.0" min="0.1" max="10.0"> 
+</parm> 
+<br/> 
+and <ei>P<sup>max</sup><sub>DS</sub></ei>, see 
+<a href="#HadScatNewCom">below</a>. If the hadrons are produced 
+within the same string the probability is <ei>P<sub>DS</sub>(&#x394y) 
+P<sup>max</sup><sub>SS</sub></ei> if the hadrons are further apart from each 
+other as <code>HadronScatter:neighbourFar</code>, <ei>0</ei> if they are 
+closer together as <code>HadronScatter:neighbourNear</code>, and linear 
+between the maximum <code>HadronScatter:maxProbSS</code> and minimum 
+probability <code>HadronScatter:minProbSS</code> inbetween. 
+ 
+<a name="HadScatNew2"></a> 
+<h4>Rapidity and Azimuth based</h4> 
+This corresponds to <code>HadronScatter:mode = 1</code>. 
+<p/> 
+All hadron pairs are considered. The scattering probability for hadrons 
+of different strings is <ei>P<sub>DS</sub>(&#x394y,&#x394&#x3C6) = 
+P<sup>max</sup><sub>DS</sub>(1 - ((&#x394y)<sup>2</sup> 
++(&#x394&#x3C6)<sup>2</sup>)<sup>1/2</sup>/R<sup>max</sup>)</ei> 
+with rapidity difference <ei>&#x394y</ei> and difference in azimuth 
+<ei>&#x394&#x3C6</ei> of the hadron pair and the 
+parameters <ei>R<sup>max</sup></ei> 
+<parm name="HadronScatter:Rmax" default="1.0" min="0.1" max="10.0"> 
+</parm> 
+<br/> 
+and <ei>P<sup>max</sup><sub>DS</sub></ei>, see 
+<a href="#HadScatNewCom">below</a>. 
+The probability for hadron pairs from the same string is similar 
+to the one before. 
+ 
+<a name="HadScatNewCom"></a> 
+<h4>Common Parameters</h4> 
+ 
+The following paramters are used for both the above cases: 
+<flag name="HadronScatter:scatterSameString" default="on"> 
+  If switched on, strings within the same string are allowed to 
+  scatter off each other. Otherwise only hadron pairs that are 
+  not produced on the same string are taken into account. 
+</flag> 
+ 
+<flag name="HadronScatter:scatterMultipleTimes" default="on"> 
+  If switched off, each hadron is only allowed to scatter at most once. 
+  By the way that possible scattering pairs are considered in order of 
+  increasing rapidity separation, this introduces a bias towards pairs 
+  with small <ei>y</ei> separation. 
+</flag> 
+ 
+<parm name="HadronScatter:maxProbDS" default="0.5" min="0.0" max="1.0"> 
+  The maximum probability <ei>P<sup>max</sup><sub>DS</sub></ei> for the 
+  scattering of two hadrons that are not part of the same string. 
+</parm> 
+ 
+<mode name="HadronScatter:neighbourNear" default="2" min="1" max="10"> 
+  If scattering of hadrons within the same string is allowed this 
+  parameter gives the closest neighbour that is allowed. The value 1 
+  corresponds to the direct neighbour. The probability associated 
+  with this potential scattering partner is <code>minProbSS</code>. 
+</mode> 
+ 
+<mode name="HadronScatter:neighbourFar" default="4" min="2" max="15"> 
+  If scattering of hadrons within the same string is allowed this 
+  parameter gives the neighbour starting from which the maximum 
+  probability <code>maxProbSS</code> is applied. 
+</mode> 
+ 
+<parm name="HadronScatter:minProbSS" default="0.5" min="0.0" max="1.0"> 
+  The minimum probability <ei>P<sup>min</sup><sub>SS</sub></ei> for the 
+  scattering of two hadrons within the same string. (Relative to that for 
+  different strings, i.e. for the total probability the baseline 
+  <code>maxProbDS</code> factor also enters.) 
+</parm> 
+ 
+<parm name="HadronScatter:maxProbSS" default="1.0" min="0.0" max="1.0"> 
+  The maximum probability <ei>P<sup>max</sup><sub>SS</sub></ei> for the 
+  scattering of two hadrons within the same string. (Relative to that for 
+  different strings, i.e. for the total probability the baseline 
+  <code>maxProbDS</code> factor also enters.) 
+</parm> 
+ 
+<a name="HadScatOld"></a> 
+<h3>The Old Model for Hadron Scattering</h3> 
+ 
+<note>Warning:</note> This is still at an experimental level, 
+and should not be used unless you know what you are doing. 
+ 
+<flag name="HadronScatter:afterDecay" default="off"> 
+Perform hadron scattering before or after first round of decays, 
+involving very short-lived particles like the <ei>rho</ei>. 
+The default is to perform scattering directly after the 
+string fragmentation, before any decays. 
+</flag> 
+ 
+<flag name="HadronScatter:allowDecayProd" default="off"> 
+Allow two hadrons with same parent hadron to scatter. 
+</flag> 
+ 
+<flag name="HadronScatter:scatterRepeat" default="off"> 
+Allow hadrons which have already scattered to scatter again. 
+Even if switched on, the same pair can not scatter off each 
+other twice. 
+</flag> 
+ 
+<h4>Hadron selection</h4> 
+ 
+<modepick name="HadronScatter:hadronSelect" default="0" 
+min="0" max="0"> 
+Probability that a hadron is soft enough to scatter. 
+(A high-<ei>pT</ei> hadron presumably being part of a jet, 
+and thus produced away from the high-particle-density region 
+at small transverse dimensions.) 
+<option value="0"> 
+<ei>P = N exp(-pT^2 / 2 / sigma^2) / 
+  ( (1 - k) exp(-pT^2 / 2 / sigma^2) + k pT0^p / (pT0^2 + pT^2)^(p/2), </ei> 
+with <ei>sigma = 2 StringPT:sigma</ei> and <ei>pT0</ei> the same as that 
+used in <ei>MultipartonInteractions</ei>. 
+</option> 
+</modepick> 
+ 
+<parm name="HadronScatter:N" default="1.0" min="0.01" max="1.0"> 
+<ei>N</ei> parameter as above. 
+</parm> 
+<parm name="HadronScatter:k" default="1.0" min="0.01" max="1.0"> 
+<ei>k</ei> parameter as above. 
+</parm> 
+<parm name="HadronScatter:p" default="6" min="2" max="30"> 
+<ei>p</ei> parameter as above. 
+</parm> 
+ 
+<h4>Scattering probability</h4> 
+ 
+<modepick name="HadronScatter:scatterProb" default="0" 
+min="0" max="2"> 
+Probability for a pair of hadrons to scatter. 
+<option value="0">All hadrons scatter with probability 
+<ei>j max(0, 1 - dR^2 / rMax^2)</ei>. Angular distribution 
+is picked flat in <ei>cos(theta).</ei></option> 
+<option value="1">As option 0, above, but only <ei>pi-pi</ei>, 
+<ei>pi-K</ei> and <ei>pi-p</ei> scatterings are considered. 
+</option> 
+<option value="2">Only <ei>pi-pi</ei>, <ei>pi-K</ei> and 
+<ei>pi-p</ei> scatterings are considered, with probability 
+given by <ei>(1 - exp(-j sigEl)) max(0, 1 - dR^2 / rMax^2)</ei>. 
+The elastic cross sections and angular distributions are taken 
+from the partial-wave distributions. 
+</option> 
+</modepick> 
+ 
+<parm name="HadronScatter:j" default="0.5" min="0.0" max="10.0"> 
+<ei>j</ei> parameter as above. 
+</parm> 
+<parm name="HadronScatter:rMax" default="1.0" min="0.1" max="2.0"> 
+<ei>rMax</ei> parameter as above. 
+</parm> 
+ 
+<flag name="HadronScatter:tile" default="off"> 
+Use tiling in <ei>(eta, phi)</ei> to reduce number of pairwise tests. 
+</flag> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2017 Torbjorn Sjostrand --> 

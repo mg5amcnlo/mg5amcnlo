@@ -1,0 +1,63 @@
+Installation instructions:
+
+1) Install PYTHIA.
+
+   Some installation scripts for PYTHIA and
+   its dependences can be found at slac.stanford.edu/~prestel/DIRE .
+   The most complete option would be to download an installation script
+
+   wget slac.stanford.edu/~prestel/DIRE/installHEPTOOLS.sh
+
+   making it executable
+
+   chmod +x installHEPTOOLS.sh
+
+   and executing the script. This will install new copies of Pythia and all
+   dependences. If you want to proceed with this convenient (yet rather
+   non-minimal), and the installation finished correctly, you can directly 
+   start experimenting with the code (see e.g. step 6) )
+
+2) Download DIRE from
+   https://direforpythia.hepforge.org
+   by e.g. using
+
+   wget http://www.hepforge.org/archive/direforpythia/DIRE-1.500.tar.gz
+
+3) Untar the DIRE tarball in the PYTHIA examples
+   directory of your PYTHIA installation directory
+   (e.g. /some/path/share/Pythia8/examples/)
+   e.g. by executing
+
+   tar xvfz DIRE-1.500.tar.gz
+
+4) cd into the DIRE-1.500 directory
+
+5) Type
+ 
+   make dire00
+
+   to compile the simplest DIRE main program.
+   Note that the dire01, dire02 and dire03 main program link
+   against HEPMC2, which means PYTHIA has to be configured to
+   support this. The main program dire04 links against ProMC.
+
+6) Run with
+
+   ./dire00
+
+   This will produce lepton scattering events at LEP.
+   The remaining example programs need an input file with settings
+   to run smoothly. An example would be to run with
+
+   make dire05; ./dire05 myinput.cmnd
+
+   where myinput.cmnd is an appropriate input file
+   (examples could be dis.cmnd, lhc.cmnd and lep.cmnd)
+
+7) Compile dire01 and run with
+
+   ./dire01 myinput.cmnd myoutput.hepmc
+
+   where myinput.cmnd is an input file and
+   myoutput.hepmc will be filled with HepMC event output.
+

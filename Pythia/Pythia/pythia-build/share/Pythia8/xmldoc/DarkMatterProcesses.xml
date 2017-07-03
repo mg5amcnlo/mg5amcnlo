@@ -1,0 +1,40 @@
+<chapter name="Dark Matter Processes"> 
+ 
+<h2>Dark Matter Processes</h2> 
+ 
+This page contains the production of Dark Matter via new <ei>s</ei>-channel 
+mediators.  Currently only vector-like mediator i.e. <ei>Z'^0</ei> for 
+Dirac DM is implemented. Note that the mediator in this case carries 
+the PDG id 55. 
+ 
+<h3><ei>Z'^0</ei></h3> 
+ 
+This group currently contains only one subprocess. 
+ 
+<flag name="DM:ffbar2Zp2XX" default="off"> 
+Scattering <ei>f fbar &rarr;Z'^0 &rarr; X Xbar</ei>. 
+Code 6001. 
+</flag> 
+ 
+<p/> 
+The couplings of the <ei>Z'^0</ei> to quarks and leptons are be 
+assumed universal, i.e. generation-independent. Currently only vector 
+couplings are implemented.  The choice of fixed axial and vector 
+couplings implies a resonance width that increases linearly with the 
+<ei>Z'^0</ei> mass. Note that cross sections strongly depend on the 
+choice of mediator and Dark Matter masses. 
+ 
+<p/> 
+Here are the couplings 
+ 
+<parm name="Zp:vq" default="0.1"> 
+vector coupling of quarks. 
+</parm> 
+ 
+<parm name="Zp:vX" default="0.1"> 
+vector coupling of the Dark Matter <ei>X</ei> particles. 
+</parm> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2017 Torbjorn Sjostrand --> 
