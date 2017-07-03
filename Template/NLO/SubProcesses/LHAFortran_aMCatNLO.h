@@ -343,9 +343,10 @@ bool LHA3FromPythia8::setEvent(int) {
   // Find resonances in hard process.
   vector<int> hardResonances;
   for ( int i = 0; i < int(event.size()); ++i) {
-    if ( event[i].status() != -22) continue;
+    //if ( event[i].status() != -22) continue;
     if ( event[i].mother1() != 3) continue;
     if ( event[i].mother2() != 4) continue;
+    if ( !(event[i].mayDecay() && event[i].isResonance()) ) continue;
     hardResonances.push_back(i);
   }
 
