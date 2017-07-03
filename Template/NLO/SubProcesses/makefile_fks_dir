@@ -106,7 +106,7 @@ check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_poles
 
-madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) pythia8_control_setup.inc $(libmadloop) makefile $(LIBS)
+madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintMC $(MINTMC) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
 	rm handling_lhe_events.o
 	strip madevent_mintMC
