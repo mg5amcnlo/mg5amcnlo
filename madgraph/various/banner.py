@@ -3287,7 +3287,7 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
-        self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
+        self.add_param('parton_shower', 'PYTHIA8', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
