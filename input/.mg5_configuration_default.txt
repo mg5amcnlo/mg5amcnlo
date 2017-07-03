@@ -59,7 +59,8 @@
 #!  Defines the path to the pythia8 installation directory (i.e. the
 #!  on containing the lib, bin and include directories) .
 #!  If using a relative path, that starts from the mg5 directory
-# pythia8_path = ./HEPTools/pythia8
+#pythia8_path = /home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
+pythia8_path = ./Pythia/Pythia/pythia-src
 
 #! MG5aMC_PY8_interface path
 #!  Defines the path of the C++ driver file that is used by MG5_aMC to
