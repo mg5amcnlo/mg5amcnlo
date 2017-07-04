@@ -202,7 +202,8 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
             starting_dir = os.path.join(cwd, starting_dir)        
 
     # Remove existing link if necessary
-    if os.path.exists(os.path.join(starting_dir, name)):
+    path = os.path.join(starting_dir, name)
+    if os.path.exists(path) and os.path.realpath(path) != os.path.realpath(file_pos):
         os.remove(os.path.join(starting_dir, name))
 
     if not abspath:
