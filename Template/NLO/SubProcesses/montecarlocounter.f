@@ -896,43 +896,40 @@ c
                stop
             endif
 
-            if(dampMCsubt)then
-               if(emscasharp)then
-                  if(qMC.le.scalemax)then
-                     emscwgt(npartner)=1d0
-                     emscav(npartner)=emsca_bare
-                  else
-                     emscwgt(npartner)=0d0
-                     emscav(npartner)=scalemax
-                  endif
-               else
-                  ptresc=(qMC-scalemin)/(scalemax-scalemin)
-                  if(ptresc.le.0d0)then
-                     emscwgt(npartner)=1d0
-                     emscav(npartner)=emsca_bare
-                  elseif(ptresc.lt.1d0)then
-                     emscwgt(npartner)=1-emscafun(ptresc,one)
-                     emscav(npartner)=emsca_bare
-                  else
-                     emscwgt(npartner)=0d0
-                     emscav(npartner)=scalemax
-                  endif
-               endif
-            endif
-            emscav_tmp=emscav
-
-        else
+         else
 c Dead zone
           xkern=0d0
           xkernazi=0d0
-           if(dampMCsubt)then
-              emscav(npartner)=2d0*sqrt(ebeam(1)*ebeam(2))
-              emscwgt(npartner)=0d0
-           endif
         endif
 c
         xkern=xkern*gfactsf*wcc
         xkernazi=xkernazi*gfactazi*gfactsf*wcc
+
+c Emsca stuff
+        if(dampMCsubt)then
+           if(emscasharp)then
+              if(qMC.le.scalemax)then
+                 emscwgt(npartner)=1d0
+                 emscav(npartner)=emsca_bare
+              else
+                 emscwgt(npartner)=0d0
+                 emscav(npartner)=scalemax
+              endif
+           else
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              if(ptresc.le.0d0)then
+                 emscwgt(npartner)=1d0
+                 emscav(npartner)=emsca_bare
+              elseif(ptresc.lt.1d0)then
+                 emscwgt(npartner)=1-emscafun(ptresc,one)
+                 emscav(npartner)=emsca_bare
+              else
+                 emscwgt(npartner)=0d0
+                 emscav(npartner)=scalemax
+              endif
+           endif
+        endif
+        emscav_tmp=emscav
 
 c End of loop over colour partners
 c      enddo
@@ -997,7 +994,7 @@ c     Input check
          stop
       endif
 
-c     compute MC cross section
+c     Compute MC cross section
       wgt=0d0
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
