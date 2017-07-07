@@ -890,7 +890,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     local_installer = ['ninja', 'collier']
     required = ['cuttools', 'iregi']
     order = ['cuttools', 'iregi', 'ninja', 'collier', 'golem', 'pjfry']
-    
+    bypassed = ['pjfry']
+
     @property
     def answer(self):
         return self.code
@@ -971,6 +972,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                   'required': 'will be installed (required)'}
         
         for i,key in enumerate(self.order,1):
+            if key in self.bypassed and self.code[key] == 'off':
+                continue
             if os.path.sep not in self.code[key]:
                 question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s%s\n' % \
                    tuple([i,]+descript[key]+[status[self.code[key]],]+\
