@@ -1838,6 +1838,7 @@ c Jacobian due to delta() of tau_born
      $        ,dum3,dum3,jac,s)
       else
          write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+         jac=-1d0
       endif
       tau=s/stot
       jac=jac/stot

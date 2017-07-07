@@ -1378,6 +1378,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # wavefunction number
         return new_wf, wf_number
 
+    def has_multifermion(self):
+        """check the presence of 4 fermion vertex"""
+        
+        mothers = self.get('mothers')
+        if len(mothers) >2:
+            nb_fermion = len([1 for wf in mothers if wf.is_fermion()])
+            if nb_fermion>2:
+                return True
+        
+        return any(wf.has_multifermion() for wf in self.get('mothers'))
+        
+
     def get_fermion_order(self):
         """Recursive function to get a list of fermion numbers
         corresponding to the order of fermions along fermion lines
@@ -1398,7 +1410,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         other_fermions = [wf for wf in self.get('mothers') if \
                           wf.is_fermion() and wf != fermion_mother]
-
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
@@ -1425,7 +1436,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if self.is_fermion():
             return [mother_list[0], fermion_number_list]
-
+        
         return fermion_number_list
 
     def needs_hermitian_conjugate(self):
@@ -2617,7 +2628,43 @@ class HelasAmplitude(base_objects.PhysicsObject):
         mystr = mystr + '\n}'
 
         return mystr
+    
+    def has_multifermion(self):
 
+        return any(wf.has_multifermion() for wf in self.get('mothers'))
+        
+
+    def nice_string(self):
+        """ simple way to check which FD is related to this amplitude"""
+        def get_structure(wf):
+            """ funtion to allow to loop over helaswavefunction"""
+            mothers = []
+            try:
+                mothers = wf.get('mothers')
+            except:
+                if wf['is_loop']:
+                    return '%s*' % wf['particle'].get('pdg_code')
+                else:
+                    return  wf['particle'].get('pdg_code')
+                
+            struct = [get_structure(w) for w in mothers]
+            if struct:
+                if 'is_loop' in wf:
+                    if  wf['is_loop']:
+                        return (struct,'>%s*'%wf.get('pdg_code') )
+                    else:
+                        return (struct,'>',wf.get('pdg_code') )
+                else:
+                    return (struct,'>', 0)
+            else:
+                if wf['is_loop']:
+                    return '%i*' %wf.get('pdg_code')
+                else:
+                    return wf.get('pdg_code')
+
+        return get_structure(self)
+    
+    
     # Enhanced get function
     def get(self, name):
         """Get the value of the property name."""
@@ -2742,6 +2789,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (tuple(res), tuple(self.get('lorentz')))
 
+
     def calculate_fermionfactor(self):
         """Calculate the fermion factor for the diagram corresponding
         to this amplitude"""
@@ -2749,6 +2797,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Pick out fermion mothers
         fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
         assert len(fermions) % 2 == 0
+        
 
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
@@ -2773,6 +2822,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Now put together the fermion line merging in this amplitude
         if self.get('type')=='loop' and len(fermion_numbers)>0:
+            #misc.sprint(self.nice_string())
+
             # Remember that the amplitude closing the loop is always a 2-point
             # "fake interaction" attached on the second l-cut wavefunction.
             # So len(fermion_numbers) is either be 0 or 2.
@@ -2786,6 +2837,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 lcuf_wf_1 = lcuf_wf_1.get_loop_mother()
             lcut_wf1_number = lcuf_wf_1.get('number_external')
             
+            
             # We must now close the loop fermion flow, if there is any.
             # This means merging the two lists representing the fermion flow of
             # each of the two l-cut fermions into one. Example for the process
@@ -2796,11 +2848,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # [[6, []], [4, [3, 5]]]
             # Which should be merged into [3,4] both times
             
+            
             # Here, iferm_to_replace is the position of the fermion line 
             # pairing which is *not* [6,[]] in the above example.
             iferm_to_replace = (fermion_numbers.index([lcut_wf2_number,[]])+1)%2
-        
-            if fermion_numbers[iferm_to_replace][0]==lcut_wf1_number:
+            
+            
+            closed_loop = fermion_numbers[iferm_to_replace][0]==lcut_wf1_number
+            
+            #if self.get('mothers')[0].is_fermion() and self.has_multifermion():
+            #    closed_loop = False
+            
+            if closed_loop:
                 # We have a closed loop fermion flow here, so we must simply 
                 # add a minus sign (irrespectively of whether the closed loop 
                 # fermion flow goes clockwise or counter-clockwise) and not
@@ -2884,6 +2943,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         tags = ['C%s' % w for w in self.get_conjugate_index()]
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
+
 
     def get_base_diagram(self, wf_dict, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this

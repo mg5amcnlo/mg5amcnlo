@@ -954,7 +954,7 @@ class DecayParticle(base_objects.Particle):
                     if 0 < minv_max.real < 0.100:
                         logger.warning("WARNING: Mass gap lower than pion mass for decay of %s "
                                                              % self['pdg_code'])
-                        logger.warning("decay into colored particle will be remove.")
+                        logger.warning("decay into colored particle will be removed.")
                         allow_qcd=False
                         if model.get_particle(abs(leg['id']))['color'] != 1:
                             continue

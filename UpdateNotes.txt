@@ -1,5 +1,45 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.5(26/05/17)
+      OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 
+          gridpack were lacking to include the generated grid for each channel. This does not lead to 
+          bias but to a significant slow down of the associated gridpack.
+      OM: Supporting user function calling other non default function.
+      OM: adding the command "update to_slha1" and "update to_slha2" (still beta)
+      RF: some cleanup in the NLO/Template files. Many unused subroutines deleted.
+      OM: fixing some bug related to complex_mass_scheme
+      OM: fixing bug in ALOHA for C++ output (in presence of form-factor)
+      OM: fixing lhe event for 1 to N process such that the <init> block is consistently set for the shower
+      OM: ExRootAnalysis interface is modified (need to be requested as an analysis)
+      RF: Fix for FxFx merging in case there are diagrams with 1->3 decays.
+
+2.5.4(28/03/17)
+      OM: Add a warning in presense of small width
+      OM: Fix a bug related to a missing library (introduced in 2.5.3)
+      OM: Improve stability of the onshell mode of MadSpin
+      VH: Fix some problem related to LHAPDF
+
+2.5.3(09/03/17)
+      PT: Modified the default shower starting scale in montecarlocounter.f.
+          The new reference scale from which the dampening profile is computed is sum_i mt_i/2, i
+          being Born level final-state momenta.
+      OM: New "special mode" for madspin accessible via "set spinmode onshell".
+          This mode allow for full spin-correlation with 3 (or more) body decay but the decaying particle
+          remains exactly onshell in this mode. Loop-induced production/decay are not allowed in this mode.
+      OM+RF: Allowing for creation of LHE like output of the fixed order run at NLO.
+          This LHEF file is unvalid for parton-shower (all PS should crash on such file). It will be 
+          unphysical to shower such sample anyway.
+          Two hidden parameters of the  FO_analyse_card.dat allow some control on the LHEF creation
+       	  "fo_lhe_weight_ratio" allows to control the strength of a partial unweighting [default:1e-3]
+             increasing this number reduce the LHEF size.
+          "fo_lhe_postprocessing" can take value like nogrouping, norandom, noidentification.
+             nogrouping forbids the appearance of the LHEF(version2) tag <eventgroup>
+             norandom   does not apply the randomization of the events.
+             noidentification does not merge born event with other born like counter-event
+      RF: Better job handling for fNLO runs.
+      VH: Fixing various problem with the pythia8 interface (especially for MLM merging)
+      Team: Fixing a series of small crash
+
 2.5.2(10/12/16)
       OM: improve systematics (thanks to Philipp Pigard)
       OM: new syntax to modify the run_card: set no_parton_cut

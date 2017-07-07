@@ -30,10 +30,8 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
+      include "mint.inc"
       
-      integer           iconfig
-      common/to_configs/iconfig
-
 c Vegas stuff
       common/tosigint/ndim
 
@@ -49,16 +47,16 @@ c Vegas stuff
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
 
       double precision weight
 c For MINT:
-      include "mint.inc"
-      real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
-     $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
-     $     ,x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij,vn
+      real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
+     $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
+     $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
+     $     ,0:maxchannels),x(ndimmax)
+      integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer ifold_energy,ifold_phi,ifold_yij
@@ -70,13 +68,6 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
       double precision ran2
       external ran2
       
@@ -118,7 +109,7 @@ c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
-      virtual_fraction=virt_fraction
+      virtual_fraction(1)=virt_fraction
 
       ntot=0
       nsun=0
@@ -144,7 +135,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,iconfig,imode,
+      call get_user_params(ncall,itmax,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
@@ -189,49 +180,49 @@ c*************************************************************
 c initialize grids
             do j=0,nintervals
                do i=1,ndimmax
-                  xgrid(j,i)=0.d0
+                  xgrid(j,i,1)=0.d0
                enddo
             enddo
          else
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
-               read (12,*) (xgrid(j,i),i=1,ndim)
+               read (12,*) (xgrid(j,i,1),i=1,ndim)
             enddo
             do j=1,nintervals_virt
-               read (12,*) (ave_virt(j,i),i=1,ndim)
+               read (12,*) (ave_virt(j,i,1),i=1,ndim)
             enddo
-            read (12,*) (ans(i),i=1,nintegrals)
+            read (12,*) (ans(i,1),i=1,nintegrals)
             read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virtual_fraction,average_virtual
+            read (12,*) virtual_fraction(1),average_virtual(1)
             close (12)
          endif
 c
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2)
+     $        ,ans,unc,chi2,nhits_in_grids)
          open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
-         write(58,*)'Final result:',ans(2),' +/-',unc(2)
+         write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
+         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
          close(58)
-         write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
-         write(*,*)'Final result:',ans(2),' +/-',unc(2)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1)
+         write(*,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
+         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
+         write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
          close(58)
 c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
          do j=0,nintervals
-            write (12,*) (xgrid(j,i),i=1,ndim)
+            write (12,*) (xgrid(j,i,1),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i),i=1,ndim)
+            write (12,*) (ave_virt(j,i,1),i=1,ndim)
          enddo
-         write (12,*) (ans(i),i=1,nintegrals)
+         write (12,*) (ans(i,1),i=1,nintegrals)
          write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virtual_fraction,average_virtual
+         write (12,*) virtual_fraction(1),average_virtual(1)
          close (12)
 
 c*************************************************************
@@ -241,14 +232,14 @@ c*************************************************************
 c to restore grids:
          open (unit=12, file='mint_grids',status='old')
          do j=0,nintervals
-            read (12,*) (xgrid(j,i),i=1,ndim)
+            read (12,*) (xgrid(j,i,1),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i),i=1,ndim)
+            read (12,*) (ave_virt(j,i,1),i=1,ndim)
          enddo
-         read (12,*) (ans(i),i=1,nintegrals)
+         read (12,*) (ans(i,1),i=1,nintegrals)
          read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virtual_fraction,average_virtual
+         read (12,*) virtual_fraction(1),average_virtual(1)
          close (12)
 
 c Prepare the MINT folding
@@ -265,45 +256,45 @@ c Prepare the MINT folding
          
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2)
+     $        ,ans,unc,chi2,nhits_in_grids)
          
 c If integrating the virtuals alone, we include the virtuals in
 c ans(1). Therefore, no need to have them in ans(5) and we have to set
 c them to zero.
          if (only_virt) then
-            ans(3)=0d0 ! virtual Xsec
-            ans(5)=0d0 ! ABS virtual Xsec
+            ans(3,1)=0d0 ! virtual Xsec
+            ans(5,1)=0d0 ! ABS virtual Xsec
          endif
 
          open(unit=58,file='res_1',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
-     $        ,sqrt(unc(1)**2+unc(5)**2)
-         write(58,*)'Final result:',ans(2),' +/-',unc(2)
+         write(58,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
+     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
+         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
          close(58)
-         write(*,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
-     $        ,sqrt(unc(1)**2+unc(5)**2)
-         write(*,*)'Final result:',ans(2),' +/-',unc(2)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1)
+         write(*,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
+     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
+         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
 c write the results.dat file 
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*)ans(1)+ans(5), unc(2), 0d0, 0, 0, 0, 0, 0d0 ,0d0, ans(2) 
+         write(58,*)ans(1,1)+ans(5,1), unc(2,1), 0d0, 0, 0, 0, 0, 0d0 ,0d0, ans(2,1) 
          close(58)
 
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
-         write (12,*) (xgrid(0,i),i=1,ndim)
+         write (12,*) (xgrid(0,i,1),i=1,ndim)
          do j=1,nintervals
-            write (12,*) (xgrid(j,i),i=1,ndim)
-            write (12,*) (ymax(j,i),i=1,ndim)
+            write (12,*) (xgrid(j,i,1),i=1,ndim)
+            write (12,*) (ymax(j,i,1),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i),i=1,ndim)
+            write (12,*) (ave_virt(j,i,1),i=1,ndim)
          enddo
-         write (12,*) ymax_virt
+         write (12,*) ymax_virt(1)
          write (12,*) (ifold(i),i=1,ndim)
-         write (12,*) (ans(i),i=1,nintegrals)
-         write (12,*) (unc(i),i=1,nintegrals)
-         write (12,*) virtual_fraction,average_virtual
+         write (12,*) (ans(i,1),i=1,nintegrals)
+         write (12,*) (unc(i,1),i=1,nintegrals)
+         write (12,*) virtual_fraction(1),average_virtual(1)
          close (12)
 
 c*************************************************************
@@ -328,23 +319,23 @@ c Mass-shell stuff. This is MC-dependent
 
 c to restore grids:
          open (unit=12, file='mint_grids',status='unknown')
-         read (12,*) (xgrid(0,i),i=1,ndim)
+         read (12,*) (xgrid(0,i,1),i=1,ndim)
          do j=1,nintervals
-            read (12,*) (xgrid(j,i),i=1,ndim)
-            read (12,*) (ymax(j,i),i=1,ndim)
+            read (12,*) (xgrid(j,i,1),i=1,ndim)
+            read (12,*) (ymax(j,i,1),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i),i=1,ndim)
+            read (12,*) (ave_virt(j,i,1),i=1,ndim)
          enddo
-         read (12,*) ymax_virt
+         read (12,*) ymax_virt(1)
          read (12,*) (ifold(i),i=1,ndim)
-         read (12,*) (ans(i),i=1,nintegrals)
-         read (12,*) (unc(i),i=1,nintegrals)
-         read (12,*) virtual_fraction,average_virtual
+         read (12,*) (ans(i,1),i=1,nintegrals)
+         read (12,*) (unc(i,1),i=1,nintegrals)
+         read (12,*) virtual_fraction(1),average_virtual(1)
          close (12)
 
 c determine how many events for the virtual and how many for the no-virt
-         ncall_virt=int(ans(5)/(ans(1)+ans(5)) * ncall)
+         ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncall)
          ncall_novi=ncall-ncall_virt
 
          write (*,*) "Generating virt :: novi approx.",ncall_virt
@@ -355,11 +346,11 @@ c determine how many events for the virtual and how many for the no-virt
 c fill the information for the write_header_init common block
          ifile=lunlhe
          ievents=ncall
-         inter=ans(2)
-         absint=ans(1)+ans(5)
-         uncer=unc(2)
+         inter=ans(2,1)
+         absint=ans(1,1)+ans(5,1)
+         uncer=unc(2,1)
 
-         weight=(ans(1)+ans(5))/ncall
+         weight=(ans(1,1)+ans(5,1))/ncall
 
          if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
      $        abrv(1:4).ne.'virt') then
@@ -375,7 +366,7 @@ c fill the information for the write_header_init common block
                vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
+               if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
@@ -392,7 +383,7 @@ c fill the information for the write_header_init common block
             endif
 c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
-            call update_fks_dir(iFKS_picked,iconfig)
+            call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
@@ -474,10 +465,10 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncall,tTot
       else
-         write (12,*)ans(1)+ans(5),sqrt(unc(1)**2+unc(5)**2),ans(2)
-     $        ,unc(2),itmax,ncall,tTot
+         write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
+     $        ,unc(2,1),itmax,ncall,tTot
       endif
       close(12)
 
@@ -515,7 +506,7 @@ c timing statistics
       end
 
 
-      subroutine get_user_params(ncall,itmax,iconfig,
+      subroutine get_user_params(ncall,itmax,
      &     imode,ixi_i,iphi_i,iy_ij,SHsep)
 c**********************************************************************
 c     Routine to get user specified parameters for run
@@ -533,7 +524,7 @@ c
 c
 c     Arguments
 c
-      integer ncall,itmax,iconfig, jconfig
+      integer ncall,itmax,jconfig
 c
 c     Local
 c
@@ -667,6 +658,9 @@ c These should be ignored (but kept for 'historical reasons')
          endif
       enddo
       write(*,12) 'Running Configuration Number: ',iconfig
+      nchans=1
+      iconfigs(1)=iconfig
+      wgt_mult=1d0
 
       write (*,'(a)') 'Enter running mode for MINT:'
       write (*,'(a)') '0 to set-up grids, 1 to integrate,'//
@@ -730,16 +724,12 @@ c
          write(*,*) 'Not subdividing B.W.'
          lbw(0)=0
       else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
+         write(*,*) 'Error BW setting: not supported at NLO'
+         stop 1
       endif
  10   format( a)
  12   format( a,i4)
       end
-c     $E$ get_user_params $E$ ! tag for MadWeight
 c     change this routine to read the input in a file
 c
 
@@ -766,8 +756,6 @@ c From dsample_fks
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
-      integer           iconfig
-      common/to_configs/iconfig
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       integer     fold
@@ -838,7 +826,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             call get_born_nFKSprocess(nFKS_in,nFKS_out)
             nFKS_picked_nbody=nFKS_out
          endif
-         call update_fks_dir(nFKS_picked_nbody,iconfig)
+         call update_fks_dir(nFKS_picked_nbody)
          jac=1d0
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
@@ -873,7 +861,7 @@ c for different nFKSprocess.
             wgt_me_real=0d0
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
-            call update_fks_dir(iFKS,iconfig)
+            call update_fks_dir(iFKS)
             jac=1d0/vol1
             probne=1d0
             gfactsf=1.d0
@@ -1183,8 +1171,6 @@ c "npNLO".
       common/event_attributes/nattr,npNLO,npLO
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      integer    maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -1219,16 +1205,16 @@ c     include all quarks (except top quark) and the gluon.
       end
 
 
-      subroutine update_fks_dir(nFKS,iconfig)
+      subroutine update_fks_dir(nFKS)
       implicit none
-      integer nFKS,iconfig
+      integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       nFKSprocess=nFKS
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig,.true.)
+      call setfksfactor(.true.)
       return
       end
 

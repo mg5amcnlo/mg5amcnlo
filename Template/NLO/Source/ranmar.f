@@ -1,10 +1,9 @@
       function ran2()
 c Wrapper for the random numbers; needed for the NLO stuff
       implicit none
+      include '../SubProcesses/mint.inc' ! includes iconfig common
       double precision ran2,x,a,b
       integer ii,jconfig
-      integer           iconfig
-      common/to_configs/iconfig
       a=0d0           ! min allowed value for x
       b=1d0           ! max allowed value for x
       ii=0            ! dummy argument of ntuple
@@ -194,6 +193,8 @@ c
 c     Arguments
 c
       integer iseed
+      integer random_offset_split
+      common /c_random_offset_split/ random_offset_split
 c
 c     Local
 c
@@ -207,7 +208,7 @@ c-----
          close(lun)
          return
  14   close(lun)
- 25   iseed = 0
+ 25   iseed = random_offset_split
       end
 
       subroutine ranmar(rvec)

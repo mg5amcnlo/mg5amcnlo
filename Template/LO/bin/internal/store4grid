@@ -53,6 +53,11 @@ for i in `cat subproc.mg` ; do
 	for j in ftn26.gz ; do
 	    if [[ -e $1_$j ]]; then
 		mv -f $1_$j default_$j
+	    elif [[ -e $j ]]; then
+		mv -f $j default_$j
+	    elif [[ -e ftn26 ]]; then
+		gzip ftn26
+		mv -f $j default_$j
 	    fi
 	done
 	cd ../

@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+import time
+start = time.time()
 
 ################################################################################
 #
@@ -103,7 +105,6 @@ except:
 if __debug__:
         print 'Running MG5 in debug mode'
 
-
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
 try:
@@ -120,7 +121,11 @@ try:
     logging.getLogger('madevent').setLevel(level)
 except:
     pass
+
 import madgraph.interface.master_interface as interface
+
+if __debug__ and time.time() - start > 0.5:
+    print 'WARNING: loading of madgraph too slow!!!', time.time() - start
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
@@ -139,6 +144,8 @@ elif options.web:
     cmd_line = interface.MasterCmdWeb()
 else: 
     cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
+
+
 
 # Call the cmd interface main loop
 try:

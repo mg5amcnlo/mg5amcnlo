@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
@@ -107,6 +106,7 @@ def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,
         return f_with_no_logger
     return control_logger
 
+PACKAGE_INFO = {}
 #===============================================================================
 # get_pkg_info
 #===============================================================================
@@ -116,6 +116,7 @@ def get_pkg_info(info_str=None):
     a dictionary with empty values is returned. As an option, an info
     string can be passed to be read instead of the file content.
     """
+    global PACKAGE_INFO
 
     if info_str:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
@@ -125,10 +126,13 @@ def get_pkg_info(info_str=None):
         info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
         info_dict['date'] = '20xx-xx-xx'                        
     else:
+        if PACKAGE_INFO:
+            return PACKAGE_INFO
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
+        PACKAGE_INFO = info_dict
         
     return info_dict
 
@@ -1351,15 +1355,18 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     """function to check if two float are approximatively equal"""
     import math
 
-    if not a or not b:
-        if zero_limit:
-            power = sig_fig + 1
+    if isinstance(sig_fig, int):
+        if not a or not b:
+            if zero_limit:
+                power = sig_fig + 1
+            else:
+                return a == b  
         else:
-            return a == b  
+            power = sig_fig - int(math.log10(abs(a))) + 1
+    
+        return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
     else:
-        power = sig_fig - int(math.log10(abs(a))) + 1
-
-    return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
+        return abs(a-b) < sig_fig
 
 ################################################################################
 # class to change directory with the "with statement"
@@ -1545,26 +1552,151 @@ class ProcessTimer:
 #      pass
 
 ## Define apple_notify (in a way which is system independent
-try:
-    import Foundation
-    import objc
-    NSUserNotification = objc.lookUpClass('NSUserNotification')
-    NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+class Applenotification(object):
 
-    def apple_notify(subtitle, info_text, userInfo={}):
+    def __init__(self):
+        self.init = False
+        self.working = True
+
+    def load_notification(self):        
         try:
-            notification = NSUserNotification.alloc().init()
+            import Foundation
+            import objc
+            self.NSUserNotification = objc.lookUpClass('NSUserNotification')
+            self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+        except:
+            self.working=False
+        self.working=True
+
+    def __call__(self,subtitle, info_text, userInfo={}):
+        
+        if not self.init:
+            self.load_notification()
+        if not self.working:
+            return
+        try:
+            notification = self.NSUserNotification.alloc().init()
             notification.setTitle_('MadGraph5_aMC@NLO')
             notification.setSubtitle_(subtitle)
             notification.setInformativeText_(info_text)
-            notification.setUserInfo_(userInfo)
-            NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+            try:
+                notification.setUserInfo_(userInfo)
+            except:
+                pass
+            self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+        except:
+            pass        
+        
+
+
+apple_notify = Applenotification()
+
+class EasterEgg(object):
+    
+    done_notification = False
+    message_aprilfirst =\
+        {'error': ['Be careful, a cat is eating a lot of fish today. This makes the code unstable.',
+                   'Really, this sounds fishy.',
+                   'A Higgs boson walks into a church. The priest says "We don\'t allow Higgs bosons in here." The Higgs boson replies, "But without me, how can you have mass?"',
+                   "Why does Heisenberg detest driving cars? Because, every time he looks at the speedometer he gets lost!",
+                   "May the mass times acceleration be with you.",
+                   "NOTE: This product may actually be nine-dimensional. If this is the case, functionality is not affected by the extra five dimensions.",
+                   "IMPORTANT: This product is composed of 100%% matter: It is the responsibility of the User to make sure that it does not come in contact with antimatter.",
+                   'The fish are out of jokes. See you next year for more!'],
+         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work.'],
+         'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
+               }
+    
+    def __init__(self, msgtype):
+
+        try:
+            now = time.localtime()
+            date = now.tm_mday, now.tm_mon 
+            if date in [(1,4)]:
+                if msgtype in EasterEgg.message_aprilfirst:
+                    choices = EasterEgg.message_aprilfirst[msgtype]
+                    if len(choices) == 0:
+                        return
+                    elif len(choices) == 1:
+                        msg = choices[0]
+                    else:
+                        import random
+                        msg = choices[random.randint(0,len(choices)-2)]
+                    EasterEgg.message_aprilfirst[msgtype].remove(msg)
+                    
+            else:
+                return
+            if MADEVENT:
+                return
+            
+            import os
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ] 
+            msg = msg % {'user': username}
+            if sys.platform == "darwin":
+                self.call_apple(msg)
+            else:
+                self.call_linux(msg)
+        except Exception, error:
+            sprint(error)
+            pass
+    
+    def __call__(self, msg):
+        try:
+            self.call_apple(msg)
         except:
             pass
-except:
-    def apple_notify(subtitle, info_text, userInfo={}):
-        return
-## End apple notify
+            
+    def call_apple(self, msg):
+        
+        #1. control if the volume is on or not
+        p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
+        output, _  = p.communicate()
+        #output volume:25, input volume:71, alert volume:100, output muted:true
+        info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
+        muted = False
+        if 'output muted' in info and info['output muted'] == 'true':
+            muted = True
+        elif 'output volume' in info and info['output volume'] == '0':
+            muted = True
+        
+        if muted:
+            if not EasterEgg.done_notification:
+                apple_notify('On April first','turn up your volume!')
+                EasterEgg.done_notification = True
+        else:
+            os.system('say %s' % msg)
+
+
+    def call_linux(self, msg):
+        # check for fishing path
+        fishPath = madgraph.MG5DIR+"/input/.cowgraph.cow"
+        if os.path.exists(fishPath):
+            fishPath = " -f " + fishPath
+            #sprint("got fishPath: ",fishPath)
+
+        # check for fishing pole
+        fishPole = which('cowthink')
+        if not os.path.exists(fishPole):
+            if os.path.exists(which('cowsay')):
+                fishPole = which('cowsay')
+            else:
+                return
+
+        # go fishing
+        fishCmd = fishPole + fishPath + " " + msg
+        os.system(fishCmd)
+
+
+if __debug__:
+    try:
+        import os 
+        import pwd
+        username =pwd.getpwuid( os.getuid() )[ 0 ]
+        if 'hirschi' in username or 'vryonidou' in username and __debug__:
+            EasterEgg('loading')
+    except:
+        pass
 
 
 def get_older_version(v1, v2):
@@ -1736,3 +1868,27 @@ def import_python_lhapdf(lhapdfconfig):
     else:
         python_lhapdf = None
     return python_lhapdf
+
+############################### TRACQER FOR OPEN FILE
+#openfiles = set()
+#oldfile = __builtin__.file
+#
+#class newfile(oldfile):
+#    done = 0
+#    def __init__(self, *args):
+#        self.x = args[0]
+#        if 'matplotlib' in self.x:
+#            raise Exception
+#        print "### OPENING %s ### %s " % (str(self.x) , time.time()-start)
+#        oldfile.__init__(self, *args)
+#        openfiles.add(self)
+#
+#    def close(self):
+#        print "### CLOSING %s ### %s" % (str(self.x), time.time()-start)
+#        oldfile.close(self)
+#        openfiles.remove(self)
+#oldopen = __builtin__.open
+#def newopen(*args):
+#    return newfile(*args)
+#__builtin__.file = newfile
+#__builtin__.open = newopen

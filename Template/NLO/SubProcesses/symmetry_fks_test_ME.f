@@ -14,6 +14,7 @@ c
       include 'fks_info.inc'
       include 'run.inc'
       include 'cuts.inc'
+      include 'mint.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -58,12 +59,11 @@ c     Local for generating amps
 c
       double precision p(0:3,99), wgt, x(99), fx
       double complex wgt1(2)
-      double precision p1(0:3,99),xx(maxinvar)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
+      double precision p1(0:3,99)
+      integer ninvar, ndim,  minconfig, maxconfig
       common/tosigint/ndim
-      integer ncall,itmax,nconfigs,ntry, ngraphs
+      integer ncall,itmax,nconfigs,ntry
       integer ic(nexternal,maxswitch), jc(12),nswitch
-      double precision saveamp(maxamps)
       integer nmatch, ibase
       logical mtc, even
 
@@ -75,8 +75,6 @@ c
 c
 c     Global
 c
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
-      common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 
       logical calculatedBorn
@@ -279,9 +277,11 @@ c x_to_f_arg subroutine
          bs_max=iconfig_in
       endif
 
-      do iconfig=bs_min,bs_max       ! Born configurations
+      do iconfig=bs_min,bs_max  ! Born configurations
+         ichan=1
+         iconfigs(1)=iconfig
       call setcuts
-      call setfksfactor(iconfig,.false.)
+      call setfksfactor(.false.)
       wgt=1d0
       ntry=1
 

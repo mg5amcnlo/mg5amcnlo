@@ -5,16 +5,14 @@
       include "unlops.inc"
       include "run.inc"
       include 'timing_variables.inc'
+      include 'mint.inc'
       integer ndim
       common/tosigint/ndim
-      integer           iconfig
-      common/to_configs/iconfig
       integer itmax,ncall
       common/citmax/itmax,ncall
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
-      include 'mint.inc'
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt,unwgtfun
@@ -263,7 +261,7 @@ c
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          kwgtinfo=iwgtinfo
+          kwgtinfo= iwgtinfo
           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)

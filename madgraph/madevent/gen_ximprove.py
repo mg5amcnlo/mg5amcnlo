@@ -162,15 +162,22 @@ class gensym(object):
                 [float(s) for s in jobs]
             except Exception:
                 logger.debug("unformated string found in gensym. Please check:\n %s" % stdout)
+                done=False
                 job_list[Pdir] = []
-                for s in jobs:
+                lines = stdout.split('\n')
+                for l in lines:
                     try:
-                        float(s)
+                        [float(s) for s in l.split()]
                     except:
                         continue
                     else:
-                        job_list[Pdir].append(s)        
-                
+                        if done:
+                            raise Exception, 'Parsing error in gensym: %s' % stdout 
+                        job_list[Pdir] = l.split()        
+                        done = True
+                if not done:
+                    raise Exception, 'Parsing error in gensym: %s' % stdout
+                     
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
         return job_list, P_zero_result
@@ -1389,7 +1396,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         nunwgt += new_evt
 
         # check the number of event for this iteration alone
-        one_iter_nb_event = grid_calculator.get_nunwgt()
+        one_iter_nb_event = max(grid_calculator.get_nunwgt(),1)
         drop_previous_iteration = False
         # compare the number of events to generate if we discard the previous iteration
         n_target_one_iter = (needed_event-one_iter_nb_event) / ( one_iter_nb_event/ sum([R.nevents for R in grid_calculator.results])) 

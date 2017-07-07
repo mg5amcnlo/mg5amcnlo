@@ -17,6 +17,8 @@ import os
 import sys
 import logging
 import time
+import shutil
+import subprocess
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -37,21 +39,44 @@ logging.basicConfig(level=vars(logging)['INFO'],
 pjoin = os.path.join
 
 class Compile_MG5:
-    
-    def __init__(self):
-        """ launch all the compilation """
-        
-        self.make_UFO_pkl()
-        self.make_v4_pkl()
-        self.make_stdHep()
-        self.make_CutTools()
-        self.make_IREGI()
 
-        #important for UCL cluster
-        files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
-                 pjoin(MG5DIR,'input','mg5_configuration.txt'))
-        self.cmd = interface.MasterCmd()        
-        self.install_package()
+    autorun = True
+    overwrite_configuration=True
+
+    def __init__(self, ext_programs):
+        """ launch all the compilation """
+
+        # important to uclclus
+        if self.overwrite_configuration:
+            files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
+                     pjoin(MG5DIR,'input','mg5_configuration.txt'))
+            
+        self.cmd = interface.MasterCmd()                
+
+        if self.autorun:
+            self.make_UFO_pkl()
+            self.make_v4_pkl()
+            self.make_stdHep()
+            self.make_CutTools()
+            self.make_IREGI()
+            self.install_package(ext_programs)
+            self.test_output_LO()
+            self.test_output_NLO()
+            self.precompilation(debug=True)
+            self.precompilation(debug=False)
+
+
+    def test_output_LO(self):
+        """do the output of a simple LO process to ensure that LO is correctly configure."""
+        self.cmd.exec_cmd('generate p p > t t~')
+        self.cmd.exec_cmd('output %s/TESTLO' %root_path)
+        shutil.rmtree('%s/TESTLO' % root_path)
+
+    def test_output_NLO(self):
+        """do the output of a simple LO process to ensure that LO is correctly configure."""
+        self.cmd.exec_cmd('generate p p > e+ ve [QCD]')
+        self.cmd.exec_cmd('output %s/TESTNLO' %root_path)
+        shutil.rmtree('%s/TESTNLO' % root_path)
 
     @staticmethod
     def make_v4_pkl():
@@ -250,13 +275,22 @@ class Compile_MG5:
 
         misc.compile(cwd = os.path.join(iregi_path,'src'))        
 
-    def install_package(self):
+    def install_package(self, programs=[]):
         print "installing external package"
-        self.cmd.exec_cmd('install pythia-pgs')
-        self.cmd.exec_cmd('install Delphes')
-        self.cmd.exec_cmd('install ExRootAnalysis')
-        self.cmd.exec_cmd('install MadAnalysis')
-        self.cmd.exec_cmd('install SysCalc')
+        if not programs:
+            programs = ['pythia-pgs','Delphes','ExRootAnalysis','MadAnalysis4','SysCalc']
+            
+        for prog in programs:
+            self.cmd.exec_cmd('install %s' % prog)
+
+    def precompilation(self, debug=False):
+        if debug:
+            subprocess.call('python -m compileall .', shell=True, cwd=root_path)            
+        else:
+            subprocess.call('python -O -m compileall .', shell=True, cwd=root_path)
 
 if __name__ == '__main__':
-    Compile_MG5()
+    Compile_MG5(sys.argv[1:])
+
+
+

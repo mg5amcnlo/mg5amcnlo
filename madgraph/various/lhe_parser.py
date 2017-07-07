@@ -152,6 +152,7 @@ class Particle(object):
 
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
+    
 
     def __new__(self, path, mode='r', *args, **opt):
         
@@ -173,6 +174,8 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
+        self.parsing = True # check if/when we need to parse the event.
+        self.eventgroup  = False
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -230,26 +233,59 @@ class EventFile(object):
         init_pos = self.tell()
         self.seek(0)
         nb_event=0
-        for _ in self:
-            nb_event +=1
+        with misc.TMP_variable(self, 'parsing', False):
+            for _ in self:
+                nb_event +=1
         self.len = nb_event
         self.seek(init_pos)
         return self.len
 
     def next(self):
         """get next event"""
-        text = ''
-        line = ''
-        mode = 0
-        while '</event>' not in line:
-            line = super(EventFile, self).next()
-            if '<event' in line:
-                mode = 1
-                text = ''
-            if mode:
-                text += line
-        return Event(text)
+
+        if not self.eventgroup:
+            text = ''
+            line = ''
+            mode = 0
+            while '</event>' not in line:
+                line = super(EventFile, self).next()
+                if '<event' in line:
+                    mode = 1
+                    text = ''
+                if mode:
+                    text += line
+
+            if self.parsing:
+                return Event(text)
+            else:
+                return text
+        else:
+            events = []
+            text = ''
+            line = ''
+            mode = 0
+            while '</eventgroup>' not in line:
+                line = super(EventFile, self).next()
+                if '<eventgroup' in line:
+                    events=[]
+                    text = ''
+                elif '<event' in line:
+                    text=''
+                    mode=1
+                elif '</event>' in line:
+                    if self.parsing:
+                        events.append(Event(text))
+                    else:
+                        events.append(text)
+                    text = ''
+                    mode = 0
+                if mode:
+                    text += line  
+            if len(events) == 0:
+                return self.next()
+            return events
     
+
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT
@@ -284,7 +320,24 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-                
+    
+    def write_events(self, event):
+        """ write a single events or a list of event
+        if self.eventgroup is ON, then add <eventgroup> around the lists of events
+        """
+        if isinstance(event, Event):
+            if self.eventgroup:
+                self.write('<eventgroup>\n%s\n</eventgroup>\n' % event)
+            else:
+                self.write(str(event))
+        elif isinstance(event, list):
+            if self.eventgroup:
+                self.write('<eventgroup>\n')
+            for evt in event:
+                self.write(str(evt))
+            if self.eventgroup:
+                self.write('</eventgroup>\n')
+    
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
@@ -504,7 +557,7 @@ class EventFile(object):
                     print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
                 value = fcts[i](event)
-                if not opts['no_output']:
+                if not opt['no_output']:
                     out[i].append(value)
             if nb_event > opt['maxevent']:
                 break
@@ -678,6 +731,7 @@ class MultiEventFile(EventFile):
     def __init__(self, start_list=[], parse=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
+        self.eventgroup = False
         self.files = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
@@ -696,7 +750,11 @@ class MultiEventFile(EventFile):
                 self.files = start_list
         self._configure = False
         
-    def add(self, path, cross, error, across):
+    def close(self,*args,**opts):
+        for f in self.files:
+            f.close(*args, **opts)
+        
+    def add(self, path, cross, error, across, nb_event=0, scale=1):
         """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
@@ -706,6 +764,7 @@ class MultiEventFile(EventFile):
             return 
         
         obj = EventFile(path)
+        obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
         self.curr_nb_events.append(0)
@@ -713,9 +772,12 @@ class MultiEventFile(EventFile):
         self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
-        self.scales.append(1)
+        self.scales.append(scale)
         self.files.append(obj)
+        if nb_event:
+            obj.len = nb_event
         self._configure = False
+        return obj
         
     def __iter__(self):
         return self
@@ -736,13 +798,17 @@ class MultiEventFile(EventFile):
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
                 event = obj.next()
-                event.sample_scale = self.scales[i] # for file reweighting
+                if not self.eventgroup:
+                    event.sample_scale = self.scales[i] # for file reweighting
+                else:
+                    for evt in event:
+                        evt.sample_scale = self.scales[i]
                 return event
         else:
             raise Exception
     
 
-    def define_init_banner(self, wgt, lha_strategy):
+    def define_init_banner(self, wgt, lha_strategy, proc_charac=None):
         """define the part of the init_banner"""
         
         if not self.banner:
@@ -789,18 +855,30 @@ class MultiEventFile(EventFile):
             run_card = self.banner.run_card
         except:
             run_card = self.banner.charge_card("run_card")
-        
+            
         init_information = run_card.get_banner_init_information()
-        if init_information["idbmup1"] == 0:
+        #correct for special case
+        if proc_charac and proc_charac['ninitial'] == 1:
+            #special case for 1>N
+            init_information = run_card.get_banner_init_information()
             event = self.next()
-            init_information["idbmup1"]= event[0].pdg
+            init_information["idbmup1"] = event[0].pdg
+            init_information["ebmup1"] = event[0].mass
+            init_information["idbmup2"] = 0 
+            init_information["ebmup2"] = 0
+            self.seek(0)
+        else:
+            # check special case without PDF for one (or both) beam
+            if init_information["idbmup1"] == 0:
+                event = self.next()
+                init_information["idbmup1"]= event[0].pdg
+                if init_information["idbmup2"] == 0:
+                    init_information["idbmup2"]= event[1].pdg
+                self.seek(0)
             if init_information["idbmup2"] == 0:
-                init_information["idbmup2"]= event[1].pdg
-            self.seek(0)
-        if init_information["idbmup2"] == 0:
-            event = self.next()
-            init_information["idbmup2"] = event[1].pdg
-            self.seek(0)
+                event = self.next()
+                init_information["idbmup2"] = event[1].pdg
+                self.seek(0)
         
         init_information["nprup"] = nb_group
         
@@ -926,7 +1004,15 @@ class MultiEventFile(EventFile):
             unwgt_name = get_wgt.func_name
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
-        
+
+        if 'proc_charac' in opts:
+            if opts['proc_charac']:
+                proc_charac = opts['proc_charac']
+            else:
+                proc_charac=None
+            del opts['proc_charac']
+        else:
+            proc_charac = None
 
         if 'event_target' in opts and opts['event_target']:
             if 'normalization' in opts:
@@ -942,10 +1028,10 @@ class MultiEventFile(EventFile):
             else:
                 strategy = 4
                 new_wgt = sum(self.across)
-            self.define_init_banner(new_wgt, strategy)
+            self.define_init_banner(new_wgt, strategy, proc_charac=proc_charac)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
-            self.define_init_banner(0,0)
+            self.define_init_banner(0,0, proc_charac=proc_charac)
             del opts['write_init']
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
@@ -1070,7 +1156,11 @@ class Event(list):
                 status = 'tag'
                 
             if 'part' == status:
-                self.append(Particle(line, event=self))
+                part = Particle(line, event=self)
+                if part.E != 0:
+                    self.append(part)
+                elif self.nexternal:
+                        self.nexternal-=1
             else:
                 if '</event>' in line:
                     line = line.replace('</event>','',1)
@@ -1101,7 +1191,15 @@ class Event(list):
                     logger.warning("WRONG MOTHER INFO %s", self)
                     particle.mother2 = 0
 
-   
+    def rescale_weights(self, ratio):
+        """change all the weights by a given ratio"""
+        
+        self.wgt *= ratio
+        self.parse_reweight()
+        for key in self.reweight_data:
+            self.reweight_data[key] *= ratio
+        return self.wgt
+    
     def reorder_mother_child(self):
         """check and correct the mother/child position.
            only correct one order by call (but this is a recursive call)"""
@@ -1175,53 +1273,53 @@ class Event(list):
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type)
         return self.nloweight
-        
+            
     def parse_lo_weight(self):
         """ """
+        
+        
         if hasattr(self, 'loweight'):
             return self.loweight
+        
+        if not hasattr(Event, 'loweight_pattern'):
+            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
+                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
         
         if start != -1 != stop :
             text = self.tag[start+8:stop]
-#<rscale>  3 0.29765919e+03</rscale>
-#<asrwt>0</asrwt>
-#<pdfrwt beam="1">  1       21 0.15134321e+00 0.29765919e+03</pdfrwt>
-#<pdfrwt beam="2">  1       21 0.38683649e-01 0.29765919e+03</pdfrwt>
-#<totfact> 0.17315115e+03</totfact>
+            
+            info = Event.loweight_pattern.search(text)
+            if not info:
+                raise Exception, '%s not parsed'% text
             self.loweight={}
-            for line in text.split('\n'):
-                line = line.replace('<', ' <').replace("'",'"')
-                if 'rscale' in line:
-                    _, nqcd, scale, _ = line.split()
-                    self.loweight['n_qcd'] = int(nqcd)
-                    self.loweight['ren_scale'] = float(scale)
-                elif '<pdfrwt beam="1"' in line:
-                    args = line.split()
-                    self.loweight['n_pdfrw1'] = int(args[2])
-                    npdf = self.loweight['n_pdfrw1']
-                    self.loweight['pdf_pdg_code1'] = [int(i) for i in args[3:3+npdf]]
-                    self.loweight['pdf_x1'] = [float(i) for i in args[3+npdf:3+2*npdf]]
-                    self.loweight['pdf_q1'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
-                elif '<pdfrwt beam="2"' in line:
-                    args = line.split()
-                    self.loweight['n_pdfrw2'] = int(args[2])
-                    npdf = self.loweight['n_pdfrw2']
-                    self.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
-                    self.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
-                    self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
-                elif '<asrwt>' in line:
-                    args = line.replace('>','> ').split()
-                    nalps = int(args[1])
-                    self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
-                    
-                elif 'totfact' in line:
-                    args = line.split() 
-                    self.loweight['tot_fact'] = float(args[1])
+            self.loweight['n_qcd'] = int(info.group('nqcd'))
+            self.loweight['ren_scale'] = float(info.group('ren_scale'))
+            self.loweight['asrwt'] =[float(x) for x in info.group('asrwt').split()[1:]]
+            self.loweight['tot_fact'] = float(info.group('totfact'))
+            
+            args = info.group('beam1').split()
+            npdf = int(args[0])
+            self.loweight['n_pdfrw1'] = npdf
+            self.loweight['pdf_pdg_code1'] = [int(i) for i in args[1:1+npdf]]
+            self.loweight['pdf_x1'] = [float(i) for i in args[1+npdf:1+2*npdf]]
+            self.loweight['pdf_q1'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]
+            args = info.group('beam2').split()
+            npdf = int(args[0])
+            self.loweight['n_pdfrw2'] = npdf
+            self.loweight['pdf_pdg_code2'] = [int(i) for i in args[1:1+npdf]]
+            self.loweight['pdf_x2'] = [float(i) for i in args[1+npdf:1+2*npdf]]
+            self.loweight['pdf_q2'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]            
+            
         else:
             return None
-        return self.loweight
+        return self.loweight            
+    
             
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
@@ -1364,6 +1462,20 @@ class Event(list):
                 else:
                     particle.color2 = color_mapping[particle.color2]                
 
+    def add_decays(self, pdg_to_decay):
+        """use auto-recursion"""
+
+        pdg_to_decay = dict(pdg_to_decay)
+
+        for i,particle in enumerate(self):
+            if particle.status != 1:
+                continue
+            if particle.pdg in pdg_to_decay and pdg_to_decay[particle.pdg]:
+                one_decay = pdg_to_decay[particle.pdg].pop()
+                self.add_decay_to_particle(i, one_decay)
+                return self.add_decays(pdg_to_decay)
+        return self
+                
 
 
     def remove_decay(self, pdg_code=0, event_id=None):
@@ -1662,6 +1774,24 @@ class Event(list):
                 logger.critical(self)
                 raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
                
+    def __eq__(self, other):
+        """two event are the same if they have the same momentum. other info are ignored"""
+        
+        if other is None:
+            return False
+        
+        for i,p in enumerate(self):
+            if p.E != other[i].E:
+                return False
+            elif p.pz != other[i].pz:
+                return False
+            elif p.px != other[i].px:
+                return False
+            elif p.py != other[i].py:
+                return False
+        return True
+        
+               
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
                 
@@ -1918,12 +2048,12 @@ class FourMomentum(object):
     @property
     def mass(self):
         """return the mass"""    
-        return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
+        return math.sqrt(max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0))
 
     @property
     def mass_sqr(self):
         """return the mass square"""    
-        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+        return max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0)
 
     @property
     def pt(self):
@@ -2041,6 +2171,34 @@ class FourMomentum(object):
         if abs(out.pz) < 1e-6 * out.E:
             out.pz = 0
         return out
+    
+    def boost_to_restframe(self, pboost):
+        """apply the boost transformation such that pboost is at rest in the new frame.
+        First apply a rotation to allign the pboost to the z axis and then use
+        zboost routine (see above)
+        """
+        
+
+        
+        
+        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
+        # rotation such that it become (E, 0 , 0 , p ) is
+        #  cosT sinF  ,  -sinT  , cosT sinF
+        #  sinT cosF  ,  cosT   , sinT sinF
+        # -sinT       ,   0     , cosF
+        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
+        cosF = pboost.pz / p
+        sinF = math.sqrt(1-cosF**2)
+        sinT = pboost.py/p/sinF
+        cosT = pboost.px/p/sinF
+        
+        out=FourMomentum([self.E,
+                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
+                          -self.px*sinT+      self.py*cosT,
+                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
+                          ])
+        out = out.zboost(E=pboost.E,pz=p)
+        return out
         
         
         
@@ -2071,12 +2229,13 @@ class OneNLOWeight(object):
     def parse(self, text):
         """parse the line and create the related object"""
         #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
+        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
-        
         data = text.split()
         # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
         # contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES]
         # stripped of alpha_s and the PDFs.
+        # from example: 0.274922677249D+01 0.000000000000D+00 0.000000000000D+00
         self.pwgt = [float(f) for f in data[:3]]
         # 2. The next two doubles are the values of the (corresponding) Born and 
         #    real-emission matrix elements. You can either use these values to check 
@@ -2095,20 +2254,27 @@ class OneNLOWeight(object):
         #    (I'm not sure that reweighting tree-level with loop^2 is something that 
         #    we can do in general, because we don't really know what to do with the 
         #    virtual matrix elements because we cannot generate 2-loop diagrams.)
+        #    from example: 0.770516514633D+01 0.113763730192D+00
         self.born = float(data[3])
         self.real = float(data[4])
         # 3. integer: number of external particles of the real-emission configuration  (as before)
+        #    from example: 5
         self.nexternal = int(data[5])
         # 4. PDG codes corresponding to the real-emission configuration (as before)
+        #    from example: 21 2 -11 12 1 2
         self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
         flag = 6+self.nexternal # new starting point for the position
         # 5. next integer is the power of g_strong in the matrix elements (as before)
+        #    from example: 2
         self.qcdpower = int(data[flag])
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
+        #    from example: 0.52500539D-02 0.30205908D+00 
         self.bjks = [float(f) for f in data[flag+1:flag+3]]
         # 7. 3 doubles: The Ellis-sexton scale, the renormalisation scale and the factorisation scale, all squared, used for this contribution (as before)
+        #    from example: 0.45444066D+04 0.45444066D+04 0.45444066D+04
         self.scales2 = [float(f) for f in data[flag+3:flag+6]]
         # 8.the value of g_strong
+        #    from example:  0.12520062D+01 
         self.gs = float(data[flag+6])
         # 9. 2 integers: the corresponding Born and real-emission type kinematics. (in the list of momenta)
         #    Note that also the Born-kinematics has n+1 particles, with, in general, 
@@ -2116,6 +2282,7 @@ class OneNLOWeight(object):
         #    there could also be 2 particles with perfectly collinear momentum). 
         #    To convert this from n+1 to a n particles, you have to sum the momenta 
         #    of the two particles that 'merge', see point 12 below.
+        #    from example:  1  2 
         self.born_related = int(data[flag+7])
         self.real_related = int(data[flag+8])
         # 10. 1 integer: the 'type'. This is the information you should use to determine 
@@ -2128,10 +2295,10 @@ class OneNLOWeight(object):
         #     type=1 : real-emission:     
         #     type=2 : Born: 
         #     type=3 : integrated counter terms: 
-        #     type=4 : soft counter-term            : 
-        #     type=5 : collinear counter-term     : 
+        #     type=4 : soft counter-term: 
+        #     type=5 : collinear counter-term: 
         #     type=6 : soft-collinear counter-term: 
-        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO :  
+        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO:  
         #     type=8 : soft counter-term (with n+1-body kin.):     
         #     type=9 : collinear counter-term (with n+1-body kin.): 
         #     type=10: soft-collinear counter-term (with n+1-body kin.): 
@@ -2140,10 +2307,12 @@ class OneNLOWeight(object):
         #     type=13: MC subtraction with n+1-body kin.: 
         #     type=14: virtual corrections minus approximate virtual
         #     type=15: approximate virtual corrections: 
+        #     from example: 1 
         self.type = int(data[flag+9])
         # 11. 1 integer: The FKS configuration for this contribution (not really 
         #     relevant for anything, but is used in checking the reweighting to 
-        #     get scale & PDF uncertainties). 
+        #     get scale & PDF uncertainties).
+        #     from example:  3  
         self.nfks = int(data[flag+10])
         # 12. 2 integers: the two particles that should be merged to form the 
         #     born contribution from the real-emission one. Remove these two particles
@@ -2151,13 +2320,16 @@ class OneNLOWeight(object):
         #     at the location of the minimum of the two particles removed. 
         #     I.e., if you merge particles 2 and 4, you have to insert the new particle 
         #     as the 2nd particle. And particle 5 and above will be shifted down by one.
+        #     from example: 5  1      
         self.to_merge_pdg = [int (f) for f in data[flag+11:flag+13]]
         # 13. 1 integer: the PDG code of the particle that is created after merging the two particles at point 12.
+        #     from example  -1 
         self.merge_new_pdg = int(data[flag+13])
         # 14. 1 double: the reference number that one should be able to reconstruct 
         #     form the weights (point 1 above) and the rest of the information of this line. 
         #     This is really the contribution to this event as computed by the code 
-        #     (and is passed to the integrator). It contains everything. 
+        #     (and is passed to the integrator). It contains everything.
+        #     from example: 0.110944218997D+05  
         self.ref_wgt = float(data[flag+14])
 
         #check the momenta configuration linked to the event
@@ -2428,8 +2600,23 @@ class NLO_PARTIALWEIGHT(object):
 
 if '__main__' == __name__:   
     
+    lhe = EventFile('unweighted_events.lhe.gz')
+    #lhe.parsing = False
+    start = time.time()
+    for event in lhe:
+        event.parse_lo_weight()
+    print 'old method -> ', time.time()-start
+    lhe = EventFile('unweighted_events.lhe.gz')
+    #lhe.parsing = False
+    start = time.time()
+    for event in lhe:
+        event.parse_lo_weight_test()
+    print 'new method -> ', time.time()-start    
+    
+
     # Example 1: adding some missing information to the event (here distance travelled)
     if False: 
+        start = time
         lhe = EventFile('unweighted_events.lhe.gz')
         output = open('output_events.lhe', 'w')
         #write the banner to the output file

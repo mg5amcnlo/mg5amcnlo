@@ -1424,7 +1424,7 @@ class HwU(Histogram):
                          wgts[0] in range(91200, 91303) or \
                          wgts[0] in range(91400, 91433) or \
                          wgts[0] in range(91700, 91801) or \
-                         wgts[0] in range(91900, 90931):
+                         wgts[0] in range(91900, 91931):
                         # PDF4LHC15 Hessian sets
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:

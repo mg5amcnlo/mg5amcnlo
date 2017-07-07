@@ -44,7 +44,7 @@ $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
-	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric -lpdf $(LDFLAGS)
+	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric -lpdf $(llhapdf) $(LDFLAGS)
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

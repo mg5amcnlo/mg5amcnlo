@@ -1854,6 +1854,8 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/CHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
       INTEGER I_LIB
       COMMON/I_LIB/I_LIB
       INCLUDE 'MadLoopParams.inc'
@@ -1915,6 +1917,14 @@ C        use the average but rather the first evaluation.
           DO I=1,3
             ESTIMATE(I,K) = FULLLIST(I,K,1)
           ENDDO
+        ENDIF
+
+C       Make sure to hard-set to zero accuracies of coupling orders
+C        not included
+        IF (K.NE.0) THEN
+          IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+            ACC(K) = 0.0D0
+          ENDIF
         ENDIF
 
       ENDDO

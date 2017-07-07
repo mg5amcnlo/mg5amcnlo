@@ -39,7 +39,7 @@ c Random numbers
       external ran2
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(maxamps), jamp2(0:maxamps)
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
@@ -70,8 +70,6 @@ c On Breit-Wigner
       logical OnBW(-nexternal:0)
 
 c LesHouches info
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include "leshouche.inc"
@@ -540,15 +538,15 @@ c     Remove non-resonant mothers, set position of particles
       do i=-ns,nexpart
          jpart(4,i)=icolalt(1,i)
          jpart(5,i)=icolalt(2,i)
-         if(i.eq.1.or.i.eq.2) then 
+         if(i.ge.1.and.i.le.nincoming) then 
             ito(i)=i            ! initial state particle
-         elseif(i.ge.3) then 
+         elseif(i.ge.nincoming+1) then 
             ito(i)=i+nres       ! final state particle
          elseif(i.le.-1.and.jpart(6,i).eq.2) then
             ires=ires+1
             ito(i)=2+ires       ! s-channel resonances
          else 
-            ito(i)=0
+            ito(i)=i
             if(i.eq.0) cycle
          endif
          if(jpart(2,i).lt.0.and.jpart(6,jpart(2,i)).ne.2) then
@@ -983,8 +981,6 @@ c
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
       integer i
       integer idup(nexternal,maxproc)
       integer mothup(2,nexternal,maxproc)

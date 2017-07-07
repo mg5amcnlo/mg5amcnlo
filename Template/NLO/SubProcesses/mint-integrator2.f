@@ -63,7 +63,7 @@ c nintegrals=5 : abs of 3
 c nintegrals=6 : born*alpha_S/2Pi
 c
       subroutine mint(fun,ndim,ncalls0,nitmax,imode,xgrid,ymax,ymax_virt
-     $     ,ans,unc,chi2)
+     $     ,ans,unc,chi2,nhits_in_grids)
 c imode= 0: integrate and adapt the grid
 c imode= 1: frozen grid, compute the integral and the upper bounds
 c imode=-1: same as imode=0, but use previously generated grids
@@ -72,28 +72,33 @@ c others: same as 1 (for now)
       include "mint.inc"
       include "FKSParams.inc"
       integer i,j,ncalls0,ndim,nitmax,imode
-      real * 8 fun,xgrid(0:nintervals,ndimmax),xint,ymax(nintervals
-     $     ,ndimmax),ans(nintegrals),unc(nintegrals),ans3(nintegrals,3)
-     $     ,unc3(nintegrals,3),ans_l3(nintegrals),unc_l3(nintegrals)
-     $     ,chi2_l3(nintegrals)
-      real * 8 xint_virt,ymax_virt
+      real * 8 fun,xgrid(0:nintervals,ndimmax,maxchannels)
+     $     ,xint(maxchannels),ymax(nintervals,ndimmax,maxchannels)
+     $     ,ans(nintegrals,0:maxchannels),unc(nintegrals,0:maxchannels)
+     $     ,ans3(nintegrals,3),unc3(nintegrals,3),ans_l3(nintegrals)
+     $     ,unc_l3(nintegrals),chi2_l3(nintegrals),vol_chan
+      real * 8 xint_virt(maxchannels),ymax_virt(maxchannels)
+     $     ,ans_chan(0:maxchannels)
       real * 8 x(ndimmax),vol
-      real * 8 xacc(0:nintervals,ndimmax)
+      real * 8 xacc(0:nintervals,ndimmax,maxchannels)
       integer icell(ndimmax),ncell(ndimmax),ncell_virt
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
-      integer nhits(nintervals,ndimmax)
-      real * 8 rand(ndimmax)
-      real * 8 dx(ndimmax),f(nintegrals),vtot(nintegrals)
-     $     ,etot(nintegrals),prod,f1(nintegrals),chi2(nintegrals)
-     $     ,efrac(nintegrals),dummy
+      integer nhits(nintervals,ndimmax,maxchannels)
+     $     ,nhits_in_grids(maxchannels)
+      real * 8 rand(ndimmax),HwU_values(2)
+      real * 8 dx(ndimmax),f(nintegrals),vtot(nintegrals,0:maxchannels)
+     $     ,etot(nintegrals,0:maxchannels),prod,f1(nintegrals)
+     $     ,chi2(nintegrals,0:maxchannels),efrac(nintegrals),dummy
       integer kdim,kint,kpoint,nit,ncalls,iret,nintcurr,nintcurr_virt
      $     ,ifirst,nit_included,kpoint_iter,non_zero_point(nintegrals)
-     $     ,ntotcalls(nintegrals),nint_used,nint_used_virt,min_it
+     $     ,ntotcalls(nintegrals),nint_used,nint_used_virt,min_it,np
       real * 8 ran3
       external ran3,fun
-      logical even,double_events,bad_iteration
-      double precision average_virtual,virtual_fraction
+      logical even,double_events,bad_iteration,regridded(maxchannels)
+     $     ,reset
+      double precision average_virtual(maxchannels)
+     $     ,virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
       character*13 title(nintegrals)
       logical new_point
@@ -109,6 +114,11 @@ c APPLgrid switch
       common /for_applgrid/ iappl
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
+      integer                                   npoints
+      double precision            cross_section
+      common /for_FixedOrder_lhe/ cross_section,npoints
+      reset=.false.
+
 c if ncalls0 is greater than 0, use the default running, i.e. do not
 c double the events after each iteration as well as use a fixed number
 c of intervals in the grids.
@@ -118,7 +128,7 @@ c of intervals in the grids.
          nint_used_virt=nintervals_virt
       else
 c if ncalls0.le.0, reset it and double the events per iteration
-         ncalls0=80*ndim
+         ncalls0=80*ndim*(nchans/3+1)
          double_events=.true.
          if (imode.eq.1 .or. imode.eq.-1) then
             nint_used=nintervals
@@ -139,21 +149,48 @@ c Grids read from file
          do kdim=1,ndim
             ifold(kdim)=1
          enddo
+         ans_chan(0)=0d0
+         do kchan=1,nchans
+            ans_chan(kchan)=ans(1,kchan)
+            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         enddo
       elseif(imode.eq.0) then
 c Initialize grids
          even=.true.
          min_it=min_it0
          do kdim=1,ndim
             ifold(kdim)=1
-            do kint=0,nint_used
-               xgrid(kint,kdim)=dble(kint)/nint_used
+            do kchan=1,nchans
+               do kint=0,nint_used
+                  xgrid(kint,kdim,kchan)=dble(kint)/nint_used
+                  if(kint.gt.0) then
+                     nhits(kint,kdim,kchan)=0
+                  endif
+               enddo
+               regridded(kchan)=.true.
             enddo
          enddo
+         do kchan=1,maxchannels
+            nhits_in_grids(kchan)=0
+         enddo
          call init_ave_virt(nint_used_virt,ndim)
+         do kchan=0,nchans
+            ans_chan(kchan)=0d0
+         enddo
+         if (double_events) then
+c           when double events, start with the very first channel
+c           only. For the first iteration, we compute each channel
+c           separately.
+            ans_chan(0)=1d0
+            ans_chan(1)=1d0
+            ncalls0=ncalls0/nchans
+         endif
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
-         xint=ans(1)
-         xint_virt=ans(5)
+         do kchan=1,nchans
+            xint(kchan)=ans(1,kchan)
+            xint_virt(kchan)=ans(5,kchan)
+         enddo
          even=.false.
          min_it=min_it1
          do kdim=1,ndim
@@ -166,36 +203,59 @@ c Initialize upper bounding envelope
      $              ,nint_used_virt
                stop
             endif
-            do kint=1,nintcurr
-               ymax(kint,kdim)=xint**(1d0/ndim)
+            do kchan=1,nchans
+               do kint=1,nintcurr
+                  ymax(kint,kdim,kchan)=xint(kchan)**(1d0/ndim)
+               enddo
             enddo
          enddo
-         ymax_virt=xint_virt
+         do kchan=1,nchans
+            ymax_virt(kchan)=xint_virt(kchan)
+         enddo
+         ans_chan(0)=0d0
+         do kchan=1,nchans
+            ans_chan(kchan)=ans(1,kchan)
+            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         enddo
       endif
+      cross_section=ans_chan(0)
       nit=0
       nit_included=0
       do i=1,nintegrals
-         ans(i)=0d0
-         unc(i)=0d0
+         do kchan=0,nchans
+            ans(i,kchan)=0d0
+            unc(i,kchan)=0d0
+         enddo
          do j=1,3
             ans3(i,j)=0d0
             unc3(i,j)=0d0
          enddo
       enddo
+      do i=1,2
+         HwU_values(i)=0d0
+      enddo
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Main loop over the iterations
  10   continue
-c This makes sure that current stdout is written to log.txt and cache is
-c emptied.
+      do kchan=1,nchans
+         np=0
+         do kint=1,nint_used
+            np=np+nhits(kint,1,kchan)
+         enddo
+         write (*,250) 'channel',kchan,':',iconfigs(kchan)
+     $        ,regridded(kchan),np,nhits_in_grids(kchan),ans_chan(kchan)
+     $        ,ans(2,kchan),virtual_fraction(kchan)
+      enddo
       call flush(6)
       if(nit.ge.nitmax) then
 c We did enough iterations, update arguments and return
-         if(imode.eq.0) xint=ans(1)
-         if(imode.eq.0) xint_virt=ans(5)
-         if (nit_included.ge.2) then
-            chi2(1)=chi2(1)/dble(nit_included-1)
-         else
-            chi2(1)=0d0
-         endif
+         do kchan=0,nchans
+            if (nit_included.ge.2) then
+               chi2(1,kchan)=chi2(1,kchan)/dble(nit_included-1)
+            else
+               chi2(1,kchan)=0d0
+            endif
+         enddo
          write (*,*) '-------'
          ncalls0=ncalls*kpoint_iter ! return number of points used
          if (double_events) then
@@ -203,6 +263,17 @@ c We did enough iterations, update arguments and return
          else
             nitmax=nit_included
          endif
+         cross_section=ans(2,0)
+         do kchan=1,nchans
+            if (regridded(kchan)) then
+               np=0
+               do kint=1,nint_used
+                  np=np+nhits(kint,1,kchan)
+               enddo
+               nhits_in_grids(kchan)=np ! set equal to number of points
+                                        ! used for last update
+            endif
+         enddo
          return
       endif
       nit=nit+1
@@ -217,29 +288,51 @@ c number of calls
          ncalls=ncalls0
          write (*,*) 'Update # PS points: ',ncalls0,' --> ',ncalls
       endif
+      npoints=ncalls
 c Reset the accumulated results for grid updating
       if(imode.eq.0) then
-         do kdim=1,ndim
-            do kint=0,nint_used
-               xacc(kint,kdim)=0
-               if(kint.gt.0) then
-                  nhits(kint,kdim)=0
+         do kchan=1,nchans
+            if (regridded(kchan).or.reset) then ! only reset if grids were 
+                                                ! updated (or forced reset)
+               if (regridded(kchan) .and. .not. reset) then
+                  np=0
+                  do kint=1,nint_used
+                     np=np+nhits(kint,1,kchan)
+                  enddo
+                  nhits_in_grids(kchan)=np ! set equal to number of
+                                           ! points used for last update
+               elseif (regridded(kchan) .and. reset) then
+                  nhits_in_grids(kchan)=0
                endif
-            enddo
+               do kdim=1,ndim
+                  do kint=0,nint_used
+                     xacc(kint,kdim,kchan)=0
+                     if(kint.gt.0) then
+                        nhits(kint,kdim,kchan)=0
+                     endif
+                  enddo
+               enddo
+            endif
          enddo
+         reset=.false.
       endif
-      do i=1,nintegrals
-         vtot(i)=0
-         etot(i)=0
+      do kchan=0,nchans
+         do i=1,nintegrals
+            vtot(i,kchan)=0
+            etot(i,kchan)=0
+         enddo
       enddo
       kpoint_iter=0
       do i=1,nintegrals
          non_zero_point(i)=0
       enddo
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Loop over PS points
  2    kpoint_iter=kpoint_iter+1
       do kpoint=1,ncalls
          new_point=.true.
+c first determine which integration channel we want to pick this point from         
+         call get_channel(ans_chan,vol_chan)
 c find random x, and its random cell
          do kdim=1,ndim
             kfold(kdim)=1
@@ -260,16 +353,17 @@ c if(even), we should compute the ncell and the rand from the ran3()
          enddo
          ifirst=0
  1       continue
-         vol=1
+         vol=1d0/vol_chan * wgt_mult
 c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
             icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
-            dx(kdim)=xgrid(icell(kdim),kdim)-xgrid(icell(kdim)-1,kdim)
+            dx(kdim)=xgrid(icell(kdim),kdim,ichan)-xgrid(icell(kdim)-1
+     $           ,kdim,ichan)
             vol=vol*dx(kdim)*nintcurr
-            x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
-            if(imode.eq.0)
-     &           nhits(icell(kdim),kdim)=nhits(icell(kdim),kdim)+1
+            x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx(kdim)
+            if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=
+     $           nhits(icell(kdim),kdim,ichan)+1
          enddo
          call get_ave_virt(x,nint_used_virt,ndim,average_virtual)
 c contribution to integral
@@ -297,13 +391,14 @@ c
          if(imode.eq.0) then
 c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
             do kdim=1,ndim
-               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f(1)
+               xacc(icell(kdim),kdim,ichan)= 
+     $              xacc(icell(kdim),kdim,ichan) + f(1)
             enddo
 c Set the Born contribution (to compute the average_virtual) to zero if
 c the virtual was not computed for this phase-space point. Compensate by
 c including the virtual_fraction.
             if (f(3).ne.0d0) then
-               f(6)=f(6)/virtual_fraction
+               f(6)=f(6)/virtual_fraction(ichan)
                call fill_ave_virt(x,nint_used_virt,ndim,f(3),f(6))
             else
                f(6)=0d0
@@ -312,7 +407,7 @@ c including the virtual_fraction.
 c update the upper bounding envelope total rate
             prod=1d0
             do kdim=1,ndim
-               prod=prod*ymax(ncell(kdim),kdim)
+               prod=prod*ymax(ncell(kdim),kdim,ichan)
             enddo
             prod=(f(1)/prod)
             if (prod.gt.1d0) then
@@ -324,14 +419,16 @@ c completely screw up the efficiency
                prod=min(2d0,prod)
                prod=prod**(1d0/dble(ndim))
                do kdim=1,ndim
-                  ymax(ncell(kdim),kdim)=ymax(ncell(kdim),kdim)*prod
+                  ymax(ncell(kdim),kdim,ichan)= 
+     $                 ymax(ncell(kdim),kdim,ichan)*prod
                enddo
             endif
 c Update the upper bounding envelope virtual. Do not include the
 c enhancement due to the virtual_fraction. (And again limit by factor 2
 c at most).
-            if (f(5)*virtual_fraction.gt.ymax_virt) ymax_virt=min(f(5)
-     $           *virtual_fraction,ymax_virt*2d0)
+            if (f(5)*virtual_fraction(ichan).gt.ymax_virt(ichan))
+     $           ymax_virt(ichan)=min(f(5)*virtual_fraction(ichan)
+     $           ,ymax_virt(ichan)*2d0)
 c for consistent printing in the log files (in particular when doing LO
 c runs), set also f(6) to zero when imode.eq.1 and the virtuals are not
 c included.
@@ -342,8 +439,8 @@ c included.
          enddo
 c Add the PS point to the result of this iteration
          do i=1,nintegrals
-            vtot(i)=vtot(i)+f(i)
-            etot(i)=etot(i)+f(i)**2
+            vtot(i,ichan)=vtot(i,ichan)+f(i)
+            etot(i,ichan)=etot(i,ichan)+f(i)**2
          enddo
          if (f(1).ne.0d0) call HwU_add_points
       enddo
@@ -365,32 +462,74 @@ c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
       if (non_zero_point(1).lt.int(0.99*ncalls)
      &                        .and. double_events) goto 2
-
+c This is the loop over all the channels for the very first iteration.
+      if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+         do kchan=nchans,1,-1
+            if (ans_chan(kchan).eq.1d0) then
+               do i=1,nintegrals
+                  vtot(i,kchan)=vtot(i,kchan)/dble(ntotcalls(i))
+                  etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
+                  etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
+     $                 /dble(ntotcalls(i)))
+               enddo
+               if (kchan.eq.nchans) exit
+               ans_chan(kchan)=0d0
+               ans_chan(kchan+1)=1d0
+               do i=1,nintegrals
+                  ntotcalls(i)=0
+                  non_zero_point(i)=0
+               enddo
+               kpoint_iter=0
+               goto 2
+            endif
+         enddo
+c set the total result for the first iteration as the sum over all the channels
+         do i=1,nintegrals
+            do kchan=1,nchans
+               vtot(i,0)=vtot(i,0)+vtot(i,kchan)
+               etot(i,0)=etot(i,0)+etot(i,kchan)**2
+            enddo
+            etot(i,0)=sqrt(etot(i,0))
+         enddo
+         ncalls0=ncalls0*nchans
+      endif
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Iteration done. Update the accumulated results and print them to the
 c screen
       do i=1,nintegrals
-         vtot(i)=vtot(i)/dble(ntotcalls(i))
-         etot(i)=etot(i)/dble(ntotcalls(i))
+         if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+            continue
+         else
+            do kchan=nchans,0,-1
+               if (kchan.ne.0) then
+                  vtot(i,0)=vtot(i,0)+vtot(i,kchan)
+                  etot(i,0)=etot(i,0)+etot(i,kchan)
+               endif
+               vtot(i,kchan)=vtot(i,kchan)/dble(ntotcalls(i))
+               etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
 c the abs is to avoid tiny negative values
-         etot(i)=sqrt(abs(etot(i)-vtot(i)**2)
-     $        /dble(ntotcalls(i)))
-         if (vtot(i).ne.0d0) then
-            efrac(i)=abs(etot(i)/vtot(i))
+               etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
+     $              /dble(ntotcalls(i)))
+            enddo
+         endif
+         if (vtot(i,0).ne.0d0) then
+            efrac(i)=abs(etot(i,0)/vtot(i,0))
          else
             efrac(i)=0d0
          endif
       enddo
       do i=1,nintegrals
          write(*,'(a,1x,e10.4,1x,a,1x,e10.4,1x,a,1x,f7.3,1x,a)')
-     $        title(i)//' =',vtot(i),' +/- ',etot(i),' (',efrac(i)*100d0
-     $        ,'%)'
+     $        title(i)//' =',vtot(i,0),' +/- ',etot(i,0),' (',efrac(i)
+     $        *100d0 ,'%)'
       enddo
 C If there was a large fluctation in this iteration, be careful with
 C including it in the accumalated results and plots.
-      if (efrac(1).gt.0.3d0 .and. iappl.eq.0) then
+      if (efrac(1).gt.0.3d0 .and. iappl.eq.0 .and. nit.gt.3) then
 c Do not include the results in the plots
          if (fixed_order) call accum(.false.)
-         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1))
+         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1)
+     $        ,HwU_values)
       endif
       if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. iappl.eq.0) then
 c Do not include the results in the updating of the grids.
@@ -401,7 +540,7 @@ c empty the accumulated results in the MC over integers
 c empty the accumalated results for the MINT grids
          if (imode.eq.0) then
 c emptying accum. results is done above when the iteration starts
-            continue
+            reset=.true.
          elseif (imode.eq.1) then
 c Cannot really skip the increase of the upper bounding envelope. So,
 c simply continue here. Note that no matter how large the integrand for
@@ -423,32 +562,55 @@ c 2nd bad iteration is a row. Reset grids
             nit_included=0
 c Reset the MINT grids
             if (imode.eq.0) then
-               do kdim=1,ndim
-                  do kint=0,nint_used
-                     xgrid(kint,kdim)=dble(kint)/nint_used
+               do kchan=1,nchans
+                  do kdim=1,ndim
+                     do kint=0,nint_used
+                        xgrid(kint,kdim,kchan)=dble(kint)/nint_used
+                     enddo
+                     regridded(kchan)=.true.
                   enddo
                enddo
+               do kchan=1,maxchannels
+                  nhits_in_grids(kchan)=0
+               enddo
                call init_ave_virt(nint_used_virt,ndim)
+               do kchan=0,nchans
+                  ans_chan(kchan)=0d0
+               enddo
+               if (double_events) then
+                  ans_chan(0)=1d0
+                  ans_chan(1)=1d0
+                  ncalls0=ncalls0/nchans
+               endif
             elseif (imode.eq.1) then
                do kdim=1,ndim
                   nintcurr=nint_used/ifold(kdim)
-                  do kint=1,nintcurr
-                     ymax(kint,kdim)=xint**(1d0/ndim)
+                  do kchan=1,nchans
+                     do kint=1,nintcurr
+                        ymax(kint,kdim,kchan)=xint(kchan)**(1d0/ndim)
+                     enddo
                   enddo
                   nintcurr_virt=nint_used_virt/ifold(kdim)
                enddo
-               ymax_virt=xint_virt
+               do kchan=1,nchans
+                  ymax_virt(kchan)=xint_virt(kchan)
+               enddo
             endif
             call reset_MC_grid  ! reset the grid for the integers
             if (fixed_order) call initplot  ! Also reset all the plots
             do i=1,nintegrals
-               ans(i)=0d0
-               unc(i)=0d0
-               chi2(i)=0d0
+               do kchan=0,nchans
+                  ans(i,kchan)=0d0
+                  unc(i,kchan)=0d0
+                  chi2(i,kchan)=0d0
+               enddo
                do j=1,3
                   ans3(i,j)=0d0
                   unc3(i,j)=0d0
                enddo
+            enddo
+            do i=1,2
+               HwU_values(i)=0d0
             enddo
             bad_iteration=.false.
          else
@@ -458,81 +620,82 @@ c Reset the MINT grids
       else
          bad_iteration=.false.
       endif
+      HwU_values(1)=etot(1,0)
+      HwU_values(2)=unc(1,0)
       if(nit.eq.1) then
-         do i=1,nintegrals
-            ans(i)=vtot(i)
-            unc(i)=etot(i)
+         do kchan=0,nchans
+            do i=1,nintegrals
+               ans(i,kchan)=vtot(i,kchan)
+               unc(i,kchan)=etot(i,kchan)
+            enddo
+            ans_chan(kchan)=ans(1,kchan)
          enddo
          write (*,'(a,1x,e10.4)') 'Chi^2 per d.o.f.',0d0
       else
 c prevent annoying division by zero for nearly zero
 c integrands
+         do kchan=nchans,0,-1 ! go backwards so that kchan=0 goes last
+                              ! (this makes sure central value is
+                              ! correctly updated).
          do i=1,nintegrals
-            if(etot(i).eq.0.and.unc(i).eq.0) then
-               if(ans(i).eq.vtot(i) .and. i.eq.1) then
+            if(etot(i,0).eq.0.and.unc(i,0).eq.0) then
+               if(ans(i,0).eq.vtot(i,0) .and. i.eq.1) then
 c double the number of points for the next iteration
                   if (double_events) ncalls0=ncalls0*2
                   goto 10
                else
-                  unc(i)=abs(vtot(i)-ans(i))
-                  etot(i)=abs(vtot(i)-ans(i))
+                  unc(i,kchan)=abs(vtot(i,kchan)-ans(i,kchan))
+                  etot(i,kchan)=abs(vtot(i,kchan)-ans(i,kchan))
                endif
-            elseif(etot(i).eq.0) then
-               etot(i)=unc(i)
-            elseif(unc(i).eq.0) then ! 1st iteration; set to a large value
-               unc(i)=etot(i)*1d99
+            elseif(etot(i,0).eq.0) then
+               etot(i,kchan)=unc(i,kchan)
+            elseif(unc(i,0).eq.0) then ! 1st iteration; set to a large value
+               unc(i,kchan)=etot(i,kchan)*1d99
             endif
-            if (i.ne.1 .and. (etot(i).eq.0 .or. unc(i).eq.0)) then
-               ans(i)=0d0
-               unc(i)=0d0
-               chi2(i)=0d0
+            if (i.ne.1 .and. (etot(i,0).eq.0 .or. unc(i,0).eq.0)) then
+               ans(i,kchan)=0d0
+               unc(i,kchan)=0d0
+               chi2(i,kchan)=0d0
             else
-               ans(i)=(ans(i)/unc(i)+vtot(i)/etot(i))/
-     &              (1/unc(i)+1/etot(i))
-               unc(i)=1/sqrt(1/unc(i)**2+1/etot(i)**2)
-               chi2(i)=chi2(i)+(vtot(i)-ans(i))**2/etot(i)**2
+               ans(i,kchan)=(ans(i,kchan)/unc(i,0)+vtot(i,kchan)/etot(i
+     $              ,0))/(1/unc(i,0)+1/etot(i,0))
+               unc(i,kchan)=1/sqrt(1/unc(i,kchan)**2+1/etot(i,kchan)**2)
+               chi2(i,kchan)=chi2(i,kchan)+(vtot(i,kchan)-ans(i,kchan))
+     $              **2/etot(i,kchan)**2
             endif
          enddo
-         write (*,'(a,1x,e10.4)') 'Chi^2=',(vtot(1)-ans(1))**2
-     $        /etot(1)**2
+         ans_chan(kchan)=ans(1,kchan)
+         enddo
+         write (*,'(a,1x,e10.4)') 'Chi^2=',(vtot(1,0)-ans(1,0))**2
+     $        /etot(1,0)**2
       endif
-
       nit_included=nit_included+1
       do i=1,nintegrals
-         if (ans(i).ne.0d0) then
-            efrac(i)=abs(unc(i)/ans(i))
+         if (ans(i,0).ne.0d0) then
+            efrac(i)=abs(unc(i,0)/ans(i,0))
          else
             efrac(i)=0d0
          endif
          write(*,'(a,1x,e10.4,1x,a,1x,e10.4,1x,a,1x,f7.3,1x,a)')
-     $        'accumulated results '//title(i)//' =',ans(i),' +/- '
-     $        ,unc(i) ,' (',efrac(i)*100d0,'%)'
+     $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
+     $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
+      cross_section=ans(1,0)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0
       else
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF =',
-     &        chi2(1)/dble(nit_included-1)
+     &        chi2(1,0)/dble(nit_included-1)
       endif
       if (imode.eq.0) then
-c     Update the average_virtual: a_new=(virt+a_old*born)/born
-         if (vtot(6).ne.0d0) then
-            if (average_virtual.eq.0d0) then ! i.e. first iteration
-               average_virtual=vtot(3)/vtot(6)+average_virtual
-            else  ! give some importance to the iterations already done
-               average_virtual=(vtot(3)/vtot(6)+average_virtual*2d0)/2d0
-            endif
-         endif
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
-         virtual_fraction=max(min(virtual_fraction*max(min(2d0*etot(3)
-     $        /etot(1),2d0),0.25d0),1d0),Min_virt_fraction)
-         write (*,'(a,1x,f7.3,1x,f7.3)') 'update virtual fraction to:'
-     $        ,virtual_fraction,average_virtual
-      elseif (imode.eq.1) then
-         write (*,'(a,1x,f7.3,1x,f7.3)') 'virtual fraction is:'
-     $        ,virtual_fraction,average_virtual
+         do kchan=1,nchans
+            virtual_fraction(kchan)=max(min(virtual_fraction(kchan)
+     $           *max(min(2d0*etot(3,kchan)/etot(1,kchan),2d0),0.25d0)
+     $           ,1d0),Min_virt_fraction)
+         enddo
       endif
 c Update the results of the last tree iterations
       do i=1,nintegrals
@@ -540,8 +703,8 @@ c Update the results of the last tree iterations
             ans3(i,j)=ans3(i,j+1)
             unc3(i,j)=unc3(i,j+1)
          enddo
-         ans3(i,3)=vtot(i)
-         unc3(i,3)=etot(i)
+         ans3(i,3)=vtot(i,0)
+         unc3(i,3)=etot(i,0)
       enddo
 c Compute the results of the last three iterations
       if (nit_included.ge.4) then
@@ -582,9 +745,12 @@ c Compute the results of the last three iterations
       endif
       if(imode.eq.0) then
 c Iteration is finished; now rearrange the grid
-         do kdim=1,ndim
-            call regrid(xacc(0,kdim),xgrid(0,kdim),nhits(1,kdim)
-     $           ,nint_used)
+         do kchan=1,nchans
+            do kdim=1,ndim
+               call regrid(xacc(0,kdim,kchan),xgrid(0,kdim,kchan)
+     $              ,nhits(1,kdim,kchan),nint_used,nhits_in_grids(kchan)
+     $              ,regridded(kchan))
+            enddo
          enddo
          call regrid_ave_virt(nint_used_virt,ndim)
 c Regrid the MC over integers (used for the MC over FKS dirs)
@@ -592,13 +758,14 @@ c Regrid the MC over integers (used for the MC over FKS dirs)
       endif
 c Quit if the desired accuracy has been reached
       if (nit_included.ge.min_it .and. accuracy.gt.0d0) then
-         if (unc(1)/ans(1)*max(1d0,chi2(1)/dble(nit_included-1))
+         if (unc(1,0)/ans(1,0)*max(1d0,chi2(1,0)/dble(nit_included-1))
      $        .lt.accuracy) then
             write (*,*) 'Found desired accuracy'
             nit=nitmax
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
-            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $           ,HwU_values)
             goto 10
          elseif(unc_l3(1)/ans_l3(1)*max(1d0,chi2_l3(1)).lt.accuracy)
      $           then
@@ -606,20 +773,24 @@ c Improve the stats in the plots
      &           'Found desired accuracy in last 3 iterations'
             nit=nitmax
             do i=1,nintegrals
-               ans(i)=ans_l3(i)
-               unc(i)=unc_l3(i)
-               chi2(i)=chi2_l3(i)*dble(nit_included-1)
+               ans(i,0)=ans_l3(i)
+               unc(i,0)=unc_l3(i)
+               chi2(i,0)=chi2_l3(i)*dble(nit_included-1)
             enddo
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
-            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $           ,HwU_values)
             goto 10
          endif
       endif
 c Double the number of intervals in the grids if not yet reach the maximum
       if (2*nint_used.le.nintervals .and. double_events) then
-         do kdim=1,ndim
-            call double_grid(xgrid(0,kdim),nint_used)
+         do kchan=1,nchans
+            do kdim=1,ndim
+               call double_grid(xgrid(0,kdim,kchan),nhits(1,kdim,kchan)
+     $              ,nint_used)
+            enddo
          enddo
          nint_used=2*nint_used
       endif
@@ -632,33 +803,49 @@ c double the number of points for the next iteration
       if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
       if (fixed_order) call accum(.true.)
-      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $     ,HwU_values)
 c Do next iteration
       goto 10
+      return
+ 250  format(a7,i5,1x,a1,1x,i5,1x,l,1x,i8,1x,i8,2x,e10.4,2x,e10.4,2x
+     $     ,e10.4)
       end
 
-      subroutine double_grid(xgrid,ninter)
+      subroutine double_grid(xgrid,nhits,ninter)
       implicit none
       include "mint.inc"
-      integer  ninter
+      integer  ninter,nhits(nintervals)
       real * 8 xgrid(0:nintervals)
       integer i
       do i=ninter,1,-1
          xgrid(i*2)=xgrid(i)
          xgrid(i*2-1)=(xgrid(i)+xgrid(i-1))/2d0
+         nhits(i*2)=nhits(i)/2
+         nhits(i*2-1)=nhits(i)-nhits(i*2)
       enddo
       return
       end
 
 
-      subroutine regrid(xacc,xgrid,nhits,ninter)
+      subroutine regrid(xacc,xgrid,nhits,ninter,nhits_in_grid,regridded)
       implicit none
       include "mint.inc"
-      integer  ninter,nhits(nintervals)
+      logical regridded
+      integer  ninter,nhits(nintervals),np,nhits_in_grid
       real * 8 xacc(0:nintervals),xgrid(0:nintervals)
       real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu,sum
       parameter ( tiny=1d-8 )
       integer kint,jint
+c compute total number of points and update grids if large
+      np=0
+      do kint=1,ninter
+         np=np+nhits(kint)
+      enddo
+      regridded=.false.
+      if (np.lt.nhits_in_grid) return
+      regridded=.true.
+      
 c Use the same smoothing as in VEGAS uses for the grids, i.e. use the
 c average of the central and the two neighbouring grid points: (Only do
 c this if we are already at the maximum intervals, because the doubling
@@ -797,33 +984,39 @@ c imode=3 store generation efficiency in x(1)
       implicit none
       integer ndim,imode
       include "mint.inc"
-      real * 8 fun,xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
-     $     ,ymax_virt,x(ndimmax)
-      real * 8 dx(ndimmax),xx(ndimmax)
+      real * 8 fun,xgrid(0:nintervals,ndimmax,maxchannels)
+     $     ,ymax(nintervals,ndimmax,maxchannels),ymax_virt(maxchannels)
+     $     ,x(ndimmax)
+      real * 8 dx(ndimmax),xx(ndimmax),vol_chan,dummy
       integer icell(ndimmax),ncell(ndimmax),ncell_virt
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
       real * 8 r,f(nintegrals),f1(nintegrals),ubound,vol,ran3
-     $     ,xmmm(nintervals,ndimmax),dummy
+     $     ,xmmm(nintervals,ndimmax,maxchannels)
       real * 8 rand(ndimmax)
       external fun,ran3
       integer icalls,mcalls,kdim,kint,nintcurr,nintcurr_virt,iret,ifirst
      $     ,i,vn,icalls_virt,mcalls_virt,icalls_nz,icalls_virt_nz
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(maxchannels)
+     $     ,virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
       save icalls,mcalls,icalls_virt,mcalls_virt,xmmm,icalls_nz
      $     ,icalls_virt_nz
       logical new_point
       common /c_new_point/ new_point
       if(imode.eq.0) then
-         do kdim=1,ndim
-            nintcurr=nintervals/ifold(kdim)
-            xmmm(1,kdim)=ymax(1,kdim)
-            do kint=2,nintcurr
-               xmmm(kint,kdim)=xmmm(kint-1,kdim)+ymax(kint,kdim)
-            enddo
-            do kint=1,nintcurr
-               xmmm(kint,kdim)=xmmm(kint,kdim)/xmmm(nintcurr,kdim)
+         do kchan=1,nchans
+            do kdim=1,ndim
+               nintcurr=nintervals/ifold(kdim)
+               xmmm(1,kdim,kchan)=ymax(1,kdim,kchan)
+               do kint=2,nintcurr
+                  xmmm(kint,kdim,kchan)=xmmm(kint-1,kdim,kchan)
+     $                 +ymax(kint,kdim,kchan)
+               enddo
+               do kint=1,nintcurr
+                  xmmm(kint,kdim,kchan)=xmmm(kint,kdim,kchan)
+     $                 /xmmm(nintcurr,kdim,kchan)
+               enddo
             enddo
          enddo
          icalls=0
@@ -868,6 +1061,7 @@ c imode=3 store generation efficiency in x(1)
          stop
       endif
  10   continue
+      call get_channel(ymax_virt,vol_chan)
       new_point=.true.
       if (vn.eq.1) then
          icalls_virt=icalls_virt+1
@@ -885,7 +1079,7 @@ c Choose cell flat
             nintcurr=nintervals/ifold(kdim)
             r=ran3(.false.)
             do kint=1,nintcurr
-               if(r.lt.xmmm(kint,kdim)) then
+               if(r.lt.xmmm(kint,kdim,ichan)) then
                   ncell(kdim)=kint
                   exit
                endif
@@ -896,7 +1090,7 @@ c Choose cell flat
       if (vn.eq.2 .or. vn.eq.3) then
          ubound=1
          do kdim=1,ndim
-            ubound=ubound*ymax(ncell(kdim),kdim)
+            ubound=ubound*ymax(ncell(kdim),kdim,ichan)
          enddo
       endif
       do kdim=1,ndim
@@ -907,18 +1101,19 @@ c Choose cell flat
       enddo
       ifirst=0
  5    continue
-      vol=1
+      vol=1d0/vol_chan
       do kdim=1,ndim
          nintcurr=nintervals/ifold(kdim)
          nintcurr_virt=nintervals_virt/ifold(kdim)
          icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
-         dx(kdim)=xgrid(icell(kdim),kdim)-xgrid(icell(kdim)-1,kdim)
+         dx(kdim)=xgrid(icell(kdim),kdim,ichan)-xgrid(icell(kdim)-1,kdim
+     $        ,ichan)
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
-         x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
+         x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx(kdim)
       enddo
       call get_ave_virt(x,nintcurr_virt,ndim,average_virtual)
       if (vn.eq.1) then
-         ubound=ymax_virt
+         ubound=ymax_virt(ichan)
       endif
       dummy=fun(x,vol,ifirst,f1)
       do i=1,nintegrals
@@ -1108,20 +1303,15 @@ c Got random numbers for all dimensions, update kkk() for the next call
       implicit none
       include "mint.inc"
       integer kdim,ndim,ninter,i
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
-      do kdim=1,ndim
-         do i=1,ninter
-            nvirt(i,kdim)=0
-            ave_virt(i,kdim)=0d0
-            nvirt_acc(i,kdim)=0
-            ave_virt_acc(i,kdim)=0d0
-            ave_born_acc(i,kdim)=0d0
+      do kchan=1,nchans
+         do kdim=1,ndim
+            do i=1,ninter
+               nvirt(i,kdim,kchan)=0
+               ave_virt(i,kdim,kchan)=0d0
+               nvirt_acc(i,kdim,kchan)=0
+               ave_virt_acc(i,kdim,kchan)=0d0
+               ave_born_acc(i,kdim,kchan)=0d0
+            enddo
          enddo
       enddo
       return
@@ -1131,20 +1321,14 @@ c Got random numbers for all dimensions, update kkk() for the next call
       implicit none
       include "mint.inc"
       integer kdim,ndim,ninter,ncell
-      double precision x(ndimmax),average_virtual
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
-      average_virtual=0d0
+      double precision x(ndimmax),average_virtual(maxchannels)
+      average_virtual(ichan)=0d0
       do kdim=1,ndim
          ncell=min(int(x(kdim)*ninter)+1,ninter)
-         average_virtual=average_virtual+ave_virt(ncell,kdim)
+         average_virtual(ichan)=average_virtual(ichan)+
+     &        ave_virt(ncell,kdim,ichan)
       enddo
-      average_virtual=average_virtual/ndim
+      average_virtual(ichan)=average_virtual(ichan)/ndim
       return
       end
 
@@ -1153,18 +1337,13 @@ c Got random numbers for all dimensions, update kkk() for the next call
       include "mint.inc"
       integer kdim,ndim,ninter,ncell
       double precision x(ndimmax),virtual,born
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
       do kdim=1,ndim
          ncell=min(int(x(kdim)*ninter)+1,ninter)
-         nvirt_acc(ncell,kdim)=nvirt_acc(ncell,kdim)+1
-         ave_virt_acc(ncell,kdim)=ave_virt_acc(ncell,kdim)+virtual
-         ave_born_acc(ncell,kdim)=ave_born_acc(ncell,kdim)+born
+         nvirt_acc(ncell,kdim,ichan)=nvirt_acc(ncell,kdim,ichan)+1
+         ave_virt_acc(ncell,kdim,ichan)=ave_virt_acc(ncell,kdim,ichan)
+     $        +virtual
+         ave_born_acc(ncell,kdim,ichan)=ave_born_acc(ncell,kdim,ichan)
+     $        +born
       enddo
       return
       end
@@ -1173,34 +1352,37 @@ c Got random numbers for all dimensions, update kkk() for the next call
       implicit none
       include "mint.inc"
       integer ninter,ndim,kdim,i
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
-c need to solve for k_new = (virt+k_old*born)/born
+c need to solve for k_new = (virt+k_old*born)/born = virt/born + k_old
+      do kchan=1,nchans
       do kdim=1,ndim
          do i=1,ninter
-            if (ave_born_acc(i,kdim).eq.0d0) cycle
-            if (ave_virt(i,kdim).eq.0d0) then ! i.e. first iteration
-               ave_virt(i,kdim)= ave_virt_acc(i,kdim)/ave_born_acc(i
-     $              ,kdim)+ave_virt(i,kdim)
-            else  ! give some importance to the iterations already done
-               ave_virt(i,kdim)=(ave_virt_acc(i,kdim)/ave_born_acc(i
-     $              ,kdim)+ave_virt(i,kdim)*2d0)/2d0
+            if (ave_born_acc(i,kdim,kchan).eq.0d0) cycle
+            if (ave_virt(i,kdim,kchan).eq.0d0) then ! i.e. first iteration
+               ave_virt(i,kdim,kchan)= ave_virt_acc(i,kdim,kchan)
+     $              /ave_born_acc(i,kdim,kchan)+ave_virt(i,kdim,kchan)
+            else  ! give some importance to the iterations already
+                  ! done: simply base it on the number of points already
+                  ! computed in that bin. Give half the weight to old iterations
+                  ! k_new = [N_new*(V/B+k_old) + (N_old/2)*k_old] / [N_new+(N_old/2)]
+               ave_virt(i,kdim,kchan)=(nvirt_acc(i,kdim,kchan)
+     $              *ave_virt_acc(i,kdim,kchan)/ave_born_acc(i,kdim
+     $              ,kchan)+(nvirt_acc(i,kdim,kchan)+nint(nvirt(i,kdim
+     $              ,kchan)/2d0))*ave_virt(i,kdim,kchan))
+     $              /dble(nvirt_acc(i,kdim,kchan)+nint(nvirt(i,kdim
+     $              ,kchan)/2d0))
             endif
          enddo
       enddo
 c reset the acc values
       do kdim=1,ndim
          do i=1,ninter
-            nvirt(i,kdim)=nvirt(i,kdim)+nvirt_acc(i,kdim)
-            nvirt_acc(i,kdim)=0
-            ave_born_acc(i,kdim)=0d0
-            ave_virt_acc(i,kdim)=0d0
+            nvirt(i,kdim,kchan)=nvirt(i,kdim,kchan)+nvirt_acc(i,kdim
+     $           ,kchan)
+            nvirt_acc(i,kdim,kchan)=0
+            ave_born_acc(i,kdim,kchan)=0d0
+            ave_virt_acc(i,kdim,kchan)=0d0
          enddo
+      enddo
       enddo
       return
       end
@@ -1210,33 +1392,83 @@ c reset the acc values
       implicit none
       include "mint.inc"
       integer kdim,ndim,i,ninter
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
+      do kchan=1,nchans
       do kdim=1,ndim
          do i=ninter,1,-1
-            ave_virt(i*2,kdim)=ave_virt(i,kdim)
-            if (nvirt(i,kdim).ne.0) then
-               nvirt(i*2,kdim)=max(nvirt(i,kdim)/2,1)
+            ave_virt(i*2,kdim,kchan)=ave_virt(i,kdim,kchan)
+            if (nvirt(i,kdim,kchan).ne.0) then
+               nvirt(i*2,kdim,kchan)=max(nvirt(i,kdim,kchan)/2,1)
             else
-               nvirt(i*2,kdim)=0
+               nvirt(i*2,kdim,kchan)=0
             endif
             if (i.ne.1) then
-               ave_virt(i*2-1,kdim)=(ave_virt(i,kdim)
-     $              +ave_virt(i-1,kdim))/2d0
-               if (nvirt(i,kdim)+nvirt(i-1,kdim).ne.0) then
-                  nvirt(i*2-1,kdim)=
-     &                 max((nvirt(i,kdim)+nvirt(i-1,kdim))/4,1)
+               ave_virt(i*2-1,kdim,kchan)=(ave_virt(i,kdim,kchan)
+     $              +ave_virt(i-1,kdim,kchan))/2d0
+               if (nvirt(i,kdim,kchan)+nvirt(i-1,kdim,kchan).ne.0) then
+                  nvirt(i*2-1,kdim,kchan)=
+     &              max((nvirt(i,kdim,kchan)+nvirt(i-1,kdim,kchan))/4,1)
                else
-                  nvirt(i*2-1,kdim)=0
+                  nvirt(i*2-1,kdim,kchan)=0
+               endif
+            else
+               if (nvirt(1,kdim,kchan).ne.0) then
+                  nvirt(1,kdim,kchan)=max(nvirt(1,kdim,kchan)/2,1)
+               else
+                  nvirt(1,kdim,kchan)=0
                endif
             endif
          enddo
       enddo
+      enddo
       return
       end
 
+
+
+      subroutine get_channel(ans,vol_chan)
+c Picks one random 'ichan' among the 'nchans' integration channels and
+c fills the channels common block in mint.inc.
+      implicit none
+      include 'mint.inc'
+      double precision ans(0:maxchannels),vol_chan,ran3,target,sum
+      external ran3
+      if (nchans.eq.1) then
+         ichan=1
+         iconfig=iconfigs(ichan)
+         vol_chan=1d0
+      elseif (nchans.gt.1) then
+         if (ans(0).le.0d0) then
+c     pick one at random (flat)
+            ichan=int(ran3(.false.)*nchans)+1
+            iconfig=iconfigs(ichan)
+            vol_chan=1d0/dble(nchans)
+         else
+c     pick one at random (weighted by cross section)
+            sum=0d0
+            do kchan=1,nchans
+               sum=sum+ans(kchan)
+            enddo
+            if (abs(sum-ans(0))/(sum+ans(0)).gt.1d-8) then
+               write (*,*) 'ERROR: sum should be equal to ans',
+     &              sum,ans(0)
+               stop 1
+            endif
+            target=ans(0)*ran3(.false.)
+            sum=0d0
+            ichan=0
+            do while (sum.lt.target)
+               ichan=ichan+1
+               sum=sum+ans(ichan)
+            enddo
+            if (ichan.eq.0 .or. ichan.gt.nchans) then
+               write (*,*) 'ERROR: ichan cannot be zero or'/
+     $              /' larger than nchans',ichan,nchans
+               stop
+            endif
+            iconfig=iconfigs(ichan)
+            vol_chan=ans(ichan)/ans(0)
+         endif
+      endif
+      return
+      end
+      

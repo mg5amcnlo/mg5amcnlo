@@ -206,7 +206,8 @@ class TestMECmdShell(unittest.TestCase):
 
         #create the gridpack        
         self.do('launch -f')
-        
+        self.check_parton_output('run_01', 100)
+        self.check_parton_output('run_01_decayed_1', 100)
         #move the MS gridpack
         self.assertTrue(os.path.exists(pjoin(self.out_dir, 'MSDIR1')))
         files.mv(pjoin(self.out_dir, 'MSDIR1'), pjoin(self.out_dir, 'MSDIR2'))
@@ -222,6 +223,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.check_parton_output('run_02_decayed_1', 100)           
         
+        self.assertEqual(self.debugging, False)
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -422,6 +424,53 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
         
+    def test_complex_mass_scheme(self):
+        """check that auto-width and Madspin works nicely with complex-mass-scheme"""
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd('set complex_mass_scheme', precmd=True)
+        mg_cmd.exec_cmd('generate g g  > t t~', precmd=True)
+        mg_cmd.exec_cmd('output %s' % self.run_dir, precmd=True)
+        
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #modify run_card
+        run_card = banner_mod.RunCard(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        run_card.set('nevents', 100)
+        run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        
+        # check the auto-width
+        self.cmd_line.exec_cmd('compute_widths 6 -f')
+
+        # check value for the width    
+        import models.check_param_card as check_param_card    
+        param_card = check_param_card.ParamCard(pjoin(self.run_dir, 'Cards', 'param_card.dat'))
+        self.assertTrue(misc.equal(1.491257, param_card['decay'].get(6).value),3)
+                        
+        # generate events
+        self.cmd_line.exec_cmd('launch -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        target = 440.779
+        self.assertTrue(misc.equal(target, val1, 4*err1))                
+        
+        # run madspin
+        fsock = open(pjoin(self.run_dir, 'Cards', 'madspin_card.dat'),'w')
+        fsock.write('decay t > w+ b \n launch')
+        fsock.close()
+        
+        self.cmd_line.exec_cmd('decay_events run_01 -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        target = 440.779
+        self.assertTrue(misc.equal(target, val1, 4*err1))          
+             
+        
+        
+        
     def test_width_scan(self):
         """check that the width settings works on a scan based.
            and check that MW is updated."""
@@ -619,6 +668,7 @@ class TestMEfromfile(unittest.TestCase):
                  parton
                  set nevents 100
                  set event_norm sum
+                 set systematics_program none
                  add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir

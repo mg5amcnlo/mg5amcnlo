@@ -10,6 +10,7 @@ c
       include 'genps.inc'      
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
+      include 'mint.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -49,18 +50,18 @@ c
      &     -1),p_ev_red_save(0:3,nexternal-1)
       double precision p1_cnt_save(0:3,nexternal,-2:2),p_born_save(0:3
      &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
+      integer ninvar, ndim, minconfig, maxconfig
       common/tosigint/ndim
-      integer ncall,itmax,nconfigs,ntry, ngraphs
+      integer ncall,itmax,nconfigs,ntry
       integer icb(nexternal-1,maxswitch),jc(12),nswitch
-      double precision saveamp(maxamps)
+      double precision saveamp(ngraphs)
       integer nmatch, ibase
       logical mtc, even
 
 c
 c     Global
 c
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 
@@ -180,7 +181,9 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       call printout
       call run_printout
       iconfig=1
-      call setfksfactor(iconfig,.false.)
+      ichan=1
+      iconfigs(1)=iconfig
+      call setfksfactor(.false.)
 c
       ndim = 55
       ncall = 10000
@@ -367,8 +370,6 @@ c
 c
 c     Process info
 c
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
@@ -446,60 +447,6 @@ c
       subroutine clear_events()
       end
 
-       subroutine write_input(nconfigs)
-c***************************************************************************
-c     Writes out input file for approximate calculation based on the
-c     number of active configurations
-c***************************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'genps.inc'
-      include '../../Source/run_config.inc'
-      integer    maxpara
-      parameter (maxpara=1000)
-c      integer   npoint_tot,         npoint_min
-c      parameter (npoint_tot=50000, npoint_min=1000)
-c
-c     Arguments
-c
-      integer nconfigs
-c
-c     local
-c
-      integer npoints
-      character*20 param(maxpara),value(maxpara)
-      integer npara, nreq
-      logical gridpack
-c-----
-c  Begin Code
-c-----
-      call load_para(npara,param,value)
-      gridpack=.false.
-
-      npoints = min_events_subprocess/nconfigs
-      npoints = max(npoints,min_events_channel)
-      open (unit=26, file = 'input_app.txt', status='unknown',
-     $     err=99)
-      if (gridpack) then
-         write(26,*) npoints_wu,itmax_wu,
-     &     '     !Number of events and iterations'      
-         write(26,'(f8.4,a)') acc_wu, '    !Accuracy'
-         write(26,*) ' 2       !Grid Adjustment 0=none'
-      else
-         write(26,*) npoints,iter_survey,
-     &     '     !Number of events and iterations'      
-         write(26,*) ' 0.0    !Accuracy'
-         write(26,*) ' 0       !Grid Adjustment 0=none'
-      endif
-      write(26,*) ' 1       !Suppress Amplitude 1=yes'
-      write(26,*) nhel_survey,'       !Helicity Sum/event 0=exact'
-      close(26)
-      return
- 99   close(26)
-      write(*,*) 'Error opening input_app.txt'
-      end
 
       subroutine write_bash(mapconfig, use_config, pwidth, jcomp
      &     ,iforest)
@@ -551,67 +498,22 @@ c-----
       ic = 0      
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
-            nbw=0               !Look for B.W. resonances
-            do j=1,imax
-               iarray(j)=0      !Assume no cuts on BW
-            enddo
-            do j=1,nexternal-3
-               if (pwidth(-j,i) .gt. 1d-20) then
-                  nbw=nbw+1
-                  write(*,*) 'Got bw',-nbw,j
-                  if(lconflict(-j).or.gForceBW(-j,i)) then
-                     if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-                     if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
-                     iarray(nbw)=1 !Cuts on BW
-                     if (nbw .gt. imax) then
-                        write(*,*) 'Too many BW w conflicts',nbw,imax
-                     endif
-                  endif
-               endif
-            enddo
-c            do j=1,2**nbw
-            done = .false.
-            do while (.not. done)
-               call enCode(icode,iarray,ibase,imax)
-c               write(*,*) 'mapping',ic,mapconfig(i)
-c$$$               if (r_from_b(mapconfig(i)) .lt. 10) then
-c$$$                  write(26,'(i1$)') r_from_b(mapconfig(i))
-c$$$               elseif (r_from_b(mapconfig(i)) .lt. 100) then
-c$$$                  write(26,'(i2$)') r_from_b(mapconfig(i))
-c$$$               elseif (r_from_b(mapconfig(i)) .lt. 1000) then
-c$$$                  write(26,'(i3$)') r_from_b(mapconfig(i))
-c$$$               elseif (r_from_b(mapconfig(i)) .lt. 10000) then
-c$$$                  write(26,'(i4$)') r_from_b(mapconfig(i))
-               if (mapconfig(i) .lt. 10) then
-                  write(26,'(i1$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 100) then
-                  write(26,'(i2$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 1000) then
-                  write(26,'(i3$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 10000) then
-                  write(26,'(i4$)') mapconfig(i)
-               endif
-               if (icode .eq. 0) then
-c                 write(26,'($a)') '.000'
-               elseif (icode .lt. 10) then
-                  write(26,'(a,i1$)') '.00', icode
-               elseif (icode .lt. 100) then
-                  write(26,'(a,i2$)') '.0', icode
-               elseif (icode .lt. 1000) then
-                  write(26,'(a,i3$)') '.', icode
-               else
-                  write(*,*) 'Error too many B.W. in symmetry.f',icode
-                  stop
-               endif
-               write(26,'(a$)') ' '
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
-            enddo
+            if (mapconfig(i) .lt. 10) then
+               write(26,'(i1$)') mapconfig(i)
+            elseif (mapconfig(i) .lt. 100) then
+               write(26,'(i2$)') mapconfig(i)
+            elseif (mapconfig(i) .lt. 1000) then
+               write(26,'(i3$)') mapconfig(i)
+            elseif (mapconfig(i) .lt. 10000) then
+               write(26,'(i4$)') mapconfig(i)
+            endif
+            write(26,'(a$)') ' '
          endif
       enddo
       close(26)
       if (mapconfig(0) .gt. 9999) then
          write(*,*) 'Only writing first 9999 jobs',mapconfig(0)
+         stop 1
       endif
 c
 c     Now write out the symmetry factors for each graph
@@ -619,40 +521,7 @@ c
       open (unit=26, file = 'symfact.dat', status='unknown')
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-c
-c        Need to write appropriate number of BW sets this is
-c        same thing as above for the bash file
-c
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
-            nbw=0               !Look for B.W. resonances
-            if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
-               do j=1,imax
-                  iarray(j)=0   !Assume no cuts on BW
-               enddo
-               do j=1,nexternal-3
-                  if (pwidth(-j,i) .gt. 1d-20) then
-                     nbw=nbw+1
-                     write(*,*) 'Got bw',nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
-                        iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
-                     endif
-                  endif
-               enddo
-            endif            
-            done = .false.
-            do while (.not. done)
-               call enCode(icode,iarray,ibase,imax)
-               if (icode .gt. 0) then
-                  write(26,'(f9.3,i6)') mapconfig(i)+real(icode)/1000.,
-     $                 use_config(i)
-               else
-                  write(26,'(2i6)') mapconfig(i),use_config(i)
-               endif
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
-            enddo
+            write(26,'(2i6)') mapconfig(i),use_config(i)
          else
             write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
          endif
@@ -660,138 +529,6 @@ c
       end
 
 
-      subroutine BW_Conflict(iconfig,itree,lconflict)
-c***************************************************************************
-c     Determines which BW conflict
-c***************************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'genps.inc'
-      include 'nexternal.inc'
-      double precision zero
-      parameter       (zero=0d0)
-c      include '../../Source/run_config.inc'
-c
-c     Arguments
-c
-      integer itree(2,-max_branch:-1),iconfig
-      logical lconflict(-max_branch:nexternal)
-
-c
-c     local
-c
-      integer i,j
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
-      double precision xmass(-max_branch:nexternal)
-c
-c     Global
-c
-      include 'coupl.inc'                     !Mass and width info
-c-----
-c  Begin Code
-c-----
-      include 'born_props.inc'   !Propagator mass and width information pmass,pwidth
-      write(*,*) 'Checking for BW ',iconfig
-c
-c     Reset variables
-c      
-      do i=1,nexternal-1
-         xmass(i) = 0d0
-         lconflict(-i) = .false.
-      enddo
-c
-c     Start by determining which propagators are part of the same 
-c     chain, or could potentially conflict
-c
-      i=1
-      do while (i .lt. nexternal-3 .and. itree(1,-i) .ne. 1)
-         xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
-         if (pwidth(-i,iconfig) .gt. 0d0) then
-            if (xmass(-i) .gt. pmass(-i,iconfig)) then  !Can't be on shell
-               lconflict(-i)=.true.
-               write(*,*) "Found Conflict", iconfig,i,
-     $              pmass(-i,iconfig),xmass(-i)
-            endif
-         endif
-         xmass(-i) = max(xmass(-i),pmass(-i,iconfig)+
-     &                                 3d0*pwidth(-i,iconfig))        
-         i=i+1
-      enddo
-c
-c     Mark all daughters of conflicted BW as conflicting
-c
-      do j=i,1,-1
-         if (lconflict(-j)) then 
-            lconflict(itree(1,-j)) = .true.
-            lconflict(itree(2,-j)) = .true.
-            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
-         endif
-      enddo
-c
-c     Only include BW props as conflicting
-c
-      do j=i,1,-1
-         if (lconflict(-j)) then 
-            if (pwidth(-j,iconfig) .le. 0) then 
-               lconflict(-j) = .false.
-               write(*,*) 'No conflict BW',iconfig,j
-            else
-               write(*,*) 'Conflicting BW',iconfig,j
-            endif
-         endif
-      enddo                  
-
-      end
-
-
-
-
-      subroutine bw_increment_array(iarray,imax,ibase,force,done)
-c************************************************************************
-c     Increments iarray     
-c************************************************************************
-      implicit none
-c
-c     Arguments
-c
-      integer imax          !Input, number of elements in iarray
-      integer ibase         !Base for incrementing, 0 is skipped
-      logical force(imax)   !Force onshell BW, counting from -imax to -1
-      integer iarray(imax)  !Output:Array of values being incremented
-      logical done          !Output:Set when no more incrementing
-
-c
-c     Global
-c
-      include 'genps.inc'
-
-c
-c     Local
-c
-      integer i,j
-      logical found
-c-----
-c  Begin Code
-c-----
-      found = .false.
-      i = 1
-      do while (i .le. imax .and. .not. found)
-         if (iarray(i) .eq. 0) then    !don't increment this
-            i=i+1
-         elseif (iarray(i) .lt. ibase-1 .and. .not. force(imax+1-i)) then
-            found = .true.
-            iarray(i)=iarray(i)+1
-         else
-            iarray(i)=1
-            i=i+1
-         endif
-      enddo
-      done = .not. found
-      end
 c
 c
 c Dummy routines
