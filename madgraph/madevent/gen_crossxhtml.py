@@ -542,9 +542,12 @@ class RunResults(list):
             self.info['collider'] = '''%s %s <br> %s x %s  GeV''' % \
                     (name1, name2, run_card['ebeam1'], run_card['ebeam2'])
             self.info['unit'] = 'pb'                       
-        else:
+        elif len(data) == 1:
             self.info['collider'] = 'decay'
             self.info['unit'] = 'GeV'
+        else:
+            self.info['collider'] = 'special mode'
+            self.info['unit'] = ''            
         
         self.append(OneTagResults(run_name, run_card, path))
         
