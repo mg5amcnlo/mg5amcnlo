@@ -5262,6 +5262,7 @@ tar -czf split_$1.tar.gz split_$1
         for nb_proc,subdir in enumerate(subproc):
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
             self.compile(['clean'], cwd=Pdir)
+        self.configured = time.time()
 
     ############################################################################
     ##  HELPING ROUTINE
