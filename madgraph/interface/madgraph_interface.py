@@ -1193,7 +1193,7 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                if (self._done_export[1] == 'plugin' and mode in self._export_formats):
                     args.append(mode)
                     args.append(self._done_export[0])
                 elif self._done_export[1].startswith(mode):

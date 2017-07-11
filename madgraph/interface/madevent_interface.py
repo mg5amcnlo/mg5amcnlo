@@ -3370,9 +3370,8 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
-        misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
-                            cwd=pjoin(self.me_dir))
-        
+        self.gen_card_html()
+
         
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')

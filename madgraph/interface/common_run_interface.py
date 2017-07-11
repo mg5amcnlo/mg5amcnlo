@@ -643,9 +643,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock = open(pjoin(me_dir,'RunWeb'),'w')
                 fsock.write(`pid`)
                 fsock.close()
-    
-                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                            cwd=me_dir)
+                self.gen_card_html()
 
         self.to_store = []
         self.run_name = None
@@ -1161,6 +1159,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 use_band=[],
                 auto_open=False)
         return True
+    
+    def gen_card_html(self):
+        """ """
+        devnull = open(os.devnull, 'w')        
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+            
     
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
@@ -3187,14 +3196,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('', level=None)
         except Exception, error:
             pass
-        devnull = open(os.devnull, 'w')
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        devnull.close()
 
+        self.gen_card_html()
         return super(CommonRunCmd, self).do_quit(line)
 
     # Aliases
@@ -5551,7 +5554,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-        
+    
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
