@@ -68,12 +68,11 @@ c     Local for generating amps
 c
       double precision p(0:3,99), wgt, x(99), fx
       double complex wgt1(2)
-      double precision p1(0:3,99),xx(maxinvar)
+      double precision p1(0:3,99)
       integer ninvar, ndim,  minconfig, maxconfig
       common/tosigint/ndim
-      integer ncall,itmax,nconfigs,ntry, ngraphs
+      integer ncall,itmax,nconfigs,ntry
       integer ic(nexternal,maxswitch), jc(12),nswitch
-      double precision saveamp(maxamps)
       integer nmatch, ibase
       logical mtc, even
 
@@ -85,8 +84,6 @@ c
 c
 c     Global
 c
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
-      common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 
       logical calculatedBorn

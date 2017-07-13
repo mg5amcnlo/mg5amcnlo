@@ -1193,7 +1193,7 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                if (self._done_export[1] == 'plugin' and mode in self._export_formats):
                     args.append(mode)
                     args.append(self._done_export[0])
                 elif self._done_export[1].startswith(mode):
@@ -5057,6 +5057,8 @@ This implies that with decay chains:
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
+                    if os.path.sep in args[1] and "import" in self.history[-1]:
+                        self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)

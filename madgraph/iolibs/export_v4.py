@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 
 import aloha
@@ -314,7 +315,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         if len(levels)==0:
             return
-        
+        start = time.time()
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
         try:
             MA5_interpreter = common_run_interface.CommonRunCmd.\
@@ -326,7 +327,6 @@ class ProcessExporterFortran(VirtualExporter):
             return
 
         MA5_main = MA5_interpreter.main
-       
         for lvl in ['parton','hadron']:
             if lvl in levels:
                 card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
@@ -345,6 +345,9 @@ class ProcessExporterFortran(VirtualExporter):
                     logger.debug('-'*60)
                 else:
                     open(card_to_generate,'w').write(text)
+        stop = time.time()
+        if stop-start >1:
+            logger.info('Cards created in %.2fs' % (stop-start))
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -2574,8 +2577,12 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
-        #cp(_file_path+'/iolibs/save_load_object.py', 
-        #                      self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/save_load_object.py', 
+                              self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/madevent/gen_crossxhtml.py', 
+                              self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/various/FO_analyse_card.py', 
+                              self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 
                               self.dir_path+'/bin/internal/file_writers.py')
         #model file                        
@@ -6283,7 +6290,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
-          %(definitions)
+          %(definitions)s
           mp__%(name)s = %(fct)s
 
           return

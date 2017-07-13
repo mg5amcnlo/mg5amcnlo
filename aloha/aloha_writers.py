@@ -802,7 +802,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             for ind in numerator.listindices():
                 formatted = self.write_obj(numerator.get_rep(ind))
                 if formatted.startswith(('+','-')):
-                    formatted = '(%s)*%s' % tuple(formatted.split('*',1))
+                    if '*' in formatted:
+                        formatted = '(%s)*%s' % tuple(formatted.split('*',1))
+                    else:
+                        if formatted.startswith('+'):
+                            formatted = formatted[1:]
+                        else:
+                            formatted = '(-1)*%s' % formatted[1:]
                 to_order[self.pass_to_HELAS(ind)] = \
                         '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
                         coeff, formatted)
@@ -1199,6 +1205,14 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
 
+    if tag and any(t.startswith('P') for t in tag[:-1]):
+        # propagator need to be the last entry for the tag
+        for i,t  in enumerate(tag):
+            if t.startswith('P'):
+                tag.pop(i)
+                tag.append(t)
+                break
+
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
     p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
@@ -1334,7 +1348,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
-                   '/' : '{0}/%s'.format(one),
+                   '/' : '{0}/(%s)'.format(one),
                    'abs': 'std::abs(%s)'
                    }
             

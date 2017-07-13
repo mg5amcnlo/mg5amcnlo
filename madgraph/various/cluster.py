@@ -257,11 +257,11 @@ class Cluster(object):
             target = path.rsplit('/SubProcesses',1)[0]
         elif 'MCatNLO' in path:
             target = path.rsplit('/MCatNLO',1)[0]
+        elif 'PY8_parallelization' in path:
+            target = path.rsplit('/PY8_parallelization',1)[0]
         elif second_path:
             target=path
             logger.warning("cluster.get_job_identifier runs unexpectedly. This should be fine but report this message if you have problem.")
-        elif 'PY8_parallelization' in path:
-            target = path.rsplit('/PY8_parallelization',1)[0]
         else:
             target = path
             

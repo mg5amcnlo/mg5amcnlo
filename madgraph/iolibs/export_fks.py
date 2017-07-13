@@ -517,6 +517,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               writers.FortranWriter(filename), 
                               nfksconfs,maxproc,maxflow,nexternal,
                               fortran_model)
+        filename = 'genps.inc'
+        ngraphs = matrix_element.born_matrix_element.get_number_of_amplitudes()
+        ncolor = max(1,len(matrix_element.born_matrix_element.get('color_basis')))
+        self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
@@ -610,7 +615,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
-                     'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
                      'madfks_mcatnlo.inc',
@@ -632,7 +636,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight1.inc',
                      'reweightNLO.inc',
                      'reweight_all.inc',
-                     'reweight_events.f',
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
@@ -643,7 +646,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'setscales.f',
                      'symmetry_fks_test_MC.f',
                      'symmetry_fks_test_ME.f',
-                     'symmetry_fks_test_Sij.f',
                      'symmetry_fks_v3.f',
                      'trapfpe.c',
                      'vegas2.for',
@@ -677,8 +679,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
         #import nexternal/leshouches in Source
-        ln('nexternal.inc', '../../Source', log=False)
-        ln('born_leshouche.inc', '../../Source', log=False)
+#        ln('nexternal.inc', '../../Source', log=False)
+#        ln('born_leshouche.inc', '../../Source', log=False)
 
 
         # Return to SubProcesses dir
@@ -1007,6 +1009,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
 
+        # Make sure it compiles with an if-statement if the above lists are empty
+        if len(mass_particles)==0:
+            iflines_mass = 'if (.True.) then\n'
+
+        if len(width_particles)==0:
+            iflines_width = 'if (.True.) then\n'
+
         replace_dict = {'iflines_mass' : iflines_mass,
                         'iflines_width' : iflines_width}
 
@@ -1165,6 +1174,18 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nfksconfs, 2, nexternal))
         lines.append('integer niprocs_d(%d)' % (nfksconfs))
 
+        writer.writelines(lines)
+
+
+    def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
+        """writes the genps.inc file
+        """
+        lines = []
+        lines.append("include 'maxparticles.inc'")
+        lines.append("include 'maxconfigs.inc'")
+        lines.append("integer maxproc,ngraphs,ncolor,maxflow")
+        lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
+                     (maxproc,ngraphs,ncolor,maxflow))
         writer.writelines(lines)
 
 
@@ -2735,10 +2756,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         info_list = fks_born.get_fks_info_list()
         lines = []
         if info_list:
-            # if the reals have been generated, fill with the corresponding value of ij
+            # if the reals have been generated, fill with the corresponding value of ij if
+            # ij is massless, or with 0 if ij is massive (no collinear singularity)
+            ij_list = [info['fks_info']['ij']if \
+                    fks_born.born_matrix_element['processes'][0]['legs'][info['fks_info']['ij']-1]['massless'] \
+                    else 0 for info in info_list]
             lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-            lines.append('DATA IJ_VALUES /' + \
-                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+            lines.append('DATA IJ_VALUES /' + ', '.join(['%d' % ij for ij in ij_list]) + '/')
         else:
             #otherwise just put the first leg
             lines.append('INTEGER IJ_VALUES(1)')

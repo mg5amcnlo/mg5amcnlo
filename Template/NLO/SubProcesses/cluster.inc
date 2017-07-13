@@ -9,7 +9,7 @@ c     id_cl gives diagrams for propagators
       logical heavyrad(n_max_cg)
       common/cl_map/id_cl,heavyrad
 c     resmap gives potential resonances for diagrams
-      logical resmap(n_max_cl,n_max_cg)
+      logical resmap(n_max_cl,n_max_cg,fks_configs)
       common/res_map/resmap
       double precision pt2ijcl(nexternal),zcl(nexternal),mt2ij(nexternal),mt2last
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2

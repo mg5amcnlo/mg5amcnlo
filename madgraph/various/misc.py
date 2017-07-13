@@ -1355,15 +1355,18 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     """function to check if two float are approximatively equal"""
     import math
 
-    if not a or not b:
-        if zero_limit:
-            power = sig_fig + 1
+    if isinstance(sig_fig, int):
+        if not a or not b:
+            if zero_limit:
+                power = sig_fig + 1
+            else:
+                return a == b  
         else:
-            return a == b  
+            power = sig_fig - int(math.log10(abs(a))) + 1
+    
+        return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
     else:
-        power = sig_fig - int(math.log10(abs(a))) + 1
-
-    return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
+        return abs(a-b) < sig_fig
 
 ################################################################################
 # class to change directory with the "with statement"

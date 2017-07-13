@@ -73,7 +73,7 @@ c Quark Sudakov
          if (iimode.eq.2) then
             gamma=gamma+CF*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2) ! A2
          endif
-         if (iipdg.gt.NF) then ! include mass effects
+         if (abs(iipdg).gt.NF) then ! include mass effects
             qom=q0/mass(iipdg)
             gamma=gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
@@ -490,10 +490,10 @@ c     IS clustering
       if((ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2).or.
      $   (ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2))then
 c     Check if ida1 is outgoing parton or ida2 is outgoing parton
-         if(.not.islast.and.ipart(1,ida2).ge.1
-     $        .and.ipart(1,ida2).le.2.and.isparton(idda1).or.ipart(1
-     $        ,ida1).ge.1.and.ipart(1
-     $        ,ida1).le.2.and.isparton(idda2))then
+         if((.not.islast) .and. ((ipart(1,ida2).ge.1 .and. ipart(1
+     $        ,ida2).le.2 .and. isparton(idda1)) .or. (ipart(1
+     $        ,ida1).ge.1 .and. ipart(1,ida1).le.2 .and.
+     $        isparton(idda2))))then
            ispartonvx=.true.
         else
            ispartonvx=.false.
@@ -1222,8 +1222,6 @@ c Common
      $     ,fks_configs,lmaxconfigs),jlast(2)
       real*8 q2bck(2)
       common /to_rw/jlast,njetstore,iqjetstore,q2bck
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs

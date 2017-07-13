@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -110,13 +110,11 @@ class HelpToCmd(object):
         logger.info("      by condor cluster (since condor has it's own way to prevent it).")
 
     def help_plot(self):
-        logger.info("syntax: help [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("syntax: plot [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
         logger.info("-- create the plot for the RUN (current run by default)")
         logger.info("     at the different stage of the event generation")
         logger.info("     Note than more than one mode can be specified in the same command.")
-        logger.info("   This require to have MadAnalysis and td require. By default")
-        logger.info("     if those programs are installed correctly, the creation")
-        logger.info("     will be performed automaticaly during the event generation.")
+        logger.info("   This requires to have MadAnalysis and td installed.")
         logger.info("   -f options: answer all question by default.")
 
     def help_compute_widths(self):
@@ -219,7 +217,7 @@ class CheckValidForCmd(object):
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
         
-        
+
         ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
@@ -232,10 +230,7 @@ class CheckValidForCmd(object):
             model = import_ufo.import_model(modelname, decay=True, 
                                    restrict=True, complex_mass_scheme=force_CMS)
         else:
-            #pattern for checking complex mass scheme.
-            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
-                                                   'proc_card_mg5.dat')).read())
+            force_CMS = self.proc_characteristics['complex_mass_scheme']
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
                          'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
@@ -648,9 +643,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock = open(pjoin(me_dir,'RunWeb'),'w')
                 fsock.write(`pid`)
                 fsock.close()
-    
-                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                            cwd=me_dir)
+                self.gen_card_html()
 
         self.to_store = []
         self.run_name = None
@@ -1173,6 +1166,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 use_band=[],
                 auto_open=False)
         return True
+    
+    def gen_card_html(self):
+        """ """
+        devnull = open(os.devnull, 'w')        
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+            
     
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
@@ -2226,7 +2230,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     #===============================================================================
     @staticmethod
     def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
-                    logstream = sys.stdout, loglevel =logging.INFO, forced = True):
+                    logstream = sys.stdout, loglevel =logging.INFO, forced = True,
+                    compilation=False):
         """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
         
         MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
@@ -2250,7 +2255,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 with misc.stdchannel_redirected(sys.stderr, os.devnull):
                     MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
-                                                     LoggerStream=logstream,forced=forced)
+                                                     LoggerStream=logstream,forced=forced, 
+                                                     no_compilation=not compilation)
         except Exception as e:
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
             error=StringIO.StringIO()
@@ -2589,7 +2595,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
                 loglevel=100,
-                forced=True)
+                forced=True,
+                compilation=True)
 
 
         # If failed to start MA5, then just leave
@@ -2679,9 +2686,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
                                   %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+            has_pdf = True
             if not os.path.isfile(target):
-                raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
-                        "an output for the analysis '%s' in\n   %s"%(MA5_runtag,target)
+                has_pdf = False
 
             # Copy the PDF report or CLs in the Events/run directory.
             if MA5_runtag.upper()=='RECASTING':
@@ -2689,7 +2696,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 carboncopy_name = '%s_MA5_%s_analysis_%s.pdf'%(
                                                    self.run_tag,mode,MA5_runtag)
-            shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+            if has_pdf:
+                shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+            else:
+                logger.error('MadAnalysis5 failed to create PDF output')
             if MA5_runtag!='default':
                 logger.info("MadAnalysis5 successfully completed the "+
                   "%s. Reported results are placed in:"%("analysis '%s'"%MA5_runtag 
@@ -2698,10 +2708,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.info("MadAnalysis5 successfully completed the analysis."+
                                             " Reported results are placed in:")
             logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
-
+            
+            anal_dir = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'  %(mode.upper(),MA5_runtag))
+            if not os.path.exists(anal_dir):
+                logger.error('MadAnalysis5 failed to completed succesfully')
+                return
             # Copy the entire analysis in the HTML directory
-            shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
-              %(mode.upper(),MA5_runtag)), pjoin(self.me_dir,'HTML',self.run_name,
+            shutil.move(anal_dir, pjoin(self.me_dir,'HTML',self.run_name,
                 '%s_MA5_%s_ANALYSIS_%s'%(self.run_tag,mode.upper(),MA5_runtag)))
 
         # Set the number of events and cross-section to the last one 
@@ -2793,7 +2806,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         cross = self.results[self.run_name].get_current_info()['cross']
 
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-        self.cluster.launch_and_wait(prog,
+        if not self.cluster:
+            clus = cluster.onecore
+        else:
+            clus = self.cluster
+        clus.launch_and_wait(prog,
                         argument= [delphes_dir, self.run_name, tag, str(cross), filepath],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
@@ -3131,8 +3148,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except Exception:
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
-            if width/mass < 1e-12:
+            if mass and width/mass < 1e-12:
                 logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if CommonRunCmd.sleep_for_error:
+                    time.sleep(5)
+                    CommonRunCmd.sleep_for_error = False
+            elif not mass and width:
+                logger.error('The width of particle %s is different of zero for a massless particle.', param.lhacode[0])
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
                     CommonRunCmd.sleep_for_error = False
@@ -3181,14 +3203,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('', level=None)
         except Exception, error:
             pass
-        devnull = open(os.devnull, 'w')
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        devnull.close()
 
+        self.gen_card_html()
         return super(CommonRunCmd, self).do_quit(line)
 
     # Aliases
@@ -3390,7 +3406,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return
 
         # First need to load MadSpin
-
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module decay_events requires that MG5 is installed on the system.
@@ -3408,7 +3423,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             The variable mg5_path might not be correctly configured.'''
 
         self.update_status('Running MadSpin', level='madspin')
-        if not '-from_cards' in line:
+        if not '-from_cards' in line and '-f' not in line:
             self.keep_cards(['madspin_card.dat'], ignore=['*'])
             self.ask_edit_cards(['madspin_card.dat'], 'fixed', plot=False)
         self.help_decay_events(skip_syntax=True)
@@ -5546,7 +5561,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-        
+    
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any

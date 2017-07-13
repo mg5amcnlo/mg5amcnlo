@@ -719,21 +719,10 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end
-c     $E$ get_user_params $E$ ! tag for MadWeight
 c     change this routine to read the input in a file
 c
 
@@ -1175,8 +1164,6 @@ c "npNLO".
       common/event_attributes/nattr,npNLO,npLO
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      integer    maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -1213,6 +1200,7 @@ c     include all quarks (except top quark) and the gluon.
 
       subroutine update_fks_dir(nFKS)
       implicit none
+      include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -1221,6 +1209,7 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
+      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 
