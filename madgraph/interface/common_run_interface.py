@@ -745,6 +745,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+
+        #ensure that the cluster/card are consistent
+        if hasattr(self, 'run_card'):
+            self.cluster.modify_interface(self)
+        else:   
+            try:
+                self.cluster.modify_interface(self)
+            except Exception, error:
+                misc.sprint(str(error))
+                
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
@@ -754,10 +764,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
-                if amcatnlo:
-                    run_card = banner_mod.RunCardNLO(opt['run_card'])
-                else:
-                    run_card = banner_mod.RunCard(opt['run_card'])
+                run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
 
@@ -3079,9 +3086,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                 logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
                                 self.cluster = plugin.new_cluster[cluster_name](**opt)
                                 break
-                        else:
-                            continue
-                        break
+                    else:
+                        continue
+                    break
                 else:
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
                 
@@ -5228,9 +5235,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths None ')   
-                    
-                        
+                    self.do_set('shower_card extrapaths None ') 
+
+
     def reask(self, *args, **opt):
         
         cmd.OneLinePathCompletion.reask(self,*args, **opt)

@@ -425,6 +425,11 @@ class HelpToCmd(object):
         self.run_options_help([("--" + key,value[-1]) for (key,value) in \
                                self._survey_options.items()])
      
+     
+    def help_restart_gridpack(self):
+        logger.info("syntax: restart_gridpack --precision= --restart_zero")
+
+
     def help_launch(self):
         """exec generate_events for 2>N and calculate_width for 1>N"""
         logger.info("syntax: launch [run_name] [options])")
@@ -2014,6 +2019,57 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         return
 
     ############################################################################
+    
+    ############################################################################
+    def do_restart_gridpack(self, line):
+        """ syntax restart_gridpack --precision=1.0 --restart_zero
+        collect the result of the current run and relaunch each channel
+        not completed or optionally a completed one with a precision worse than 
+        a threshold (and/or the zero result channel)"""
+        
+    
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_survey(args)
+    
+        # initialize / remove lhapdf mode
+        #self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        #self.configure_directory()
+        
+        gensym = gen_ximprove.gensym(self)
+        
+        min_precision = 1.0
+        resubmit_zero=False
+        if '--precision=' in line:
+            s = line.index('--precision=') + len('--precision=')
+            arg=line[s:].split(1)[0]
+            min_precision = float(arg)
+        
+        if '--restart_zero' in line:
+            resubmit_zero = True
+            
+            
+        gensym.resubmit(min_precision, resubmit_zero)
+        self.monitor(run_type='All jobs submitted for gridpack', html=True)
+
+                        #will be done during the refine (more precisely in gen_ximprove)
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)  
+        self.exec_cmd("print_results %s" % self.run_name,
+                       errorhandling=False, printcmd=False, precmd=False, postcmd=False)      
+        
+        self.results.add_detail('run_statistics', dict(gensym.run_statistics))
+
+        
+        #self.exec_cmd('combine_events', postcmd=False)
+        #self.exec_cmd('store_events', postcmd=False)
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        self.exec_cmd('create_gridpack', postcmd=False)
+        
+    
+
+    ############################################################################    
 
     ############################################################################
     def do_generate_events(self, line):
@@ -2633,12 +2689,14 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+            self.run_card = run_card
+            self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-            
+                
             # Ensure that the bias parameters has all the required input from the
             # run_card
             if run_card['bias_module'].lower() not in ['dummy','none']:
@@ -2887,7 +2945,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         
         jobs, P_zero_result = ajobcreator.launch()
-        
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
@@ -5152,7 +5209,9 @@ tar -czf split_$1.tar.gz split_$1
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random'):
+        if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+            #just ensure that cluster specific are correctly handled
+            self.cluster.modify_interface(self)
             return
         else:
             self.configured = time.time()
