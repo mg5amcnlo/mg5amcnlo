@@ -229,7 +229,7 @@ c
       sjac = 1d0
       if (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
          if (abs(lpp(1)).eq.9.or.abs(lpp(2)).eq.9)then
-            call get_dummy_x1_x2(sjac, Xbk(1), x(ndim-1),pi1, pi2, stot)
+            call get_dummy_x1_x2(sjac, Xbk(1), x(ndim-1),pi1, pi2, stot, s(-nbranch))
             if (.not.set_cm_rap)then
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
                set_cm_rap=.true.
@@ -251,23 +251,22 @@ c-------
 c           Set CM rapidity for use in the rap() function
             cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
             set_cm_rap=.true.
-         endif
 c           Set shat
             s(-nbranch) = xbk(1)*xbk(2)*stot
+         endif
+
       elseif (lpp(1).eq.9.or.lpp(2).eq.9) then 
          if (lpp(1).eq.9)then
-            call get_dummy_x1(sjac, xbk(1), x(ndim), pi1, pi2, stot)
+            call get_dummy_x1(sjac, xbk(1), x(ndim), pi1, pi2, stot, s(-nbranch))
             xbk(2) = 1d0
          else
-            call get_dummy_x1(sjac, xbk(2), x(ndim), pi1, pi2, stot)
+            call get_dummy_x1(sjac, xbk(2), x(ndim), pi1, pi2, stot, s(-nbranch))
             xbk(1) = 1d0
          endif
          if (.not.set_cm_rap)then
             cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
             set_cm_rap=.true.
          endif
-c           Set shat
-            s(-nbranch) = xbk(1)*xbk(2)*stot
       elseif (abs(lpp(1)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(1) = x(ndim)
