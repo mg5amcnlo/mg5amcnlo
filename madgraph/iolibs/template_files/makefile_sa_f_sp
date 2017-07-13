@@ -24,4 +24,4 @@ endif
 
 matrix$(MENUM)py.so: matrix.f makefile $(LIBS)
 	touch __init__.py
-	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py
+	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --f77exec=$(FC)

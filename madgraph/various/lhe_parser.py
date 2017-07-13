@@ -174,6 +174,10 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
+        if path.endswith('.gz') and mode == 'w' and\
+                                              isinstance(self, EventFileNoGzip):
+            path = path[:-3]
+        
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
         try:

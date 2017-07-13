@@ -3279,10 +3279,15 @@ Beware that this can be dangerous for local multicore runs.""")
         bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
         banner = banner_mod.Banner(lhe.banner)
         banner.modify_init_cross(cross)
+        banner.set_lha_strategy(-4)
         banner.write(bannerfile, close_tag=False)
         bannerfile.close()
         # replace the lhe file by the new one
-        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        if lhe.name.endswith('.gz'):
+            os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        else:
+            os.system('cat %s %s > %s.gz' %(bannerfile.name, output.name, lhe.name))
+            os.remove(lhe.name)
         os.remove(bannerfile.name)
         os.remove(output.name)
         
@@ -3365,9 +3370,8 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
-        misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
-                            cwd=pjoin(self.me_dir))
-        
+        self.gen_card_html()
+
         
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
@@ -4772,7 +4776,7 @@ tar -czf split_$1.tar.gz split_$1
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         if not self.force:
-            self.ask_edit_cards([], args, plot=True)
+            self.ask_edit_cards(['plot_card.dat'], args, plot=True)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -5257,6 +5261,7 @@ tar -czf split_$1.tar.gz split_$1
         for nb_proc,subdir in enumerate(subproc):
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
             self.compile(['clean'], cwd=Pdir)
+        self.configured = time.time()
 
     ############################################################################
     ##  HELPING ROUTINE

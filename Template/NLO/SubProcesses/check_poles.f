@@ -183,6 +183,7 @@ c initialization
             enddo
           enddo
 
+          CALL UPDATE_AS_PARAM()
           call sborn(p_born, born)
           call sloopmatrix_thres(p_born,virt_wgts,tolerance,
      1 accuracies,return_code)

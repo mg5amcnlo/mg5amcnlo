@@ -1009,6 +1009,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
 
+        # Make sure it compiles with an if-statement if the above lists are empty
+        if len(mass_particles)==0:
+            iflines_mass = 'if (.True.) then\n'
+
+        if len(width_particles)==0:
+            iflines_width = 'if (.True.) then\n'
+
         replace_dict = {'iflines_mass' : iflines_mass,
                         'iflines_width' : iflines_width}
 
@@ -2749,10 +2756,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         info_list = fks_born.get_fks_info_list()
         lines = []
         if info_list:
-            # if the reals have been generated, fill with the corresponding value of ij
+            # if the reals have been generated, fill with the corresponding value of ij if
+            # ij is massless, or with 0 if ij is massive (no collinear singularity)
+            ij_list = [info['fks_info']['ij']if \
+                    fks_born.born_matrix_element['processes'][0]['legs'][info['fks_info']['ij']-1]['massless'] \
+                    else 0 for info in info_list]
             lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-            lines.append('DATA IJ_VALUES /' + \
-                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+            lines.append('DATA IJ_VALUES /' + ', '.join(['%d' % ij for ij in ij_list]) + '/')
         else:
             #otherwise just put the first leg
             lines.append('INTEGER IJ_VALUES(1)')
