@@ -124,7 +124,6 @@ c
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
-      integer          lwgt(0:maxconfigs,maxinvar)
       logical firsttime
 
       double precision xprop(3,nexternal),tprop(3,nexternal)
@@ -132,7 +131,7 @@ c
       integer imatch
       save maxwgt
 
-      integer ninvar, nconfigs
+      integer ninvar
       
 c
 c     External
@@ -142,6 +141,9 @@ c
 c
 c     Global
 c
+      integer          lwgt(0:maxconfigs,maxinvar)
+      common/to_lwgt/lwgt
+
       double precision pmass(nexternal)
       common/to_mass/  pmass
 
@@ -172,7 +174,6 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
-      save lwgt
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
@@ -200,42 +201,7 @@ c----
 c      write(*,*) 'using iconfig',iconfig
       if (firsttime) then
          firsttime=.false.
-         do i=1,nexternal
-            m(i)=pmass(i)
-         enddo
-c        Set stot
-         if (nincoming.eq.1) then
-            stot=m(1)**2
-         else
-            m1=m(1)
-            m2=m(2)
-            if (abs(lpp(1)) .eq. 1 .or. abs(lpp(1)) .eq. 2) m1 = 0.938d0
-            if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
-            if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
-            if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
-            if (lpp(1).ne.9) then
-               if(ebeam(1).lt.m1) ebeam(1)=m1
-               if(ebeam(2).lt.m2) ebeam(2)=m2
-            endif
-            pi1(0)=ebeam(1)
-            pi1(3)=sqrt(max(ebeam(1)**2-m1**2, 0d0))
-            pi2(0)=ebeam(2)
-            pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
-            stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
-         endif
-         write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
-c        Start graph mapping
-         do i=1,mapconfig(0)
-            if (mapconfig(i) .eq. iconfig) this_config=i
-         enddo
-         write(*,*) 'Mapping Graph',iconfig,' to config',this_config
-         iconfig = this_config
-         nconfigs = 1
-         mincfig=iconfig
-         maxcfig=iconfig
-         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
-         maxwgt=0d0
-c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
+         call configure_integral(this_config,mincfig, maxcfig, invar,maxwgt)
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
          nbranch      = nparticles-2
@@ -243,51 +209,10 @@ c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-         call set_peaks
-         if (.false. ) then
-            call find_matches(iconfig,isym(0))
-            write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
-         endif
-         if (.false.) then
-            i=1
-            do while (mapconfig(i) .ne. iconfig
-     $          .and. i .lt. mapconfig(0))
-               i=i+1
-            enddo
-         endif
-
+         do i=1,nexternal
+            m(i)=pmass(i)
+         enddo
          write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
-         do j=1,invar
-            lwgt(0,j)=0
-         enddo
-c
-c     Here we set up which diagrams contribute to each variable
-c     in principle more than 1 diagram can contribute to a variable
-c     if we believe they will have identical structure.
-c
-c         do i=1,mapconfig(0)
-         do i=mincfig,maxcfig
-c         do k=1,isym(0)
-c            i = isym(k)
-            write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
-            do j=1,ndim
-               ipole = minvar(j,i)
-               if (ipole .ne. 0) then
-                  n = lwgt(0,ipole)+1
-                  lwgt(n,ipole)=mapconfig(i)  
-                  lwgt(0,ipole)=n
-               endif
-            enddo
-         enddo
-
-c     Initialize dsig (needed for subprocess group running mode)
-         dum=dsig(0,0,1)
-
-      else
-         do i=1,11
-c            swidth(i)=-5d0         !tells us to use the same point over again
-         enddo
-c         swidth(10)=0d0
       endif                          !First_time
 
       if (.false.) then
@@ -571,6 +496,138 @@ c
       endif
       end
 
+
+      subroutine configure_integral(iconfig,mincfig,maxcfig,invar,maxwgt)
+c**************************************************************************
+c     inputs  iconfig   == Current configuration working on
+c     output  m
+c**************************************************************************
+
+      implicit none
+
+      include 'genps.inc'
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+      include 'run.inc'
+
+c     local
+      double precision pi1(0:3),pi2(0:3),p0,p3
+      double precision dum
+      integer i,j,ipole,n
+      integer nbranch,ndim,nconfigs
+      integer ninvar
+      integer nparticles,nfinal
+
+
+c
+c     Arguments
+c
+      integer iconfig,mincfig,maxcfig,invar
+      double precision maxwgt
+c
+c     External
+c
+      double precision lambda,dot,dsig
+      logical passcuts
+
+
+      logical firsttime
+      data firsttime/.true./
+      save firsttime
+c
+c     global
+c
+      double precision M(-max_branch:max_particles)
+
+      double precision pmass(nexternal)
+      common/to_mass/  pmass
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
+
+      integer           Minvar(maxdim,lmaxconfigs)
+      common /to_invar/ Minvar
+
+      integer          lwgt(0:maxconfigs,maxinvar)
+      common/to_lwgt/lwgt
+
+      if (firsttime)then
+         firsttime=.false.
+         do i=1,nexternal
+            m(i)=pmass(i)
+         enddo
+c        Set stot
+         if (nincoming.eq.1) then
+            stot=m(1)**2
+         else
+            m1=m(1)
+            m2=m(2)
+            if (abs(lpp(1)) .eq. 1 .or. abs(lpp(1)) .eq. 2) m1 = 0.938d0
+            if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
+            if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
+            if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
+            if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
+            pi1(0)=ebeam(1)
+            pi1(3)=sqrt(max(ebeam(1)**2-m1**2, 0d0))
+            pi2(0)=ebeam(2)
+            pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
+            stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
+         endif
+         write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
+         endif
+c        Start graph mapping
+         do i=1,mapconfig(0)
+            if (mapconfig(i) .eq. iconfig) this_config=i
+         enddo
+         write(*,*) 'Mapping Graph',iconfig,' to config',this_config
+         iconfig = this_config
+         nconfigs = 1
+         mincfig=iconfig
+         maxcfig=iconfig
+         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+         maxwgt=0d0
+c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
+         nparticles   = nexternal
+         nfinal       = nparticles-nincoming
+         nbranch      = nparticles-2
+         ndim         = 3*nfinal-4
+         if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
+         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
+         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+         call set_peaks
+         do j=1,invar
+            lwgt(0,j)=0
+         enddo
+c
+c     Here we set up which diagrams contribute to each variable
+c     in principle more than 1 diagram can contribute to a variable
+c     if we believe they will have identical structure.
+c
+c         do i=1,mapconfig(0)
+         do i=mincfig,maxcfig
+c         do k=1,isym(0)
+c            i = isym(k)
+            write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
+            do j=1,ndim
+               ipole = minvar(j,i)
+               if (ipole .ne. 0) then
+                  n = lwgt(0,ipole)+1
+                  lwgt(n,ipole)=mapconfig(i)
+                  lwgt(0,ipole)=n
+               endif
+            enddo
+         enddo
+
+c     Initialize dsig (needed for subprocess group running mode)
+         dum=dsig(0,0,1)
+
+      return
+      end
 
       subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
