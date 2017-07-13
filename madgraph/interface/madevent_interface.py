@@ -5207,8 +5207,8 @@ tar -czf split_$1.tar.gz split_$1
         self.make_opts_var = {}
         
         #see when the last file was modified
-        time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
-                        os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
         if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
             #just ensure that cluster specific are correctly handled
             self.cluster.modify_interface(self)
