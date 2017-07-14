@@ -622,14 +622,12 @@ c Finalize PS point
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
-      logical firsttime,foundB(2)
+      logical firsttime
       data firsttime /.true./
-      save nFKSprocessBorn,foundB
+      save nFKSprocessBorn
 c
       if (firsttime) then
          firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
          do iFKS=1,fks_configs
             nFKSprocessBorn(iFKS)=0
             if ( need_color_links_D(iFKS) .or. 
@@ -674,6 +672,10 @@ c     If still not found, just pick any one that has a soft singularity
                      nFKSprocessBorn(iFKS)=iiFKS
                   endif
                enddo
+            endif
+c     if there are no soft singularities at all, just do something trivial
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               nFKSprocessBorn(iFKS)=iFKS
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs

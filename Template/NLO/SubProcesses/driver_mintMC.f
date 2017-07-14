@@ -1324,32 +1324,36 @@ c     include all quarks (except top quark) and the gluon.
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
-      logical firsttime,foundB(2)
+      logical firsttime
       data firsttime /.true./
-      save nFKSprocessBorn,foundB
+      save nFKSprocessBorn
+c
       if (firsttime) then
          firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
          do iFKS=1,fks_configs
             nFKSprocessBorn(iFKS)=0
-            if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
+            if ( need_color_links_D(iFKS) .or. 
+     &           need_charge_links_D(iFKS) )then
                nFKSprocessBorn(iFKS)=iFKS
             endif
             if (nFKSprocessBorn(iFKS).eq.0) then
 c     try to find the process that has the same j_fks but with i_fks a
 c     gluon
                do iiFKS=1,fks_configs
-                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 .and.
+                  if ( (need_color_links_D(iiFKS) .or.
+     &                  need_charge_links_D(iiFKS)) .and.
      &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
                      nFKSprocessBorn(iFKS)=iiFKS
                      exit
                   endif
                enddo
             endif
+c     try to find the process that has the j_fks initial state if
+c     current j_fks is initial state (and similar for final state j_fks)
             if (nFKSprocessBorn(iFKS).eq.0) then
                do iiFKS=1,fks_configs
-                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 ) then
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
                      if ( fks_j_D(iiFKS).le.nincoming .and.
      &                    fks_j_D(iFKS).le.nincoming ) then
                         nFKSprocessBorn(iFKS)=iiFKS
@@ -1361,6 +1365,19 @@ c     gluon
                      endif
                   endif
                enddo
+            endif
+c     If still not found, just pick any one that has a soft singularity
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                  endif
+               enddo
+            endif
+c     if there are no soft singularities at all, just do something trivial
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               nFKSprocessBorn(iFKS)=iFKS
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
