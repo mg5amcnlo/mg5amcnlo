@@ -3353,6 +3353,13 @@ class RunCardNLO(RunCard):
         """check the validity of the various input"""
         
         super(RunCardNLO, self).check_validity()
+
+        # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
+        if self['lpp1']==0 and self['lpp2']==0:
+            if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                self['pdlabel']='nn23nlo'
+                self['reweight_pdf']=[False]
+                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
