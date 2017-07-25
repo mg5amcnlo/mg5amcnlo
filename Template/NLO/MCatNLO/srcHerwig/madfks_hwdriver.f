@@ -397,3 +397,21 @@ C---CLEAN EXIT IF USING ROOT; DUMMY OTHERWISE
       CALL RCLOS()
  999  STOP
       END
+
+
+c     dummy routines for stdhep
+      SUBROUTINE PYERRM(MERR,CHMESS)
+      implicit none
+      integer MERR
+      CHARACTER CHMESS*(*)
+      write(*,*)'dummy PYERRM should never be called from HW6'
+      stop
+      end
+
+
+      FUNCTION PYCOMP(KF)
+      implicit none
+      integer KF,PYCOMP
+      write(*,*)'dummy PYCOMP should never be called from HW6'
+      stop
+      end
