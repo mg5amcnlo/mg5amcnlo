@@ -50,7 +50,9 @@ c Vegas stuff
       double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
 
-      double precision weight
+      double precision weight,event_weight
+      character*7 event_norm
+      common /event_normalisation/event_norm
 c For MINT:
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
      $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
@@ -311,7 +313,11 @@ c Mass-shell stuff. This is MC-dependent
          if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
-         read (99,*) nevts
+         if (event_norm(1:4).ne.'bias') then
+            read (99,*) nevts
+         else
+            read (99,*) nevts,event_weight
+         endif
          close(99)
          write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
@@ -354,7 +360,11 @@ c fill the information for the write_header_init common block
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
 
-         weight=(ans(1,1)+ans(5,1))/ncall
+         if (event_norm(1:4).ne.'bias') then
+            weight=(ans(1,1)+ans(5,1))/ncall
+         else
+            weight=event_weight
+         endif
 
          if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
      $        abrv(1:4).ne.'virt') then

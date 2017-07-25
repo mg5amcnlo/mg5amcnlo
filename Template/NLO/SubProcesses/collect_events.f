@@ -26,9 +26,11 @@
      $     /" to average to the Xsec (=default)"
       write (*,*) "give '3' to overwrite the weights"/
      $     /" to either +/- 1."
+      write (*,*) "give '4' to keep the weights, but overwrite "
+     $     /"the Xsec in the init block."
       read (*,*) i_orig
       if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2 .and.
-     $     i_orig.ne.3) stop
+     $     i_orig.ne.3 .and. i_orig.ne.4) stop
       write(*,*) i_orig
 
 
@@ -238,8 +240,6 @@ c
       data iseed/1/
       double precision rnd,fk88random
       external fk88random
-      logical debug
-      parameter (debug=.false.)
       integer nevents_file(80),proc_id(80)
       common /to_nevents_file/nevents_file,proc_id
       double precision xsecfrac_all(80)
@@ -256,11 +256,6 @@ c
       logical get_xsec_from_res1
       common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 c
-      if(debug) then
-         write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
-         write(ioutput,*)'test test test'
-         return
-      endif
       maxevt=0
       if (.not. get_xsec_from_res1) then
          do i=1,100
@@ -420,7 +415,7 @@ c      header. Check consistency in this case
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
         if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
-        if (i_orig.eq.0) then
+        if (i_orig.eq.0 .or. i_orig.eq.4) then
            evwgt_sign=XWGTUP
         else
 c Overwrite the weights. Also overwrite the weights used for PDF & scale

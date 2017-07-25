@@ -83,7 +83,7 @@ int main() {
     double evtweight = pythia.info.weight();
     double normhepmc;
     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
-    if (evt_norm == "average") {
+    if (evt_norm != "sum") {
       normhepmc = 1. / double(iEventshower);
     } else {
       normhepmc = double(iEventtot) / double(iEventshower);

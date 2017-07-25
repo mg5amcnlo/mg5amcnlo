@@ -1751,7 +1751,10 @@ RESTART = %(mint_mode)s
         """write the nevts files in the SubProcesses/P*/G*/ directories"""
         for job in jobs:
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
-                f.write('%i\n' % job['nevents'])
+                if self.run_card['event_norm'].lower()=='bias':
+                    f.write('%i %f\n' % (job['nevents'],self.cross_sect_dict['xseca']))
+                else:
+                    f.write('%i\n' % job['nevents'])
 
     def combine_split_order_run(self,jobs_to_run):
         """Combines jobs and grids from split jobs that have been run"""
@@ -3161,6 +3164,8 @@ RESTART = %(mint_mode)s
             p.communicate(input = '1\n')
         elif event_norm.lower() == 'unity':
             p.communicate(input = '3\n')
+        elif event_norm.lower() == 'bias':
+            p.communicate(input = '0\n')
         else:
             p.communicate(input = '2\n')
 
@@ -3572,7 +3577,7 @@ RESTART = %(mint_mode)s
 
                     if self.banner.get('run_card', 'event_norm').lower() == 'sum':
                         norm = 1.
-                    elif self.banner.get('run_card', 'event_norm').lower() == 'average':
+                    else:
                         norm = 1./float(self.shower_card['nsplit_jobs'])
 
                     plotfiles2 = []
