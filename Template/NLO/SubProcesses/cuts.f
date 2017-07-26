@@ -918,7 +918,7 @@ c      'bias' = event_norm
 c
       implicit none
       include 'nexternal.inc'
-      double precision bias_wgt,p(0:3,nexternal)
+      double precision bias_wgt,p(0:3,nexternal),H_T
       integer ipdg(nexternal),i
 
       bias_wgt=1d0
@@ -930,6 +930,12 @@ c         if (ipdg(i).eq.6) then
 c            bias_wgt=sqrt(p(1,i)**2+p(2,i)**2)**3
 c         endif
 c      enddo
+c Or to use H_T^2 one does     
+c      H_T=0d0
+c      do i=1,nexternal
+c         H_T=H_T+sqrt(p(1,i)**2+p(2,i)**2)
+c      enddo
+c      bias_wgt=H_T**2
       return
       end
 
