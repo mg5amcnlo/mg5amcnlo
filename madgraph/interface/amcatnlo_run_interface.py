@@ -1541,6 +1541,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             try:
                 with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
                     jobs_to_collect=pickle.load(f)
+                    for job in jobs_to_collect:
+                        job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
                 raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \

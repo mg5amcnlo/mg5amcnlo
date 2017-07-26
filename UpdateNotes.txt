@@ -7,6 +7,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: Fixed bug #1694548 (problem with NLO for QCD-charged heavy vector bosons)
       RF: Another fix (adding on a fix in 2.5.5) related to FxFx merging in case there are
           diagrams with 1->3 decays
+      RF: Fixed bug #1706072 related to wrong path with NLO gridpack mode
 
 2.5.5(26/05/17)
       OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 
