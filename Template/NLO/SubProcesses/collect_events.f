@@ -26,11 +26,9 @@
      $     /" to average to the Xsec (=default)"
       write (*,*) "give '3' to overwrite the weights"/
      $     /" to either +/- 1."
-      write (*,*) "give '4' to keep the weights, but overwrite "
-     $     /"the Xsec in the init block."
       read (*,*) i_orig
       if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2 .and.
-     $     i_orig.ne.3 .and. i_orig.ne.4) stop
+     $     i_orig.ne.3) stop
       write(*,*) i_orig
 
 
@@ -415,7 +413,7 @@ c      header. Check consistency in this case
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
         if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
-        if (i_orig.eq.0 .or. i_orig.eq.4) then
+        if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
         else
 c Overwrite the weights. Also overwrite the weights used for PDF & scale

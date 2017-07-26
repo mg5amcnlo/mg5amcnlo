@@ -2335,6 +2335,10 @@ class OneNLOWeight(object):
         #     (and is passed to the integrator). It contains everything.
         #     from example: 0.110944218997D+05  
         self.ref_wgt = float(data[flag+14])
+        # 15. The bias weight. This weight is included in the self.ref_wgt, as well as in
+        #     the self.pwgt. However, it is already removed from the XWGTUP (and
+        #     scale/pdf weights). That means that in practice this weight is not used.
+        self.bias_wgt = float(data[flag+15])
 
         #check the momenta configuration linked to the event
         if self.type in self.real_type:

@@ -3980,6 +3980,8 @@ RESTART = %(mint_mode)s
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
+        if self.run_card['event_norm'].lower()=='bias' and self.run_card['nevents'] != 0:
+            evt_wghts[:]=[wgt/float(self.run_card['nevents']) for wgt in evt_wghts]
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'

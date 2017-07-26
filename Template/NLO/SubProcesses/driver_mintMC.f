@@ -50,7 +50,7 @@ c Vegas stuff
       double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
 
-      double precision weight,event_weight
+      double precision weight,event_weight,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
 c For MINT:
@@ -399,6 +399,10 @@ c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
+            if (event_norm(1:4).eq.'bias') then
+               call include_inverse_bias_wgt(inv_bias)
+               weight=event_weight*inv_bias
+            endif
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
          call deallocate_weight_lines
@@ -962,9 +966,11 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-
+         
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
+c Include the weight from the bias_function
+         call include_bias_wgt
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have

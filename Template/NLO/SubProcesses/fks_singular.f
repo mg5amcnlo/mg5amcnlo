@@ -619,7 +619,7 @@ c bpower.
       include 'run.inc'
       include 'genps.inc'
       include 'timing_variables.inc'
-      double precision pi,unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
+      double precision pi,vegas_wgt,enhance,xnoborn_cnt,xtot
      $     ,bpower,cpower,tiny
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
@@ -732,11 +732,10 @@ c Compute the multi-channel enhancement factor 'enhance'.
             enhance=0d0
          endif
       endif
-      call unweight_function(p_born,unwgtfun)
       call set_cms_stuff(0)
 c f_* multiplication factors for Born and nbody
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
-     $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
+     $     *pi**2))*enhance*fkssymmetryfactorBorn*vegas_wgt
       f_nb=f_b
       call cpu_time(tAfter)
       tf_nb=tf_nb+(tAfter-tBefore)
@@ -753,7 +752,7 @@ c terms.
       include 'fks_powers.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
+      double precision vegas_wgt,enhance,xnoborn_cnt,xtot
      &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
      &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
      &     ,prefact_deg_sxi,zero
@@ -845,11 +844,10 @@ c Compute the multi-channel enhancement factor 'enhance'.
             enhance=0d0
          endif
       endif
-      call unweight_function(p_born,unwgtfun)
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
-      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+      f_r=prefact*jac_ev*enhance*fkssymmetryfactor*vegas_wgt
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then
@@ -857,9 +855,9 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
      &        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
      &        -y_ij_fks_ev)
          f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
-     $        *unwgtfun*fkssymmetryfactor*vegas_wgt
+     $        *fkssymmetryfactor*vegas_wgt
          f_s_MC_S=prefact*jac_cnt(0)*enhance
-     $        *unwgtfun*fkssymmetryfactor*vegas_wgt
+     $        *fkssymmetryfactor*vegas_wgt
          f_s_MC_H=f_s_MC_S
 
          if (pmass(j_fks).eq.0d0) then
@@ -867,9 +865,9 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
             prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
      $           /deltaS)/deltaS
             f_c=(prefact_c+prefact_coll)*jac_cnt(1)
-     $           *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+     $           *enhance*fkssymmetryfactor*vegas_wgt
             f_c_MC_S=prefact_c*jac_cnt(1)
-     $           *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+     $           *enhance*fkssymmetryfactor*vegas_wgt
             f_c_MC_H=f_c_MC_S
 
             call set_cms_stuff(1)
@@ -881,12 +879,12 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
      $           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
      $           *log(delta_used/deltaS)/deltaS
             f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
-     $           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+     $           *fkssymmetryfactorDeg*vegas_wgt
             f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c
-     &           +prefact_coll_c)*jac_cnt(2)*enhance*unwgtfun
+     &           +prefact_coll_c)*jac_cnt(2)*enhance
      &           *fkssymmetryfactorDeg*vegas_wgt
             f_sc_MC_S=prefact_c*jac_cnt(2)
-     $           *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+     $           *enhance*fkssymmetryfactor*vegas_wgt
             f_sc_MC_H=f_sc_MC_S
 
             call set_cms_stuff(2)
@@ -898,13 +896,13 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
      &           -log(min(xiimax_cnt(1),xiScut_used))**2 )*1/(2.d0
      &           *deltaS)
             f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
-     &           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+     &           *fkssymmetryfactorDeg*vegas_wgt
             f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))
-     &           *enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+     &           *enhance*fkssymmetryfactorDeg*vegas_wgt
             f_dsc(3)=prefact_deg_slxi*jac_cnt(2)/(shat/(32*pi**2))
-     &           *enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+     &           *enhance*fkssymmetryfactorDeg*vegas_wgt
             f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat
-     &           /(32*pi**2))*enhance*unwgtfun*fkssymmetryfactorDeg
+     &           /(32*pi**2))*enhance*fkssymmetryfactorDeg
      &           *vegas_wgt
          else
             f_c=0d0
@@ -1214,6 +1212,117 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
+      subroutine include_bias_wgt
+c Include the weight from the bias_wgt_function to all the contributions
+c in icontr. This only changes the weight of the central value (after
+c inclusion of alphaS and parton luminosity). Both for 'wgts(1,icontr)'
+c as well as the the 'parton_iproc(1:niproc(icontr),icontr)', since
+c these are the ones used in MINT as well as for unweighting. Also the
+c 'virt_wgt_mint' and 'born_wgt_mint' are updated. Furthermore, to
+c include the weight also in the 'wgt' array that contain the
+c coefficients for PDF and scale computations. 
+      use weight_lines
+      implicit none
+      integer i,j
+      double precision bias
+      character*7 event_norm
+      common /event_normalisation/event_norm
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+c Set the bias_wgt to 1 in case we do not have to do any biassing
+      if (event_norm(1:4).ne.'bias') then
+         do i=1,icontr
+            bias_wgt(i)=1d0
+         enddo
+         return
+      endif
+c loop over all contributions
+      do i=1,icontr
+         if (itype(i).eq.1) then
+            ! use (n+1)-body momenta for the real emission. Pick the
+            ! first IPROC for parton PDGs.
+            call bias_weight_function(momenta_m(0,1,2,i),parton_pdg(1,1
+     $           ,i),bias)
+         else
+            ! use n-body momenta for all the other contributions. Pick
+            ! the first IPROC for parton PDGs.
+            call bias_weight_function(momenta_m(0,1,1,i),parton_pdg(1,1
+     $           ,i),bias)
+         endif
+         bias_wgt(i)=bias
+c Update the weights:
+         wgts(1,i)=wgts(1,i)*bias_wgt(i)
+         do j=1,niproc(i)
+            parton_iproc(j,i)=parton_iproc(j,i)*bias_wgt(i)
+         enddo
+         do j=1,3
+            wgt(j,i)=wgt(j,i)*bias_wgt(i)
+         enddo
+         if (itype(i).eq.14) then
+            virt_wgt_mint=virt_wgt_mint*bias_wgt(i)
+            born_wgt_mint=born_wgt_mint*bias_wgt(i)
+         endif
+      enddo
+      return
+      end
+
+      subroutine include_inverse_bias_wgt(inv_bias)
+c Update the inverse of the bias in the event weight. All information in
+c the rwgt_lines is NOT updated.
+      use weight_lines
+      use extra_weights
+      implicit none
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      integer i,ict,ipr,ii
+      double precision wgt_num,wgt_denom,inv_bias
+      character*7 event_norm
+      common /event_normalisation/event_norm
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      logical         Hevents
+      common/SHevents/Hevents
+      if (event_norm(1:4).ne.'bias') then
+         inv_bias=1d0
+         return
+      endif
+      wgt_num=0d0
+      wgt_denom=0d0
+      do i=1,icontr_sum(0,icontr_picked)
+         ict=icontr_sum(i,icontr_picked)
+         if (bias_wgt(ict).eq.0d0) then
+            write (*,*) "ERROR in include_inverse_bias_wgt: "/
+     $           /"bias_wgt is equal to zero",ict,bias_wgt
+            stop 1
+         endif
+c for all the rwgt_lines, remove the bias-wgt contribution from the
+c weights there. Note that the wgtref (also written in the event file)
+c keeps its contribution from the bias_wgt.
+         if (.not. Hevents) then
+            ipr=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
+            do ii=1,iproc_save(nFKS(ict))
+               if (eto(ii,nFKS(ict)).ne.ipr) cycle
+               wgt_denom=wgt_denom+parton_iproc(ii,ict)
+               wgt_num=wgt_num+parton_iproc(ii,ict)/bias_wgt(ict)
+            enddo
+         else
+            ipr=iproc_picked
+            wgt_denom=wgt_denom+parton_iproc(ipr,ict)
+            wgt_num=wgt_num+parton_iproc(ipr,ict)/bias_wgt(ict)
+         endif
+      enddo
+      if (abs((wgtref-wgt_denom)/(wgtref+wgt_denom)).gt.1d-10) then
+         write (*,*) "ERROR in include_inverse_bias_wgt: "/
+     $        /"reference weight not equal to recomputed weight",wgtref
+     $        ,wgt_denom
+         stop 1
+      endif
+c update the event weight to be written in the file
+      inv_bias=wgt_num/wgt_denom
+      return
+      end
+      
 
       subroutine set_pdg_codes(iproc,pd,iFKS,ict)
       use weight_lines
@@ -1748,14 +1857,27 @@ c Fills the function that is returned to the MINT integrator
       include 'nexternal.inc'
       include 'mint.inc'
       integer i
-      double precision f(nintegrals),sigint
+      double precision f(nintegrals),sigint,bias
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      character*7 event_norm
+      common /event_normalisation/event_norm
       sigint=0d0
       do i=1,icontr
-         sigint=sigint+wgts(1,i)
+         if (event_norm(1:4).ne.'bias') then
+            sigint=sigint+wgts(1,i)
+         else
+            if (itype(i).eq.1) then
+               call bias_weight_function(momenta_m(0,1,2,i),parton_pdg(1
+     $              ,1,i),bias)
+            else
+               call bias_weight_function(momenta_m(0,1,1,i),parton_pdg(1
+     $              ,1,i),bias)
+            endif
+            sigint=sigint+wgts(1,i)*bias
+         endif
       enddo
       f(1)=abs(sigint)
       f(2)=sigint
@@ -2193,7 +2315,7 @@ c momenta in the momenta_str() array.
       n_ctr_found=0
       n_mom_conf=0
 c Loop over all the contributions in the picked contribution (the latter
-c is chosen in the pick_unweight_cont() subroutine)
+c is chosen in the pick_unweight_contr() subroutine)
       do i=1,icontr_sum(0,icontr_picked)
          ict=icontr_sum(i,icontr_picked)
 c Check if the current set of momenta are already available in the
@@ -2270,8 +2392,7 @@ c iproc_picked:
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
 
-               write (str_temp,
-     &                    '(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
+               write (str_temp,30)
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -2282,7 +2403,8 @@ c iproc_picked:
      &              fks_i_d(nFKS(ict)),
      &              fks_j_d(nFKS(ict)),
      &              parton_pdg_uborn(fks_j_d(nFKS(ict)),ii,ict),
-     &              parton_iproc(ii,ict)
+     &              parton_iproc(ii,ict),
+     &              bias_wgt(ict)
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(str_temp))
@@ -2321,7 +2443,7 @@ c H-event
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(procid))
 
-            write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
+            write (str_temp,30)
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
@@ -2332,7 +2454,8 @@ c H-event
      &           fks_i_d(nFKS(ict)),
      &           fks_j_d(nFKS(ict)),
      &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipr,ict),
-     &           parton_iproc(ipr,ict)
+     &           parton_iproc(ipr,ict),
+     &           bias_wgt(ict)
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
@@ -2340,6 +2463,8 @@ c H-event
 
          endif
       enddo
+      return
+ 30   format(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
