@@ -2317,9 +2317,10 @@ class NLO_PARTIALWEIGHT(object):
 
         
         def __init__(self, momenta, wgts, event, real_type=(1,11)):
-            list.__init__(self, momenta)
             
+            list.__init__(self, momenta)
             assert self
+            self.soft = False
             self.wgts = wgts
             self.pdgs = list(wgts[0].pdgs)
             self.event = event
@@ -2347,56 +2348,45 @@ class NLO_PARTIALWEIGHT(object):
             elif any(w.type in self.real_type for w in wgts):
                 if any(w.type not in self.real_type for w in wgts):
                     raise Exception
-                # check if this is too soft/colinear if so use the born
-                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
-
-                if ind1> ind2: 
-                    ind1, ind2 = ind2, ind1                
-                if ind1 >= sum(1 for p in event if p.status==-1):
-                    new_p = self[ind1] + self[ind2]
-                else:
-                    new_p = self[ind1] - self[ind2]
-           
-                if __debug__:
-                    ptot = FourMomentum()
-                    for i in xrange(len(self)):
-                        if i <2:
-                            ptot += self[i]
-                        else:
-                            ptot -= self[i]
-                    if ptot.mass_sqr > 1e-16:
-                        misc.sprint(ptot, ptot.mass_sqr)
-                
-                inv_mass = new_p.mass_sqr
-                shat = (self[0]+self[1]).mass_sqr
-                if (abs(inv_mass)/shat < 1e-6):
-                    self.pop(ind1)
-                    self.insert(ind1, new_p)
-                    self.pop(ind2)
-                    self.pdgs.pop(ind1) 
-                    self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
-                    self.pdgs.pop(ind2)                 
-                    # DO NOT update the pdgs of the partial weight!
-                    self.put_onshell(ind1, 0)
-                    
-                if __debug__:
-                    ptot = FourMomentum()
-                    for i in xrange(len(self)):
-                        if i <2:
-                            ptot += self[i]
-                        else:
-                            ptot -= self[i]
-                    if ptot.mass_sqr > 1e-16:
-                        misc.sprint(ptot, ptot.mass_sqr)
-                        raise Exception
+                # Do nothing !!!
+                # previously (commented we were checking here if the particle 
+                # were too soft this is done  later now
+#                    The comment line below allow to convert this event 
+#                    to a born one (old method)    
+#                    self.pop(ind1) 
+#                    self.insert(ind1, new_p)
+#                    self.pop(ind2)
+#                    self.pdgs.pop(ind1) 
+#                    self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
+#                    self.pdgs.pop(ind2)                 
+#                    # DO NOT update the pdgs of the partial weight!                    
             else:
                 raise Exception
+
+        def check_fks_singularity(self, ind1, ind2, nb_init=2, threshold=1e-6):
+            """check that the propagator associated to ij is not too light 
+               [related to soft-collinear singularity]"""
+
+            if ind1> ind2: 
+                ind1, ind2 = ind2, ind1                
+            if ind1 >= nb_init:
+                new_p = self[ind1] + self[ind2]
+            else:
+                new_p = self[ind1] - self[ind2]
+                
+            inv_mass = new_p.mass_sqr
+            shat = (self[0]+self[1]).mass_sqr
+            if (abs(inv_mass)/shat < threshold):
+                return True
+            else:
+                return False
+ 
  
         def get_pdg_code(self):
             return self.pdgs
 
         def put_onshell(self, ind, mass):
-	    """ check that particle mass of particle number 'ind' 
+            """ check that particle mass of particle number 'ind' 
                 is onshell and if not use algorithm from VH thesis
                 to restore them."""
             
@@ -2411,7 +2401,8 @@ class NLO_PARTIALWEIGHT(object):
             
             if ind<2:
                 self.put_onshell_initial(ind, mass)
-#            else:
+            else:
+                raise Exception, 'code not implemented for final state'
 #                self.put_onshell_final(ind, mass)
             
         def put_onshell_initial(self, ind, mass):
@@ -2472,21 +2463,6 @@ class NLO_PARTIALWEIGHT(object):
             assert misc.equal(self[0].mass_sqr, 0, 8)
             assert misc.equal(self[1].mass_sqr, 0, 8)
                  
-
-#        def put_onshell_final(self, ind, mass):
-#            """ """            
-#
-#            assert self[0].px==self[0].py==0==self[1].px==self[1].py
-#
-#            p0,p1, pf= self[0],selfself[ind]
-#            
-#            shiftf = (-1 if self[ind].pz<0 else 1) *\
-#                     math.sqrt(max(0, self[ind]
-#
-#            
-#            self[0] =
-#            self[1] =
-#            self[ind]=
             
         def get_tag_and_order(self):
             """ return the tag and order for this basic event""" 
@@ -2616,6 +2592,7 @@ class NLO_PARTIALWEIGHT(object):
 #0.359257891118d-05 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12292838d-02 0.43683926d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  1 12  3 0.334254554762d+00
 #0.929944817736d-03 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12112732d-02 0.45047393d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  2 11  3 0.835109616010d+02
         
+        
         text = text.lower().replace('d','e')
         all_line = text.split('\n')
         #get global information
@@ -2639,27 +2616,47 @@ class NLO_PARTIALWEIGHT(object):
         
         assert len(wgts) == int(nb_wgt)
         
-        get_weights_for_momenta = {}
+        get_weights_for_momenta = dict( (i,[]) for i in range(1,nb_event+1)  )
         size_momenta = 0
         for wgt in wgts:
             if wgt.momenta_config in get_weights_for_momenta:
                 get_weights_for_momenta[wgt.momenta_config].append(wgt)
             else: 
+                misc.sprint(wgt.type, wgt.real_related,wgt.momenta_config)
                 if size_momenta == 0: size_momenta = wgt.nexternal
                 assert size_momenta == wgt.nexternal
                 get_weights_for_momenta[wgt.momenta_config] = [wgt]
     
         assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
     
+        # check singular behavior
+        for key in range(1, nb_event+1):
+            wgts = get_weights_for_momenta[key]
+            if not wgts:
+                continue
+            if size_momenta == 0: size_momenta = wgts[0].nexternal
+            p = momenta[size_momenta*(key-1):key*size_momenta]
+            evt = self.BasicEvent(p, wgts, self.event, self.real_type) 
+            if len(evt) == size_momenta: #real type 
+                for wgt in wgts:
+                    if evt.check_fks_singularity(wgt.to_merge_pdg[0]-1,
+                                                 wgt.to_merge_pdg[1]-1,
+                                                 nb_init=sum(1 for p in self.event if p.status==-1)):
+                        get_weights_for_momenta[wgt.momenta_config].remove(wgt)
+                        get_weights_for_momenta[wgt.born_related].append(wgt)
+     
          
-    
+        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
+           
         self.cevents = []   
         for key in range(1, nb_event+1): 
             if key in get_weights_for_momenta:
                 wgt = get_weights_for_momenta[key]
-                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event, self.real_type) 
+                if not wgt:
+                    continue
+                p = momenta[size_momenta*(key-1):key*size_momenta]
+                evt = self.BasicEvent(p, get_weights_for_momenta[key], self.event, self.real_type)                         
                 self.cevents.append(evt)
-            momenta = momenta[size_momenta:]
            
         nb_wgt_check = 0 
         for cevt in self.cevents:
