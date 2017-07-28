@@ -2578,6 +2578,8 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['unit']='pb'
             self.cross_sect_dict['xsec_string']='Total cross section'
             self.cross_sect_dict['axsec_string']='Total abs(cross section)'
+        if self.run_card['event_norm'].lower()=='bias':
+            self.cross_sect_dict['xsec_string']+=', incl. bias (DO NOT USE)'
 
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
