@@ -1395,7 +1395,8 @@ c     parton_iproc(iproc,icontr) : value of the PDF for the iproc
 c        contribution
 c     parton_pdg(nexternal,iproc,icontr) : value of the PDG codes for
 c     the iproc contribution
-c     ipr(icontr): for seperate_parton_configs: the iproc of current contribution
+c     ipr(icontr): for separate_flavour_configs: the iproc of current
+c        contribution
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
