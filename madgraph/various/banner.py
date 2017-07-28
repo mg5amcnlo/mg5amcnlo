@@ -2474,7 +2474,7 @@ class RunCardLO(RunCard):
         self.add_param("alpsfact", 1.0)
         self.add_param("chcluster", False, hidden=True)
         self.add_param("pdfwgt", True, hidden=True)
-        self.add_param("asrwgtflavor", 5)
+        self.add_param("asrwgtflavor", 5,                                       comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
         self.add_param("event_norm", "average", include=False, sys_default='sum')

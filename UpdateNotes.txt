@@ -1,6 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.5.6 (XX/XX/XX)
+      OM: Fixing a bug leading to a crash in pythia8 due to one event wrongly written when splitting the
+          events for the parralelization of pythia8
       OM: Fixing an issue, leading to NAN for some of the channel of integration for complicated processes.
       RF: Refactor of the HwU.f fortran code. Gives more flexibility and potentially lower
           memory requirements.

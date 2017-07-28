@@ -1043,7 +1043,7 @@ class CondorCluster(Cluster):
                 
             for line in status.stdout:
                 id, status = line.strip().split()
-                ongoing.append(int(id))
+                ongoing.append(id)
                 if status in ['I','U']:
                     idle += 1
                 elif status == 'R':
@@ -1052,7 +1052,7 @@ class CondorCluster(Cluster):
                     fail += 1
 
         for id in list(self.submitted_ids):
-            if int(id) not in ongoing:
+            if id not in ongoing:
                 status = self.check_termination(id)
                 if status == 'wait':
                     run += 1
