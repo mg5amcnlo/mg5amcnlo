@@ -117,7 +117,7 @@ class CombineRuns(object):
         #back out with the appropriate scaled weight
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
         wgt = results.axsec / results.nunwgt
-        tot_nevents=0
+        tot_nevents, nb_file = 0, 0
         for result in results:  
             i = result.name
             if channel.endswith(os.path.pathsep):
@@ -125,8 +125,9 @@ class CombineRuns(object):
             else:
                 path = channel + i
             nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
-            #tot_events += nw
-        #logger.debug("Combined %s events to %s " % (tot_events, channel))
+            tot_nevents += nw
+            nb_file += 1
+        logger.debug("Combined %s file generating %s events for %s " , nb_file, tot_nevents, channel)
 
     @staticmethod
     def get_fortran_str(nb):
@@ -143,8 +144,10 @@ class CombineRuns(object):
 
         new_wgt = self.get_fortran_str(new_wgt)
         old_line = ""
+        nb_evt =0 
         for line in open(input):
             if old_line.startswith("<event>"):
+                nb_evt+=1
                 data = line.split()
                 if not len(data) == 6:
                     raise MadGraph5Error, "Line after <event> should have 6 entries"
@@ -156,7 +159,7 @@ class CombineRuns(object):
                                            new_wgt, '  '.join(data[3:]))
             fsock.write(line)
             old_line = line
-           
+        return nb_evt
     def get_channels(self, proc_path):
         """Opens file symfact.dat to determine all channels"""
         sympath = os.path.join(proc_path, 'symfact.dat')

@@ -27,7 +27,7 @@ $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
-	 weight_lines.o leshouche_inc_chooser.o fks_inc_chooser.o	\
+	 leshouche_inc_chooser.o fks_inc_chooser.o			\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o			\
 	 $(fastjetfortran_madfks) fks_singular.o veto_xsec.o		\
@@ -35,7 +35,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
 	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
-	 $(applgrid_interface) genps_fks.o
+	 $(applgrid_interface) genps_fks.o weight_lines.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
@@ -61,13 +61,13 @@ TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=weight_lines.o reweight_xsec_events.o handling_lhe_events.o	\
+RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
 	leshouche_inc_chooser.o pythia_unlops.o recluster.o 		\
-	reweight_xsec.o
+	reweight_xsec.o weight_lines.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
@@ -117,6 +117,11 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
+
+reweight_xsec_events.o: weight_lines.o
+fks_singular.o: weight_lines.o
+driver_mintMC.o: weight_lines.o
+driver_mintFO.o: weight_lines.o
 
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\

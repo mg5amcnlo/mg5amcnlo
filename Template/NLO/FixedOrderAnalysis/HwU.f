@@ -430,7 +430,6 @@ c     2 empty lines after each plot
          write (unit,'(a)') ''
          write (unit,'(a)') ''         
       enddo
-      call HwU_deallocate_all
       deallocate(buffer)
       return
       end

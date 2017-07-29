@@ -1,6 +1,6 @@
       program collect_events
       implicit none
-      character*120 string120,eventfile
+      character*512 string512,eventfile
       character*19 basicfile,nextbasicfile
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
@@ -65,9 +65,9 @@ c
       nevents=0
       xtotal=0.d0
       do while (.true.)
-         read(10,'(120a)',err=2,end=2) string120
-         eventfile=string120(2:index(string120,'   '))
-         read(string120(index(string120,'   '):120),*)
+         read(10,'(512a)',err=2,end=2) string512
+         eventfile=string512(2:index(string512,'   '))
+         read(string512(index(string512,'   '):512),*)
      $    ievents,absxsec,xsecfrac
          if (ievents.eq.0) cycle
          nevents=nevents+ievents

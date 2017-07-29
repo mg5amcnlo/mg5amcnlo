@@ -2119,8 +2119,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 loopwfnumber=loopwfnumber+1
             for loopamp in loopdiag.get_loop_amplitudes():
                 # Set the number of the starting wavefunction (common to all 
-                # diagrams) to one.
-                loopamp.get_starting_loop_wavefunction().set('number',0)
+                # diagrams) to 0 or -1 if it requires complex conjugation. 
+                start_loop_wf = loopamp.get_starting_loop_wavefunction()
+                if start_loop_wf.get('fermionflow')==1:
+                    start_loop_wf.set('number',0)
+                else:
+                    # External loop WF for flipped fermionflow.
+                    start_loop_wf.set('number',-1)
                 for amp in loopamp['amplitudes']:
                     amp.set('number',loop_ampnumber)
                     loop_ampnumber=loop_ampnumber+1

@@ -1193,7 +1193,7 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                if (self._done_export[1] == 'plugin' and mode in self._export_formats):
                     args.append(mode)
                     args.append(self._done_export[0])
                 elif self._done_export[1].startswith(mode):
@@ -7589,22 +7589,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
-            path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                          self._curr_helas_model)
             
-            # Write the procdef_mg5.dat file with process info
-            card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                self._curr_exporter.write_procdef_mg5(card_path,
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except Exception:
-                    misc.sprint('command history fails.', 10)
-                    pass
+                #try:
+                #    cmd.Cmd.onecmd(self, 'history .')
+                #except Exception:
+                #    misc.sprint('command history fails.', 10)
+                #    pass
 
         # Pythia 8
         elif self._export_format == 'pythia8':
@@ -7674,6 +7666,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         matrix_elements.remove(me)
                     else:
                         calls = calls + new_calls
+
+        if self._generate_info and hasattr(self._curr_exporter, 'write_procdef_mg5'):
+            # Write the procdef_mg5.dat file with process info
+            card_path = pjoin(self._export_dir ,'SubProcesses', \
+                                     'procdef_mg5.dat')
+            self._curr_exporter.write_procdef_mg5(card_path,
+                                self._curr_model['name'],
+                                self._generate_info)
+
 
         cpu_time2 = time.time() - cpu_time1
 

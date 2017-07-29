@@ -281,6 +281,7 @@ c     If we are still initializing the grid or simply not using one at all, then
       TOTWGT=0D0
       DO J=1,SYMCONF(0)
         DO I=1,MAXSPROC
+	  IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
           DO K=1,2
             TOTWGT=TOTWGT+SELPROC(K,I,J)
             IF(R.LT.TOTWGT)THEN
@@ -290,6 +291,7 @@ c     If we are still initializing the grid or simply not using one at all, then
                 GOTO 50
              ENDIF
           ENDDO
+	  ENDIF
         ENDDO
       ENDDO
  50   CONTINUE

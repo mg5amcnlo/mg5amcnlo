@@ -734,14 +734,7 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         write(*,*) 'Error BW setting: not supported at NLO'
-         stop 1
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end

@@ -436,16 +436,21 @@ class Combine_results(list, OneResult):
         if update_statistics:
             self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
-    def compute_average(self):
+    def compute_average(self, error=None):
         """compute the value associate to this combination"""
 
         nbjobs = len(self)
         if not nbjobs:
             return
+        max_xsec = max(one.xsec for one in self)
+        min_xsec = min(one.xsec for one in self)
         self.axsec = sum([one.axsec for one in self]) / nbjobs
         self.xsec = sum([one.xsec for one in self]) /nbjobs
         self.xerrc = sum([one.xerrc for one in self]) /nbjobs
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
+        if error:
+            self.xerrc = error
+            self.xerru = error
 
         self.nevents = sum([one.nevents for one in self])
         self.nw = 0#sum([one.nw for one in self])
@@ -464,6 +469,20 @@ class Combine_results(list, OneResult):
             self.eff_iter += result.eff_iter
             self.maxwgt_iter += result.maxwgt_iter
 
+        #check full consistency
+        onefail = False
+        for one in list(self):
+            if one.xsec < (self.xsec - 25* one.xerru):
+                if not onefail:
+                    logger.debug('multi run are inconsistent: %s < %s - 25* %s: assign error %s', one.xsec, self.xsec, one.xerru, error if error else max_xsec-min_xsec)
+                onefail = True
+                self.remove(one)
+        if onefail:
+            if error:
+                return self.compute_average(error)
+            else:
+                return self.compute_average((max_xsec-min_xsec)/2.)
+            
 
     
     def compute_iterations(self):

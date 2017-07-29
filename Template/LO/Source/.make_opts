@@ -37,9 +37,6 @@ ifeq ($(origin CFLAGS),undefined)
 CFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
 endif
 
-# Increase the number of allowed charcters in a Fortran line
-FFLAGS+= -ffixed-line-length-132
-
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
 FC=$(DEFAULT_F_COMPILER)
@@ -47,6 +44,15 @@ endif
 ifeq ($(origin F2PY), undefined)
 F2PY=$(DEFAULT_F2PY_COMPILER)
 endif
+
+# Increase the number of allowed charcters in a Fortran line
+ifeq ($(FC), ftn)
+FFLAGS+= -extend-source # for ifort type of compiler
+else
+FFLAGS+= -ffixed-line-length-132
+endif
+
+
 
 UNAME := $(shell uname -s)
 ifeq ($(origin LDFLAGS), undefined)
@@ -91,7 +97,7 @@ endif
 ifneq ($(lhapdf),)
 CXXFLAGS += $(shell $(lhapdf) --cppflags)
 alfas_functions=alfas_functions_lhapdf
-llhapdf+= -lLHAPDF
+llhapdf+= $(shell $(lhapdf) --libs) -lLHAPDF
 else
 alfas_functions=alfas_functions
 llhapdf=

@@ -149,7 +149,7 @@ class Banner(dict):
                     self[tag] = text
                     text = ''
                     store = False
-            if store:
+            if store and not line.startswith(('<![CDATA[',']]>')):
                 if line.endswith('\n'):
                     text += line
                 else:
@@ -382,18 +382,19 @@ class Banner(dict):
         ff.write(header % { 'version':float(self.lhe_version)})
 
 
-        for tag in [t for t in self.ordered_items if t in self.keys()]:
-            if tag in exclude: 
+        for tag in [t for t in self.ordered_items if t in self.keys()]+ \
+            [t for t in self.keys() if t not in self.ordered_items]:
+            if tag in ['init'] or tag in exclude: 
                 continue
             capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':capitalized_tag, 'text':self[tag].strip()})
-        for tag in [t for t in self.keys() if t not in self.ordered_items]:
-            if tag in ['init'] or tag in exclude:
-                continue
-            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':capitalized_tag, 'text':self[tag].strip()})
+            start_data, stop_data = '', ''
+            if '<' in self[tag] or '@' in self[tag]:
+                start_data = '\n<![CDATA['
+                stop_data = ']]>\n'
+            ff.write('<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
+                     {'tag':capitalized_tag, 'text':self[tag].strip(),
+                      'start_data': start_data, 'stop_data':stop_data})
+        
         
         if not '/header' in exclude:
             ff.write('</header>\n')    
@@ -2473,7 +2474,7 @@ class RunCardLO(RunCard):
         self.add_param("alpsfact", 1.0)
         self.add_param("chcluster", False, hidden=True)
         self.add_param("pdfwgt", True, hidden=True)
-        self.add_param("asrwgtflavor", 5)
+        self.add_param("asrwgtflavor", 5,                                       comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
         self.add_param("event_norm", "average", include=False, sys_default='sum')
@@ -2618,7 +2619,9 @@ class RunCardLO(RunCard):
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
+        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+        
         # Specify what particle IDs to use for the CKKWL merging cut ktdurham
         
     def check_validity(self):
@@ -3350,6 +3353,13 @@ class RunCardNLO(RunCard):
         """check the validity of the various input"""
         
         super(RunCardNLO, self).check_validity()
+
+        # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
+        if self['lpp1']==0 and self['lpp2']==0:
+            if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                self['pdlabel']='nn23nlo'
+                self['reweight_pdf']=[False]
+                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 

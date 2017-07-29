@@ -1634,11 +1634,15 @@ class width_estimate(object):
                 self.ask_edit_cards(['param_card'],[], plot=False)
         
         
+        commandline = 'import model %s' % model.get('modelpath+restriction') 
+        if not model.mg5_name:
+            commandline += ' --modelname'
+        cmd.exec_cmd(commandline)
+
         line = 'compute_widths %s %s' % \
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
 
         #pattern for checking complex mass scheme.
         has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''', re.M)

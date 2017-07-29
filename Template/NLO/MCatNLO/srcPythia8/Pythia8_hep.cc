@@ -64,7 +64,7 @@ int main() {
     // the number of events read by Pythia so far
     int nSelected=pythia.info.nSelected();
 
-    if (nSelected >= iEventshower) break;
+    if (nSelected > iEventshower) break;
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();

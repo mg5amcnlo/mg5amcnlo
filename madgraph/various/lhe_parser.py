@@ -173,7 +173,7 @@ class EventFile(object):
 
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
-        
+
         if path.endswith('.gz') and mode == 'w' and\
                                               isinstance(self, EventFileNoGzip):
             path = path[:-3]
@@ -233,15 +233,13 @@ class EventFile(object):
             return 0
         if hasattr(self,"len"):
             return self.len
-
-        init_pos = self.tell()
         self.seek(0)
         nb_event=0
         with misc.TMP_variable(self, 'parsing', False):
             for _ in self:
                 nb_event +=1
         self.len = nb_event
-        self.seek(init_pos)
+        self.seek(0)
         return self.len
 
     def next(self):
@@ -258,7 +256,6 @@ class EventFile(object):
                     text = ''
                 if mode:
                     text += line
-
             if self.parsing:
                 return Event(text)
             else:
@@ -2608,18 +2605,19 @@ class NLO_PARTIALWEIGHT(object):
 
 if '__main__' == __name__:   
     
-    lhe = EventFile('unweighted_events.lhe.gz')
-    #lhe.parsing = False
-    start = time.time()
-    for event in lhe:
-        event.parse_lo_weight()
-    print 'old method -> ', time.time()-start
-    lhe = EventFile('unweighted_events.lhe.gz')
-    #lhe.parsing = False
-    start = time.time()
-    for event in lhe:
-        event.parse_lo_weight_test()
-    print 'new method -> ', time.time()-start    
+    if False:
+        lhe = EventFile('unweighted_events.lhe.gz')
+        #lhe.parsing = False
+        start = time.time()
+        for event in lhe:
+            event.parse_lo_weight()
+        print 'old method -> ', time.time()-start
+        lhe = EventFile('unweighted_events.lhe.gz')
+        #lhe.parsing = False
+        start = time.time()
+        for event in lhe:
+            event.parse_lo_weight_test()
+        print 'new method -> ', time.time()-start    
     
 
     # Example 1: adding some missing information to the event (here distance travelled)
