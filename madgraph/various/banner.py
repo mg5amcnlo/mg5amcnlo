@@ -333,7 +333,6 @@ class Banner(dict):
 
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
-        misc.sprint(cross)
         assert isinstance(cross, dict)
 #        assert "all" in cross
         assert "init" in self
@@ -343,7 +342,6 @@ class Banner(dict):
         new_data.append(all_lines[0])
         for i in range(1, len(all_lines)):
             line = all_lines[i]
-            misc.sprint(line)
             split = line.split()
             if len(split) == 4:
                 xsec, xerr, xmax, pid = split 

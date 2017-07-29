@@ -1689,7 +1689,23 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
     
     
 
-
+def plugin_import(module, error_msg, fcts=[]):
+    """convenient way to import a plugin file/function"""
+    
+    try:
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+    except ImportError:
+        try:
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        except ImportError:
+            raise MadGraph5Error, error_msg
+    
+    if not fcts:
+        return _temp
+    elif len(fcts) == 1:
+        return getattr(_temp,fcts[0])
+    else:
+        return [getattr(_temp,name) for name in fcts]
 
 
 python_lhapdf=None

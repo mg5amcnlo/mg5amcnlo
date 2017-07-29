@@ -495,7 +495,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.banner.write(output[name], close_tag=False)
         
                 
-        os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
@@ -566,8 +565,6 @@ class ReweightInterface(extended_cmd.Cmd):
             for key in output:
                 output[key].write('</LesHouchesEvents>\n')
                 output.close()
-            
-        os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'n'
         
         if self.mother:
             output2.write('</LesHouchesEvents>\n')

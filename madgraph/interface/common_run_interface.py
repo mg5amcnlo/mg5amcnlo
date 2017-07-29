@@ -1901,7 +1901,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight.log'),'w')
                         new_command.append('--multicore=create')
                     else:
-                        stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%i.log' % i),'w')
+                        stdout = devnull
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
