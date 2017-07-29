@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,7 +11,6 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -142,6 +142,8 @@ c Only do the reweighting when actually generating the events
          doreweight=do_rwgt_scale.or.do_rwgt_pdf
       else
          doreweight=.false.
+         do_rwgt_scale=.false.
+         do_rwgt_pdf=.false.
       endif
       if (abrv(1:4).eq.'virt') then
          only_virt=.true.
@@ -201,6 +203,7 @@ c
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
          write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
@@ -257,6 +260,7 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          
 c If integrating the virtuals alone, we include the virtuals in
 c ans(1). Therefore, no need to have them in ans(5) and we have to set
@@ -387,6 +391,7 @@ c Randomly pick the contribution that will be written in the event file
             call fill_rwgt_lines
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
+         call deallocate_weight_lines
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
          write (*,*) 'Generation efficiencies:',x(1),x(4)
@@ -482,10 +487,6 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 c timing statistics
       include "timing_variables.inc"
       data tOLP/0.0/
-      data tFastJet/0.0/
-      data tPDF/0.0/
-      data tDSigI/0.0/
-      data tDSigR/0.0/
       data tGenPS/0.0/
       data tBorn/0.0/
       data tIS/0.0/
@@ -732,12 +733,11 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
-c From dsample_fks
+      use weight_lines
       implicit none
       include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
@@ -972,7 +972,6 @@ c summed explicitly and which by MC-ing.
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight_all.inc'
       include 'nFKSconfigs.inc'
       double precision lum,dlum
       external dlum
@@ -996,19 +995,12 @@ c summed explicitly and which by MC-ing.
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
      $        /' Born PS point (sum=0)'
       endif
-      maxproc_save=0
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
          xbk(1)=0.5d0
          xbk(2)=0.5d0
          lum=dlum()  ! updates IPROC
-         maxproc_save=max(maxproc_save,IPROC)
-         if (doreweight) then
-            call reweight_settozero()
-            call reweight_settozero_all(nFKSprocess*2,.true.)
-            call reweight_settozero_all(nFKSprocess*2-1,.true.)
-         endif
       enddo
       write (*,*) 'Total number of FKS directories is', fks_configs
 c For sum over identical FKS pairs, need to find the identical structures

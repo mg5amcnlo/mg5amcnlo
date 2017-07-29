@@ -208,10 +208,10 @@ c
       function muR_ref_dynamic(pp)
 c This is a function of the kinematic configuration pp, which returns
 c a scale to be used as a reference for renormalization scale
+      use extra_weights
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'run.inc'
       include 'cuts.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)

@@ -1008,9 +1008,6 @@ c the same method
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      logical rotategranny
-      common/crotategranny/rotategranny
-
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
 
@@ -1110,10 +1107,6 @@ c Insert <ij>/[ij] which is not included by sborn()
                   pi(i)=p_i_fks_ev(i)
                   pj(i)=p(i,j_fks)
                enddo
-               if(rotategranny)then
-                  call trp_rotate_invar(pi,pi,cthbe,sthbe,cphibe,sphibe)
-                  call trp_rotate_invar(pj,pj,cthbe,sthbe,cphibe,sphibe)
-               endif
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
                CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
                CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
@@ -1128,13 +1121,8 @@ c Insert <ij>/[ij] which is not included by sborn()
             endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
             imother_fks=min(i_fks,j_fks)
-            if(rotategranny)then
-               call getaziangles(p_born_rot(0,imother_fks),
-     #                           cphi_mother,sphi_mother)
-            else
-               call getaziangles(p_born(0,imother_fks),
-     #                           cphi_mother,sphi_mother)
-            endif
+            call getaziangles(p_born(0,imother_fks),
+     #                        cphi_mother,sphi_mother)
             wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #                  wgt1(2) * azifact
          else

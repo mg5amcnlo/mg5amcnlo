@@ -16,60 +16,26 @@ c     Constants
 c
       double precision zero
       parameter       (ZERO = 0d0)
-      real*8 Pi
-      parameter( Pi = 3.14159265358979323846d0 )
-      integer    lun
-      parameter (lun=22)
 c
 c     LOCAL
 c
       integer i,j
-      integer icollider,detail_level
-      logical  do_cuts(nexternal)
-      integer ncheck
-      logical done,fopened
 C     
 C     GLOBAL
 C
 c--masses and poles
       double precision pmass(nexternal)
       common/to_mass/  pmass
-c--cuts
-      double precision etmin(nincoming+1:nexternal)
-      double precision etamax(nincoming+1:nexternal)
-      double precision emin(nincoming+1:nexternal)
-      double precision r2min(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_min(nexternal,nexternal)
-      double precision etmax(nincoming+1:nexternal)
-      double precision etamin(nincoming+1:nexternal)
-      double precision emax(nincoming+1:nexternal)
-      double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_max(nexternal,nexternal)
-      common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max
-
-      double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
-      logical jetor
-      common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
-
 c
-c     les houches accord stuff to identify neutrinos
+c     les houches accord stuff to identify particles
 c
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
-c      include 'leshouche.inc'
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-c
-c
-c     reading parameters
-      integer maxpara
-      parameter (maxpara=100)
-      character*20 param(maxpara),value(maxpara)
-      integer npara
 c
 c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
@@ -565,10 +531,6 @@ c
       include 'nexternal.inc'
       include 'maxparticles.inc'
       include 'maxconfigs.inc'
-      include 'mint.inc'
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
       logical new_point
