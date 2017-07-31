@@ -421,7 +421,7 @@ in presence of majorana particle/flow violation"""
             pos = pos+3
             ltype = data[pos]
             if ltype != 'complex':
-                data[pos+1] = re.sub(r'\b(%s)\b' % '|'.join(to_change),
+                data[pos+1] = re.sub(r'\b(?<!-)(%s)\b' % '|'.join(to_change),
                                      lambda x: to_change[x.group()], data[pos+1])
             data[pos+1] = '(%s)' % data[pos+1]
         text=''.join(data)

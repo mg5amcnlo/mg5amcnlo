@@ -130,12 +130,12 @@ C
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/DPW
 
-	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
-	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
+	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
+	  %(complex_mp_format)s PL(0:3,-1:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-      %(complex_dp_format)s DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
-	  %(complex_dp_format)s DP_PL(0:3,0:NLOOPWAVEFUNCS)
+      %(complex_dp_format)s DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s DP_PL(0:3,-1:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/DP_WL,DP_PL
 
 ## if(not AmplitudeReduction){
@@ -222,8 +222,10 @@ DO I=1,NEXTERNAL
 ENDDO
 
 DO I=0,3
+  PL(I,-1)=CMPLX(ZERO,ZERO,KIND=16)
   PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
   IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+    DP_PL(I,-1)=DCMPLX(0.0d0,0.0d0)
     DP_PL(I,0)=DCMPLX(0.0d0,0.0d0)
   ENDIF
 ENDDO
@@ -234,6 +236,8 @@ IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 DO I=1,MAXLWFSIZE
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,MAXLWFSIZE
+	  WL(I,J,K,-1)=(ZERO,ZERO)
+	  DP_WL(I,J,K,-1)=(0.0d0,0.0d0)
       IF (I.EQ.K.AND.J.EQ.0) THEN
         WL(I,J,K,0)=(1.0e0_16,ZERO)
       ELSE
@@ -249,6 +253,18 @@ DO I=1,MAXLWFSIZE
     ENDDO
   ENDDO
 ENDDO
+
+C This is the chare conjugate version of the unit 4-currents in the canonical cartesian basis.
+C This, for now, is only defined for 4-fermionic currents.
+WL(1,0,2,-1) = (-1.0e0_16,ZERO)
+WL(2,0,1,-1) = (1.0e0_16,ZERO)
+WL(3,0,4,-1) = (1.0e0_16,ZERO)
+WL(4,0,3,-1) = (-1.0e0_16,ZERO)
+DP_WL(1,0,2,-1) = DCMPLX(-1.0d0,0.0d0)
+DP_WL(2,0,1,-1) = DCMPLX(1.0d0,0.0d0)
+DP_WL(3,0,4,-1) = DCMPLX(1.0d0,0.0d0)
+DP_WL(4,0,3,-1) = DCMPLX(-1.0d0,0.0d0)
+
 
 DO K=1, 3
 ## if(not AmplitudeReduction){

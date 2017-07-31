@@ -643,10 +643,17 @@ param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
         else:
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
-        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
-        writer.write(text)
         
-        return True
+        replace_dict= {'libraries': set_of_lib, 
+                       'model':model_line,
+                       'additional_dsample': '',
+                       'additional_dependencies':''} 
+        
+        if writer:
+            text = open(path).read() % replace_dict
+            writer.write(text)
+            
+        return replace_dict
 
     #===========================================================================
     # write_nexternal_madspin
@@ -2288,10 +2295,18 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
-        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
-        writer.write(text)
+
+        replace_dict= {'libraries': set_of_lib, 
+                       'model':model_line,
+                       'additional_dsample': '',
+                       'additional_dependencies':''} 
+
+        text = open(path).read() % replace_dict
         
-        return True
+        if writer:
+            writer.write(text)
+        
+        return replace_dict
 
     #===========================================================================
     # write_matrix_element_v4

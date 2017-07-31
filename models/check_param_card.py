@@ -900,15 +900,17 @@ class ParamCardIterator(ParamCard):
             yield param_card
         
     
-    def store_entry(self, run_name, cross):
+    def store_entry(self, run_name, cross, error=None):
         """store the value of the cross-section"""
         if isinstance(cross, dict):
             info = dict(cross)
             info.update({'bench' : self.itertag, 'run_name': run_name})
             self.cross.append(info)
         else:
-            self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
-        
+            if error is None:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
+            else:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """

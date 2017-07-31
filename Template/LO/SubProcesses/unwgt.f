@@ -603,7 +603,7 @@ c
       if (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
-            if(xbk(1).eq.1d0.or.pmass(1).eq.0d0) then
+            if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then
                ! construct the beam momenta in each frame and compute the related (z)boost
                ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
                ebi(1) = 0

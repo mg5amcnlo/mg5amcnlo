@@ -719,14 +719,7 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         write(*,*) 'Error BW setting: not supported at NLO'
-         stop 1
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end
@@ -1207,6 +1200,7 @@ c     include all quarks (except top quark) and the gluon.
 
       subroutine update_fks_dir(nFKS)
       implicit none
+      include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -1215,6 +1209,7 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
+      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 

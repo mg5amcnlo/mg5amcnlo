@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -1265,7 +1265,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'])
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
@@ -1282,7 +1283,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         argss[0] = mode
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'])
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
@@ -1539,6 +1541,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             try:
                 with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
                     jobs_to_collect=pickle.load(f)
+                    for job in jobs_to_collect:
+                        job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
                 raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
@@ -3814,6 +3818,7 @@ RESTART = %(mint_mode)s
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
+        misc.sprint(evt_file)
         shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
@@ -3904,7 +3909,8 @@ RESTART = %(mint_mode)s
                 lhaid_list = [abs(int(self.shower_card['pdfcode']))]
                 content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif int(self.shower_card['pdfcode'])==1:
+        elif int(self.shower_card['pdfcode'])==1 or \
+            int(self.shower_card['pdfcode'])==-1 and True:
             # Try to use LHAPDF because user wants to use the same PDF
             # as was used for the event generation. However, for the
             # event generation, LHAPDF was not used, so non-trivial to
@@ -4527,8 +4533,7 @@ RESTART = %(mint_mode)s
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
-                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+
             self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not

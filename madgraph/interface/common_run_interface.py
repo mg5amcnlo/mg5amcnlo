@@ -110,13 +110,11 @@ class HelpToCmd(object):
         logger.info("      by condor cluster (since condor has it's own way to prevent it).")
 
     def help_plot(self):
-        logger.info("syntax: help [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("syntax: plot [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
         logger.info("-- create the plot for the RUN (current run by default)")
         logger.info("     at the different stage of the event generation")
         logger.info("     Note than more than one mode can be specified in the same command.")
-        logger.info("   This require to have MadAnalysis and td require. By default")
-        logger.info("     if those programs are installed correctly, the creation")
-        logger.info("     will be performed automaticaly during the event generation.")
+        logger.info("   This requires to have MadAnalysis and td installed.")
         logger.info("   -f options: answer all question by default.")
 
     def help_compute_widths(self):
@@ -645,12 +643,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock = open(pjoin(me_dir,'RunWeb'),'w')
                 fsock.write(`pid`)
                 fsock.close()
-    
-                try:
-                    misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                            cwd=me_dir)
-                except:
-                    pass
+                self.gen_card_html()
+
         self.to_store = []
         self.run_name = None
         self.run_tag = None
@@ -751,6 +745,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+
+        #ensure that the cluster/card are consistent
+        if hasattr(self, 'run_card'):
+            self.cluster.modify_interface(self)
+        else:   
+            try:
+                self.cluster.modify_interface(self)
+            except Exception, error:
+                misc.sprint(str(error))
+                
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
@@ -760,10 +764,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
-                if amcatnlo:
-                    run_card = banner_mod.RunCardNLO(opt['run_card'])
-                else:
-                    run_card = banner_mod.RunCard(opt['run_card'])
+                run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
 
@@ -1165,6 +1166,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 use_band=[],
                 auto_open=False)
         return True
+    
+    def gen_card_html(self):
+        """ """
+        devnull = open(os.devnull, 'w')        
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+            
     
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
@@ -3074,9 +3086,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                 logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
                                 self.cluster = plugin.new_cluster[cluster_name](**opt)
                                 break
-                        else:
-                            continue
-                        break
+                    else:
+                        continue
+                    break
                 else:
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
                 
@@ -3191,14 +3203,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('', level=None)
         except Exception, error:
             pass
-        devnull = open(os.devnull, 'w')
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        devnull.close()
 
+        self.gen_card_html()
         return super(CommonRunCmd, self).do_quit(line)
 
     # Aliases
@@ -5229,9 +5235,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths None ')   
-                    
-                        
+                    self.do_set('shower_card extrapaths None ') 
+
+
     def reask(self, *args, **opt):
         
         cmd.OneLinePathCompletion.reask(self,*args, **opt)
@@ -5555,7 +5561,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-        
+    
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any

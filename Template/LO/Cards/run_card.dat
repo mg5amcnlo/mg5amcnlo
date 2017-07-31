@@ -114,7 +114,6 @@
  %(pta)s  = pta       ! minimum pt for the photons 
  %(ptl)s  = ptl       ! minimum pt for the charged leptons 
  %(misset)s  = misset    ! minimum missing Et (sum of neutrino's momenta)
- %(ptheavy)s  = ptheavy   ! minimum pt for one heavy final state
  %(ptjmax)s  = ptjmax    ! maximum pt for the jets
  %(ptbmax)s  = ptbmax    ! maximum pt for the b
  %(ptamax)s  = ptamax    ! maximum pt for the photons
@@ -191,6 +190,7 @@
 #*********************************************************************
 # Inclusive cuts                                                     *
 #*********************************************************************
+ %(ptheavy)s  = ptheavy   ! minimum pt for at least one heavy final state
  %(xptj)s  = xptj ! minimum pt for at least one jet  
  %(xptb)s  = xptb ! minimum pt for at least one b 
  %(xpta)s  = xpta ! minimum pt for at least one photon 

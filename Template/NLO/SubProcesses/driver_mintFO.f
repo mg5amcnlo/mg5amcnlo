@@ -505,6 +505,7 @@ c Finalize PS point
 
       subroutine update_fks_dir(nFKS)
       implicit none
+      include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -513,6 +514,7 @@ c Finalize PS point
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.false.)
+      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
       
