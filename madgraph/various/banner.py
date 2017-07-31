@@ -333,7 +333,6 @@ class Banner(dict):
 
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
-
         assert isinstance(cross, dict)
 #        assert "all" in cross
         assert "init" in self

@@ -646,9 +646,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock.write(`pid`)
                 fsock.close()
     
-                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                try:
+                    misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
                             cwd=me_dir)
-
+                except:
+                    pass
         self.to_store = []
         self.run_name = None
         self.run_tag = None
@@ -1889,7 +1891,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if 'nevt_job' in self.run_card and self.run_card['nevt_job'] !=-1:
                     nevt_job = self.run_card['nevt_job']
                 else:
-                    nevt_job = max(5000, self.run_card['nevents']/50)
+                    nevt_job = max(2500, self.run_card['nevents']/self.options['nb_core'])
                 logger.info("split the event file in bunch of %s events" % nevt_job)
                 nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
                 starttime = time.time()
@@ -5142,7 +5144,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
-                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
+                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO|NLO_tree)\s*(?:#|$)''', re.M+re.I)
                 text = open(self.paths['reweight']).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):

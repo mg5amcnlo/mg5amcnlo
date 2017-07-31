@@ -4784,8 +4784,6 @@ RESTART = %(mint_mode)s
             file.write(content)
         file.close()
 
-
-
     ############################################################################
     def find_model_name(self):
         """ return the model name """

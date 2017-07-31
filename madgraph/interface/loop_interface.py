@@ -428,6 +428,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             main_file_name = args[args.index('-name') + 1]
         except Exception:
             pass
+        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
 
         # Whatever the format we always output the quadruple precision routines
         # to allow for curing possible unstable points.
@@ -463,7 +464,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             output_type = 'madloop_matchbox'
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
-                     noclean, output_type=output_type, group_subprocesses=False)
+                     noclean, output_type=output_type, group_subprocesses=False,
+                     cmd_options=line_options)
 
         if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.copy_template(self._curr_model)
