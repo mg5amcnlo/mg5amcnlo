@@ -889,14 +889,18 @@ class ReweightInterface(extended_cmd.Cmd):
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0)
         # reshuffle event for mass effect # external mass only
-        jac = event.change_ext_mass(self.new_param_card)
+        if isinstance(self.run_card, banner.RunCardLO):
+            jac = event.change_ext_mass(self.new_param_card)
+        else:
+            jac =1
+
         if jac != 1:
             if self.output_type == 'default':
                 logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
                 raise Exception
             mode = self.run_card['dynamical_scale_choice']
             if mode == -1:
-                logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale')
+                logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale for renormalisation scale')
                 mode = 3
             event.scale = event.get_scale(mode)
             event.aqcd = self.lhe_input.get_alphas(event.scale, lhapdf_config=self.mother.options['lhapdf'])

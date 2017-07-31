@@ -1943,7 +1943,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.to_store.append('event')
         # forbid this function to create an empty item in results.
-        if self.results.current['cross'] == 0 and self.run_name:
+        if not self.force_run and self.results.current['cross'] == 0 and self.run_name:
             self.results.delete_run(self.run_name, self.run_tag)
 
         self.check_decay_events(args) 

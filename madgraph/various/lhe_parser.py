@@ -2559,8 +2559,6 @@ class NLO_PARTIALWEIGHT(object):
                 self.pdgs.pop(ind1) 
                 self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
                 self.pdgs.pop(ind2)
-                #ensure the onshell of the particle
-                self.put_onshell(ind1, 0)
                 # DO NOT update the pdgs of the partial weight!
 
             elif any(w.type in self.real_type for w in wgts):
@@ -2602,85 +2600,6 @@ class NLO_PARTIALWEIGHT(object):
  
         def get_pdg_code(self):
             return self.pdgs
-
-        def put_onshell(self, ind, mass):
-            """ check that particle mass of particle number 'ind' 
-                is onshell and if not use algorithm from VH thesis
-                to restore them."""
-            
-            if misc.equal(self[ind].mass_sqr, mass**2, 20):
-                return # nothing to do
-
-            if sum(1 for p in self.event if p.status==-1) == 1:
-                logger.debug('1 to N can not be put back onshell. Continue')
-                return # does not work for 1 to N: keep it offshell
-
-            assert self.pdgs[ind] in (range(-6,7)+[21,22]) ,"onshell routine works only for zero mass particle. PDG is not assume massless."
-            
-            if ind<2:
-                self.put_onshell_initial(ind, mass)
-            else:
-                raise Exception, 'code not implemented for final state'
-#                self.put_onshell_final(ind, mass)
-            
-        def put_onshell_initial(self, ind, mass):
-            """ """
-
-            assert mass == 0
-
-            ptot = self[0] + self[1]
-                
-            # particle 2 should not have any pt. The one reshuffle has a pt
-            if ind == 0:
-                p1 = self[0] # the one we modify with pt
-                p2 = self[1] # original one no pt
-            else:
-                p1 = self[1] # the one we modify with pt
-                p2 = self[0] # original one no pt
-                
-            assert misc.equal(p2.px, 0 , 8)
-            assert misc.equal(p2.py, 0 , 8)
-
-            discr = -ptot.mass_sqr
-            
-            shifte1 = ( ptot.E*(ptot.pt2 -2*p1.E*ptot.E +ptot.E**2) +
-                        (2*p1.E-ptot.E)*ptot.pz**2 + ptot.pz*discr
-                      )/ (2*(ptot.E**2-ptot.pz**2))
-             
-            shifte2 = -( ptot.E*(ptot.pt2 + 2*p2.E*ptot.E - ptot.E**2) +
-                        (-2*p2.E + ptot.E)*ptot.pz**2 + ptot.pz*discr
-                      )/ (2*(ptot.E**2-ptot.pz**2))
-            
-            shiftz1 = ( -2*p1.pz*(ptot.E**2 - ptot.pz**2) 
-                        + ptot.pz*(ptot.pt2 + ptot.E**2 - ptot.pz**2)
-                        + ptot.E*discr
-                      )/ (2*(ptot.E**2 - ptot.pz**2))
-
-
-            shiftz2 = -( 2*p2.pz*(ptot.E**2 - ptot.pz**2) 
-                         + ptot.pz*(ptot.pt2 - ptot.E**2 + ptot.pz**2)
-                         + ptot.E*discr
-                       )/ (2*(ptot.E**2 - ptot.pz**2))
-
-     
-            p1 = FourMomentum(p1.E + shifte1,
-                                   p1.px,
-                                   p1.py,
-                                   p1.pz + shiftz1)
-                                
-            p2 = FourMomentum(p2.E + shifte2,
-                                   0.,
-                                   0.,
-                                   p2.pz + shiftz2)
-
-            if ind == 0:
-                self[0], self[1] = p1, p2
-            else:
-                self[0], self[1] = p2, p1
-                
-            assert misc.equal(self[0].mass_sqr, 0, 8)
-            assert misc.equal(self[1].mass_sqr, 0, 8)
-                 
             
         def get_tag_and_order(self):
             """ return the tag and order for this basic event""" 

@@ -30,6 +30,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madgraph_interface as MG5Cmd
 import madgraph.interface.madevent_interface as MECmd
+import madgraph.interface.amcatnlo_run_interface as aMCCmd
 import madgraph.interface.reweight_interface as RGWTcmd
 import madgraph.interface.common_run_interface as commonCmd
 import madgraph.interface.launch_ext_program as launch_ext
@@ -58,7 +59,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = True
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -99,7 +100,23 @@ class TestMECmdRWGT(unittest.TestCase):
         mecmd = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         
         return mecmd
-                
+
+
+    def get_aMCcmd(self, event):
+        
+        mycmd = MGCmd.MasterCmd(mgme_dir=MG5DIR)
+        mycmd.use_rawinput = False
+        mycmd.haspiping = False
+        #misc.sprint(mgcmd, dir(mgcmd))
+        mycmd.run_cmd('import model sm; generate u u~ > mu+ mu- [QCD]; output %s' % self.run_dir)
+        
+        #os.mkdir(pjoin(self.run_dir, 'Events'))
+        os.mkdir(pjoin(self.run_dir, 'Events', 'run_01'))
+        files.cp(event, pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
+        
+        mecmd = aMCCmd.aMCatNLOCmd(me_dir=self.run_dir)
+        mecmd.force_run = True
+        return mecmd                
 
     def test_oneloop_reweighting(self):
         """ testing that we can reweight the hj sample to a loop-induced  sample
@@ -173,6 +190,30 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
         #misc.sprint(solutions)
         
+    def test_nlo_reweighting(self):
+        """ check identical re-weighting in ttbar 
+        """
+        
+        me_cmd = self.get_aMCcmd(pjoin(_pickle_path, 'ttbar_nlo.lhe.gz'))
+        
+        cmd_lines = """
+        change mode LO+NLO
+        launch --rwgt_name=MYNLO
+        """ 
+
+        ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
+        ff.write(cmd_lines)
+        ff.close()
+        
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            me_cmd.run_cmd('reweight run_01 --from_cards')
+        
+        lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
+        for i,event in enumerate(lhe): 
+            rwgt_data = event.parse_reweight()
+            self.assertEqual(event.wgt, rwgt_data['MYNLO_nlo'])
+            self.assertTrue('MYNLO_lo' in rwgt_data)
+        
     def test_scan_reweighting(self):
         """ testing that we can use the scan syntax and that we can assign name to weight
         """
@@ -191,6 +232,7 @@ class TestMECmdRWGT(unittest.TestCase):
         
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
+            
 
 
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
@@ -211,7 +253,7 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertTrue(misc.equal(rwgt_data['NAME_1'], solutions2[i]))
             
 
-    def test_nlo_reweighting(self):
+    def test_nlo_reweighting_comb(self):
         """check that nlo reweighting is working.
            The main point is to check the recombination of the weights
            Since the rest should be either checked by the lhe_parser class
