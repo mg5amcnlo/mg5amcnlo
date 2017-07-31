@@ -537,6 +537,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               writers.FortranWriter(filename), 
                               nfksconfs,maxproc,maxflow,nexternal,
                               fortran_model)
+        filename = 'genps.inc'
+        ngraphs = matrix_element.born_me.get_number_of_amplitudes()
+        ncolor = max(1,len(matrix_element.born_me.get('color_basis')))
+        self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
@@ -636,8 +641,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'chooser_functions.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
-                     'c_weight.inc',
-                     'genps.inc',
+                     'weight_lines.f',
                      'genps_fks.f',
                      'boostwdir2.f',
                      'madfks_mcatnlo.inc',
@@ -646,6 +650,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'HwU_dummy.f',
                      'madfks_plot.f',
                      'analysis_dummy.f',
+                     'analysis_lhe.f',
                      'mint-integrator2.f',
                      'MC_integer.f',
                      'mint.inc',
@@ -653,12 +658,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'q_es.inc',
                      'recluster.cc',
                      'Boosts.h',
-                     'reweight.inc',
-                     'reweight0.inc',
-                     'reweight1.inc',
-                     'reweightNLO.inc',
-                     'reweight_all.inc',
-                     'reweight_events.f',
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
@@ -667,11 +666,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
-                     'symmetry_fks_test_MC.f',
-                     'symmetry_fks_test_ME.f',
-                     'symmetry_fks_test_Sij.f',
+                     'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
-                     'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
                      'handling_lhe_events.f',
@@ -757,7 +753,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         devnull = os.open(os.devnull, os.O_RDWR)
         try:
-            res = misc.call([self.options['lhapdf'], '--version'], \
+            res = misc.call([mg5options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception:
             res = 1
@@ -1350,6 +1346,18 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(lines)
 
 
+    def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
+        """writes the genps.inc file
+        """
+        lines = []
+        lines.append("include 'maxparticles.inc'")
+        lines.append("include 'maxconfigs.inc'")
+        lines.append("integer maxproc,ngraphs,ncolor,maxflow")
+        lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
+                     (maxproc,ngraphs,ncolor,maxflow))
+        writer.writelines(lines)
+
+
     def write_leshouche_info_file(self, filename, matrix_element):
         """writes the leshouche_info.inc file which contains 
         the LHA informations for all the real emission processes
@@ -1395,10 +1403,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text1 = \
             """\n\ndouble precision function dlum()
             implicit none
-            include 'timing_variables.inc'
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
-            call cpu_time(tbefore)
             """
 
         if matrix_element.real_processes:
@@ -1421,7 +1427,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text1 += \
                 """
                 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess\n stop\n endif
-                call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
                 return \nend
                 """
         else:
@@ -1434,8 +1439,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text1 += \
                 """
                 call dlum_0(dlum)
-                call cpu_time(tAfter)
-                tPDF = tPDF + (tAfter-tBefore)
                 return
                 end
                 """

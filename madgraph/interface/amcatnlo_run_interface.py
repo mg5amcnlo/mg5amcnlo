@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -75,7 +75,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card 
-    import internal.histograms as histograms
+    import internal.lhe_parser as lhe_parser
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -90,7 +90,7 @@ else:
     import madgraph.various.misc as misc
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
-    import madgraph.various.histograms as histograms
+    import madgraph.various.lhe_parser as lhe_parser
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
 
 class aMCatNLOError(Exception):
@@ -120,10 +120,14 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
-            misc.compile([test], cwd = this_dir, job_specs = False)
+            if test == 'test_ME' or test == 'test_MC':
+                test_exe='test_soft_col_limits'
+            else:
+                test_exe=test
+            misc.compile([test_exe], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
-            misc.call(['./%s' % (test)], cwd=this_dir, 
+            misc.call(['./%s' % (test_exe)], cwd=this_dir, 
                     stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'),
                     close_fds=True)
             if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
@@ -134,9 +138,7 @@ def compile_dir(*arguments):
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
-                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
             #compile madevent_mintMC/mintFO
@@ -1144,10 +1146,24 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     ############################################################################
-    def do_treatcards(self, line, amcatnlo=True):
+    def do_treatcards(self, line, amcatnlo=True,mode=''):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
                 #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
+        
+        # propagate the FO_card entry FO_LHE_weight_ratio to the run_card.
+        # this variable is system only in the run_card 
+        # can not be done in EditCard since this parameter is not written in the 
+        # run_card directly.
+        if mode in ['LO', 'NLO']: 
+            name = 'fo_lhe_weight_ratio'
+            FO_card = analyse_card.FOAnalyseCard(pjoin(self.me_dir,'Cards', 'FO_analyse_card.dat'))
+            if name in FO_card:
+                self.run_card.set(name, FO_card[name], user=False)
+            name = 'fo_lhe_postprocessing'
+            if name in FO_card:
+                self.run_card.set(name, FO_card[name], user=False)
+                        
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1251,7 +1267,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'])
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
@@ -1268,7 +1285,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         argss[0] = mode
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'])
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
@@ -1525,6 +1543,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             try:
                 with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
                     jobs_to_collect=pickle.load(f)
+                    for job in jobs_to_collect:
+                        job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
                 raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
@@ -2209,10 +2229,122 @@ RESTART = %(mint_mode)s
                      pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the ROOT file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        elif self.analyse_card['fo_analysis_format'].lower() == 'lhe':
+            self.combine_FO_lhe(jobs)
+            logger.info('The results of this run and the LHE File (to be used for plotting only)' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))            
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
 
+    def combine_FO_lhe(self,jobs):
+        """combine the various lhe file generated in each directory.
+           They are two steps:
+           1) banner 
+           2) reweight each sample by the factor written at the end of each file
+           3) concatenate each of the new files (gzip those).
+        """
+        
+        logger.info('Combining lhe events for plotting analysis')
+        start = time.time()
+        self.run_card['fo_lhe_postprocessing'] = [i.lower() for i in self.run_card['fo_lhe_postprocessing']]
+        output = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+        if os.path.exists(output):
+            os.remove(output)
+        
+
+        
+        
+        # 1. write the banner
+        text = open(pjoin(jobs[0]['dirname'],'header.txt'),'r').read()
+        i1, i2 = text.find('<initrwgt>'),text.find('</initrwgt>') 
+        self.banner['initrwgt'] = text[10+i1:i2]
+#        
+#        <init>
+#        2212 2212 6.500000e+03 6.500000e+03 0 0 247000 247000 -4 1
+#        8.430000e+02 2.132160e+00 8.430000e+02 1
+#        <generator name='MadGraph5_aMC@NLO' version='2.5.2'>please cite 1405.0301 </generator>
+#        </init>
+
+        cross = sum(j['result'] for j in jobs)
+        error = math.sqrt(sum(j['error'] for j in jobs))
+        self.banner['init'] = "0 0 0e0 0e0 0 0 0 0 -4 1\n  %s %s %s 1" % (cross, error, cross)
+        self.banner.write(output[:-3], close_tag=False)
+        misc.gzip(output[:-3])
+        
+        
+        
+        fsock = lhe_parser.EventFile(output,'a')
+        if 'nogrouping' in self.run_card['fo_lhe_postprocessing']:
+            fsock.eventgroup = False
+        else:
+            fsock.eventgroup = True
+        
+        if 'norandom' in self.run_card['fo_lhe_postprocessing']:
+            for job in jobs:
+                dirname = job['dirname']
+                #read last line
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                # get normalisation ratio 
+                ratio = cross/sumwgt
+                lhe = lhe_parser.EventFile(pjoin(dirname,'events.lhe'))
+                lhe.eventgroup = True # read the events by eventgroup
+                for eventsgroup in lhe:
+                    neweventsgroup = []
+                    for i,event in enumerate(eventsgroup):
+                        event.rescale_weights(ratio)
+                        if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                                and event == neweventsgroup[-1]:
+                            neweventsgroup[-1].wgt += event.wgt
+                            for key in event.reweight_data:
+                                neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
+                        else:
+                            neweventsgroup.append(event)
+                    fsock.write_events(neweventsgroup)
+                lhe.close()
+                os.remove(pjoin(dirname,'events.lhe'))
+        else:
+            lhe = []
+            lenlhe = []     
+            misc.sprint('need to combine %s event file' % len(jobs))
+            globallhe = lhe_parser.MultiEventFile()
+            globallhe.eventgroup = True
+            for job in jobs:
+                dirname = job['dirname']
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                lastlhe = globallhe.add(pjoin(dirname,'events.lhe'),cross, 0, cross,
+                                        nb_event=int(nb_event), scale=cross/sumwgt)
+            for eventsgroup in globallhe:
+                neweventsgroup = []
+                for i,event in enumerate(eventsgroup):
+                    event.rescale_weights(event.sample_scale)
+                    if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                            and event == neweventsgroup[-1]:
+                        neweventsgroup[-1].wgt += event.wgt
+                        for key in event.reweight_data:
+                            neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
+                    else:
+                        neweventsgroup.append(event) 
+                fsock.write_events(neweventsgroup)               
+            globallhe.close()
+            fsock.write('</LesHouchesEvents>\n') 
+            fsock.close()
+            misc.sprint('combining lhe file done in ', time.time()-start)
+            for job in jobs:
+                dirname = job['dirname']
+                os.remove(pjoin(dirname,'events.lhe'))
+                                
+                                           
+                        
+        misc.sprint('combining lhe file done in ', time.time()-start)
+                        
+                        
+                    
+
+            
+            
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
@@ -3730,6 +3862,7 @@ RESTART = %(mint_mode)s
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
+        misc.sprint(evt_file)
         shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
@@ -3820,7 +3953,8 @@ RESTART = %(mint_mode)s
                 lhaid_list = [abs(int(self.shower_card['pdfcode']))]
                 content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif int(self.shower_card['pdfcode'])==1:
+        elif int(self.shower_card['pdfcode'])==1 or \
+            int(self.shower_card['pdfcode'])==-1 and True:
             # Try to use LHAPDF because user wants to use the same PDF
             # as was used for the event generation. However, for the
             # event generation, LHAPDF was not used, so non-trivial to
@@ -4419,7 +4553,7 @@ RESTART = %(mint_mode)s
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         # create param_card.inc and run_card.inc
-        self.do_treatcards('', amcatnlo=True)
+        self.do_treatcards('', amcatnlo=True, mode=mode)
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
@@ -4443,8 +4577,7 @@ RESTART = %(mint_mode)s
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
-                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+
             self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
@@ -4518,7 +4651,7 @@ RESTART = %(mint_mode)s
             not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
             if  os.path.exists(pjoin(sourcedir,'CutTools')):
                 logger.info('Compiling CutTools (can take a couple of minutes) ...')
-                misc.compile(['CutTools'], cwd = sourcedir)
+                misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                 logger.info('          ...done.')
             else:
                 raise aMCatNLOError('Could not compile CutTools because its'+\
@@ -4540,7 +4673,7 @@ RESTART = %(mint_mode)s
                     logger.info('CutTools was compiled with a different fortran'+\
                                             ' compiler. Re-compiling it now...')
                     misc.compile(['cleanCT'], cwd = sourcedir)
-                    misc.compile(['CutTools'], cwd = sourcedir)
+                    misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                     logger.info('          ...done.')
                 else:
                     raise aMCatNLOError("CutTools installation in %s"\
@@ -4684,18 +4817,19 @@ RESTART = %(mint_mode)s
         if test in ['test_ME', 'test_MC']:
             content = "-2 -2\n" #generate randomly energy/angle
             content+= "100 100\n" #run 100 points for soft and collinear tests
-            content+= "0\n" #sum over helicities
             content+= "0\n" #all FKS configs
-            content+= '\n'.join(["-1"] * 50) #random diagram
+            content+= '\n'.join(["-1"] * 50) #random diagram (=first diagram)
         elif test == 'check_poles':
             content = '20 \n -1\n'
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
             shower = self.run_card['parton_shower']
-            MC_header = "%s\n " % shower + \
-                        "1 \n1 -0.1\n-1 -0.1\n"
-            file.write(MC_header + content)
+            header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
+            file.write(header + content)
+        elif test == 'test_ME':
+            header = "2 \n"
+            file.write(header + content)
         else:
             file.write(content)
         file.close()
@@ -4981,7 +5115,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 
-        
         self.banner = banner_mod.Banner()
 
         # store the cards in the banner

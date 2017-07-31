@@ -27,7 +27,6 @@ C VARIABLES
 C
       INTEGER I,J,K
       include 'orders.inc'
-      include 'coupl.inc'
       double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
@@ -43,10 +42,9 @@ C
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 
-      include 'genps.inc'
-      double precision amp2b(maxamps), jamp2b(0:maxamps,0:nampso)
+      double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
       common/to_amps_born/  amp2b,       jamp2b
-      double precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
       common/to_amps/  amp2,       jamp2
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
@@ -192,7 +190,6 @@ C CONSTANTS
 C  
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER NAMPSO, NSQAMPSO
@@ -222,7 +219,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps,0:NAMPSO)
+      Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
       common/to_amps_born/  amp2,       jamp2
       DATA jamp2(0,0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
@@ -346,7 +343,6 @@ C
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coupl.inc"
-      include "genps.inc"
 C  
 C ARGUMENTS 
 C  
@@ -365,7 +361,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double precision amp2(maxamps), jamp2(0:maxamps,0:nampso)
+      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
       common/to_amps_born/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp

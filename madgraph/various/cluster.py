@@ -257,6 +257,8 @@ class Cluster(object):
             target = path.rsplit('/SubProcesses',1)[0]
         elif 'MCatNLO' in path:
             target = path.rsplit('/MCatNLO',1)[0]
+        elif 'PY8_parallelization' in path:
+            target = path.rsplit('/PY8_parallelization',1)[0]
         elif second_path:
             target=path
             logger.warning("cluster.get_job_identifier runs unexpectedly. This should be fine but report this message if you have problem.")
@@ -534,6 +536,15 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
     def metasubmit(self, me_dir):
         logger.warning("""This cluster didn't support metajob submit.""")
         return 0
+
+    def modify_interface(self, run_interface):
+        """routine which allow to modify the run_card/mg5cmd object to change the
+           default behavior of the runs.
+           This is called at the time of the compilation of the run_card. 
+           Note that this function can be called multiple times by run.
+           """
+        #run_card = run_interface.run_card
+        return 
 
 class Packet(object):
     """ an object for handling packet of job, it is designed to be thread safe
@@ -1032,7 +1043,7 @@ class CondorCluster(Cluster):
                 
             for line in status.stdout:
                 id, status = line.strip().split()
-                ongoing.append(int(id))
+                ongoing.append(id)
                 if status in ['I','U']:
                     idle += 1
                 elif status == 'R':
@@ -1041,7 +1052,7 @@ class CondorCluster(Cluster):
                     fail += 1
 
         for id in list(self.submitted_ids):
-            if int(id) not in ongoing:
+            if id not in ongoing:
                 status = self.check_termination(id)
                 if status == 'wait':
                     run += 1

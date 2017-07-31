@@ -127,7 +127,6 @@ C CONSTANTS
 C  
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER NAMPSO, NSQAMPSO
@@ -158,7 +157,7 @@ C GLOBAL VARIABLES
 C  
 C MZ uncomment and change these lines if we'll decide to
 C use also the amp from the counterterms for the multichannelling
-C      Double Precision amp2(maxamps), jamp2(0:maxamps,0:NAMPSO)
+C      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:NAMPSO)
 C      common/to_amps/  amp2,       jamp2
 C
 C MZ      DATA jamp2(0,0) /   %(ncolor)d/          
@@ -247,7 +246,6 @@ C
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coupl.inc"
-      include "genps.inc"
 C  
 C ARGUMENTS 
 C  
@@ -269,7 +267,7 @@ C
 
 C MZ uncomment and change these lines if we'll decide to
 C use also the amp from the counterterms for the multichannelling
-C      double precision amp2(maxamps), jamp2(0:maxamps,nampso)
+C      double precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,nampso)
 C      common/to_amps/  amp2,       jamp2
       double precision hel_fac
       integer get_hel,skip

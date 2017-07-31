@@ -177,8 +177,6 @@ c leshouche.inc information
       integer i,j,k
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -225,8 +223,8 @@ c
       end
 
 
-      subroutine read_configs_and_props_info(mapconfig_d,iforest_d,sprop_d,
-     1                                   tprid_d,pmass_d,pwidth_d,pow_d)
+      subroutine read_configs_and_props_info(mapconfig_d,iforest_d
+     $     ,sprop_d,tprid_d,pmass_d,pwidth_d,pow_d)
 C read the various information from the configs_and_props_info.dat file
       implicit none
       integer i,j,k
@@ -371,8 +369,9 @@ c born_leshouche.inc file.
       end
 
 
-      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j, m_type, ch_m)
-C viven the type (color representation) and charges of i and j, return
+      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j,
+     $     m_type, ch_m)
+C Given the type (color representation) and charges of i and j, return
 C the type and charges of the mother particle
       implicit none
       integer i_type, j_type, m_type

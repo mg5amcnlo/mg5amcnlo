@@ -1,0 +1,1668 @@
+# C -> MAPCONFIG_D
+# F/D -> IFOREST_D
+# S -> SPROP_D
+# T -> TPRID_D
+# M -> PMASS_D/PWIDTH_D
+# P -> POW_D
+# 
+# nFKSprocess 1
+# Diagram 1 for nFKSprocess 1
+C      1      1      1 
+F      1     -1      1      2
+D      5
+D      3
+S      1     -1      1            6
+F      1     -2      1      2
+D      4
+D     -1
+S      1     -2      1           21
+# Diagram 2 for nFKSprocess 1
+C      1      2      2 
+F      1     -1      2      2
+D      5
+D      4
+S      1     -1      2           -6
+F      1     -2      2      2
+D     -1
+D      3
+S      1     -2      2           21
+# Diagram 3 for nFKSprocess 1
+C      1      3      3 
+F      1     -1      3      2
+D      4
+D      3
+S      1     -1      3           21
+F      1     -2      3      2
+D      1
+D      5
+T      1     -2      3            2
+F      1     -3      3      2
+D     -2
+D     -1
+# Diagram 4 for nFKSprocess 1
+C      1      4      4 
+F      1     -1      4      2
+D      4
+D      3
+S      1     -1      4           21
+F      1     -2      4      2
+D      1
+D     -1
+T      1     -2      4            2
+F      1     -3      4      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 1
+C      1      0      4
+# 
+# nFKSprocess 2
+# Diagram 1 for nFKSprocess 2
+C      2      1      1 
+F      2     -1      1      2
+D      5
+D      3
+S      2     -1      1            6
+F      2     -2      1      2
+D      4
+D     -1
+S      2     -2      1           21
+# Diagram 2 for nFKSprocess 2
+C      2      2      2 
+F      2     -1      2      2
+D      5
+D      4
+S      2     -1      2           -6
+F      2     -2      2      2
+D     -1
+D      3
+S      2     -2      2           21
+# Diagram 3 for nFKSprocess 2
+C      2      3      3 
+F      2     -1      3      2
+D      4
+D      3
+S      2     -1      3           21
+F      2     -2      3      2
+D      1
+D      5
+T      2     -2      3            2
+F      2     -3      3      2
+D     -2
+D     -1
+# Diagram 4 for nFKSprocess 2
+C      2      4      4 
+F      2     -1      4      2
+D      4
+D      3
+S      2     -1      4           21
+F      2     -2      4      2
+D      1
+D     -1
+T      2     -2      4            2
+F      2     -3      4      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 2
+C      2      0      4
+# 
+# nFKSprocess 3
+# Diagram 1 for nFKSprocess 3
+C      3      1      1 
+F      3     -1      1      2
+D      5
+D      3
+S      3     -1      1            6
+F      3     -2      1      2
+D      4
+D     -1
+S      3     -2      1           21
+# Diagram 2 for nFKSprocess 3
+C      3      2      2 
+F      3     -1      2      2
+D      5
+D      4
+S      3     -1      2           -6
+F      3     -2      2      2
+D     -1
+D      3
+S      3     -2      2           21
+# Diagram 3 for nFKSprocess 3
+C      3      3      3 
+F      3     -1      3      2
+D      4
+D      3
+S      3     -1      3           21
+F      3     -2      3      2
+D      1
+D      5
+T      3     -2      3            2
+F      3     -3      3      2
+D     -2
+D     -1
+# Diagram 4 for nFKSprocess 3
+C      3      4      4 
+F      3     -1      4      2
+D      4
+D      3
+S      3     -1      4           21
+F      3     -2      4      2
+D      1
+D     -1
+T      3     -2      4            2
+F      3     -3      4      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 3
+C      3      0      4
+# 
+# nFKSprocess 4
+# Diagram 1 for nFKSprocess 4
+C      4      1      1 
+F      4     -1      1      2
+D      5
+D      3
+S      4     -1      1            6
+F      4     -2      1      2
+D      4
+D     -1
+S      4     -2      1           21
+# Diagram 2 for nFKSprocess 4
+C      4      2      2 
+F      4     -1      2      2
+D      5
+D      4
+S      4     -1      2           -6
+F      4     -2      2      2
+D     -1
+D      3
+S      4     -2      2           21
+# Diagram 3 for nFKSprocess 4
+C      4      3      3 
+F      4     -1      3      2
+D      4
+D      3
+S      4     -1      3           21
+F      4     -2      3      2
+D      1
+D      5
+T      4     -2      3            2
+F      4     -3      3      2
+D     -2
+D     -1
+# Diagram 4 for nFKSprocess 4
+C      4      4      4 
+F      4     -1      4      2
+D      4
+D      3
+S      4     -1      4           21
+F      4     -2      4      2
+D      1
+D     -1
+T      4     -2      4            2
+F      4     -3      4      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 4
+C      4      0      4
+# 
+# nFKSprocess 5
+# Diagram 1 for nFKSprocess 5
+C      5      1      1 
+F      5     -1      1      2
+D      4
+D      3
+S      5     -1      1           21
+F      5     -2      1      2
+D      5
+D     -1
+S      5     -2      1            2
+# Diagram 2 for nFKSprocess 5
+C      5      2      2 
+F      5     -1      2      2
+D      1
+D      3
+T      5     -1      2            6
+F      5     -2      2      2
+D     -1
+D      4
+T      5     -2      2           21
+F      5     -3      2      2
+D     -2
+D      5
+# Diagram 3 for nFKSprocess 5
+C      5      3      3 
+F      5     -1      3      2
+D      1
+D      4
+T      5     -1      3            6
+F      5     -2      3      2
+D     -1
+D      3
+T      5     -2      3           21
+F      5     -3      3      2
+D     -2
+D      5
+# Diagram 4 for nFKSprocess 5
+C      5      4      4 
+F      5     -1      4      2
+D      4
+D      3
+S      5     -1      4           21
+F      5     -2      4      2
+D      1
+D      5
+T      5     -2      4            2
+F      5     -3      4      2
+D     -2
+D     -1
+# Number of configs for nFKSprocess 5
+C      5      0      4
+# 
+# nFKSprocess 6
+# Diagram 1 for nFKSprocess 6
+C      6      1      1 
+F      6     -1      1      2
+D      4
+D      3
+S      6     -1      1           21
+F      6     -2      1      2
+D      5
+D     -1
+S      6     -2      1           21
+# Diagram 2 for nFKSprocess 6
+C      6      2      2 
+F      6     -1      2      2
+D      5
+D      3
+S      6     -1      2            6
+F      6     -2      2      2
+D      4
+D     -1
+S      6     -2      2           22
+# Diagram 3 for nFKSprocess 6
+C      6      3      3 
+F      6     -1      3      2
+D      5
+D      3
+S      6     -1      3            6
+F      6     -2      3      2
+D      4
+D     -1
+S      6     -2      3           21
+# Diagram 4 for nFKSprocess 6
+C      6      4      4 
+F      6     -1      4      2
+D      5
+D      3
+S      6     -1      4            6
+F      6     -2      4      2
+D      4
+D     -1
+S      6     -2      4           23
+# Diagram 5 for nFKSprocess 6
+C      6      5      5 
+F      6     -1      5      2
+D      5
+D      4
+S      6     -1      5           -6
+F      6     -2      5      2
+D     -1
+D      3
+S      6     -2      5           22
+# Diagram 6 for nFKSprocess 6
+C      6      6      6 
+F      6     -1      6      2
+D      5
+D      4
+S      6     -1      6           -6
+F      6     -2      6      2
+D     -1
+D      3
+S      6     -2      6           21
+# Diagram 7 for nFKSprocess 6
+C      6      7      7 
+F      6     -1      7      2
+D      5
+D      4
+S      6     -1      7           -6
+F      6     -2      7      2
+D     -1
+D      3
+S      6     -2      7           23
+# Diagram 8 for nFKSprocess 6
+C      6      8      8 
+F      6     -1      8      2
+D      4
+D      3
+S      6     -1      8           22
+F      6     -2      8      2
+D      1
+D      5
+T      6     -2      8            2
+F      6     -3      8      2
+D     -2
+D     -1
+# Diagram 9 for nFKSprocess 6
+C      6      9      9 
+F      6     -1      9      2
+D      4
+D      3
+S      6     -1      9           21
+F      6     -2      9      2
+D      1
+D      5
+T      6     -2      9            2
+F      6     -3      9      2
+D     -2
+D     -1
+# Diagram 10 for nFKSprocess 6
+C      6     10     10 
+F      6     -1     10      2
+D      4
+D      3
+S      6     -1     10           23
+F      6     -2     10      2
+D      1
+D      5
+T      6     -2     10            2
+F      6     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 6
+C      6     11     11 
+F      6     -1     11      2
+D      4
+D      3
+S      6     -1     11           22
+F      6     -2     11      2
+D      1
+D     -1
+T      6     -2     11            2
+F      6     -3     11      2
+D     -2
+D      5
+# Diagram 12 for nFKSprocess 6
+C      6     12     12 
+F      6     -1     12      2
+D      4
+D      3
+S      6     -1     12           21
+F      6     -2     12      2
+D      1
+D     -1
+T      6     -2     12            2
+F      6     -3     12      2
+D     -2
+D      5
+# Diagram 13 for nFKSprocess 6
+C      6     13     13 
+F      6     -1     13      2
+D      4
+D      3
+S      6     -1     13           23
+F      6     -2     13      2
+D      1
+D     -1
+T      6     -2     13            2
+F      6     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 6
+C      6      0     13
+# 
+# nFKSprocess 7
+# Diagram 1 for nFKSprocess 7
+C      7      1      1 
+F      7     -1      1      2
+D      4
+D      3
+S      7     -1      1           21
+F      7     -2      1      2
+D      5
+D     -1
+S      7     -2      1           21
+# Diagram 2 for nFKSprocess 7
+C      7      2      2 
+F      7     -1      2      2
+D      5
+D      3
+S      7     -1      2            6
+F      7     -2      2      2
+D      4
+D     -1
+S      7     -2      2           22
+# Diagram 3 for nFKSprocess 7
+C      7      3      3 
+F      7     -1      3      2
+D      5
+D      3
+S      7     -1      3            6
+F      7     -2      3      2
+D      4
+D     -1
+S      7     -2      3           21
+# Diagram 4 for nFKSprocess 7
+C      7      4      4 
+F      7     -1      4      2
+D      5
+D      3
+S      7     -1      4            6
+F      7     -2      4      2
+D      4
+D     -1
+S      7     -2      4           23
+# Diagram 5 for nFKSprocess 7
+C      7      5      5 
+F      7     -1      5      2
+D      5
+D      4
+S      7     -1      5           -6
+F      7     -2      5      2
+D     -1
+D      3
+S      7     -2      5           22
+# Diagram 6 for nFKSprocess 7
+C      7      6      6 
+F      7     -1      6      2
+D      5
+D      4
+S      7     -1      6           -6
+F      7     -2      6      2
+D     -1
+D      3
+S      7     -2      6           21
+# Diagram 7 for nFKSprocess 7
+C      7      7      7 
+F      7     -1      7      2
+D      5
+D      4
+S      7     -1      7           -6
+F      7     -2      7      2
+D     -1
+D      3
+S      7     -2      7           23
+# Diagram 8 for nFKSprocess 7
+C      7      8      8 
+F      7     -1      8      2
+D      4
+D      3
+S      7     -1      8           22
+F      7     -2      8      2
+D      1
+D      5
+T      7     -2      8            2
+F      7     -3      8      2
+D     -2
+D     -1
+# Diagram 9 for nFKSprocess 7
+C      7      9      9 
+F      7     -1      9      2
+D      4
+D      3
+S      7     -1      9           21
+F      7     -2      9      2
+D      1
+D      5
+T      7     -2      9            2
+F      7     -3      9      2
+D     -2
+D     -1
+# Diagram 10 for nFKSprocess 7
+C      7     10     10 
+F      7     -1     10      2
+D      4
+D      3
+S      7     -1     10           23
+F      7     -2     10      2
+D      1
+D      5
+T      7     -2     10            2
+F      7     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 7
+C      7     11     11 
+F      7     -1     11      2
+D      4
+D      3
+S      7     -1     11           22
+F      7     -2     11      2
+D      1
+D     -1
+T      7     -2     11            2
+F      7     -3     11      2
+D     -2
+D      5
+# Diagram 12 for nFKSprocess 7
+C      7     12     12 
+F      7     -1     12      2
+D      4
+D      3
+S      7     -1     12           21
+F      7     -2     12      2
+D      1
+D     -1
+T      7     -2     12            2
+F      7     -3     12      2
+D     -2
+D      5
+# Diagram 13 for nFKSprocess 7
+C      7     13     13 
+F      7     -1     13      2
+D      4
+D      3
+S      7     -1     13           23
+F      7     -2     13      2
+D      1
+D     -1
+T      7     -2     13            2
+F      7     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 7
+C      7      0     13
+# 
+# nFKSprocess 8
+# Diagram 1 for nFKSprocess 8
+C      8      1      1 
+F      8     -1      1      2
+D      4
+D      3
+S      8     -1      1           21
+F      8     -2      1      2
+D      5
+D     -1
+S      8     -2      1           21
+# Diagram 2 for nFKSprocess 8
+C      8      2      2 
+F      8     -1      2      2
+D      5
+D      3
+S      8     -1      2            6
+F      8     -2      2      2
+D      4
+D     -1
+S      8     -2      2           22
+# Diagram 3 for nFKSprocess 8
+C      8      3      3 
+F      8     -1      3      2
+D      5
+D      3
+S      8     -1      3            6
+F      8     -2      3      2
+D      4
+D     -1
+S      8     -2      3           21
+# Diagram 4 for nFKSprocess 8
+C      8      4      4 
+F      8     -1      4      2
+D      5
+D      3
+S      8     -1      4            6
+F      8     -2      4      2
+D      4
+D     -1
+S      8     -2      4           23
+# Diagram 5 for nFKSprocess 8
+C      8      5      5 
+F      8     -1      5      2
+D      5
+D      4
+S      8     -1      5           -6
+F      8     -2      5      2
+D     -1
+D      3
+S      8     -2      5           22
+# Diagram 6 for nFKSprocess 8
+C      8      6      6 
+F      8     -1      6      2
+D      5
+D      4
+S      8     -1      6           -6
+F      8     -2      6      2
+D     -1
+D      3
+S      8     -2      6           21
+# Diagram 7 for nFKSprocess 8
+C      8      7      7 
+F      8     -1      7      2
+D      5
+D      4
+S      8     -1      7           -6
+F      8     -2      7      2
+D     -1
+D      3
+S      8     -2      7           23
+# Diagram 8 for nFKSprocess 8
+C      8      8      8 
+F      8     -1      8      2
+D      4
+D      3
+S      8     -1      8           22
+F      8     -2      8      2
+D      1
+D      5
+T      8     -2      8            2
+F      8     -3      8      2
+D     -2
+D     -1
+# Diagram 9 for nFKSprocess 8
+C      8      9      9 
+F      8     -1      9      2
+D      4
+D      3
+S      8     -1      9           21
+F      8     -2      9      2
+D      1
+D      5
+T      8     -2      9            2
+F      8     -3      9      2
+D     -2
+D     -1
+# Diagram 10 for nFKSprocess 8
+C      8     10     10 
+F      8     -1     10      2
+D      4
+D      3
+S      8     -1     10           23
+F      8     -2     10      2
+D      1
+D      5
+T      8     -2     10            2
+F      8     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 8
+C      8     11     11 
+F      8     -1     11      2
+D      4
+D      3
+S      8     -1     11           22
+F      8     -2     11      2
+D      1
+D     -1
+T      8     -2     11            2
+F      8     -3     11      2
+D     -2
+D      5
+# Diagram 12 for nFKSprocess 8
+C      8     12     12 
+F      8     -1     12      2
+D      4
+D      3
+S      8     -1     12           21
+F      8     -2     12      2
+D      1
+D     -1
+T      8     -2     12            2
+F      8     -3     12      2
+D     -2
+D      5
+# Diagram 13 for nFKSprocess 8
+C      8     13     13 
+F      8     -1     13      2
+D      4
+D      3
+S      8     -1     13           23
+F      8     -2     13      2
+D      1
+D     -1
+T      8     -2     13            2
+F      8     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 8
+C      8      0     13
+# 
+# nFKSprocess 9
+# Diagram 1 for nFKSprocess 9
+C      9      1      1 
+F      9     -1      1      2
+D      4
+D      3
+S      9     -1      1           21
+F      9     -2      1      2
+D      5
+D     -1
+S      9     -2      1           21
+# Diagram 2 for nFKSprocess 9
+C      9      2      2 
+F      9     -1      2      2
+D      5
+D      3
+S      9     -1      2            6
+F      9     -2      2      2
+D      4
+D     -1
+S      9     -2      2           22
+# Diagram 3 for nFKSprocess 9
+C      9      3      3 
+F      9     -1      3      2
+D      5
+D      3
+S      9     -1      3            6
+F      9     -2      3      2
+D      4
+D     -1
+S      9     -2      3           21
+# Diagram 4 for nFKSprocess 9
+C      9      4      4 
+F      9     -1      4      2
+D      5
+D      3
+S      9     -1      4            6
+F      9     -2      4      2
+D      4
+D     -1
+S      9     -2      4           23
+# Diagram 5 for nFKSprocess 9
+C      9      5      5 
+F      9     -1      5      2
+D      5
+D      4
+S      9     -1      5           -6
+F      9     -2      5      2
+D     -1
+D      3
+S      9     -2      5           22
+# Diagram 6 for nFKSprocess 9
+C      9      6      6 
+F      9     -1      6      2
+D      5
+D      4
+S      9     -1      6           -6
+F      9     -2      6      2
+D     -1
+D      3
+S      9     -2      6           21
+# Diagram 7 for nFKSprocess 9
+C      9      7      7 
+F      9     -1      7      2
+D      5
+D      4
+S      9     -1      7           -6
+F      9     -2      7      2
+D     -1
+D      3
+S      9     -2      7           23
+# Diagram 8 for nFKSprocess 9
+C      9      8      8 
+F      9     -1      8      2
+D      4
+D      3
+S      9     -1      8           22
+F      9     -2      8      2
+D      1
+D      5
+T      9     -2      8            2
+F      9     -3      8      2
+D     -2
+D     -1
+# Diagram 9 for nFKSprocess 9
+C      9      9      9 
+F      9     -1      9      2
+D      4
+D      3
+S      9     -1      9           21
+F      9     -2      9      2
+D      1
+D      5
+T      9     -2      9            2
+F      9     -3      9      2
+D     -2
+D     -1
+# Diagram 10 for nFKSprocess 9
+C      9     10     10 
+F      9     -1     10      2
+D      4
+D      3
+S      9     -1     10           23
+F      9     -2     10      2
+D      1
+D      5
+T      9     -2     10            2
+F      9     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 9
+C      9     11     11 
+F      9     -1     11      2
+D      4
+D      3
+S      9     -1     11           22
+F      9     -2     11      2
+D      1
+D     -1
+T      9     -2     11            2
+F      9     -3     11      2
+D     -2
+D      5
+# Diagram 12 for nFKSprocess 9
+C      9     12     12 
+F      9     -1     12      2
+D      4
+D      3
+S      9     -1     12           21
+F      9     -2     12      2
+D      1
+D     -1
+T      9     -2     12            2
+F      9     -3     12      2
+D     -2
+D      5
+# Diagram 13 for nFKSprocess 9
+C      9     13     13 
+F      9     -1     13      2
+D      4
+D      3
+S      9     -1     13           23
+F      9     -2     13      2
+D      1
+D     -1
+T      9     -2     13            2
+F      9     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 9
+C      9      0     13
+# 
+# nFKSprocess 10
+# Diagram 1 for nFKSprocess 10
+C     10      1      1 
+F     10     -1      1      2
+D      4
+D      3
+S     10     -1      1           22
+F     10     -2      1      2
+D      5
+D     -1
+S     10     -2      1            2
+# Diagram 2 for nFKSprocess 10
+C     10      2      2 
+F     10     -1      2      2
+D      4
+D      3
+S     10     -1      2           21
+F     10     -2      2      2
+D      5
+D     -1
+S     10     -2      2            2
+# Diagram 3 for nFKSprocess 10
+C     10      3      3 
+F     10     -1      3      2
+D      4
+D      3
+S     10     -1      3           23
+F     10     -2      3      2
+D      5
+D     -1
+S     10     -2      3            2
+# Diagram 4 for nFKSprocess 10
+C     10      4      4 
+F     10     -1      4      2
+D      1
+D      3
+T     10     -1      4            6
+F     10     -2      4      2
+D     -1
+D      4
+T     10     -2      4           22
+F     10     -3      4      2
+D     -2
+D      5
+# Diagram 5 for nFKSprocess 10
+C     10      5      5 
+F     10     -1      5      2
+D      1
+D      3
+T     10     -1      5            6
+F     10     -2      5      2
+D     -1
+D      4
+T     10     -2      5           21
+F     10     -3      5      2
+D     -2
+D      5
+# Diagram 6 for nFKSprocess 10
+C     10      6      6 
+F     10     -1      6      2
+D      1
+D      3
+T     10     -1      6            6
+F     10     -2      6      2
+D     -1
+D      4
+T     10     -2      6           23
+F     10     -3      6      2
+D     -2
+D      5
+# Diagram 7 for nFKSprocess 10
+C     10      7      7 
+F     10     -1      7      2
+D      1
+D      4
+T     10     -1      7            6
+F     10     -2      7      2
+D     -1
+D      3
+T     10     -2      7           22
+F     10     -3      7      2
+D     -2
+D      5
+# Diagram 8 for nFKSprocess 10
+C     10      8      8 
+F     10     -1      8      2
+D      1
+D      4
+T     10     -1      8            6
+F     10     -2      8      2
+D     -1
+D      3
+T     10     -2      8           21
+F     10     -3      8      2
+D     -2
+D      5
+# Diagram 9 for nFKSprocess 10
+C     10      9      9 
+F     10     -1      9      2
+D      1
+D      4
+T     10     -1      9            6
+F     10     -2      9      2
+D     -1
+D      3
+T     10     -2      9           23
+F     10     -3      9      2
+D     -2
+D      5
+# Diagram 10 for nFKSprocess 10
+C     10     10     10 
+F     10     -1     10      2
+D      4
+D      3
+S     10     -1     10           22
+F     10     -2     10      2
+D      1
+D      5
+T     10     -2     10            2
+F     10     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 10
+C     10     11     11 
+F     10     -1     11      2
+D      4
+D      3
+S     10     -1     11           21
+F     10     -2     11      2
+D      1
+D      5
+T     10     -2     11            2
+F     10     -3     11      2
+D     -2
+D     -1
+# Diagram 12 for nFKSprocess 10
+C     10     12     12 
+F     10     -1     12      2
+D      4
+D      3
+S     10     -1     12           23
+F     10     -2     12      2
+D      1
+D      5
+T     10     -2     12            2
+F     10     -3     12      2
+D     -2
+D     -1
+# Diagram 13 for nFKSprocess 10
+C     10     13     13 
+F     10     -1     13      2
+D      4
+D      3
+S     10     -1     13           21
+F     10     -2     13      2
+D      1
+D     -1
+T     10     -2     13           21
+F     10     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 10
+C     10      0     13
+# 
+# nFKSprocess 11
+# Diagram 1 for nFKSprocess 11
+C     11      1      1 
+F     11     -1      1      2
+D      4
+D      3
+S     11     -1      1           21
+F     11     -2      1      2
+D      5
+D     -1
+S     11     -2      1           -2
+# Diagram 2 for nFKSprocess 11
+C     11      2      2 
+F     11     -1      2      2
+D      1
+D      5
+T     11     -1      2           21
+F     11     -2      2      2
+D     -1
+D      4
+T     11     -2      2            6
+F     11     -3      2      2
+D     -2
+D      3
+# Diagram 3 for nFKSprocess 11
+C     11      3      3 
+F     11     -1      3      2
+D      1
+D      5
+T     11     -1      3           21
+F     11     -2      3      2
+D     -1
+D      3
+T     11     -2      3            6
+F     11     -3      3      2
+D     -2
+D      4
+# Diagram 4 for nFKSprocess 11
+C     11      4      4 
+F     11     -1      4      2
+D      4
+D      3
+S     11     -1      4           21
+F     11     -2      4      2
+D      1
+D     -1
+T     11     -2      4            2
+F     11     -3      4      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 11
+C     11      0      4
+# 
+# nFKSprocess 12
+# Diagram 1 for nFKSprocess 12
+C     12      1      1 
+F     12     -1      1      2
+D      4
+D      3
+S     12     -1      1           22
+F     12     -2      1      2
+D      5
+D     -1
+S     12     -2      1           -2
+# Diagram 2 for nFKSprocess 12
+C     12      2      2 
+F     12     -1      2      2
+D      4
+D      3
+S     12     -1      2           21
+F     12     -2      2      2
+D      5
+D     -1
+S     12     -2      2           -2
+# Diagram 3 for nFKSprocess 12
+C     12      3      3 
+F     12     -1      3      2
+D      4
+D      3
+S     12     -1      3           23
+F     12     -2      3      2
+D      5
+D     -1
+S     12     -2      3           -2
+# Diagram 4 for nFKSprocess 12
+C     12      4      4 
+F     12     -1      4      2
+D      1
+D      5
+T     12     -1      4           22
+F     12     -2      4      2
+D     -1
+D      4
+T     12     -2      4            6
+F     12     -3      4      2
+D     -2
+D      3
+# Diagram 5 for nFKSprocess 12
+C     12      5      5 
+F     12     -1      5      2
+D      1
+D      5
+T     12     -1      5           21
+F     12     -2      5      2
+D     -1
+D      4
+T     12     -2      5            6
+F     12     -3      5      2
+D     -2
+D      3
+# Diagram 6 for nFKSprocess 12
+C     12      6      6 
+F     12     -1      6      2
+D      1
+D      5
+T     12     -1      6           23
+F     12     -2      6      2
+D     -1
+D      4
+T     12     -2      6            6
+F     12     -3      6      2
+D     -2
+D      3
+# Diagram 7 for nFKSprocess 12
+C     12      7      7 
+F     12     -1      7      2
+D      1
+D      5
+T     12     -1      7           22
+F     12     -2      7      2
+D     -1
+D      3
+T     12     -2      7            6
+F     12     -3      7      2
+D     -2
+D      4
+# Diagram 8 for nFKSprocess 12
+C     12      8      8 
+F     12     -1      8      2
+D      1
+D      5
+T     12     -1      8           21
+F     12     -2      8      2
+D     -1
+D      3
+T     12     -2      8            6
+F     12     -3      8      2
+D     -2
+D      4
+# Diagram 9 for nFKSprocess 12
+C     12      9      9 
+F     12     -1      9      2
+D      1
+D      5
+T     12     -1      9           23
+F     12     -2      9      2
+D     -1
+D      3
+T     12     -2      9            6
+F     12     -3      9      2
+D     -2
+D      4
+# Diagram 10 for nFKSprocess 12
+C     12     10     10 
+F     12     -1     10      2
+D      4
+D      3
+S     12     -1     10           21
+F     12     -2     10      2
+D      1
+D      5
+T     12     -2     10           21
+F     12     -3     10      2
+D     -2
+D     -1
+# Diagram 11 for nFKSprocess 12
+C     12     11     11 
+F     12     -1     11      2
+D      4
+D      3
+S     12     -1     11           22
+F     12     -2     11      2
+D      1
+D     -1
+T     12     -2     11            2
+F     12     -3     11      2
+D     -2
+D      5
+# Diagram 12 for nFKSprocess 12
+C     12     12     12 
+F     12     -1     12      2
+D      4
+D      3
+S     12     -1     12           21
+F     12     -2     12      2
+D      1
+D     -1
+T     12     -2     12            2
+F     12     -3     12      2
+D     -2
+D      5
+# Diagram 13 for nFKSprocess 12
+C     12     13     13 
+F     12     -1     13      2
+D      4
+D      3
+S     12     -1     13           23
+F     12     -2     13      2
+D      1
+D     -1
+T     12     -2     13            2
+F     12     -3     13      2
+D     -2
+D      5
+# Number of configs for nFKSprocess 12
+C     12      0     13
+# 
+M      1     -1      1            6 
+P      1     -1      1      1 
+M      1     -2      1           21 
+P      1     -2      1      2 
+M      1     -1      2           -6 
+P      1     -1      2      1 
+M      1     -2      2           21 
+P      1     -2      2      2 
+M      1     -1      3           21 
+P      1     -1      3      2 
+M      1     -2      3            2 
+P      1     -2      3      1 
+M      1     -1      4           21 
+P      1     -1      4      2 
+M      1     -2      4            2 
+P      1     -2      4      1 
+# 
+M      2     -1      1            6 
+P      2     -1      1      1 
+M      2     -2      1           21 
+P      2     -2      1      2 
+M      2     -1      2           -6 
+P      2     -1      2      1 
+M      2     -2      2           21 
+P      2     -2      2      2 
+M      2     -1      3           21 
+P      2     -1      3      2 
+M      2     -2      3            2 
+P      2     -2      3      1 
+M      2     -1      4           21 
+P      2     -1      4      2 
+M      2     -2      4            2 
+P      2     -2      4      1 
+# 
+M      3     -1      1            6 
+P      3     -1      1      1 
+M      3     -2      1           21 
+P      3     -2      1      2 
+M      3     -1      2           -6 
+P      3     -1      2      1 
+M      3     -2      2           21 
+P      3     -2      2      2 
+M      3     -1      3           21 
+P      3     -1      3      2 
+M      3     -2      3            2 
+P      3     -2      3      1 
+M      3     -1      4           21 
+P      3     -1      4      2 
+M      3     -2      4            2 
+P      3     -2      4      1 
+# 
+M      4     -1      1            6 
+P      4     -1      1      1 
+M      4     -2      1           21 
+P      4     -2      1      2 
+M      4     -1      2           -6 
+P      4     -1      2      1 
+M      4     -2      2           21 
+P      4     -2      2      2 
+M      4     -1      3           21 
+P      4     -1      3      2 
+M      4     -2      3            2 
+P      4     -2      3      1 
+M      4     -1      4           21 
+P      4     -1      4      2 
+M      4     -2      4            2 
+P      4     -2      4      1 
+# 
+M      5     -1      1           21 
+P      5     -1      1      2 
+M      5     -2      1            2 
+P      5     -2      1      1 
+M      5     -1      2            6 
+P      5     -1      2      1 
+M      5     -2      2           21 
+P      5     -2      2      2 
+M      5     -1      3           -6 
+P      5     -1      3      1 
+M      5     -2      3           21 
+P      5     -2      3      2 
+M      5     -1      4           21 
+P      5     -1      4      2 
+M      5     -2      4            2 
+P      5     -2      4      1 
+# 
+M      6     -1      1           21 
+P      6     -1      1      2 
+M      6     -2      1           21 
+P      6     -2      1      2 
+M      6     -1      2            6 
+P      6     -1      2      1 
+M      6     -2      2           22 
+P      6     -2      2      2 
+M      6     -1      3            6 
+P      6     -1      3      1 
+M      6     -2      3           21 
+P      6     -2      3      2 
+M      6     -1      4            6 
+P      6     -1      4      1 
+M      6     -2      4           23 
+P      6     -2      4      2 
+M      6     -1      5           -6 
+P      6     -1      5      1 
+M      6     -2      5           22 
+P      6     -2      5      2 
+M      6     -1      6           -6 
+P      6     -1      6      1 
+M      6     -2      6           21 
+P      6     -2      6      2 
+M      6     -1      7           -6 
+P      6     -1      7      1 
+M      6     -2      7           23 
+P      6     -2      7      2 
+M      6     -1      8           22 
+P      6     -1      8      2 
+M      6     -2      8            2 
+P      6     -2      8      1 
+M      6     -1      9           21 
+P      6     -1      9      2 
+M      6     -2      9            2 
+P      6     -2      9      1 
+M      6     -1     10           23 
+P      6     -1     10      2 
+M      6     -2     10            2 
+P      6     -2     10      1 
+M      6     -1     11           22 
+P      6     -1     11      2 
+M      6     -2     11            2 
+P      6     -2     11      1 
+M      6     -1     12           21 
+P      6     -1     12      2 
+M      6     -2     12            2 
+P      6     -2     12      1 
+M      6     -1     13           23 
+P      6     -1     13      2 
+M      6     -2     13            2 
+P      6     -2     13      1 
+# 
+M      7     -1      1           21 
+P      7     -1      1      2 
+M      7     -2      1           21 
+P      7     -2      1      2 
+M      7     -1      2            6 
+P      7     -1      2      1 
+M      7     -2      2           22 
+P      7     -2      2      2 
+M      7     -1      3            6 
+P      7     -1      3      1 
+M      7     -2      3           21 
+P      7     -2      3      2 
+M      7     -1      4            6 
+P      7     -1      4      1 
+M      7     -2      4           23 
+P      7     -2      4      2 
+M      7     -1      5           -6 
+P      7     -1      5      1 
+M      7     -2      5           22 
+P      7     -2      5      2 
+M      7     -1      6           -6 
+P      7     -1      6      1 
+M      7     -2      6           21 
+P      7     -2      6      2 
+M      7     -1      7           -6 
+P      7     -1      7      1 
+M      7     -2      7           23 
+P      7     -2      7      2 
+M      7     -1      8           22 
+P      7     -1      8      2 
+M      7     -2      8            2 
+P      7     -2      8      1 
+M      7     -1      9           21 
+P      7     -1      9      2 
+M      7     -2      9            2 
+P      7     -2      9      1 
+M      7     -1     10           23 
+P      7     -1     10      2 
+M      7     -2     10            2 
+P      7     -2     10      1 
+M      7     -1     11           22 
+P      7     -1     11      2 
+M      7     -2     11            2 
+P      7     -2     11      1 
+M      7     -1     12           21 
+P      7     -1     12      2 
+M      7     -2     12            2 
+P      7     -2     12      1 
+M      7     -1     13           23 
+P      7     -1     13      2 
+M      7     -2     13            2 
+P      7     -2     13      1 
+# 
+M      8     -1      1           21 
+P      8     -1      1      2 
+M      8     -2      1           21 
+P      8     -2      1      2 
+M      8     -1      2            6 
+P      8     -1      2      1 
+M      8     -2      2           22 
+P      8     -2      2      2 
+M      8     -1      3            6 
+P      8     -1      3      1 
+M      8     -2      3           21 
+P      8     -2      3      2 
+M      8     -1      4            6 
+P      8     -1      4      1 
+M      8     -2      4           23 
+P      8     -2      4      2 
+M      8     -1      5           -6 
+P      8     -1      5      1 
+M      8     -2      5           22 
+P      8     -2      5      2 
+M      8     -1      6           -6 
+P      8     -1      6      1 
+M      8     -2      6           21 
+P      8     -2      6      2 
+M      8     -1      7           -6 
+P      8     -1      7      1 
+M      8     -2      7           23 
+P      8     -2      7      2 
+M      8     -1      8           22 
+P      8     -1      8      2 
+M      8     -2      8            2 
+P      8     -2      8      1 
+M      8     -1      9           21 
+P      8     -1      9      2 
+M      8     -2      9            2 
+P      8     -2      9      1 
+M      8     -1     10           23 
+P      8     -1     10      2 
+M      8     -2     10            2 
+P      8     -2     10      1 
+M      8     -1     11           22 
+P      8     -1     11      2 
+M      8     -2     11            2 
+P      8     -2     11      1 
+M      8     -1     12           21 
+P      8     -1     12      2 
+M      8     -2     12            2 
+P      8     -2     12      1 
+M      8     -1     13           23 
+P      8     -1     13      2 
+M      8     -2     13            2 
+P      8     -2     13      1 
+# 
+M      9     -1      1           21 
+P      9     -1      1      2 
+M      9     -2      1           21 
+P      9     -2      1      2 
+M      9     -1      2            6 
+P      9     -1      2      1 
+M      9     -2      2           22 
+P      9     -2      2      2 
+M      9     -1      3            6 
+P      9     -1      3      1 
+M      9     -2      3           21 
+P      9     -2      3      2 
+M      9     -1      4            6 
+P      9     -1      4      1 
+M      9     -2      4           23 
+P      9     -2      4      2 
+M      9     -1      5           -6 
+P      9     -1      5      1 
+M      9     -2      5           22 
+P      9     -2      5      2 
+M      9     -1      6           -6 
+P      9     -1      6      1 
+M      9     -2      6           21 
+P      9     -2      6      2 
+M      9     -1      7           -6 
+P      9     -1      7      1 
+M      9     -2      7           23 
+P      9     -2      7      2 
+M      9     -1      8           22 
+P      9     -1      8      2 
+M      9     -2      8            2 
+P      9     -2      8      1 
+M      9     -1      9           21 
+P      9     -1      9      2 
+M      9     -2      9            2 
+P      9     -2      9      1 
+M      9     -1     10           23 
+P      9     -1     10      2 
+M      9     -2     10            2 
+P      9     -2     10      1 
+M      9     -1     11           22 
+P      9     -1     11      2 
+M      9     -2     11            2 
+P      9     -2     11      1 
+M      9     -1     12           21 
+P      9     -1     12      2 
+M      9     -2     12            2 
+P      9     -2     12      1 
+M      9     -1     13           23 
+P      9     -1     13      2 
+M      9     -2     13            2 
+P      9     -2     13      1 
+# 
+M     10     -1      1           22 
+P     10     -1      1      2 
+M     10     -2      1            2 
+P     10     -2      1      1 
+M     10     -1      2           21 
+P     10     -1      2      2 
+M     10     -2      2            2 
+P     10     -2      2      1 
+M     10     -1      3           23 
+P     10     -1      3      2 
+M     10     -2      3            2 
+P     10     -2      3      1 
+M     10     -1      4            6 
+P     10     -1      4      1 
+M     10     -2      4           22 
+P     10     -2      4      2 
+M     10     -1      5            6 
+P     10     -1      5      1 
+M     10     -2      5           21 
+P     10     -2      5      2 
+M     10     -1      6            6 
+P     10     -1      6      1 
+M     10     -2      6           23 
+P     10     -2      6      2 
+M     10     -1      7           -6 
+P     10     -1      7      1 
+M     10     -2      7           22 
+P     10     -2      7      2 
+M     10     -1      8           -6 
+P     10     -1      8      1 
+M     10     -2      8           21 
+P     10     -2      8      2 
+M     10     -1      9           -6 
+P     10     -1      9      1 
+M     10     -2      9           23 
+P     10     -2      9      2 
+M     10     -1     10           22 
+P     10     -1     10      2 
+M     10     -2     10            2 
+P     10     -2     10      1 
+M     10     -1     11           21 
+P     10     -1     11      2 
+M     10     -2     11            2 
+P     10     -2     11      1 
+M     10     -1     12           23 
+P     10     -1     12      2 
+M     10     -2     12            2 
+P     10     -2     12      1 
+M     10     -1     13           21 
+P     10     -1     13      2 
+M     10     -2     13           21 
+P     10     -2     13      2 
+# 
+M     11     -1      1           21 
+P     11     -1      1      2 
+M     11     -2      1           -2 
+P     11     -2      1      1 
+M     11     -1      2           21 
+P     11     -1      2      2 
+M     11     -2      2           -6 
+P     11     -2      2      1 
+M     11     -1      3           21 
+P     11     -1      3      2 
+M     11     -2      3            6 
+P     11     -2      3      1 
+M     11     -1      4           21 
+P     11     -1      4      2 
+M     11     -2      4            2 
+P     11     -2      4      1 
+# 
+M     12     -1      1           22 
+P     12     -1      1      2 
+M     12     -2      1           -2 
+P     12     -2      1      1 
+M     12     -1      2           21 
+P     12     -1      2      2 
+M     12     -2      2           -2 
+P     12     -2      2      1 
+M     12     -1      3           23 
+P     12     -1      3      2 
+M     12     -2      3           -2 
+P     12     -2      3      1 
+M     12     -1      4           22 
+P     12     -1      4      2 
+M     12     -2      4           -6 
+P     12     -2      4      1 
+M     12     -1      5           21 
+P     12     -1      5      2 
+M     12     -2      5           -6 
+P     12     -2      5      1 
+M     12     -1      6           23 
+P     12     -1      6      2 
+M     12     -2      6           -6 
+P     12     -2      6      1 
+M     12     -1      7           22 
+P     12     -1      7      2 
+M     12     -2      7            6 
+P     12     -2      7      1 
+M     12     -1      8           21 
+P     12     -1      8      2 
+M     12     -2      8            6 
+P     12     -2      8      1 
+M     12     -1      9           23 
+P     12     -1      9      2 
+M     12     -2      9            6 
+P     12     -2      9      1 
+M     12     -1     10           21 
+P     12     -1     10      2 
+M     12     -2     10           21 
+P     12     -2     10      2 
+M     12     -1     11           22 
+P     12     -1     11      2 
+M     12     -2     11            2 
+P     12     -2     11      1 
+M     12     -1     12           21 
+P     12     -1     12      2 
+M     12     -2     12            2 
+P     12     -2     12      1 
+M     12     -1     13           23 
+P     12     -1     13      2 
+M     12     -2     13            2 
+P     12     -2     13      1 

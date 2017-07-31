@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 
 import aloha
@@ -314,7 +315,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         if len(levels)==0:
             return
-        
+        start = time.time()
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
         try:
             MA5_interpreter = common_run_interface.CommonRunCmd.\
@@ -326,7 +327,6 @@ class ProcessExporterFortran(VirtualExporter):
             return
 
         MA5_main = MA5_interpreter.main
-       
         for lvl in ['parton','hadron']:
             if lvl in levels:
                 card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
@@ -345,6 +345,9 @@ class ProcessExporterFortran(VirtualExporter):
                     logger.debug('-'*60)
                 else:
                     open(card_to_generate,'w').write(text)
+        stop = time.time()
+        if stop-start >1:
+            logger.info('Cards created in %.2fs' % (stop-start))
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -636,10 +639,17 @@ param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
         else:
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
-        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
-        writer.write(text)
         
-        return True
+        replace_dict= {'libraries': set_of_lib, 
+                       'model':model_line,
+                       'additional_dsample': '',
+                       'additional_dependencies':''} 
+        
+        if writer:
+            text = open(path).read() % replace_dict
+            writer.write(text)
+            
+        return replace_dict
 
     #===========================================================================
     # write_nexternal_madspin
@@ -1953,7 +1963,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
     def finalize(self, matrix_elements, history, mg5options, flaglist):
-        """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+        """Finalize Standalone MG4 directory by 
+           generation proc_card_mg5.dat
+           generate a global makefile
+           """
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
@@ -1979,6 +1992,25 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             files.copytree(pjoin(MG5DIR, 'Template', 'NLO', 'Source', 'PDF'),
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
+            
+        # create a single makefile to compile all the subprocesses
+        text = '''\n# For python linking (require f2py part of numpy)\nifeq ($(origin MENUM),undefined)\n  MENUM=2\nendif\n''' 
+        deppython = ''
+        for Pdir in os.listdir(pjoin(self.dir_path,'SubProcesses')):
+            if os.path.isdir(pjoin(self.dir_path, 'SubProcesses', Pdir)):
+                text += '%(0)s/matrix$(MENUM)py.so:\n\tcd %(0)s;make matrix$(MENUM)py.so\n'% {'0': Pdir}
+                deppython += ' %(0)s/matrix$(MENUM)py.so ' % {'0': Pdir}
+        
+        text+='all: %s\n\techo \'done\'' % deppython
+            
+        ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
+        ff.write(text)
+        ff.close()
+        
+        
+        
+        
+            
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -1999,7 +2031,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         including the necessary matrix.f and nexternal.inc files"""
 
         cwd = os.getcwd()
-
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -2126,10 +2157,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
-        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
-        writer.write(text)
+
+        replace_dict= {'libraries': set_of_lib, 
+                       'model':model_line,
+                       'additional_dsample': '',
+                       'additional_dependencies':''} 
+
+        text = open(path).read() % replace_dict
         
-        return True
+        if writer:
+            writer.write(text)
+        
+        return replace_dict
 
     #===========================================================================
     # write_matrix_element_v4
@@ -2539,8 +2578,12 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
-        #cp(_file_path+'/iolibs/save_load_object.py', 
-        #                      self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/save_load_object.py', 
+                              self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/madevent/gen_crossxhtml.py', 
+                              self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/various/FO_analyse_card.py', 
+                              self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 
                               self.dir_path+'/bin/internal/file_writers.py')
         #model file                        
@@ -6235,16 +6278,31 @@ class UFO_model_to_mg4(object):
           double complex function %(name)s(%(args)s)
           implicit none
           double complex %(args)s
+          %(definitions)s
           %(name)s = %(fct)s
 
           return
           end
           """
+                    str_fct = self.p_to_f.parse(fct.expr)
+                    if not self.p_to_f.to_define:
+                        definitions = []
+                    else:
+                        definitions=[]
+                        for d in self.p_to_f.to_define:
+                            if d == 'pi':
+                                definitions.append(' double precision pi')
+                                definitions.append(' data pi /3.1415926535897932d0/')
+                            else:
+                                definitions.append(' double complex %s' % d)
+                                
                     text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", ".join(fct.arguments),                
-                                'fct': self.p_to_f.parse(fct.expr)
+                                'fct': str_fct,
+                                'definitions': '\n'.join(definitions)
                                  }
+
                     fsock.writelines(text)
             if self.opt['mp']:
                 fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
@@ -6256,15 +6314,29 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
+          %(definitions)s
           mp__%(name)s = %(fct)s
 
           return
           end
           """
+          
+                        str_fct = self.mp_p_to_f.parse(fct.expr)
+                        if not self.p_to_f.to_define:
+                            definitions = []
+                        else:
+                            definitions=[]
+                            for d in self.p_to_f.to_define:
+                                if d == 'mp_pi':
+                                    definitions.append(' %s mp_pi' % self.mp_real_format)
+                                    definitions.append(' data mp_pi /3.141592653589793238462643383279502884197e+00_16/')
+                                else:   
+                                    definitions.append(' %s %s' % (self.mp_complex_format,d))
                         text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", mp__".join(fct.arguments),                
-                                'fct': self.mp_p_to_f.parse(fct.expr),
+                                'fct': str_fct,
+                                'definitions': '\n'.join(definitions),
                                 'complex_mp_format': self.mp_complex_format
                                  }
                         fsock.writelines(text)

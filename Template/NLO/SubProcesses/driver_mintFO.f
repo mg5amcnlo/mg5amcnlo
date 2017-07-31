@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,33 +11,23 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,ndim
+      integer i,j,k,l,l1,l2
       character*130 buf
 c
 c     Global
 c
-      integer                                      nsteps
-      character*40          result_file,where_file
-      common /sample_status/result_file,where_file,nsteps
-      integer ngroup
-      common/to_group/ngroup
-      data ngroup/0/
 cc
       include 'run.inc'
       include 'coupl.inc'
       
-      double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
-c Vegas stuff
+c     Vegas stuff
+      integer         ndim
       common/tosigint/ndim
 
       real*8 sigint
@@ -151,18 +142,6 @@ c
         n1(i)=0
       enddo
       
-      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
-      read (lun+1,'(a130)',err=11,end=11) buf
-      l1=index(buf,'P')
-      l2=index(buf,'_')
-      if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
-     $     read(buf(l1+1:l2-1),*,err=11) ngroup
- 11   print *,'Process in group number ',ngroup
-
-      lun = 27
-      twgt = -2d0            !determine wgt after first iteration
-      open(unit=lun,status='scratch')
-      nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -213,6 +192,8 @@ c     Fill the number of combined matrix elements for given initial state lumino
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
+            do_rwgt_scale=.false.
+            do_rwgt_pdf=.false.
             do kchan=1,nchans
                do i=1,ndimmax
                   do j=0,nintervals
@@ -255,9 +236,6 @@ c
                virtual_fraction(kchan)=1d0
             enddo
          endif
-c
-c Setup for parton-level NLO reweighting
-         if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 C check for zero cross-section
 C if restoring grids corresponding to sigma=0, just terminate the run
          if (imode.ne.0.and.ans(1,0).eq.0d0.and.unc(1,0).eq.0d0) then
@@ -268,6 +246,7 @@ C if restoring grids corresponding to sigma=0, just terminate the run
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
      $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
+         call deallocate_weight_lines
          write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
          write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
          write(*,*)'chi**2 per D.o.F.:',chi2(1,0)
@@ -390,10 +369,6 @@ c to save grids:
 c timing statistics
       include "timing_variables.inc"
       data tOLP/0.0/
-      data tFastJet/0.0/
-      data tPDF/0.0/
-      data tDSigI/0.0/
-      data tDSigR/0.0/
       data tGenPS/0.0/
       data tBorn/0.0/
       data tIS/0.0/
@@ -415,12 +390,12 @@ c timing statistics
 
 
       double precision function sigint(xx,vegas_wgt,ifl,f)
+      use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
-      include 'reweight.inc'
       include 'run.inc'
       include 'orders.inc'
       include 'fks_info.inc'
@@ -605,6 +580,7 @@ c Finalize PS point
 
       subroutine update_fks_dir(nFKS)
       implicit none
+      include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -613,6 +589,7 @@ c Finalize PS point
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.false.)
+      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
       

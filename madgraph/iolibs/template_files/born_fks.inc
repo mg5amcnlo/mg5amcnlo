@@ -14,7 +14,6 @@ C CONSTANTS
 C  
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER    THEL
@@ -41,7 +40,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
       common/to_amps/  amp2,       jamp2
       DATA jamp2(0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
@@ -59,6 +58,7 @@ C
       common/c_nfksprocess/nfksprocess
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      logical cond_ij
 C ----------
 C BEGIN CODE
 C ----------
@@ -66,11 +66,15 @@ C ----------
       glu_ij = ij_values(nfksprocess)
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
+        if (glu_ij.eq.0) then
+      	  skip(nfksprocess)=0
+       else
          skip(nFKSprocess)=1			 
          do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
             skip(nFKSprocess)=skip(nFKSprocess)+1
          enddo
          skip(nFKSprocess)=skip(nFKSprocess)-1
+       endif
       endif
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
@@ -102,7 +106,11 @@ C ----------
       ANS(2) = 0D0
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
+        ! the following lines are to avoid segfaults when glu_ij=0
+        cond_ij=skip(nfksprocess).eq.0
+        if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
             ANS(2)=ANS(2)+BORNTILDE
@@ -145,7 +153,6 @@ C
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coupl.inc"
-      include "genps.inc"
 C  
 C ARGUMENTS 
 C  
@@ -164,7 +171,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
@@ -176,6 +183,7 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       integer step_hel
+      logical cond_ij
 %(ij_lines)s
 C  
 C COLOR DATA
@@ -190,20 +198,33 @@ C ----------
       back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
-      if (back_hel.ne.0) then
-        step_hel=-2*back_hel
+      if (glu_ij.ne.0) then
+        back_hel = nhel(glu_ij)
+        if (back_hel.ne.0) then
+          step_hel=-2*back_hel
+        else
+          step_hel=1
+        endif
       else
+        back_hel=0
         step_hel=1
       endif
       DO IHEL=back_hel,-back_hel,step_hel
-         IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
-        if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
+        if (glu_ij.ne.0) then
+          cond_ij=IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0
+        else
+          cond_ij=IHEL.EQ.back_hel 
+        endif
+        IF (cond_ij) THEN
+        if (glu_ij.ne.0) then
+          if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
+        endif
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
-          if(ihel.eq.BACK_HEL)then
+          if(ihel.eq.back_hel)then
             saveamp(i,hell)=amp(i)
-          elseif(ihel.eq.-BACK_HEL)then
+          elseif(ihel.eq.-back_hel)then
             saveamp(i,hell+skip(nFKSprocess))=amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
@@ -212,9 +233,9 @@ C ----------
         enddo
         elseif (calculatedBorn) then
         do i=1,ngraphs
-          if(ihel.eq.BACK_HEL)then
+          if(ihel.eq.back_hel)then
             amp(i)=saveamp(i,hell)
-          elseif(ihel.eq.-BACK_HEL)then
+          elseif(ihel.eq.-back_hel)then
             amp(i)=saveamp(i,hell+skip(nFKSprocess))
           else
             write(*,*) "ERROR #1 in born.f"
@@ -247,7 +268,7 @@ C ----------
         ENDDO
         BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))/DENOM(I)
       ENDDO
-      nhel(glu_ij) = back_hel
+      if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END
        
 

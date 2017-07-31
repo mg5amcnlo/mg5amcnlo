@@ -35,6 +35,7 @@ import time
 import StringIO
 
 pjoin = os.path.join
+root = os.path.dirname(__file__)
 
 class SystematicsError(Exception):
     pass

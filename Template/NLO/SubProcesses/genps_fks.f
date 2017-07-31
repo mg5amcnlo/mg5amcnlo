@@ -2,8 +2,6 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-c     Timing profile statistics
-      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       include "born_conf.inc"
@@ -34,8 +32,6 @@ c     Timing profile statistics
       include 'coupl.inc'
       include 'born_props.inc'
 c     
-      call cpu_time(tBefore)
-c
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -72,8 +68,6 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
-      call cpu_time(tAfter)      
-      tGenPS = tGenPS + (tAfter-tBefore)
       return
       end
 
@@ -887,8 +881,8 @@ c Start by generating all the invariant masses of the s-channels
      &        ,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
       else
          call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
-     &        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
-     &        ,pass)
+     $        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
+     $        ,pass)
       endif
       if (.not.pass) goto 222
 c If only s-channels, also set the p1+p2 s-channel
@@ -1840,7 +1834,7 @@ c arguments
       integer icountevts,i_fks,j_fks
       double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
      &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2) ,y_ij_fks,xi_i_hat
+     &     ,x(2),y_ij_fks,xi_i_hat
       double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3)
       logical pass
 c common blocks
@@ -2199,40 +2193,6 @@ c
       return
       end
 
-
-      function bwfunc(s,xm02,gah)
-c Returns the Breit Wigner function, normalized in such a way that
-c its integral in the range (-inf,inf) is one
-      implicit none
-      real*8 bwfunc,s,xm02,gah
-      real*8 pi,xm0
-      parameter (pi=3.1415926535897932d0)
-c
-      xm0=sqrt(xm02)
-      bwfunc=xm0*gah/(pi*((s-xm02)**2+xm02*gah**2))
-      return
-      end
-
-
-      function xbwmass3(t,xm02,ga,bwdelf,bwfmmn)
-c Returns the boson mass squared, given 0<t<1, the nominal mass (xm0),
-c and the mass range (implicit in bwdelf and bwfmmn). This function
-c is the inverse of F(M^2), where
-c   F(M^2)=\int_{xmlow2}^{M^2} ds BW(sqrt(s),M0,Ga)
-c   BW(M,M0,Ga)=M0 Ga/pi 1/((M^2-M0^2)^2+M0^2 Ga^2
-c and therefore eats up the Breit-Wigner when changing integration 
-c variable M^2 --> t
-      implicit none
-      real*8 xbwmass3,t,xm02,ga,bwdelf,bwfmmn
-      real*8 pi,xm0
-      parameter (pi=3.1415926535897932d0)
-c
-      xm0=sqrt(xm02)
-      xbwmass3=xm02+xm0*ga*tan(pi*bwdelf*t-bwfmmn)
-      return
-      end
-
-
       subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
@@ -2398,21 +2358,10 @@ c Jacobian due to delta() of tau_born
       subroutine generate_tau_BW(stot,idim,x,mass,width,cBW,BWmass
      $     ,BWwidth,tau,jac)
       implicit none
-      real*8 pi
-      parameter (pi=3.1415926535897932d0)
-      integer nsamp
-      parameter (nsamp=1)
-      include 'run.inc'
-      include 'genps.inc'
-      integer cBW,icount,idim
-      data icount /0/
-      double precision stot,x,tau,jac,mass,width,m,w,a,b,BWmass(-1:1)
-     $     ,BWwidth(-1:1),s,s_mass
-      double precision smax,smin,xm02,stemp,bwmdpl,bwmdmn,bwfmpl,bwfmmn
-      double precision bwdelf,xbwmass3,bwfunc,x0
-      external xmwmass3,bwfunc
-      double precision tau_Born_lower_bound_save
-     $     ,tau_lower_bound_resonance_save,tau_lower_bound_save
+      integer cBW,idim
+      double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
+     $     -1:1),s_mass,s
+      double precision smax,smin
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
@@ -2439,18 +2388,15 @@ c Jacobian due to delta() of tau_born
 
 
       subroutine generate_tau(stot,idim,x,tau,jac)
-      double precision x,tau,jac
-      double precision roH,roHs,fract,ximax0,ximin0,tmp,fract1,fract2
-     &     ,roHj,stot,s,dum,dum3(-1:1),smin,smax,s_mass
-      integer nsamp,idim
-      parameter (nsamp=1)
-      double precision tau_Born_lower_bound,tau_lower_bound_resonance
-     &     ,tau_lower_bound,tiny
+      implicit none
+      integer idim
+      double precision x,tau,jac,smin,smax,s_mass,s,tiny,dum,dum3(-1:1)
+     $     ,stot
       parameter (tiny=1d-8)
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
-     &     ,tau_lower_bound_resonance,tau_lower_bound
-      character*4 abrv
-      common /to_abrv/ abrv
+     $     ,tau_lower_bound_resonance,tau_lower_bound
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
@@ -2462,6 +2408,7 @@ c Jacobian due to delta() of tau_born
      $        ,dum3,dum3,jac,s)
       else
          write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+         jac=-1d0
       endif
       tau=s/stot
       jac=jac/stot
@@ -2510,8 +2457,7 @@ c For e+e- collisions, set tau to one and y to zero
 
       
       subroutine generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
-     $     ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x
-     $     ,xjac0,pass)
+     $     ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -2522,18 +2468,12 @@ c For e+e- collisions, set tau to one and y to zero
       double precision sqrtshat_born,totmass,xjac0
       integer itree(2,-max_branch:-1)
       integer i,j,ii,order(-nexternal:0)
-      double precision smin,smax,xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn,bwdelf
-     &     ,totalmass,tmp,ximin0,ximax0
-      double precision xbwmass3,bwfunc
-      external xbwmass3,bwfunc
+      double precision smin,smax,totalmass
       logical pass
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      double precision b(-1:1),x0
-      double precision s_mass(-nexternal:nexternal),xi,fract,vol_new
-     $     ,shat,x_new
-      parameter (fract=0.1d0)
+      integer cBW(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),cBW_width(-1:1,
+     $     -nexternal:-1)
+      double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass
       pass=.true.
       totalmass=totmass
@@ -3033,9 +2973,8 @@ c Kajantie's normalization of phase space (compensated below in flux)
       include 'nexternal.inc'
       double precision p_born(0:3,nexternal-1),xmrec2,shat_born
       logical pass
-      integer imother
-      integer i
-      double precision recoilbar(0:3),dot,tmp
+      integer imother,i
+      double precision recoilbar(0:3),dot
       external dot
       pass=.true.
       do i=0,3
@@ -3080,15 +3019,10 @@ c     itype=5: Conflicting BW, with alternative mass larger
 c     itype=6: Conflicting BW on both sides
 c
       implicit none
-      include 'nexternal.inc'
-      include 'run.inc'         ! ebeam
-c ARGUMENTS
       integer itype,idim
       double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
      $     ,cBW_width(-1:1),jac,s
-c LOCAL      
-      double precision tmp,vol_new,x_min,x_max,x_new,fract,x_mass,xg,A
-     $     ,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      double precision fract,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
       integer j
 c
       if (itype.eq.1) then

@@ -15,16 +15,13 @@ C
 C     
 C     ARGUMENTS 
 C     
-      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
 C     
 C     VARIABLES
 C     
       INTEGER I, J
       INCLUDE 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
-      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
-      DATA KEEP_ORDER / NSQAMPSO * .TRUE. /
-      DATA FIRSTTIME / .TRUE. /
       INCLUDE 'born_nhel.inc'
       DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL
@@ -37,20 +34,10 @@ C
 C     
 C     BEGIN CODE
 C     
-C     look for orders which match the born order constraint 
+C     Store all the orders that come from the diagrams, regardless
+C     of the fact that they satisfy or not the squared-orders
+C      constraints
 
-      IF (FIRSTTIME) THEN
-        DO I = 1, NSQAMPSO
-C         this is for the orders of the born to integrate
-          DO J = 1, NSPLITORDERS
-            IF(GETORDPOWFROMINDEX_B(J, I) .GT. BORN_ORDERS(J)) THEN
-              KEEP_ORDER(I) = .FALSE.
-              EXIT
-            ENDIF
-          ENDDO
-        ENDDO
-        FIRSTTIME = .FALSE.
-      ENDIF
 
 C     look for orders which match the born order constraint 
       CALL SBORN_HEL_SPLITORDERS(P,ANS)
@@ -59,12 +46,10 @@ C     look for orders which match the born order constraint
         WGT_HEL_SUMMED(J) = 0D0
       ENDDO
       DO I = 1, NSQAMPSO
-        IF (KEEP_ORDER(I)) THEN
-          ANS_SUMMED = ANS_SUMMED + ANS(I)
-          DO J = 1, MAX_BHEL
-            WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
-          ENDDO
-        ENDIF
+        ANS_SUMMED = ANS_SUMMED + ANS(I)
+        DO J = 1, MAX_BHEL
+          WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
+        ENDDO
       ENDDO
 
       RETURN
@@ -239,12 +224,91 @@ C     JAMPs contributing to orders QCD=0 QED=2
           DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
-          DO N = 1, NAMPSO
-            ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
-          ENDDO
+          ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
+     $     *DCONJG(JAMP(I,M))/DENOM(I)
         ENDDO
       ENDDO
+      END
+
+
+
+
+      SUBROUTINE PICKHELICITYMC(P,GOODHEL,HEL,IHEL_OUT,VOL)
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'born_nhel.inc'
+      DOUBLE PRECISION P(0:3, NEXTERNAL-1)
+      INTEGER GOODHEL(MAX_BHEL),HEL(0:MAX_BHEL)
+      INTEGER IHEL_OUT
+      DOUBLE PRECISION VOL
+
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=1)
+      DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
+      COMMON/C_BORN_HEL_SPLIT/WGT_HEL
+      DOUBLE PRECISION SUM_HEL(NSQAMPSO)
+      INTEGER I, IHEL
+
+      INTEGER N_NONZERO_ORD
+      DOUBLE PRECISION SUM_ALL
+      DOUBLE PRECISION ACCUM, TARGET
+      DOUBLE PRECISION BORN_WGT_RECOMP_DIRECT
+
+      DOUBLE PRECISION RAN2
+
+      CALL SBORN_HEL(P,BORN_WGT_RECOMP_DIRECT)
+
+C     Loop over the various orders of squared Feynman diagrams and
+C      compute for each order the sum
+      N_NONZERO_ORD = 0
+      SUM_ALL = 0D0
+      DO I = 1, NSQAMPSO
+        SUM_HEL(I) = 0D0
+        DO IHEL = 1, HEL(0)
+          IF (WGT_HEL(I, HEL(IHEL)).LT.0D0) THEN
+            WRITE(*,*) 'Helicities from squared diagrams must be > 0  !'
+            STOP 1
+          ENDIF
+          SUM_HEL(I)=SUM_HEL(I) + WGT_HEL(I, HEL(IHEL))
+     $     *DBLE(GOODHEL(IHEL))
+        ENDDO
+        IF (SUM_HEL(I).GT.0D0) THEN
+          N_NONZERO_ORD = N_NONZERO_ORD + 1
+          SUM_ALL = SUM_ALL + SUM_HEL(I)
+        ENDIF
+      ENDDO
+
+
+      TARGET=RAN2()
+      IHEL=1
+      ACCUM=0D0
+
+      DO I = 1, NSQAMPSO
+        IF (SUM_HEL(I).EQ.0D0) CYCLE
+        ACCUM=ACCUM+WGT_HEL(I,HEL(IHEL))/SUM_HEL(I)*DBLE(GOODHEL(IHEL))
+     $   /N_NONZERO_ORD
+      ENDDO
+
+      DO WHILE (ACCUM.LT.TARGET)
+        IHEL=IHEL+1
+        DO I = 1, NSQAMPSO
+          IF (SUM_HEL(I).EQ.0D0) CYCLE
+          ACCUM=ACCUM+WGT_HEL(I,HEL(IHEL))/SUM_HEL(I)
+     $     *DBLE(GOODHEL(IHEL))/N_NONZERO_ORD
+        ENDDO
+      ENDDO
+
+      VOL=0D0
+      DO I = 1, NSQAMPSO
+        IF (SUM_HEL(I).EQ.0D0) CYCLE
+        VOL=VOL+WGT_HEL(I,HEL(IHEL))/SUM_HEL(I)*DBLE(GOODHEL(IHEL))
+     $   /N_NONZERO_ORD
+      ENDDO
+
+
+      IHEL_OUT=IHEL
+
+      RETURN
       END
 
 

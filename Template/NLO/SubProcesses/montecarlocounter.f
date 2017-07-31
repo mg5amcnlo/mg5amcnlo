@@ -6,11 +6,9 @@
 c Nexternal is the number of legs (initial and final) al NLO, while max_bcol
 c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -313,13 +311,11 @@ c
       parameter (zero=0d0)
 
       include 'genps.inc'
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'born_leshouche.inc'
       include "born_nhel.inc"
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
+      include 'born_leshouche.inc'
       include 'coupl.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -1282,7 +1278,7 @@ c the same method
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double Precision amp2(maxamps), jamp2(0:maxamps)
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
       integer i_fks,j_fks
@@ -1306,9 +1302,6 @@ c the same method
       double precision xi_i_fks_ev,y_ij_fks_ev,t
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-
-      logical rotategranny
-      common/crotategranny/rotategranny
 
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
@@ -1468,10 +1461,6 @@ c Insert <ij>/[ij] which is not included by sborn()
                   pi(i)=p_i_fks_ev(i)
                   pj(i)=p(i,j_fks)
                enddo
-               if(rotategranny)then
-                  call trp_rotate_invar(pi,pi,cthbe,sthbe,cphibe,sphibe)
-                  call trp_rotate_invar(pj,pj,cthbe,sthbe,cphibe,sphibe)
-               endif
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
                CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
                CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
@@ -1486,13 +1475,8 @@ c Insert <ij>/[ij] which is not included by sborn()
             endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
             imother_fks=min(i_fks,j_fks)
-            if(rotategranny)then
-               call getaziangles(p_born_rot(0,imother_fks),
+            call getaziangles(p_born(0,imother_fks),
      #                           cphi_mother,sphi_mother)
-            else
-               call getaziangles(p_born(0,imother_fks),
-     #                           cphi_mother,sphi_mother)
-            endif
             do iord=1, nsplitorders
                borntilde(iord) = -(cphi_mother-ximag*sphi_mother)**2 *
      #                  borntilde(iord) * azifact
@@ -2965,7 +2949,7 @@ c
       include "nexternal.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
       integer i_scale,i
-      parameter(i_scale=0)
+      parameter(i_scale=1)
 
       ref_sc=0d0
       if(i_scale.eq.0)then

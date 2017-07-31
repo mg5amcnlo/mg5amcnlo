@@ -31,7 +31,6 @@ C     VARIABLES
 C     
       INTEGER I,J,K
       INCLUDE 'orders.inc'
-      INCLUDE 'coupl.inc'
       DOUBLE PRECISION ANS_SUMMED
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS,
@@ -48,10 +47,9 @@ C
       DOUBLE PRECISION       WGT_ME_BORN,WGT_ME_REAL
       COMMON /C_WGT_ME_TREE/ WGT_ME_BORN,WGT_ME_REAL
 
-      INCLUDE 'genps.inc'
-      DOUBLE PRECISION AMP2B(MAXAMPS), JAMP2B(0:MAXAMPS,0:NAMPSO)
+      DOUBLE PRECISION AMP2B(2), JAMP2B(0:1,0:NAMPSO)
       COMMON/TO_AMPS_BORN/  AMP2B,       JAMP2B
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXAMPS)
+      DOUBLE PRECISION AMP2(2), JAMP2(0:1)
       COMMON/TO_AMPS/  AMP2,       JAMP2
       LOGICAL SPLIT_TYPE_USED(NSPLITORDERS)
       COMMON/TO_SPLIT_TYPE_USED/SPLIT_TYPE_USED
@@ -118,13 +116,9 @@ C     the born to be integrated
       MAX_VAL = 0D0
 
 C     reset the amp_split array
-      DO I = 1, AMP_SPLIT_SIZE
-        AMP_SPLIT(I) = 0D0
-        DO J = 1, NSPLITORDERS
-          AMP_SPLIT_CNT(I,1,J) = 0D0
-          AMP_SPLIT_CNT(I,2,J) = 0D0
-        ENDDO
-      ENDDO
+      AMP_SPLIT(1:AMP_SPLIT_SIZE) = 0D0
+      AMP_SPLIT_CNT(1:AMP_SPLIT_SIZE,1:2,1:NSPLITORDERS) = DCMPLX(0D0
+     $ ,0D0)
 
       DO I = 1, NSQAMPSO
         MAX_VAL = MAX(MAX_VAL, ABS(ANS(1,I)))
@@ -147,9 +141,8 @@ C     this is to avoid fake non-zero contributions
       WGT_ME_BORN=ANS_SUMMED
 
 C     fill the amp2 and jamp2 arrays
-      DO I = 1, NGRAPHS
-        AMP2(I)=AMP2B(I)  ! amp2 just needs to be copyed
-      ENDDO
+      AMP2(1:NGRAPHS)=AMP2B(1:NGRAPHS)  ! amp2 just needs to be copyed
+
       DO I = 0, INT(JAMP2B(0,0))
         JAMP2(I)=0D0
         DO J = 1, NAMPSO
@@ -161,8 +154,7 @@ C         here sum all, this may be refined later
 
 C     quantities for the counterterms
       DO J = 1, NSPLITORDERS
-        ANS_CNT(1,J) = (0D0, 0D0)
-        ANS_CNT(2,J) = (0D0, 0D0)
+        ANS_CNT(1:2,J) = (0D0, 0D0)
         IF (.NOT.SPLIT_TYPE_USED(J)) CYCLE
         DO I = 1, NSQAMPSO
           IF (KEEP_ORDER_CNT(J,I)) THEN
@@ -212,7 +204,6 @@ C     CONSTANTS
 C     
       INCLUDE 'nexternal.inc'
       INCLUDE 'born_nhel.inc'
-      INCLUDE 'genps.inc'
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  16 )
       INTEGER NAMPSO, NSQAMPSO
@@ -259,7 +250,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXAMPS,0:NAMPSO)
+      DOUBLE PRECISION AMP2(NGRAPHS), JAMP2(0:1,0:NAMPSO)
       COMMON/TO_AMPS_BORN/  AMP2,       JAMP2
       DATA JAMP2(0,0) /   1/
       LOGICAL GOODHEL(NCOMB,7)
@@ -391,7 +382,6 @@ C
       INCLUDE 'nexternal.inc'
       INCLUDE 'born_nhel.inc'
       INCLUDE 'coupl.inc'
-      INCLUDE 'genps.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -411,7 +401,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXAMPS,0:NAMPSO)
+      DOUBLE PRECISION AMP2(2), JAMP2(0:1,0:NAMPSO)
       COMMON/TO_AMPS_BORN/  AMP2,       JAMP2
       DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
       COMMON/TO_SAVEAMP/SAVEAMP

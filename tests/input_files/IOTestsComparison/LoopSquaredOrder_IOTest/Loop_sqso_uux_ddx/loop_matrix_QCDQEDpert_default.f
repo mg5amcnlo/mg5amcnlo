@@ -358,9 +358,9 @@ C      subroutine of MadLoopCommons.dat
       COMPLEX*32 MPW(20,NWAVEFUNCS)
       COMMON/ML5_0_MP_W/MPW
 
-      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
-     $ ,0:NLOOPWAVEFUNCS)
-      COMPLEX*16 PL(0:3,0:NLOOPWAVEFUNCS)
+      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,
+     $ -1:NLOOPWAVEFUNCS)
+      COMPLEX*16 PL(0:3,-1:NLOOPWAVEFUNCS)
       COMMON/ML5_0_WL/WL,PL
 
       COMPLEX*16 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
@@ -591,12 +591,16 @@ C         We write a dummy filter for structural reasons here
 
 C       SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
 C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+C       The index -1 is for the charge-conjugated fermions with
+C        flipped fermion flow.
         DO I=0,3
+          PL(I,-1)=DCMPLX(0.0D0,0.0D0)
           PL(I,0)=DCMPLX(0.0D0,0.0D0)
         ENDDO
         DO I=1,MAXLWFSIZE
           DO J=0,LOOPMAXCOEFS-1
             DO K=1,MAXLWFSIZE
+              WL(I,J,K,-1)=(0.0D0,0.0D0)
               IF(I.EQ.K.AND.J.EQ.0) THEN
                 WL(I,J,K,0)=(1.0D0,0.0D0)
               ELSE
@@ -610,6 +614,14 @@ C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
           STOP
         ENDIF
       ENDIF
+
+C     This is the chare conjugate version of the unit 4-currents in
+C      the canonical cartesian basis.
+C     This, for now, is only defined for 4-fermionic currents.
+      WL(1,0,2,-1) = DCMPLX(-1.0D0,0.0D0)
+      WL(2,0,1,-1) = DCMPLX(1.0D0,0.0D0)
+      WL(3,0,4,-1) = DCMPLX(1.0D0,0.0D0)
+      WL(4,0,3,-1) = DCMPLX(-1.0D0,0.0D0)
 
 C     Make sure that lorentz rotation tests are not used if there is
 C      external loop wavefunction of spin 2 and that one specific
@@ -1887,6 +1899,8 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/ML5_0_CHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
       INTEGER I_LIB
       COMMON/ML5_0_I_LIB/I_LIB
       INCLUDE 'MadLoopParams.inc'
@@ -1948,6 +1962,14 @@ C        use the average but rather the first evaluation.
           DO I=1,3
             ESTIMATE(I,K) = FULLLIST(I,K,1)
           ENDDO
+        ENDIF
+
+C       Make sure to hard-set to zero accuracies of coupling orders
+C        not included
+        IF (K.NE.0) THEN
+          IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+            ACC(K) = 0.0D0
+          ENDIF
         ENDIF
 
       ENDDO

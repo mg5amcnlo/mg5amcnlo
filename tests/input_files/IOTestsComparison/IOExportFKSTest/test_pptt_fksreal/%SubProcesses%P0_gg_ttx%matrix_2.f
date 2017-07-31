@@ -73,9 +73,7 @@ C     look for orders which match the nlo order constraint
       ANS_MAX = 0D0
 
 C     reset the amp_split array
-      DO I = 1, AMP_SPLIT_SIZE
-        AMP_SPLIT(I) = 0D0
-      ENDDO
+      AMP_SPLIT(1:AMP_SPLIT_SIZE) = 0D0
 
       DO I = 1, NSQAMPSO
         ANS_MAX = MAX(DABS(ANS(I)),ANS_MAX)

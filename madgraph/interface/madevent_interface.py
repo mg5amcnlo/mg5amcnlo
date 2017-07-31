@@ -17,29 +17,22 @@
 """
 from __future__ import division
 
-import atexit
 import collections
-import cmath
 import glob
 import logging
 import math
-import optparse
 import os
-import pydoc
 import random
 import re
-import signal
-import shutil
+
 import stat
 import subprocess
 import sys
-import traceback
 import time
 import tarfile
 import StringIO
 import shutil
 import copy
-import xml.dom.minidom as minidom
 
 try:
     import readline
@@ -59,8 +52,6 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-
-    
 except ImportError: 
     # import from madevent directory
     MADEVENT = True
@@ -78,7 +69,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    import internal.histograms as histograms
+#    import internal.histograms as histograms # imported later to not slow down the loading of the code
     from internal.files import ln
 else:
     # import from madgraph directory
@@ -95,12 +86,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    import madgraph.various.histograms as histograms
-
+#    import madgraph.various.histograms as histograms  # imported later to not slow down the loading of the code
     import models.check_param_card as check_param_card
     from madgraph.iolibs.files import ln    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
-
 
 
 
@@ -436,6 +425,11 @@ class HelpToCmd(object):
         self.run_options_help([("--" + key,value[-1]) for (key,value) in \
                                self._survey_options.items()])
      
+     
+    def help_restart_gridpack(self):
+        logger.info("syntax: restart_gridpack --precision= --restart_zero")
+
+
     def help_launch(self):
         """exec generate_events for 2>N and calculate_width for 1>N"""
         logger.info("syntax: launch [run_name] [options])")
@@ -1077,7 +1071,7 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         if not os.path.exists('%s.gz'%input_file):
             if os.path.exists(input_file):
-                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
+                misc.gzip(input_file, stdout='%s.gz'%input_file)
             else:
                 raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
@@ -2025,6 +2019,57 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         return
 
     ############################################################################
+    
+    ############################################################################
+    def do_restart_gridpack(self, line):
+        """ syntax restart_gridpack --precision=1.0 --restart_zero
+        collect the result of the current run and relaunch each channel
+        not completed or optionally a completed one with a precision worse than 
+        a threshold (and/or the zero result channel)"""
+        
+    
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_survey(args)
+    
+        # initialize / remove lhapdf mode
+        #self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        #self.configure_directory()
+        
+        gensym = gen_ximprove.gensym(self)
+        
+        min_precision = 1.0
+        resubmit_zero=False
+        if '--precision=' in line:
+            s = line.index('--precision=') + len('--precision=')
+            arg=line[s:].split(1)[0]
+            min_precision = float(arg)
+        
+        if '--restart_zero' in line:
+            resubmit_zero = True
+            
+            
+        gensym.resubmit(min_precision, resubmit_zero)
+        self.monitor(run_type='All jobs submitted for gridpack', html=True)
+
+                        #will be done during the refine (more precisely in gen_ximprove)
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)  
+        self.exec_cmd("print_results %s" % self.run_name,
+                       errorhandling=False, printcmd=False, precmd=False, postcmd=False)      
+        
+        self.results.add_detail('run_statistics', dict(gensym.run_statistics))
+
+        
+        #self.exec_cmd('combine_events', postcmd=False)
+        #self.exec_cmd('store_events', postcmd=False)
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        self.exec_cmd('create_gridpack', postcmd=False)
+        
+    
+
+    ############################################################################    
 
     ############################################################################
     def do_generate_events(self, line):
@@ -2034,7 +2079,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode, args)
+        switch_mode = self.ask_run_configuration(mode, args)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2130,6 +2175,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+
+                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                    input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
+                    output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
+                    self.create_root_file(input , output)
 
                 self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
                 # shower launches pgs/delphes if needed    
@@ -2639,12 +2689,14 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+            self.run_card = run_card
+            self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-            
+                
             # Ensure that the bias parameters has all the required input from the
             # run_card
             if run_card['bias_module'].lower() not in ['dummy','none']:
@@ -2893,7 +2945,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         
         jobs, P_zero_result = ajobcreator.launch()
-        
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
@@ -3212,9 +3263,13 @@ Beware that this can be dangerous for local multicore runs.""")
                                      sum_axsec) 
                         partials +=1
             
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+                
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
+                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                              proc_charac=self.proc_characteristic)
             
             if partials:
                 for i in range(partials):
@@ -3231,15 +3286,6 @@ Beware that this can be dangerous for local multicore runs.""")
         
         
         self.to_store.append('event')
-        eradir = self.options['exrootanalysis_path']
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']
-        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
-           os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-                if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                    os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-                self.create_root_file(output='%s/unweighted_events.root' % \
-                                                                  self.run_name)
     
     ############################################################################ 
     def correct_bias(self):
@@ -3290,10 +3336,15 @@ Beware that this can be dangerous for local multicore runs.""")
         bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
         banner = banner_mod.Banner(lhe.banner)
         banner.modify_init_cross(cross)
+        banner.set_lha_strategy(-4)
         banner.write(bannerfile, close_tag=False)
         bannerfile.close()
         # replace the lhe file by the new one
-        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        if lhe.name.endswith('.gz'):
+            os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        else:
+            os.system('cat %s %s > %s.gz' %(bannerfile.name, output.name, lhe.name))
+            os.remove(lhe.name)
         os.remove(bannerfile.name)
         os.remove(output.name)
         
@@ -3376,9 +3427,8 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
-        misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
-                            cwd=pjoin(self.me_dir))
-        
+        self.gen_card_html()
+
         
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
@@ -3488,12 +3538,14 @@ Beware that this can be dangerous for local multicore runs.""")
             py8_path                  = pjoin(MG5DIR,py8_path)
 
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock =  open(pjoin(mg5amc_py8_interface_path, 'MG5AMC_VERSION_ON_INSTALL'))
+        MG5_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock = open(pjoin(mg5amc_py8_interface_path, 'PYTHIA8_VERSION_ON_INSTALL'))
+        PY8_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
             p = subprocess.Popen(['./get_pythia8_version.py',py8_path],
@@ -3759,6 +3811,14 @@ already exists and is not a fifo file."""%fifo_path)
 
     def do_pythia8(self, line):
         """launch pythia8"""
+
+
+        try:
+            import madgraph
+        except ImportError:  
+            import internal.histograms as histograms
+        else:
+            import madgraph.various.histograms as histograms
 
         # Check argument's validity
         args = self.split_arg(line)
@@ -4416,6 +4476,7 @@ tar -czf split_$1.tar.gz split_$1
     
     def extract_cross_sections_from_DJR(self,djr_output):
         """Extract cross-sections from a djr XML output."""
+        import xml.dom.minidom as minidom
         run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
         all_nodes = dict((int(node.getAttribute('id')),node) for
                                                       node in run_nodes)
@@ -4772,7 +4833,7 @@ tar -czf split_$1.tar.gz split_$1
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         if not self.force:
-            self.ask_edit_cards([], args, plot=True)
+            self.ask_edit_cards(['plot_card.dat'], args, plot=True)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -4957,7 +5018,7 @@ tar -czf split_$1.tar.gz split_$1
             exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
             if 'ajob' in exename: 
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat','dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -5001,7 +5062,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
             elif 'survey' in exename:
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -5053,7 +5114,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
             elif "refine_splitted.sh" in exename:
-                input_files = ['madevent','symfact.dat','iproc.dat',
+                input_files = ['madevent','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses',
@@ -5146,12 +5207,14 @@ tar -czf split_$1.tar.gz split_$1
         self.make_opts_var = {}
         
         #see when the last file was modified
-        time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
-                        os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random'):
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+        if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+            #just ensure that cluster specific are correctly handled
+            self.cluster.modify_interface(self)
             return
         else:
-            self.configured = time.time()
+            self.configured = time_mod
         self.update_status('compile directory', level=None, update_results=True)
         if self.options['automatic_html_opening'] and html_opening:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -5193,7 +5256,9 @@ tar -czf split_$1.tar.gz split_$1
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
-            self.configured = time.time()
+            time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+            self.configured = time_mod
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -5257,6 +5322,12 @@ tar -czf split_$1.tar.gz split_$1
         for nb_proc,subdir in enumerate(subproc):
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
             self.compile(['clean'], cwd=Pdir)
+
+        #see when the last file was modified
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+
+        self.configured = time_mod
 
     ############################################################################
     ##  HELPING ROUTINE
@@ -5528,12 +5599,28 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('Creating root files', level='parton')
 
         eradir = self.options['exrootanalysis_path']
+        totar = False
+        if input.endswith('.gz'):
+            misc.gunzip(input, keep=True)
+            totar = True
+            input = input[:-3]
+            
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
         except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
+    
+        if totar:
+            if os.path.exists('%s.gz' % input):
+                try:
+                    os.remove(input)
+                except:
+                    pass
+            else:
+                misc.gzip(input,keep=False)
+            
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
@@ -5746,6 +5833,15 @@ tar -czf split_$1.tar.gz split_$1
             if hadron_card_present or parton_card_present:
                 switch['analysis'] = 'MADANALYSIS_5'
 
+        # ExRootanalysis
+        eradir = self.options['exrootanalysis_path']
+        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+            valid_options['analysis'].insert(0,'EXROOTANALYSIS')
+            if switch['analysis'] in ['OFF', void]:
+                switch['analysis'] = 'EXROOTANALYSIS'
+
+                 
+
         if len(valid_options['analysis'])>1:                
             available_mode.append('3')
             if switch['analysis'] == void:
@@ -5761,7 +5857,7 @@ tar -czf split_$1.tar.gz split_$1
                 options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'
-                else:
+                elif switch['detector'] not in ['PGS']:
                     switch['detector'] = 'OFF'
             elif valid_options['detector'] == ['OFF']:
                 switch['detector'] = "Requires a shower"
@@ -5817,7 +5913,7 @@ tar -czf split_$1.tar.gz split_$1
                 return red%switch_value
             elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
                                   'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
-                                  'DELPHES-CMS','DELPHES']:
+                                  'DELPHES-CMS','DELPHES', 'EXROOTANALYSIS']:
                 return green%switch_value
             else:
                 return bold%switch_value                
@@ -5970,13 +6066,13 @@ tar -czf split_$1.tar.gz split_$1
         
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
-            return
+            return switch
 
         if answer == 'auto':
             self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
             self.ask_edit_cards(cards, plot=False)
-        return
+        return switch
     
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, pythia_version=6):
@@ -6281,8 +6377,7 @@ class MadLoopInitializer(object):
         # Now run make
         devnull = open(os.devnull, 'w')
         start=time.time()
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        retcode = misc.compile(arg=['-j1','check'], cwd=dir_name, nb_core=1)
         compilation_time = time.time()-start
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)

@@ -1150,14 +1150,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             raise 'No such file or directory %s' % args[1]
         
     
-    def check_answer_in_input_file(self, question_instance, default, path=False):
+    def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
 
         if not self.inputfile:
             return None# interactive mode
 
-        line = self.get_stored_line()
-        # line define if a previous answer was not answer correctly 
+        if line is None:
+            line = self.get_stored_line()
+            # line define if a previous answer was not answer correctly 
         if not line:
             try:
                 line = self.inputfile.next()
@@ -1198,6 +1199,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             possibility = [opt for opt in options if line.lower()==opt.lower()]
             if len (possibility)==1:
                 return possibility[0]
+        if '=' in line and ' ' in line.strip():
+            line,n = re.subn('\s*=\s*','=', line)
+            if n:
+                return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
+            
+            
             
         # No valid answer provides
         if self.haspiping:
@@ -1205,8 +1212,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return None # print the question and use the pipe
         else:
             logger.info(question_instance.question)
-            logger.warning('The answer to the previous question is not set in your input file')
-            logger.warning('Use %s value' % default)
+            logger.warning('found line : %s' % line)
+            logger.warning('This answer is not valid for current question. Keep it for next question and use here default: %s', default) 
             self.store_line(line)
             return str(default)
 
@@ -1279,6 +1286,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             except Exception:
                 pass
             
+
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -1299,6 +1311,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__, 
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
+        
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True
@@ -1330,6 +1347,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
+        
         #stop the execution if on a non interactive mode                                
         if self.use_rawinput == False:
             return True
@@ -1374,7 +1396,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if hasattr(self, 'me_dir'):
             me_dir = os.path.basename(me_dir) + ' '
         
-        
+        misc.EasterEgg('error')
+            
         try:
             raise 
         except self.InvalidCmd as error:            
@@ -1883,7 +1906,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
-            
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
@@ -2120,7 +2142,12 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
-            elif not self.casesensitive:
+            elif ' ' in line.strip() and '=' in self.value:
+                line,n = re.subn(r'\s*=\s*', '=', line)
+                if n:
+                    self.default(line)
+                    return self.postcmd(stop, line)
+            if not self.casesensitive:
                 for ans in self.allow_arg:
                     if ans.lower() == self.value.lower():
                         self.value = ans
@@ -2128,6 +2155,8 @@ class SmartQuestion(BasicCmd):
                         break
                 else:
                     raise Exception
+
+                
             else: 
                 raise Exception
         except Exception,error:

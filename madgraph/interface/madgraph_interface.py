@@ -39,6 +39,7 @@ import inspect
 import urllib
 import random
 
+
 #useful shortcut
 pjoin = os.path.join
 
@@ -59,6 +60,8 @@ import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
+
+
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
@@ -97,6 +100,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_lib as aloha_lib
 
 import mg5decay.decay_objects as decay_objects
+
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -1191,7 +1195,7 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                if (self._done_export[1] == 'plugin' and mode in self._export_formats):
                     args.append(mode)
                     args.append(self._done_export[0])
                 elif self._done_export[1].startswith(mode):
@@ -1566,6 +1570,9 @@ This will take effect only in a NEW terminal
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
             elif path != 'auto':
+                if path in ['HELAS', 'tests', 'MadSpin', 'madgraph', 'mg5decay', 'vendor']:
+                    if os.getcwd() == MG5DIR:
+                        raise self.InvalidCmd, "This name correspond to a buildin MG5 directory. Please choose another name"
                 self._export_dir = path
             elif path == 'auto':
                 if self.options['pythia8_path']:
@@ -2807,7 +2814,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
                        'cluster_size':100,
-                       'output_dependencies':'external'
+                       'output_dependencies':'external',
+                       'crash_on_error':False
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2929,6 +2937,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_install('update --mode=mg5_end')
         print
 
+        misc.EasterEgg('quit')
+        
+        
         return value
 
     # Add a process to the existing multiprocess definition
@@ -2951,6 +2962,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if '--diagram_filter' in args:
             diagram_filter = True
             args.remove('--diagram_filter')
+        
+        standalone_only = False
+        if '--standalone' in args:
+            standalone_only = True
+            args.remove('--standalone')            
 
         # Check the validity of the arguments
         self.check_add(args)
@@ -3016,7 +3032,7 @@ This implies that with decay chains:
             # Check that we have the same number of initial states as
             # existing processes
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
-               myprocdef.get_ninitial():
+               myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
             self._curr_proc_defs.append(myprocdef)
@@ -5048,6 +5064,8 @@ This implies that with decay chains:
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
+                    if os.path.sep in args[1] and "import" in self.history[-1]:
+                        self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)
@@ -6103,13 +6121,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options', printcmd=False)
+                self.exec_cmd('save options %s' % opt, printcmd=False)
             elif opt=='pjfry':
                 self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options', printcmd=False)            
+                self.exec_cmd('save options %s' % opt, printcmd=False)            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
-                self.exec_cmd('save options',printcmd=False)
+                self.exec_cmd('save options %s' % opt, printcmd=False)
 
 
 
@@ -6249,7 +6267,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             # Re-compile CutTools and IREGI
             if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
-                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+                misc.compile(arg=['-j1'],cwd=pjoin(MG5DIR,'vendor','CutTools'),nb_core=1)
             if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
                 misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
@@ -6496,7 +6514,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     self.options[name] = value
                 if value.lower() == "none" or value=="":
                     self.options[name] = None
-
+        config_file.close()      
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
@@ -6879,6 +6897,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
 
+        
         args = self.split_arg(line)
         # Check argument validity
         if check:
@@ -7226,6 +7245,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.allow_notification_center = self.options[args[0]]
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
+        # True/False formatting
+        elif args[0] in ['crash_on_error']:
+            tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
@@ -7245,7 +7268,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             return stop
 
         if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto', log=False)
+            self.exec_cmd('save options %s' % args[0] , log=False)
         elif args[0] in self.options_madevent:
             if not '--no_save' in line:
                 logger.info('This option will be the default in any output that you are going to create in this session.')
@@ -7573,22 +7596,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
-            path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                          self._curr_helas_model)
             
-            # Write the procdef_mg5.dat file with process info
-            card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                self._curr_exporter.write_procdef_mg5(card_path,
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except Exception:
-                    misc.sprint('command history fails.', 10)
-                    pass
+                #try:
+                #    cmd.Cmd.onecmd(self, 'history .')
+                #except Exception:
+                #    misc.sprint('command history fails.', 10)
+                #    pass
 
         # Pythia 8
         elif self._export_format == 'pythia8':
@@ -7658,6 +7673,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         matrix_elements.remove(me)
                     else:
                         calls = calls + new_calls
+
+        if self._generate_info and hasattr(self._curr_exporter, 'write_procdef_mg5'):
+            # Write the procdef_mg5.dat file with process info
+            card_path = pjoin(self._export_dir ,'SubProcesses', \
+                                     'procdef_mg5.dat')
+            self._curr_exporter.write_procdef_mg5(card_path,
+                                self._curr_model['name'],
+                                self._generate_info)
+
 
         cpu_time2 = time.time() - cpu_time1
 

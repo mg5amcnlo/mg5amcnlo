@@ -55,9 +55,8 @@ C         link partons 4 and 4
 
         WGT = WGT_COL * G**2
 C       update the amp_split_soft, which is summed in sbornsoft
-        DO I = 1, AMP_SPLIT_SIZE
-          AMP_SPLIT_SOFT(I) = DBLE(AMP_SPLIT_CNT(I,1,QCD_POS)) * G**2
-        ENDDO
+        AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE) = DBLE(AMP_SPLIT_CNT(1:AMP_SPL
+     $IT_SIZE,1,QCD_POS)) * G**2
 
       ELSE IF (NEED_CHARGE_LINKS) THEN
         CHARGEPROD = CHARGES_BORN(M) * CHARGES_BORN(N)
@@ -68,10 +67,8 @@ C       add a factor 1/2 for the self-eikonal soft link
         IF (M.EQ.N) CHARGEPROD = CHARGEPROD / 2D0
         WGT = DBLE(ANS_CNT(1, QED_POS)) * CHARGEPROD * DBLE(GAL(1))**2
 C       update the amp_split_soft, which is summed in sbornsoft
-        DO I = 1, AMP_SPLIT_SIZE
-          AMP_SPLIT_SOFT(I) = DBLE(AMP_SPLIT_CNT(I,1,QED_POS)) *
-     $      CHARGEPROD * DBLE(GAL(1))**2
-        ENDDO
+        AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE) = DBLE(AMP_SPLIT_CNT(1:AMP_SPL
+     $IT_SIZE,1,QED_POS)) * CHARGEPROD * DBLE(GAL(1))**2
       ENDIF
 
       RETURN

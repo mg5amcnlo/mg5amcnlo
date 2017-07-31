@@ -367,8 +367,8 @@ C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK subroutine of Mad
       %(complex_mp_format)s MPW(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/MPW
 
-	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
-	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s PL(0:3,-1:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
 ## if(not AmplitudeReduction){
@@ -597,12 +597,15 @@ CLOSE(1)
 
 C SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
 C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+C The index -1 is for the charge-conjugated fermions with flipped fermion flow.
   DO I=0,3
+    PL(I,-1)=DCMPLX(0.0d0,0.0d0)
     PL(I,0)=DCMPLX(0.0d0,0.0d0)
   ENDDO
   DO I=1,MAXLWFSIZE
     DO J=0,LOOPMAXCOEFS-1
 	  DO K=1,MAXLWFSIZE
+	    WL(I,J,K,-1)=(0.0d0,0.0d0)
 	    IF(I.EQ.K.AND.J.EQ.0) then
         	WL(I,J,K,0)=(1.0d0,0.0d0)
 		ELSE
@@ -616,6 +619,13 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
     stop
   ENDIF
 ENDIF
+
+C This is the chare conjugate version of the unit 4-currents in the canonical cartesian basis.
+C This, for now, is only defined for 4-fermionic currents.
+WL(1,0,2,-1) = DCMPLX(-1.0d0,0.0d0)
+WL(2,0,1,-1) = DCMPLX(1.0d0,0.0d0)
+WL(3,0,4,-1) = DCMPLX(1.0d0,0.0d0)
+WL(4,0,3,-1) = DCMPLX(-1.0d0,0.0d0)
 
 C Make sure that lorentz rotation tests are not used if there is external loop wavefunction of spin 2 and that one specific helicity is asked
 NROTATIONS_DP_BU = NROTATIONS_DP
@@ -2091,6 +2101,8 @@ C
 C
 C GLOBAL VARIABLES
 C
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 	  integer I_LIB
 	  common/%(proc_prefix)sI_LIB/I_LIB
 	  include 'MadLoopParams.inc'
@@ -2147,6 +2159,13 @@ C       When using COLLIER with the internal stability test, the first evaluatio
 		  DO I=1,3
 		    estimate(i,k) = fulllist(i,k,1)
 		  ENDDO
+		ENDIF
+
+c       Make sure to hard-set to zero accuracies of coupling orders not included
+        if (K.ne.0) THEN
+		  IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+		    acc(k) = 0.0d0
+		  ENDIF
 		ENDIF
 
 	  enddo

@@ -469,7 +469,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
                 if os.path.exists(pjoin(sourcedir,'CutTools')):
                     logger.info('Compiling CutTools (can take a couple of minutes) ...')
-                    misc.compile(['CutTools'], cwd = sourcedir)
+                    misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                     logger.info('          ...done.')
                 else:
                     raise MadGraph5Error('Could not compile CutTools because its'+\
@@ -490,7 +490,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                     logger.info('CutTools was compiled with a different fortran'+\
                                             ' compiler. Re-compiling it now...')
                     misc.compile(['cleanCT'], cwd = sourcedir)
-                    misc.compile(['CutTools'], cwd = sourcedir)
+                    misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                     logger.info('          ...done.')
                 else:
                     raise MadGraph5Error("CutTools installation in %s"\

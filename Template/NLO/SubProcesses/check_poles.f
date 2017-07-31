@@ -14,7 +14,6 @@ C
       integer return_code
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
-      double precision accuracy2
       double precision ren_scale, energy
       include 'genps.inc'
       include 'nexternal.inc'
@@ -121,6 +120,9 @@ c     not equal to it so as to be sensitive to all logs in the check.
           pmass_rambo(i-nincoming) = pmass(i)
       enddo
 
+      iconfig=1
+      ichan=1
+      iconfigs(1)=iconfig
 c Find the nFKSprocess for which we compute the Born-like contributions,
 c ie. which is a Born+g real-emission process
       do nFKSprocess=1,fks_configs
@@ -210,6 +212,8 @@ c initialization
               p_born(j,k) = prambo(j,k-nincoming)
             enddo
           enddo
+
+          CALL UPDATE_AS_PARAM()
           call sborn(p_born, born)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
@@ -228,10 +232,6 @@ c initialization
           endif
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
-
-C         If MadLoop was still in initialization mode, then skip this
-C         point for the checks
-          if (accuracy2.lt.0.0d0) goto 200
 C         Otherwise, perform the check
           npointsChecked = npointsChecked +1
 
