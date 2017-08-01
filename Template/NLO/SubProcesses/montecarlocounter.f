@@ -53,12 +53,33 @@ c        2       0           501                  2       0           501
 c        3      500          502                  3      502          501
 c        4      502          501                  4      500          502
 c
-c and if one fixes for example fksfather=3, then ipartners = 3
-c while colorflow =  0  0  0                                 1
-c                    1  1  0                                 4
-c                    2  1  2                                 2
-c                    1  2  0
+c and if one fixes for example fksfather=3, then the situation is the following.
 c
+c fksfather = 3
+c  
+c ipartners(0) = 3
+c ipartners(1,2,3) = 1, 4, 2
+c  
+c colorflow(1,0) = 1 = number of flows where ipartners(1) = 1 is connected to 3
+c colorflow(2,0) = 2 = number of flows where ipartners(2) = 4 is connected to 3
+c colorflow(3,0) = 1 = number of flows where ipartners(3) = 2 is connected to 3
+c colorflow(1,1) = 1 = flow where ipartners(1) = 1 is connected to 3
+c colorflow(1,2) = 0 -> no other flow connecting 1 and 3
+c colorflow(2,1) = 1 = first flow where ipartners(2) = 4 is connected to 3
+c colorflow(2,2) = 2 = second flow where ipartners(2) = 4 is connected to 3
+c colorflow(3,1) = 2 = flow where ipartners(3) = 2 is connected to 3
+c colorflow(3,2) = 0 -> no other flow connecting 2 and 3
+c colorflow(4,1) = 0 -> there is no fourth partner of 3
+c colorflow(4,2) = 0 -> there is no fourth partner of 3
+c  
+c Thus
+c
+c ipartners(0..3) = 3, 1, 4, 2
+c  
+c colorflow(1,0..2) = 1, 1, 0
+c colorflow(2,0..2) = 2, 1, 2
+c colorflow(3,0..2) = 1, 2, 0
+c colorflow(4,0..2) = 0, 0, 0
 
       fksfather=min(i_fks,j_fks)
 
