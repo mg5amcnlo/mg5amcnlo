@@ -1017,6 +1017,7 @@ class CondorCluster(Cluster):
 
         return status.stdout.readline().strip()
     
+    jobstatus = {'0':'U', '1':'I','2':'R','3':'X','4':'C','5':'H','6':'E'}
     @check_interupt()
     @multiple_try(nb_try=10, sleep=10)
     def control(self, me_dir):
@@ -1032,17 +1033,18 @@ class CondorCluster(Cluster):
             start = i * packet
             stop = (i+1) * packet
             cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + \
-            " -format \'%-2s\  ' \'ClusterId\' " + \
-            " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-            
-            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+            " -format \"%d \"   ClusterId " + \
+            " -format \"%d\\n\"  JobStatus "
+
+            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE)
             error = status.stderr.read()
             if status.returncode or error:
                 raise ClusterManagmentError, 'condor_q returns error: %s' % error
-                
+
             for line in status.stdout:
                 id, status = line.strip().split()
+                status = self.jobstatus[status]
                 ongoing.append(id)
                 if status in ['I','U']:
                     idle += 1

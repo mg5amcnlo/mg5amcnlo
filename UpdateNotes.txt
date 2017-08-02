@@ -1,6 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.5.6 (XX/XX/XX)
+      OM: Add new option to systematics program:
+           --remove_weights, --keep_weights, --start_id
+           See "help systematics for more details."
+      OM: Update condor class to support CERN type of cluster (thanks Daria Satco)
       OM: Fixing a bug leading to a crash in pythia8 due to one event wrongly written when splitting the
           events for the parralelization of pythia8
       OM: Fixing an issue, leading to NAN for some of the channel of integration for complicated processes.
