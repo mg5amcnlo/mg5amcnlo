@@ -1047,7 +1047,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.output_type != 'default':
             if len(type_nlo) !=1:
                 raise Exception
-            to_write = [partial_check[i]/ref_wgts[i]*partial_check[i]
+            to_write = [partial[i]/ref_wgts[i]*partial_check[i]
                              if 0.85<avg[i]<1.15 else 0
                               for i in range(len(ref_wgts))]
             for cevent in event.nloweight.cevents:

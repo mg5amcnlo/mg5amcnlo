@@ -263,8 +263,6 @@ class TestMECmdRWGT(unittest.TestCase):
         cmd_lines = """
         change mode NLO_tree
         change model loop_sm-no_b_mass
-        define p = p b b~
-        define j = j b b~
         change process p p > h [QCD]
         change process p p > h j [QCD] --add
         change process p p > h j j QED<=1 [QCD] --add

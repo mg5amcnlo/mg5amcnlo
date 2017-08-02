@@ -666,11 +666,11 @@ class Systematics(object):
         nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
         for cevent in nloinfo.cevents:
             if dyn == 1: 
-                mur2 = cevent.get_et_scale(1.)**2
+                mur2 = max(1.0, cevent.get_et_scale(1.)**2) 
             elif dyn == 2:
-                mur2 = cevent.get_ht_scale(1.)**2
+                mur2 = max(1.0, cevent.get_ht_scale(1.)**2)
             elif dyn == 3:
-                mur2 = cevent.get_ht_scale(0.5)**2
+                mur2 = max(1.0, cevent.get_ht_scale(0.5)**2)
             elif dyn == 4:
                 mur2 = cevent.get_sqrts_scale(event,1)**2
             else:
