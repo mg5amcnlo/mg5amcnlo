@@ -5911,6 +5911,8 @@ You can also copy/paste, your event file here.''')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == self.paths['run']:
             self.run_card = banner_mod.RunCard(path)
+        elif path == self.paths['shower']:
+            self.shower_card = shower_card_mod.ShowerCard(path)
         elif path == self.paths['ML']:
             self.MLcard = banner_mod.MadLoopParam(path)
         elif path == self.paths['PY8']:
