@@ -591,7 +591,6 @@ class Systematics(object):
                 out =[]
                 keep_last = False
                 for line in self.banner['initrwgt'].split('\n'):
-                    misc.sprint(line)
                     sline = line.strip()
                     if sline.startswith('</weightgroup'):
                         if wgt_in_group:
