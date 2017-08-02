@@ -1,5 +1,9 @@
 include ../Source/make_opts
 
+LIBDIR = ../lib/
+LINKLIBS = -L$(LIBDIR) -lgeneric
+LIBS = $(LIBDIR)libgeneric.a
+
 # Files for the read40 combiner of top drawer files
 READ40=read40.o
 
@@ -9,11 +13,8 @@ SPLIT40=split40.o
 # Files to collect all the events in the separate integration channels into a single file
 COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o
 
-combine_jobs.o : combine_jobs.f max_split.inc
-	$(FC) $(FFLAGS) -c combine_jobs.f
-
 %.o : %.f
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
 %.o : %.for
 	$(FC) $(FFLAGS) -c $<
 
@@ -23,7 +24,7 @@ read40: $(READ40)
 split40: $(SPLIT40)
 	$(FC) $(LDFLAGS) -o split40 $(SPLIT40)
 
-collect_events: $(COLLECT_EVENTS)
-	$(FC) $(LDFLAGS) -o collect_events $(COLLECT_EVENTS)
+collect_events: $(COLLECT_EVENTS) $(LIBS)
+	$(FC) -o collect_events $(COLLECT_EVENTS) $(LINKLIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
 

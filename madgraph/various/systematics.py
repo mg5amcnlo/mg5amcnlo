@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __builtin__ import True, False
 if __name__ == "__main__":
     import sys
     import os
@@ -50,6 +51,9 @@ class Systematics(object):
                  pdf='errorset', #[(id, subset)]
                  dyn=[-1,1,2,3,4],
                  together=[('mur', 'muf', 'dyn')],
+                 remove_wgts=[],
+                 keep_wgts=[],
+                 start_id=None,
                  lhapdf_config=misc.which('lhapdf-config'),
                  log=lambda x: sys.stdout.write(str(x)+'\n')
                  ):
@@ -220,7 +224,81 @@ class Systematics(object):
                 bmass = 4.7
             self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
         
+        # Store which weight to keep/removed
+        self.remove_wgts = []
+        for id in remove_wgts:
+            if id == 'all':
+                self.remove_wgts = ['all']
+                break
+            elif ',' in id:
+                min_value, max_value = [int(v) for v in id.split(',')]
+                self.remove_wgts += [i for i in range(min_value, max_value+1)]
+            else:
+                self.remove_wgts.append(id)
+        self.keep_wgts = []
+        for id in keep_wgts:
+            if id == 'all':
+                self.keep_wgts = ['all']
+                break
+            elif ',' in id:
+                min_value, max_value = [int(v) for v in id.split(',')]
+                self.remove_wgts += [i for i in range(min_value, max_value+1)]
+            else:
+                self.remove_wgts.append(id)  
+                
+        # input to start the id in the weight
+        self.start_wgt_id = int(start_id[0]) if start_id else None
+        self.has_wgts_pattern = False # tag to check if the pattern for removing
+                                      # the weights was computed already
 
+        
+    def is_wgt_kept(self, name):
+        """ determine if we have to keep/remove such weight """
+        
+        if 'all' in self.keep_wgts or not self.remove_wgts:
+            return True
+
+        #start by checking what we want to keep        
+        if name in self.keep_wgts: 
+            return True
+        
+        # check for regular expression
+        if not self.has_wgts_pattern:
+            pat = r'|'.join(w for w in self.keep_wgts if any(letter in w for letter in '*?.([+\\'))
+            if pat:
+                self.keep_wgts_pattern = re.compile(pat)
+            else:
+                self.keep_wgts_pattern = None
+            pat = r'|'.join(w for w in self.remove_wgts if any(letter in w for letter in '*?.([+\\'))
+            if pat:
+                self.rm_wgts_pattern = re.compile(pat)
+            else:
+                self.rm_wgts_pattern = None                
+            self.has_wgts_pattern=True
+            
+        if self.keep_wgts_pattern and re.match(self.keep_wgts_pattern,name):
+            return True
+
+        #check what we want to remove
+        if 'all' in self.remove_wgts:
+            return False
+        elif name in self.remove_wgts:
+            return False
+        elif self.rm_wgts_pattern and re.match(self.rm_wgts_pattern, name):
+            return False
+        else:
+            return True
+
+    def remove_old_wgts(self, event):
+        """remove the weight as requested by the user"""
+        
+        rwgt_data = event.parse_reweight()
+        for name in rwgt_data.keys():
+            if not self.is_wgt_kept(name):
+                del rwgt_data[name]
+                event.reweight_order.remove(name)
+        
+        
     def run(self, stdout=sys.stdout):
         """ """
         start_time = time.time()
@@ -252,6 +330,7 @@ class Systematics(object):
                     self.log( '# currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
                     
             self.new_event() #re-init the caching of alphas/pdf
+            self.remove_old_wgts(event)
             if self.is_lo:
                 wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
             else:
@@ -502,7 +581,40 @@ class Systematics(object):
              text += "</weightgroup>\n"
             
         if 'initrwgt' in self.banner:
-            self.banner['initrwgt'] += text
+            if not self.remove_wgts:
+                self.banner['initrwgt'] += text
+            else:
+                # remove the line which correspond to removed weight
+                # removed empty group.
+                wgt_in_group=0
+                tmp_group_txt =[]
+                out =[]
+                keep_last = False
+                for line in self.banner['initrwgt'].split('\n'):
+                    misc.sprint(line)
+                    sline = line.strip()
+                    if sline.startswith('</weightgroup'):
+                        if wgt_in_group:
+                            out += tmp_group_txt
+                            out.append('</weightgroup>')
+                        if '<weightgroup' in line:
+                            wgt_in_group=0
+                            tmp_group_txt = [line[line.index('<weightgroup'):]]                            
+                    elif sline.startswith('<weightgroup'):
+                        wgt_in_group=0
+                        tmp_group_txt = [line]   
+                    elif sline.startswith('<weight'):
+                        name = re.findall(r'\bid=[\'\"]([^\'\"]*)[\'\"]', sline)
+                        if self.is_wgt_kept(name[0]):
+                            tmp_group_txt.append(line)
+                            keep_last = True
+                            wgt_in_group +=1
+                        else:
+                            keep_last = False
+                    elif keep_last:
+                        tmp_group_txt.append(line)
+                out.append(text)
+                self.banner['initrwgt'] = '\n'.join(out) 
         else:
             self.banner['initrwgt'] = text
             
@@ -514,6 +626,9 @@ class Systematics(object):
 
     def get_id(self):
         
+        if self.start_wgt_id is not None:
+            return int(self.start_wgt_id)
+        
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
             return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt']) if wid.isdigit()])+1
@@ -521,8 +636,6 @@ class Systematics(object):
             return 1
         
         
-
-
     def get_all_fct(self):
         
         all_args = []
@@ -819,7 +932,7 @@ def call_systematics(args, result=sys.stdout, running=True,
         del opts['from_card']
     
 
-    obj = Systematics(input, output, log=log,**opts)
+    obj = Systematics(input, output, log=log, **opts)
     if running:
         obj.run(result)  
     return obj

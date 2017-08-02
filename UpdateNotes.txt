@@ -1,15 +1,20 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.5.6 (XX/XX/XX)
+      OM: Add new option to systematics program:
+           --remove_weights, --keep_weights, --start_id
+           See "help systematics for more details."
+      OM: Update condor class to support CERN type of cluster (thanks Daria Satco)
       OM: Fixing a bug leading to a crash in pythia8 due to one event wrongly written when splitting the
           events for the parralelization of pythia8
       OM: Fixing an issue, leading to NAN for some of the channel of integration for complicated processes.
       RF: Refactor of the HwU.f fortran code. Gives more flexibility and potentially lower
           memory requirements.
-      RF: Fixed bug #1694548 (problem with NLO for QCD-charged heavy vector bosons)
+      RF: Fixed bug #1694548 (problem with NLO for QCD-charged heavy vector bosons).
       RF: Another fix (adding on a fix in 2.5.5) related to FxFx merging in case there are
-          diagrams with 1->3 decays
       RF: Fixed bug #1706072 related to wrong path with NLO gridpack mode
+          diagrams with 1->3 decays.
+      RF: Refactor of the (NLO) code related to extra weights (for PDF/scale uncertainties).
 
 2.5.5(26/05/17)
       OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 

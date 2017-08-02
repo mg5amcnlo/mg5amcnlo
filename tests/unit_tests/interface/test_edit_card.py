@@ -508,4 +508,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(shower['includepaths'], 'extra/1 ex/t/ra2 EXtra3')
         self.cmd.do_set('extralibs lib1 liB2 lIB3')
         self.assertEqual(shower['extralibs'], 'lib1 liB2 lIB3')
+
+        # finally reload the default shower card
+        # and check that, when any variable is set, the others correspond to the new shower_card
+        # (Bug 1708113)
+        self.cmd.copy_file('/tmp/edit_card/Cards/shower_card_default.dat')
+        # check that we have the default
+        shower = self.cmd.shower_card
+        self.assertEqual(shower['nevents'], -1)
+        self.cmd.do_set('shower_card nevents 150')
+        self.assertEqual(shower['analyse'], '')
         

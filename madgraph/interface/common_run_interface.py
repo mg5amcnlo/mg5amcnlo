@@ -49,6 +49,7 @@ pjoin = os.path.join
 logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
+                
 try:
     import madgraph
 except ImportError:    
@@ -1462,16 +1463,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("")
         logger.info("options: (values written are the default)", '$MG:color:BLACK')
         logger.info("")
-        logger.info("   --mur=0.5,1,2    # specify the values for renormalisation scale variation")
-        logger.info("   --muf=0.5,1,2    # specify the values for factorisation scale variation")
-        logger.info("   --alps=1         # specify the values for MLM emission scale variation (LO only)")
-        logger.info("   --dyn=-1,1,2,3,4 # specify the dynamical schemes to use.")
-        logger.info("                    #   -1 is the one used by the sample.")
-        logger.info("                    #   > 0 correspond to options of dynamical_scale_choice of the run_card.")
-        logger.info("   --pdf=errorset   # specify the pdfs to use for pdf variation. (see below)")
+        logger.info("   --mur=0.5,1,2     # specify the values for renormalisation scale variation")
+        logger.info("   --muf=0.5,1,2     # specify the values for factorisation scale variation")
+        logger.info("   --alps=1          # specify the values for MLM emission scale variation (LO only)")
+        logger.info("   --dyn=-1,1,2,3,4  # specify the dynamical schemes to use.")
+        logger.info("                     #   -1 is the one used by the sample.")
+        logger.info("                     #   > 0 correspond to options of dynamical_scale_choice of the run_card.")
+        logger.info("   --pdf=errorset    # specify the pdfs to use for pdf variation. (see below)")
         logger.info("   --together=mur,muf,dyn # lists the parameter that must be varied simultaneously so as to ")
         logger.info("                          # compute the weights for all combinations of their variations.")
-        logger.info("   --from_card      # use the information from the run_card (LO only).")
+        logger.info("   --from_card       # use the information from the run_card (LO only).")
+        logger.info("   --remove_weights= # remove previously written weights matching the descriptions")
+        logger.info("   --keep_weights=   # force to keep the weight even if in the list of remove_weights")
+        logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1483,12 +1487,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       CT10@0   : runs over the central member of the associated set")
         logger.info("       CT10@X   : runs over the Xth member of the associated PDF set")
         logger.info("       XX,YY,ZZ : runs over the sets for XX,YY,ZZ (those three follows above syntax)")
-        
+        logger.info("")
+        logger.info("   Allowed value for the keep/remove_wgts options:", '$MG:color:BLACK')
+        logger.info("       all      : keep/remove all weights")
+        logger.info("       name     : keep/remove that particular weight")
+        logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
+        logger.info("       PATTERN  : keep/remove all the weights matching the (python) regular expression.")
+        logger.info("       note that multiple entry of those arguments are allowed")
     def complete_systematics(self, text, line, begidx, endidx):
         """auto completion for the systematics command"""
  
         args = self.split_arg(line[0:begidx], error=False)
-        options = ['--mur=', '--muf=', '--pdf=', '--dyn=','--alps=','--together=','--from_card ']
+        options = ['--mur=', '--muf=', '--pdf=', '--dyn=','--alps=',
+                   '--together=','--from_card ','--remove_wgts=',
+                   '--keep_wgts=','--start_id=']
         
         if len(args) == 1 and os.path.sep not in text:
             #return valid run_name
@@ -1546,7 +1558,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = [a for a in args if not a.startswith('-') or opts.append(a)] 
 
         #check sanity of options
-        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf='))
+        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
+                                 '--remove_wgts=', '--keep_wgts','--start_id='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
@@ -4182,11 +4195,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_shower = False
         if 'shower_card.dat' in cards:
             self.has_shower = True
-            try:
-                import madgraph.various.shower_card as showercards
-            except:
-                import internal.shower_card as showercards
-            self.shower_card = showercards.ShowerCard(self.paths['shower'])
+            self.shower_card = shower_card_mod.ShowerCard(self.paths['shower'])
             self.shower_vars = self.shower_card.keys()
             
             # check for conflict with run_card/param_card
@@ -5911,6 +5920,8 @@ You can also copy/paste, your event file here.''')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == self.paths['run']:
             self.run_card = banner_mod.RunCard(path)
+        elif path == self.paths['shower']:
+            self.shower_card = shower_card_mod.ShowerCard(path)
         elif path == self.paths['ML']:
             self.MLcard = banner_mod.MadLoopParam(path)
         elif path == self.paths['PY8']:
@@ -5927,6 +5938,8 @@ You can also copy/paste, your event file here.''')
             except:
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
+        else:
+            logger.debug('not keep in sync: %s', path)
         return path
 
 class EditParamCard(AskforEditCard):

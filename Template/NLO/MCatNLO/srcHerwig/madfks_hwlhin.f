@@ -80,7 +80,6 @@ c Avoids rounding problems for zero-mass particles
              read(iunit,'(a)')string ! <rwgt>
           enddo
           if(index(string,'</event>').eq.0)then
-             wgtref=XWGTUP/MQQ
              do iww=2,nwgt      ! start at 2, because 'central value' is not part of the extra weights
                 call read_rwgt_line_wgt(iunit,ww(iww))
              enddo
