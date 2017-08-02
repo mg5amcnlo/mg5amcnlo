@@ -1340,7 +1340,35 @@ class Event(list):
         
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type)
-        return self.nloweight
+            return self.nloweight
+
+    def rewrite_nlo_weight(self, wgt=None):
+        """get the string associate to the weight"""
+        
+        text="""<mgrwgt>
+        %(total_wgt).10e %(nb_wgt)i %(nb_event)i 0
+        %(event)s
+        %(wgt)s
+        </mgrwgt>"""
+        
+        
+        if not wgt:
+            if not hasattr(self, 'nloweight'):
+                return
+            wgt = self.nloweight
+            
+        data = {'total_wgt': wgt.total_wgt, #need to check name and meaning,
+                'nb_wgt': wgt.nb_wgt,
+                'nb_event': wgt.nb_event,
+                'event': '\n'.join(p.__str__(mode='fortran') for p in wgt.momenta),
+                'wgt':'\n'.join(w.__str__(mode='formatted') 
+                                         for e in wgt.cevents for w in e.wgts)}
+         
+        data['total_wgt'] = sum([w.ref_wgt for e in wgt.cevents for w in e.wgts])
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        
+        self.tag = self.tag[:start] + text % data + self.tag[stop+9:]
+        
             
     def parse_lo_weight(self):
         """ """
@@ -1991,6 +2019,10 @@ class Event(list):
             reweight_str = '' 
             
         tag_str = self.tag
+        if hasattr(self, 'nloweight') and self.nloweight.modified:
+            self.rewrite_nlo_weight()
+            tag_str = self.tag
+            
         if self.matched_scale_data:
             tmp_scale = ' '.join(['pt_clust_%i=\"%s\"' % (i+1,v)
                                    for i,v in enumerate(self.matched_scale_data)
@@ -2318,6 +2350,12 @@ class FourMomentum(object):
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
     
+    def __str__(self, mode='python'):
+        if mode == 'python':
+            return self.__repr__()
+        elif mode == 'fortran':
+            return '%.10e %.10e %.10e %.10e' % self.get_tuple()
+    
     def get_tuple(self):
         return (self.E, self.px, self.py,self.pz)
     
@@ -2403,20 +2441,50 @@ class OneNLOWeight(object):
         if isinstance(input, str):
             self.parse(input)
         
-    def __str__(self):
+    def __str__(self, mode='display'):
         
-        out = """        pwgt: %(pwgt)s
-        born, real : %(born)s %(real)s
-        pdgs : %(pdgs)s
-        bjks : %(bjks)s
-        scales**2, gs: %(scales2)s %(gs)s
-        born/real related : %(born_related)s %(real_related)s
-        type / nfks : %(type)s  %(nfks)s
-        to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
-        ref_wgt :  %(ref_wgt)s""" % self.__dict__
-        return out
-        
-        
+        if mode == 'display':
+            out = """        pwgt: %(pwgt)s
+            born, real : %(born)s %(real)s
+            pdgs : %(pdgs)s
+            bjks : %(bjks)s
+            scales**2, gs: %(scales2)s %(gs)s
+            born/real related : %(born_related)s %(real_related)s
+            type / nfks : %(type)s  %(nfks)s
+            to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
+            ref_wgt :  %(ref_wgt)s""" % self.__dict__
+            return out
+        elif mode == 'formatted':
+            format_var = []
+            variable = []
+            
+            def to_add_full(f, v, format_var, variable):
+                """ function to add to the formatted output"""
+                if isinstance(v, list):
+                    format_var += [f]*len(v)
+                    variable += v
+                else:
+                    format_var.append(f)
+                    variable.append(v)
+            to_add = lambda x,y: to_add_full(x,y, format_var, variable)
+            #set the formatting
+            to_add('%.10e', self.pwgt)
+            to_add('%.10e', self.born)
+            to_add('%.10e', self.real)
+            to_add('%i', self.nexternal)
+            to_add('%i', self.pdgs)
+            to_add('%i', self.qcdpower)
+            to_add('%.10e', self.bjks)
+            to_add('%.10e', self.scales2)
+            to_add('%.10e', self.gs)
+            to_add('%i', [self.born_related, self.real_related])
+            to_add('%i' , [self.type, self.nfks])
+            to_add('%i' , self.to_merge_pdg)
+            to_add('%i', self.merge_new_pdg)
+            to_add('%.10e', self.ref_wgt)
+            
+            return ' '.join(format_var) % tuple(variable)
+            
     def parse(self, text):
         """parse the line and create the related object"""
         #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
@@ -2592,7 +2660,11 @@ class NLO_PARTIALWEIGHT(object):
                 new_p = self[ind1] - self[ind2]
                 
             inv_mass = new_p.mass_sqr
-            shat = (self[0]+self[1]).mass_sqr
+            if nb_init == 2:
+                shat = (self[0]+self[1]).mass_sqr
+            else:
+                shat = self[0].mass
+
             if (abs(inv_mass)/shat < threshold):
                 return True
             else:
@@ -2704,6 +2776,12 @@ class NLO_PARTIALWEIGHT(object):
         
         self.real_type = real_type
         self.event = event
+        self.total_wgt = 0.
+        self.nb_event = 0
+        self.nb_wgts = 0
+        self.modified = False #set on True if we decide to change internal infor
+                              # that need to be written in the event file.
+                              #need to be set manually when this is the case
         if isinstance(input, str):
             self.parse(input)
             
@@ -2739,9 +2817,12 @@ class NLO_PARTIALWEIGHT(object):
             first_line = all_line.pop(0)
             
         wgt, nb_wgt, nb_event, _ = first_line.split()
+        self.total_wgt = float(wgt.replace('d','e'))
         nb_wgt, nb_event = int(nb_wgt), int(nb_event)
+        self.nb_wgt, self.nb_event = nb_wgt, nb_event
         
         momenta = []
+        self.momenta = momenta #keep the original list of momenta to be able to rewrite the events
         wgts = []
         for line in all_line:
             data = line.split()
@@ -2782,7 +2863,7 @@ class NLO_PARTIALWEIGHT(object):
                                                  nb_init=sum(1 for p in self.event if p.status==-1)):
                         get_weights_for_momenta[wgt.momenta_config].remove(wgt)
                         get_weights_for_momenta[wgt.born_related].append(wgt)
-     
+                        wgt.momenta_config = wgt.born_related
          
         assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
            

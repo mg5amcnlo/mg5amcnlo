@@ -547,8 +547,10 @@ class ReweightInterface(extended_cmd.Cmd):
                     if weight[name] == 0:
                         continue
                     new_evt = lhe_parser.Event(str(event))
-                    new_evt.rescale_weights(weight[name]/event.wgt)
-                    for key in new_evt.reweight_data:
+                    new_evt.wgt = weight[name]
+                    new_evt.parse_reweight()
+                    #new_evt.rescale_weights(weight[name]/event.wgt)
+                    for key in new_evt.reweight_data.keys():
                         if isinstance(key,str) and key.startswith(('reweight_','rwgt_')):
                             del new_evt.reweight_data[key]    
                     output[(tag_name,name)].write(str(new_evt))
@@ -570,7 +572,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             for key in output:
                 output[key].write('</LesHouchesEvents>\n')
-                output.close()
+                output[key].close()
 
         # add output information        
         if self.mother and hasattr(self.mother, 'results'):
@@ -938,6 +940,10 @@ class ReweightInterface(extended_cmd.Cmd):
             
         event.parse_reweight()
         event.parse_nlo_weight() 
+        if self.output_type != 'default':
+            event.nloweight.modified = True # the internal info will be changed
+                                            # so set this flage to True to change
+                                            # the writting of those data
 
         #initialise the input to the function which recompute the weight
         scales2 = []
@@ -971,7 +977,6 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
-
             for c_wgt in cevent.wgts:
                 orig_wgt += c_wgt.ref_wgt
                 #add the information to the input
@@ -993,12 +998,13 @@ class ReweightInterface(extended_cmd.Cmd):
                                c_wgt.pwgt[1] * ratio_T,
                                c_wgt.pwgt[2] * ratio_T]
                     wgt_virt.append(new_wgt)
-                    
+
                 if '_tree' in type_nlo:
                     new_wgt = [c_wgt.pwgt[0] * ratio_T,
                                c_wgt.pwgt[1] * ratio_T,
                                c_wgt.pwgt[2] * ratio_T]
                     wgt_tree.append(new_wgt)
+                    
                 base_wgt.append(c_wgt.pwgt[:3])
         
         #change the ordering to the fortran one:
@@ -1029,13 +1035,27 @@ class ReweightInterface(extended_cmd.Cmd):
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
                           for i in range(len(avg)))
-            final_weight['_tree'] = new_out/orig_wgt*event.wgt            
+            final_weight['_tree'] = new_out/orig_wgt*event.wgt    
+                  
              
         if '_lo' in type_nlo:
             w_orig = self.calculate_matrix_element(event, 0)
             w_new =  self.calculate_matrix_element(event, 1)            
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
+            
+        if self.output_type != 'default':
+            if len(type_nlo) !=1:
+                raise Exception
+            to_write = [partial_check[i]/ref_wgts[i]*partial_check[i]
+                             if 0.85<avg[i]<1.15 else 0
+                              for i in range(len(ref_wgts))]
+            for cevent in event.nloweight.cevents:
+                for c_wgt in cevent.wgts:
+                        c_wgt.ref_wgt = to_write.pop(0)
+                        c_wgt.pwgt = wgt_tree.pop(0)
+            assert not to_write
+            assert not wgt_tree
         return final_weight 
         
      
