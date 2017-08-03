@@ -444,8 +444,12 @@ class Systematics(object):
             lhapdfid = self.orig_pdf.lhapdfID
             values = pdfs[lhapdfid]
             pdfset = self.pdfsets[lhapdfid]
-            pdferr =  pdfset.uncertainty(values)
-            resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
+            try:
+                pdferr =  pdfset.uncertainty(values)
+            except RuntimeError:
+                resume.write( '# PDF variation: missing combination\n')
+            else:
+                resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
         # report error/central not directly linked to the central
         resume.write( "#\n")        
         for lhapdfid,values in pdfs.items():
@@ -460,8 +464,13 @@ class Systematics(object):
                 # File "lhapdf.pyx", line 329, in lhapdf.PDFSet.uncertainty (lhapdf.cpp:6621)
                 # RuntimeError: "ErrorType: unknown" not supported by LHAPDF::PDFSet::uncertainty.
                 continue
-            pdferr =  pdfset.uncertainty(values)
-            resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
+            try:
+                pdferr =  pdfset.uncertainty(values)
+            except RuntimeError:
+                # the same error can happend to some other type of error like custom.
+                pass
+            else:
+                resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
 
         dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
         for key, curr in dyns.items():

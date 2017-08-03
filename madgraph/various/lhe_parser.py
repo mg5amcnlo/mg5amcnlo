@@ -174,9 +174,11 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
 
+        self.to_zip = False
         if path.endswith('.gz') and mode == 'w' and\
                                               isinstance(self, EventFileNoGzip):
             path = path[:-3]
+            self.to_zip = True # force to zip the file at close() with misc.gzip
         
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
@@ -591,7 +593,8 @@ class EventFile(object):
             current.write(str(event))
         if i!=0:
             current.write('</LesHouchesEvent>\n')
-            current.close()   
+            current.close()
+             
         return nb_file +1
 
     def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxint):
@@ -719,6 +722,12 @@ class EventFileGzip(EventFile, gzip.GzipFile):
         
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""
+    
+    def close(self,*args, **opts):
+        
+        out = super(EventFileNoGzip, self).close(*args, **opts)
+        if self.to_zip:
+            misc.gzip(self.name)
     
 class MultiEventFile(EventFile):
     """a class to read simultaneously multiple file and read them in mixing them.
