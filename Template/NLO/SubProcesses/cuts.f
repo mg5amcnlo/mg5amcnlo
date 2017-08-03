@@ -933,7 +933,7 @@ c      enddo
 c Or to use H_T^2 one does     
 c      H_T=0d0
 c      do i=1,nexternal
-c         H_T=H_T+sqrt(p(1,i)**2+p(2,i)**2)
+c         H_T=H_T+sqrt(max(0d0,(pp(0,i)+pp(3,i))*(pp(0,i)-pp(3,i))))
 c      enddo
 c      bias_wgt=H_T**2
       return
