@@ -581,7 +581,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     try:
                         logger.info('running systematics computation')
                         import madgraph.various.systematics as syst
-                        args = [output[key].name] + self.systematics
+                        args = [output[key].name, output[key].name] + self.systematics
                         if self.mother and self.mother.options['lhapdf']:
                             args.append('--lhapdf_config=%s' % self.mother.options['lhapdf'])
                         syst.call_systematics(args, result=open('rwg_syst_%s.result' % key[0],'w'),
@@ -806,7 +806,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 mg_rwgt_info.append((tag, name, str_info))
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
-        self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+        if self.output_type == 'default':
+            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+        else:
+            self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
             if tag.isdigit():
                 self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
