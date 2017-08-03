@@ -60,7 +60,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = True
+        self.debugging = False
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -235,7 +235,7 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        if 1:#with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
         solutions = []
@@ -246,7 +246,7 @@ class TestMECmdRWGT(unittest.TestCase):
             rwgt_data = event_orig.parse_reweight()
             self.assertTrue('rwgt_1_tree' in rwgt_data)
             self.assertEqual(event.wgt, rwgt_data['rwgt_1_tree'])
-            self.assertTrue(misc.equal(math.abs(event.wgt), 41.511565))
+            self.assertTrue(misc.equal(abs(event.wgt), 41.511565))
             nlo1 = event.parse_nlo_weight()
             nlo2 = event_orig.parse_nlo_weight()
             #check that nloweight have been updated
@@ -275,7 +275,7 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        if 1: #with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))

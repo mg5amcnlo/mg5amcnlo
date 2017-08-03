@@ -143,6 +143,7 @@ class Systematics(object):
             lhapdf_config = lhapdf_config[0]
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         if not lhapdf:
+            log('fail to load lhapdf: doe not perform systematics')
             return
         lhapdf.setVerbosity(0)
         self.pdfsets = {}  
@@ -247,10 +248,9 @@ class Systematics(object):
                 self.remove_wgts.append(id)  
                 
         # input to start the id in the weight
-        self.start_wgt_id = int(start_id[0]) if start_id else None
+        self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
         self.has_wgts_pattern = False # tag to check if the pattern for removing
                                       # the weights was computed already
-
         
     def is_wgt_kept(self, name):
         """ determine if we have to keep/remove such weight """
@@ -630,7 +630,9 @@ class Systematics(object):
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
-            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt']) if wid.isdigit()])+1
+            matches =  pattern.findall(self.banner['initrwgt'])
+            matches.append('0') #ensure to have a valid entry for the max 
+            return  max([int(wid) for wid in  matches if wid.isdigit()])+1
         else:
             return 1
         
@@ -932,7 +934,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     
 
     obj = Systematics(input, output, log=log, **opts)
-    if running:
+    if running and obj:
         obj.run(result)  
     return obj
 

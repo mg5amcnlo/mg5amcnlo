@@ -96,6 +96,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_model = None
         self.second_process = None
         self.dedicated_path = {}
+        self.systematics = False # allow to run systematics in ouput2.0 mode
         self.mg5cmd = master_interface.MasterCmd()
         if mother:
             self.mg5cmd.options.update(mother.options)
@@ -326,6 +327,8 @@ class ReweightInterface(extended_cmd.Cmd):
         print "change model X :use model X for the reweighting"
         print "change process p p > e+ e-: use a new process for the reweighting"
         print "change process p p > mu+ mu- --add : add one new process to existing ones"
+        print "change output [default|2.0|unweight]:"
+        print "               default: add weight(s) to the current file"    
     
     def do_change(self, line):
         """allow to define a second model/processes"""
@@ -376,6 +379,11 @@ class ReweightInterface(extended_cmd.Cmd):
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
                 os.mkdir(self.rwgt_dir)
+        elif args[0] == 'systematics':
+            if self.output_type == 'default':
+                logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
+                self.output_type = '2.0'
+            self.systematics = args[1:]
         elif args[0] == 'multicore':
             pass 
             # this line is meant to be parsed by common_run_interface and change the way this class is called.
@@ -549,13 +557,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     new_evt = lhe_parser.Event(str(event))
                     new_evt.wgt = weight[name]
                     new_evt.parse_reweight()
-                    #new_evt.rescale_weights(weight[name]/event.wgt)
-                    for key in new_evt.reweight_data.keys():
-                        if isinstance(key,str) and key.startswith(('reweight_','rwgt_')):
-                            del new_evt.reweight_data[key]    
+                    new_evt.reweight_data = {}  
                     output[(tag_name,name)].write(str(new_evt))
 
-                
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
             if self.run_card['event_norm'] == 'average':
@@ -573,7 +577,18 @@ class ReweightInterface(extended_cmd.Cmd):
             for key in output:
                 output[key].write('</LesHouchesEvents>\n')
                 output[key].close()
-
+                if self.systematics and len(output) ==1:
+                    try:
+                        logger.info('running systematics computation')
+                        import madgraph.various.systematics as syst
+                        args = [output[key].name] + self.systematics
+                        if self.mother and self.mother.options['lhapdf']:
+                            args.append('--lhapdf_config=%s' % self.mother.options['lhapdf'])
+                        syst.call_systematics(args, result=open('rwg_syst_%s.result' % key[0],'w'),
+                                              log=logger.info)
+                    except Exception:
+                        logger.error('fail to add systematics')
+                        raise
         # add output information        
         if self.mother and hasattr(self.mother, 'results'):
             run_name = self.mother.run_name
@@ -706,7 +721,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         # Find new tag in the banner and add information if needed
-        if 'initrwgt' in self.banner:
+        if 'initrwgt' in self.banner and self.output_type == 'default': 
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
