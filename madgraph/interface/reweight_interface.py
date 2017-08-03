@@ -354,7 +354,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.second_process = [" ".join(args[1:])]
         elif args[0] in ['virtual_path', 'tree_path']:
-            self.dedicated_path[args[0]] = args[1]
+            self.dedicated_path[args[0]] = os.path.abspath(args[1])
         elif args[0] == "output":
             if args[1] in ['default', '2.0', 'unweight']:
                 self.output_type = args[1]
@@ -379,6 +379,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
                 os.mkdir(self.rwgt_dir)
+            self.rwgt_dir = os.path.abspath(self.rwgt_dir)
         elif args[0] == 'systematics':
             if self.output_type == 'default':
                 logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
@@ -486,8 +487,7 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-        
-        
+                
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -835,7 +835,6 @@ class ReweightInterface(extended_cmd.Cmd):
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
                     if 'second' in path or tag == 3:
-                        misc.sprint('inisitialise', path, tag)
                         module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                     else:
                         module.initialise(pjoin(path_me, 'rw_me', 'Cards', 'param_card_orig.dat'))
