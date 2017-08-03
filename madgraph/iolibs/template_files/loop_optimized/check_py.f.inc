@@ -29,7 +29,7 @@ C
 C     INCLUDE FILES
 C     
 C     the include file with the values of the parameters and masses   
-C        
+C
       INCLUDE 'coupl.inc'
 C     particle masses
       REAL*8 PMASS(NEXTERNAL)
@@ -57,8 +57,22 @@ CF2PY INTENT(IN) :: NHEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
 CF2PY INTENT(IN) :: ALPHAS
 CF2PY INTENT(IN) :: SCALE2
+c
+c     LOCAL BUFFERING OF ANSWER to avoid re-computing
+c
+	integer buffer_size
+	parameter (buffer_size=5)
+	double precision old_ALPHAS(buffer_size)
+    double precision old_scale2(buffer_size)
+    integer old_nhel(buffer_size)
+    double precision old_p(0:3,nexternal,buffer_size)
+      double precision old_me(buffer_size)
+      integer old_return(buffer_size)
+      integer buffer_position
 
-
+	data buffer_position /1/
+	save old_ALPHAS, old_scale2, old_nhel, old_p, buffer_position
+	save old_me, old_return
 C     
 C     GLOBAL VARIABLES
 C     
@@ -69,6 +83,20 @@ C
       CHARACTER*20 CHOSEN_LOOP_SO_INDICES(NSQUAREDSO)
       LOGICAL CHOSEN_LOOP_SO_CONFIGS(NSQUAREDSO)
       COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_LOOP_SO_CONFIGS
+C
+C     CHECK BUFFERING
+C
+	do i=1, buffer_size
+	  if(SCALE2.eq.OLD_SCALE2(i))then
+	  if(ALPHAS.eq.OLD_ALPHAS(i).and.NHEL.eq.OLD_NHEL(i))then
+	  	  if(ALL(P.eq.old_P(:,:,i)))then
+		  	  ANS = old_me(i)
+			  RETURNCODE = old_return(i)
+			  return
+		  endif
+	  endif
+	  endif
+    enddo
 C     
 C     BEGIN CODE
 C     
@@ -103,6 +131,13 @@ C
        
 c      loop induce -> only finite part 
        ANS =  MATELEM(1,0)
+
+c
+c      Store result for the buffering
+c
+      old_me(buffer_position) = ans
+	  old_return(buffer_position) = RETURNCODE
+	  buffer_position = MOD(buffer_position, buffer_size) +1
 
       END
 

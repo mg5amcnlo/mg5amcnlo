@@ -1330,7 +1330,7 @@ class Event(list):
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
-    def parse_nlo_weight(self, real_type=(1,11)):
+    def parse_nlo_weight(self, real_type=(1,11), threshold=None):
         """ """
         if hasattr(self, 'nloweight'):
             return self.nloweight
@@ -1339,7 +1339,8 @@ class Event(list):
         if start != -1 != stop :
         
             text = self.tag[start+8:stop]
-            self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type)
+            self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type,
+                                               threshold=threshold)
             return self.nloweight
 
     def rewrite_nlo_weight(self, wgt=None):
@@ -2648,10 +2649,13 @@ class NLO_PARTIALWEIGHT(object):
             else:
                 raise Exception
 
-        def check_fks_singularity(self, ind1, ind2, nb_init=2, threshold=1e-6):
+        def check_fks_singularity(self, ind1, ind2, nb_init=2, threshold=None):
             """check that the propagator associated to ij is not too light 
                [related to soft-collinear singularity]"""
 
+            if threshold is None:
+                threshold = 1e-8
+                
             if ind1> ind2: 
                 ind1, ind2 = ind2, ind1                
             if ind1 >= nb_init:
@@ -2773,18 +2777,20 @@ class NLO_PARTIALWEIGHT(object):
     
         
             
-    def __init__(self, input, event, real_type=(1,11)):
+    def __init__(self, input, event, real_type=(1,11), threshold=None):
         
         self.real_type = real_type
         self.event = event
         self.total_wgt = 0.
         self.nb_event = 0
         self.nb_wgts = 0
+        self.threshold = threshold
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
         if isinstance(input, str):
             self.parse(input)
+        
             
         
     def parse(self, text):
@@ -2862,8 +2868,8 @@ class NLO_PARTIALWEIGHT(object):
                         continue
                     if evt.check_fks_singularity(wgt.to_merge_pdg[0]-1,
                                                  wgt.to_merge_pdg[1]-1,
-                                                 nb_init=sum(1 for p in self.event if p.status==-1)):
-                        misc.sprint('singular', wgt.type)
+                                                 nb_init=sum(1 for p in self.event if p.status==-1),
+                                                 threshold=self.threshold):
                         get_weights_for_momenta[wgt.momenta_config].remove(wgt)
                         get_weights_for_momenta[wgt.born_related].append(wgt)
                         wgt.momenta_config = wgt.born_related

@@ -96,6 +96,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_model = None
         self.second_process = None
         self.dedicated_path = {}
+        self.soft_threshold = None
         self.systematics = False # allow to run systematics in ouput2.0 mode
         self.mg5cmd = master_interface.MasterCmd()
         if mother:
@@ -385,6 +386,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
                 self.output_type = '2.0'
             self.systematics = args[1:]
+        elif args[0] == 'soft_threshold':
+            self.soft_threshold = banner.ConfigFile.format_variable(args[1], float, 'soft_threshold')
         elif args[0] == 'multicore':
             pass 
             # this line is meant to be parsed by common_run_interface and change the way this class is called.
@@ -956,7 +959,7 @@ class ReweightInterface(extended_cmd.Cmd):
         final_weight = {'orig': event.wgt}
             
         event.parse_reweight()
-        event.parse_nlo_weight() 
+        event.parse_nlo_weight(threshold=self.soft_threshold) 
         if self.output_type != 'default':
             event.nloweight.modified = True # the internal info will be changed
                                             # so set this flage to True to change
