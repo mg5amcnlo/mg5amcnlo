@@ -60,7 +60,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = True
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -235,24 +235,27 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if 1: #with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
-        solutions = []
-        lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_2.lhe.gz'))
+        solutions = [41.511565, 41.721035, 41.511565, 41.511565, 41.548867, 41.511565, 41.511565, 41.511565, 41.511565, 41.779185, 41.511565, 42.838034, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.644966, 41.511565, 41.783022, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.813529, 41.511709, 41.511566, 41.511565, 41.755922, 41.816085, 41.513216, -41.511565, 41.511565, 43.318636, 41.511565, 41.845886, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.754537, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.512746, 41.511565, 41.697032, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 44.52215, 41.511565, 41.660314, 41.511565, 41.511565, 41.511565, 41.71963, 41.511565, 41.511565, 41.533628, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 41.77062, 41.618347, 41.511565, 41.511565, 41.511672, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.781002, 41.511565, 41.511565, 41.511565, -41.511565, 41.791335, 41.511565, 41.511565]
+        lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_1.lhe.gz'))
         lhe_orig = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
         from itertools import izip
+        i=-1
         for event, event_orig in izip(lhe, lhe_orig): 
+            i+=1
             rwgt_data = event_orig.parse_reweight()
             self.assertTrue('rwgt_1_tree' in rwgt_data)
             self.assertEqual(event.wgt, rwgt_data['rwgt_1_tree'])
-            self.assertTrue(misc.equal(abs(event.wgt), 41.511565))
+            #misc.sprint(abs(event.wgt))
+            self.assertTrue(misc.equal(event.wgt, solutions[i]))
             nlo1 = event.parse_nlo_weight()
             nlo2 = event_orig.parse_nlo_weight()
             #check that nloweight have been updated
             self.assertNotEqual(nlo1.total_wgt, nlo2.total_wgt)
-            solutions.append(rwgt_data['rwgt_1_tree'])
-
+            #solutions.append(rwgt_data['rwgt_1_tree'])
+        #misc.sprint(solutions)
 
     def test_loop_improved_reweighting(self):
         """ check identical re-weighting in ttbar 
@@ -286,6 +289,8 @@ class TestMECmdRWGT(unittest.TestCase):
             rwgt_data = event.parse_reweight()
             self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], solutions[i]))
             self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], event2.wgt))
+            
+            
     def test_scan_reweighting(self):
         """ testing that we can use the scan syntax and that we can assign name to weight
         """
@@ -294,7 +299,7 @@ class TestMECmdRWGT(unittest.TestCase):
         cmd_lines = """
         launch --rwgt_name=SINGLE
         set aEWM1 150
-        launch -n  --rwgt_name=NAME
+        launch  --rwgt_name=NAME
         set aEWM1 scan:[140,150]
         """ 
         

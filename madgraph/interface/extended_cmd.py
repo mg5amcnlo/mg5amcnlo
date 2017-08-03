@@ -1200,8 +1200,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len (possibility)==1:
                 return possibility[0]
         if '=' in line and ' ' in line.strip():
+            leninit = len(line)
             line,n = re.subn('\s*=\s*','=', line)
-            if n:
+            print(line)
+            logger.critical(str([line]),n)
+            if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
             

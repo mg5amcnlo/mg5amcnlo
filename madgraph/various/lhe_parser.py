@@ -2263,7 +2263,7 @@ class FourMomentum(object):
     @property
     def mass_sqr(self):
         """return the mass square"""    
-        return max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0)
+        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
 
     @property
     def pt(self):
@@ -2663,8 +2663,9 @@ class NLO_PARTIALWEIGHT(object):
             if nb_init == 2:
                 shat = (self[0]+self[1]).mass_sqr
             else:
-                shat = self[0].mass
-
+                shat = self[0].mass_sqr
+            
+            
             if (abs(inv_mass)/shat < threshold):
                 return True
             else:
@@ -2841,7 +2842,6 @@ class NLO_PARTIALWEIGHT(object):
             if wgt.momenta_config in get_weights_for_momenta:
                 get_weights_for_momenta[wgt.momenta_config].append(wgt)
             else: 
-                misc.sprint(wgt.type, wgt.real_related,wgt.momenta_config)
                 if size_momenta == 0: size_momenta = wgt.nexternal
                 assert size_momenta == wgt.nexternal
                 get_weights_for_momenta[wgt.momenta_config] = [wgt]
@@ -2858,9 +2858,12 @@ class NLO_PARTIALWEIGHT(object):
             evt = self.BasicEvent(p, wgts, self.event, self.real_type) 
             if len(evt) == size_momenta: #real type 
                 for wgt in wgts:
+                    if not wgt.type in self.real_type:
+                        continue
                     if evt.check_fks_singularity(wgt.to_merge_pdg[0]-1,
                                                  wgt.to_merge_pdg[1]-1,
                                                  nb_init=sum(1 for p in self.event if p.status==-1)):
+                        misc.sprint('singular', wgt.type)
                         get_weights_for_momenta[wgt.momenta_config].remove(wgt)
                         get_weights_for_momenta[wgt.born_related].append(wgt)
                         wgt.momenta_config = wgt.born_related
@@ -2873,14 +2876,31 @@ class NLO_PARTIALWEIGHT(object):
                 wgt = get_weights_for_momenta[key]
                 if not wgt:
                     continue
-                p = momenta[size_momenta*(key-1):key*size_momenta]
-                evt = self.BasicEvent(p, get_weights_for_momenta[key], self.event, self.real_type)                         
-                self.cevents.append(evt)
-           
-        nb_wgt_check = 0 
-        for cevt in self.cevents:
-            nb_wgt_check += len(cevt.wgts)
-        assert nb_wgt_check == int(nb_wgt)
+                pdg_to_event = {}
+                for w in wgt:
+                    pdgs = w.pdgs
+                    if w.momenta_config == w.born_related:
+                        pdgs = list(pdgs)
+                        ind1, ind2 = [ind-1 for ind in w.to_merge_pdg] 
+                        if ind1> ind2: 
+                            ind1, ind2 = ind2, ind1
+                        pdgs.pop(ind1) 
+                        pdgs.insert(ind1, w.merge_new_pdg )
+                        pdgs.pop(ind2)
+                    pdgs = tuple(pdgs)
+                    if pdgs not in pdg_to_event:
+                        p = momenta[size_momenta*(key-1):key*size_momenta]
+                        evt = self.BasicEvent(p, [w], self.event, self.real_type)                         
+                        self.cevents.append(evt)
+                        pdg_to_event[pdgs] = evt
+                    else:
+                        pdg_to_event[pdgs].wgts.append(w)
+        
+        if __debug__: 
+            nb_wgt_check = 0 
+            for cevt in self.cevents:
+                nb_wgt_check += len(cevt.wgts)
+            assert nb_wgt_check == int(nb_wgt)
             
             
 

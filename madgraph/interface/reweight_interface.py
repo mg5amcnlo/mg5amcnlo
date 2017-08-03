@@ -973,7 +973,7 @@ class ReweightInterface(extended_cmd.Cmd):
         gs=[]
         qcdpower = []
         ref_wgts = [] #for debugging
-        
+        #misc.sprint('*********', event.nloweight.nb_wgt, event.nloweight.nb_event )
         orig_wgt = 0
         for cevent in event.nloweight.cevents:
             #check if we need to compute the virtual for that cevent
@@ -981,7 +981,7 @@ class ReweightInterface(extended_cmd.Cmd):
             all_ctype = [w.type for w in cevent.wgts]
             if '_nlo' in type_nlo and any(c in all_ctype for c in [2,14,15]):
                 need_V =True
-                
+            
             w_orig = self.calculate_matrix_element(cevent, 0)
             w_new =  self.calculate_matrix_element(cevent, 1)
             ratio_T = w_new/w_orig
