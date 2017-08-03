@@ -384,6 +384,7 @@ c
           do k=1,nb_mc_masses
              m(indices_mc_masses(k))=values_mc_masses(k)
           enddo
+          ivar=0
           call generate_momenta_conf(jac,x,itree,qmass,qwidth,ptrial,pprod,map_external2res) 
           
           if (jac.lt.0d0) then
