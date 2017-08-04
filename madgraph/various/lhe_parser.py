@@ -1815,15 +1815,6 @@ class Event(list):
                 ind+=1
         return jac
     
-    
-    def rescale_all_mas(self, new_param_card, old_param_card=None):
-        """routine to rescale the mass via RAMBO method. """
-        
-        
-        
-        
-        
-    
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
         

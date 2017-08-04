@@ -610,7 +610,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
         self.lhe_input.close()
         if not self.mother:
-            print self.lhe_input.name
             name, ext = self.lhe_input.name.rsplit('.',1)
             target = '%s_out.%s' % (name, ext)            
         elif self.output_type != "default" :
@@ -975,7 +974,7 @@ class ReweightInterface(extended_cmd.Cmd):
         gs=[]
         qcdpower = []
         ref_wgts = [] #for debugging
-        #misc.sprint('*********', event.nloweight.nb_wgt, event.nloweight.nb_event )
+
         orig_wgt = 0
         for cevent in event.nloweight.cevents:
             #check if we need to compute the virtual for that cevent
