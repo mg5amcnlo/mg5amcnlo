@@ -44,7 +44,7 @@ c to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
-        call add_wgt(2,wgt1,0d0,0d0)
+        call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
 
 C This is the counterterm for the 6f->5f scheme change 
@@ -65,7 +65,7 @@ C in the LO cross section
         wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
-        call add_wgt(2,wgt6f1,wgt6f2,wgt6f3)
+        call add_wgt(2,orders,wgt6f1,wgt6f2,wgt6f3)
       enddo
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
@@ -184,7 +184,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'orders.inc'
       include 'mint.inc'
       integer orders(nsplitorders)
-      integer iamp
+      integer iamp, i
       double precision amp_split_virt(amp_split_size),
      &     amp_split_born_for_virt(amp_split_size),
      &     amp_split_avv(amp_split_size)
@@ -235,7 +235,13 @@ c value to the list of weights using the add_wgt subroutine
          born_wgt_veto=born_wgt/g2
          call compute_veto_compensating_factor(H1_factor_virt
      $        ,born_wgt_veto,1d0,1d0,veto_compensating_factor)
-         call add_wgt(7,-veto_compensating_factor*f_nb,0d0,0d0)
+C Since VETOXSEC must still be adapted in FKS_EW, I put a dummy
+C order array here which I arbitrarily chose to be the (-1,-1)
+C to make sure that it cannot be incorrectly understood.
+         do i=1,nsplitorders
+           orders(i)=-1
+         enddo
+         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0)
         write(*,*) 'FIX VETOXSEC in FKS_EW'
         stop
       endif
@@ -254,8 +260,8 @@ c value to the list of weights using the add_wgt subroutine
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
         wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb/g22
         wgt4=amp_split_avv(iamp)*f_nb/g22
-        call add_wgt(3,wgt1,wgt2,wgt3)
-        call add_wgt(15,wgt4,0d0,0d0)
+        call add_wgt(3,orders,wgt1,wgt2,wgt3)
+        call add_wgt(15,orders,wgt4,0d0,0d0)
       enddo
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -276,7 +282,7 @@ c and not be part of the plots nor computation of the cross section.
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
-        call add_wgt(14,wgt1,0d0,0d0)
+        call add_wgt(14,orders,wgt1,0d0,0d0)
       enddo
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
@@ -324,10 +330,10 @@ c its value to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
-          call add_wgt(1,wgt1*sudakov_damp,0d0,0d0)
+          call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
         endif
         if (sudakov_damp.lt.1d0) then
-          call add_wgt(11,wgt1*(1d0-sudakov_damp),0d0,0d0)
+          call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
         endif
       enddo
       call cpu_time(tAfter)
@@ -388,7 +394,7 @@ c the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
-          call add_wgt(8,-wgt1*f_s_MC_H,0d0,0d0)
+          call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
           wgt1=wgt1*f_s_MC_S
         else
           wgt1=0d0
@@ -396,7 +402,7 @@ c the list of weights using the add_wgt subroutine
         if (xi_i_fks_ev.le.xiScut_used) then
           wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
         endif
-        if (wgt1.ne.0d0) call add_wgt(4,wgt1,0d0,0d0)
+        if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0)
       enddo
 
       call cpu_time(tAfter)
@@ -481,7 +487,7 @@ c to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
-          call add_wgt(9,-wgt1*f_c_MC_H,0d0,0d0)
+          call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
           wgt1=wgt1*f_c_MC_S
         else
           wgt1=0d0
@@ -496,7 +502,7 @@ c to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,orders,wgt1,0d0,wgt3)
       enddo
 
       call cpu_time(tAfter)
@@ -590,7 +596,7 @@ c value to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
-          call add_wgt(10,-wgt1*f_sc_MC_H,0d0,0d0)
+          call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
           wgt1=wgt1*f_sc_MC_S
         else
           wgt1=0d0
@@ -611,7 +617,7 @@ c value to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,orders,wgt1,0d0,wgt3)
       enddo
 
       call cpu_time(tAfter)
@@ -701,10 +707,10 @@ c respectively.
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(12,wgt1,0d0,0d0)
+                call add_wgt(12,orders,wgt1,0d0,0d0)
                 wgt1=sevmc*f_MC_H*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(13,-wgt1,0d0,0d0)
+                call add_wgt(13,orders,-wgt1,0d0,0d0)
               enddo
             endif
          enddo
@@ -1315,7 +1321,7 @@ c equal to ione, so no need to define separate factors.
       end
 
       
-      subroutine add_wgt(type,wgt1,wgt2,wgt3)
+      subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
 c Adds a contribution to the list in weight_lines. 'type' sets the type
 c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
@@ -1337,6 +1343,13 @@ c     type=15: virt-trick: average born contribution
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
+c
+c
+c The argument orders specifies what are the squared coupling orders
+c factorizing the particular set of weights added here. The position of
+c the QCD and QED orders there can be obtained via the parameter qcd_pos
+c and qed_pos defined in orders.inc
+c This is solely used for now in order to apply a potential user-defined filer.
 c
 c This subroutine increments the 'icontr' counter: each new call to this
 c function makes sure that it's considered a new contribution. For each
@@ -1404,8 +1417,12 @@ c        contribution
       include 'coupl.inc'
       include 'fks_info.inc'
       include 'q_es.inc'
+      include 'FKSParams.inc'
+      include 'orders.inc'
       integer type,i,j
+      logical foundIt,foundOrders
       double precision wgt1,wgt2,wgt3
+      integer orders(nsplitorders)
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       double precision p_born(0:3,nexternal-1)
@@ -1430,6 +1447,61 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
+
+C Apply user-defined (in FKS_params.dat) contribution type filters if necessary
+      if (VetoedContributionTypes(0).gt.0) then
+        do i=1,VetoedContributionTypes(0)
+          if (type.eq.VetoedContributionTypes(i)) then
+C This contribution was explicitely vetoed out by the user. Skip it.
+            return
+          endif
+        enddo
+      endif
+      if (SelectedContributionTypes(0).gt.0) then
+        foundIt = .False.
+        do i=1,SelectedContributionTypes(0)
+          if (type.eq.SelectedContributionTypes(i)) then
+            foundIt = .True.
+            exit
+          endif
+        enddo
+        if (.not.foundIt) then
+C This contribution was not part of the user selection. Skip it.
+          return
+        endif
+      endif
+
+C Apply the user-defined coupling-order filter if present
+C First the simple QCD and QED filters 
+      if (QCD_squared_selected.ne.-1.and.
+     &   QCD_squared_selected.ne.orders(qcd_pos)) then
+        return
+      endif
+      if (QED_squared_selected.ne.-1.and.
+     &   QED_squared_selected.ne.orders(qed_pos)) then
+        return
+      endif
+C Secondly, the more advanced filter
+      if (SelectedCouplingOrders(1,0).gt.0) then
+        foundIt = .False.
+        do j=1,SelectedCouplingOrders(1,0)
+          foundOrders = .True.
+          do i=1,nsplitorders
+            if (SelectedCouplingOrders(i,j).ne.orders(i)) then
+              foundOrders = .False.
+              exit
+            endif
+          enddo
+          if (foundOrders) then
+            foundIt = .True.
+            exit
+          endif
+        enddo
+        if (.not.foundIt) then
+          return
+        endif
+      endif
+
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type

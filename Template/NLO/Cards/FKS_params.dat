@@ -6,12 +6,6 @@
 ! ==========================================================================
 !
 ! ==========================================================================
-! Arbitrary numerical parameters used in the FKS formalism
-! ==========================================================================
-!
-! To be implemented by the FKS authors
-!
-! ==========================================================================
 ! Parameters controlling the tests based on the IR poles comparison
 ! ==========================================================================
 !
@@ -42,6 +36,95 @@
 #PrecisionVirtualAtRunTime
 1.0d-3
 ! Default :: 1.0d-3
+!
+! ==========================================================================
+! Parameters controlling what coupling orders must be factorized by the
+! contributions included by MadFKS in the context of mixed-order expansions
+! ==========================================================================
+!
+! Set the QCD and QED squared order that must be factorized by the  
+! contribution selected. This follows the same convention as the syntax 
+! QCD^2== and QED^2== used at generation time. The default value of -1 
+! instructs MadFKS to include all those available.
+!
+#QCD^2==
+-1
+! Default :: -1
+!
+#QED^2==
+-1
+! Default :: -1
+!
+! Alternatively the user can defined a list of squared orders to select
+! The first entry is the number of specifed squared orders, and the ordering
+! is indicated in orders.inc with typically QCD first, followed by QED
+! This is just the generalization of the short-hand above.
+!
+! Example:
+!
+! #SelectedCouplingOrders
+! 2
+! 4 0
+! 2 2
+!
+! Selects all contribution factorizing \alpha_s^2 and \alpha_s * \alpha.
+!
+#SelectedCouplingOrders
+0
+-1 -1
+! Default ::
+! 0
+! -1 -1
+!
+! ==========================================================================
+! This parameter allows to veto of select specific type of contributions.
+!     type=1 : real-emission
+!     type=2 : Born
+!     type=3 : integrated counter terms
+!     type=4 : soft counter-term
+!     type=5 : collinear counter-term
+!     type=6 : soft-collinear counter-term
+!     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO
+!     type=8 : soft counter-term (with n+1-body kin.)
+!     type=9 : collinear counter-term (with n+1-body kin.)
+!     type=10: soft-collinear counter-term (with n+1-body kin.)
+!     type=11: real-emission (with n-body kin.)
+!     type=12: MC subtraction with n-body kin.
+!     type=13: MC subtraction with n+1-body kin.
+!     type=14: virtual corrections
+!     type=15: virt-trick: average born contribution
+! ==========================================================================
+! 
+! The first entry specifies the length  of the list of vetoed or allowed types
+!
+! Example:
+! #SelectedContributionTypes
+! 3
+! 2 14 15
+!
+! Would select only the finite part of the virtual and the Born contribution, and
+!
+! #VetoedContributionTypes
+! 1
+! 2
+!
+! Would remove the Born contribution, effectively computing only the NLO contribs.
+!
+! The default values disable completely these filters.
+!
+#VetoedContributionTypes
+0
+-1
+! Default ::
+! 0
+! -1
+!
+#SelectedContributionTypes
+0
+-1
+! Default :: .true.
+! 0
+! -1
 !
 ! ==========================================================================
 ! Parameters defining the techniques used for the MC integration
@@ -85,6 +168,12 @@
 #SeparateFlavourConfigurations
 .false.
 ! Default :: .false.
+!
+! ==========================================================================
+! Arbitrary numerical parameters used in the FKS formalism
+! ==========================================================================
+!
+! To be implemented by the FKS authors
 !
 ! ==========================================================================
 ! End of FKS_params.dat file
