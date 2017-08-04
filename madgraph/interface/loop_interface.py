@@ -608,11 +608,18 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self._curr_matrix_elements.\
                               get_matrix_elements()])
+                
                 # assign a unique id number to all process
-                uid = 0 
+                uid = 0
+                id_list = set() # the id needs also to be different to ensure that 
+                                # all the prefix are different which allows to have 
+                                # a unique library  
                 for me in self._curr_matrix_elements.get_matrix_elements():
                     uid += 1 # update the identification number
                     me.get('processes')[0].set('uid', uid)
+                    if me.get('processes')[0].get('id') in id_list:
+                        me.get('processes')[0].set('id', uid)
+                    id_list.add(me.get('processes')[0].get('id'))
 
             cpu_time2 = time.time()
             return ndiags, cpu_time2 - cpu_time1
@@ -631,7 +638,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         # Pick out the matrix elements in a list
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
-
+        
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in self.supported_ML_format:
             for unique_id, me in enumerate(matrix_elements):
@@ -811,7 +818,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 if arg.startswith('--loop_filter='):
                     loop_filter = arg[14:]
                 if not isinstance(self, extended_cmd.CmdShell):
-                    raise InvalidCmd, "loop_filter is not allowed in web mode"
+                    raise self.InvalidCmd, "loop_filter is not allowed in web mode"
             args = [a for a in args if not a.startswith('--loop_filter=')]
 
             # Rejoin line
@@ -831,8 +838,11 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             # split it in a loop
             succes, failed = 0, 0
             for base_proc in myprocdef:
+                command = "add process %s" % base_proc.nice_string(prefix=False, print_weighted=True)
+                if '@' not in command:
+                    command += ' @%s'  % base_proc.get('id')
                 try:
-                    self.exec_cmd("add process %s" % base_proc.nice_string(prefix=False, print_weighted=True))
+                    self.exec_cmd(command)
                     succes += 1
                 except Exception:
                     failed +=1
@@ -846,9 +856,11 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         # If it is a process for MadLoop standalone, make sure it has a 
         # unique ID. It is important for building a BLHA library which
         # contains unique entry point for each process generated.
-        all_ids = [amp.get('process').get('id') for amp in self._curr_amps]
-        if myprocdef.get('id') in all_ids:
-                myprocdef.set('id',max(all_ids)+1)
+        #all_ids = [amp.get('process').get('id') for amp in self._curr_amps]
+        #if myprocdef.get('id') in all_ids:
+        #        myprocdef.set('id',max(all_ids)+1)
+        #This is ensure at the output stage! by checking that every output have
+        # a different id => No need here.
              
         self.proc_validity(myprocdef,'ML5')
 
