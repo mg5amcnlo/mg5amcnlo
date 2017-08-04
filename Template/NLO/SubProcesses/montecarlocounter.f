@@ -308,6 +308,13 @@ c
       double precision xkern(2),xkernazi(2),factor
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision emscwgt(nexternal)
+      double precision evnt_wgt
+      integer i, j
+      double precision mu_r
+      double precision pb(0:4,-nexternal+3:2*nexternal-3)
+      double precision p_read(0:4,2*nexternal-3), wgt_read
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      integer npart
 
 c True MC subtraction term
       first_MCcnt_call=.true.
@@ -318,6 +325,27 @@ c True MC subtraction term
          do npartner=1,ipartners(0)
             if(is_pt_hard)cycle
             factor=1d0
+
+        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
+C       Check if Pythia8 needs to be initialized
+cC         By default, we now use an empty command file
+c          call pythia_init(pythia_cmd_file)
+C       Send current event to Pythia8
+        call pythia_setevent()
+C       Ask Pythia8 to shower current event
+        call pythia_next()
+C       Ask Pythia8 to printout its internal record of the event
+        call pythia_stat()
+C       Read (i.e. simply access) the output HEPEUP event stream
+        call read_HEPEUP_event(p_read,wgt_read)
+C       And printout the corresponding event kinematics and weight
+        do j=1,2*nexternal-3
+          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
+        enddo
+        write(*,*) 'wgt_read=',wgt_read
+
+
+
             call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
