@@ -30,6 +30,7 @@ import subprocess
 import sys
 import time
 import traceback
+import urllib
 import glob
 import StringIO
 
@@ -5524,6 +5525,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             str(line) != 'EOF' and line.strip() in self.allow_arg:            
             self.open_file(line)
             self.value = 'repeat'
+        elif line.strip().startswith(('http:','www')):
+            self.value = 'repeat'
+            import tempfile
+            fsock, path = tempfile.mkstemp()
+            try:
+                text = urllib.urlopen(line.strip())
+            except Exception:
+                logger.error('fail to load the file')
+            else:
+                for line in text:
+                    os.write(fsock, line)
+                os.close(fsock)
+                self.copy_file(path)
+                os.remove(path)
+                
+                
         else:
             self.value = line
 
