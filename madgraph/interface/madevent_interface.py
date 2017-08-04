@@ -3012,14 +3012,13 @@ Beware that this can be dangerous for local multicore runs.""")
         if len(args) == 2:
             refine_opt['max_process']= args[1]
 
-
         # initialize / remove lhapdf mode
         self.configure_directory()
 
         # Update random number
         self.update_random()
         self.save_random()
-
+        
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
@@ -5209,7 +5208,8 @@ tar -czf split_$1.tar.gz split_$1
         #see when the last file was modified
         time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+        
+        if self.configured >= time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
             #just ensure that cluster specific are correctly handled
             self.cluster.modify_interface(self)
             return
