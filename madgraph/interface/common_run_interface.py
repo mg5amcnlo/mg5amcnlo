@@ -4072,8 +4072,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards','FO_analyse_card.dat')
         self.paths['FO_analyse_default'] = pjoin(self.me_dir,'Cards','FO_analyse_card_default.dat')
         self.paths['pythia'] =pjoin(self.me_dir, 'Cards','pythia_card.dat')
-        self.paths['PY8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
-        self.paths['PY8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
+        self.paths['pythia8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
+        self.paths['pythia8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
         self.paths['madspin_default'] = pjoin(self.me_dir,'Cards/madspin_card_default.dat')
         self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
@@ -4210,7 +4210,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         if 'pythia8_card.dat' in cards:
             self.has_PY8 = True
-            self.PY8Card = banner_mod.PY8Card(self.paths['PY8'])
+            self.PY8Card = banner_mod.PY8Card(self.paths['pythia8'])
             self.PY8CardDefault = banner_mod.PY8Card()
             
             self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
@@ -5867,7 +5867,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif 'MadLoopParams' in answer:
             answer = self.paths['ML']
         elif 'pythia8_card' in answer:
-            answer = self.paths['PY8']
+            answer = self.paths['pythia8']
         if os.path.exists(answer):
             path = answer
         else:
@@ -5924,13 +5924,13 @@ You can also copy/paste, your event file here.''')
             self.shower_card = shower_card_mod.ShowerCard(path)
         elif path == self.paths['ML']:
             self.MLcard = banner_mod.MadLoopParam(path)
-        elif path == self.paths['PY8']:
+        elif path == self.paths['pythia8']:
             # Use the read function so that modified/new parameters are correctly
             # set as 'user_set'
             if not self.PY8Card:
-                self.PY8Card = banner_mod.PY8Card(self.paths['PY8_default'])
+                self.PY8Card = banner_mod.PY8Card(self.paths['pythia8_default'])
 
-            self.PY8Card.read(self.paths['PY8'], setter='user')
+            self.PY8Card.read(self.paths['pythia8'], setter='user')
             self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
         elif path == self.paths['MadWeight']:
             try:

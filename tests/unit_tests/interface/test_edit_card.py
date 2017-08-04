@@ -75,8 +75,13 @@ class TestEditCardCmd(unittest.TestCase):
         #MadLoop Card
         files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
         
+        #Pythia8 
+        files.cp(pjoin(template_path, 'LO/Cards/pythia8_card_default.dat'), '/tmp/edit_card/Cards/pythia8_card_default.dat')
+        files.cp(pjoin(template_path, 'LO/Cards/pythia8_card_default.dat'), '/tmp/edit_card/Cards/pythia8_card.dat')
+        
         fakemother = FakeInterface('/tmp/edit_card/')
-        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat'],
+        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat',
+                                                    'pythia8_card.dat'],
                                         mode='auto', mother_interface=fakemother)
 
     def get_completion(self, text):
@@ -518,4 +523,20 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(shower['nevents'], -1)
         self.cmd.do_set('shower_card nevents 150')
         self.assertEqual(shower['analyse'], '')
+
+    def test_modif_pythia8_card(self):
+        """ """        
+        
+        py8 = self.cmd.PY8Card
+        qcut = py8['JetMatching:qCut']
+        self.cmd.do_set('jetmatching:qcut 53')
+        self.assertEqual(py8['JetMatching:qCut'], 53.)
+        
+        self.cmd.copy_file('/tmp/edit_card/Cards/pythia8_card_default.dat')
+        self.assertNotEqual(py8['JetMatching:qCut'], 53.)
+        self.assertEqual(py8['JetMatching:qCut'], qcut)
+        
+        self.cmd.do_set('JetMatching:nJetMax 2')
+        self.assertEqual(py8['JetMatching:qCut'], qcut)
+        self.assertEqual(py8['JetMatching:nJetMax'], 2)
         
