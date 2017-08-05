@@ -1441,7 +1441,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             
             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
@@ -1457,11 +1456,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
                 if mint_step+1==2 and nevents==0:
                     self.print_summary(options,2,mode)
                     return
-                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
-                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
+
             # Sanity check on the event files. If error the jobs are resubmitted
             self.check_event_files(jobs_to_collect)
 
