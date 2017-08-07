@@ -909,8 +909,11 @@ c writing out the events (or making the plots), this factor is again
 c divided out. A value different from 1 makes that MINT (or vegas) does
 c not list the correct cross section, but the cross section can still be
 c computed from summing all the weights of the events (and dividing by
-c the number of events). The 'bias_wgt' should be a IR-safe function of
-c the momenta.
+c the number of events). Since the weights of the events are no longer
+c identical for all events, the statistical uncertainty on this total
+c cross section can be much larger than without including the bias.
+c
+c The 'bias_wgt' should be a IR-safe function of the momenta.
 c      
 c For this to be used, the 'event_norm' option in the run_card should be
 c set to
