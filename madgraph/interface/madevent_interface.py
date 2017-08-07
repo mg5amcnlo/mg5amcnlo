@@ -3012,14 +3012,13 @@ Beware that this can be dangerous for local multicore runs.""")
         if len(args) == 2:
             refine_opt['max_process']= args[1]
 
-
         # initialize / remove lhapdf mode
         self.configure_directory()
 
         # Update random number
         self.update_random()
         self.save_random()
-
+        
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
@@ -5207,14 +5206,15 @@ tar -czf split_$1.tar.gz split_$1
         self.make_opts_var = {}
         
         #see when the last file was modified
-        time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
-                        os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+        
+        if self.configured >= time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
             #just ensure that cluster specific are correctly handled
             self.cluster.modify_interface(self)
             return
         else:
-            self.configured = time.time()
+            self.configured = time_mod
         self.update_status('compile directory', level=None, update_results=True)
         if self.options['automatic_html_opening'] and html_opening:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -5256,7 +5256,9 @@ tar -czf split_$1.tar.gz split_$1
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
-            self.configured = time.time()
+            time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+            self.configured = time_mod
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -5320,7 +5322,12 @@ tar -czf split_$1.tar.gz split_$1
         for nb_proc,subdir in enumerate(subproc):
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
             self.compile(['clean'], cwd=Pdir)
-        self.configured = time.time()
+
+        #see when the last file was modified
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+
+        self.configured = time_mod
 
     ############################################################################
     ##  HELPING ROUTINE

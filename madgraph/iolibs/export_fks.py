@@ -611,7 +611,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_singular.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
-                     'c_weight.inc',
+                     'weight_lines.f',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
@@ -631,11 +631,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'q_es.inc',
                      'recluster.cc',
                      'Boosts.h',
-                     'reweight.inc',
-                     'reweight0.inc',
-                     'reweight1.inc',
-                     'reweightNLO.inc',
-                     'reweight_all.inc',
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
@@ -644,10 +639,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
-                     'symmetry_fks_test_MC.f',
-                     'symmetry_fks_test_ME.f',
+                     'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
-                     'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
                      'handling_lhe_events.f',
@@ -1222,10 +1215,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         file = \
 """double precision function dlum()
 implicit none
-include 'timing_variables.inc'
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-call cpu_time(tbefore)
 """
         if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
@@ -1238,16 +1229,12 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
         else:
             file+= \
 """call dlum_0(dlum)
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """

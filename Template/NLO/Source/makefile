@@ -8,12 +8,8 @@ CUTTOOLSDIR= ./CutTools/
 IREGIDIR= ./IREGI/src/
 STDHEPDIR= ./StdHEP/
 
-PROCESS= matrix.o myamp.o 
-
-GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o setrun.o	\
-	  run_printout.o dgauss.o ranmar.o getissud.o
-
-INCLUDEF = coupl.inc pmass.inc cluster.inc
+GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o	\
+	  run_printout.o dgauss.o ranmar.o setrun.o
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
@@ -21,19 +17,19 @@ all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
     $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc
 	rm -f PDF/*.o
 
-
 $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a
 	cd DHELAS; make
 
 $(LIBDIR)libgeneric.a: $(GENERIC)
 	rm -f $(LIBDIR)libgeneric.a
-	ar cru libgeneric.a $(GENERIC)
+	ar cru libgeneric.a $(GENERIC) extra_weights.o
 	ranlib libgeneric.a
 	mv libgeneric.a $(LIBDIR)
+	cp -f extra_weights.mod $(LIBDIR)
 	rm -f $(alfas_functions).o 
 
-setrun.o: run_card.inc 
+setrun.o: run_card.inc extra_weights.o
 	$(FC) $(FFLAGS) -c -o setrun.o setrun.f
 
 $(LIBDIR)libpdf.a: PDF

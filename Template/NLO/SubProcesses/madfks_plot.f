@@ -1,12 +1,11 @@
 c Wrapper routines for the fixed order analyses
       subroutine initplot
+      use extra_weights
       implicit none
       include 'run.inc'
       include "nexternal.inc"
-      include 'reweight0.inc'
-      integer nwgt,max_weight
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*50 weights_info(max_weight)
+      integer nwgt
+      character(len=50),allocatable :: weights_info(:),ctemp(:)
       character*13 temp
       integer i,npdfs,ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
@@ -16,6 +15,7 @@ c Wrapper routines for the fixed order analyses
       common /for_applgrid/ iappl
       include "appl_common.inc"
       nwgt=1
+      if (.not.allocated(weights_info)) allocate(weights_info(1))
       weights_info(nwgt)="central value               "
       if (do_rwgt_scale) then
          do kk=1,dyn_scale(0)
@@ -24,6 +24,9 @@ c set the weights_info string for scale variations
                do ii=1,nint(scalevarF(0))
                   do jj=1,nint(scalevarR(0))
                      nwgt=nwgt+1
+                     allocate(ctemp(nwgt))
+                     ctemp(1:nwgt-1)=weights_info
+                     call move_alloc(ctemp,weights_info)
                      if (ickkw.ne.-1) then
                         write(weights_info(nwgt),
      &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
@@ -39,6 +42,9 @@ c set the weights_info string for scale variations
                enddo
             else
                nwgt=nwgt+1
+               allocate(ctemp(nwgt))
+               ctemp(1:nwgt-1)=weights_info
+               call move_alloc(ctemp,weights_info)
                if (ickkw.ne.-1) then
                   write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
      $                 "dyn=",dyn_scale(kk),"muR=",scalevarR(1)
@@ -76,19 +82,25 @@ c     to "setrun")
             endif
             if(nmemPDF(nn)+1.gt.maxPDFs)then
                write(*,*)'Too many PDFs: increase maxPDFs in '/
-     $              /'reweight0.inc to ',numPDFs+1
+     $              /'extra_weights.f to ',nmemPDF(nn)+1
                stop
             endif
 c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   nwgt=nwgt+1
+                  allocate(ctemp(nwgt))
+                  ctemp(1:nwgt-1)=weights_info
+                  call move_alloc(ctemp,weights_info)
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /' '//trim(adjustl(lhaPDFsetname(nn)))
                enddo
             else
                nwgt=nwgt+1
+               allocate(ctemp(nwgt))
+               ctemp(1:nwgt-1)=weights_info
+               call move_alloc(ctemp,weights_info)
                write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $              /' '//trim(adjustl(lhaPDFsetname(nn)))
@@ -135,9 +147,9 @@ c To keep track of the accumulated results:
 
 
       subroutine topout
+      use extra_weights
       implicit none
       include "nexternal.inc"
-      include 'reweight0.inc'
       include 'run.inc'
       integer ii,jj,n,kk,nn
       logical usexinteg,mint
@@ -220,12 +232,11 @@ C where ylab is the rapidity in the lab frame and ycm the rapidity
 C in the center-of-momentum frame.
 C
 C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight.inc'
-      include 'reweightNLO.inc'
       double precision pp(0:3,nexternal),ybst_til_tolab
       integer itype
       double precision p(0:4,nexternal),pplab(0:3,nexternal),chybst
@@ -236,9 +247,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer istatus(nexternal),iPDG(nexternal)
       double precision pmass(nexternal)
       common/to_mass/pmass
-      integer max_weight
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision www(max_weight)
+      double precision www(*)
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
