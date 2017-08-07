@@ -717,7 +717,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
-            if self.run_card['event_norm'] == 'average':
+            if self.run_card['event_norm'] in ['average','bias']:
                 for key, value in cross.items():
                     cross[key] = value / (event_nb+1)
                 
