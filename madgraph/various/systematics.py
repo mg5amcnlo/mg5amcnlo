@@ -81,7 +81,8 @@ class Systematics(object):
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
-    
+        matching_mode = self.banner.get('run_card', 'ickkw')
+
         #check for beam
         beam1, beam2 = self.banner.get_pdg_beam()
         if abs(beam1) != 2212 and abs(beam2) != 2212:
@@ -124,7 +125,13 @@ class Systematics(object):
         if isinstance(dyn, str):
             dyn = dyn.split(',')
         self.dyn=[int(i) for i in dyn]
- 
+        # For FxFx only mode -1 makes sense
+        if matching_mode == 3:
+            self.dyn = [-1]
+        # avoid sqrts at NLO if ISR is possible
+        if 4 in self.dyn and self.b1 and self.b2 and not self.is_lo:
+            self.dyn.remove(4)
+
         if isinstance(together, str):
             self.together = together.split(',')
         else:
@@ -375,7 +382,7 @@ class Systematics(object):
 
         if norm == 'sum':
             norm = 1
-        elif norm == 'average':
+        elif norm in ['average', 'bias']:
             norm = 1./nb_event
         elif norm == 'unity':
             norm = 1
@@ -830,6 +837,7 @@ class Systematics(object):
                 tmp *= wgtpdf                
                 wgt += tmp
                 
+                
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
                     if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=2):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
@@ -837,7 +845,6 @@ class Systematics(object):
                         misc.sprint(cevent)
                         misc.sprint(mur2,muf2)
                         raise Exception, 'not enough agreement between stored value and computed one'
-                
                 
         return wgt
                             

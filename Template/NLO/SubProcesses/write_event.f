@@ -13,7 +13,7 @@
       integer i,j,lunlhe
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
-      double precision wgt,unwgtfun
+      double precision wgt
       double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
@@ -81,14 +81,6 @@ c Put the Hevent info in a common block
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
-
-      call unweight_function(p_born,unwgtfun)
-      if (unwgtfun.ne.0d0) then
-         evnt_wgt=evnt_wgt/unwgtfun
-      else
-         write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
-         stop
-      endif
 
 c  Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe

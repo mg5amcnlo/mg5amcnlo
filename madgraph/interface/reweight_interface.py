@@ -385,7 +385,13 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.output_type == 'default':
                 logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
                 self.output_type = '2.0'
-            self.systematics = args[1:]
+            if len(args) == 2:
+                try:
+                    self.systematics = banner.ConfigFile.format_variable(args[1], bool)
+                except Exception, error:
+                    self.systematics = args[1:]
+            else:
+                self.systematics = args[1:]
         elif args[0] == 'soft_threshold':
             self.soft_threshold = banner.ConfigFile.format_variable(args[1], float, 'soft_threshold')
         elif args[0] == 'multicore':
@@ -565,7 +571,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
-            if self.run_card['event_norm'] == 'average':
+            if self.run_card['event_norm'] in ['average','bias']:
                 for key, value in cross.items():
                     cross[key] = value / (event_nb+1)
                 
@@ -584,7 +590,11 @@ class ReweightInterface(extended_cmd.Cmd):
                     try:
                         logger.info('running systematics computation')
                         import madgraph.various.systematics as syst
-                        args = [output[key].name, output[key].name] + self.systematics
+                        
+                        if not isinstance(self.systematics, bool):
+                            args = [output[key].name, output[key].name] + self.systematics
+                        else:
+                            args = [output[key].name, output[key].name]
                         if self.mother and self.mother.options['lhapdf']:
                             args.append('--lhapdf_config=%s' % self.mother.options['lhapdf'])
                         syst.call_systematics(args, result=open('rwg_syst_%s.result' % key[0],'w'),
@@ -830,7 +840,6 @@ class ReweightInterface(extended_cmd.Cmd):
             tag_name = self.options['rwgt_name']
         else:
             tag_name = 'rwgt_%s' % rewgtid
-
 
         #initialise module.
         for (path,tag), module in self.f2pylib.items():

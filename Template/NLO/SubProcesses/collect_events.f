@@ -238,8 +238,6 @@ c
       data iseed/1/
       double precision rnd,fk88random
       external fk88random
-      logical debug
-      parameter (debug=.false.)
       integer nevents_file(80),proc_id(80)
       common /to_nevents_file/nevents_file,proc_id
       double precision xsecfrac_all(80)
@@ -256,11 +254,6 @@ c
       logical get_xsec_from_res1
       common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 c
-      if(debug) then
-         write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
-         write(ioutput,*)'test test test'
-         return
-      endif
       maxevt=0
       if (.not. get_xsec_from_res1) then
          do i=1,100
