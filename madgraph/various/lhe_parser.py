@@ -2236,8 +2236,9 @@ class OneNLOWeight(object):
         return out
         
         
-    def parse(self, text):
-        """parse the line and create the related object"""
+    def parse(self, text, keep_bias=False):
+        """parse the line and create the related object.
+           keep bias allow to not systematically correct for the bias in the written information"""
         #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
         #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
@@ -2341,6 +2342,17 @@ class OneNLOWeight(object):
         #     (and is passed to the integrator). It contains everything.
         #     from example: 0.110944218997D+05  
         self.ref_wgt = float(data[flag+14])
+        # 15. The bias weight. This weight is included in the self.ref_wgt, as well as in
+        #     the self.pwgt. However, it is already removed from the XWGTUP (and
+        #     scale/pdf weights). That means that in practice this weight is not used.
+        try:
+            self.bias_wgt = float(data[flag+15])
+        except KeyError:
+            self.bias_wgt = 1.0
+            
+        if not keep_bias:
+            self.ref_wgt /= self.bias_wgt
+            self.pwgt = [p/self.bias_wgt for p in self.pwgt]
 
         #check the momenta configuration linked to the event
         if self.type in self.real_type:

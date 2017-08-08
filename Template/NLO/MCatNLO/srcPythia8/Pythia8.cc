@@ -58,7 +58,7 @@ int main() {
   int iEventshower=pythia.mode("Main:spareMode1");
   string evt_norm=pythia.word("Main:spareWord1");
   int iEventtot_norm=iEventtot;
-  if (evt_norm == "average"){
+  if (evt_norm != "sum"){
     iEventtot_norm=1;
   }
 
@@ -112,7 +112,7 @@ int main() {
     double normhepmc;
     // Add the weight of the current event to the cross section.
     normhepmc = 1. / double(iEventshower);
-    if (evt_norm == "average") {
+    if (evt_norm != "sum") {
       sigmaTotal  += evtweight*normhepmc;
     } else {
       sigmaTotal  += evtweight*normhepmc*iEventtot;
