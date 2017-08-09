@@ -150,6 +150,7 @@ class Systematics(object):
             lhapdf_config = lhapdf_config[0]
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         if not lhapdf:
+            log('fail to load lhapdf: doe not perform systematics')
             return
         lhapdf.setVerbosity(0)
         self.pdfsets = {}  
@@ -254,10 +255,9 @@ class Systematics(object):
                 self.remove_wgts.append(id)  
                 
         # input to start the id in the weight
-        self.start_wgt_id = int(start_id[0]) if start_id else None
+        self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
         self.has_wgts_pattern = False # tag to check if the pattern for removing
                                       # the weights was computed already
-
         
     def is_wgt_kept(self, name):
         """ determine if we have to keep/remove such weight """
@@ -607,7 +607,6 @@ class Systematics(object):
                 out =[]
                 keep_last = False
                 for line in self.banner['initrwgt'].split('\n'):
-                    misc.sprint(line)
                     sline = line.strip()
                     if sline.startswith('</weightgroup'):
                         if wgt_in_group:
@@ -647,7 +646,9 @@ class Systematics(object):
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
-            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt']) if wid.isdigit()])+1
+            matches =  pattern.findall(self.banner['initrwgt'])
+            matches.append('0') #ensure to have a valid entry for the max 
+            return  max([int(wid) for wid in  matches if wid.isdigit()])+1
         else:
             return 1
         
@@ -795,11 +796,11 @@ class Systematics(object):
         nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
         for cevent in nloinfo.cevents:
             if dyn == 1: 
-                mur2 = cevent.get_et_scale(1.)**2
+                mur2 = max(1.0, cevent.get_et_scale(1.)**2) 
             elif dyn == 2:
-                mur2 = cevent.get_ht_scale(1.)**2
+                mur2 = max(1.0, cevent.get_ht_scale(1.)**2)
             elif dyn == 3:
-                mur2 = cevent.get_ht_scale(0.5)**2
+                mur2 = max(1.0, cevent.get_ht_scale(0.5)**2)
             elif dyn == 4:
                 mur2 = cevent.get_sqrts_scale(event,1)**2
             else:
@@ -949,7 +950,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     
 
     obj = Systematics(input, output, log=log, **opts)
-    if running:
+    if running and obj:
         obj.run(result)  
     return obj
 

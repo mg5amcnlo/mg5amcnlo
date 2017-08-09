@@ -44,7 +44,7 @@ except:
 # print help(matrix2py)
 
 # Read the model parameters
-matrix2py.initialise(os.path.abspath(pjoin(root_path,os.pardir,os.pardir,'Cards','param_card.dat')))
+matrix2py.{2}initialise(os.path.abspath(pjoin(root_path,os.pardir,os.pardir,'Cards','param_card.dat')))
 
 
 def invert_momenta(p):
@@ -86,7 +86,7 @@ nhel = -1 # means sum over all helicity
 # Choice of renormalization scale
 renormalization_scale = 91.188
 
-finite_loop_me, return_code = matrix2py.get_me(P, alphas, renormalization_scale, nhel)
+finite_loop_me, return_code = matrix2py.{2}get_me(P, alphas, renormalization_scale, nhel)
 
 
 print '='*112
