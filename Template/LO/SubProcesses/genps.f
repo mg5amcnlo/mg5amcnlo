@@ -229,6 +229,8 @@ c
       sjac = 1d0
       if (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
          if (abs(lpp(1)).eq.9.or.abs(lpp(2)).eq.9)then
+            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
             call get_dummy_x1_x2(sjac, Xbk(1), x(ndim-1),pi1, pi2, stot, s(-nbranch))
             if (.not.set_cm_rap)then
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
@@ -256,6 +258,7 @@ c           Set shat
          endif
 
       elseif (lpp(1).eq.9.or.lpp(2).eq.9) then 
+         call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          if (lpp(1).eq.9)then
             call get_dummy_x1(sjac, xbk(1), x(ndim), pi1, pi2, stot, s(-nbranch))
             xbk(2) = 1d0
@@ -308,7 +311,10 @@ c      write(*,*) "shat=",sqrt(s(-nbranch))
 c
 c     First Generate Momentum for initial state particles
 c
-      if(nincoming.eq.2) then
+      if (lpp(1).eq.9.or.lpp(2).eq.9)then
+         p(:,1) = pi1(:)
+         p(:,2) = pi2(:)
+      else if(nincoming.eq.2) then
         call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
       else
         do i=0,3
