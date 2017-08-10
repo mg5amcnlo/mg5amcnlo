@@ -326,23 +326,23 @@ c True MC subtraction term
             if(is_pt_hard)cycle
             factor=1d0
 
-        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
-C       Check if Pythia8 needs to be initialized
-cC         By default, we now use an empty command file
-c          call pythia_init(pythia_cmd_file)
-C       Send current event to Pythia8
-        call pythia_setevent()
-C       Ask Pythia8 to shower current event
-        call pythia_next()
-C       Ask Pythia8 to printout its internal record of the event
-        call pythia_stat()
-C       Read (i.e. simply access) the output HEPEUP event stream
-        call read_HEPEUP_event(p_read,wgt_read)
-C       And printout the corresponding event kinematics and weight
-        do j=1,2*nexternal-3
-          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
-        enddo
-        write(*,*) 'wgt_read=',wgt_read
+c$$$        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
+c$$$C       Check if Pythia8 needs to be initialized
+c$$$cC         By default, we now use an empty command file
+c$$$c          call pythia_init(pythia_cmd_file)
+c$$$C       Send current event to Pythia8
+c$$$        call pythia_setevent()
+c$$$C       Ask Pythia8 to shower current event
+c$$$        call pythia_next()
+c$$$C       Ask Pythia8 to printout its internal record of the event
+c$$$        call pythia_stat()
+c$$$C       Read (i.e. simply access) the output HEPEUP event stream
+c$$$        call read_HEPEUP_event(p_read,wgt_read)
+c$$$C       And printout the corresponding event kinematics and weight
+c$$$        do j=1,2*nexternal-3
+c$$$          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
+c$$$        enddo
+c$$$        write(*,*) 'wgt_read=',wgt_read
 
 
 
