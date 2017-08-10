@@ -1841,8 +1841,12 @@ class Event(list):
                 masses.append(part.mass)
         
         p_init = FourMomentum()
+        p_inits = []
+        n_init = 0
         for p in incoming:
+            n_init +=1
             p_init += p
+            p_inits.append(p)
         old_sqrts = p_init.mass
 
         new_mom, jac = self.mass_shuffle(old_momenta, old_sqrts, masses, new_sqrts=new_sqrts)
@@ -1854,6 +1858,40 @@ class Event(list):
                 part.E, part.px, part.py, part.pz, part.mass = \
                 new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
                 ind+=1
+        
+        #change the initial state
+        p_init = FourMomentum()
+        for part in self:
+            if part.status==1:
+                p_init += part
+        if n_init == 1:
+            for part in self:
+                if part.status == -1:
+                    part.E, part.px, part.py, part.pz = \
+                                 p_init.E, p_init.px, p_init.py, p_init.pz
+        elif n_init ==2:
+            if not misc.equal(p_init.px, 0) or not  misc.equal(p_init.py, 0):
+                raise Exception
+            if not misc.equal(p_inits[0].px, 0) or not  misc.equal(p_inits[0].py, 0):
+                raise Exception            
+            #assume that initial energy is written as
+            # p1 = (sqrts/2*exp(eta),   0, 0 , E1)
+            # p2 = (sqrts/2*exp(-eta),   0, 0 , -E2)
+            # keep eta fix
+            eta = math.log(2*p_inits[0].E/old_sqrts)
+            new_p = [[new_sqrts/2*math.exp(eta), 0., 0., new_sqrts/2*math.exp(eta)],
+                     [new_sqrts/2*math.exp(-eta), 0., 0., new_sqrts/2*math.exp(-eta)]] 
+            
+            ind=0
+            for part in self:
+                if part.status == -1:
+                    part.E, part.px, part.py, part.pz = new_p[ind]
+                    ind+=1
+                    if ind ==2:
+                        break
+        else:
+            raise Exception
+                            
         return jac        
         
     
