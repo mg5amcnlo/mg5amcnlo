@@ -371,6 +371,7 @@ c respectively.
       integer icolup(2,nexternal-1,max_bcol)
       integer iemitter,ipartner,icolLO(2,nexternal-1)
       include "born_leshouche.inc"
+      integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
 
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
@@ -404,26 +405,43 @@ c -- call to MC counterterm functions
             xmcxsec(npartner)=xmcxsec(npartner)+factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
-c     colour and flavour information
-c
-c     this information is just commented, since I'd like to
-c     avoid defining new arrays
-c
-c     the emitter is min(i_fks,j_fks)
-c
-c     its partner is ipartners(npartner)
-c
-c     the colour flow relevant to the current loop iteration is
-c     completely specified by
-c     ICOLUP(1,i,colorflow(npartner,cflows)), i=1,nexternal-1
-c     ICOLUP(2,i,colorflow(npartner,cflows)), i=1,nexternal-1
-c     if colorflow(npartner,cflows) = 0 the ICOLUP's are empty
-c
-c     the identities of LO partons is IDUP(i,1), i=1,nexternal-1
-c
-c     mothers of the various LO particles are
-c     MOTHUP(1,i,1),i=1,nexternal-1
-c     MOTHUP(2,i,1),i=1,nexternal-1
+c$$$     colour and flavour information
+c$$$
+c$$$     this information is just commented, since I'd like to
+c$$$     avoid defining new arrays
+c$$$
+c$$$     the emitter is min(i_fks,j_fks)
+c$$$
+c$$$     its partner is ipartners(npartner)
+c$$$
+c$$$     the colour flow relevant to the current loop iteration is
+c$$$     completely specified by
+c$$$     ICOLUP(1,i,colorflow(npartner,cflows)), i=1,nexternal-1
+c$$$     ICOLUP(2,i,colorflow(npartner,cflows)), i=1,nexternal-1
+c$$$     if colorflow(npartner,cflows) = 0 the ICOLUP's are empty
+c$$$     the very same information ican be retrieved by
+c$$$     call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
+c$$$     and is in
+c$$$     jpart(4,i), i=1,nexternal-1
+c$$$     jpart(5,i), i=1,nexternal-1
+c$$$     
+c$$$     the identities of LO partons is IDUP(i,1), i=1,nexternal-1
+c$$$
+c$$$     mothers of the various LO particles are
+c$$$     MOTHUP(1,i,1),i=1,nexternal-1
+c$$$     MOTHUP(2,i,1),i=1,nexternal-1
+c$$$
+c$$$     below is an example of how to get S and H colour flows.
+c$$$
+c$$$            if(colorflow(npartner,cflows).ne.0d0)then
+c$$$               call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
+c$$$               write(*,*)colorflow(npartner,cflows)
+c$$$               write(*,*)(jpart(4,i), i=1,nexternal-1),' aaaa1'
+c$$$               write(*,*)(jpart(5,i), i=1,nexternal-1),' aaaa2'
+c$$$               call fill_icolor_H(colorflow(npartner,cflows),jpart)
+c$$$               write(*,*)(jpart(4,i), i=1,nexternal),' bbbb1'
+c$$$               write(*,*)(jpart(5,i), i=1,nexternal),' bbbb2'
+c$$$            endif
          enddo
       enddo
       if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,probne)

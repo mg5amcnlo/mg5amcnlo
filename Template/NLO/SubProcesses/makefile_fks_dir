@@ -52,13 +52,13 @@ MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
 
 # Files for check_poles
 POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
-       BinothLHA.o born_hel.o
+       BinothLHA.o born_hel.o add_write_info.o
 
 # Files for tests
-TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o
+TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o add_write_info.o
 
 # Files for gensym
-SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
+SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o add_write_info.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
