@@ -1213,6 +1213,9 @@ class ConfigFile(dict):
                     value = int(value)
                 elif value[1:].isdigit() and value[0] == '-':
                     value = int(value)
+                elif value.endswith(('k', 'M')) and value[:-1].isdigit():
+                    convert = {'k':1000, 'M':1000000}
+                    value =int(value[:-1]) * convert[value[-1]] 
                 else:
                     try:
                         value = float(value.replace('d','e'))
