@@ -7299,6 +7299,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
+        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -7427,9 +7428,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         #Exporter + Template
         if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                                             group_subprocesses=group_processes)
+                                             group_subprocesses=group_processes,
+                                             cmd_options=line_options)
         elif options['exporter'] == 'cpp':
-            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
+            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
+                                                              cmd_options=line_options)
         
         self._curr_exporter.pass_information_from_cmd(self)
         

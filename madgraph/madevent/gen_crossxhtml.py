@@ -753,6 +753,7 @@ class OneTagResults(dict):
         # define at run_result
         self['run_name'] = run_name
         self['tag'] = run_card['run_tag']
+        self['event_norm'] = run_card['event_norm']
         self.event_path = pjoin(path,'Events')
         self.me_dir = path
         self.debug = None
@@ -1339,7 +1340,7 @@ class OneTagResults(dict):
         # Compute the text for eachsubpart
         
         sub_part_template_parton = """
-        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g</a> %(syst)s </center></td>
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g %(bias)s</a> %(syst)s </center></td>
         <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
@@ -1414,6 +1415,10 @@ class OneTagResults(dict):
                 continue
             local_dico = {'type': ttype, 'run': self['run_name'], 'syst': '',
                           'tag': self['tag']}
+            if self['event_norm'].lower()=='bias':
+                local_dico['bias']='(biased, do not use)'
+            else:
+                local_dico['bias']=''
 
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
@@ -1548,7 +1553,8 @@ class OneTagResults(dict):
                            'links': 'banner only',
                            'action': action,
                            'run_mode': '',
-                           'syst':''
+                           'syst':'',
+                           'bias':''
                            }                                
                                   
         if self.debug is KeyboardInterrupt:

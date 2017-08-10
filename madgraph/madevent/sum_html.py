@@ -337,7 +337,7 @@ class OneResult(object):
         # this is for amcatnlo: the number of events has to be read from another file
         if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
                 os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
-            nevts = int(open(pjoin(os.path.split(filepath)[0], 'nevts')).read())
+            nevts = int((open(pjoin(os.path.split(filepath)[0], 'nevts')).read()).split()[0])
             self.nevents = nevts
             self.nunwgt = nevts
         

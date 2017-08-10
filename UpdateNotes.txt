@@ -17,6 +17,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           diagrams with 1->3 decays.
       RF: Refactor of the (NLO) code related to extra weights (for PDF/scale uncertainties).
       RF: Fixed a bug (found by SF) that gave a seriously biased resonance mass when using MadSpin for decaying a 2->1 process.
+      RF+OM: Added the possibility to also have a bias-function for event generation at (f)NLO(+PS)
+
 
 2.5.5(26/05/17)
       OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 

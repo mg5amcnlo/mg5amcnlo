@@ -81,7 +81,8 @@ class Systematics(object):
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
-    
+        matching_mode = self.banner.get('run_card', 'ickkw')
+
         #check for beam
         beam1, beam2 = self.banner.get_pdg_beam()
         if abs(beam1) != 2212 and abs(beam2) != 2212:
@@ -124,7 +125,13 @@ class Systematics(object):
         if isinstance(dyn, str):
             dyn = dyn.split(',')
         self.dyn=[int(i) for i in dyn]
- 
+        # For FxFx only mode -1 makes sense
+        if matching_mode == 3:
+            self.dyn = [-1]
+        # avoid sqrts at NLO if ISR is possible
+        if 4 in self.dyn and self.b1 and self.b2 and not self.is_lo:
+            self.dyn.remove(4)
+
         if isinstance(together, str):
             self.together = together.split(',')
         else:
@@ -143,6 +150,7 @@ class Systematics(object):
             lhapdf_config = lhapdf_config[0]
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         if not lhapdf:
+            log('fail to load lhapdf: doe not perform systematics')
             return
         lhapdf.setVerbosity(0)
         self.pdfsets = {}  
@@ -247,10 +255,9 @@ class Systematics(object):
                 self.remove_wgts.append(id)  
                 
         # input to start the id in the weight
-        self.start_wgt_id = int(start_id[0]) if start_id else None
+        self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
         self.has_wgts_pattern = False # tag to check if the pattern for removing
                                       # the weights was computed already
-
         
     def is_wgt_kept(self, name):
         """ determine if we have to keep/remove such weight """
@@ -375,7 +382,7 @@ class Systematics(object):
 
         if norm == 'sum':
             norm = 1
-        elif norm == 'average':
+        elif norm in ['average', 'bias']:
             norm = 1./nb_event
         elif norm == 'unity':
             norm = 1
@@ -600,7 +607,6 @@ class Systematics(object):
                 out =[]
                 keep_last = False
                 for line in self.banner['initrwgt'].split('\n'):
-                    misc.sprint(line)
                     sline = line.strip()
                     if sline.startswith('</weightgroup'):
                         if wgt_in_group:
@@ -640,7 +646,9 @@ class Systematics(object):
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
-            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt']) if wid.isdigit()])+1
+            matches =  pattern.findall(self.banner['initrwgt'])
+            matches.append('0') #ensure to have a valid entry for the max 
+            return  max([int(wid) for wid in  matches if wid.isdigit()])+1
         else:
             return 1
         
@@ -788,11 +796,11 @@ class Systematics(object):
         nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
         for cevent in nloinfo.cevents:
             if dyn == 1: 
-                mur2 = cevent.get_et_scale(1.)**2
+                mur2 = max(1.0, cevent.get_et_scale(1.)**2) 
             elif dyn == 2:
-                mur2 = cevent.get_ht_scale(1.)**2
+                mur2 = max(1.0, cevent.get_ht_scale(1.)**2)
             elif dyn == 3:
-                mur2 = cevent.get_ht_scale(0.5)**2
+                mur2 = max(1.0, cevent.get_ht_scale(0.5)**2)
             elif dyn == 4:
                 mur2 = cevent.get_sqrts_scale(event,1)**2
             else:
@@ -838,6 +846,7 @@ class Systematics(object):
                 tmp *= wgtpdf                
                 wgt += tmp
                 
+                
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
                     if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=2):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
@@ -845,7 +854,6 @@ class Systematics(object):
                         misc.sprint(cevent)
                         misc.sprint(mur2,muf2)
                         raise Exception, 'not enough agreement between stored value and computed one'
-                
                 
         return wgt
                             
@@ -942,7 +950,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     
 
     obj = Systematics(input, output, log=log, **opts)
-    if running:
+    if running and obj:
         obj.run(result)  
     return obj
 

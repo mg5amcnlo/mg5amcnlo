@@ -557,10 +557,6 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           tmp=tmp/2d0
           temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
-      elseif(dynamical_scale_choice.eq.4) then
-c         \sqrt(s), partonic energy
-          tmp=dsqrt(2d0*dot(pp(0,1),pp(0,2)))
-          temp_scale_id='\sqrt(s), partonic energy'
       elseif(dynamical_scale_choice.eq.0) then
 c         fixed scale
           tmp=muR_ref_fixed
