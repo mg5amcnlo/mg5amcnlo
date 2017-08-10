@@ -1880,7 +1880,7 @@ class Event(list):
             # keep eta fix
             eta = math.log(2*p_inits[0].E/old_sqrts)
             new_p = [[new_sqrts/2*math.exp(eta), 0., 0., new_sqrts/2*math.exp(eta)],
-                     [new_sqrts/2*math.exp(-eta), 0., 0., new_sqrts/2*math.exp(-eta)]] 
+                     [new_sqrts/2*math.exp(-eta), 0., 0., -new_sqrts/2*math.exp(-eta)]] 
             
             ind=0
             for part in self:
