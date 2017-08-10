@@ -1667,7 +1667,7 @@ class Model(PhysicsObject):
                 self.add_param(newsw2, ['external'])
             # Force a refresh of the parameter dictionary
             self.parameters_dict = None
-            return true
+            return True
 
         elif mode==set(['mz','mw','alpha']):
             # For now, all we support is to go from mz, Gf, alpha to mz, mw, alpha
