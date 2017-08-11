@@ -1907,7 +1907,7 @@ RESTART = %(mint_mode)s
         # ideal conditions)
         time_per_job=time_expected/(nb_submit*(1+len(jobs_to_run)/2))
         jobs_to_run_new=[]
-        jobs_to_collect_new=copy.copy(jobs_to_collect)
+        jobs_to_collect_new=[job for job in jobs_to_collect if job['resultABS']!=0]
         for job in jobs_to_run:
             # remove current job from jobs_to_collect. Make sure
             # to remove all the split ones in case the original
