@@ -22,6 +22,17 @@ c is the number of color flows at Born level
       logical isspecial,isspecial0
       common/cisspecial/isspecial
       logical spec_case
+c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      include 'born_conf.inc'
+      include 'coloramps.inc'
+c
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
@@ -62,7 +73,21 @@ c and another gluon will be found which is connected to it by both
 c colour and anticolour
       isspecial=.false.
 c
+c consider only leading colour flows
+      num_leading_cflows=0
       do i=1,max_bcol
+         is_leading_cflow(i)=.false.
+         do j=1,mapconfig(0)
+            if(icolamp(i,j,1))then
+               is_leading_cflow(i)=.true.
+               num_leading_cflows=num_leading_cflows+1
+               exit
+            endif
+         enddo
+      enddo
+c
+      do i=1,max_bcol
+         if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
          isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
@@ -190,6 +215,9 @@ c      include "fks.inc"
       common/cnotagluon/notagluon
       logical isspecial
       common/cisspecial/isspecial
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
       if(ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
@@ -245,12 +273,18 @@ c
 c
       enddo
 c
-      if( (notagluon.and.ntot.ne.max_bcol) .or.
+      if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
      #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
-     #        (isspecial.and.ntot.ne.max_bcol) ) ) )then
+     #      ( (.not.isspecial).and.ntot.ne.(2*num_leading_cflows) .or.
+     #        (isspecial.and.ntot.ne.num_leading_cflows) ) ) )then
          write(*,*)'Error #6 in check_mc_matrices',
-     #     notagluon,ntot,max_bcol
+     #     notagluon,ntot,num_leading_cflows,max_bcol
+         stop
+      endif
+c
+      if(num_leading_cflows.gt.max_bcol)then
+         write(*,*)'Error #7 in check_mc_matrices',
+     #     num_leading_cflows,max_bcol
          stop
       endif
 c
@@ -1019,6 +1053,10 @@ c the same method
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
+c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
       
 c
 c BORN
@@ -1028,7 +1066,7 @@ c BORN
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
-        sumborn=sumborn+jamp2(i)
+         if(is_leading_cflow(i))sumborn=sumborn+jamp2(i)
 c sumborn is the sum of the leading-color amplitudes squared
       enddo
       
@@ -1142,7 +1180,8 @@ c BARRED AMPLITUDES
       do i=1,max_bcol
          if (sumborn.ne.0d0) then
             bornbars(i)=jamp2(i)/sumborn * born *iden_comp
-         elseif (born.eq.0d0 .or. jamp2(i).eq.0d0) then
+         elseif (born.eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbars(i)=0d0
          else
             write (*,*) 'ERROR #1, dividing by zero'
@@ -1150,7 +1189,8 @@ c BARRED AMPLITUDES
          endif
          if (sumborn.ne.0d0) then
             bornbarstilde(i)=jamp2(i)/sumborn * borntilde *iden_comp
-         elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0) then
+         elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbarstilde(i)=0d0
          else
             write (*,*) 'ERROR #2, dividing by zero'
@@ -2491,6 +2531,8 @@ c Shower scale
       integer ileg
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      integer fksfather
+      common/cfksfather/fksfather
 
       logical emscasharp
       double precision emsca
@@ -2511,7 +2553,7 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax)
+      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax,fksfather)
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
@@ -2544,8 +2586,10 @@ c Consistency check
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      integer fksfather
+      common/cfksfather/fksfather
 
-      call assign_ref_scale(p_born,xi,shat,ref_scale)
+      call assign_ref_scale(p_born,xi,shat,ref_scale,fksfather)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
       xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
      &              xscalemin+scaleMCdelta)
@@ -2561,23 +2605,26 @@ c
       end
 
 
-      subroutine assign_ref_scale(p,xii,sh,ref_sc)
+      subroutine assign_ref_scale(p,xii,sh,ref_sc,ifat)
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
-      integer i_scale,i
-      parameter(i_scale=1)
+      integer i_scale,i,ifat
+      parameter(i_scale=2)
 
       ref_sc=0d0
       if(i_scale.eq.0)then
 c Born-level CM energy squared
          ref_sc=dsqrt(max(0d0,(1-xii)*sh))
       elseif(i_scale.eq.1)then
-c Sum of final-state transverse masses
+c Sum of final-state transverse masses divided by two
          do i=3,nexternal-1
             ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
          enddo
          ref_sc=ref_sc/2d0
+      elseif(i_scale.eq.2)then
+c Transverse mass of the emitter
+         ref_sc=dsqrt(max(0d0,(p(0,ifat)+p(3,ifat))*(p(0,ifat)-p(3,ifat))))
       else
          write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
          stop
