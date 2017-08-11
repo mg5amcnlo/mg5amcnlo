@@ -436,6 +436,106 @@ c********************************************************************
       return
       end
 
+      subroutine fill_HEPEUP_event_2(p, wgt, npart, id, status, mothers,
+     &           cols, spin, scale)
+      implicit none
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
+      include "nexternal.inc"
+      include "coupl.inc"
+      include 'hep_event_streams.inc'
+      double precision wgt, aqcd, aqed
+
+      double precision p(0:3,nexternal)
+      integer id(nexternal)
+      integer mothers(2,nexternal)
+      integer cols(2,nexternal)
+      integer status(nexternal)
+      integer spin(nexternal)
+      double precision scale(2*nexternal)
+
+      integer npart, i, proc_code
+      logical firsttime
+      data firsttime/.true./
+c
+      scalup_out = scale(1)
+      scalup_out = 1d9
+
+      aqcd=g**2/(4d0*pi)
+      aqed=gal(1)**2/(4d0*pi)
+c
+c 'fill_HEPrup_block' should be called after 'aqcd' has been set,
+c because it includes a call to 'setrun', which resets the value of
+c alpha_s to the one in the param_card.dat (without any running).
+      if (firsttime) then
+         call fill_HEPRUP_init()
+         firsttime=.false.
+      endif
+
+c
+
+c********************************************************************
+c     Fill in LesHouches event block according to conventions
+c     ic(1,*) = Particle ID
+c     ic(2.*) = Mothup(1)
+c     ic(3,*) = Mothup(2)
+c     ic(4,*) = ICOLUP(1)
+c     ic(5,*) = ICOLUP(2)
+c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
+c     ic(7,*) = Helicity
+c********************************************************************
+      proc_code = 66
+      NUP_out=npart
+      IDPRUP_out=proc_code
+      XWGTUP_out=wgt
+      AQEDUP_out=aqed
+      AQCDUP_out=aqcd
+      do i=1,NUP_out
+        IDUP_out(i)=id(i)
+        ISTUP_out(i)=status(i)
+        MOTHUP_out(1,i)=mothers(1,i)
+        MOTHUP_out(2,i)=mothers(2,i)
+        ICOLUP_out(1,i)=cols(1,i)
+        ICOLUP_out(2,i)=cols(2,i)
+        PUP_out(1,i)=p(1,i)
+        PUP_out(2,i)=p(2,i)
+        PUP_out(3,i)=p(3,i)
+        PUP_out(4,i)=p(0,i)
+        PUP_out(5,i)=dsqrt(p(0,i)*p(0,i) - p(1,i)*p(1,i) - p(2,i)*p(2,i) - p(3,i)*p(3,i))
+        VTIMUP_out(i)=0.d0
+        SPINUP_out(i)=dfloat(spin(i))
+      enddo
+
+      return
+      end
+
+      subroutine clear_HEPEUP_event()
+      include 'hep_event_streams.inc'
+
+      NUP_out=-1
+      IDPRUP_out=0
+      XWGTUP_out=0.0
+      AQEDUP_out=0.0
+      AQCDUP_out=0.0
+      do i=1,maxpup_out
+        IDUP_out(i)=0
+        ISTUP_out(i)=0
+        MOTHUP_out(1,i)=0
+        MOTHUP_out(2,i)=0
+        ICOLUP_out(1,i)=0
+        ICOLUP_out(2,i)=0
+        PUP_out(1,i)=0.0
+        PUP_out(2,i)=0.0
+        PUP_out(3,i)=0.0
+        PUP_out(4,i)=0.0
+        PUP_out(5,i)=0.0
+        VTIMUP_out(i)=0.0
+        SPINUP_out(i)=0.0
+      enddo
+
+      return
+      end
+
       subroutine read_HEPEUP_event(p, wgt)
          include 'hep_event_streams.inc'
          include 'nexternal.inc'

@@ -421,29 +421,45 @@ extern "C" {
 
   // an initialisation function
   void pythia_init_(char input[500]) {
-	string cmdFilePath(input);
+    string cmdFilePath(input);
     // Remove whitespaces
+    cout << "--" << input << "--" << endl;
+    cout << "--" << cmdFilePath << "--" << endl;
     while(cmdFilePath.find(" ", 0) != string::npos)
       cmdFilePath.erase(cmdFilePath.begin()+cmdFilePath.find(" ",0));
     if (cmdFilePath!="" && !(fopen(cmdFilePath.c_str(), "r"))) {
-		cout<<"Pythia8 input file '"<<cmdFilePath<<"' not found."<<endl;
-		abort();
+      cout<<"Pythia8 input file ' "<<cmdFilePath<<" ' not found."<<endl;
+      abort();
     }
     lhareader.setInit();
-	// Example of a user hook for storing in the out stream the event after the first emission.
+    // Example of a user hook for storing in the out stream the event after the first emission.
     pythia.setUserHooksPtr(&printFirstEmission);
-	if (cmdFilePath!="") {
-       cout<<"Initialising Pythia8 from cmd file '"<<cmdFilePath<<"'"<<endl;		
-       pythia.readFile(cmdFilePath.c_str());
-	} else {
-	   cout<<"Using default initialization of Pythia8."<<endl;
-	   pythia.readString("Beams:frameType=5");
-	   pythia.readString("Check:epTolErr=1.0000000000e-02");
-	}
+    if (cmdFilePath!="") {
+      cout<<"Initialising Pythia8 from cmd file '"<<cmdFilePath<<"'"<<endl;		
+      pythia.readFile(cmdFilePath.c_str());
+    } else {
+     cout<<"Using default initialization of Pythia8."<<endl;
+     pythia.readString("Beams:frameType=5");
+     pythia.readString("Check:epTolErr=1.0000000000e-02");
+    }
     pythia.setLHAupPtr(& lhareader);
     pythia.init();
-	// Flag that Pythia8 intiialisation has been performed.
-	pythia_control_.is_pythia_active = 1;
+    // Flag that Pythia8 intiialisation has been performed.
+    pythia_control_.is_pythia_active = 1;
+  }
+
+  // an initialisation function
+  void pythia_init_default_() {
+    lhareader.setInit();
+    // Example of a user hook for storing in the out stream the event after the first emission.
+    pythia.setUserHooksPtr(&printFirstEmission);
+    cout<<"Using default initialization of Pythia8."<<endl;
+    pythia.readString("Beams:frameType=5");
+    pythia.readString("Check:epTolErr=1.0000000000e-02");
+    pythia.setLHAupPtr(& lhareader);
+    pythia.init();
+    // Flag that Pythia8 intiialisation has been performed.
+    pythia_control_.is_pythia_active = 1;
   }
 
   // a function to shower and analyse events
@@ -462,9 +478,7 @@ extern "C" {
       lhareader.setInit();
       pythia.init();
     }
-//    pythia.settings.listAll();
     pythia.next();
-	
     ++iEvent;
   }
 

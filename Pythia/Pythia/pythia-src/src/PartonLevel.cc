@@ -295,6 +295,7 @@ void PartonLevel::resetTrial() {
 
 bool PartonLevel::next( Event& process, Event& event) {
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Current event classification.
   isResolved        = infoPtr->isResolved();
   isResolvedA       = isResolved;
@@ -348,6 +349,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     ( (beamAPtr->getGammaMode() == 2) && (beamBPtr->getGammaMode() == 0) )
     || ( (beamAPtr->getGammaMode() == 0) && (beamBPtr->getGammaMode() == 2) );
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Prepare for a potential hard diffractive event.
   if (doHardDiff) {
 
@@ -380,6 +382,7 @@ bool PartonLevel::next( Event& process, Event& event) {
       return false;
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     if (isHardDiff) {
       // Set up the diffractive system if run without MPI veto.
       if (sampleTypeDiff%2 == 1) setupHardDiff( process);
@@ -405,6 +408,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     sizeEvent    = event.size();
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Number of actual branchings.
   int nBranch        = 0;
   // Number of desired branchings, negative value means no restriction.
@@ -456,6 +460,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     if ( !setupResolvedLeptonGamma( process) ) return false;
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Prepare to do multiparton interactions; at new mass for diffraction.
   if (doMPIinit) multiPtr->reset();
 
@@ -496,6 +501,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     // Identify hard interaction system for showers.
     setupHardSys( process, event);
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Optionally check for a veto after the hardest interaction.
     if (canVetoMPIStep) {
       doVeto = userHooksPtr->doVetoMPIStep( 1, event);
@@ -538,6 +544,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     beamAPtr->pTMPI( process.scale() );
     beamBPtr->pTMPI( process.scale() );
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Potentially reset starting scales for matrix element merging.
     if ( hasMergingHooks && (doTrial || canRemoveEvent || canRemoveEmission) )
       mergingHooksPtr->setShowerStartingScales( doTrial,
@@ -548,6 +555,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     pTsaveISR       = pTmaxISR;
     pTsaveFSR       = pTmaxFSR;
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Prepare the classes to begin the generation.
     if (doMPI) multiPtr->prepare( event, pTmaxMPI, (iHardDiffLoop == 2) );
     if (doISR) spacePtr->prepare( 0, event, limitPTmaxISR);
@@ -556,6 +564,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     if (doSecondHard && doFSRduringProcess) timesPtr->prepare( 1, event,
        limitPTmaxFSR);
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Impact parameter has now been chosen, except for diffraction.
     if (!isDiff) infoPtr->setImpact( multiPtr->bMPI(),
       multiPtr->enhanceMPI(), multiPtr->enhanceMPIavg(), true,
@@ -565,6 +574,7 @@ bool PartonLevel::next( Event& process, Event& event) {
     double pTveto = pTvetoPT;
     typeLatest    = 0;
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Begin evolution down in pT from hard pT scale.
     do {
       infoPtr->addCounter(22);
@@ -615,6 +625,7 @@ bool PartonLevel::next( Event& process, Event& event) {
         }
       }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
       // Do a multiparton interaction (if allowed).
       if (pTmulti > 0. && pTmulti > pTspace && pTmulti > pTtimes) {
         infoPtr->addCounter(23);
@@ -710,6 +721,7 @@ bool PartonLevel::next( Event& process, Event& event) {
       // If no pT scales above zero then nothing to be done.
       else pTmax = 0.;
 
+    cout << __FILE__ << " " << __LINE__ << endl;
       // Check for double counting for Drell-Yan weak production.
       // Only look at the second emission.
       if ( (infoPtr->code() == 221 || infoPtr->code() == 222) &&
@@ -892,6 +904,7 @@ bool PartonLevel::next( Event& process, Event& event) {
       } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Handle veto after ISR + FSR + MPI, but before beam remnants
     // and resonance decays, e.g. for MLM matching.
     if (canVetoEarly && userHooksPtr->doVetoPartonLevelEarly( event)) {
@@ -966,6 +979,7 @@ bool PartonLevel::next( Event& process, Event& event) {
   }
   if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // If beam photon unresolved during evolution remove the copies of the
   // beam particle from the event record.
   if ( ( beamAPtr->isGamma() || beamBPtr->isGamma() )
@@ -985,6 +999,7 @@ bool PartonLevel::next( Event& process, Event& event) {
   // End big outer loop to handle two systems in double diffraction.
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // If no additional MPI has been found then set up the diffractive
   // system the first time around.
   if (isHardDiff && sampleTypeDiff%2 == 0 && iHardDiffLoop == 1 && nMPI == 1) {
@@ -1041,6 +1056,7 @@ bool PartonLevel::next( Event& process, Event& event) {
       multiPtr->enhanceMPIavg(), false);
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Do colour reconnection for resonance decays.
   if (!earlyResDec && forceResonanceCR && doReconnect &&
       !doDiffCR && reconnectMode != 0) {
@@ -1078,6 +1094,7 @@ bool PartonLevel::next( Event& process, Event& event) {
   // End big outer loop to handle the setup of the diffractive system.
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // Done.
   return true;
 

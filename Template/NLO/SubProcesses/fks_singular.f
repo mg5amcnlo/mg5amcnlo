@@ -369,9 +369,31 @@ c respectively.
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
+      integer icolup_tmp(2,nexternal-1)
       integer iemitter,ipartner,icolLO(2,nexternal-1)
+      double precision wgt
+      integer spinup(nexternal-1)
+      integer istup(nexternal-1)
+      integer emscav(2*nexternal)
+      double precision p_read(0:3,nexternal)
+      double precision wgt_read
+C     To access Pythia8 control variables
+      include 'pythia8_control.inc'
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
+
+      do i=1,2
+        istup(i) = -1
+      enddo
+      do i=3,nexternal
+        istup(i) = 1
+      enddo
+      do i=1,nexternal
+        spinup(i) = -9
+      enddo
+      pythia_cmd_file=''
+
+
 
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
@@ -405,6 +427,56 @@ c -- call to MC counterterm functions
             xmcxsec(npartner)=xmcxsec(npartner)+factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*) 'aaaaaaaaaaaaa'
+        do i=1,nexternal
+          write(*,*) 'i=', i, ' id=', idup(i,1)
+        enddo
+
+        do i=1,nexternal
+          write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+        enddo
+
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+       write(*,*)
+
+       call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
+
+       call clear_HEPEUP_event()
+c       call fill_HEPEUP_event_2(p, wgt, nexternal, idup, istup, mothup, icolup, spinup, emscav)
+       call fill_HEPEUP_event(p(0,1), wgt, jpart(1,1), nexternal, mu_r)
+       if (is_pythia_active.eq.0) then
+         call pythia_init_default()
+       endif
+       call pythia_setevent()
+       call pythia_next()
+       call pythia_stat()
+
+       call abort
+C     ---------------------------------------------------------------
+
 c$$$     colour and flavour information
 c$$$
 c$$$     this information is just commented, since I'd like to

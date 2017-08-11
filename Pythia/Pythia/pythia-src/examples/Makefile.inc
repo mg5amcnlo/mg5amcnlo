@@ -1,5 +1,5 @@
 # PYTHIA configuration file.
-# Generated on Fri Jun 30 10:28:58 CDT 2017 with the user supplied options:
+# Generated on Mon Jul 3 12:29:23 CDT 2017 with the user supplied options:
 # --prefix=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build
 # --with-hepmc2=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/HepMC-build
 # --enable-debug

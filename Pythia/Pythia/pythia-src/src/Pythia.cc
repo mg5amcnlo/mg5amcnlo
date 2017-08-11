@@ -1776,6 +1776,7 @@ bool Pythia::next() {
     // from LHEF, while the current event is not read from LHEF.
     info.setLHEF3EventInfo();
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     if ( !processLevel.next( process) ) {
       if (doLHA && info.atEndOfFile()) info.errorMsg("Abort from "
         "Pythia::next: reached end of Les Houches Events File");
@@ -1786,6 +1787,7 @@ bool Pythia::next() {
 
     info.addCounter(11);
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Update tried and selected events immediately after next event was
     // generated. Note: This does not accumulate cross section.
     processLevel.accumulate(false);
@@ -1799,6 +1801,7 @@ bool Pythia::next() {
       }
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Possibility to perform matrix element merging for this event.
     if (doMerging) {
       int veto = mergingPtr->mergeProcess( process );
@@ -1818,6 +1821,7 @@ bool Pythia::next() {
       if (veto == 2 && doResDec) processLevel.nextDecays( process);
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Possibility to stop the generation at this stage.
     if (!doPartonLevel) {
       boostAndVertex( true, true);
@@ -1835,6 +1839,7 @@ bool Pythia::next() {
     info.addCounter(12);
     for (int i = 14; i < 19; ++i) info.setCounter(i);
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // Allow up to ten tries for parton- and hadron-level processing.
     bool physical   = true;
     for (int iTry = 0; iTry < NTRY; ++iTry) {
@@ -1857,6 +1862,7 @@ bool Pythia::next() {
       beamGamB.clear();
       partonSystems.clear();
 
+    cout << __FILE__ << " " << __LINE__ << endl;
       // Parton-level evolution: ISR, FSR, MPI.
       if ( !partonLevel.next( process, event) ) {
 
@@ -1952,12 +1958,14 @@ bool Pythia::next() {
       break;
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // If event vetoed then to make a new try.
     if (hasVetoed || hasVetoedDiff)  {
       if (abortIfVeto) return false;
       continue;
     }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
     // If event failed any other way (after ten tries) then give up.
     if (!physical) {
       info.errorMsg("Abort from Pythia::next: "
@@ -1975,6 +1983,7 @@ bool Pythia::next() {
     break;
   }
 
+    cout << __FILE__ << " " << __LINE__ << endl;
   // List events.
   if (doLHA && nPrevious < nShowLHA) lhaUpPtr->listEvent();
   if (nPrevious < nShowInfo) info.list();
@@ -2544,6 +2553,20 @@ bool Pythia::check() {
           "unmatched particle energy/momentum/mass");
         physical = false;
         iErrEpm.push_back(i);
+
+
+cout << " in pythia " << endl;
+cout << " in pythia " << endl;
+cout << " in pythia " << endl;
+cout << " in pythia " << endl;
+cout << " in pythia " << endl;
+process.list();
+cout << endl;
+cout << endl;
+cout << endl;
+cout << endl;
+
+
       } else if (checkMass && errMass > mTolWarn) {
         info.errorMsg("Warning in Pythia::check: "
           "not quite matched particle energy/momentum/mass");

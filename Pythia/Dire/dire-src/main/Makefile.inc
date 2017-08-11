@@ -1,5 +1,5 @@
 # PYTHIA configuration file.
-# Generated on Wed Jun 28 19:42:24 CDT 2017 with the user supplied options:
+# Generated on Mon Jul 3 12:31:06 CDT 2017 with the user supplied options:
 # --prefix=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Dire/dire-build
 # --with-pythia8=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
 
