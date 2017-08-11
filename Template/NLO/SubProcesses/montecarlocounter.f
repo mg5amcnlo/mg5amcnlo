@@ -2531,8 +2531,6 @@ c Shower scale
       integer ileg
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      integer fksfather
-      common/cfksfather/fksfather
 
       logical emscasharp
       double precision emsca
@@ -2553,7 +2551,7 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax,fksfather)
+      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax)
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
@@ -2586,10 +2584,8 @@ c Consistency check
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      integer fksfather
-      common/cfksfather/fksfather
 
-      call assign_ref_scale(p_born,xi,shat,ref_scale,fksfather)
+      call assign_ref_scale(p_born,xi,shat,ref_scale)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
       xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
      &              xscalemin+scaleMCdelta)
@@ -2605,26 +2601,23 @@ c
       end
 
 
-      subroutine assign_ref_scale(p,xii,sh,ref_sc,ifat)
+      subroutine assign_ref_scale(p,xii,sh,ref_sc)
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
-      integer i_scale,i,ifat
-      parameter(i_scale=2)
+      integer i_scale,i
+      parameter(i_scale=1)
 
       ref_sc=0d0
       if(i_scale.eq.0)then
 c Born-level CM energy squared
          ref_sc=dsqrt(max(0d0,(1-xii)*sh))
       elseif(i_scale.eq.1)then
-c Sum of final-state transverse masses divided by two
+c Sum of final-state transverse masses
          do i=3,nexternal-1
             ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
          enddo
          ref_sc=ref_sc/2d0
-      elseif(i_scale.eq.2)then
-c Transverse mass of the emitter
-         ref_sc=dsqrt(max(0d0,(p(0,ifat)+p(3,ifat))*(p(0,ifat)-p(3,ifat))))
       else
          write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
          stop
