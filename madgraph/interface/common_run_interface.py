@@ -3711,6 +3711,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.mkdir(pjoin(libdir, 'PDFsets'))
         self.make_opts_var['lhapdf'] = self.options['lhapdf']
         self.make_opts_var['lhapdfversion'] = lhapdf_version[0]
+        self.make_opts_var['lhapdfsubversion'] = lhapdf_version.split('.',2)[1]
         self.make_opts_var['lhapdf_config'] = self.options['lhapdf']
 
 
@@ -3949,7 +3950,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
-
+        if self.lhapdf_version.startswith('6.2'):
+            logger.warning('Support of LHAPDF 6.2.x is still in beta phase. Consider to use LHAPDF 6.1.x in case of problem.')
         return self.lhapdf_version
 
 
