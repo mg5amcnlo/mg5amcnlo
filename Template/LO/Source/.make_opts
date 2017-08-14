@@ -97,7 +97,7 @@ endif
 ifneq ($(lhapdf),)
 CXXFLAGS += $(shell $(lhapdf) --cppflags)
 alfas_functions=alfas_functions_lhapdf
-llhapdf+= $(shell $(lhapdf) --libs) -lLHAPDF
+llhapdf+= $(shell $(lhapdf) --cflags --libs) -lLHAPDF
 else
 alfas_functions=alfas_functions
 llhapdf=
