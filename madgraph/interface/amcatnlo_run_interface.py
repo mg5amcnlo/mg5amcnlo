@@ -907,6 +907,234 @@ class CompleteForCmd(CheckValidForCmd):
 class aMCatNLOAlreadyRunning(InvalidCmd):
     pass
 
+class AskRunNLO(cmd.ControlSwitch):
+    
+    to_control = [('order', 'Type of perturbative computation'),
+                  ('fixed_order', 'Fixed order (no event generation and no MC@[N]LO matching)'),
+                  ('shower', 'Shower the generated events'),
+                  ('madspin', 'Decay onshell particles'),
+                  ('reweight', 'Add weights to events for new hypp.'),
+                   ('madanalysis5','Run MadAnalysis5 on the events generated:')]
+    
+    def __init__(self, question, line_args=[], mode=None, force=False,
+                                                                  *args, **opt):
+        
+        self.check_available_module(opt['mother_interface'].options)
+        self.me_dir = opt['mother_interface'].me_dir
+        self.proc_characteristics = opt['mother_interface'].proc_characteristics
+        super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
+                                     *args, **opt)
+
+    def check_available_module(self, options):
+        
+        if options['madanalysis5_path']:
+            self.available_module.add('MA5')
+        if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
+            self.available_module.add('MadSpin')
+            if misc.has_f2py() or self.mother_interface.options['f2py_compiler']:
+                self.available_module.add('reweight')
+#
+#   shorcut
+#
+    def ans_lo(self, value):
+        
+        if value is None:            
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'ON'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: lo=%s' % value)
+
+    def ans_nlo(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'ON'
+            self.set_switch('shower', 'OFF')    
+        else:
+            logger.warning('Invalid command: nlo=%s' % value)
+            
+    def ans_amc__at__nlo(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'ON')
+        else:
+            logger.warning('Invalid command: aMC@NLO=%s' % value)
+            
+    def ans_amc__at__lo(self, value):
+        if value is None:
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'ON')    
+        else:
+            logger.warning('Invalid command: aMC@LO=%s' % value)  
+                  
+    def ans_noshower(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: noshower=%s' % value)  
+                  
+    def ans_noshowerlo(self, value):
+        if value is None:
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: noshowerlo=%s' % value)                    
+#
+#   ORDER   
+#   
+    def get_allowed_order(self):
+        return ["LO", "NLO"]
+    
+    def set_default_order(self):    
+        self.switch['order'] = 'NLO'
+        
+    def set_switch_off_order(self):
+        return
+#
+#   Fix order
+#    
+    def get_allowed_fixed_order(self):
+        """ """
+        if self.proc_characteristics['ninitial'] == 1:
+            return ['ON']
+        else:
+            return ['ON', 'OFF']
+        
+    def set_default_fixed_order(self):    
+        self.switch['fixed_order'] = 'OFF'
+    
+    def conflict_fixed_order_shower(self, vfix, vshower):
+        """ consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+        """
+        
+        if vfix == 'ON' and vshower != 'OFF' :
+            return 'OFF'
+        return None
+    
+    conflict_fixed_order_madspin = conflict_fixed_order_shower
+    conflict_fixed_order_reweight = conflict_fixed_order_shower
+
+    def conflict_fixed_order_madanalysis5(self, vfix, vma5):
+        
+        if vfix == 'ON' and vma5 == 'ON' :
+            return 'OFF'
+        return None    
+
+
+    def conflict_shower_fixed_order(self, vshower, vfix):
+        """ consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+        """    
+        
+        if vshower == 'ON' and vfix == 'ON':
+            return 'OFF'
+        return None
+
+    conflict_madspin_fixed_order = conflict_shower_fixed_order
+    conflict_reweight_fixed_order = conflict_shower_fixed_order
+    conflict_madanlysis5_fixed_order = conflict_shower_fixed_order
+
+#
+#   Shower
+#
+    def get_allowed_shower(self):
+        """ """
+        if self.proc_characteristics['ninitial'] == 1:
+            return ['OFF']
+        else:
+            return ['ON', 'OFF']
+        
+    def set_default_shower(self):  
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):  
+            self.switch['shower'] = 'ON'
+            self.switch['fixed_order'] = "OFF"
+        else:
+            self.switch['shower'] = 'OFF'
+
+    def conflict_shower_madanalysis5(self, vshower, vma5):
+        """ MA5 only possible with (N)LO+PS if shower is run"""
+        
+        if vshower == 'OFF' and vma5 == 'ON':
+            return 'OFF'
+        return None
+    
+    def conflict_madanalysis5_sower(self, vma5, vshower):
+        
+        if vma5=='ON' and vshower =='OFF':
+            return 'ON'
+        return None
+    
+#
+#   madspin
+#
+    def get_allowed_madspin(self):
+        """ """
+        if self.proc_characteristics['ninitial'] == 1:
+            return ['OFF']
+        else:
+            return ['ON', 'OFF']
+            
+    def set_default_maspin(self):
+        
+        if 'MadSpin' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                self.switch['madspin'] = 'ON'
+            else:
+                self.switch['madspin'] = 'OFF'
+        else:
+            self.switch['madspin'] = 'Not Avail.'    
+        
+#
+#   reweight
+#
+    get_allowed_reweight = get_allowed_madspin
+    
+    def set_default_reweight(self):
+        """initialise the switch for reweight"""
+        
+        if 'reweight' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                self.switch['reweight'] = 'ON'
+            else:
+                self.switch['reweight'] = 'OFF'
+        else:
+            self.switch['reweight'] = 'Not Avail.'      
+#
+#   MadAnalysis5
+#    
+    get_allowed_madanalysis5 = get_allowed_madspin
+    
+    def set_default_madanalysis5(self):
+        """initialise the switch for reweight"""
+        
+        if 'MA5' not in self.available_module: 
+            self.switch['madanalysis5'] =  'Not Avail.'
+        elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
+            self.switch['madanalysis5'] = 'ON'
+        else:
+            self.switch['madanalysis5'] = 'OFF'
+            
+    def check_value_madanalysis5(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        value = value.lower()
+        if value in self.get_allowed('madanalysis5'):
+            return True
+        elif value == 'hadron':
+            return 'ON' if 'ON' in self.get_allowed_madanalysis5 else False
+        else:
+            return False
+        
 #===============================================================================
 # aMCatNLOCmd
 #===============================================================================

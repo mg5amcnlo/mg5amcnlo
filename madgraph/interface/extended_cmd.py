@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __builtin__ import True
 """  A file containing different extension of the cmd basic python library"""
 
 
@@ -1041,7 +1042,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, text_format='4', **opt):
+            first_cmd=None, text_format='4', force=False, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -1082,6 +1083,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if alias:
             choices += alias.keys()
         
+
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
         
@@ -1095,26 +1097,30 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
         
-
-            
-            
-        answer = self.check_answer_in_input_file(question_instance, default, path_msg)
-        if answer is not None:
-            if answer in alias:
-                answer = alias[answer]
-            if ask_class:
-                line=answer
-                answer = question_instance.default(line)
-                question_instance.postcmd(answer, line)
-                return question_instance.answer 
-            if hasattr(question_instance, 'check_answer_consistency'):
-                question_instance.check_answer_consistency()
-            return answer
+        if not force:
+            answer = default
+        else:
+                
+            answer = self.check_answer_in_input_file(question_instance, default, path_msg)
+            if answer is not None:
+                if answer in alias:
+                    answer = alias[answer]
+                if ask_class:
+                    line=answer
+                    answer = question_instance.default(line)
+                    question_instance.postcmd(answer, line)
+                    return question_instance.answer 
+                if hasattr(question_instance, 'check_answer_consistency'):
+                    question_instance.check_answer_consistency()
+                return answer
         
         question = question_instance.question
-        value =   Cmd.timed_input(question, default, timeout=timeout,
+        if not force:
+            value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-        
+        else:
+            value = default
+
         try:
             if value in alias:
                 value = alias[value]
@@ -1123,6 +1129,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if value == default and ask_class:
             value = question_instance.default(default)
+
         return value
  
     def do_import(self, line):
@@ -2014,10 +2021,11 @@ class SmartQuestion(BasicCmd):
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
-            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            out[' Recognized command'] = super(SmartQuestion, self).completenames(text,line, *ignored)
             
             return self.deal_multiple_categories(out)
         except Exception, error:
+            misc.sprint('here')
             print error
     
     completedefault = completenames
@@ -2131,6 +2139,7 @@ class SmartQuestion(BasicCmd):
 
     def postcmd(self, stop, line):
 
+        misc.sprint(stop, line, self.value)
         try:    
             if self.value in self.allow_arg:
                 return True
@@ -2139,7 +2148,7 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
-            elif self.value == 'repeat':
+            elif self.value in ['repeat', 'reask']:
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
@@ -2202,7 +2211,7 @@ class OneLinePathCompletion(SmartQuestion):
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
-            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            out[' Recognized command'] = BasicCmd.completenames(self, text, line, begidx, endidx)
             
             return self.deal_multiple_categories(out, formatting)
         except Exception, error:
@@ -2231,8 +2240,9 @@ class OneLinePathCompletion(SmartQuestion):
 
             return Cmd.path_completion(text,
                                         os.path.join('.',*[a for a in args \
-                                               if a.endswith(os.path.sep)]))
-        self.completenames(line+text)
+                                               if a.endswith(os.path.sep)]),
+                                       begidx, endidx)
+        return self.completenames(text, line, begidx, endidx)
 
 
     def postcmd(self, stop, line):
@@ -2266,6 +2276,436 @@ def raw_path_input(input_text, allow_arg=[], default=None):
     print input_text
     obj = OneLinePathCompletion(allow_arg=allow_arg, default=default )
     return obj.cmdloop()
+
+
+
+class ControlSwitch(SmartQuestion):
+    """A class for asking a question on which program to run.
+       This is the abstract class
+       
+       Behavior for each switch can be customize via:
+       set_default_XXXX() -> set default value
+       get_allowed_XXXX() -> return list of possible value
+       check_value_XXXX(value) -> return True/False if the user can set such value
+       switch_off_XXXXX()      -> set if off (called for special mode)
+       color_for_XXXX(value)   -> return the representation on the screen for value
+
+       consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+       
+       consistency_XX(val_XX):
+            check the consistency of the other switch given the new status of this one. 
+            return a dict {key:replaced_value} or {} if nothing to do
+            
+       user typing "NAME" will result to a call to self.ans_NAME(None)
+       user typing "NAME=XX" will result to a call to self.ans_NAME('XX')    
+       
+       Note on case sensitivity:
+       -------------------------
+       the XXX is displayed with the case in self.to_control
+           but ALL functions should use the lower case version.
+       for key associated to get_allowed_keys(), 
+           if (user) value not in that list.
+              -> try to find the first entry matching up to the case
+       for ans_XXX, set the value to lower case, but if case_XXX is set to True 
+       """
+       
+    line_length = 80
+    case_sensitive = False
+
+    def __init__(self, to_control, motherinstance, *args, **opts):
+        """to_control is a list of ('KEY': 'Choose the shower/hadronization program')
+        """
+    
+        self.to_control = to_control
+        self.mother_interface = motherinstance
+        self.inconsistent_keys = {} #flag parameter which are currently not consistent
+                                    # and the value by witch they will be replaced if the
+                                    # inconsistency remains.  
+        self.inconsistent_details = {} # flag to list 
+        
+        #initialise the main return value
+        self.switch = {}
+        for key, _ in to_control:
+            self.switch[key.lower()] = 'temporary'
+            
+        self.set_default_switch()
+        question = self.create_question()
+        
+        #check all default for auto-completion
+        allowed_args = [ `i`+';' for i in range(1, 1+len(self.to_control))] 
+        for key in self.switch:
+            allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
+        # adding special mode
+        allowed_args += [key[4:]+';' for key in dir(self) if key.startswith('ans_')]
+        if 'allow_arg' in opts:
+            allowed_args += opts['allow_arg']
+            del opts['allow_arg']
+
+        super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
+        self.options = self.mother_interface.options
+
+
+    def set_default_switch(self):
+        
+        for key,_ in self.to_control:
+            key = key.lower()
+            if hasattr(self, 'set_default_%s' % key):
+                getattr(self, 'set_default_%s' % key)()
+            else:
+                self.default_switch_for(key)
+    
+    def default_switch_for(self, key, value):
+        """use this if they are no dedicated function for such key"""
+        
+        if hasattr(self, 'get_allowed_%s' % key):
+            return getattr(self, 'get_allowed_%s' % key)()[0]
+        else:
+            self.switch[key] = 'OFF'
+    
+    def set_all_off(self):
+        """set all valid parameter to OFF --call before special keyword--
+        """
+        
+        for key in self.switch:
+            if hasattr(self, 'switch_off_%s' % key):
+                getattr(self, 'switch_off_%s' % key)()
+            elif self.check_value(key, self.switch[key]):
+                self.switch[key] = 'OFF'
+        self.inconsistent_details = {}
+        self.inconsistent_keys = {}
+    
+        
+    def check_value(self, key, value):
+        """return True/False if the value is a correct value to be set by the USER.
+           other value than those can be set by the system --like-- Not available.
+           This does not check the full consistency of the switch
+           """
+           
+        if hasattr(self, 'check_value_%s' % key):
+            return getattr(self, 'check_value_%s' % key)()
+        elif value in self.get_allowed(key):
+            return True
+        else:
+            return False
+        
+        
+        
+    def get_allowed(self, key):
+        """return the list of possible value for key"""
+
+        if hasattr(self, 'get_allowed_%s' % key):
+            return getattr(self, 'get_allowed_%s' % key)()
+        else:
+            return ['ON', 'OFF']    
+        
+    def default(self, line):
+        """Default action if line is not recognized"""
+        
+        line=line.strip().replace('@', '__at__')
+        if ';' in line:
+            for l in line.split(';'):
+                if l:
+                    out = self.default(l)
+            return out
+        
+        if '=' in line:
+            base, value = line.split('=')
+        elif ' ' in line:
+            base, value = line.split(' ', 1)
+        elif hasattr(self, 'ans_%s' % line.lower()):
+            base, value = line.lower(), None
+        elif line.isdigit() and line in [`i` for i in range(1, len(self.switch)+1)]:
+            # go from one valid option to the next in the get_allowed for that option
+            base = self.to_control[int(line)-1][0].lower()
+            return self.default(base) # just recall this function with the associate name
+        elif line.lower() in self.switch:
+            # go from one valid option to the next in the get_allowed for that option
+            base = line.lower()
+            try:
+                cur = self.get_allowed(base).index(self.switch[base])
+            except:
+                if self.get_allowed(base):
+                    value = self.get_allowed(base)[0]
+                else:                                            
+                    logger.warning('Can not switch "%s" to another value via number', base)
+                    self.value='reask'
+                    return
+            else:
+                try:
+                    value = self.get_allowed(base)[cur+1]
+                except IndexError:
+                    value = self.get_allowed(base)[0]
+        elif line in ['', 'done', 'EOF', 'eof','0']:
+            super(ControlSwitch, self).default(line)
+            return self.answer
+        elif line in 'auto':
+            self.switch['dynamical'] = True
+            return super(ControlSwitch, self).default(line)
+        else:
+            logger.warning('unknow command: %s' % line)
+            self.value = 'reask'
+            return
+        
+        self.value = 'reask'   
+        base = base.lower()
+        if hasattr(self, 'ans_%s' % base):
+            if value and not self.is_case_sensitive(base):
+                value = value.lower()
+            getattr(self, 'ans_%s' % base)(value)
+        elif base in self.switch:
+            self.set_switch(base, value)        
+        else:
+            logger.warning('Not valid command: %s' % line)
+   
+    def is_case_sensitive(self, key):
+        """check if a key is case sensitive"""
+        
+        case = self.case_sensitive 
+        if hasattr(self, 'case_%s' % key):
+            case = getattr(self, 'case_%s' % key)
+        return case
+    
+    def onecmd(self, line, **opt):
+        """ensure to rewrite the function if a call is done directly"""
+        out = super(ControlSwitch, self).onecmd(line, **opt)
+        self.create_question()
+        return out
+
+    @property
+    def answer(self):
+        if not self.inconsistent_keys:
+            return self.switch
+        else:
+            out = dict(self.switch)
+            out.update(self.inconsistent_keys)
+            return out
+
+    def postcmd(self, stop, line):
+        
+        line = line.strip()
+        if ';' in line:
+            line= [l for l in line.split(';') if l][-1] 
+        if line in ['0','done', 'EOF','','auto']:
+            return True
+        return self.reask(True)
+        
+
+    def set_switch(self, key, value, user=True):
+        """change a switch to a given value"""
+
+        assert key in self.switch
+
+        
+        
+        if hasattr(self, 'ans_%s' % key):
+            if not self.is_case_sensitive(key):
+                value = value.lower()
+            return getattr(self, 'ans_%s' % key)(value)
+        
+        if not self.is_case_sensitive(key) and value not in self.get_allowed(key):
+            lower = [t.lower() for t in self.get_allowed(key)]
+            try:
+                ind = lower.index(value.lower())
+            except ValueError:
+                pass # keep the current case, in case check_value accepts it anyway.
+            else:
+                value = self.get_allowed(key)[ind]
+        
+        check = self.check_value(key, value) 
+        if not check:
+            logger.warning('"%s" not valid option for "%s"', value, key)
+            return
+        if isinstance(check, str):
+            value = check
+        
+        self.switch[key] = value
+        
+        if user:
+            self.check_consistency(key, value)
+        
+    def remove_inconsistency(self, keys=[]):
+        
+        if not keys:
+            self.inconsistent_keys = {} 
+            self.inconsistent_details = {} 
+        elif isinstance(keys, list):
+            for key in keys:
+                if key in self.inconsistent_keys:
+                    del self.inconsistent_keys[keys]
+                    del self.inconsistent_details[keys]                
+        else:
+            if keys in self.inconsistent_keys:
+                del self.inconsistent_keys[keys]
+                del self.inconsistent_details[keys]
+        
+    def check_consistency(self, key, value):
+        """check the consistency of the new flag with the old ones"""
+        
+        # this is used to update self.consistency_keys which contains:
+        #  {key: replacement value with solved conflict}
+        # it is based on self.consistency_details which is a dict
+        # key:  {'orig_value': 
+        #                'changed_key':
+        #                'new_changed_key_val':
+        #                'replacement': 
+        # which keeps track of all conflict and of their origin.
+        
+        
+        # rules is a dict: {keys:None} if the value for that key is consistent.
+        #                  {keys:value_to_replace} if that key is inconsistent
+        if hasattr(self, 'consistency_%s' % key):
+            rules = dict([(key2, None) for key2 in self.switch])
+            rules.update(getattr(self, 'consistency_%s' % key)(value, self.switch))
+        else:
+            rules = {}
+            for key2,value2 in self.switch.items():
+                if hasattr(self, 'consistency_%s_%s' % (key,key2)):
+                    rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+                else:
+                    rules[key2] = None
+        
+        #update the self.inconsisten_details adding new conflict
+        # start by removing the inconsistency for the newly set parameter
+        self.remove_inconsistency(key)
+        # then add the new ones
+        for key2 in self.switch:
+            if rules[key2]:
+                info = {'orig_value': self.switch[key2],
+                        'changed_key': key,
+                        'new_changed_key_val': value,
+                        'replacement': rules[key2]}
+                if key2 in self.inconsistent_details:
+                    self.inconsistent_details[key2].append(info)
+                else:
+                    self.inconsistent_details[key2] = [info]
+        
+        if not self.inconsistent_details:
+            return 
+  
+        # review the status of all conflict
+        for key2 in dict(self.inconsistent_details):
+            for conflict in list(self.inconsistent_details[key2]):
+                keep_conflict = True
+                # check that we are still at the current value
+                if conflict['orig_value'] != self.switch[key2]:
+                    keep_conflict = False
+                # check if the reason of the conflict still in place
+                if self.switch[conflict['changed_key']] != conflict['new_changed_key_val']:
+                    keep_conflict = False
+                if not keep_conflict:
+                    self.inconsistent_details[key2].remove(conflict)
+            if not self.inconsistent_details[key2]:
+                del self.inconsistent_details[key2]
+
+        # create the valid set of replacement for this current conflict
+        tmp_switch = {} # to cross-check that non-conflicted one is consistent with last changed
+        for key2 in self.switch:
+            if key2 in self.inconsistent_details:
+                tmp_switch[key2] = self.inconsistent_details[key2][-1]['replacement']
+            else:
+                tmp_switch[key2] = self.switch[key2]
+
+        # validate tmp_switch.
+        to_check = [(key, value)] + [(k,tmp_switch[k]) for k in self.switch if tmp_switch[k]!= self.switch[k]]
+        i = 0
+        while len(to_check) and i < 50:
+            # check in a iterative way the consistency of the tmp_switch parameter
+            i +=1
+            key2, value2 = to_check.pop()
+            if hasattr(self, 'consistency_%s' % key2):
+                rules2 = dict([(key2, None) for key2 in self.switch])
+                rules2.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
+            else:
+                rules = {}
+                for key3,value3 in self.switch.items():
+                    if hasattr(self, 'consistency_%s_%s' % (key2,key3)):
+                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value2)
+                    else:
+                        rules[key3] = None
+                        
+            for key, replacement in rules.items():
+                if replacement:
+                    tmp_switch[key] = replacement
+                    to_check.append((key, replacement))
+        
+
+        # Now tmp_switch is to a fully consistent setup for sure.
+        # fill self.inconsistent_key
+        self.inconsistent_keys = {}
+        for key2, value2 in tmp_switch.items():
+            if value2 != self.switch[key2]:
+                self.inconsistent_keys[key2] = value2
+            
+    #    
+    # Helper routine for putting questions with correct color 
+    #
+    green = '\x1b[32m%s\x1b[0m' 
+    bold = '\x1b[33m%s\x1b[0m'
+    red   = '\x1b[31m%s\x1b[0m'    
+    def color_for_value(self, key, switch_value):
+        
+        if  hasattr(self, 'color_for_%s' % key):
+            return getattr(self, 'color_for_%s' % key)(switch_value)
+        
+        if self.check_value(key, switch_value):
+            if switch_value in ['OFF']:
+                # inconsistent key are the list of key which are inconsistent with the last change
+                return self.red % switch_value
+            elif key in self.inconsistent_keys:
+                return self.red % switch_value + '-> ' + self.bold % self.inconsistent_keys[key]
+            else:
+                return self.green % switch_value
+            
+        else:
+            if ' ' in switch_value:
+                return self.bold % switch_value 
+            else:
+                return self.red % switch_value
+
+    def create_question(self):
+                
+        text = \
+        ["The following switches determine which programs are run:",
+         "/%s\\" % ("=" * (self.line_length-2))
+         ] 
+        
+        format = '| %2d. %{0}s %11s = %11s'.format(self.line_length-34)
+        
+        for i,(key, descrip) in enumerate(self.to_control):            
+            text.append(format % (i+1, descrip+':', key, self.color_for_value(key,self.switch[key])))
+
+        
+        text.append("\\%s/" % ("=" * (self.line_length-2)))
+        
+        # find a good example of switch to set
+        example = None
+        for key in self.switch:
+            if len(self.get_allowed(key)) > 1:
+                    for val in self.get_allowed(key):
+                        if val != self.switch[key]:
+                            example = (key, val)
+                            break
+                    else:
+                        continue
+                    break
+                
+        if not example:
+            example = ('KEY', 'VALUE')
+            
+        text += \
+          ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
+           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % self.to_control[0][0],
+           "Type 'help' for the list of all valid option",
+           "Type '0', 'auto', 'done' or just press enter when you are done."]
+        
+        self.question =    "\n".join(text)                                                              
+        return self.question
+    
+
+
 
 #===============================================================================
 # 
