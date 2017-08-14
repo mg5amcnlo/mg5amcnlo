@@ -89,7 +89,7 @@ j=%(directory)s
      if [ "$keeplog" = true ] ; then
 	 echo "" >> $k; echo "ls status:" >> $k; ls >> $k	 
      else
-	 rm ftn26 > /dev/null
+	 rm ftn26 &> /dev/null
      fi
 
 

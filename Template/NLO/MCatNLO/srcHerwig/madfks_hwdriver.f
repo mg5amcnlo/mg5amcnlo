@@ -323,7 +323,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
 C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
-      if (NORM_EVENT.eq.'average')MQQ=1
+      if (NORM_EVENT(1:3).ne.'sum')MQQ=1
 
       MSFLAG=0
       IF (LHSOFT) THEN
@@ -397,3 +397,21 @@ C---CLEAN EXIT IF USING ROOT; DUMMY OTHERWISE
       CALL RCLOS()
  999  STOP
       END
+
+
+c     dummy routines for stdhep
+      SUBROUTINE PYERRM(MERR,CHMESS)
+      implicit none
+      integer MERR
+      CHARACTER CHMESS*(*)
+      write(*,*)'dummy PYERRM should never be called from HW6'
+      stop
+      end
+
+
+      FUNCTION PYCOMP(KF)
+      implicit none
+      integer KF,PYCOMP
+      write(*,*)'dummy PYCOMP should never be called from HW6'
+      stop
+      end

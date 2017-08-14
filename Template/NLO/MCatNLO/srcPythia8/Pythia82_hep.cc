@@ -70,7 +70,7 @@ int main() {
     // the number of events read by Pythia so far
     int nSelected=pythia.info.nSelected();
 
-    if (nSelected >= iEventshower) break;
+    if (nSelected > iEventshower) break;
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();
@@ -83,7 +83,7 @@ int main() {
     double evtweight = pythia.info.weight();
     double normhepmc;
     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
-    if (evt_norm == "average") {
+    if (evt_norm != "sum") {
       normhepmc = 1. / double(iEventshower);
     } else {
       normhepmc = double(iEventtot) / double(iEventshower);

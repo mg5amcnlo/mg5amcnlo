@@ -407,19 +407,22 @@ in presence of majorana particle/flow violation"""
     @staticmethod
     def mod_propagator_expression(tag, text):
         """Change the index of the propagator to match the current need"""
-        data = re.split(r'(\b[a-zA-Z]\w*?)\(([\'\w,\s]*?)\)',text)
 
+        data = re.split(r'(\b[a-zA-Z]\w*?)\(([\'\w,\s\"\+\-]*?)\)',text)
+        to_change = {}
+        for old, new in tag.items():
+            if isinstance(new, str):
+                new='\'%s\'' % new
+            else:
+                new = str(new)
+            to_change[r'%s' % old] = new
         pos=-2
         while pos +3 < len(data):
             pos = pos+3
             ltype = data[pos]
             if ltype != 'complex':
-                for old, new in tag.items():
-                    if isinstance(new, str):
-                        new='\'%s\'' % new
-                    else:
-                        new = str(new)
-                    data[pos+1] = re.sub(r'\b%s\b' % old, new, data[pos+1])
+                data[pos+1] = re.sub(r'\b(?<!-)(%s)\b' % '|'.join(to_change),
+                                     lambda x: to_change[x.group()], data[pos+1])
             data[pos+1] = '(%s)' % data[pos+1]
         text=''.join(data)
         return text
