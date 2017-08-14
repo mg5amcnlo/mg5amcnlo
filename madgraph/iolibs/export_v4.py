@@ -3718,16 +3718,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             calls = 0
         return calls
 
-    def link_files_in_SubProcess(self, Ppath):
-        """ Create the necessary links in the P* directory path Ppath"""
-        
-        #import genps.inc and maxconfigs.inc into Subprocesses
-        ln(self.dir_path + '/Source/genps.inc', 
-                                     self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/maxconfigs.inc',
-                                     self.dir_path + '/SubProcesses', log=False)
-
-        linkfiles = ['addmothers.f',
+    link_Sub_files = ['addmothers.f',
                      'cluster.f',
                      'cluster.inc',
                      'coupl.inc',
@@ -3750,7 +3741,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'setscales.f',
                      'sudakov.inc',
                      'symmetry.f',
-                     'unwgt.f']
+                     'unwgt.f',
+                     'dummy_fct.f'
+                     ]
+
+    def link_files_in_SubProcess(self, Ppath):
+        """ Create the necessary links in the P* directory path Ppath"""
+        
+        #import genps.inc and maxconfigs.inc into Subprocesses
+        ln(self.dir_path + '/Source/genps.inc', 
+                                     self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc',
+                                     self.dir_path + '/SubProcesses', log=False)
+
+        linkfiles = self.link_Sub_files
 
         for file in linkfiles:
             ln('../' + file , cwd=Ppath)    
@@ -6795,7 +6799,12 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         elif cmd._export_format in ['madweight']:
             return ProcessExporterFortranMW(cmd._export_dir, opt)
         elif format == 'plugin':
-            return cmd._export_plugin(cmd._export_dir, opt)
+            if isinstance(cmd._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                return cmd._export_plugin(cmd._export_dir, loop_induced_opt)
+            else:
+                return cmd._export_plugin(cmd._export_dir, opt)
+
         else:
             raise Exception, 'Wrong export_v4 format'
     else:

@@ -50,10 +50,9 @@ pjoin = os.path.join
 logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
-                
 try:
     import madgraph
-except ImportError:    
+except ImportError:
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.banner as banner_mod
@@ -67,7 +66,9 @@ except ImportError:
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.lhe_parser as lhe_parser
     import internal.FO_analyse_card as FO_analyse_card 
+    import internal.sum_html as sum_html
     from internal import InvalidCmd, MadGraph5Error
+    
     MADEVENT=True    
 else:
     # import from madgraph directory
@@ -82,6 +83,7 @@ else:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
+    import madgraph.madevent.sum_html as sum_html
 #    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
@@ -665,6 +667,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.ninitial = int(found.group(1))
         else:
             self.ninitial = self.proc_characteristics['ninitial']
+
+    def make_make_all_html_results(self, folder_names = [], jobs=[]):
+        return sum_html.make_all_html_results(self, folder_names, jobs)
 
 
     ############################################################################

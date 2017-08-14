@@ -2758,9 +2758,11 @@ class RunCardLO(RunCard):
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
+                self['use_syst'] = False
             else:
                 self['lpp1'] = 0
-                self['lpp2'] = 0                
+                self['lpp2'] = 0    
+                self['use_syst'] = False            
                 
         # Check if need matching
         min_particle = 99

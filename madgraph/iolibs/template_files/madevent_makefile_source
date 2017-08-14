@@ -61,7 +61,7 @@ $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib
 
 # Dependencies
 
-dsample.o: DiscreteSampler.o dsample.f genps.inc
+dsample.o: DiscreteSampler.o dsample.f genps.inc StringCast.o
 DiscreteSampler.o: StringCast.o
 invarients.o: invarients.f genps.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
