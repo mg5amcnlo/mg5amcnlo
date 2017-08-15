@@ -5098,8 +5098,6 @@ RESTART = %(mint_mode)s
     def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
         
-        misc.sprint(self.last_mode, switch, options)
-
         if 'parton' not in options:
             options['parton'] = False
         if 'reweightonly' not in options:

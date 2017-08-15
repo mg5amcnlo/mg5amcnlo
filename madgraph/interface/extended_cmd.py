@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __builtin__ import True
 """  A file containing different extension of the cmd basic python library"""
 
 
