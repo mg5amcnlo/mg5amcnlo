@@ -1141,15 +1141,19 @@ class ReweightInterface(extended_cmd.Cmd):
         
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
-            nhel = hel_dict[tuple(hel_order)]
-            if event[1].status == -1: #check if this is a 2 >N processes
-                # need to pass to the rest-frame
-                pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-                for i,thisp in enumerate(p):
-                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0                 
+            nhel = hel_dict[tuple(hel_order)]                
         else:
             nhel = -1
+            
+        # For 2>N pass in the center of mass frame
+        #   - required for helicity by helicity re-weighitng
+        #   - Speed-up loop computation 
+        if event[1].status == -1: #check if this is a 2 >N processes
+            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+            for i,thisp in enumerate(p):
+                p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+            assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+        
         pold = list(p)
         p = self.invert_momenta(p)
         pdg = list(orig_order[0])+list(orig_order[1])
