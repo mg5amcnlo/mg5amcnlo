@@ -2025,7 +2025,6 @@ class SmartQuestion(BasicCmd):
             
             return self.deal_multiple_categories(out)
         except Exception, error:
-            misc.sprint('here')
             print error
     
     completedefault = completenames
@@ -2075,10 +2074,7 @@ class SmartQuestion(BasicCmd):
         if prev_timer:     
             if pat.search(self.question):
                 timeout = int(pat.search(self.question).groups()[0])
-            else:
-                timeout=20
-            print
-            signal.alarm(timeout)
+                signal.alarm(timeout)
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
@@ -2139,7 +2135,6 @@ class SmartQuestion(BasicCmd):
 
     def postcmd(self, stop, line):
 
-        misc.sprint(stop, line, self.value)
         try:    
             if self.value in self.allow_arg:
                 return True
@@ -2314,6 +2309,7 @@ class ControlSwitch(SmartQuestion):
        
     line_length = 80
     case_sensitive = False
+    quit_on = ['0','done', 'EOF','','auto']
 
     def __init__(self, to_control, motherinstance, *args, **opts):
         """to_control is a list of ('KEY': 'Choose the shower/hadronization program')
@@ -2325,7 +2321,8 @@ class ControlSwitch(SmartQuestion):
                                     # and the value by witch they will be replaced if the
                                     # inconsistency remains.  
         self.inconsistent_details = {} # flag to list 
-        
+        self.last_changed = []         # keep the order in which the flag have been modified 
+                                       # to choose the resolution order of conflict
         #initialise the main return value
         self.switch = {}
         for key, _ in to_control:
@@ -2357,7 +2354,7 @@ class ControlSwitch(SmartQuestion):
             else:
                 self.default_switch_for(key)
     
-    def default_switch_for(self, key, value):
+    def default_switch_for(self, key):
         """use this if they are no dedicated function for such key"""
         
         if hasattr(self, 'get_allowed_%s' % key):
@@ -2385,7 +2382,7 @@ class ControlSwitch(SmartQuestion):
            """
            
         if hasattr(self, 'check_value_%s' % key):
-            return getattr(self, 'check_value_%s' % key)()
+            return getattr(self, 'check_value_%s' % key)(value)
         elif value in self.get_allowed(key):
             return True
         else:
@@ -2488,7 +2485,7 @@ class ControlSwitch(SmartQuestion):
         line = line.strip()
         if ';' in line:
             line= [l for l in line.split(';') if l][-1] 
-        if line in ['0','done', 'EOF','','auto']:
+        if line in self.quit_on:
             return True
         return self.reask(True)
         
@@ -2543,6 +2540,10 @@ class ControlSwitch(SmartQuestion):
         
     def check_consistency(self, key, value):
         """check the consistency of the new flag with the old ones"""
+        
+        if key in self.last_changed:
+            self.last_changed.remove(key)
+        self.last_changed.append(key)
         
         # this is used to update self.consistency_keys which contains:
         #  {key: replacement value with solved conflict}
@@ -2600,21 +2601,26 @@ class ControlSwitch(SmartQuestion):
             if not self.inconsistent_details[key2]:
                 del self.inconsistent_details[key2]
 
+
         # create the valid set of replacement for this current conflict
-        tmp_switch = {} # to cross-check that non-conflicted one is consistent with last changed
-        for key2 in self.switch:
-            if key2 in self.inconsistent_details:
-                tmp_switch[key2] = self.inconsistent_details[key2][-1]['replacement']
-            else:
-                tmp_switch[key2] = self.switch[key2]
+        # start by current status to avoid to keep irrelevant conflict
+        tmp_switch = dict(self.switch)
+        
+        # build the order in which we have to check the various conflict reported
+        to_check = [(c['changed_key'], c['new_changed_key_val']) \
+                         for k in self.inconsistent_details.values() for c in k
+                         if c['changed_key'] != key] 
+
+        to_check.sort(lambda x, y: -1 if self.last_changed.index(x[0])>self.last_changed.index(y[0]) else 1)
 
         # validate tmp_switch.
-        to_check = [(key, value)] + [(k,tmp_switch[k]) for k in self.switch if tmp_switch[k]!= self.switch[k]]
+        to_check = [(key, value)] + to_check
+
         i = 0
         while len(to_check) and i < 50:
             # check in a iterative way the consistency of the tmp_switch parameter
             i +=1
-            key2, value2 = to_check.pop()
+            key2, value2 = to_check.pop(0)
             if hasattr(self, 'consistency_%s' % key2):
                 rules2 = dict([(key2, None) for key2 in self.switch])
                 rules2.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
@@ -2622,7 +2628,7 @@ class ControlSwitch(SmartQuestion):
                 rules = {}
                 for key3,value3 in self.switch.items():
                     if hasattr(self, 'consistency_%s_%s' % (key2,key3)):
-                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value2)
+                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value3)
                     else:
                         rules[key3] = None
                         
@@ -2630,8 +2636,18 @@ class ControlSwitch(SmartQuestion):
                 if replacement:
                     tmp_switch[key] = replacement
                     to_check.append((key, replacement))
-        
-
+            # avoid situation like
+            # to_check = [('fixed_order', 'ON'), ('fixed_order', 'OFF')]
+            # always keep the last one
+            pos = {}
+            for i, (key,value) in enumerate(to_check):
+                pos[key] = i
+            to_check_new = []
+            for i, (key,value) in enumerate(to_check):
+                if pos[key] == i:
+                    to_check_new.append((key,value))
+            to_check = to_check_new
+            
         # Now tmp_switch is to a fully consistent setup for sure.
         # fill self.inconsistent_key
         self.inconsistent_keys = {}
@@ -2647,18 +2663,17 @@ class ControlSwitch(SmartQuestion):
     red   = '\x1b[31m%s\x1b[0m'    
     def color_for_value(self, key, switch_value):
         
-        if  hasattr(self, 'color_for_%s' % key):
-            return getattr(self, 'color_for_%s' % key)(switch_value)
+        if key in self.inconsistent_keys:
+            return self.red % switch_value + '-> ' + self.bold % self.inconsistent_keys[key]
         
         if self.check_value(key, switch_value):
+            if  hasattr(self, 'color_for_%s' % key):
+                return getattr(self, 'color_for_%s' % key)(switch_value)            
             if switch_value in ['OFF']:
                 # inconsistent key are the list of key which are inconsistent with the last change
                 return self.red % switch_value
-            elif key in self.inconsistent_keys:
-                return self.red % switch_value + '-> ' + self.bold % self.inconsistent_keys[key]
             else:
                 return self.green % switch_value
-            
         else:
             if ' ' in switch_value:
                 return self.bold % switch_value 
@@ -2697,7 +2712,7 @@ class ControlSwitch(SmartQuestion):
             
         text += \
           ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
-           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % self.to_control[0][0],
+           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
            "Type 'help' for the list of all valid option",
            "Type '0', 'auto', 'done' or just press enter when you are done."]
         

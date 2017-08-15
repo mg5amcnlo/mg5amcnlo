@@ -619,6 +619,7 @@ class AskRun(cmd.ControlSwitch):
            -> YY is another key
            -> return value should be None or "replace_YY" 
         """
+
         if vshower == 'OFF':
             if self.check_value('detector', vdetector) and  vdetector!= 'OFF':
                 return 'OFF'
@@ -6087,8 +6088,7 @@ tar -czf split_$1.tar.gz split_$1
         if '-M' in args or '--madspin' in args:
             passing_cmd.append('madspin=ON')
         
-        switch = self.ask('', '0', [],
-                              path_msg='enter path', ask_class = self.action_switcher,
+        switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, line_args=args, force=self.force,
                               first_cmd=passing_cmd)
         

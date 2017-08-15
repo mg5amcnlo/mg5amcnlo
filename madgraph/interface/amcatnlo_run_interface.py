@@ -910,23 +910,28 @@ class aMCatNLOAlreadyRunning(InvalidCmd):
 class AskRunNLO(cmd.ControlSwitch):
     
     to_control = [('order', 'Type of perturbative computation'),
-                  ('fixed_order', 'Fixed order (no event generation and no MC@[N]LO matching)'),
+                  ('fixed_order', 'No MC@[N]LO matching / event generation'),
                   ('shower', 'Shower the generated events'),
                   ('madspin', 'Decay onshell particles'),
                   ('reweight', 'Add weights to events for new hypp.'),
-                   ('madanalysis5','Run MadAnalysis5 on the events generated:')]
+                   ('madanalysis','Run MadAnalysis5 on the events generated')]
+    
+    quit_on = cmd.ControlSwitch.quit_on + ['onlyshower']
     
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
         
         self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
+        self.last_mode = opt['mother_interface'].last_mode
+        misc.sprint(self.last_mode)
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
 
     def check_available_module(self, options):
         
+        self.available_module = set()
         if options['madanalysis5_path']:
             self.available_module.add('MA5')
         if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
@@ -976,21 +981,40 @@ class AskRunNLO(cmd.ControlSwitch):
             self.set_switch('shower', 'OFF')
         else:
             logger.warning('Invalid command: noshower=%s' % value)  
-                  
+        
+    def ans_onlyshower(self, value):
+        if value is None:
+            self.switch['mode'] = 'onlyshower'
+            self.switch['madspin'] = 'OFF'
+            self.switch['reweight'] = 'OFF'
+        else:
+            logger.warning('Invalid command: onlyshower=%s' % value)     
+              
     def ans_noshowerlo(self, value):
         if value is None:
             self.switch['order'] = 'LO'
             self.switch['fixed_order'] = 'OFF'
             self.set_switch('shower', 'OFF')
         else:
-            logger.warning('Invalid command: noshowerlo=%s' % value)                    
+            logger.warning('Invalid command: noshowerlo=%s' % value)    
+            
+    def ans_madanalysis5(self, value):
+        """ shortcut madanalysis5 -> madanalysis """
+        
+        if value is None:
+            return self.onecmd('madanalysis')
+        else:
+            self.set_switch('madanalysis', value)                
 #
 #   ORDER   
 #   
     def get_allowed_order(self):
         return ["LO", "NLO"]
     
-    def set_default_order(self):    
+    def set_default_order(self):  
+        
+        if self.last_mode in ['LO', 'aMC@L0', 'noshowerLO']:
+            self.switch['order'] = 'LO'       
         self.switch['order'] = 'NLO'
         
     def set_switch_off_order(self):
@@ -1005,10 +1029,20 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return ['ON', 'OFF']
         
-    def set_default_fixed_order(self):    
+    def set_default_fixed_order(self):  
+        
+        if self.last_mode in ['LO', 'NLO']:
+            self.switch['fixed_order'] = 'ON'
         self.switch['fixed_order'] = 'OFF'
+
+    def color_for_fixed_order(self, switch_value):
+         
+        if switch_value in ['OFF']:
+            return self.green % switch_value
+        else:
+            return self.red % switch_value
     
-    def conflict_fixed_order_shower(self, vfix, vshower):
+    def consistency_fixed_order_shower(self, vfix, vshower):
         """ consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
            -> YY is another key set by the user.
@@ -1019,17 +1053,17 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'OFF'
         return None
     
-    conflict_fixed_order_madspin = conflict_fixed_order_shower
-    conflict_fixed_order_reweight = conflict_fixed_order_shower
+    consistency_fixed_order_madspin = consistency_fixed_order_shower
+    consistency_fixed_order_reweight = consistency_fixed_order_shower
 
-    def conflict_fixed_order_madanalysis5(self, vfix, vma5):
+    def consistency_fixed_order_madanalysis(self, vfix, vma5):
         
         if vfix == 'ON' and vma5 == 'ON' :
             return 'OFF'
         return None    
 
 
-    def conflict_shower_fixed_order(self, vshower, vfix):
+    def consistency_shower_fixed_order(self, vshower, vfix):
         """ consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
            -> YY is another key set by the user.
@@ -1040,9 +1074,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'OFF'
         return None
 
-    conflict_madspin_fixed_order = conflict_shower_fixed_order
-    conflict_reweight_fixed_order = conflict_shower_fixed_order
-    conflict_madanlysis5_fixed_order = conflict_shower_fixed_order
+    consistency_madspin_fixed_order = consistency_shower_fixed_order
+    consistency_reweight_fixed_order = consistency_shower_fixed_order
+    consistency_madanalysis_fixed_order = consistency_shower_fixed_order
 
 #
 #   Shower
@@ -1054,21 +1088,26 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return ['ON', 'OFF']
         
-    def set_default_shower(self):  
+    def set_default_shower(self): 
+        
+        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+            self.switch['shower'] = 'OFF'
+            return 
+         
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):  
             self.switch['shower'] = 'ON'
             self.switch['fixed_order'] = "OFF"
         else:
             self.switch['shower'] = 'OFF'
 
-    def conflict_shower_madanalysis5(self, vshower, vma5):
+    def consistency_shower_madanalysis(self, vshower, vma5):
         """ MA5 only possible with (N)LO+PS if shower is run"""
         
         if vshower == 'OFF' and vma5 == 'ON':
             return 'OFF'
         return None
     
-    def conflict_madanalysis5_sower(self, vma5, vshower):
+    def consistency_madanalysis_sower(self, vma5, vshower):
         
         if vma5=='ON' and vshower =='OFF':
             return 'ON'
@@ -1084,7 +1123,7 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return ['ON', 'OFF']
             
-    def set_default_maspin(self):
+    def set_default_madspin(self):
         
         if 'MadSpin' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
@@ -1092,7 +1131,8 @@ class AskRunNLO(cmd.ControlSwitch):
             else:
                 self.switch['madspin'] = 'OFF'
         else:
-            self.switch['madspin'] = 'Not Avail.'    
+            self.switch['madspin'] = 'Not Avail.'  
+            
         
 #
 #   reweight
@@ -1112,25 +1152,25 @@ class AskRunNLO(cmd.ControlSwitch):
 #
 #   MadAnalysis5
 #    
-    get_allowed_madanalysis5 = get_allowed_madspin
+    get_allowed_madanalysis = get_allowed_madspin
     
-    def set_default_madanalysis5(self):
+    def set_default_madanalysis(self):
         """initialise the switch for reweight"""
         
         if 'MA5' not in self.available_module: 
-            self.switch['madanalysis5'] =  'Not Avail.'
+            self.switch['madanalysis'] =  'Not Avail.'
         elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
-            self.switch['madanalysis5'] = 'ON'
+            self.switch['madanalysis'] = 'ON'
         else:
-            self.switch['madanalysis5'] = 'OFF'
+            self.switch['madanalysis'] = 'OFF'
             
-    def check_value_madanalysis5(self, value):
+    def check_value_madanalysis(self, value):
         """check an entry is valid. return the valid entry in case of shortcut"""
         
-        value = value.lower()
-        if value in self.get_allowed('madanalysis5'):
+        if value.upper() in self.get_allowed('madanalysis'):
             return True
-        elif value == 'hadron':
+        value = value.lower()
+        if value == 'hadron':
             return 'ON' if 'ON' in self.get_allowed_madanalysis5 else False
         else:
             return False
@@ -5053,204 +5093,47 @@ RESTART = %(mint_mode)s
         return model
 
 
-
+    action_switcher = AskRunNLO
     ############################################################################
     def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
         
+        misc.sprint(self.last_mode, switch, options)
+
         if 'parton' not in options:
             options['parton'] = False
         if 'reweightonly' not in options:
             options['reweightonly'] = False
         
-        
-        void = 'Not installed'
-        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight','madanalysis5']
-        switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
-                  'madspin': void,'reweight':'OFF','madanalysis5':void}
-        if not switch:
-            switch = switch_default
-        else:
-            switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
-        default_switch = ['ON', 'OFF']
-        
-
-        allowed_switch_value = {'order': ['LO', 'NLO'],
-                                'fixed_order': default_switch,
-                                'shower': default_switch,
-                                'madspin': default_switch,
-                                'reweight': default_switch,
-                                'madanalysis5':['OFF','HADRON']}
-
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 
-                                       'madanalysis5_hadron_card_default.dat')):
-            allowed_switch_value['madanalysis5']=[]
-
-        description = {'order':  'Perturbative order of the calculation:',
-                       'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
-                       'shower': 'Shower the generated events:',
-                       'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weights to the events based on changing model parameters:',
-                       'madanalysis5':'Run MadAnalysis5 on the events generated:'}
-
-        force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
-                       ('madspin', 'ON'): {'fixed_order':'OFF'},
-                       ('reweight', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF','madanalysis5':'OFF'},
-                       ('madanalysis5','HADRON'): {'shower': 'ON','fixed_order':'OFF'},
-                       ('shower','OFF'): {'madanalysis5': 'OFF'},   
-                       }
-        special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
-
-        assign_switch = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-
-        if self.proc_characteristics['ninitial'] == 1:
-            switch['fixed_order'] = 'ON'
-            switch['shower'] = 'Not available for decay'
-            switch['madspin'] = 'Not available for decay'
-            switch['reweight'] = 'Not available for decay'
-            switch['madanalysis5'] = 'Not available for decay'
-            allowed_switch_value['fixed_order'] = ['ON']
-            allowed_switch_value['shower'] = ['OFF']
-            allowed_switch_value['madspin'] = ['OFF']
-            allowed_switch_value['reweight'] = ['OFF']
-            allowed_switch_value['madanalysis5'] = ['OFF']
-            available_mode = ['0','1']
-            special_values = ['LO', 'NLO']
-        else: 
-            # Init the switch value according to the current status
-            available_mode = ['0', '1', '2','3']
-
         if mode == 'auto': 
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
-            mode = 'noshower'         
+            mode = 'noshower'  
         
-
-        if '3' in available_mode:
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-                switch['shower'] = 'ON'
-            else:
-                switch['shower'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card_default.dat')):
-                available_mode.append('6')
-                if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card.dat')):
-                    switch['madanalysis5'] = 'HADRON'
-                else:
-                    switch['madanalysis5'] = 'OFF'                
-                
-        if (not aMCatNLO or self.options['mg5_path']) and '3' in available_mode:
-            available_mode.append('4')
-            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-                switch['madspin'] = 'ON'
-            else:
-                switch['madspin'] = 'OFF'
-            if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('5')
-                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                    switch['reweight'] = 'ON'
-                else:
-                    switch['reweight'] = 'OFF'
-            else:
-                switch['reweight'] = 'Not available (requires NumPy)'
-
-        if 'do_reweight' in options and options['do_reweight'] and '3' in available_mode:
-            if switch['reweight'] == "OFF":
-                switch['reweight'] = "ON"
-            elif switch['reweight'] != "ON":
-                logger.critical("Cannot run REWEIGHT: %s" % switch['reweight'])
+        passing_cmd = []
+        for key,value in switch.keys():
+            passing_cmd.append('%s=%s' % (key,value))
+        
+        if 'do_reweight' in options and options['do_reweight']:
+            passing_cmd.append('reweight=ON')
         if 'do_madspin' in options and  options['do_madspin']:
-            if switch['madspin'] == "OFF":
-                switch['madspin'] = 'ON'
-            elif switch['madspin'] != "ON":
-                logger.critical("Cannot run MadSpin module: %s" % switch['reweight'])
-                        
-        answers = list(available_mode) + ['auto', 'done']
-        alias = {}
-        for id, key in enumerate(switch_order):
-            if switch[key] != void and switch[key] in allowed_switch_value[key] and \
-                                              len(allowed_switch_value[key])>1:
-                answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
-                #allow lower case for on/off
-                alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
-                                   for s in allowed_switch_value[key]))
-        answers += special_values
+            passing_cmd.append('madspin=ON')
+
+        force = self.force
+        if mode == 'onlyshower':
+            passing_cmd.append('onlyshower')
+            force = True
+        elif mode:
+            passing_cmd.append(mode)
+
+        switch = self.ask('', '0', [], ask_class = self.action_switcher,
+                              mode=mode, force=force,
+                              first_cmd=passing_cmd)
         
-        def create_question(switch):
-            switch_format = " %i %-61s %12s=%s\n"
-            question = "The following switches determine which operations are executed:\n"
-            for id, key in enumerate(switch_order):
-                question += switch_format % (id+1, description[key], key, switch[key])
-            question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
-            question += '  or set any switch explicitly (e.g. type \'order=LO\' at the prompt)\n'
-            question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-            return question
+        misc.sprint(switch)
 
-
-        def modify_switch(mode, answer, switch):
-            if '=' in answer:
-                key, status = answer.split('=')
-                switch[key] = status
-                if (key, status) in force_switch:
-                    for key2, status2 in force_switch[(key, status)].items():
-                        if switch[key2] not in  [status2, void]:
-                            logger.info('For coherence \'%s\' is set to \'%s\''
-                                        % (key2, status2), '$MG:color:BLACK')
-                            switch[key2] = status2
-            elif answer in ['0', 'auto', 'done']:
-                return 
-            elif answer in special_values:
-                logger.info('Enter mode value: %s. Go to the related mode' % answer, '$MG:color:BLACK')
-                #assign_switch('reweight', 'OFF')
-                #assign_switch('madspin', 'OFF')
-                if answer == 'LO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'ON'
-                    assign_switch('shower', 'OFF')
-                elif answer == 'NLO':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'ON'
-                    assign_switch('shower', 'OFF')
-                elif answer == 'aMC@NLO':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'ON')
-                elif answer == 'aMC@LO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'ON')
-                elif answer == 'noshower':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')                                                  
-                elif answer == 'noshowerLO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')
-                if mode:
-                    return
-            return switch
-
-        modify_switch(mode, self.last_mode, switch)
-        if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-            assign_switch('madspin', 'ON')
-        
-        if not self.force:
-            answer = ''
-            while answer not in ['0', 'done', 'auto', 'onlyshower']:
-                question = create_question(switch)
-                if mode:
-                    answer = mode
-                else:
-                    answer = self.ask(question, '0', answers, alias=alias)
-                if answer.isdigit() and answer != '0':
-                    key = switch_order[int(answer) - 1]
-                    opt1 = allowed_switch_value[key][0]
-                    opt2 = allowed_switch_value[key][1]
-                    answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
-
-                if not modify_switch(mode, answer, switch):
-                    break
+        if 'mode' in switch:
+            mode = switch['mode']
 
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
@@ -5287,7 +5170,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 cards.append('madspin_card.dat')
             if switch['reweight'] == 'ON':
                 cards.append('reweight_card.dat')
-            if switch['madanalysis5'] == 'HADRON':
+            if switch['madanalysis'] == 'HADRON':
                 cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
