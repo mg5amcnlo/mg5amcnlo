@@ -2669,7 +2669,7 @@ class OneNLOWeight(object):
         #     scale/pdf weights). That means that in practice this weight is not used.
         try:
             self.bias_wgt = float(data[flag+15])
-        except KeyError:
+        except IndexError:
             self.bias_wgt = 1.0
             
         if not keep_bias:
