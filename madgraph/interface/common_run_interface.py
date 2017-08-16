@@ -1169,7 +1169,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 uncertainties=[], 
                 ratio_correlations=True,
                 arg_string='Automatic plotting from MG5aMC', 
-                jet_samples_to_keep=[],
+                jet_samples_to_keep=None,
                 use_band=[],
                 auto_open=False)
         return True

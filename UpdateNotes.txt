@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.6.0 (14/08/17)
+2.6.0 (16/08/17)
       New Functionalities:
       --------------------
       RF+OM: Added the possibility to also have a bias-function for event generation at (f)NLO(+PS)
