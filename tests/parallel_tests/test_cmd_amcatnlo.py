@@ -240,7 +240,7 @@ class MECmdShell(IOTests.IOTestManager):
         is needed in order to test the correct wavefunction size setting for spin2
         particles"""
         cmd = os.getcwd()
-        self.generate(['p p > w+ y [QCD] '], 'tests/loop_smgrav')
+        self.generate(['p p > w+ y [QCD] '], '%s/tests/input_files/loop_smgrav' % MG5DIR)
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
