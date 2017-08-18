@@ -16,6 +16,7 @@
 
 
 import logging
+import math
 import os
 import pydoc
 import re
@@ -2281,7 +2282,7 @@ class ControlSwitch(SmartQuestion):
        set_default_XXXX() -> set default value
        get_allowed_XXXX() -> return list of possible value
        check_value_XXXX(value) -> return True/False if the user can set such value
-       switch_off_XXXXX()      -> set if off (called for special mode)
+       switch_off_XXXXX()      -> set it off (called for special mode)
        color_for_XXXX(value)   -> return the representation on the screen for value
 
        consistency_XX_YY(val_XX, val_YY)
@@ -2306,7 +2307,6 @@ class ControlSwitch(SmartQuestion):
        for ans_XXX, set the value to lower case, but if case_XXX is set to True 
        """
        
-    line_length = 80
     case_sensitive = False
     quit_on = ['0','done', 'EOF','','auto']
 
@@ -2322,6 +2322,7 @@ class ControlSwitch(SmartQuestion):
         self.inconsistent_details = {} # flag to list 
         self.last_changed = []         # keep the order in which the flag have been modified 
                                        # to choose the resolution order of conflict
+        self.first_conflict = True     # allow to have a dedicated info at the first conflict 
         #initialise the main return value
         self.switch = {}
         for key, _ in to_control:
@@ -2583,7 +2584,12 @@ class ControlSwitch(SmartQuestion):
                     self.inconsistent_details[key2] = [info]
         
         if not self.inconsistent_details:
-            return 
+            return
+        
+        # If this is the first time, print a explanation message 
+        if self.first_conflict:
+            self.first_conflict = False
+            logger.warning("Your current setup is not fully consistent, if you do not continue to modify it. It will be modifed as follow.")
   
         # review the status of all conflict
         for key2 in dict(self.inconsistent_details):
@@ -2617,6 +2623,7 @@ class ControlSwitch(SmartQuestion):
 
         i = 0
         while len(to_check) and i < 50:
+            #misc.sprint(i, to_check, tmp_switch)
             # check in a iterative way the consistency of the tmp_switch parameter
             i +=1
             key2, value2 = to_check.pop(0)
@@ -2646,6 +2653,8 @@ class ControlSwitch(SmartQuestion):
                 if pos[key] == i:
                     to_check_new.append((key,value))
             to_check = to_check_new
+        if i>=50:
+            logger.critical('Failed to find a consistent set of switch values.')
             
         # Now tmp_switch is to a fully consistent setup for sure.
         # fill self.inconsistent_key
@@ -2658,12 +2667,14 @@ class ControlSwitch(SmartQuestion):
     # Helper routine for putting questions with correct color 
     #
     green = '\x1b[32m%s\x1b[0m' 
-    bold = '\x1b[33m%s\x1b[0m'
-    red   = '\x1b[31m%s\x1b[0m'    
-    def color_for_value(self, key, switch_value):
+    yellow = '\x1b[33m%s\x1b[0m'
+    red   = '\x1b[31m%s\x1b[0m'
+    bold = '\x1b[1m%s\x1b[0m'
+    def color_for_value(self, key, switch_value, consistency=True):
         
-        if key in self.inconsistent_keys:
-            return self.red % switch_value + '-> ' + self.bold % self.inconsistent_keys[key]
+        if consistency and key in self.inconsistent_keys:
+            return self.color_for_value(key, self.inconsistent_keys[key], consistency=False) +\
+                                u' \u21d0 '+ self.yellow % switch_value
         
         if self.check_value(key, switch_value):
             if  hasattr(self, 'color_for_%s' % key):
@@ -2679,22 +2690,214 @@ class ControlSwitch(SmartQuestion):
             else:
                 return self.red % switch_value
 
-    def create_question(self):
+    def print_info(self,key):
+    
+        if hasattr(self, 'print_info_%s' % key):
+            return getattr(self, 'print_info_%s' % key)
+
+        #re-order the options in order to have those in cycling order    
+        try:
+            ind =  self.get_allowed(key).index(self.switch[key])
+        except Exception, err:
+            options = self.get_allowed(key)
+        else:
+            options = self.get_allowed(key)[ind:]+ self.get_allowed(key)[:ind] 
+
+        info = '|'.join([v for v in options if v != self.switch[key]])
+        if info == '':
+            info = 'type \'help %s\' for information.' % key
+        return info
+
+    def question_formatting(self, nb_col = 80,
+                                  ldescription=0,
+                                  lswitch=0,
+                                  lname=0,
+                                  ladd_info=0,
+                                  lpotential_switch=0,
+                                  lnb_key=0):
+        """should return four lines:
+        1. The upper band (typically /========\ 
+        2. The lower band (typically \========/
+        3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
+        4. The line with    conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
+        # Be carefull to include the size of the color flag for the switch
+        green/red/yellow are  adding 9 in length 
+        
+        line should be like '| %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |'
+
+           the total lenght of the line (for defining the upper/lower line)
+           available key : nb
+                           descrip
+                           name
+                           switch          # formatted with color + conflict handling
+                           conflict_switch # color formatted value from self.inconsistent_keys
+                           switch_nc # self.switch without color formatting
+                           conflict_switch_nc # self.inconsistent_keys without color formatting
+                           add_info
+        """
+        
+        list_length = []
+        # | 1. KEY = VALUE |
+        list_length.append(lnb_key + lname + lswitch + 9)
+        #1. DESCRIP KEY = VALUE
+        list_length.append(lnb_key + ldescription+ lname + lswitch + 6)
+        #1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT
+        list_length.append(list_length[-1] - lswitch + lpotential_switch)
+        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        list_length.append(list_length[-1] +4)
+        # 1. DESCRIP KEY = VALUE_MAXSIZE
+        list_length.append(lnb_key + ldescription+ lname + (2*lpotential_switch+3) + 6)
+        #| 1. DESCRIP KEY = VALUE_MAXSIZE |
+        list_length.append(list_length[-1] +4)
+        #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
+        list_length.append(list_length[-1] + 3 + max(15,6+ladd_info))
+        #| 1. DESCRIP    |   KEY = VALUE_MAXSIZE |     INFO     |
+        list_length.append(list_length[-1] + 14)        
+        
+        selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
+        selected = selected[-1]
+        
+        # upper and lower band
+        if selected !=0:
+            size = list_length[selected-1]
+        else:
+            size = nb_col
+
+        # default for upper/lower:
+        upper = "/%s\\" % ("=" * (size-2))
+        lower = "\\%s/" % ("=" * (size-2))        
+        
+        if selected==0:
+            f1= '%(nb){0}d \x1b[1m%(name){1}s\x1b[0m=%(switch)-{2}s'.format(lnb_key,
+                                                                  lname,lswitch)
+            f2= f1
+        # | 1. KEY = VALUE |
+        elif selected == 1:
+            upper = "/%s\\" % ("=" * (nb_col-2))
+            lower = "\\%s/" % ("=" * (nb_col-2))
+            to_add = nb_col -size
+            f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
+                                                                  lname,lswitch+9+to_add)
+            f2 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
+                                                                  lname,lswitch+18+to_add)
+        #1. DESCRIP KEY = VALUE
+        elif selected == 2:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key, ldescription,lname,lswitch)
+            f2 = f1
+        #1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT
+        elif selected == 3:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key, ldescription,lname,lpotential_switch)
+            f2 =f1
+        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        elif selected == 4:
+            upper = "/%s\\" % ("=" * (nb_col-2))
+            lower = "\\%s/" % ("=" * (nb_col-2))
+            to_add = nb_col -size
+            f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f1 = f.format(lnb_key,ldescription,lname,lpotential_switch+9+to_add)
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+18+to_add)
+        # 1. DESCRIP KEY = VALUE_MAXSIZE
+        elif selected == 5:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3)
+            f2 = f1
+        #| 1. DESCRIP KEY = VALUE_MAXSIZE |
+        elif selected == 6: 
+            f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9)
+            f2 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+18)
+        #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
+        elif selected == 7:
+            ladd_info = max(15,6+ladd_info)
+            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4,
+                                                    lname+3+2*lpotential_switch+5,
+                                                    ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ') 
+            
+            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
+            f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9, ladd_info-4)
+            f2 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+18, ladd_info-4)
+        elif selected == 8:
+            ladd_info = max(15,10+ladd_info)
+            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
+                                                    lname+3+2*lpotential_switch+10,
+                                                    ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ') 
+            
+            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
+            f1 = f.format(lnb_key,ldescription+5,5+lname,2*lpotential_switch+3+9, ladd_info-5)
+            f2 = f.format(lnb_key,ldescription+5,5+lname,2*lpotential_switch+3+18, ladd_info-5)
+        
+        
+        return upper, lower, f1, f2
                 
+    def create_question(self):
+        """ create the question  with correct formatting"""
+        
+        # geth the number of line and column of the shell to adapt the printing
+        # accordingly  
+        try:
+            nb_rows, nb_col = os.popen('stty size', 'r').read().split()
+            nb_rows, nb_col = int(nb_rows), int(nb_col)
+        except Exception:
+            nb_rows, nb_col = 20, 80
+      
+        #compute information on the length of element to display
+        max_len_description = 0 
+        max_len_switch = 0
+        max_len_name = 0
+        max_len_add_info = 0
+        max_len_potential_switch = 0
+        max_nb_key = 1 + int(math.log10(len(self.to_control)))
+
+        for key, descrip in self.to_control:
+            if len(descrip) > max_len_description: max_len_description = len(descrip)
+            if len(key) >  max_len_name: max_len_name = len(key)
+            if key in self.inconsistent_keys:
+                to_display = '%s < %s' % (self.switch[key], self.inconsistent_keys[key])
+            else:
+                to_display = self.switch[key]
+            if len(to_display) > max_len_switch: max_len_switch=len(to_display)
+            
+            info = self.print_info(key)
+            if len(info)> max_len_add_info: max_len_add_info = len(info)
+            
+            max_k = max(len(k) for k in self.get_allowed(key))
+            if max_k > max_len_potential_switch: max_len_potential_switch = max_k
+
+        upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
+                                         max_len_name, max_len_add_info, 
+                                         max_len_potential_switch, max_nb_key)
+        
         text = \
         ["The following switches determine which programs are run:",
-         "/%s\\" % ("=" * (self.line_length-2))
-         ] 
+         upper_line
+        ]                     
         
-        format = '| %2d. %{0}s %11s = %11s'.format(self.line_length-34)
-        
-        for i,(key, descrip) in enumerate(self.to_control):            
-            text.append(format % (i+1, descrip+':', key, self.color_for_value(key,self.switch[key])))
 
         
-        text.append("\\%s/" % ("=" * (self.line_length-2)))
+        for i,(key, descrip) in enumerate(self.to_control):
+            
+            data_to_format = {'nb': i+1,
+                           'descrip': descrip,
+                           'name': key,
+                           'switch': self.color_for_value(key,self.switch[key]),
+                           'add_info': self.print_info(key),
+                           'switch_nc': self.switch[key]
+                           }
+            if key in self.inconsistent_keys:
+                data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
+                data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False),
+                text.append(f2 % data_to_format)
+            else:
+                text.append(f1 % data_to_format)
+
+                                
+        text.append(lower_line)
         
-        # find a good example of switch to set
+        # find a good example of switch to set for the lower part of the description
         example = None
         for key in self.switch:
             if len(self.get_allowed(key)) > 1:
@@ -2714,6 +2917,19 @@ class ControlSwitch(SmartQuestion):
            "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
            "Type 'help' for the list of all valid option",
            "Type '0', 'auto', 'done' or just press enter when you are done."]
+        
+        # check on the number of row:
+        if len(text) > nb_rows:
+            # too many lines. Remove some
+            to_remove = [ -2, #Type 'help' for the list of all valid option
+                          -5,  # \====/
+                          -4, #Either type the switch number (1 to %s) to change its setting,
+                          -3, # Set any switch explicitly
+                          -1, # Type '0', 'auto', 'done' or just press enter when you are done.
+                         ] 
+            misc.sprint(len(to_remove), len(text)-nb_rows)
+            to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
+            text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
         
         self.question =    "\n".join(text)                                                              
         return self.question

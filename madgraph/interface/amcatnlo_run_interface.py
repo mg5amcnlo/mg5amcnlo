@@ -924,7 +924,6 @@ class AskRunNLO(cmd.ControlSwitch):
         self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
         self.last_mode = opt['mother_interface'].last_mode
-        misc.sprint(self.last_mode)
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
@@ -942,6 +941,7 @@ class AskRunNLO(cmd.ControlSwitch):
 #   shorcut
 #
     def ans_lo(self, value):
+        """ function called if the user type lo=value. or lo (then value is None)"""
         
         if value is None:            
             self.switch['order'] = 'LO'
@@ -1107,7 +1107,7 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'OFF'
         return None
     
-    def consistency_madanalysis_sower(self, vma5, vshower):
+    def consistency_madanalysis_shower(self, vma5, vshower):
         
         if vma5=='ON' and vshower =='OFF':
             return 'ON'
@@ -5127,8 +5127,6 @@ RESTART = %(mint_mode)s
         switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=force,
                               first_cmd=passing_cmd)
-        
-        misc.sprint(switch)
 
         if 'mode' in switch:
             mode = switch['mode']
