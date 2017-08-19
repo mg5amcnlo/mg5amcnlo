@@ -2473,6 +2473,12 @@ class ControlSwitch(SmartQuestion):
 
     @property
     def answer(self):
+        
+        #avoid key to Not Avail in the output
+        for key in self.switch:
+            if not self.check_value(key, self.switch[key]):
+                self.switch[key] = 'OFF'
+        
         if not self.inconsistent_keys:
             return self.switch
         else:
@@ -2714,7 +2720,8 @@ class ControlSwitch(SmartQuestion):
                                   lname=0,
                                   ladd_info=0,
                                   lpotential_switch=0,
-                                  lnb_key=0):
+                                  lnb_key=0,
+                                  key=None):
         """should return four lines:
         1. The upper band (typically /========\ 
         2. The lower band (typically \========/
@@ -2736,6 +2743,17 @@ class ControlSwitch(SmartQuestion):
                            add_info
         """
         
+        if key:
+            # key is only provided for conflict
+            len_switch = len(self.switch[key])
+            if key in self.inconsistent_keys:
+                len_cswitch = len(self.inconsistent_keys[key])
+            else:
+                len_cswitch = 0
+        else:
+            len_switch = 0 
+            len_cswitch = 0 
+            
         list_length = []
         # | 1. KEY = VALUE |
         list_length.append(lnb_key + lname + lswitch + 9)
@@ -2750,9 +2768,9 @@ class ControlSwitch(SmartQuestion):
         #| 1. DESCRIP KEY = VALUE_MAXSIZE |
         list_length.append(list_length[-1] +4)
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
-        list_length.append(list_length[-1] + 3 + max(15,6+ladd_info))
+        list_length.append(list_length[-1] +3+ max(15,6+ladd_info))
         #| 1. DESCRIP    |   KEY = VALUE_MAXSIZE |     INFO     |
-        list_length.append(list_length[-1] + 14)        
+        list_length.append(list_length[-2] +13+ max(15,10+ladd_info))        
         
         selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
         selected = selected[-1]
@@ -2778,8 +2796,9 @@ class ControlSwitch(SmartQuestion):
             to_add = nb_col -size
             f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
                                                                   lname,lswitch+9+to_add)
-            f2 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
-                                                                  lname,lswitch+18+to_add)
+            
+            f = u'| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
+            f2 =f.format(lnb_key, lname, len_cswitch+9, lswitch-len_cswitch+len_switch+to_add-3)
         #1. DESCRIP KEY = VALUE
         elif selected == 2:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
@@ -2789,7 +2808,17 @@ class ControlSwitch(SmartQuestion):
         elif selected == 3:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
             f1 = f.format(lnb_key, ldescription,lname,lpotential_switch)
-            f2 =f1
+            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3
+            if l_conflict_line < nb_col:
+                f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
+            elif l_conflict_line -4 < nb_col:
+                f = u'%(nb){0}d.%(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
+            else:
+                ldescription -= (l_conflict_line - nb_col)
+                f = u'%(nb){0}d. %(descrip)-{1}.{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
         #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
         elif selected == 4:
             upper = "/%s\\" % ("=" * (nb_col-2))
@@ -2797,17 +2826,20 @@ class ControlSwitch(SmartQuestion):
             to_add = nb_col -size
             f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,lpotential_switch+9+to_add)
-            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+18+to_add)
+            f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |'
+            f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3)
         # 1. DESCRIP KEY = VALUE_MAXSIZE
         elif selected == 5:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3)
-            f2 = f1
+            f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, lpotential_switch+len_switch)
         #| 1. DESCRIP KEY = VALUE_MAXSIZE |
         elif selected == 6: 
             f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9)
-            f2 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+18)
+            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch)
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
@@ -2818,17 +2850,22 @@ class ControlSwitch(SmartQuestion):
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9, ladd_info-4)
-            f2 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+18, ladd_info-4)
+            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |   %(add_info)-{5}s |'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
             upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
                                                     lname+3+2*lpotential_switch+10,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
+            lower = "\\%s/" % ("=" * (size-2)) 
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
             f1 = f.format(lnb_key,ldescription+5,5+lname,2*lpotential_switch+3+9, ladd_info-5)
-            f2 = f.format(lnb_key,ldescription+5,5+lname,2*lpotential_switch+3+18, ladd_info-5)
+            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |     %(add_info)-{5}s|'
+            f2 = f.format(lnb_key,ldescription+5,5+lname,
+                          lpotential_switch+9,
+                          lpotential_switch+len_switch, ladd_info-5)
         
         
         return upper, lower, f1, f2
@@ -2879,17 +2916,26 @@ class ControlSwitch(SmartQuestion):
 
         
         for i,(key, descrip) in enumerate(self.to_control):
+
+
             
             data_to_format = {'nb': i+1,
                            'descrip': descrip,
                            'name': key,
                            'switch': self.color_for_value(key,self.switch[key]),
                            'add_info': self.print_info(key),
-                           'switch_nc': self.switch[key]
+                           'switch_nc': self.switch[key],
+                           'strike_switch': u'\u0336'.join(self.switch[key]) + u'\u0336',
                            }
             if key in self.inconsistent_keys:
+                # redefine the formatting here, due to the need to know the conflict size
+                upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
+                                         max_len_name, max_len_add_info, 
+                                         max_len_potential_switch, max_nb_key,
+                                         key=key)
+                
                 data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
-                data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False),
+                data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
                 text.append(f2 % data_to_format)
             else:
                 text.append(f1 % data_to_format)
