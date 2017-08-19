@@ -1503,29 +1503,13 @@ This will take effect only in a NEW terminal
             self._export_format = args.pop(0)
         elif args:
             # check for PLUGIN format
-            for plugpath in self.plugin_path:
-                plugindirname = os.path.basename(plugpath)
-                for plug in os.listdir(plugpath):
-                    if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                        try:
-                            __import__('%s.%s' % (plugindirname,plug))
-                        except Exception, error:
-                            logger.warning("error detected in plugin: %s.", plug)
-                            logger.warning("%s", error)
-                            continue
-                        plugin = sys.modules['%s.%s' % (plugindirname,plug)]                
-                        if hasattr(plugin, 'new_output'):
-                            if not misc.is_plugin_supported(plugin):
-                                continue
-                            if args[0] in plugin.new_output:
-                                self._export_format = 'plugin'
-                                self._export_plugin = plugin.new_output[args[0]]
-                                logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
-                                args.pop(0)
-                                break
-                else:
-                    continue
-                break
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 args[0], warning=True, 
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                self._export_format = 'plugin'
+                self._export_plugin = output_cls
+                args.pop(0)
             else:
                 self._export_format = default
         else:

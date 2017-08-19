@@ -1819,6 +1819,43 @@ def plugin_import(module, error_msg, fcts=[]):
     else:
         return [getattr(_temp,name) for name in fcts]
 
+def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
+                       info=None):
+    """return the class associated with keyname for a given plugin class
+    if keyname is None, return all the name associated"""
+    
+    validname = []
+    for plugpath in plugin_path:
+        plugindirname = os.path.basename(plugpath)
+        for plug in os.listdir(plugpath):
+            if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
+                try:
+                    with stdchannel_redirected(sys.stdout, os.devnull):
+                        __import__('%s.%s' % (plugindirname,plug))
+                except Exception, error:
+                    if warning:
+                        logger.warning("error detected in plugin: %s.", plug)
+                        logger.warning("%s", error)
+                    continue
+                plugin = sys.modules['%s.%s' % (plugindirname,plug)] 
+                if hasattr(plugin, target_type):
+                    if not is_plugin_supported(plugin):
+                        continue
+                    if keyname is None:
+                        validname += getattr(plugin, target_type).keys()
+                    else:
+                        if keyname in getattr(plugin, target_type):
+                            if not info:
+                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:color:BLACK')
+                            else:
+                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:color:BLACK')
+                            return getattr(plugin, target_type)[keyname]
+                        
+    if not keyname:
+        return validname
+    
+    
+    
 
 python_lhapdf=None
 def import_python_lhapdf(lhapdfconfig):

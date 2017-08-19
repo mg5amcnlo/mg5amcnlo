@@ -799,6 +799,22 @@ class AskRun(cmd.ControlSwitch):
 #
 #   ReWeight handling
 #
+    def get_allowed_reweight(self):
+        """ return the list of valid option for reweight=XXX """
+        
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        if 'reweight' not in self.available_module:
+            self.allowed_reweight = []
+            return
+        self.allowed_reweight = ['ON', 'OFF']
+        
+        # check for plugin mode
+        plugin_path = self.mother_interface.plugin_path
+        opts = misc.from_plugin_import(plugin_path, 'new_reweight', warning=False)
+        self.allowed_reweight += opts
+        
     def set_default_reweight(self):
         """initialise the switch for reweight"""
         
@@ -6091,7 +6107,8 @@ tar -czf split_$1.tar.gz split_$1
         switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, line_args=args, force=self.force,
                               first_cmd=passing_cmd)
-        
+        #
+        self.switch = switch # store the value of the switch for plugin purpose 
         if 'dynamical' in switch:
             mode = 'auto'
         
@@ -6111,9 +6128,9 @@ tar -czf split_$1.tar.gz split_$1
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        if switch['madspin'] == 'ON':
+        if switch['madspin'] != 'OFF':
             cards.append('madspin_card.dat')
-        if switch['reweight'] == 'ON':
+        if switch['reweight'] != 'OFF':
             cards.append('reweight_card.dat')
         if switch['analysis'] in ['MADANALYSIS5']:
             cards.append('madanalysis5_parton_card.dat')

@@ -2780,7 +2780,8 @@ class ControlSwitch(SmartQuestion):
             size = list_length[selected-1]
         else:
             size = nb_col
-
+        #misc.sprint(nb_col, selected)
+        
         # default for upper/lower:
         upper = "/%s\\" % ("=" * (size-2))
         lower = "\\%s/" % ("=" * (size-2))        
@@ -2808,16 +2809,16 @@ class ControlSwitch(SmartQuestion):
         elif selected == 3:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
             f1 = f.format(lnb_key, ldescription,lname,lpotential_switch)
-            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3
-            if l_conflict_line < nb_col:
+            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
+            if l_conflict_line <= nb_col:
                 f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
-            elif l_conflict_line -4 < nb_col:
+            elif l_conflict_line -4 <= nb_col:
                 f = u'%(nb){0}d.%(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
             else:
                 ldescription -= (l_conflict_line - nb_col)
-                f = u'%(nb){0}d. %(descrip)-{1}.{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f = u'%(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
         #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
         elif selected == 4:
@@ -2826,20 +2827,34 @@ class ControlSwitch(SmartQuestion):
             to_add = nb_col -size
             f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,lpotential_switch+9+to_add)
-            f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |'
-            f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3)
+            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
+            if l_conflict_line <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3+3)
+            elif l_conflict_line -1 <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3+3)
+            elif l_conflict_line -3 <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3+3)
+                        
+            else:
+                ldescription -= (l_conflict_line - nb_col)
+                f=u'| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, lpotential_switch-len_cswitch+len_switch+to_add-3+3)
+                
         # 1. DESCRIP KEY = VALUE_MAXSIZE
         elif selected == 5:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3)
             f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
-            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, lpotential_switch+len_switch)
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, lpotential_switch+len_switch+3)
         #| 1. DESCRIP KEY = VALUE_MAXSIZE |
         elif selected == 6: 
             f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9)
-            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |'
-            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch)
+            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch+3)
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
@@ -2850,8 +2865,8 @@ class ControlSwitch(SmartQuestion):
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
             f1 = f.format(lnb_key,ldescription,lname,2*lpotential_switch+3+9, ladd_info-4)
-            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |   %(add_info)-{5}s |'
-            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch, ladd_info-4)
+            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,lpotential_switch+len_switch+3, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
             upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
@@ -2862,10 +2877,10 @@ class ControlSwitch(SmartQuestion):
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
             f1 = f.format(lnb_key,ldescription+5,5+lname,2*lpotential_switch+3+9, ladd_info-5)
-            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s |     %(add_info)-{5}s|'
+            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
             f2 = f.format(lnb_key,ldescription+5,5+lname,
                           lpotential_switch+9,
-                          lpotential_switch+len_switch, ladd_info-5)
+                          lpotential_switch+len_switch+3, ladd_info-5)
         
         
         return upper, lower, f1, f2
@@ -2925,11 +2940,11 @@ class ControlSwitch(SmartQuestion):
                            'switch': self.color_for_value(key,self.switch[key]),
                            'add_info': self.print_info(key),
                            'switch_nc': self.switch[key],
-                           'strike_switch': u'\u0336'.join(self.switch[key]) + u'\u0336',
+                           'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }
             if key in self.inconsistent_keys:
                 # redefine the formatting here, due to the need to know the conflict size
-                upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
+                _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
                                          max_len_name, max_len_add_info, 
                                          max_len_potential_switch, max_nb_key,
                                          key=key)
@@ -2973,7 +2988,6 @@ class ControlSwitch(SmartQuestion):
                           -3, # Set any switch explicitly
                           -1, # Type '0', 'auto', 'done' or just press enter when you are done.
                          ] 
-            misc.sprint(len(to_remove), len(text)-nb_rows)
             to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
             text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
         

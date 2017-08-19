@@ -2740,37 +2740,13 @@ RESTART = %(mint_mode)s
             try:
                 self.cluster = cluster.from_name[cluster_name](**self.options)
             except KeyError:
-                if aMCatNLO and ('mg5_path' not in self.options or not self.options['mg5_path']):
-                    if not self.plugin_path:
-                        raise self.InvalidCmd('%s not native cluster type and no plugin directory available.' % cluster_name)
-                elif aMCatNLO:
-                    mg5dir = self.options['mg5_path']
-                    if mg5dir not in sys.path:
-                        sys.path.append(mg5dir)
-                    if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
-                        self.plugin_path.append(pjoin(mg5dir))
-                else:
-                    mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plugpath in self.plugin_path: 
-                    plugindirname = os.path.basename(plugpath)
-                    for plug in os.listdir(plugpath):
-                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                            try:
-                                __import__('%s.%s' % (plugindirname, plug))
-                            except Exception, error:
-                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it',plugindirname, plug)
-                                continue
-                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
-                            if not hasattr(plugin, 'new_cluster'):
-                                continue
-                            if not misc.is_plugin_supported(plugin):
-                                continue              
-                            if cluster_name in plugin.new_cluster:
-                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                                self.cluster = plugin.new_cluster[cluster_name](**self.options)
-                                break
+                cluster_class = misc.from_plugin_import(self.plugin_path, 
+                                            'new_cluster', cluster_name,
+                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                if cluster_class:
+                    self.cluster = cluster_class(**self.options)
         
         if self.cluster_mode == 2:
             try:
