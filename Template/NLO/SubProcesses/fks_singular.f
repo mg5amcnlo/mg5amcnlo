@@ -326,7 +326,7 @@ c respectively.
       include 'timing_variables.inc'
       include 'reweight.inc'
       include 'coupl.inc'
-      integer nofpartners,i
+      integer nofpartners,i,j,k
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
      $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
      $     ,xmcxsec(nexternal),g22,wgt1,xlum_mc_fact,fks_Hij
@@ -369,6 +369,12 @@ c respectively.
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
+      integer idup_s(nexternal-1,maxproc)
+      integer mothup_s(2,nexternal-1,maxproc)
+      integer icolup_s(2,nexternal-1,maxflow)
+      integer idup_h(nexternal,maxproc)
+      integer mothup_h(2,nexternal,maxproc)
+      integer icolup_h(2,nexternal,maxflow)
       integer icolup_tmp(2,nexternal-1)
       integer iemitter,ipartner,icolLO(2,nexternal-1)
       double precision wgt
@@ -381,6 +387,12 @@ C     To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
+      logical firsttime1
+      data firsttime1 /.true./
+      include 'leshouche_decl.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      save mothup_d, icolup_d, niprocs_d
 
       do i=1,2
         istup(i) = -1
@@ -427,93 +439,104 @@ c -- call to MC counterterm functions
             xmcxsec(npartner)=xmcxsec(npartner)+factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
-
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*) 'aaaaaaaaaaaaa'
-        do i=1,nexternal
-          write(*,*) 'i=', i, ' id=', idup(i,1)
-        enddo
-
-        do i=1,nexternal
-          write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-        enddo
-
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-       write(*,*)
-
-       call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
-
-       call clear_HEPEUP_event()
-c       call fill_HEPEUP_event_2(p, wgt, nexternal, idup, istup, mothup, icolup, spinup, emscav)
-       call fill_HEPEUP_event(p(0,1), wgt, jpart(1,1), nexternal, mu_r)
-       if (is_pythia_active.eq.0) then
-         call pythia_init_default()
-       endif
-       call pythia_setevent()
-       call pythia_next()
-       call pythia_stat()
-
-       call abort
-C     ---------------------------------------------------------------
-
-c$$$     colour and flavour information
 c$$$
-c$$$     this information is just commented, since I'd like to
-c$$$     avoid defining new arrays
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*) 'aaaaaaaaaaaaa'
+c$$$        do i=1,nexternal
+c$$$          write(*,*) 'i=', i, ' id=', idup(i,1)
+c$$$        enddo
 c$$$
-c$$$     the emitter is min(i_fks,j_fks)
+c$$$        do i=1,nexternal
+c$$$          write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+c$$$        enddo
 c$$$
-c$$$     its partner is ipartners(npartner)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
+c$$$       write(*,*)
 c$$$
-c$$$     the colour flow relevant to the current loop iteration is
-c$$$     completely specified by
-c$$$     ICOLUP(1,i,colorflow(npartner,cflows)), i=1,nexternal-1
-c$$$     ICOLUP(2,i,colorflow(npartner,cflows)), i=1,nexternal-1
-c$$$     if colorflow(npartner,cflows) = 0 the ICOLUP's are empty
-c$$$     the very same information ican be retrieved by
-c$$$     call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
-c$$$     and is in
-c$$$     jpart(4,i), i=1,nexternal-1
-c$$$     jpart(5,i), i=1,nexternal-1
-c$$$     
-c$$$     the identities of LO partons is IDUP(i,1), i=1,nexternal-1
+c$$$       call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
 c$$$
-c$$$     mothers of the various LO particles are
-c$$$     MOTHUP(1,i,1),i=1,nexternal-1
-c$$$     MOTHUP(2,i,1),i=1,nexternal-1
+c$$$       call clear_HEPEUP_event()
+c$$$c       call fill_HEPEUP_event_2(p, wgt, nexternal, idup, istup, mothup, icolup, spinup, emscav)
+c$$$       call fill_HEPEUP_event(p(0,1), wgt, jpart(1,1), nexternal, mu_r)
+c$$$       if (is_pythia_active.eq.0) then
+c$$$         call pythia_init_default()
+c$$$       endif
+c$$$       call pythia_setevent()
+c$$$       call pythia_next()
+c$$$       call pythia_stat()
 c$$$
-c$$$     below is an example of how to get S and H colour flows.
-c$$$
-c$$$            if(colorflow(npartner,cflows).ne.0d0)then
-c$$$               call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
-c$$$               write(*,*)colorflow(npartner,cflows)
-c$$$               write(*,*)(jpart(4,i), i=1,nexternal-1),' aaaa1'
-c$$$               write(*,*)(jpart(5,i), i=1,nexternal-1),' aaaa2'
-c$$$               call fill_icolor_H(colorflow(npartner,cflows),jpart)
-c$$$               write(*,*)(jpart(4,i), i=1,nexternal),' bbbb1'
-c$$$               write(*,*)(jpart(5,i), i=1,nexternal),' bbbb2'
-c$$$            endif
+c$$$       call abort
+c$$$C     ---------------------------------------------------------------
+
+c$$$  Colour and flavour 
+c$$$  the emitter is min(i_fks,j_fks)
+c$$$  its partner is ipartners(npartner)
+c     S-event kinematics read from born_leshouche.inc
+            do i=1,nexternal-1
+               IDUP_S(i,1)=IDUP(i,1)
+               MOTHUP_S(1,i,1)=MOTHUP(1,i,1)
+               MOTHUP_S(2,i,1)=MOTHUP(2,i,1)
+               do j=1,max_bcol
+                  ICOLUP_S(1,i,j)=ICOLUP(1,i,j)
+                  ICOLUP_S(2,i,j)=ICOLUP(2,i,j)
+               enddo
+            enddo            
+c     H-event kinematics, filled in read_leshouche_info
+            if (firsttime1)then
+               call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
+               firsttime1=.false.
+            endif
+            do j=1,niprocs_d(nFKSprocess)
+               do i=1,nexternal
+                  IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
+                  MOTHUP_H(1,i,j)=MOTHUP_D(nFKSprocess,1,i,j)
+                  MOTHUP_H(2,i,j)=MOTHUP_D(nFKSprocess,2,i,j)
+               enddo
+            enddo
+c     for colour flows, two alternatives
+c     1) access to all possible H-event flows, even colour subleading
+c     2) access to one H-event flow (picked at random) per S-event flow
+c$$$            do j=1,maxflow_used
+c$$$               do i=1,nexternal
+c$$$                  ICOLUP_H(1,i,j)=ICOLUP_D(nFKSprocess,1,i,j)
+c$$$                  ICOLUP_H(2,i,j)=ICOLUP_D(nFKSprocess,2,i,j)
+c$$$               enddo
+c$$$            enddo
+
+            do j=1,max_bcol
+               call fill_icolor_H(j,jpart)
+               do i=1,nexternal
+                  ICOLUP_H(1,i,j)=jpart(4,i)
+                  ICOLUP_H(2,i,j)=jpart(5,i)
+               enddo
+c$$$c     print
+c$$$               write(*,*)'gggggggg'
+c$$$               write(*,*)
+c$$$               write(*,*)j,(ICOLUP_H(1,i,j),i=1,nexternal)
+c$$$               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
+            enddo
+            
          enddo
       enddo
       if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,probne)
