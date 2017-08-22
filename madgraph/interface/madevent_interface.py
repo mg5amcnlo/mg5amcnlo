@@ -533,7 +533,7 @@ class AskRun(cmd.ControlSwitch):
                 self.available_module.add('Delphes')
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
-            if misc.has_f2py() or self.mother_interface.options['f2py_compiler']:
+            if misc.has_f2py() or options['f2py_compiler']:
                 self.available_module.add('reweight')
 
 #   old mode to activate the shower            
@@ -578,16 +578,16 @@ class AskRun(cmd.ControlSwitch):
         else:
             self.switch['shower'] = 'Not Avail'
 
-    def check_shower(self, value):
+    def check_value_shower(self, value):
         """check an entry is valid. return the valid entry in case of shortcut"""
         
         if value in self.get_allowed_shower():
             return True
         
         value =value.lower()
-        if value in ['py6','6','pythia_6']:
+        if value in ['py6','6','pythia_6'] and 'PY6' in self.available_module:
             return 'Pythia6'
-        elif value in ['py8','8','pythia_8']:
+        elif value in ['py8','8','pythia_8'] and 'PY8' in self.available_module:
             return 'Pythia8'
         else:
             return False

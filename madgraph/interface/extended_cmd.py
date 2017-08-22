@@ -2410,6 +2410,12 @@ class ControlSwitch(SmartQuestion):
         
         if '=' in line:
             base, value = line.split('=')
+            # allow 1=OFF
+            if base.isdigit() :
+                try:
+                    base = self.to_control[int(base)-1][0]
+                except:
+                    pass
         elif ' ' in line:
             base, value = line.split(' ', 1)
         elif hasattr(self, 'ans_%s' % line.lower()):
@@ -2711,7 +2717,7 @@ class ControlSwitch(SmartQuestion):
 
         info = '|'.join([v for v in options if v != self.switch[key]])
         if info == '':
-            info = 'type \'help %s\' for information.' % key
+            info = 'please install module'
         return info
 
     def question_formatting(self, nb_col = 80,
@@ -2915,8 +2921,11 @@ class ControlSwitch(SmartQuestion):
             
             info = self.print_info(key)
             if len(info)> max_len_add_info: max_len_add_info = len(info)
-            
-            max_k = max(len(k) for k in self.get_allowed(key))
+
+            if self.get_allowed(key):
+                max_k = max(len(k) for k in self.get_allowed(key))
+            else:
+                max_k = 0
             if max_k > max_len_potential_switch: max_len_potential_switch = max_k
 
         upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 

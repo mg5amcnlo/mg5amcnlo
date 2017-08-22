@@ -935,7 +935,7 @@ class AskRunNLO(cmd.ControlSwitch):
             self.available_module.add('MA5')
         if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
-            if misc.has_f2py() or self.mother_interface.options['f2py_compiler']:
+            if misc.has_f2py()  or options['f2py_compiler']:
                 self.available_module.add('reweight')
 #
 #   shorcut
