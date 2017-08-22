@@ -1118,6 +1118,8 @@ class AskRunNLO(cmd.ControlSwitch):
 #
     def get_allowed_madspin(self):
         """ """
+        if 'MadSpin' not in self.available_module:
+            return []
         if self.proc_characteristics['ninitial'] == 1:
             return ['OFF']
         else:
@@ -1137,7 +1139,15 @@ class AskRunNLO(cmd.ControlSwitch):
 #
 #   reweight
 #
-    get_allowed_reweight = get_allowed_madspin
+    def get_allowed_reweight(self):
+        """ """
+        
+        if 'reweight' not in self.available_module:
+            return []
+        if self.proc_characteristics['ninitial'] == 1:
+            return ['OFF']
+        else:
+            return ['ON', 'OFF']        
     
     def set_default_reweight(self):
         """initialise the switch for reweight"""
@@ -1174,6 +1184,7 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'ON' if 'ON' in self.get_allowed_madanalysis5 else False
         else:
             return False
+        
         
 #===============================================================================
 # aMCatNLOCmd

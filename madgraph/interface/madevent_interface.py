@@ -576,7 +576,7 @@ class AskRun(cmd.ControlSwitch):
         elif self.get_allowed_shower():
             self.switch['shower'] = 'OFF'
         else:
-            self.switch['shower'] = 'Not Avail'
+            self.switch['shower'] = 'Not Avail.'
 
     def check_value_shower(self, value):
         """check an entry is valid. return the valid entry in case of shortcut"""
@@ -658,7 +658,7 @@ class AskRun(cmd.ControlSwitch):
         elif self.get_allowed_detector():
             self.switch['detector'] = 'OFF'
         else: 
-            self.switch['detector'] =  'missing'
+            self.switch['detector'] =  'Not Avail.'
                 
 #   old mode to activate pgs            
     def ans_pgs(self, value=None):
