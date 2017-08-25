@@ -104,36 +104,37 @@ c Put the Hevent info in a common block
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
 
-C     ---------------------------------------------------------------
-C     START of example of a dynamic call to PY8 using current event
-C     ---------------------------------------------------------------
-      if (is_pythia_active.eq.-1) then
-C       Pythia8 was not available when the process was compiled!
-        continue
-      else
-        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
-C       Check if Pythia8 needs to be initialized
-        if (is_pythia_active.eq.0) then
-C         By default, we now use an empty command file
-          call pythia_init(pythia_cmd_file)
-        endif
-C       Send current event to Pythia8
-        call pythia_setevent()
-C       Ask Pythia8 to shower current event
-        call pythia_next()
-C       Ask Pythia8 to printout its internal record of the event
-        call pythia_stat()
-C       Read (i.e. simply access) the output HEPEUP event stream
-        call read_HEPEUP_event(p_read,wgt_read)
-C       And printout the corresponding event kinematics and weight
-        do j=1,2*nexternal-3
-          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
-        enddo
-        write(*,*) 'wgt_read=',wgt_read
-      endif
-C     ---------------------------------------------------------------
-C     END of example.
-C     ---------------------------------------------------------------
+cC     ---------------------------------------------------------------
+cC     START of example of a dynamic call to PY8 using current event
+cC     ---------------------------------------------------------------
+c      if (is_pythia_active.eq.-1) then
+cC       Pythia8 was not available when the process was compiled!
+c        continue
+c      else
+c        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
+cC       Check if Pythia8 needs to be initialized
+c        if (is_pythia_active.eq.0) then
+cC         By default, we now use an empty command file
+cC          call pythia_init(pythia_cmd_file)
+c          call pythia_init_default()
+c        endif
+cC       Send current event to Pythia8
+c        call pythia_setevent()
+cC       Ask Pythia8 to shower current event
+c        call pythia_next()
+cC       Ask Pythia8 to printout its internal record of the event
+c        call pythia_stat()
+cC       Read (i.e. simply access) the output HEPEUP event stream
+c        call read_HEPEUP_event(p_read,wgt_read)
+cC       And printout the corresponding event kinematics and weight
+c        do j=1,2*nexternal-3
+c          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
+c        enddo
+c        write(*,*) 'wgt_read=',wgt_read
+c      endif
+cC     ---------------------------------------------------------------
+cC     END of example.
+cC     ---------------------------------------------------------------
 
       call unweight_function(p_born,unwgtfun)
       if (unwgtfun.ne.0d0) then
@@ -443,6 +444,7 @@ c********************************************************************
       parameter (pi=3.1415926535897932385d0)
       include "nexternal.inc"
       include "coupl.inc"
+c      include "pmass.inc"
       include 'hep_event_streams.inc'
       double precision wgt, aqcd, aqed
 
@@ -453,6 +455,9 @@ c********************************************************************
       integer status(nexternal)
       integer spin(nexternal)
       double precision scale(2*nexternal)
+      double precision pmass(nexternal)
+      REAL*8 ZERO
+      PARAMETER (ZERO=0D0)
 
       integer npart, i, proc_code
       logical firsttime
@@ -460,6 +465,9 @@ c********************************************************************
 c
       scalup_out = scale(1)
       scalup_out = 1d9
+
+c     Read the particle masses.
+      include "pmass.inc"
 
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
@@ -501,7 +509,8 @@ c********************************************************************
         PUP_out(2,i)=p(2,i)
         PUP_out(3,i)=p(3,i)
         PUP_out(4,i)=p(0,i)
-        PUP_out(5,i)=dsqrt(p(0,i)*p(0,i) - p(1,i)*p(1,i) - p(2,i)*p(2,i) - p(3,i)*p(3,i))
+c        PUP_out(5,i)=dsqrt(max(0.0,p(0,i)*p(0,i) - p(1,i)*p(1,i) - p(2,i)*p(2,i) - p(3,i)*p(3,i)))
+        PUP_out(5,i)=pmass(i)
         VTIMUP_out(i)=0.d0
         SPINUP_out(i)=dfloat(spin(i))
       enddo

@@ -378,8 +378,8 @@ c respectively.
       integer icolup_tmp(2,nexternal-1)
       integer iemitter,ipartner,icolLO(2,nexternal-1)
       double precision wgt
-      integer spinup(nexternal-1)
-      integer istup(nexternal-1)
+      integer spinup_local(nexternal-1)
+      integer istup_local(nexternal-1)
       integer emscav(2*nexternal)
       double precision p_read(0:3,nexternal)
       double precision wgt_read
@@ -394,18 +394,20 @@ C     To access Pythia8 control variables
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       save mothup_d, icolup_d, niprocs_d
 
+      logical         Hevents
+      common/SHevents/Hevents
+      integer nexternal_now
+
       do i=1,2
-        istup(i) = -1
+        istup_local(i) = -1
       enddo
       do i=3,nexternal
-        istup(i) = 1
+        istup_local(i) = 1
       enddo
       do i=1,nexternal
-        spinup(i) = -9
+        spinup_local(i) = -9
       enddo
       pythia_cmd_file=''
-
-
 
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
@@ -531,14 +533,47 @@ c$$$            enddo
                   ICOLUP_H(2,i,j)=jpart(5,i)
                enddo
 c$$$c     print
-c$$$               write(*,*)'gggggggg'
-c$$$               write(*,*)
-c$$$               write(*,*)j,(ICOLUP_H(1,i,j),i=1,nexternal)
-c$$$               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
+c               write(*,*)'gggggggg'
+c               write(*,*)
+c               write(*,*)j,(ICOLUP_H(1,i,j),i=1,nexternal)
+c               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
+
+               write (*,*) 'Color configuration j=', j
+               do i=1,nexternal
+                 write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
+     &                      ' col_h=', icolup_h(1,i,j), ' acol_h=', icolup_h(2,i,j)
+               enddo
+               do i=1,nexternal
+                 write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+               enddo
+               nexternal_now=nexternal
+
+               call clear_HEPEUP_event()
+               call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+     &                istup_local, mothup_h, icolup_h, spinup_local, emscav)
+               if (is_pythia_active.eq.0) then
+                 call pythia_init_default()
+               endif
+               call pythia_setevent()
+               call pythia_next()
+               call pythia_stat()
+
             enddo
             
          enddo
       enddo
+
+
+cccccccccccccccccc
+cccccccccccccccccc
+cccccccccccccccccc
+cccccccccccccccccc
+      if ( hevents ) call abort
+cccccccccccccccccc
+cccccccccccccccccc
+cccccccccccccccccc
+
+
       if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,probne)
 c -- end of call to MC counterterm functions
 
