@@ -378,8 +378,8 @@ c respectively.
       integer icolup_tmp(2,nexternal-1)
       integer iemitter,ipartner,icolLO(2,nexternal-1)
       double precision wgt
-      integer spinup_local(nexternal-1)
-      integer istup_local(nexternal-1)
+      integer spinup_local(nexternal)
+      integer istup_local(nexternal)
       integer emscav(2*nexternal)
       double precision p_read(0:3,nexternal)
       double precision wgt_read
@@ -441,55 +441,6 @@ c -- call to MC counterterm functions
             xmcxsec(npartner)=xmcxsec(npartner)+factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
-c$$$
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*) 'aaaaaaaaaaaaa'
-c$$$        do i=1,nexternal
-c$$$          write(*,*) 'i=', i, ' id=', idup(i,1)
-c$$$        enddo
-c$$$
-c$$$        do i=1,nexternal
-c$$$          write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-c$$$        enddo
-c$$$
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$       write(*,*)
-c$$$
-c$$$       call fill_icolor_S(colorflow(npartner,cflows),jpart,lc)
-c$$$
-c$$$       call clear_HEPEUP_event()
-c$$$c       call fill_HEPEUP_event_2(p, wgt, nexternal, idup, istup, mothup, icolup, spinup, emscav)
-c$$$       call fill_HEPEUP_event(p(0,1), wgt, jpart(1,1), nexternal, mu_r)
-c$$$       if (is_pythia_active.eq.0) then
-c$$$         call pythia_init_default()
-c$$$       endif
-c$$$       call pythia_setevent()
-c$$$       call pythia_next()
-c$$$       call pythia_stat()
-c$$$
-c$$$       call abort
-c$$$C     ---------------------------------------------------------------
 
 c$$$  Colour and flavour 
 c$$$  the emitter is min(i_fks,j_fks)
