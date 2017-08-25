@@ -129,3 +129,78 @@ c born_leshouche.inc file.
       return 
       end
 
+      subroutine read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
+C read the various information from the configs_and_props_info.dat file
+      implicit none
+      include "nexternal.inc"
+      integer itmp_array(nexternal)
+      integer i,j,k,l
+      character *200 buff
+      include 'leshouche_decl.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'born_maxamps.inc'
+c$$$      integer idup(nexternal,maxproc)
+c$$$      integer mothup(2,nexternal,maxproc)
+c$$$      integer icolup(2,nexternal,maxflow)
+c$$$      include 'born_leshouche.inc'
+c$$$      if (fks_configs.eq.1) then
+c$$$         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+c$$$c SPECIAL for [LOonly=QCD] process. Simply use the information from the
+c$$$c born_leshouche.inc file.
+c$$$            do j=1,maxproc
+c$$$               do i=1,nexternal-1
+c$$$                  idup_d(1,i,j)=idup(i,j)
+c$$$                  mothup_d(1,1,i,j)=mothup(1,i,j)
+c$$$                  mothup_d(1,2,i,j)=mothup(2,i,j)
+c$$$               enddo
+c$$$               idup_d(1,nexternal,j)=-21
+c$$$               mothup_d(1,1,nexternal,j)=mothup(1,fks_j_d(1),j)
+c$$$               mothup_d(1,2,nexternal,j)=mothup(2,fks_j_d(1),j)
+c$$$            enddo
+c$$$            do j=1,maxflow
+c$$$               do i=1,nexternal-1
+c$$$                  icolup_d(1,1,i,j)=icolup(1,i,j)
+c$$$                  icolup_d(1,2,i,j)=icolup(2,i,j)
+c$$$               enddo
+c$$$               icolup_d(1,1,nexternal,j)=-99999 ! should not be used
+c$$$               icolup_d(1,2,nexternal,j)=-99999
+c$$$            enddo
+c$$$            niprocs_d(1)=maxproc_used
+c$$$            return
+c$$$         endif
+c$$$      endif
+
+      open(unit=78, file='leshouche_info.dat', status='old')
+      do while (.true.)
+        read(78,'(a)',end=999) buff
+        if (buff(:1).eq.'#') cycle
+        if (buff(:1).eq.'I') then
+        ! idup
+        ! I  i   j   id1 ..idn -> IDUP_D(i,k,j)=idk
+          read(buff(2:),*) i,j,(itmp_array(k),k=1,nexternal)
+          do k=1,nexternal
+            idup_d(i,k,j)=itmp_array(k)
+          enddo
+          niprocs_d(i)=j
+        else if (buff(:1).eq.'M') then
+        ! idup
+        ! I  i   j   l   id1 ..idn -> MOTHUP_D(i,j,k,l)=idk
+          read(buff(2:),*) i,j,l,(itmp_array(k),k=1,nexternal)
+          do k=1,nexternal
+            mothup_d(i,j,k,l)=itmp_array(k)
+          enddo
+        else if (buff(:1).eq.'C') then
+        ! idup
+        ! I  i   j   l   id1 ..idn -> ICOLUP_D(i,j,k,l)=idk
+          read(buff(2:),*) i,j,l,(itmp_array(k),k=1,nexternal)
+          do k=1,nexternal
+            icolup_d(i,j,k,l)=itmp_array(k)
+          enddo
+        endif
+      enddo
+ 999  continue
+      close(78)
+
+      return 
+      end
