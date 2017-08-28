@@ -1083,7 +1083,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if alias:
             choices += alias.keys()
         
-
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
         
@@ -1097,10 +1096,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
         
-        if not force:
+        if force:
             answer = default
         else:
-                
             answer = self.check_answer_in_input_file(question_instance, default, path_msg)
             if answer is not None:
                 if answer in alias:
@@ -1185,8 +1183,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if not line:
             # Comment or empty line, pass to the next one
             return self.check_answer_in_input_file(question_instance, default, path)
+
         options = question_instance.allow_arg
         if line in options or line.lower() in options:
+            return line
+        elif '%s;' % line in options or '%s;' % line.lower() in options:
             return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
