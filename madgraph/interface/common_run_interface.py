@@ -483,6 +483,12 @@ class CheckValidForCmd(object):
             args.remove('-from_cards')
             opts.append('-from_cards')
 
+        if any(t.startswith('--plugin=') for t in args):
+            plugin = [t  for t in args if t.startswith('--plugin')][0]
+            args.remove(plugin)
+            opts.append(plugin)
+            
+
         if len(args) == 0:
             if self.run_name:
                 args.insert(0, self.run_name)
@@ -498,6 +504,7 @@ class CheckValidForCmd(object):
         args[0] = self.get_events_path(args[0])
 
         args += opts
+
 
     def check_check_events(self,args):
         """Check the argument for decay_events command
@@ -1784,6 +1791,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
+
         #### Utility function
         def check_multicore(self):
             """ determine if the cards are save for multicore use"""
@@ -1835,7 +1843,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF']:
             plugin=self.switch['reweight']
             
-            
+
             
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
@@ -1857,6 +1865,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # load the name of the event file
         args = self.split_arg(line) 
+        if plugin and '--plugin=' not in line:
+            args.append('--plugin=%s' % plugin)
+        
 
         if not self.force_run:
             # forbid this function to create an empty item in results.
@@ -1876,8 +1887,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not isinstance(self, cmd.CmdShell):
                 command.append('--web')
             command.append('reweight')
-            if plugin:
-                command.append('--plugin=%s' % plugin)
             
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
@@ -1952,6 +1961,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     all_lhe.append('%s_%s.lhe' % (new_args[0],i))
                     if '-from_cards' not in command:
                         new_command.append('-from_cards')
+                    if plugin:
+                        new_command.append('--plugin=%s' % plugin)
                     if i==0:
                         if __debug__:
                             stdout = None
@@ -2012,7 +2023,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
-        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             

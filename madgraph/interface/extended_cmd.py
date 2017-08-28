@@ -1164,6 +1164,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if line is None:
             line = self.get_stored_line()
             # line define if a previous answer was not answer correctly 
+
         if not line:
             try:
                 line = self.inputfile.next()
@@ -2454,7 +2455,7 @@ class ControlSwitch(SmartQuestion):
             return
         
         self.value = 'reask'   
-        base = base.lower()
+        base = base.lower()               
         if hasattr(self, 'ans_%s' % base):
             if value and not self.is_case_sensitive(base):
                 value = value.lower()
@@ -2729,7 +2730,7 @@ class ControlSwitch(SmartQuestion):
 
         info = '|'.join([v for v in options if v != self.switch[key]])
         if info == '':
-            info = 'please install module'
+            info = 'Please install module'
         return info
 
     def question_formatting(self, nb_col = 80,
