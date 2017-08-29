@@ -1831,7 +1831,12 @@ class RestrictModel(model_reader.ModelReader):
                 for key, value in vertex['couplings'].items():
                     if value == coupling:
                         vertex['couplings'][key] = main
-
+                    elif value == '-%s' % coupling:
+                        if main.startswith('-'):
+                            vertex['couplings'][key] = main[1:]
+                        else:
+                            vertex['couplings'][key] = '-%s' % main
+                        
             # replace the coupling appearing in the particle counterterm
             particles_ct = [ pct for pct in self.coupling_pos[coupling] if 
                          isinstance(pct, tuple)]
