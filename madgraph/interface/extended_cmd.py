@@ -2323,7 +2323,6 @@ class ControlSwitch(SmartQuestion):
         self.inconsistent_details = {} # flag to list 
         self.last_changed = []         # keep the order in which the flag have been modified 
                                        # to choose the resolution order of conflict
-        self.first_conflict = True     # allow to have a dedicated info at the first conflict 
         #initialise the main return value
         self.switch = {}
         for key, _ in to_control:
@@ -2606,12 +2605,7 @@ class ControlSwitch(SmartQuestion):
         
         if not self.inconsistent_details:
             return
-        
-        # If this is the first time, print a explanation message 
-        if self.first_conflict:
-            self.first_conflict = False
-            logger.warning("Your current setup is not fully consistent, if you do not continue to modify it. It will be modifed as follow.")
-  
+          
         # review the status of all conflict
         for key2 in dict(self.inconsistent_details):
             for conflict in list(self.inconsistent_details[key2]):
@@ -2793,7 +2787,6 @@ class ControlSwitch(SmartQuestion):
         selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
         selected = selected[-1]
         
-        selected=5
         # upper and lower band
         if selected !=0:
             size = list_length[selected-1]
@@ -2913,9 +2906,9 @@ class ControlSwitch(SmartQuestion):
         try:
             nb_rows, nb_col = os.popen('stty size', 'r').read().split()
             nb_rows, nb_col = int(nb_rows), int(nb_col)
-        except Exception:
+        except Exception,error:
             nb_rows, nb_col = 20, 80
-      
+        
         #compute information on the length of element to display
         max_len_description = 0 
         max_len_switch = 0

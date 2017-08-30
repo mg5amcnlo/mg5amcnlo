@@ -585,9 +585,9 @@ class AskRun(cmd.ControlSwitch):
             return True
         
         value =value.lower()
-        if value in ['py6','6','pythia_6'] and 'PY6' in self.available_module:
+        if value in ['py6','p6','pythia_6'] and 'PY6' in self.available_module:
             return 'Pythia6'
-        elif value in ['py8','8','pythia_8'] and 'PY8' in self.available_module:
+        elif value in ['py8','p8','pythia_8'] and 'PY8' in self.available_module:
             return 'Pythia8'
         else:
             return False
