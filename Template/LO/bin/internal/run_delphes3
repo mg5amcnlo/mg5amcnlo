@@ -23,6 +23,7 @@ if [ ! -e $delphesdir/DelphesSTDHEP ]; then
   exit
 fi
 
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
 if [ ${file: -3} == ".gz" ]
 then
   if [ ${file: -7} == ".hep.gz" ]
