@@ -1158,12 +1158,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
 
+
         if not self.inputfile:
             return None# interactive mode
 
         if line is None:
             line = self.get_stored_line()
             # line define if a previous answer was not answer correctly 
+
         if not line:
             try:
                 line = self.inputfile.next()
@@ -1213,7 +1215,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
-            
+        
+        if hasattr(question_instance, 'special_check_answer_in_input_file'):
+            out = question_instance.special_check_answer_in_input_file(line, default)
+            if out is not None:
+                return out
+        else:
+            misc.sprint('No special check')
+        
             
         # No valid answer provides
         if self.haspiping:
@@ -2343,6 +2352,32 @@ class ControlSwitch(SmartQuestion):
 
         super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
+
+    def special_check_answer_in_input_file(self, line, default):
+        """this is called after the standard check if the asnwer were not valid
+           in particular all input in the auto-completion have been already validated.
+           (this include all those with ans_xx and the XXXX=YYY for YYY in self.get_allowed(XXXX)
+           We just check here the XXXX = YYYY for YYYY not in self.get_allowed(XXXX)
+           but for which self.check_value(XXXX,YYYY) returns True.
+           We actually allowed XXXX = YYY even if check_value is False to allow case
+           where some module are missing
+        """
+
+        if '=' not in line:
+            if line.strip().startswith('set'):
+                self.mother_interface.store_line(line)
+                return str(default) 
+            return None
+        key, value = line.split('=',1)
+        if key in self.switch:
+            return line
+        if key in [str(i+1) for i in range(len(self.to_control))]:
+            return line
+
+        return None
+        
+        
+        
 
 
     def set_default_switch(self):
