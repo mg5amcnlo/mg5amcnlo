@@ -925,6 +925,7 @@ class AskRunNLO(cmd.ControlSwitch):
         self.me_dir = opt['mother_interface'].me_dir
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
 
@@ -937,6 +938,10 @@ class AskRunNLO(cmd.ControlSwitch):
             self.available_module.add('MadSpin')
             if misc.has_f2py()  or options['f2py_compiler']:
                 self.available_module.add('reweight')
+        if options['pythia8_path']:
+            self.available_module.add('PY8')
+        if options['hwpp_path'] and options['thepeg_path'] and options['hepmc_path']:
+            self.available_module.add('HW7')
 #
 #   shorcut
 #
@@ -1042,6 +1047,15 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return self.red % switch_value
     
+    def color_for_shower(self, switch_value):
+         
+        if switch_value in ['ON']:
+            return self.green % switch_value
+        elif switch_value in self.get_allowed('shower'):
+            return self.green % switch_value
+        else:
+            return self.red % switch_value    
+    
     def consistency_fixed_order_shower(self, vfix, vshower):
         """ consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
@@ -1070,7 +1084,7 @@ class AskRunNLO(cmd.ControlSwitch):
            -> return value should be None or "replace_YY" 
         """    
         
-        if vshower == 'ON' and vfix == 'ON':
+        if vshower != 'OFF' and vfix == 'ON':
             return 'OFF'
         return None
 
@@ -1083,19 +1097,53 @@ class AskRunNLO(cmd.ControlSwitch):
 #
     def get_allowed_shower(self):
         """ """
+        
+        if hasattr(self, 'allowed_shower'):
+            return self.allowed_shower
+        
         if self.proc_characteristics['ninitial'] == 1:
+            self.allowed_shower = ['OFF']
             return ['OFF']
         else:
-            return ['ON', 'OFF']
+            allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            if 'PY8' in self.available_module:
+                allowed.append('PYTHIA8')
+            if 'HW7' in self.available_module:
+                allowed.append('HERWIGPP')
+            
+            self.allowed_shower = allowed
+            
+            return allowed
+    
+    def check_value_shower(self, value):
+        """ """
         
+        if value.upper() in self.get_allowed_shower():
+            return True
+        if value.upper() in ['PYTHIA8', 'HERWIGPP']:
+            return True
+        if value.upper() == 'ON':
+            return self.run_card['parton_shower']
+        if value.upper() in ['P8','PY8','PYTHIA_8']:
+            return 'PYTHIA8'
+        if value.upper() in ['PY6','P6','PY6PT', 'PYTHIA_6', 'PYTHIA_6PT','PYTHIA6PT','PYTHIA6_PT']:
+            return 'PYTHIA6PT'
+        if value.upper() in ['PY6Q', 'PYTHIA_6Q','PYTHIA6Q', 'PYTHIA6_Q']:
+            return 'PYTHIA6Q'
+        if value.upper() in ['HW7', 'HERWIG7']:
+            return 'HERWIG7'
+        if value.upper() in ['HW++', 'HWPP', 'HERWIG++']:
+            return 'HERWIGPP'
+    
     def set_default_shower(self): 
         
         if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'
             return 
          
-        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):  
-            self.switch['shower'] = 'ON'
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            self.switch['shower'] = self.run_card['parton_shower']  
+            #self.switch['shower'] = 'ON'
             self.switch['fixed_order'] = "OFF"
         else:
             self.switch['shower'] = 'OFF'
@@ -1109,7 +1157,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def consistency_madanalysis_shower(self, vma5, vshower):
         
-        if vma5=='ON' and vshower =='OFF':
+        if vma5=='ON' and vshower == 'OFF':
             return 'ON'
         return None
     
@@ -5121,14 +5169,14 @@ RESTART = %(mint_mode)s
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
             if switch['order'] == 'LO':
-                if switch['shower'] == 'ON':
+                if switch['shower'] != 'OFF':
                     mode = 'aMC@LO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'LO'
                 else:
                     mode =  'noshowerLO'
             elif switch['order'] == 'NLO':
-                if switch['shower'] == 'ON':
+                if switch['shower'] != 'OFF':
                     mode = 'aMC@NLO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'NLO'
@@ -5170,6 +5218,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         # automatically switch to keep_wgt option
         first_cmd = [] # force to change some switch
+        if switch['shower'] != 'OFF':
+            first_cmd.append('set parton_shower %s' % switch['shower'])
         
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
