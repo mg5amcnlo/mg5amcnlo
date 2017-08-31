@@ -929,6 +929,20 @@ class AskRunNLO(cmd.ControlSwitch):
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
 
+    @property
+    def answer(self):
+        
+        out = super(AskRunNLO, self).answer
+        if out['shower'] == 'HERWIG7':
+            out['shower'] = 'HERWIGPP'
+        
+        if out['shower'] not in self.get_allowed('shower') or out['shower'] =='OFF':
+            out['runshower'] = False
+        else:
+            out['runshower'] = True
+        return out
+
+
     def check_available_module(self, options):
         
         self.available_module = set()
@@ -1134,6 +1148,8 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'HERWIG7'
         if value.upper() in ['HW++', 'HWPP', 'HERWIG++']:
             return 'HERWIGPP'
+        if value.upper() in ['HW6', 'HERWIG_6']:
+            return 'HERWIG6'
     
     def set_default_shower(self): 
         
@@ -5169,14 +5185,14 @@ RESTART = %(mint_mode)s
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
             if switch['order'] == 'LO':
-                if switch['shower'] != 'OFF':
+                if switch['runshower']:
                     mode = 'aMC@LO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'LO'
                 else:
                     mode =  'noshowerLO'
             elif switch['order'] == 'NLO':
-                if switch['shower'] != 'OFF':
+                if switch['runshower']:
                     mode = 'aMC@NLO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'NLO'
@@ -5185,8 +5201,15 @@ RESTART = %(mint_mode)s
         logger.info('will run in mode: %s' % mode)                
 
         if mode == 'noshower':
-            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
-Please, shower the Les Houches events before using them for physics analyses.""")            
+            if switch['shower'] == 'OFF':
+                logger.warning("""You have chosen not to run a parton shower.
+    NLO events without showering are NOT physical.
+    Please, shower the LesHouches events before using them for physics analyses.
+    You have to choose NOW which parton-shower you WILL use and specify it in the run_card.""")   
+            else:
+                logger.info("""Your Parton-shower choice is not available for running.
+    The events will be generated for the  associated Parton-Shower.
+    Remember that NLO events without showering are NOT physical.""", '$MG:color:BLACK')           
 
         
         # specify the cards which are needed for this run.
@@ -5220,6 +5243,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
         first_cmd = [] # force to change some switch
         if switch['shower'] != 'OFF':
             first_cmd.append('set parton_shower %s' % switch['shower'])
+        elif switch['fixed_order'] == 'ON':
+            first_cmd.append('set parton_shower not_possible_for_fix_order_run')
         
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)

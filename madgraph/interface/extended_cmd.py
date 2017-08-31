@@ -2481,7 +2481,7 @@ class ControlSwitch(SmartQuestion):
     def answer(self):
         
         #avoid key to Not Avail in the output
-        for key in self.switch:
+        for key,_ in self.to_control:
             if not self.check_value(key, self.switch[key]):
                 self.switch[key] = 'OFF'
         
