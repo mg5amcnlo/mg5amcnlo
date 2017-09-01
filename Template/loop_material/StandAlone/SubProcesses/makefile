@@ -94,6 +94,9 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst $(DOTF),$(
 $(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
 
+$(DOTO) : $(DOTF)
+	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
+
 $(OLP): $(OLP_PROCESS) $(LIBS)
 	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)
 
