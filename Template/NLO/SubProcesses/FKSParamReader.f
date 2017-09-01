@@ -22,6 +22,10 @@
           goto 901
       endif
 
+!     Make sure to have default parameters if not set 
+!     in the FKSParams.dat card (if it is an old one for instance)
+      call DefaultFKSParam()
+
       open(68, file=fileName, err=676, action='READ')
       do
          read(68,*,end=999) buff
