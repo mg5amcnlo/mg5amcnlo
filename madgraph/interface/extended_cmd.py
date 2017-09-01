@@ -1158,6 +1158,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
 
+
         if not self.inputfile:
             return None# interactive mode
 
@@ -1214,7 +1215,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
-            
+        
+        if hasattr(question_instance, 'special_check_answer_in_input_file'):
+            out = question_instance.special_check_answer_in_input_file(line, default)
+            if out is not None:
+                return out
+        else:
+            misc.sprint('No special check')
+        
             
         # No valid answer provides
         if self.haspiping:
@@ -2324,7 +2332,6 @@ class ControlSwitch(SmartQuestion):
         self.inconsistent_details = {} # flag to list 
         self.last_changed = []         # keep the order in which the flag have been modified 
                                        # to choose the resolution order of conflict
-        self.first_conflict = True     # allow to have a dedicated info at the first conflict 
         #initialise the main return value
         self.switch = {}
         for key, _ in to_control:
@@ -2345,6 +2352,32 @@ class ControlSwitch(SmartQuestion):
 
         super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
+
+    def special_check_answer_in_input_file(self, line, default):
+        """this is called after the standard check if the asnwer were not valid
+           in particular all input in the auto-completion have been already validated.
+           (this include all those with ans_xx and the XXXX=YYY for YYY in self.get_allowed(XXXX)
+           We just check here the XXXX = YYYY for YYYY not in self.get_allowed(XXXX)
+           but for which self.check_value(XXXX,YYYY) returns True.
+           We actually allowed XXXX = YYY even if check_value is False to allow case
+           where some module are missing
+        """
+
+        if '=' not in line:
+            if line.strip().startswith('set'):
+                self.mother_interface.store_line(line)
+                return str(default) 
+            return None
+        key, value = line.split('=',1)
+        if key in self.switch:
+            return line
+        if key in [str(i+1) for i in range(len(self.to_control))]:
+            return line
+
+        return None
+        
+        
+        
 
 
     def set_default_switch(self):
@@ -2483,7 +2516,7 @@ class ControlSwitch(SmartQuestion):
     def answer(self):
         
         #avoid key to Not Avail in the output
-        for key in self.switch:
+        for key,_ in self.to_control:
             if not self.check_value(key, self.switch[key]):
                 self.switch[key] = 'OFF'
         
@@ -2607,12 +2640,7 @@ class ControlSwitch(SmartQuestion):
         
         if not self.inconsistent_details:
             return
-        
-        # If this is the first time, print a explanation message 
-        if self.first_conflict:
-            self.first_conflict = False
-            logger.warning("Your current setup is not fully consistent, if you do not continue to modify it. It will be modifed as follow.")
-  
+          
         # review the status of all conflict
         for key2 in dict(self.inconsistent_details):
             for conflict in list(self.inconsistent_details[key2]):
@@ -2794,7 +2822,6 @@ class ControlSwitch(SmartQuestion):
         selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
         selected = selected[-1]
         
-        selected=5
         # upper and lower band
         if selected !=0:
             size = list_length[selected-1]
@@ -2914,9 +2941,9 @@ class ControlSwitch(SmartQuestion):
         try:
             nb_rows, nb_col = os.popen('stty size', 'r').read().split()
             nb_rows, nb_col = int(nb_rows), int(nb_col)
-        except Exception:
+        except Exception,error:
             nb_rows, nb_col = 20, 80
-      
+        
         #compute information on the length of element to display
         max_len_description = 0 
         max_len_switch = 0
