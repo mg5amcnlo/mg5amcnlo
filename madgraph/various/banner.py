@@ -1929,8 +1929,8 @@ class PY8Card(ConfigFile):
         # If 'LHEFInputs:nSubruns' is not user_set, then make sure it is
         # updated at least larger or equal to the maximum SubRunID
         if 'LHEFInputs:nSubruns'.lower() not in self.user_set and \
-             len(subruns_to_write)>0 and self['LHEFInputs:nSubruns']<\
-                                                   max(subruns_to_write.keys()):
+             len(subruns_to_write)>0 and 'LHEFInputs:nSubruns' in self\
+             and self['LHEFInputs:nSubruns']<max(subruns_to_write.keys()):
             logger.info("Updating PY8 parameter 'LHEFInputs:nSubruns' to "+
           "%d so as to cover all defined subruns."%max(subruns_to_write.keys()))
             self['LHEFInputs:nSubruns'] = max(subruns_to_write.keys())
