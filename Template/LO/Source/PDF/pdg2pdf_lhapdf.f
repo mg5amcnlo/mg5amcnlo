@@ -22,6 +22,11 @@ C
       data pdflast/30*-99d9/
       data imemlast/2*-99/
 
+      if (ih.eq.9) then
+         pdg2pdf =1d0
+         return
+      endif
+
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.

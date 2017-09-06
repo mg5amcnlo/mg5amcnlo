@@ -3294,7 +3294,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
-            cross, error = sum_html.make_all_html_results(self)
+            cross, error = self.make_make_all_html_results()
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)  
             self.exec_cmd("print_results %s" % self.run_name,
@@ -3444,7 +3444,7 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             self.refine_mode = "new"
             
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 
@@ -6429,7 +6429,7 @@ class GridPackCmd(MadEventCmd):
         combine_runs.CombineRuns(self.me_dir)
         
         #update html output
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
         

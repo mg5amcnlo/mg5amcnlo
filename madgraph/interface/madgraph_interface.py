@@ -1498,7 +1498,6 @@ This will take effect only in a NEW terminal
     def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
-
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         elif args:
@@ -7273,7 +7272,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
 
         noclean = '-noclean' in args
         force = '-f' in args

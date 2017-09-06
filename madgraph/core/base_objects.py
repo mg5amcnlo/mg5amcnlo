@@ -1667,7 +1667,7 @@ class Model(PhysicsObject):
                 self.add_param(newsw2, ['external'])
             # Force a refresh of the parameter dictionary
             self.parameters_dict = None
-            return true
+            return True
 
         elif mode==set(['mz','mw','alpha']):
             # For now, all we support is to go from mz, Gf, alpha to mz, mw, alpha
@@ -3353,9 +3353,15 @@ class Process(PhysicsObject):
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
 
-        return filter(lambda leg: leg.get('state') == False and\
+        legs = filter(lambda leg: leg.get('state') == False and\
                        leg.get('number') == number,
-                       self.get('legs'))[0].get('id')
+                       self.get('legs'))
+        if not legs:
+            return None
+        else:
+            return legs[0].get('id')
+        
+        return [0].get('id')
 
     def get_initial_final_ids(self):
         """return a tuple of two tuple containing the id of the initial/final

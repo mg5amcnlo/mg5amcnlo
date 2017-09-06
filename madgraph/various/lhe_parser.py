@@ -1741,8 +1741,11 @@ class Event(list):
         return tag, order
     
     @staticmethod
-    def mass_shuffle(momenta, sqrts, new_mass):
+    def mass_shuffle(momenta, sqrts, new_mass, new_sqrts=None):
         """use the RAMBO method to shuffle the PS. initial sqrts is preserved."""
+        
+        if not new_sqrts:
+            new_sqrts = sqrts
         
         oldm = [p.mass_sqr for p in momenta]
         newm = [m**2 for m in new_mass]
@@ -1753,13 +1756,13 @@ class Event(list):
                 momenta[i] = m.boost_to_restframe(tot_mom)
         
         # this is the equation 4.3 of RAMBO paper        
-        f = lambda chi: sqrts - sum(math.sqrt(max(0, M + chi**2*(p.E**2-m))) 
+        f = lambda chi: new_sqrts - sum(math.sqrt(max(0, M + chi**2*(p.E**2-m))) 
                                     for M,p,m in zip(newm, momenta,oldm))
         # this is the derivation of the function
         df = lambda chi: -1* sum(chi*(p.E**2-m)/math.sqrt(max(0,(p.E**2-m)*chi**2+M))
             for M,p,m in zip(newm, momenta,oldm))
         
-        if sum(new_mass) > sqrts:
+        if sum(new_mass) > new_sqrts:
             return momenta, 0
         try:
             chi = misc.newtonmethod(f, df, 1.0, error=1e-7,maxiter=1000)
@@ -1823,6 +1826,74 @@ class Event(list):
                 new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
                 ind+=1
         return jac
+    
+    def change_sqrts(self, new_sqrts):
+        """routine to rescale the momenta to change the invariant mass"""
+        
+        old_momenta = []
+        incoming = []
+        masses = []        
+        for part in self:
+            if part.status == -1:
+                incoming.append(FourMomentum(part))
+            if part.status == 1:
+                old_momenta.append(FourMomentum(part))
+                masses.append(part.mass)
+        
+        p_init = FourMomentum()
+        p_inits = []
+        n_init = 0
+        for p in incoming:
+            n_init +=1
+            p_init += p
+            p_inits.append(p)
+        old_sqrts = p_init.mass
+
+        new_mom, jac = self.mass_shuffle(old_momenta, old_sqrts, masses, new_sqrts=new_sqrts)
+        
+        #modify the momenta of the particles:
+        ind =0
+        for part in self:
+            if part.status==1:
+                part.E, part.px, part.py, part.pz, part.mass = \
+                new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
+                ind+=1
+        
+        #change the initial state
+        p_init = FourMomentum()
+        for part in self:
+            if part.status==1:
+                p_init += part
+        if n_init == 1:
+            for part in self:
+                if part.status == -1:
+                    part.E, part.px, part.py, part.pz = \
+                                 p_init.E, p_init.px, p_init.py, p_init.pz
+        elif n_init ==2:
+            if not misc.equal(p_init.px, 0) or not  misc.equal(p_init.py, 0):
+                raise Exception
+            if not misc.equal(p_inits[0].px, 0) or not  misc.equal(p_inits[0].py, 0):
+                raise Exception            
+            #assume that initial energy is written as
+            # p1 = (sqrts/2*exp(eta),   0, 0 , E1)
+            # p2 = (sqrts/2*exp(-eta),   0, 0 , -E2)
+            # keep eta fix
+            eta = math.log(2*p_inits[0].E/old_sqrts)
+            new_p = [[new_sqrts/2*math.exp(eta), 0., 0., new_sqrts/2*math.exp(eta)],
+                     [new_sqrts/2*math.exp(-eta), 0., 0., -new_sqrts/2*math.exp(-eta)]] 
+            
+            ind=0
+            for part in self:
+                if part.status == -1:
+                    part.E, part.px, part.py, part.pz = new_p[ind]
+                    ind+=1
+                    if ind ==2:
+                        break
+        else:
+            raise Exception
+                            
+        return jac        
+        
     
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
@@ -2598,7 +2669,7 @@ class OneNLOWeight(object):
         #     scale/pdf weights). That means that in practice this weight is not used.
         try:
             self.bias_wgt = float(data[flag+15])
-        except KeyError:
+        except IndexError:
             self.bias_wgt = 1.0
             
         if not keep_bias:

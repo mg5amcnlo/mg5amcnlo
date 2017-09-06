@@ -1087,16 +1087,17 @@ class ReweightInterface(extended_cmd.Cmd):
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
             
-        if self.output_type != 'default':
-            if len(type_nlo) !=1:
-                raise Exception
+        if self.output_type != 'default' and len(type_nlo)==1 and '_lo' not in type_nlo:
             to_write = [partial[i]/ref_wgts[i]*partial_check[i]
                              if 0.85<avg[i]<1.15 else 0
                               for i in range(len(ref_wgts))]
             for cevent in event.nloweight.cevents:
                 for c_wgt in cevent.wgts:
                         c_wgt.ref_wgt = to_write.pop(0)
-                        c_wgt.pwgt = wgt_tree.pop(0)
+                        if '_tree' in type_nlo:
+                            c_wgt.pwgt = wgt_tree.pop(0)
+                        else:
+                            c_wgt.pwgt = wgt_virt.pop(0)
             assert not to_write
             assert not wgt_tree
         return final_weight 
@@ -1156,15 +1157,20 @@ class ReweightInterface(extended_cmd.Cmd):
         
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
-            nhel = hel_dict[tuple(hel_order)]
-            if event[1].status == -1: #check if this is a 2 >N processes
-                # need to pass to the rest-frame
-                pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-                for i,thisp in enumerate(p):
-                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0                 
+            nhel = hel_dict[tuple(hel_order)]                
         else:
             nhel = -1
+            
+        # For 2>N pass in the center of mass frame
+        #   - required for helicity by helicity re-weighitng
+        #   - Speed-up loop computation 
+        if (hasattr(event[1], 'status') and event[1].status == -1) or \
+           (event[1].px == event[1].py == 0.):
+            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+            for i,thisp in enumerate(p):
+                p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+            assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+        
         pold = list(p)
         p = self.invert_momenta(p)
         pdg = list(orig_order[0])+list(orig_order[1])

@@ -1305,7 +1305,9 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
         self.add_param('colored_pdgs', [1,2,3,4,5])
-        self.add_param('complex_mass_scheme', False)        
+        self.add_param('complex_mass_scheme', False)
+        self.add_param('pdg_initial1', [0])
+        self.add_param('pdg_initial2', [0])        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1775,7 +1777,9 @@ class PY8Card(ConfigFile):
         started_subrun_reading = False
         while line!='':
             # Skip comments
-            if line.strip().startswith('!') or line.strip().startswith('\n'):
+            if line.strip().startswith('!') or \
+               line.strip().startswith('\n') or\
+               line.strip() == '':
                 output.write(line)
                 # Proceed to next line
                 last_pos = tmpl.tell()
@@ -2758,9 +2762,11 @@ class RunCardLO(RunCard):
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
+                self['use_syst'] = False
             else:
                 self['lpp1'] = 0
-                self['lpp2'] = 0                
+                self['lpp2'] = 0    
+                self['use_syst'] = False            
                 
         # Check if need matching
         min_particle = 99
@@ -3300,7 +3306,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy")
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
