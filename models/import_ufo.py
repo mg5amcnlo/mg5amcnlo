@@ -1646,6 +1646,8 @@ class RestrictModel(model_reader.ModelReader):
         self.coupling_pos = {}
         for vertex in self['interactions']:
             for key, coupling in vertex['couplings'].items():
+                if coupling.startswith('-'):
+                    coupling = coupling[1:]
                 if coupling in self.coupling_pos:
                     if vertex not in self.coupling_pos[coupling]:
                         self.coupling_pos[coupling].append(vertex)
@@ -1819,7 +1821,6 @@ class RestrictModel(model_reader.ModelReader):
         
         main = couplings[0]
         self.del_coup += couplings[1:] # add the other coupl to the suppress list
-        
         for coupling in couplings[1:]:
             # check if param is linked to an interaction
             if coupling not in self.coupling_pos:
