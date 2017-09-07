@@ -46,7 +46,7 @@ echo $$ >> ../myprocid
 # Uncomment the following to have the LHCO file:
 #
 #
-#$delphesdir/root2lhco ${run}/${tag}_delphes.root delphes_events.lhco
+#$delphesdir/root2lhco ${run}/${tag}_delphes_events.root delphes_events.lhco
 #
 #if [ -e delphes_events.lhco ]; then
 ## write the delphes banner
