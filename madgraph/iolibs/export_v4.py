@@ -1739,7 +1739,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             f2py_compiler = ''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
-            f2py_compiler = default_compiler
+            f2py_compiler = default_compiler['f2py']
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
         elif sys.version_info[1] == 6:

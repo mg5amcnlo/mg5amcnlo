@@ -1358,7 +1358,10 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     if isinstance(sig_fig, int):
         if not a or not b:
             if zero_limit:
-                power = sig_fig + 1
+                if zero_limit is not True:
+                    power = zero_limit
+                else:
+                    power = sig_fig + 1
             else:
                 return a == b  
         else:
