@@ -3708,7 +3708,7 @@ c Insert <ij>/[ij] which is not included by sborn()
             endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
             imother_fks=min(i_fks,j_fks)
-            call getaziangles(p_born_rot(0,imother_fks),
+            call getaziangles(p_born(0,imother_fks),
      #                       cphi_mother,sphi_mother)
             wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #             wgt1(2) * azifact
