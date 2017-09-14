@@ -4002,7 +4002,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
                      'madweight_card', 'MadLoopParams', 'shower_card']
-    to_init_card = ['param', 'run', 'madweight', 'madloop', 'shower', 'pythia8','delphes']
+    to_init_card = ['param', 'run', 'madweight', 'madloop', 
+                    'shower', 'pythia8','delphes','madspin']
     special_shortcut = {}
     special_shortcut_help = {}
     
@@ -4282,11 +4283,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             'simplepy8' : 'Turn off non-perturbative slow features of Pythia8.',
             'mpi' : 'syntax: set mpi value: allow to turn mpi in Pythia8 on/off',
              })
+        return []
         
+    def init_madspin(self, cards):
         
+        if not self.get_path('madspin', cards):
+            return []
         
-        
-        return self.py8_vars
+        self.special_shortcut.update({
+            'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s'])
+            })
+        self.special_shortcut_help.update({
+            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.'
+             })
+        return []
     
     def init_delphes(self, cards):
         
@@ -4769,7 +4779,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning(str(e))
                         return
                     else:
-                        self.do_set(text)
+                        split = text.split()
+                        if hasattr(self, 'do_%s' % split[0]):
+                            getattr(self, 'do_%s' % split[0])(' '.join(split[1:]))
+                        else:
+                            self.do_set(text)
                 #need to call a function
                 else:
                     val = [values[str(i)] for i in range(len(values))]
@@ -5439,6 +5453,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        if not param_card:
+            return False
+        
         logger.info('Update the dependent parameter of the param_card.dat')
         modify = True
         class TimeOutError(Exception): 
@@ -5822,7 +5839,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -5834,7 +5851,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
@@ -5850,7 +5867,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
@@ -5866,7 +5883,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                                 
             else:
                 ff = open(pjoin(self.me_dir,'Cards',card),'a')
                 ff.write("%s \n" % line.split(None,1)[1])

@@ -4271,7 +4271,7 @@ Please install this tool with the following MG5_aMC command:
         else: 
             shell_exe = misc.which(shell)
             if not shell_exe:
-                self.InvalidCmd('No s hell could be found in your environment.\n'+
+                raise self.InvalidCmd('No s hell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
