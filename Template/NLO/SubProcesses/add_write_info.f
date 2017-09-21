@@ -7,7 +7,6 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coloramps.inc"
-      include "reweight0.inc"
       include "nFKSconfigs.inc"
       include "leshouche_decl.inc"
       include "run.inc"
@@ -39,7 +38,7 @@ c Random numbers
       external ran2
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(maxamps), jamp2(0:maxamps)
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
@@ -70,8 +69,6 @@ c On Breit-Wigner
       logical OnBW(-nexternal:0)
 
 c LesHouches info
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include "leshouche.inc"
@@ -983,8 +980,6 @@ c
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
       integer i
       integer idup(nexternal,maxproc)
       integer mothup(2,nexternal,maxproc)

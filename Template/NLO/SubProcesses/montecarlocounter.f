@@ -22,6 +22,17 @@ c is the number of color flows at Born level
       logical isspecial,isspecial0
       common/cisspecial/isspecial
       logical spec_case
+c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      include 'born_conf.inc'
+      include 'coloramps.inc'
+c
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
@@ -62,7 +73,21 @@ c and another gluon will be found which is connected to it by both
 c colour and anticolour
       isspecial=.false.
 c
+c consider only leading colour flows
+      num_leading_cflows=0
       do i=1,max_bcol
+         is_leading_cflow(i)=.false.
+         do j=1,mapconfig(0)
+            if(icolamp(i,j,1))then
+               is_leading_cflow(i)=.true.
+               num_leading_cflows=num_leading_cflows+1
+               exit
+            endif
+         enddo
+      enddo
+c
+      do i=1,max_bcol
+         if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
          isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
@@ -190,6 +215,9 @@ c      include "fks.inc"
       common/cnotagluon/notagluon
       logical isspecial
       common/cisspecial/isspecial
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
       if(ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
@@ -245,12 +273,18 @@ c
 c
       enddo
 c
-      if( (notagluon.and.ntot.ne.max_bcol) .or.
+      if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
      #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
-     #        (isspecial.and.ntot.ne.max_bcol) ) ) )then
+     #      ( (.not.isspecial).and.ntot.ne.(2*num_leading_cflows) .or.
+     #        (isspecial.and.ntot.ne.num_leading_cflows) ) ) )then
          write(*,*)'Error #6 in check_mc_matrices',
-     #     notagluon,ntot,max_bcol
+     #     notagluon,ntot,num_leading_cflows,max_bcol
+         stop
+      endif
+c
+      if(num_leading_cflows.gt.max_bcol)then
+         write(*,*)'Error #7 in check_mc_matrices',
+     #     num_leading_cflows,max_bcol
          stop
       endif
 c
@@ -984,7 +1018,7 @@ c the same method
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double Precision amp2(maxamps), jamp2(0:maxamps)
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
       integer i_fks,j_fks
@@ -1008,9 +1042,6 @@ c the same method
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      logical rotategranny
-      common/crotategranny/rotategranny
-
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
 
@@ -1022,6 +1053,10 @@ c the same method
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
+c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
       
 c
 c BORN
@@ -1031,7 +1066,7 @@ c BORN
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
-        sumborn=sumborn+jamp2(i)
+         if(is_leading_cflow(i))sumborn=sumborn+jamp2(i)
 c sumborn is the sum of the leading-color amplitudes squared
       enddo
       
@@ -1110,10 +1145,6 @@ c Insert <ij>/[ij] which is not included by sborn()
                   pi(i)=p_i_fks_ev(i)
                   pj(i)=p(i,j_fks)
                enddo
-               if(rotategranny)then
-                  call trp_rotate_invar(pi,pi,cthbe,sthbe,cphibe,sphibe)
-                  call trp_rotate_invar(pj,pj,cthbe,sthbe,cphibe,sphibe)
-               endif
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
                CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
                CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
@@ -1128,13 +1159,8 @@ c Insert <ij>/[ij] which is not included by sborn()
             endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
             imother_fks=min(i_fks,j_fks)
-            if(rotategranny)then
-               call getaziangles(p_born_rot(0,imother_fks),
-     #                           cphi_mother,sphi_mother)
-            else
-               call getaziangles(p_born(0,imother_fks),
-     #                           cphi_mother,sphi_mother)
-            endif
+            call getaziangles(p_born(0,imother_fks),
+     #                        cphi_mother,sphi_mother)
             wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #                  wgt1(2) * azifact
          else
@@ -1154,7 +1180,8 @@ c BARRED AMPLITUDES
       do i=1,max_bcol
          if (sumborn.ne.0d0) then
             bornbars(i)=jamp2(i)/sumborn * born *iden_comp
-         elseif (born.eq.0d0 .or. jamp2(i).eq.0d0) then
+         elseif (born.eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbars(i)=0d0
          else
             write (*,*) 'ERROR #1, dividing by zero'
@@ -1162,7 +1189,8 @@ c BARRED AMPLITUDES
          endif
          if (sumborn.ne.0d0) then
             bornbarstilde(i)=jamp2(i)/sumborn * borntilde *iden_comp
-         elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0) then
+         elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbarstilde(i)=0d0
          else
             write (*,*) 'ERROR #2, dividing by zero'

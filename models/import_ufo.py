@@ -78,10 +78,9 @@ def find_ufo_path(model_name):
                     last_model_path = os.path.join(MG5DIR, p, model_name)
                 return os.path.join(MG5DIR, p, model_name)
     if os.path.isdir(model_name):
-        if last_model_path != os.path.join(MG5DIR, model_name):
-            logger.info("model loaded from: %s", os.path.join(os.getcwd(), model_name))
-            last_model_path = os.path.join(MG5DIR, model_name)
-        return model_name   
+        logger.warning('No model %s found in default path. Did you mean \'import model ./%s\'',
+                       model_name, model_name)
+        raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     else:
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     
@@ -1647,6 +1646,8 @@ class RestrictModel(model_reader.ModelReader):
         self.coupling_pos = {}
         for vertex in self['interactions']:
             for key, coupling in vertex['couplings'].items():
+                if coupling.startswith('-'):
+                    coupling = coupling[1:]
                 if coupling in self.coupling_pos:
                     if vertex not in self.coupling_pos[coupling]:
                         self.coupling_pos[coupling].append(vertex)
@@ -1820,7 +1821,6 @@ class RestrictModel(model_reader.ModelReader):
         
         main = couplings[0]
         self.del_coup += couplings[1:] # add the other coupl to the suppress list
-        
         for coupling in couplings[1:]:
             # check if param is linked to an interaction
             if coupling not in self.coupling_pos:
@@ -1832,7 +1832,12 @@ class RestrictModel(model_reader.ModelReader):
                 for key, value in vertex['couplings'].items():
                     if value == coupling:
                         vertex['couplings'][key] = main
-
+                    elif value == '-%s' % coupling:
+                        if main.startswith('-'):
+                            vertex['couplings'][key] = main[1:]
+                        else:
+                            vertex['couplings'][key] = '-%s' % main
+                        
             # replace the coupling appearing in the particle counterterm
             particles_ct = [ pct for pct in self.coupling_pos[coupling] if 
                          isinstance(pct, tuple)]

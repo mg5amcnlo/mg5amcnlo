@@ -1121,21 +1121,27 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
                     # Now generate new wavefunction for the last leg
 
-                    # Need one amplitude for each color structure,
-                    done_color = {} # store link to color
+                    # Group interactions with the same color as we need only one amplitude
+                    # for each color structure
+                    grouped_interaction_keys = {}
+                    colors_order             = []
                     for coupl_key in sorted(inter.get('couplings').keys()):
                         color = coupl_key[0]
-                        if color in done_color:
-                            wf = done_color[color]
-                            wf.get('coupling').append(inter.get('couplings')[coupl_key])
-                            wf.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
-                            continue
-                        wf = helas_objects.HelasWavefunction(last_leg, vertex.get('id'), model)
-                        wf.set('coupling', [inter.get('couplings')[coupl_key]])
+                        if color not in colors_order:
+                            colors_order.append(color)
+                            grouped_interaction_keys[color] = \
+                              (coupl_key, [inter.get('couplings')[coupl_key]], [inter.get('lorentz')[coupl_key[1]]])
+                        else:
+                            grouped_interaction_keys[color][1].append(inter.get('couplings')[coupl_key])
+                            grouped_interaction_keys[color][2].append(inter.get('lorentz')[coupl_key[1]])
+
+                    for coupl_key, all_couplings, all_lorentz in [grouped_interaction_keys[color] for color in colors_order]:
+                        color = coupl_key[0]
+                        wf = helas_objects.HelasWavefunction(last_leg, vertex.get('id'), model)                        
+                        wf.set('coupling', all_couplings)                        
                         if inter.get('color'):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
-                        done_color[color] = wf
-                        wf.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
+                        wf.set('lorentz', all_lorentz)
                         wf.set('color_key', color)
                         wf.set('mothers',mothers)
                         ###print "in process_struct and adding wf with"
@@ -1169,8 +1175,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             try:
                                 # Use wf_mother_arrays to locate existing
                                 # wavefunction
-                                wf = wavefunctions[wf_mother_arrays.index(\
-                                wf.to_array())]
+                                wf = wavefunctions[wf_mother_arrays.index(wf.to_array())]
                                 # Since we reuse the old wavefunction, reset
                                 # wfNumber
                                 wfNumber = wfNumber - 1
@@ -1190,9 +1195,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         new_color_list.append(coupl_key[0])
                         new_color_lists.append(new_color_list)
 
+                
                 number_to_wavefunctions = new_number_to_wavefunctions
                 color_lists = new_color_lists
-            
+
             ###print "bridg wfs returned="
             ###for wf in bridge_wfs:
             ###    print "    bridge =",wf['number_external'],"("+str(wf.get_pdg_code())+") number=",wf['number']
@@ -1587,7 +1593,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 (motherslist, colorlists), wfNumber = getloopmothers(\
                                 helas_objects.HelasWavefunctionList(), structIDs, \
                                 [], diagram_wavefunctions, wfNumber)
-                          
+    
                 for mothers, structcolorlist in zip(motherslist, colorlists):
                     for ct_vertex in ct_vertices:
                         # Now generate HelasAmplitudes from this ct_vertex.
@@ -1637,7 +1643,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 wavefunctionNumber, last_loop_wfs, color_lists = \
                   process_tag_elem(tagElem, wavefunctionNumber, \
                                    last_loop_wfs, color_lists)
-                  
+
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
             wavefunctionNumber, amplitudeNumber = create_amplitudes(
@@ -2113,8 +2119,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 loopwfnumber=loopwfnumber+1
             for loopamp in loopdiag.get_loop_amplitudes():
                 # Set the number of the starting wavefunction (common to all 
-                # diagrams) to one.
-                loopamp.get_starting_loop_wavefunction().set('number',0)
+                # diagrams) to 0 or -1 if it requires complex conjugation. 
+                start_loop_wf = loopamp.get_starting_loop_wavefunction()
+                if start_loop_wf.get('fermionflow')==1:
+                    start_loop_wf.set('number',0)
+                else:
+                    # External loop WF for flipped fermionflow.
+                    start_loop_wf.set('number',-1)
                 for amp in loopamp['amplitudes']:
                     amp.set('number',loop_ampnumber)
                     loop_ampnumber=loop_ampnumber+1
@@ -2304,6 +2315,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         exporter just after export_v4 because at this stage an alohaModel is
         already created and can be specified here instead of being generated.
         This can make a difference for very complicated models."""
+        
         
         if alohaModel is None:
             # Generate it here

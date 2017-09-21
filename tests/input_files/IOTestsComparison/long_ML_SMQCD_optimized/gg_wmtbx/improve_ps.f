@@ -783,7 +783,15 @@ C     Now find the 'x' rescaling factor
 C     Apply the rescaling
       DO I=1,NEXTERNAL
         DO J=1,3
-          NEWP(J,I)=NEWP(J,I)*XSCALE
+C         Consider scaling by x**2 for the first particle so that
+C         the algorithm for numerically solving for XSCALE has a
+C          non-vanishing
+C         derivative in the case that all particle are massless.
+          IF (I.EQ.1) THEN
+            NEWP(J,I)=NEWP(J,I)*XSCALE**2
+          ELSE
+            NEWP(J,I)=NEWP(J,I)*XSCALE
+          ENDIF
         ENDDO
       ENDDO
 
@@ -968,20 +976,33 @@ C     ----------
       RES=ZERO
       BUFF=ZERO
 
+C     Consider scaling by x**2 for the first particle so that
+C     the algorithm for numerically solving for XSCALE has a
+C      non-vanishing
+C     derivative in the case that all particle are massless.
+
       DO I=1,NEXTERNAL
         IF (I.LE.NINITIAL) THEN
           FACTOR=-ONE
         ELSE
           FACTOR=ONE
         ENDIF
-        BUFF=MASSES(I)**2+PVECSQ(I)*X**2
+        IF (I.EQ.1) THEN
+          BUFF=MASSES(I)**2+PVECSQ(I)*X**4
+        ELSE
+          BUFF=MASSES(I)**2+PVECSQ(I)*X**2
+        ENDIF
         IF (BUFF.LT.ZERO) THEN
           RES=ZERO
           ERROR = 1
           GOTO 800
         ENDIF
         IF (DERIVATIVE) THEN
-          RES=RES + FACTOR*((X*PVECSQ(I))/SQRT(BUFF))
+          IF (I.EQ.1) THEN
+            RES=RES + FACTOR*((2*X*PVECSQ(I))/SQRT(BUFF))
+          ELSE
+            RES=RES + FACTOR*((X*PVECSQ(I))/SQRT(BUFF))
+          ENDIF
         ELSE
           RES=RES + FACTOR*SQRT(BUFF)
         ENDIF

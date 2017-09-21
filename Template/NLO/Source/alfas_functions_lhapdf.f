@@ -89,7 +89,7 @@ c     it with the 0.3 ms function cpu_time.
       ALPHAS=alphasPDF(Q)
       call cpu_time(tAfter)
       
-      tPDF = tPDF + (tAfter-tBefore)
+c      tPDF = tPDF + (tAfter-tBefore)
 
       RETURN
       END

@@ -19,6 +19,12 @@ Fortran, C++, etc."""
 
 import re
 import collections
+try:
+    import madgraph
+except ImportError:
+        import internal.misc
+else:
+    import madgraph.various.misc as misc
 
 class FileWriter(file):
     """Generic Writer class. All writers should inherit from this class."""
@@ -392,6 +398,52 @@ class FortranWriter(FileWriter):
 #===============================================================================
 # CPPWriter
 #===============================================================================
+
+
+    def remove_routine(self, text, fct_names, formatting=True):
+        """write the incoming text but fully removing the associate routine/function
+           text can be a path to a file, an iterator, a string
+           fct_names should be a list of functions to remove
+        """
+
+        f77_type = ['real*8', 'integer', 'double precision']
+        pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                             % {'type':'|'.join(f77_type)}, re.I)
+        
+        removed = []
+        if isinstance(text, str):   
+            if '\n' in text:
+                text = text.split('\n')
+            else:
+                text = open(text)
+        if isinstance(fct_names, str):
+            fct_names = [fct_names]
+        
+        to_write=True     
+        for line in text:
+            fct = pattern.findall(line)
+            if fct:
+                if fct[0] in fct_names:
+                    to_write = False
+                else:
+                    to_write = True
+
+            if to_write:
+                if formatting:
+                    if line.endswith('\n'):
+                        line = line[:-1]
+                    self.writelines(line)
+                else:
+                    if not line.endswith('\n'):
+                        line = '%s\n' % line
+                    file.writelines(self, line)
+            else:
+                removed.append(line)
+                
+        return removed
+        
+
+
 class CPPWriter(FileWriter):
     """Routines for writing C++ lines. Keeps track of brackets,
     spaces, indentation and splitting of long lines"""

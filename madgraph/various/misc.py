@@ -1355,15 +1355,21 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     """function to check if two float are approximatively equal"""
     import math
 
-    if not a or not b:
-        if zero_limit:
-            power = sig_fig + 1
+    if isinstance(sig_fig, int):
+        if not a or not b:
+            if zero_limit:
+                if zero_limit is not True:
+                    power = zero_limit
+                else:
+                    power = sig_fig + 1
+            else:
+                return a == b  
         else:
-            return a == b  
+            power = sig_fig - int(math.log10(abs(a))) + 1
+    
+        return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
     else:
-        power = sig_fig - int(math.log10(abs(a))) + 1
-
-    return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
+        return abs(a-b) < sig_fig
 
 ################################################################################
 # class to change directory with the "with statement"
@@ -1752,8 +1758,12 @@ def is_plugin_supported(obj):
 It has been validated for the last time with version: %s""",
                                         name, '.'.join(str(i) for i in val_ver))
     else:
-        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
-        plugin_support[name] = False
+        if __debug__:
+            logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
+            plugin_support[name] = True            
+        else:
+            logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
+            plugin_support[name] = False
     return plugin_support[name]
     
 
@@ -1794,7 +1804,23 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
     
     
 
-
+def plugin_import(module, error_msg, fcts=[]):
+    """convenient way to import a plugin file/function"""
+    
+    try:
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+    except ImportError:
+        try:
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        except ImportError:
+            raise MadGraph5Error, error_msg
+    
+    if not fcts:
+        return _temp
+    elif len(fcts) == 1:
+        return getattr(_temp,fcts[0])
+    else:
+        return [getattr(_temp,name) for name in fcts]
 
 
 python_lhapdf=None
@@ -1865,6 +1891,20 @@ def import_python_lhapdf(lhapdfconfig):
     else:
         python_lhapdf = None
     return python_lhapdf
+
+def newtonmethod(f, df, x0, error=1e-10,maxiter=10000):
+    """implement newton method for solving f(x)=0, df is the derivate"""
+    x = x0
+    iter=0
+    while abs(f(x)) > error:
+        iter+=1
+        x = x - f(x)/df(x)
+        if iter ==maxiter:
+            sprint('fail to solve equation')
+            raise Exception
+    return x
+
+
 
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()

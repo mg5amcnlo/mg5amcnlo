@@ -303,15 +303,17 @@ C      all, then we pick a point based on PDF only.
         TOTWGT=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            DO K=1,2
-              TOTWGT=TOTWGT+SELPROC(K,I,J)
-              IF(R.LT.TOTWGT)THEN
-                IPROC=I
-                ICONF=J
-                IMIRROR=K
-                GOTO 50
-              ENDIF
-            ENDDO
+            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+              DO K=1,2
+                TOTWGT=TOTWGT+SELPROC(K,I,J)
+                IF(R.LT.TOTWGT)THEN
+                  IPROC=I
+                  ICONF=J
+                  IMIRROR=K
+                  GOTO 50
+                ENDIF
+              ENDDO
+            ENDIF
           ENDDO
         ENDDO
  50     CONTINUE

@@ -213,7 +213,7 @@ c               Insert graph in list of propagators
                      if(prwidth(k,ignum).gt.ZERO) then
                      if(btest(mlevel,4))
      $                       write(*,*)'Adding resonance ',ignum,icmp(l)
-                        resmap(icmp(l),ignum)=.true.
+                        resmap(icmp(l),ignum,nFKSprocess)=.true.
                      endif
                   enddo
 c     proceed w/ next table, since there is no possibility,
@@ -278,8 +278,6 @@ c Common
       integer tprid(-max_branch:-1,n_max_cg)
       integer mapconfig(0:n_max_cg)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -341,8 +339,6 @@ c**************************************************************************
       double precision prwidth(-max_branch:-1,n_max_cg)
       integer prow(-max_branch:-1,n_max_cg)
       common/c_props_inc/prmass,prwidth,prow
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -458,7 +454,8 @@ c     if chcluster, allow only this config
 c     check if we have constraint from onshell resonances
             foundbw=.true.
             do j=1,nbw
-               if(resmap(ibwlist(1,j),id_cl(nFKSprocess,idij,i)))then
+               if(resmap(ibwlist(1,j),id_cl(nFKSprocess,idij,i)
+     $              ,nFKSprocess))then
                   cycle
                endif
                foundbw=.false.
@@ -520,15 +517,18 @@ c Include
       include 'message.inc'
       include 'real_from_born_configs.inc'
       include 'run.inc'
+      include 'fks_info.inc'
 c Argument
       double precision p(0:3,nexternal)
 c Local
       integer i,j,k,n,idi,idj,idij,icgs(0:n_max_cg),nleft,iwin,jwin
-     $     ,iwinp,imap(nexternal,2)
+     $     ,iwinp,imap(nexternal,2),i_fks,j_fks
       double precision pcmsp(0:3),p1(0:3),pi(0:3),nr(0:3),nn2,ct,st
      $     ,minpt2ij,pt2ij(n_max_cl),zij(n_max_cl)
       double precision pz(0:3)
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
+      integer igraphscounter
+      data igraphscounter/149/
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -540,6 +540,9 @@ c External
       double precision dj, pydj, djb, pyjb, dot, SumDot, zclus
       external findmt,dj, pydj, djb, pyjb, dot, SumDot, zclus, combid
 
+      i_fks=fks_i_d(nFKSprocess)
+      j_fks=fks_j_d(nFKSprocess)
+      
       if (btest(mlevel,1))
      $   write (*,*)'New event'
 
@@ -626,7 +629,10 @@ c     prefer clustering when outgoing in direction of incoming
                      endif
                   endif
 c     Check if smallest pt2 ("winner")
-                  if (pt2ij(idij).lt.minpt2ij) then
+                  if (pt2ij(idij).lt.minpt2ij .or.
+     &                 (pt2ij(idij).eq.minpt2ij .and.
+     &                 (i.eq.i_fks .or. i.eq.j_fks) .and.
+     &                 (j.eq.i_fks .or. j.eq.j_fks))  ) then
                      iwin=j
                      jwin=i
                      minpt2ij=pt2ij(idij)
@@ -799,6 +805,11 @@ c     This is important when we have mixed QED-QCD
                   exit
                endif
             enddo
+            if (igraphs(0).ge.2) then ! "randomize" the graph taken
+               igraphscounter=igraphscounter+1
+               igraphs(0)=1
+               igraphs(1)=igraphs(mod(igraphscounter,igraphs(0))+1)
+            endif
             zcl(n+1)=1
             cluster=.true.
             clustered=.true.
@@ -866,7 +877,10 @@ c     prefer clustering when outgoing in direction of incoming
                      write(*,*)'     cf. djb: ',djb(pcl(0,idi))
                   endif
                endif
-               if (pt2ij(idij).lt.minpt2ij) then
+               if (pt2ij(idij).lt.minpt2ij .or.
+     &                 (pt2ij(idij).eq.minpt2ij .and.
+     &                 (i.eq.i_fks .or. i.eq.j_fks) .and.
+     &              (j.eq.i_fks .or. j.eq.j_fks))  ) then
                   iwin=j
                   jwin=i
                   minpt2ij=pt2ij(idij)

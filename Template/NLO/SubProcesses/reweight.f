@@ -73,7 +73,7 @@ c Quark Sudakov
          if (iimode.eq.2) then
             gamma=gamma+CF*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2) ! A2
          endif
-         if (iipdg.gt.NF) then ! include mass effects
+         if (abs(iipdg).gt.NF) then ! include mass effects
             qom=q0/mass(iipdg)
             gamma=gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
@@ -1228,8 +1228,6 @@ c Common
      $     ,fks_configs,lmaxconfigs),jlast(2)
       real*8 q2bck(2)
       common /to_rw/jlast,njetstore,iqjetstore,q2bck
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -1244,9 +1242,9 @@ c Common
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
 c External
       logical ispartonvx,isqcd,isparton,isjetvx,isjet
-      double precision alphas,getissud,pdg2pdf,sudwgt,sudwgt_exp
-      external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud
-     $     ,pdg2pdf,isjet,sudwgt,sudwgt_exp
+      double precision alphas,pdg2pdf,sudwgt,sudwgt_exp
+      external ispartonvx,alphas,isqcd,isparton,isjetvx,pdg2pdf,isjet
+     $     ,sudwgt,sudwgt_exp
 c FxFx
       integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal)
@@ -1484,17 +1482,17 @@ c     Perform Sudakov reweighting if ickkw=2
      $                 pt2prev(idacl(n,i)).lt.pt2ijcl(n))then
                      if (ickkw.ne.3) then
 c Sudakov including PDFs:
-                        tmp=min(1d0,max(
-     &                       getissud(ibeam(j),
-     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                       xnow(j),xnow(3-j),pt2ijcl(n)) ,
-     &                       1d-20 ) /
-     $                       max(
-     &                       getissud(ibeam(j),
-     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                       xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
-     &                       1d-20 ))
-                        tmp2=0d0
+c$$$                        tmp=min(1d0,max(
+c$$$     &                       getissud(ibeam(j),
+c$$$     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                       xnow(j),xnow(3-j),pt2ijcl(n)) ,
+c$$$     &                       1d-20 ) /
+c$$$     $                       max(
+c$$$     &                       getissud(ibeam(j),
+c$$$     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                       xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
+c$$$     &                       1d-20 ))
+c$$$                        tmp2=0d0
                      else
 c     Sudakov excluding PDFs:
                         tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),

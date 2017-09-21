@@ -1,6 +1,6 @@
       program collect_events
       implicit none
-      character*120 string120,eventfile
+      character*512 string512,eventfile
       character*19 basicfile,nextbasicfile
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
@@ -65,9 +65,9 @@ c
       nevents=0
       xtotal=0.d0
       do while (.true.)
-         read(10,'(120a)',err=2,end=2) string120
-         eventfile=string120(2:index(string120,'   '))
-         read(string120(index(string120,'   '):120),*)
+         read(10,'(512a)',err=2,end=2) string512
+         eventfile=string512(2:index(string512,'   '))
+         read(string512(index(string512,'   '):512),*)
      $    ievents,absxsec,xsecfrac
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
@@ -209,8 +209,9 @@ c
       end
 
 
-      subroutine collect_all_evfiles(ioutput,numoffiles,junit,
-     #                               imaxevt,evwgt)
+      subroutine collect_all_evfiles(ioutput,numoffiles,junit,imaxevt
+     $     ,evwgt)
+      use extra_weights
       implicit none
       integer i_orig
       common /c_i_orig/i_orig
@@ -237,8 +238,6 @@ c
       data iseed/1/
       double precision rnd,fk88random
       external fk88random
-      logical debug
-      parameter (debug=.false.)
       integer nevents_file(80),proc_id(80)
       common /to_nevents_file/nevents_file,proc_id
       double precision xsecfrac_all(80)
@@ -249,18 +248,12 @@ c
       double precision xsecup_l(100),xerrup_l(100)
       integer lprup_l(100),nproc_l
       logical found_proc
-      include 'reweight_all.inc'
       include 'run.inc'
       integer proc_id_tot(0:100)
       double precision xsec(100),xsecABS,xerr(100)
       logical get_xsec_from_res1
       common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 c
-      if(debug) then
-         write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
-         write(ioutput,*)'test test test'
-         return
-      endif
       maxevt=0
       if (.not. get_xsec_from_res1) then
          do i=1,100

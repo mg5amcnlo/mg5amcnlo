@@ -17,7 +17,6 @@ C     CONSTANTS
 C     
       INCLUDE 'nexternal.inc'
       INCLUDE 'born_nhel.inc'
-      INCLUDE 'genps.inc'
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  12 )
       INTEGER    THEL
@@ -57,7 +56,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXAMPS)
+      DOUBLE PRECISION AMP2(1), JAMP2(0:1)
       COMMON/TO_AMPS/  AMP2,       JAMP2
       DATA JAMP2(0) /   1/
       LOGICAL GOODHEL(NCOMB,4)
@@ -75,6 +74,7 @@ C
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       DOUBLE PRECISION       WGT_ME_BORN,WGT_ME_REAL
       COMMON /C_WGT_ME_TREE/ WGT_ME_BORN,WGT_ME_REAL
+      LOGICAL COND_IJ
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -82,11 +82,15 @@ C     ----------
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       NTRY(NFKSPROCESS)=NTRY(NFKSPROCESS)+1
       IF (NTRY(NFKSPROCESS).LT.2) THEN
-        SKIP(NFKSPROCESS)=1
-        DO WHILE(NHEL(GLU_IJ ,SKIP(NFKSPROCESS)).NE.-NHEL(GLU_IJ ,1))
-          SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)+1
-        ENDDO
-        SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)-1
+        IF (GLU_IJ.EQ.0) THEN
+          SKIP(NFKSPROCESS)=0
+        ELSE
+          SKIP(NFKSPROCESS)=1
+          DO WHILE(NHEL(GLU_IJ ,SKIP(NFKSPROCESS)).NE.-NHEL(GLU_IJ ,1))
+            SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)+1
+          ENDDO
+          SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)-1
+        ENDIF
       ENDIF
       DO JJ=1,NGRAPHS
         AMP2(JJ)=0D0
@@ -119,7 +123,12 @@ C     ----------
       ANS(2) = 0D0
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
-        IF (NHEL(GLU_IJ,IHEL).EQ.NHEL(GLU_IJ,1)) THEN
+          ! the following lines are to avoid segfaults when glu_ij=0
+        COND_IJ=SKIP(NFKSPROCESS).EQ.0
+        IF (.NOT.COND_IJ) COND_IJ=COND_IJ.OR.NHEL(GLU_IJ,IHEL)
+     $   .EQ.NHEL(GLU_IJ,1)
+          !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        IF (COND_IJ) THEN
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
      $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.
      $      2) ) THEN
@@ -169,7 +178,6 @@ C
       INCLUDE 'nexternal.inc'
       INCLUDE 'born_nhel.inc'
       INCLUDE 'coupl.inc'
-      INCLUDE 'genps.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -189,7 +197,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXAMPS)
+      DOUBLE PRECISION AMP2(NGRAPHS), JAMP2(0:NCOLOR)
       COMMON/TO_AMPS/  AMP2,       JAMP2
       DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
       COMMON/TO_SAVEAMP/SAVEAMP
@@ -201,6 +209,7 @@ C
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       INTEGER STEP_HEL
+      LOGICAL COND_IJ
       INTEGER IJ_VALUES(4)
       DATA IJ_VALUES /1, 2, 1, 2/
 C     
@@ -218,14 +227,27 @@ C     ----------
       BACK_HEL = NHEL(GLU_IJ)
       BORNS(1) = 0D0
       BORNS(2) = 0D0
-      IF (BACK_HEL.NE.0) THEN
-        STEP_HEL=-2*BACK_HEL
+      IF (GLU_IJ.NE.0) THEN
+        BACK_HEL = NHEL(GLU_IJ)
+        IF (BACK_HEL.NE.0) THEN
+          STEP_HEL=-2*BACK_HEL
+        ELSE
+          STEP_HEL=1
+        ENDIF
       ELSE
+        BACK_HEL=0
         STEP_HEL=1
       ENDIF
       DO IHEL=BACK_HEL,-BACK_HEL,STEP_HEL
-        IF (IHEL.EQ.BACK_HEL.OR.NHEL(GLU_IJ).NE.0) THEN
-          IF (NHEL(GLU_IJ).NE.0) NHEL(GLU_IJ) = IHEL
+        IF (GLU_IJ.NE.0) THEN
+          COND_IJ=IHEL.EQ.BACK_HEL.OR.NHEL(GLU_IJ).NE.0
+        ELSE
+          COND_IJ=IHEL.EQ.BACK_HEL
+        ENDIF
+        IF (COND_IJ) THEN
+          IF (GLU_IJ.NE.0) THEN
+            IF (NHEL(GLU_IJ).NE.0) NHEL(GLU_IJ) = IHEL
+          ENDIF
           IF (.NOT. CALCULATEDBORN) THEN
             CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
             CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
@@ -280,7 +302,7 @@ C           Amplitude(s) for diagram number 1
         ENDDO
         BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))/DENOM(I)
       ENDDO
-      NHEL(GLU_IJ) = BACK_HEL
+      IF (GLU_IJ.NE.0) NHEL(GLU_IJ) = BACK_HEL
       END
 
 
