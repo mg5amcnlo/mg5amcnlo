@@ -611,7 +611,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_singular.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
-                     'c_weight.inc',
+                     'weight_lines.f',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
@@ -631,11 +631,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'q_es.inc',
                      'recluster.cc',
                      'Boosts.h',
-                     'reweight.inc',
-                     'reweight0.inc',
-                     'reweight1.inc',
-                     'reweightNLO.inc',
-                     'reweight_all.inc',
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
@@ -644,10 +639,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
-                     'symmetry_fks_test_MC.f',
-                     'symmetry_fks_test_ME.f',
+                     'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
-                     'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
                      'handling_lhe_events.f',
@@ -1009,6 +1002,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
 
+        # Make sure it compiles with an if-statement if the above lists are empty
+        if len(mass_particles)==0:
+            iflines_mass = 'if (.True.) then\n'
+
+        if len(width_particles)==0:
+            iflines_width = 'if (.True.) then\n'
+
         replace_dict = {'iflines_mass' : iflines_mass,
                         'iflines_width' : iflines_width}
 
@@ -1215,10 +1215,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         file = \
 """double precision function dlum()
 implicit none
-include 'timing_variables.inc'
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-call cpu_time(tbefore)
 """
         if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
@@ -1231,16 +1229,12 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
         else:
             file+= \
 """call dlum_0(dlum)
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
@@ -2749,10 +2743,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         info_list = fks_born.get_fks_info_list()
         lines = []
         if info_list:
-            # if the reals have been generated, fill with the corresponding value of ij
+            # if the reals have been generated, fill with the corresponding value of ij if
+            # ij is massless, or with 0 if ij is massive (no collinear singularity)
+            ij_list = [info['fks_info']['ij']if \
+                    fks_born.born_matrix_element['processes'][0]['legs'][info['fks_info']['ij']-1]['massless'] \
+                    else 0 for info in info_list]
             lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-            lines.append('DATA IJ_VALUES /' + \
-                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+            lines.append('DATA IJ_VALUES /' + ', '.join(['%d' % ij for ij in ij_list]) + '/')
         else:
             #otherwise just put the first leg
             lines.append('INTEGER IJ_VALUES(1)')

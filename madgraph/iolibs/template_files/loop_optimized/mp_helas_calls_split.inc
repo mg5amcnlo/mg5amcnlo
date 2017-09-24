@@ -60,8 +60,8 @@ C
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/W
 
-	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
-	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
+	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
+	  %(complex_mp_format)s PL(0:3,-1:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
 ## if(not AmplitudeReduction){

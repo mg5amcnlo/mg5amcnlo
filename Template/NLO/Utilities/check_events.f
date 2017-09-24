@@ -6,10 +6,12 @@ c                   fill_MC_mshell.f dbook.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
+      use extra_weights
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
      # isavePDF,itemp,ii
+      integer numscales,numPDFpairs,numPDFs
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
@@ -42,7 +44,8 @@ c negative number of events
       double precision wgt3a,wgt3s
       double precision wgt4a,wgt4s
       double precision wgt5a,wgt5s
-      double precision saved_weight,tmp
+      double precision saved_weight,tmp,wmin,wmax,wlim
+      integer ipos,ineg
       character*80 event_file
       character*140 buff
       character*6 ch6
@@ -59,14 +62,14 @@ c negative number of events
       integer j,k
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal),xnorm
 
-      include 'reweight0.inc'
-      integer kr,kf,kpdf
-      double precision sum_wgt_resc_scale(maxscales,maxscales),
-     # sum_wgt_resc_pdf(0:maxPDFs),
-     # xmax_wgt_resc_scale(maxscales,maxscales),
-     # xmax_wgt_resc_pdf(0:maxPDFs),
-     # xmin_wgt_resc_scale(maxscales,maxscales),
-     # xmin_wgt_resc_pdf(0:maxPDFs)
+      integer kk,kr,kf,kpdf
+      double precision 
+     # sum_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # sum_wgt_resc_pdf(0:maxPDFs,maxPDFsets),
+     # xmax_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # xmax_wgt_resc_pdf(0:maxPDFs,maxPDFsets),
+     # xmin_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # xmin_wgt_resc_pdf(0:maxPDFs,maxPDFsets)
       integer istep
       double precision percentage
       include 'dbook.inc'
@@ -144,6 +147,8 @@ c read from events
       unweighted=.true.
       keepevent=.true.
       shower=.false.
+      wmax=-1.d100
+      wmin=1.d100
 
       call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
      #                           MonteCarlo)
@@ -220,7 +225,7 @@ c
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
       
-      do i=1,min(10,maxevt)
+      do i=1,min(100,maxevt)
         call read_lhef_event_catch(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -247,10 +252,12 @@ c
               write(*,*)'Inconsistency #2 in event file',i,' ',buff
               stop
             endif
-          unweighted=unweighted.and.
+            unweighted=unweighted.and.
      #               abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
           endif
         endif
+        wmax=max(wmax,XWGTUP)
+        wmin=min(wmin,XWGTUP)
         if(idec.eq.0)call findmothers(NUP,IDUP,ISTUP)
 
       enddo
@@ -263,6 +270,11 @@ c
         write(*,*)'The events appear to be unweighted'
       else
         write(*,*)'The events appear to be weighted'
+        if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+          wmax=wmax/maxevt
+          wmin=wmin/maxevt
+        endif
+        wlim=max(abs(wmax),abs(wmin))
       endif
 
       if(rwgtinfo)then
@@ -304,25 +316,40 @@ c
       itoterr=0
       mtoterr=0
       if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
-        do kr=1,maxscales
-          do kf=1,maxscales
-            sum_wgt_resc_scale(kr,kf)=0.d0
-            xmax_wgt_resc_scale(kr,kf)=-1.d100
-            xmin_wgt_resc_scale(kr,kf)=1.d100
+        do kk=1,maxdynscales
+          do kr=1,maxscales
+            do kf=1,maxscales
+              sum_wgt_resc_scale(kr,kf,kk)=0.d0
+              xmax_wgt_resc_scale(kr,kf,kk)=-1.d100
+              xmin_wgt_resc_scale(kr,kf,kk)=1.d100
+            enddo
           enddo
         enddo
-        do kpdf=0,maxPDFs
-          sum_wgt_resc_pdf(kpdf)=0.d0
-          xmax_wgt_resc_pdf(kpdf)=-1.d100
-          xmin_wgt_resc_pdf(kpdf)=1.d100
+        do kk=1,maxPDFsets
+          do kpdf=0,maxPDFs
+            sum_wgt_resc_pdf(kpdf,kk)=0.d0
+            xmax_wgt_resc_pdf(kpdf,kk)=-1.d100
+            xmin_wgt_resc_pdf(kpdf,kk)=1.d100
+          enddo
         enddo
       endif
 
       i=0
+      ipos=0
+      ineg=0
       call inihist
       call bookup(1,'scalup',2d0,0d0,200d0)
       call bookup(2,'scalup',8d0,0d0,800d0)
       call bookup(3,'log scalup',0.1d0,0d0,4d0)
+      if(.not.unweighted)then
+        tmp=2*wlim/100.d0
+        call bookup(4,'weight',tmp,-wlim,wlim)
+        tmp=4*wlim/100.d0
+        call bookup(5,'weight',tmp,-2*wlim,2*wlim)
+        tmp=8*wlim/100.d0
+        call bookup(6,'weight',tmp,-4*wlim,4*wlim)
+      endif
+
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -330,6 +357,17 @@ c
          call mfill(1,SCALUP,XWGTUP)
          call mfill(2,SCALUP,XWGTUP)
          if(SCALUP.gt.0d0)call mfill(3,log10(SCALUP),XWGTUP)
+         if(.not.unweighted)then
+           if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+             call mfill(4,XWGTUP/maxevt,abs(XWGTUP))
+             call mfill(5,XWGTUP/maxevt,abs(XWGTUP))
+             call mfill(6,XWGTUP/maxevt,abs(XWGTUP))
+           else
+             call mfill(4,XWGTUP,abs(XWGTUP))
+             call mfill(5,XWGTUP,abs(XWGTUP))
+             call mfill(6,XWGTUP,abs(XWGTUP))
+           endif
+         endif
          if(index(buff,'endoffile').ne.0)then
            keepevent=.false.
            goto 111
@@ -338,32 +376,41 @@ c
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
          sum_abs_wgt=sum_abs_wgt+abs(XWGTUP)
+         if(sign(1.d0,XWGTUP).gt.0.d0)then
+           ipos=ipos+1
+         else
+           ineg=ineg+1
+         endif
 
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
 c XWGTUP*wgtxsecmu(kr,kf)/wgtref
          if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
-           do kr=1,numscales
-             do kf=1,numscales
-               sum_wgt_resc_scale(kr,kf)=sum_wgt_resc_scale(kr,kf)+
-     #                                   wgtxsecmu(kr,kf)
-               xmax_wgt_resc_scale(kr,kf)=
-     #           max(xmax_wgt_resc_scale(kr,kf),
-     #               wgtxsecmu(kr,kf))
-               xmin_wgt_resc_scale(kr,kf)=
-     #           min(xmin_wgt_resc_scale(kr,kf),
-     #               wgtxsecmu(kr,kf))
+           do kk=1,dyn_scale(0)
+             do kr=1,numscales
+               do kf=1,numscales
+                 sum_wgt_resc_scale(kr,kf,kk)=
+     #              sum_wgt_resc_scale(kr,kf,kk)+wgtxsecmu(kr,kf,kk)
+                 xmax_wgt_resc_scale(kr,kf,kk)=
+     #             max(xmax_wgt_resc_scale(kr,kf,kk),
+     #               wgtxsecmu(kr,kf,kk))
+                 xmin_wgt_resc_scale(kr,kf,kk)=
+     #             min(xmin_wgt_resc_scale(kr,kf,kk),
+     #               wgtxsecmu(kr,kf,kk))
+               enddo
              enddo
            enddo
-           do kpdf=1,2*numPDFpairs
-             sum_wgt_resc_pdf(kpdf)=sum_wgt_resc_pdf(kpdf)+
-     #                              wgtxsecPDF(kpdf)
-             xmax_wgt_resc_pdf(kpdf)=
-     #         max(xmax_wgt_resc_pdf(kpdf),
-     #             wgtxsecPDF(kpdf))
-             xmin_wgt_resc_pdf(kpdf)=
-     #         min(xmin_wgt_resc_pdf(kpdf),
-     #             wgtxsecPDF(kpdf))
+           do kk=1,lhaPDFid(0)
+             do kpdf=1,2*numPDFpairs
+               sum_wgt_resc_pdf(kpdf,kk)=sum_wgt_resc_pdf(kpdf,kk)+
+     #                                wgtxsecPDF(kpdf,kk)
+               xmax_wgt_resc_pdf(kpdf,kk)=
+     #           max(xmax_wgt_resc_pdf(kpdf,kk),
+     #             wgtxsecPDF(kpdf,kk))
+               xmin_wgt_resc_pdf(kpdf,kk)=
+     #           min(xmin_wgt_resc_pdf(kpdf,kk),
+     #             wgtxsecPDF(kpdf,kk))
+             enddo
            enddo
          endif
 
@@ -476,18 +523,20 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
              tmp=wgtcentral/XWGTUP
              wgt1a=wgt1a+tmp
              wgt1s=wgt1s+tmp**2
-             tmp=wgtmumin/wgtcentral
-             wgt2a=wgt2a+tmp
-             wgt2s=wgt2s+tmp**2
-             tmp=wgtmumax/wgtcentral
-             wgt3a=wgt3a+tmp
-             wgt3s=wgt3s+tmp**2
-             tmp=wgtpdfmin/wgtcentral
-             wgt4a=wgt4a+tmp
-             wgt4s=wgt4s+tmp**2
-             tmp=wgtpdfmax/wgtcentral
-             wgt5a=wgt5a+tmp
-             wgt5s=wgt5s+tmp**2
+             if(wgtcentral.ne.0.d0)then
+               tmp=wgtmumin/wgtcentral
+               wgt2a=wgt2a+tmp
+               wgt2s=wgt2s+tmp**2
+               tmp=wgtmumax/wgtcentral
+               wgt3a=wgt3a+tmp
+               wgt3s=wgt3s+tmp**2
+               tmp=wgtpdfmin/wgtcentral
+               wgt4a=wgt4a+tmp
+               wgt4s=wgt4s+tmp**2
+               tmp=wgtpdfmax/wgtcentral
+               wgt5a=wgt5a+tmp
+               wgt5s=wgt5s+tmp**2
+             endif
            endif
          endif
 
@@ -505,6 +554,11 @@ c Don't check momentum conservation in that case
  111     continue
       enddo
 
+      if(maxevt.ne.(ipos+ineg))then
+        write(*,*)'Something wrong with counting events:',
+     #             maxevt,ipos,ineg
+      endif
+
       open(unit=99,file='SCALUP.top',status='unknown')
       call mclear
       xnorm=1d0
@@ -515,13 +569,19 @@ c Don't check momentum conservation in that case
       call multitop(1,3,2,'scalup    ',' ','LOG')
       call multitop(2,3,2,'scalup    ',' ','LOG')
       call multitop(3,3,2,'log scalup',' ','LOG')
+      call multitop(4,3,2,'weight    ',' ','LOG')
+      call multitop(5,3,2,'weight    ',' ','LOG')
+      call multitop(6,3,2,'weight    ',' ','LOG')
       close(99)
 
-      if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
-      if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
+      if(event_norm.eq.'ave'.or.event_norm.eq.'bia')
+     #   sum_wgt=sum_wgt/maxevt
+      if(event_norm.eq.'ave'.or.event_norm.eq.'bia')
+     #   sum_abs_wgt=sum_abs_wgt/maxevt
       err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
+      write (*,*) ' of which:',ipos,' w>0',ineg,' w<0'
       write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
       write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
@@ -586,56 +646,68 @@ c Error if more that one sigma away
         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Sums of rescaled weights'
-          do kr=1,numscales
-            do kf=1,numscales
-              if(event_norm.eq.'ave')then
-                write(64,300)'scales',kr,kf,' ->',
-     #                     sum_wgt_resc_scale(kr,kf)/maxevt
-              else
-                write(64,300)'scales',kr,kf,' ->',
-     #                     sum_wgt_resc_scale(kr,kf)
-              endif
+          do kk=1,dyn_scale(0)
+            do kr=1,numscales
+              do kf=1,numscales
+                if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+                  write(64,300)'scales',kk,kr,kf,' ->',
+     #                       sum_wgt_resc_scale(kr,kf,kk)/maxevt
+                else
+                  write(64,300)'scales',kk,kr,kf,' ->',
+     #                       sum_wgt_resc_scale(kr,kf,kk)
+                endif
+              enddo
             enddo
           enddo
-          if(event_norm.eq.'ave')then
-            do kpdf=1,2*numPDFpairs
-              write(64,301)'PDF',kpdf,' ->',
-     #                   sum_wgt_resc_pdf(kpdf)/maxevt
+          if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+            do kk=1,lhaPDFid(0)
+              do kpdf=1,2*numPDFpairs
+                write(64,301)'PDF',kk,kpdf,' ->',
+     #                     sum_wgt_resc_pdf(kpdf,kk)/maxevt
+              enddo
             enddo
           else
-            do kpdf=1,2*numPDFpairs
-              write(64,301)'PDF',kpdf,' ->',
-     #                   sum_wgt_resc_pdf(kpdf)
+            do kk=1,lhaPDFid(0)
+              do kpdf=1,2*numPDFpairs
+                write(64,301)'PDF',kk,kpdf,' ->',
+     #                     sum_wgt_resc_pdf(kpdf,kk)
+              enddo
             enddo
           endif
         endif
         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Max and min of rescaled weights'
-          do kr=1,numscales
-            do kf=1,numscales
-              if(event_norm.eq.'ave')then
-                write(64,400)'scales',kr,kf,' ->',
-     #                     xmax_wgt_resc_scale(kr,kf),
-     #                     xmin_wgt_resc_scale(kr,kf)
-              else
-                write(64,400)'scales',kr,kf,' ->',
-     #                     xmax_wgt_resc_scale(kr,kf),
-     #                     xmin_wgt_resc_scale(kr,kf)
-              endif
+          do kk=1,dyn_scale(0)
+            do kr=1,numscales
+              do kf=1,numscales
+                if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+                  write(64,400)'scales',kk,kr,kf,' ->',
+     #                       xmax_wgt_resc_scale(kr,kf,kk)/maxevt,
+     #                       xmin_wgt_resc_scale(kr,kf,kk)/maxevt
+                else
+                  write(64,400)'scales',kk,kr,kf,' ->',
+     #                       xmax_wgt_resc_scale(kr,kf,kk),
+     #                       xmin_wgt_resc_scale(kr,kf,kk)
+                endif
+              enddo
             enddo
           enddo
-          if(event_norm.eq.'ave')then
-            do kpdf=1,2*numPDFpairs
-              write(64,401)'PDF',kpdf,' ->',
-     #                   xmax_wgt_resc_pdf(kpdf),
-     #                   xmin_wgt_resc_pdf(kpdf)
+          if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+            do kk=1,lhaPDFid(0)
+              do kpdf=1,2*numPDFpairs
+                write(64,401)'PDF',kk,kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf,kk)/maxevt,
+     #                   xmin_wgt_resc_pdf(kpdf,kk)/maxevt
+              enddo
             enddo
           else
+            do kk=1,lhaPDFid(0)
             do kpdf=1,2*numPDFpairs
-              write(64,401)'PDF',kpdf,' ->',
-     #                   xmax_wgt_resc_pdf(kpdf),
-     #                   xmin_wgt_resc_pdf(kpdf)
+              write(64,401)'PDF',kk,kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf,kk),
+     #                   xmin_wgt_resc_pdf(kpdf,kk)
+              enddo
             enddo
           endif
         endif
@@ -655,10 +727,10 @@ c Error if more that one sigma away
 
       if(idec.eq.0)call finalizedecays()
 
- 300  format(a,2(1x,i2),a,(1x,f16.6))
- 301  format(a,6x,i3,a,(1x,f16.6))
- 400  format(a,2(1x,i2),a,2(1x,f16.6))
- 401  format(a,6x,i3,a,2(1x,f16.6))
+ 300  format(a,3(1x,i2),a,(1x,f16.6))
+ 301  format(a,6x,i2,i3,a,(1x,f16.6))
+ 400  format(a,3(1x,i2),a,2(1x,f16.6))
+ 401  format(a,6x,i2,i3,a,2(1x,f16.6))
 
       end
 

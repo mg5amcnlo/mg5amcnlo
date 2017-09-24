@@ -36,7 +36,7 @@ logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
     import madgraph.various.misc as misc
-    from madgraph import MG5DIR
+    from madgraph import MG5DIR, MadGraph5Error
     MADEVENT = False
 except ImportError, error:
     try:
@@ -862,7 +862,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
 
-
     if MADEVENT:
         plugin_path = []
     else:
@@ -1135,7 +1134,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         # Execute the card
         self.import_command_file(args[1])
-         
+    
+        
     def check_import(self, args):
         """check import command"""
         
@@ -1150,14 +1150,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             raise 'No such file or directory %s' % args[1]
         
     
-    def check_answer_in_input_file(self, question_instance, default, path=False):
+    def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
 
         if not self.inputfile:
             return None# interactive mode
 
-        line = self.get_stored_line()
-        # line define if a previous answer was not answer correctly 
+        if line is None:
+            line = self.get_stored_line()
+            # line define if a previous answer was not answer correctly 
         if not line:
             try:
                 line = self.inputfile.next()
@@ -1198,6 +1199,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             possibility = [opt for opt in options if line.lower()==opt.lower()]
             if len (possibility)==1:
                 return possibility[0]
+        if '=' in line and ' ' in line.strip():
+            leninit = len(line)
+            line,n = re.subn('\s*=\s*','=', line)
+            if n and len(line) != leninit:
+                return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
+            
+            
             
         # No valid answer provides
         if self.haspiping:
@@ -1205,8 +1213,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return None # print the question and use the pipe
         else:
             logger.info(question_instance.question)
-            logger.warning('The answer to the previous question is not set in your input file')
-            logger.warning('Use %s value' % default)
+            logger.warning('found line : %s' % line)
+            logger.warning('This answer is not valid for current question. Keep it for next question and use here default: %s', default) 
             self.store_line(line)
             return str(default)
 
@@ -2135,7 +2143,12 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
-            elif not self.casesensitive:
+            elif ' ' in line.strip() and '=' in self.value:
+                line,n = re.subn(r'\s*=\s*', '=', line)
+                if n:
+                    self.default(line)
+                    return self.postcmd(stop, line)
+            if not self.casesensitive:
                 for ans in self.allow_arg:
                     if ans.lower() == self.value.lower():
                         self.value = ans
@@ -2143,6 +2156,8 @@ class SmartQuestion(BasicCmd):
                         break
                 else:
                     raise Exception
+
+                
             else: 
                 raise Exception
         except Exception,error:

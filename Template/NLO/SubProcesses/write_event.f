@@ -8,14 +8,12 @@
       include 'mint.inc'
       integer ndim
       common/tosigint/ndim
-      integer itmax,ncall
-      common/citmax/itmax,ncall
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
-      double precision wgt,unwgtfun
+      double precision wgt
       double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
@@ -25,17 +23,8 @@
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-
-      integer np,npart
-      double precision jampsum,sumborn,shower_scale
-      double complex wgt1(2)
-      character*4 abrv
-      common /to_abrv/ abrv
+      integer npart
+      double precision shower_scale
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       call cpu_time(tBefore)
@@ -93,21 +82,9 @@ c Put the Hevent info in a common block
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
 
-      call unweight_function(p_born,unwgtfun)
-      if (unwgtfun.ne.0d0) then
-         evnt_wgt=evnt_wgt/unwgtfun
-      else
-         write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
-         stop
-      endif
-
-      if (abrv.ne.'grid') then
 c  Write-out the events
-         call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     &        ,shower_scale,ickkw)
-      else
-         call write_random_numbers(lunlhe)
-      endif
+      call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
+     $     ,shower_scale,ickkw)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -116,13 +93,8 @@ c  Write-out the events
 
       subroutine write_header_init
       implicit none
-      integer lunlhe,nevents
-      double precision res,err,res_abs
-      character*120 string
-      logical Hevents
-      common/SHevents/Hevents
+      integer lunlhe
       character*10 MonteCarlo
-c
       common/cMonteCarloType/MonteCarlo
       integer ifile,ievents
       double precision inter,absint,uncer
@@ -143,11 +115,6 @@ c Scales
       character*7 event_norm
       common /event_normalisation/event_norm
 
-
-c      open(unit=58,file='res_1',status='old')
-c      read(58,'(a)')string
-c      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
-c      close(58)
       lunlhe=ifile
 c get info on beam and PDFs
       call setrun
@@ -190,11 +157,11 @@ c get info on beam and PDFs
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
      $     ,ickkw)
+      use extra_weights
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
-      include 'reweight.inc'
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
       double precision pi,zero
@@ -311,16 +278,3 @@ c********************************************************************
       return
       end
 
-      subroutine write_random_numbers(lunlhe)
-      implicit none
-      integer lunlhe,i
-      double precision x(99),sigintF_save,f_abs_save
-      common /c_sigint/ x,sigintF_save,f_abs_save
-      integer ndim
-      common/tosigint/ndim
-      write (lunlhe,'(a)')'  <event>'
-      write (lunlhe,*) ndim,sigintF_save,f_abs_save
-      write (lunlhe,*) (x(i),i=1,ndim)
-      write (lunlhe,'(a)')'  </event>'
-      return
-      end

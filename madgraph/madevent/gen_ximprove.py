@@ -105,13 +105,15 @@ class gensym(object):
         #if the user defines it in the run_card:
         if self.run_card['survey_splitting'] != -1:
             self.splitted_grid = self.run_card['survey_splitting']
+        if self.run_card['survey_nchannel_per_job'] != -1:
+            self.combining_job = self.run_card['survey_nchannel_per_job']        
         
         self.splitted_Pdir = {}
         self.splitted_for_dir = lambda x,y: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.lastoffset = {}
     
-    def launch(self):
+    def launch(self, to_submit=True, clean=True):
         """ """
         
         self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
@@ -121,8 +123,8 @@ class gensym(object):
         P_zero_result = [] # check the number of times where they are no phase-space
         
         nb_tot_proc = len(subproc)
+        job_list = {}        
         for nb_proc,subdir in enumerate(subproc):
-            job_list = {}
             self.cmd.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
                                (nb_proc+1,nb_tot_proc), level=None)
 
@@ -131,15 +133,16 @@ class gensym(object):
             logger.info('    %s ' % subdir)
             
             # clean previous run
-            for match in misc.glob('*ajob*', Pdir):
-                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(match)
-            for match in misc.glob('G*', Pdir):
-                if os.path.exists(pjoin(match,'results.dat')):
-                    os.remove(pjoin(match, 'results.dat')) 
-                if os.path.exists(pjoin(match, 'ftn25')):
-                    os.remove(pjoin(match, 'ftn25')) 
-                    
+            if clean:
+                for match in misc.glob('*ajob*', Pdir):
+                    if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                        os.remove(match)
+                for match in misc.glob('G*', Pdir):
+                    if os.path.exists(pjoin(match,'results.dat')):
+                        os.remove(pjoin(match, 'results.dat')) 
+                    if os.path.exists(pjoin(match, 'ftn25')):
+                        os.remove(pjoin(match, 'ftn25')) 
+                        
             #compile gensym
             self.cmd.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
@@ -180,9 +183,55 @@ class gensym(object):
                     raise Exception, 'Parsing error in gensym: %s' % stdout
                      
             self.cmd.compile(['madevent'], cwd=Pdir)
-            self.submit_to_cluster(job_list)
+            if to_submit:
+                self.submit_to_cluster(job_list)
+                job_list = {}
+                
         return job_list, P_zero_result
             
+    def resubmit(self, min_precision=1.0, resubmit_zero=False):
+        """collect the result of the current run and relaunch each channel
+        not completed or optionally a completed one with a precision worse than 
+        a threshold (and/or the zero result channel)"""
+        
+        job_list, P_zero_result = self.launch(to_submit=False, clean=False)
+        
+        for P , jobs in dict(job_list).items():
+            misc.sprint(jobs)
+            to_resub = []
+            for job in jobs:
+                if os.path.exists(pjoin(P, 'G%s' % job)) and os.path.exists(pjoin(P, 'G%s' % job, 'results.dat')):
+                    one_result = sum_html.OneResult(job)
+                    try:
+                        one_result.read_results(pjoin(P, 'G%s' % job, 'results.dat'))
+                    except:
+                        to_resub.append(job)
+                    if one_result.xsec == 0:
+                        if resubmit_zero:
+                            to_resub.append(job)
+                    elif max(one_result.xerru, one_result.xerrc)/one_result.xsec > min_precision:
+                        to_resub.append(job)
+                else:
+                    to_resub.append(job)   
+            if to_resub:
+                for G in to_resub:
+                    try:
+                        shutil.rmtree(pjoin(P, 'G%s' % G))
+                    except Exception, error:
+                        misc.sprint(error)
+                        pass
+            misc.sprint(to_resub) 
+            self.submit_to_cluster({P: to_resub})
+                    
+                    
+                    
+                    
+                
+                
+                
+        
+        
+           
             
     def submit_to_cluster(self, job_list):
         """ """

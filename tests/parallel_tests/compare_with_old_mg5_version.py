@@ -178,7 +178,7 @@ class OLDMG5Comparator(unittest.TestCase):
     def compare_cross_section_to_values( self, values, my_proc_list = [], 
                         orders = {}, model = 'sm',
                         filename = "", print_result = False,
-                        tolerance = 1e-02):   
+                        tolerance = 2e-02):   
                 
         if 'v4' in model:
             raise Exception, 'Not implemented'
@@ -429,7 +429,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > j j']
         values = {'number_of_P0': '1',
-                  'cross_P0_qq_qq': '6.269e+04'}
+                  'cross_P0_qq_qq': '6.069e+04'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,

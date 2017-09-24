@@ -6,47 +6,16 @@ c 1. PDF set
 c 2. Collider parameters
 c 3. cuts
 c---------------------------------------------------------------------- 
+      use extra_weights
       implicit none
-c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
-c     local
-c     
-      integer npara
-      character*20 param(maxpara),value(maxpara)
-c
-c     include
-c
       include 'PDF/pdf.inc'
       include 'run.inc'
       include 'alfas.inc'
       include 'MODEL/coupl.inc'
-      include '../SubProcesses/reweight0.inc'
-
-      double precision D
-      common/to_dj/D
-c
-c     local
-c
-      character*20 ctemp
-      integer k,i,l1,l2
+      integer k,i
       character*132 buff
-C
-C     input cuts
-C
       include 'cuts.inc'
-C
-C     BEAM POLARIZATION
-C
-      REAL*8 POL(2)
-      common/to_polarization/ POL
-      data POL/1d0,1d0/
-c
-c     Les Houches init block (for the <init> info)
-c
+c Les Houches init block (for the <init> info)
       integer maxpup
       parameter(maxpup=100)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
@@ -55,7 +24,6 @@ c
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
 c
-      logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
       integer nevents
@@ -64,17 +32,13 @@ c
       integer iappl
       common /for_applgrid/ iappl
       integer idum
-C      
-c
-c----------
-c     start
-c----------
+c jet-rate distance. To be set to 1 for FxFx
+      double precision D
+      common/to_dj/D
+c Include all the parameters set in the run_card.dat
       include 'run_card.inc'
-      
-c MZ add the possibility to have shower_MC input lowercase
+c Change shower_MC string to upper case
       call to_upper(shower_MC)
-C
-
 c Determine if there is a need to do scale and/or PDF reweighting
       do_rwgt_scale=.false.
       do i=1,dyn_scale(0)
@@ -90,69 +54,41 @@ c Determine if there is a need to do scale and/or PDF reweighting
             exit
          endif
       enddo
-
 c Default scale and PDF choice used for the actual run
       dynamical_scale_choice=dyn_scale(1)
       lhaid=lhaPDFid(1)
-
-c merging cuts
-      xqcut=0d0
-      xmtc=0d0
-      d=1d0
-      
-c*********************************************************************
-c     Random Number Seed                                             *
-c*********************************************************************
-
-        gridrun=.false.
-        gridpack=.false.
-
-c************************************************************************     
-c     Renormalization and factorization scales                          *
-c************************************************************************     
-c
-
 c For backward compatibility
       scale = muR_ref_fixed
       q2fact(1) = muF1_ref_fixed**2      ! fact scale**2 for pdf1
       q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
-
 c check that the event normalization input is reasoble
       buff = event_norm 
       call case_trap2(buff) ! requires a string of length 20 at least
       event_norm=buff 
-      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum'
-     $     .and. event_norm(1:5).ne.'unity')then
+      if ( event_norm(1:7).ne.'average' .and.
+     $     event_norm(1:3).ne.'sum' .and.
+     $     event_norm(1:5).ne.'unity'.and.
+     $     event_norm(1:4).ne.'bias')then
          write (*,*) 'Do not understand the event_norm parameter'/
      &        /' in the run_card.dat. Possible options are'/
-     &        /' "average", "sum" or "unity". Current input is: ',
-     &        event_norm
-         open(unit=26,file='../../error',status='unknown')
-         write (26,*) 'Do not understand the event_norm parameter'/
-     &        /' in the run_card.dat. Possible options are'/
-     &        /' "average", "sum" or "unity". Current input is: ',
-     &        event_norm
-         
+     &        /' "average", "sum", "unity" or "bias". '/
+     &        /'Current input is: ', event_norm
          stop 1
       endif
-
-c info for reweight
-
+c Check parameters for FxFx/UNLOPS/NNLL-veto
       if ( ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3 .and.
      &     ickkw.ne.-1) then
          write (*,*) 'ickkw parameter not known. ickkw=',ickkw
          stop
       endif
-c$$$      ickkw=0
       chcluster=.false.
       ktscheme=1
-
-c !!! Default behavior changed (MH, Aug. 07) !!!
-c If no pdf, read the param_card and use the value from there and
-c order of alfas running = 2
-
+      xqcut=0d0
+      xmtc=0d0
+      D=1d0
+c Set alphaS(mZ)      
       if(lpp(1).ne.0.or.lpp(2).ne.0) then
          write(*,*) 'A PDF is used, so alpha_s(MZ)'/
      &        /' is going to be modified'
@@ -172,33 +108,29 @@ c order of alfas running = 2
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
-c !!! end of modification !!!
-
-C       Fill common block for Les Houches init info
+C Fill common block for Les Houches init info
       do i=1,2
-        if(lpp(i).eq.1.or.lpp(i).eq.2) then
-          idbmup(i)=2212
-        elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
-          idbmup(i)=-2212
-        elseif(lpp(i).eq.3) then
-          idbmup(i)=11
-        elseif(lpp(i).eq.-3) then
-          idbmup(i)=-11
-        elseif(lpp(i).eq.0) then
-           open (unit=71,status='old',file='initial_states_map.dat')
-           read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
-           close (71)
-c          idbmup(i)=idup(i,1)
-        else
-          idbmup(i)=lpp(i)
-        endif
+         if(lpp(i).eq.1.or.lpp(i).eq.2) then
+            idbmup(i)=2212
+         elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
+            idbmup(i)=-2212
+         elseif(lpp(i).eq.3) then
+            idbmup(i)=11
+         elseif(lpp(i).eq.-3) then
+            idbmup(i)=-11
+         elseif(lpp(i).eq.0) then
+            open (unit=71,status='old',file='initial_states_map.dat')
+            read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
+            close (71)
+         else
+            idbmup(i)=lpp(i)
+         endif
         ebmup(i)=ebeam(i)
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
-
-      if (lpdfvar(1) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
-c fill the nmemPDF(i) array with the number of PDF error set. This we
+c Fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
+      if (lpdfvar(1) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
          call numberPDFm(1,nmemPDF(1))
          if (nmemPDF(1).eq.1) then
             nmemPDF(1)=0
@@ -207,100 +139,51 @@ c get from LHAPDF.
       else
          nmemPDF(1)=0
       endif
-
-      return
- 99   write(*,*) 'error in reading'
       return
  100  write(*,*) '"initial_states_map.dat" not found (or incorrect'/
      $     /' format) by "Source/setrun"'
       stop 1
       end
 
-C-------------------------------------------------
-C   GET_PDFUP
-C   Convert MadEvent pdf name to LHAPDF number
-C-------------------------------------------------
-
       subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhaid)
+C     Convert internal pdf name to LHAPDF number
       implicit none
-
       character*(*) pdfin
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
-
       parameter (npdfs=16)
       character*7 pdflabs(npdfs)
-      data pdflabs/
-     $   'none',
-     $   'mrs02nl',
-     $   'mrs02nn',
-     $   'cteq4_m',
-     $   'cteq4_l',
-     $   'cteq4_d',
-     $   'cteq5_m',
-     $   'cteq5_d',
-     $   'cteq5_l',
-     $   'cteq5m1',
-     $   'cteq6_m',
-     $   'cteq6_l',
-     $   'cteq6l1',     
-     $   'nn23lo',
-     $   'nn23lo1',
-     $   'nn23nlo'/
+      data pdflabs/ 'none', 'mrs02nl', 'mrs02nn', 'cteq4_m', 'cteq4_l',
+     $     'cteq4_d', 'cteq5_m', 'cteq5_d', 'cteq5_l', 'cteq5m1',
+     $     'cteq6_m', 'cteq6_l', 'cteq6l1', 'nn23lo', 'nn23lo1',
+     $     'nn23nlo'/
       integer numspdf(npdfs)
-      data numspdf/
-     $   00000,
-     $   20250,
-     $   20270,
-     $   19150,
-     $   19170,
-     $   19160,
-     $   19050,
-     $   19060,
-     $   19070,
-     $   19051,
-     $   10000,
-     $   10041,
-     $   10042,
-     $   246800,
-     $   247000,
-     $   244800/
-
-
+      data numspdf/ 00000, 20250, 20270, 19150, 19170, 19160, 19050,
+     $     19060, 19070, 19051, 10000, 10041, 10042, 246800, 247000,
+     $     244800/
       if(pdfin.eq."lhapdf") then
-        write(*,*)'using LHAPDF'
-        do i=1,2
-           pdfgup(i)=-1
-           pdfsup(i)=lhaid
-        enddo
-        return
+         write(*,*)'using LHAPDF'
+         do i=1,2
+            pdfgup(i)=-1
+            pdfsup(i)=lhaid
+         enddo
+         return
       endif
-
-      
       mpdf=-1
       do i=1,npdfs
-        if(pdfin(1:len_trim(pdfin)) .eq. pdflabs(i))then
-          mpdf=numspdf(i)
-        endif
+         if(pdfin(1:len_trim(pdfin)) .eq. pdflabs(i))then
+            mpdf=numspdf(i)
+         endif
       enddo
-
       if(mpdf.eq.-1) then
-        write(*,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
-        write(*,*)'known pdfs are'
-        write(*,*) pdflabs
-        open(unit=26,file='../../error',status='unknown')
-        write(26,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
-        write(26,*)'known pdfs are'
-        write(26,*) pdflabs
-        stop 1
-c$$$        write(*,*)'using ',pdflabs(12)
-c$$$        mpdf=numspdf(12)
+         write(*,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
+         write(*,*)'known pdfs are'
+         write(*,*) pdflabs
+         stop 1
       endif
-
       do i=1,2
-        pdfgup(i)=-1
-        pdfsup(i)=mpdf
+         pdfgup(i)=-1
+         pdfsup(i)=mpdf
       enddo
-
       return
       end

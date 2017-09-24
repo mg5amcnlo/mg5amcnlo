@@ -116,8 +116,9 @@ C
 	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
       
 	  INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
-      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
       COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+
 C
 C     FUNCTIONS
 C
@@ -292,7 +293,7 @@ C ----------
 
       END
 
-      SUBROUTINE %(proc_prefix)sGET_ME(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE   
 C
 C CONSTANT
@@ -325,10 +326,10 @@ C     the include file with the values of the parameters and masses
       return 
       end
 
-      SUBROUTINE %(proc_prefix)sINITIALISE(PATH)
+      SUBROUTINE %(proc_prefix)sINITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.    
       IMPLICIT NONE   
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH 
       call setpara(PATH)  !first call to setup the paramaters    
       return 

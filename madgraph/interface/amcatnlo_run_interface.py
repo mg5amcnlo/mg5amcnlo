@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -120,10 +120,14 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
-            misc.compile([test], cwd = this_dir, job_specs = False)
+            if test == 'test_ME' or test == 'test_MC':
+                test_exe='test_soft_col_limits'
+            else:
+                test_exe=test
+            misc.compile([test_exe], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
-            misc.call(['./%s' % (test)], cwd=this_dir, 
+            misc.call(['./%s' % (test_exe)], cwd=this_dir, 
                     stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'),
                     close_fds=True)
             if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
@@ -134,9 +138,7 @@ def compile_dir(*arguments):
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
-                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
             #compile madevent_mintMC/mintFO
@@ -1265,7 +1267,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'])
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
@@ -1282,7 +1285,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         argss[0] = mode
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'])
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
@@ -1437,7 +1441,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             
             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
@@ -1453,11 +1456,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
                 if mint_step+1==2 and nevents==0:
                     self.print_summary(options,2,mode)
                     return
-                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
-                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
+
             # Sanity check on the event files. If error the jobs are resubmitted
             self.check_event_files(jobs_to_collect)
 
@@ -1539,6 +1543,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             try:
                 with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
                     jobs_to_collect=pickle.load(f)
+                    for job in jobs_to_collect:
+                        job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
                 raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
@@ -1670,10 +1676,11 @@ RESTART = %(mint_mode)s
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
         if fixed_order:
-            cross, error = sum_html.make_all_html_results(self, jobs=jobs_to_collect)
+            cross, error = self.make_make_all_html_results(folder_names=['%s*' % run_mode], 
+                                                           jobs=jobs_to_collect)
         else:
             name_suffix={'born' :'B' , 'all':'F'}
-            cross, error = sum_html.make_all_html_results(self, folder_names=['G%s*' % name_suffix[run_mode]])
+            cross, error = self.make_make_all_html_results(folder_names=['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 # Combine grids from split fixed order jobs
@@ -1749,7 +1756,10 @@ RESTART = %(mint_mode)s
         """write the nevts files in the SubProcesses/P*/G*/ directories"""
         for job in jobs:
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
-                f.write('%i\n' % job['nevents'])
+                if self.run_card['event_norm'].lower()=='bias':
+                    f.write('%i %f\n' % (job['nevents'],self.cross_sect_dict['xseca']))
+                else:
+                    f.write('%i\n' % job['nevents'])
 
     def combine_split_order_run(self,jobs_to_run):
         """Combines jobs and grids from split jobs that have been run"""
@@ -2573,6 +2583,8 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['unit']='pb'
             self.cross_sect_dict['xsec_string']='Total cross section'
             self.cross_sect_dict['axsec_string']='Total abs(cross section)'
+        if self.run_card['event_norm'].lower()=='bias':
+            self.cross_sect_dict['xsec_string']+=', incl. bias (DO NOT USE)'
 
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
@@ -3159,6 +3171,8 @@ RESTART = %(mint_mode)s
             p.communicate(input = '1\n')
         elif event_norm.lower() == 'unity':
             p.communicate(input = '3\n')
+        elif event_norm.lower() == 'bias':
+            p.communicate(input = '0\n')
         else:
             p.communicate(input = '2\n')
 
@@ -3570,7 +3584,7 @@ RESTART = %(mint_mode)s
 
                     if self.banner.get('run_card', 'event_norm').lower() == 'sum':
                         norm = 1.
-                    elif self.banner.get('run_card', 'event_norm').lower() == 'average':
+                    else:
                         norm = 1./float(self.shower_card['nsplit_jobs'])
 
                     plotfiles2 = []
@@ -3835,6 +3849,7 @@ RESTART = %(mint_mode)s
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
+
         shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
@@ -3925,7 +3940,8 @@ RESTART = %(mint_mode)s
                 lhaid_list = [abs(int(self.shower_card['pdfcode']))]
                 content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif int(self.shower_card['pdfcode'])==1:
+        elif int(self.shower_card['pdfcode'])==1 or \
+            int(self.shower_card['pdfcode'])==-1 and True:
             # Try to use LHAPDF because user wants to use the same PDF
             # as was used for the event generation. However, for the
             # event generation, LHAPDF was not used, so non-trivial to
@@ -3994,6 +4010,8 @@ RESTART = %(mint_mode)s
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
+        if self.run_card['event_norm'].lower()=='bias' and self.run_card['nevents'] != 0:
+            evt_wghts[:]=[1./float(self.run_card['nevents']) for wgt in evt_wghts]
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
@@ -4548,8 +4566,7 @@ RESTART = %(mint_mode)s
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
-                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+
             self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
@@ -4789,23 +4806,22 @@ RESTART = %(mint_mode)s
         if test in ['test_ME', 'test_MC']:
             content = "-2 -2\n" #generate randomly energy/angle
             content+= "100 100\n" #run 100 points for soft and collinear tests
-            content+= "0\n" #sum over helicities
             content+= "0\n" #all FKS configs
-            content+= '\n'.join(["-1"] * 50) #random diagram
+            content+= '\n'.join(["-1"] * 50) #random diagram (=first diagram)
         elif test == 'check_poles':
             content = '20 \n -1\n'
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
             shower = self.run_card['parton_shower']
-            MC_header = "%s\n " % shower + \
-                        "1 \n1 -0.1\n-1 -0.1\n"
-            file.write(MC_header + content)
+            header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
+            file.write(header + content)
+        elif test == 'test_ME':
+            header = "2 \n"
+            file.write(header + content)
         else:
             file.write(content)
         file.close()
-
-
 
     ############################################################################
     def find_model_name(self):

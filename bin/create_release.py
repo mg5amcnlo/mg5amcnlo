@@ -200,9 +200,9 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 
 
 # 1.1 Change the trapfpe.c code to an empty file
-os.remove(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'))
-create_empty = open(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'),'w')
-create_empty.close()
+#os.remove(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'))
+#create_empty = open(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'),'w')
+#create_empty.close()
 
 # 2. Create the automatic documentation in the apidoc directory
 try:

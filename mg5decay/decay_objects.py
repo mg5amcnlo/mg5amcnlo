@@ -1992,6 +1992,9 @@ class DecayModel(model_reader.ModelReader):
     def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
         
+        if q < 0.5:
+            return
+
         # Raise error for wrong type of q
         if not isinstance(q, int) and not isinstance(q, long) and \
                 not isinstance(q, float):
