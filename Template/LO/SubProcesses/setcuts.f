@@ -23,7 +23,7 @@ c
 c
 c     LOCAL
 c
-      integer i,j
+      integer i,j,k
       integer icollider,detail_level
       integer ncheck
       logical done,fopened
@@ -404,6 +404,27 @@ c
             endif
          enddo
       enddo      
+c
+c     smin cut from PDG cut 
+c
+      if (pdg_cut(1).ne.0)then
+         do k=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               do j = i+1,nexternal
+                  if(.not.cut_decays.and.from_decay(j))then
+                     cycle
+                  endif
+                  if (abs(idup(i, 1, iproc)).eq.pdg_cut(k).and.
+     &                 abs(idup(j, 1, iproc)).eq.pdg_cut(k))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                  endif
+               enddo
+            enddo
+         enddo
+      endif      
 
 c     
 c     ptll cut (min and max)

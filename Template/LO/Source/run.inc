@@ -80,4 +80,6 @@ c
       double precision Emax4pdg(0:25) 
       double precision etamin4pdg(0:25) 
       double precision etamax4pdg(0:25) 
-      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, Emin4pdg, Emax4pdg, etamin4pdg,etamax4pdg
+      double precision mxxmin4pdg(0:25) 
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, Emin4pdg, Emax4pdg, etamin4pdg,
+     &etamax4pdg, mxxmin4pdg

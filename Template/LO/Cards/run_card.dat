@@ -183,6 +183,7 @@
  %(mmbbmax)s  = mmbbmax ! max invariant mass of a b pair
  %(mmaamax)s  = mmaamax ! max invariant mass of gamma gamma pair
  %(mmllmax)s  = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
+ %(mxx_min_pdg)s = mxx_min_pdg ! min invariant mass of a pair of particle X (e.g. {6:250})
 #*********************************************************************
 # Minimum and maximum invariant mass for all letpons                 *
 #*********************************************************************
