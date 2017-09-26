@@ -73,11 +73,11 @@ C
 c
 c
 c
-      integer pdg_cut(0:10)
-      double precision pt_min_pdg(0:10) 
-      double precision pt_max_pdg(0:10) 
-      double precision E_min_pdg(0:10) 
-      double precision E_max_pdg(0:10) 
-      double precision eta_min_pdg(0:10) 
-      double precision eta_max_pdg(0:10) 
-      common/TO_PDG_SPECIFIC_CUT/pdg_cut, pt_min_pdg,pt_max_pdg, E_min_pdg, E_max_pdg, eta_min_pdg,eta_max_pdg
+      integer pdg_cut(0:25)
+      double precision ptmin4pdg(0:25) 
+      double precision ptmax4pdg(0:25) 
+      double precision Emin4pdg(0:25) 
+      double precision Emax4pdg(0:25) 
+      double precision etamin4pdg(0:25) 
+      double precision etamax4pdg(0:25) 
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, Emin4pdg, Emax4pdg, etamin4pdg,etamax4pdg

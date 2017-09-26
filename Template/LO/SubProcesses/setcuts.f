@@ -319,12 +319,12 @@ c
                   cycle
                endif
                if (abs(idup(i, 1, iproc)).eq.pdg_cut(j))then
-                  etmin(i) = pt_min_pdg(j)
-                  etmax(i)= pt_max_pdg(j)
-                  emin(i)= E_min_pdg(j)
-                  emax(i)= E_max_pdg(j)
-                  etamin(i)= eta_min_pdg(j)
-                  etamax(i)= eta_max_pdg(j)
+                  etmin(i) = ptmin4pdg(j)
+                  etmax(i)= ptmax4pdg(j)
+                  emin(i)= Emin4pdg(j)
+                  emax(i)= Emax4pdg(j)
+                  etamin(i)= etamin4pdg(j)
+                  etamax(i)= etamax4pdg(j)
                endif
             enddo
          enddo
