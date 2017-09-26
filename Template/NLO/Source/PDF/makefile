@@ -16,8 +16,13 @@ ifdef lhapdf
   else
     ifdef applgrid
       PDF         = pdfwrap_lhapdf.o pdf_lhapdf.o pdg2pdf_lhapdf.o opendata.o
-    else
-      PDF         = pdfwrap_lhapdf.o pdf_lhapdf6.o pdg2pdf_lhapdf6.o opendata.o
+    else # lhapdf6
+      ifeq ($(lhapdfsubversion),1) # 6.1.X
+        PDF         = pdfwrap_lhapdf.o pdf_lhapdf6.o pdg2pdf_lhapdf6.o opendata.o
+      else # 6.2.X
+        CXXFLAGS+=-std=c++11    
+        PDF         = pdfwrap_lhapdf.o pdf_lhapdf62.o pdg2pdf_lhapdf6.o opendata.o
+      endif
     endif
   endif
 else
