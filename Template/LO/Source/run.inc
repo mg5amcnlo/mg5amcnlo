@@ -70,4 +70,14 @@ C are the PDGs subject to the ktdurham cut
 C
       integer pdgs_for_merging_cut(0:1000)
       common/TO_MERGE/pdgs_for_merging_cut
-
+c
+c
+c
+      integer pdg_cut(0:10)
+      double precision pt_min_pdg(0:10) 
+      double precision pt_max_pdg(0:10) 
+      double precision E_min_pdg(0:10) 
+      double precision E_max_pdg(0:10) 
+      double precision eta_min_pdg(0:10) 
+      double precision eta_max_pdg(0:10) 
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, pt_min_pdg,pt_max_pdg, E_min_pdg, E_max_pdg, eta_min_pdg,eta_max_pdg

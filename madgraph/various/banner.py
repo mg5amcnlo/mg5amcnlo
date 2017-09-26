@@ -2155,8 +2155,11 @@ class RunCard(ConfigFile):
             value, name = line
             name = name.lower().strip()
             if name not in self and ('min' in name or 'max' in name):
-                #looks like an entry added by one user -> add it nicely
-                self.add_param(name, float(value), hidden=True, cut=True)
+                if self.pdg_cut_pattern and self.pdg_cut_pattern.search(name):
+                    self.set_special_pdg_cut(name, value)
+                else:
+                    #looks like an entry added by one user -> add it nicely
+                    self.add_param(name, float(value), hidden=True, cut=True)
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
@@ -2624,8 +2627,73 @@ class RunCardLO(RunCard):
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
         
-        # Specify what particle IDs to use for the CKKWL merging cut ktdurham
+        # parameter allowing to define simple cut via the pdg
+        # Special syntax are related to those. (can not be edit directly)
+        #self.add_param('ptmin4pdg',{'__type__':0.}, include=False)
+        #self.add_param('ptmax4pdg',{'__type__':0.}, include=False)
+        #self.add_param('Emin4pdg',{'__type__':0.}, include=False)
+        #self.add_param('Emin4pdg',{'__type__':0.}, include=False)
+        #self.add_param('etamin4pdg',{'__type__':0.}, include=False)
+        #self.add_param('etamax4pdg',{'__type__':0.}, include=False)
         
+        self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
+        self.add_param('pt_min_pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('pt_max_pdg',[-1.], hidden=True, system=True)
+        self.add_param('E_min_pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('E_max_pdg',[-1.], hidden=True, system=True)  
+        self.add_param('eta_min_pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('eta_max_pdg',[-1.], hidden=True, system=True)   
+        # Not implemetented right now (double particle cut)
+        #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
+        # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
+        #self.add_param('M_max_pdg',[0.], hidden=True, system=True)               
+        # self.add_param('DR_min_pdg',[0.], hidden=True, system=True) # store pt min
+        #self.add_param('DR_max_pdg',[0.], hidden=True, system=True)               
+           
+    pdg_cut_pattern = re.compile(r'(pt|E|eta)_(min|max)_(\d+)', re.I)
+    def __setitem__(self, name, value, change_userdefine=False):
+        """set the attribute and set correctly the type if the value is a string.
+           change_userdefine on True if we have to add the parameter in user_set
+        """
+        
+        if self.pdg_cut_pattern.search(name):
+            return self.set_special_pdg_cut(name, value)
+        else:
+            return super(RunCardLO, self).__setitem__(name, value, change_userdefine)
+   
+    def set_special_pdg_cut(self, name, value):
+        """ """
+        recomp =   self.pdg_cut_pattern.search(name)
+        var, minmax, pdg = recomp.groups()
+        pdg = int(pdg)
+        if pdg in range(6)+ range(11,16)+[21,22]:
+            logger.error('PDG specific quark can not be use for light/b quark, lepton, gluon or photon.')
+            return
+        
+        if self['pdg_cut'] == [0]:
+            self['pdg_cut'][0] = pdg
+            pos = 0
+        elif pdg in self['pdg_cut']:
+            pos = self['pdg_cut'].index(pdg)
+        else:
+            pos = len(self['pdg_cut'])
+            if pos==10:
+                logger.error('maximum 10 pdg specific cut are allowed. setting for %s is ignored', name)
+                return 
+            self['pdg_cut'].append(pdg)
+            self['pt_min_pdg'].append(0.)
+            self['E_min_pdg'].append(0.)
+            self['eta_min_pdg'].append(0.)
+            self['pt_max_pdg'].append(0)
+            self['E_max_pdg'].append(0)
+            self['eta_max_pdg'].append(0)
+        
+        self['%s_%s_pdg' %(var, minmax)][pos] = self.format_variable(value, float, name=name)
+                         
+                
+            
+            
+             
     def check_validity(self):
         """ """
         
@@ -3269,7 +3337,8 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-
+    pdg_cut_pattern =False
+    
     def default_setup(self):
         """define the default value"""
         

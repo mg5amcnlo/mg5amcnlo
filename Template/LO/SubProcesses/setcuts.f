@@ -204,7 +204,7 @@ c
          is_a_nu(i)=.false.
 
 
-c-do not apply cuts to these
+c-do not apply cuts to these. CAREFULL: PDG_CUT do not consider do_cuts (they simply check the cut_decays)
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
          if (abs(idup(i,1,iproc)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1,iproc)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
@@ -308,8 +308,27 @@ c                 etamax(i)=etaonium
 c            endif
          endif
       enddo
+c
+c     check for pdg specific cut
+c
+      if (pdg_cut(1).ne.0)then
 
-
+         do j=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               if (abs(idup(i, 1, iproc)).eq.pdg_cut(j))then
+                  etmin(i) = pt_min_pdg(j)
+                  etmax(i)= pt_max_pdg(j)
+                  emin(i)= E_min_pdg(j)
+                  emax(i)= E_max_pdg(j)
+                  etamin(i)= eta_min_pdg(j)
+                  etamax(i)= eta_max_pdg(j)
+               endif
+            enddo
+         enddo
+      endif
 
 c
 c     delta r cut
