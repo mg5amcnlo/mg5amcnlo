@@ -5174,6 +5174,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """This is run on quitting the class. Apply here all the self-consistency
         rule that you want. Do the modification via the set command."""
 
+        # For NLO run forbid any pdg specific cut on massless particle
+        if isinstance(self.run_card,banner_mod.RunCardNLO):
+            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
+                           self.run_card['eta_min_pdg'].keys()+self.run_card['eta_max_pdg'].keys()): 
+            
+                if self.param_card.get_value('mass', int(pdg), default=0) ==0:
+                    raise Exception, "For NLO run, you can use PDG specific cut only for massive particles: (failed for %s)" % pdg
+        
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             isinstance(self.run_card,banner_mod.RunCardNLO) and \

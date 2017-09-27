@@ -40,6 +40,8 @@ C     file, others are in ./Source/kin_functions.f
       external R2_04,invm2_04,pt_04,eta_04,pt,eta
 c local integers
       integer i,j
+c temporary variable for caching locally computation
+      double precision tmpvar
 c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
@@ -62,6 +64,12 @@ c The UNLOPS cut
       double precision p_unlops(0:3,nexternal)
       include "run.inc" ! includes the ickkw parameter
       logical passUNLOPScuts
+c PDG specific cut
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision etamin(nincoming+1:nexternal-1)
+      double precision etamax(nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,etamin,etamax
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
@@ -372,6 +380,34 @@ c End of loop over photons
 c End photon isolation
       endif
 
+C
+C     PDG SPECIFIC CUT. (PT/ETA)
+C
+      do i=nincoming+1,nexternal-1
+         if(etmin(i).ne.0d0.or.etmax(i).gt.0d0)then
+            tmpvar = pt_04(p(0,i))
+            write(*,*) 'cut on ', i, ipdg(i)
+            if (tmpvar.lt.etmin(i)) then
+               passcuts_user=.false.
+               return
+            else if(tmpvar.gt.etmax(i).and.etmax(i).gt.0d0) then
+               passcuts_user=.false.
+               return
+            endif
+         endif
+         if(etamin(i).ne.0d0.or.etamax(i).gt.0d0)then
+            tmpvar = eta_04(p(0,i))
+            if (tmpvar.lt.etamin(i)) then
+               passcuts_user=.false.
+               return
+            else if(tmpvar.gt.etamax(i).and.etamax(i).gt.0d0) then
+               passcuts_user=.false.
+               return
+            endif
+         endif
+      enddo
+
+
 C***************************************************************
 C***************************************************************
 C PUT HERE YOUR USER-DEFINED CUTS
@@ -379,6 +415,7 @@ C***************************************************************
 C***************************************************************
 C
 c$$$C EXAMPLE: cut on top quark pT
+c$$$C          Note that PDG specific cut are more optimised than simple user cut
 c$$$      do i=1,nexternal   ! loop over all external particles
 c$$$         if (istatus(i).eq.1    ! final state particle
 c$$$     &        .and. abs(ipdg(i)).eq.6) then    ! top quark

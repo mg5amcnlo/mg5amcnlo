@@ -36,6 +36,12 @@ C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+c 
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision etamin(nincoming+1:nexternal-1)
+      double precision etamax(nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,etamin,etamax
 c
 c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
@@ -87,6 +93,40 @@ c-charged-leptons
 c-photons
          if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
       enddo
+c
+c     check for pdg specific cut (pt/eta)
+c
+      do i=nincoming+1, nexternal-1 ! never include last particle
+         etmin(i) = 0d0
+         etmax(i) = -1d0
+         etamin(i) = 0d0
+         etamax(i) =-1d0
+      enddo
+      if (pdg_cut(1).ne.0)then
+         do j=1,pdg_cut(0)
+            do i=nincoming+1, nexternal-1 ! never include last particle
+               if (abs(idup(i, 1)).eq.pdg_cut(j))then
+c                 fully ensure that only massive particles are allowed at NLO
+                  if(pmass(i).eq.0d0) then
+                     write(*,*) 'Illegal use of pdg specific cut.'
+                     write(*,*)'For NLO process, only massive particle can be included'
+                     stop 1
+                  endif
+c                 fully ensure that this is not a jet/lepton/photon
+                  if(is_a_lp(i).or.is_a_lm(i).or.is_a_j(i).or.is_a_ph(i))then
+                     write(*,*) 'Illegal use of pdg specific cut.'
+                     write(*,*) 'This can not be used for jet/lepton/photon/gluon'
+                     stop 1
+                  endif
+                  etmin(i) = ptmin4pdg(j)
+                  etmax(i)= ptmax4pdg(j)
+                  etamin(i)= etamin4pdg(j)
+                  etamax(i)= etamax4pdg(j)
+               endif
+            enddo
+         enddo
+      endif
+
 
       RETURN
       END
@@ -157,6 +197,13 @@ c Les Houches common block
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       real*8         emass(nexternal)
       common/to_mass/emass
+c     block for the (simple) cut bsed on the pdg
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision etamin(nincoming+1:nexternal-1)
+      double precision etamax(nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,etamin,etamax
+c
       logical firsttime,firsttime_chans(maxchannels)
       data firsttime /.true./
       data firsttime_chans/maxchannels*.true./
@@ -309,10 +356,21 @@ c lepton pT
                      endif
                   enddo
                else
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)
-                  xm(i)=emass(i)
+                  if (i.eq.nexternal)then
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
+                        taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) +  emass(i)
+                        taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + emass(i)
+                        xm(i) = emass(i)
+                  else
+                     if  (j_fks.gt.nincoming) then
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + max(etmin(i), emass(i))
+                     else
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
+                     endif
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + max(etmin(i), emass(i))
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + max(etmin(i),emass(i))
+                     xm(i) = emass(i)+etmin(i)
+                  endif
                endif
                xw(i)=0d0
             enddo

@@ -79,3 +79,13 @@ c    For FO run (with lhe type of analysis
 c
       double precision FO_LHE_weight_ratio
       common /FO_ANALYSIS_LHW/FO_LHE_weight_ratio
+c
+c
+c
+      integer pdg_cut(0:25)
+      double precision ptmin4pdg(0:25) 
+      double precision ptmax4pdg(0:25) 
+      double precision etamin4pdg(0:25) 
+      double precision etamax4pdg(0:25) 
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, etamin4pdg,
+     &etamax4pdg
