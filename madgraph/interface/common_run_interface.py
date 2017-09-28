@@ -3869,7 +3869,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # lhapdf-config
             getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
-            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            if lhapdf_version.startswith('6.1'): 
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            else:
+                #for python 6.2.1, import lhapdf should be working to download pdf
+                lhapdf = misc.import_python_lhapdf(lhapdf_config)
+                if lhapdf:
+                    if 'PYTHONPATH' in os.environ:
+                        os.environ['PYTHONPATH']+= ':' + os.path.dirname(lhapdf.__file__)
+                    else:
+                        os.environ['PYTHONPATH'] = ':'.join(sys.path) + ':' + os.path.dirname(lhapdf.__file__)
+                else:
+                    logger.warning('lhapdf 6.2.1 requires python integration in order to download pdf set. Trying anyway')
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
