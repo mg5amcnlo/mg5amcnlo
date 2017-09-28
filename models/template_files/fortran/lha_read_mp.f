@@ -279,12 +279,12 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo
       
       npara=npara-1
-c      close(iunit)
+ 99   close(iunit)
       if (WriteParamLog) then
         close(logfile)
       endif
       
- 99   return
+      return
  
       end
 

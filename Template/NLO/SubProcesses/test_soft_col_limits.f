@@ -78,6 +78,8 @@ C split orders stuff
      $     ,amp_split_size)
       double precision limit_split(15,amp_split_size), wlimit_split(15
      $     ,amp_split_size)
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
       double precision ran2
       external         ran2
 c-----
@@ -310,7 +312,11 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
             fxl(1)=fx*wgt
             wfxl(1)=jac_cnt(0)
             do iamp=1,amp_split_size
-               fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
+               if(ilim.eq.0)then
+                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0)
+               else
+                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
+               endif
                wfxl_split(1,iamp)=jac_cnt(0)
             enddo
             if (ilim.eq.2) then
@@ -329,7 +335,11 @@ c because otherwise fresh random will be used...
             limit(1)=fx*wgt
             wlimit(1)=wgt
             do iamp=1,amp_split_size
-               limit_split(1,iamp) = amp_split(iamp)*wgt
+               if (ilim.eq.2) then
+                 limit_split(1,iamp) = amp_split(iamp)*wgt
+               else
+                 limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+               endif
                wlimit_split(1,iamp) = wgt
             enddo
 
@@ -365,11 +375,21 @@ c because otherwise fresh random will be used...
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
                   call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  fxl(i)=fx*wgt
+                  wfxl(i)=jac_cnt(0)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(0)
+                     wfxl_split(i,iamp)=jac_cnt(0)
+                  enddo
                endif
                limit(i)=fx*wgt
                wlimit(i)=wgt
                do iamp=1,amp_split_size
-                  limit_split(i,iamp) = amp_split(iamp)*wgt
+                  if (ilim.eq.2) then
+                    limit_split(i,iamp) = amp_split(iamp)*wgt
+                  else
+                    limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+                  endif
                   wlimit_split(i,iamp) = wgt
                enddo
                do k=1,nexternal
@@ -507,7 +527,11 @@ c
             fxl(1)=fx*jac_cnt(1)
             wfxl(1)=jac_cnt(1)
             do iamp=1,amp_split_size
-               fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
+              if(ilim.eq.0)then
+                fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1)
+              else
+                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
+              endif
                wfxl_split(1,iamp) = jac_cnt(1)
             enddo
 
@@ -520,8 +544,12 @@ c
             limit(1)=fx*wgt
             wlimit(1)=wgt
             do iamp=1,amp_split_size
-               limit_split(1,iamp) = amp_split(iamp)*wgt
-               wlimit_split(1,iamp) = wgt
+              if (ilim.eq.2) then
+                limit_split(1,iamp) = amp_split(iamp)*wgt
+              else
+                limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+              endif
+              wlimit_split(1,iamp) = wgt
             enddo
 
             do k=1,nexternal
@@ -556,12 +584,22 @@ c
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
                   call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  fxl(i)=fx*wgt
+                  wfxl(i)=jac_cnt(0)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(1)
+                     wfxl_split(i,iamp) = jac_cnt(1)
+                  enddo
                endif
                limit(i)=fx*wgt
                wlimit(i)=wgt
                do iamp=1,amp_split_size
-                  limit_split(i,iamp) = amp_split(iamp)*wgt
-                  wlimit_split(i,iamp) = wgt
+                 if (ilim.eq.2) then
+                   limit_split(i,iamp) = amp_split(iamp)*wgt
+                 else
+                   limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+                 endif
+                 wlimit_split(i,iamp) = wgt
                enddo
                do k=1,nexternal
                   do l=0,3

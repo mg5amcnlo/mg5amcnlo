@@ -42,7 +42,8 @@ except:
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
-sys.path.insert(0, os.path.join(root_path,'bin'))
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.join(root_path,'bin'))
 
 # usefull shortcut
 pjoin = os.path.join
@@ -52,7 +53,7 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-except ImportError: 
+except ImportError,error: 
     # import from madevent directory
     MADEVENT = True
     import internal.extended_cmd as cmd
@@ -2960,7 +2961,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
-            cross, error = sum_html.make_all_html_results(self)
+            cross, error = self.make_make_all_html_results()
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)  
             self.exec_cmd("print_results %s" % self.run_name,
@@ -3012,14 +3013,13 @@ Beware that this can be dangerous for local multicore runs.""")
         if len(args) == 2:
             refine_opt['max_process']= args[1]
 
-
         # initialize / remove lhapdf mode
         self.configure_directory()
 
         # Update random number
         self.update_random()
         self.save_random()
-
+        
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
@@ -3111,7 +3111,7 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             self.refine_mode = "new"
             
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 
@@ -4344,13 +4344,13 @@ tar -czf split_$1.tar.gz split_$1
             # From the log file
             if all(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
                         PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
-                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
+                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))      
+                else:
+                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1. YYYYY')
 
             if not any(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 self.results.add_detail('cross_pythia', PY8_extracted_information['sigma_m'])
@@ -4377,12 +4377,13 @@ tar -czf split_$1.tar.gz split_$1
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
             if os.path.isfile(djr_output) and len(PY8_extracted_information['cross_sections'])==0:
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                    PY8_extracted_information['cross_sections'] = {} 
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
+                else:
+                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1.XXXXX')
+                    PY8_extracted_information['cross_sections'] = {} 
+                    
             cross_sections = PY8_extracted_information['cross_sections']
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -5209,9 +5210,11 @@ tar -czf split_$1.tar.gz split_$1
         #see when the last file was modified
         time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+        
+        if self.configured >= time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
             #just ensure that cluster specific are correctly handled
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             return
         else:
             self.configured = time_mod
@@ -6034,7 +6037,7 @@ tar -czf split_$1.tar.gz split_$1
                                                                      
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
-
+    
         cards = ['param_card.dat', 'run_card.dat']
         if switch['shower'] in ['PY6', 'PYTHIA6']:
             cards.append('pythia_card.dat')
@@ -6349,7 +6352,7 @@ class GridPackCmd(MadEventCmd):
         combine_runs.CombineRuns(self.me_dir)
         
         #update html output
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
         
@@ -6827,9 +6830,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line = MadEventCmd(force_run=True)
+                cmd_line = MadEventCmd(os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line = MadEventCmdShell(force_run=True)
+                cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error

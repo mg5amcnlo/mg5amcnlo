@@ -80,14 +80,15 @@ class LoopExporterFortran(object):
         ProcessExporterFortran but give access to arguments like dir_path and
         clean using options. This avoids method resolution object ambiguity"""
 
-    default_opt = {'clean': False, 'complex_mass':False,
+    default_opt = dict(export_v4.ProcessExporterFortran.default_opt)
+    default_opt.update({'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
                         'fortran_compiler':'gfortran',
                         'SubProc_prefix': 'P',
                         'output_dependencies': 'external',
                         'compute_color_flows': False,
-                        'mode':''}
+                        'mode':''})
 
     include_names    = {'ninja' : 'mninja.mod',
                         'golem' : 'generic_function_1p.mod',
@@ -241,6 +242,133 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         super(LoopProcessExporterFortranSA, self).copy_template(model)
 
         self.loop_additional_template_setup()
+    
+    def write_f2py_makefile(self):
+        return
+    
+    def write_f2py_check_sa(self, matrix_element, output_path):
+        """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
+ 
+        # No need to further edit this file for now.
+        file = open(os.path.join(self.template_dir,\
+                                       'check_sa_all.py.inc')).read()
+        open(output_path,'w').writelines(file)
+        # Make it executable
+        os.chmod(output_path, os.stat(output_path).st_mode | stat.S_IEXEC)
+    
+    def write_f2py_splitter(self):
+        """write a function to call the correct matrix element"""
+        
+        template = """
+%(python_information)s
+
+      SUBROUTINE INITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
+      CHARACTER*512 PATH
+CF2PY INTENT(IN) :: PATH
+      CALL SETPARA(PATH)  !first call to setup the paramaters
+      RETURN
+      END
+
+      SUBROUTINE SET_MADLOOP_PATH(PATH)
+C     Routine to set the path of the folder 'MadLoop5_resources' to MadLoop
+        CHARACTER(512) PATH
+CF2PY intent(in)::path
+        CALL SETMADLOOPPATH(PATH)
+      END
+
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
+  IMPLICIT NONE
+
+CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
+CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in) :: npdg
+CF2PY double precision, intent(out) :: ANS
+CF2PY integer, intent(out) :: RETURNCODE
+CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALES2
+
+  integer pdgs(*)
+  integer npdg, nhel, RETURNCODE
+  double precision p(*)
+  double precision ANS, ALPHAS, PI,SCALES2
+
+%(smatrixhel)s
+
+      return
+      end
+  
+  subroutine get_pdg_order(OUT)
+  IMPLICIT NONE
+CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
+  
+  INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  DATA PDGS/ %(pdgs)s /
+  OUT=PDGS
+  RETURN
+  END
+  
+  subroutine get_prefix(PREFIX)
+  IMPLICIT NONE
+CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
+  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
+  DATA PREF / '%(prefix)s'/
+  PREFIX = PREF
+  RETURN
+  END 
+  
+        """
+         
+        allids = self.prefix_info.keys()
+        allprefix = [self.prefix_info[key][0] for key in allids]
+        min_nexternal = min([len(ids) for ids in allids])
+        max_nexternal = max([len(ids) for ids in allids])
+
+        info = []
+        for key, (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+            
+
+        text = []
+        for n_ext in range(min_nexternal, max_nexternal+1):
+            current = [ids for ids in allids if len(ids)==n_ext]
+            if not current:
+                continue
+            if min_nexternal != max_nexternal:
+                if n_ext == min_nexternal:
+                    text.append('       if (npdg.eq.%i)then' % n_ext)
+                else:
+                    text.append('       else if (npdg.eq.%i)then' % n_ext)
+            for ii,pdgs in enumerate(current):
+                condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
+                if ii==0:
+                    text.append( ' if(%s) then ! %i' % (condition, i))
+                else:
+                    text.append( ' else if(%s) then ! %i' % (condition,i))
+                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+            text.append(' endif')
+        #close the function
+        if min_nexternal != max_nexternal:
+            text.append('endif')
+
+        formatting = {'python_information':'\n'.join(info), 
+                          'smatrixhel': '\n'.join(text),
+                          'maxpart': max_nexternal,
+                          'nb_me': len(allids),
+                          'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
+                                             for i in range(max_nexternal) \
+                                             for pdg in allids]),
+                      'prefix':'\',\''.join(allprefix)
+                      }
+    
+    
+        text = template % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
+        
+    
     
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
@@ -832,6 +960,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
                        group_number = group_number, group_elem_number = proc_id)
 
+        if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
+            for proc in matrix_element.get('processes'):
+                ids = [l.get('id') for l in proc.get('legs_with_decays')]
+                self.prefix_info[tuple(ids)] = [dict['proc_prefix'], proc.get_tag()]
+
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
         dict['proc_id'] = ''
@@ -1071,9 +1204,15 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         # We can always write the f2py wrapper if present (in loop optimized mode, it is)
         if not os.path.isfile(pjoin(self.template_dir,'check_py.f.inc')):
             return
+        
         file = open(os.path.join(self.template_dir,\
                                       'check_py.f.inc')).read()
-        file=file%replace_dict
+
+        if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
+            replace_dict['prefix_routine'] = replace_dict['proc_prefix']
+        else:
+            replace_dict['prefix_routine'] = ''
+        file=file%replace_dict        
         new_path = writer.name.replace('check_sa.f', 'f2py_wrapper.f')
         new_writer = writer.__class__(new_path, 'w')
         new_writer.writelines(file)
@@ -1088,7 +1227,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
 
         process_definition_string = curr_proc.nice_string().replace('Process:','')
-        file=file.format(random_PSpoint_python_formatted,process_definition_string)
+        file=file.format(random_PSpoint_python_formatted,process_definition_string,
+                         replace_dict['proc_prefix'].lower())
         new_path = writer.name.replace('check_sa.f', 'check_sa.py')
         new_writer = open(new_path, 'w')
         new_writer.writelines(file)

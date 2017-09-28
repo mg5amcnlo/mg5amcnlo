@@ -54,7 +54,9 @@ c Vegas stuff
       integer              n_ord_virt
       common /c_n_ord_virt/n_ord_virt
 
-      double precision weight
+      double precision weight,event_weight,inv_bias
+      character*7 event_norm
+      common /event_normalisation/event_norm
 c For MINT:
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
      $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
@@ -340,7 +342,11 @@ c Mass-shell stuff. This is MC-dependent
          if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
-         read (99,*) nevts
+         if (event_norm(1:4).ne.'bias') then
+            read (99,*) nevts
+         else
+            read (99,*) nevts,event_weight
+         endif
          close(99)
          write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
@@ -385,7 +391,11 @@ c fill the information for the write_header_init common block
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
 
-         weight=(ans(1,1)+ans(5,1))/ncall
+         if (event_norm(1:4).ne.'bias') then
+            weight=(ans(1,1)+ans(5,1))/ncall
+         else
+            weight=event_weight
+         endif
 
          if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
      $        abrv(1:4).ne.'virt') then
@@ -420,6 +430,10 @@ c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
+            if (event_norm(1:4).eq.'bias') then
+               call include_inverse_bias_wgt(inv_bias)
+               weight=event_weight*inv_bias
+            endif
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
          call deallocate_weight_lines
@@ -1007,9 +1021,11 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-
+         
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
+c Include the weight from the bias_function
+         call include_bias_wgt
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have

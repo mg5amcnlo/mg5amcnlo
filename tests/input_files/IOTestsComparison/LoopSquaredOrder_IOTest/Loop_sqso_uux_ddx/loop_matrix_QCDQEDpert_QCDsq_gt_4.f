@@ -1942,6 +1942,16 @@ C        not included
           ENDIF
         ENDIF
 
+C       If NaN are present in the evaluation, automatically set the
+C        accuracy to 1.0d99.
+        DO I=1,3
+          DO J=1,MAXSTABILITYLENGTH
+            IF (ISNAN(FULLLIST(I,K,J))) THEN
+              ACC(K) = 1.0D99
+            ENDIF
+          ENDDO
+        ENDDO
+
       ENDDO
 
       END

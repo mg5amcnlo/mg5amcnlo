@@ -97,6 +97,7 @@ class VirtualExporter(object):
     
     
     def __init__(self, dir_path = "", opt=None):
+        # cmd_options is a dictionary with all the optional argurment passed at output time 
         return
 
     def copy_template(self, model):
@@ -139,7 +140,8 @@ class ProcessExporterFortran(VirtualExporter):
 
     default_opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False,
-                        'v5_model': True
+                        'v5_model': True,
+                        'output_options':{}
                         }
     grouped_mode = False
 
@@ -152,6 +154,8 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
+        
+        self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
@@ -1736,7 +1740,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             f2py_compiler = ''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
-            f2py_compiler = default_compiler
+            f2py_compiler = default_compiler['f2py']
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
         elif sys.version_info[1] == 6:
@@ -1859,7 +1863,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
     matrix_template = "matrix_standalone_v4.inc"
 
-    def __init__(self, *args, **opts):
+    def __init__(self, *args,**opts):
         """add the format information compare to standard init"""
         
         if 'format' in opts:
@@ -1867,6 +1871,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             del opts['format']
         else:
             self.format = 'standalone'
+        
+        self.prefix_info = {}
         ProcessExporterFortran.__init__(self, *args, **opts)
 
     def copy_template(self, model):
@@ -1905,7 +1911,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
@@ -1993,24 +1999,141 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
             
-        # create a single makefile to compile all the subprocesses
-        text = '''\n# For python linking (require f2py part of numpy)\nifeq ($(origin MENUM),undefined)\n  MENUM=2\nendif\n''' 
-        deppython = ''
-        for Pdir in os.listdir(pjoin(self.dir_path,'SubProcesses')):
-            if os.path.isdir(pjoin(self.dir_path, 'SubProcesses', Pdir)):
-                text += '%(0)s/matrix$(MENUM)py.so:\n\tcd %(0)s;make matrix$(MENUM)py.so\n'% {'0': Pdir}
-                deppython += ' %(0)s/matrix$(MENUM)py.so ' % {'0': Pdir}
-        
-        text+='all: %s\n\techo \'done\'' % deppython
+        if self.prefix_info:
+            self.write_f2py_splitter()
+            self.write_f2py_makefile()
+            self.write_f2py_check_sa(matrix_elements,
+                            pjoin(self.dir_path,'SubProcesses','check_sa.py'))
+        else:
+            # create a single makefile to compile all the subprocesses
+            text = '''\n# For python linking (require f2py part of numpy)\nifeq ($(origin MENUM),undefined)\n  MENUM=2\nendif\n''' 
+            deppython = ''
+            for Pdir in os.listdir(pjoin(self.dir_path,'SubProcesses')):
+                if os.path.isdir(pjoin(self.dir_path, 'SubProcesses', Pdir)):
+                    text += '%(0)s/matrix$(MENUM)py.so:\n\tcd %(0)s;make matrix$(MENUM)py.so\n'% {'0': Pdir}
+                    deppython += ' %(0)s/matrix$(MENUM)py.so ' % {'0': Pdir}
+            text+='all: %s\n\techo \'done\'' % deppython
             
-        ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
-        ff.write(text)
-        ff.close()
+            ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
+            ff.write(text)
+            ff.close()
+                    
+    def write_f2py_splitter(self):
+        """write a function to call the correct matrix element"""
         
-        
-        
-        
+        template = """
+%(python_information)s
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  IMPLICIT NONE
+
+CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
+CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in) :: npdg
+CF2PY double precision, intent(out) :: ANS
+CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALE2
+  integer pdgs(*)
+  integer npdg, nhel
+  double precision p(*)
+  double precision ANS, ALPHAS, PI,SCALE2
+  include 'coupl.inc'
+  
+  PI = 3.141592653589793D0
+  G = 2* DSQRT(ALPHAS*PI)
+  CALL UPDATE_AS_PARAM()
+  if (scale2.ne.0d0) stop 1
+
+%(smatrixhel)s
+
+      return
+      end
+  
+      SUBROUTINE INITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
+      CHARACTER*512 PATH
+CF2PY INTENT(IN) :: PATH
+      CALL SETPARA(PATH)  !first call to setup the paramaters
+      RETURN
+      END
+
+    subroutine get_pdg_order(PDG)
+  IMPLICIT NONE
+CF2PY INTEGER, intent(out) :: PDG(%(nb_me)i,%(maxpart)i)  
+  INTEGER PDG(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  DATA PDGS/ %(pdgs)s /
+  PDG = PDGS
+  RETURN
+  END 
+
+    subroutine get_prefix(PREFIX)
+  IMPLICIT NONE
+CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
+  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
+  DATA PREF / '%(prefix)s'/
+  PREFIX = PREF
+  RETURN
+  END 
+ 
+  
+        """
+         
+        allids = self.prefix_info.keys()
+        allprefix = [self.prefix_info[key][0] for key in allids]
+        min_nexternal = min([len(ids) for ids in allids])
+        max_nexternal = max([len(ids) for ids in allids])
+
+        info = []
+        for key, (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s' % (tag, key, prefix))
             
+
+        text = []
+        for n_ext in range(min_nexternal, max_nexternal+1):
+            current = [ids for ids in allids if len(ids)==n_ext]
+            if not current:
+                continue
+            if min_nexternal != max_nexternal:
+                if n_ext == min_nexternal:
+                    text.append('       if (npdg.eq.%i)then' % n_ext)
+                else:
+                    text.append('       else if (npdg.eq.%i)then' % n_ext)
+            for ii,pdgs in enumerate(current):
+                condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
+                if ii==0:
+                    text.append( ' if(%s) then ! %i' % (condition, i))
+                else:
+                    text.append( ' else if(%s) then ! %i' % (condition,i))
+                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[pdgs][0])
+            text.append(' endif')
+        #close the function
+        if min_nexternal != max_nexternal:
+            text.append('endif')
+
+        formatting = {'python_information':'\n'.join(info), 
+                          'smatrixhel': '\n'.join(text),
+                          'maxpart': max_nexternal,
+                          'nb_me': len(allids),
+                          'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
+                                             for i in range(max_nexternal) for pdg in allids),
+                          'prefix':'\',\''.join(allprefix)
+                          }
+        formatting['lenprefix'] = len(formatting['prefix'])
+        text = template % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
+            
+    def write_f2py_check_sa(self, matrix_element, writer):
+        """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
+        # To be implemented. It is just an example file, i.e. not crucial.
+        return
+    
+    def write_f2py_makefile(self):
+        """ """
+        # Add file in SubProcesses
+        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -2038,13 +2161,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if self.opt['sa_symmetry']:
             # avoid symmetric output
             for i,proc in enumerate(matrix_element.get('processes')):
-                        
-                initial = []    #filled in the next line
-                final = [l.get('id') for l in proc.get('legs')\
-                      if l.get('state') or initial.append(l.get('id'))]
-                decay_finals = proc.get_final_ids_after_decay()
-                decay_finals.sort()
-                tag = (tuple(initial), tuple(decay_finals))
+                   
+                tag = proc.get_tag()     
                 legs = proc.get('legs')[:]
                 leg0 = proc.get('legs')[0]
                 leg1 = proc.get('legs')[1]
@@ -2085,10 +2203,24 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             filename = pjoin(dirpath, 'matrix_prod.f')
         else:
             filename = pjoin(dirpath, 'matrix.f')
+            
+        proc_prefix = ''
+        if 'prefix' in self.cmd_options:
+            if self.cmd_options['prefix'] == 'int':
+                proc_prefix = 'M%s_' % number
+            elif self.cmd_options['prefix'] == 'proc':
+                proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
+            else:
+                raise Exception, '--prefix options supports only \'int\' and \'proc\''
+            for proc in matrix_element.get('processes'):
+                ids = [l.get('id') for l in proc.get('legs_with_decays')]
+                self.prefix_info[tuple(ids)] = [proc_prefix, proc.get_tag()] 
+                
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
-            fortran_model)
+            fortran_model,
+            proc_prefix=proc_prefix)
 
         if self.opt['export_format'] == 'standalone_msP':
             filename =  pjoin(dirpath,'configs_production.inc')
@@ -2135,11 +2267,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+        linkfiles = ['check_sa.f', 'coupl.inc']
+
+        if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
+            text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
+            new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
+            with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
+                f.write(new_text)
+            linkfiles.pop(0)
 
         for file in linkfiles:
             ln('../%s' % file, cwd=dirpath)
-
+        ln('../makefileP', name='makefile', cwd=dirpath)
         # Return to original PWD
         #os.chdir(cwd)
 
@@ -2193,7 +2332,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             
         if not self.opt.has_key('sa_symmetry'):
             self.opt['sa_symmetry']=False
-
 
 
         # The proc_id is for MadEvent grouping which is never used in SA.
@@ -3581,16 +3719,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             calls = 0
         return calls
 
-    def link_files_in_SubProcess(self, Ppath):
-        """ Create the necessary links in the P* directory path Ppath"""
-        
-        #import genps.inc and maxconfigs.inc into Subprocesses
-        ln(self.dir_path + '/Source/genps.inc', 
-                                     self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/maxconfigs.inc',
-                                     self.dir_path + '/SubProcesses', log=False)
-
-        linkfiles = ['addmothers.f',
+    link_Sub_files = ['addmothers.f',
                      'cluster.f',
                      'cluster.inc',
                      'coupl.inc',
@@ -3613,7 +3742,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'setscales.f',
                      'sudakov.inc',
                      'symmetry.f',
-                     'unwgt.f']
+                     'unwgt.f',
+                     'dummy_fct.f'
+                     ]
+
+    def link_files_in_SubProcess(self, Ppath):
+        """ Create the necessary links in the P* directory path Ppath"""
+        
+        #import genps.inc and maxconfigs.inc into Subprocesses
+        ln(self.dir_path + '/Source/genps.inc', 
+                                     self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc',
+                                     self.dir_path + '/SubProcesses', log=False)
+
+        linkfiles = self.link_Sub_files
 
         for file in linkfiles:
             ln('../' + file , cwd=Ppath)    
@@ -6520,14 +6662,15 @@ class UFO_model_to_mg4(object):
                                       rule_card_path=rule_card, 
                                       mssm_convert=True)
         
-def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True):
+def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 
         interface containing all potential usefull information.
         The output_type argument specifies from which context the output
         is called. It is 'madloop' for MadLoop5, 'amcatnlo' for FKS5 output
         and 'default' for tree-level outputs."""
 
-    opt = cmd.options
+    opt = dict(cmd.options)
+    opt['output_options'] = cmd_options
 
     # ==========================================================================
     # First check whether Ninja must be installed.
@@ -6576,9 +6719,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'SubProc_prefix':'P',
       'compute_color_flows':cmd.options['loop_color_flows'],
       'mode': 'reweight' if cmd._export_format == "standalone_rw" else '',
-      'cluster_local_path': cmd.options['cluster_local_path']
+      'cluster_local_path': cmd.options['cluster_local_path'],
+      'output_options': cmd_options
       }
-
 
     if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters
@@ -6680,7 +6823,12 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         elif cmd._export_format in ['madweight']:
             return ProcessExporterFortranMW(cmd._export_dir, opt)
         elif format == 'plugin':
-            return cmd._export_plugin(cmd._export_dir, opt)
+            if isinstance(cmd._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                return cmd._export_plugin(cmd._export_dir, loop_induced_opt)
+            else:
+                return cmd._export_plugin(cmd._export_dir, opt)
+
         else:
             raise Exception, 'Wrong export_v4 format'
     else:

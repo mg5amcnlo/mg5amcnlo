@@ -95,12 +95,20 @@ endif
 # Option lhapdf
 
 ifneq ($(lhapdf),)
-CXXFLAGS += $(shell $(lhapdf) --cppflags)
-alfas_functions=alfas_functions_lhapdf
-llhapdf+= $(shell $(lhapdf) --libs) -lLHAPDF
+  CXXFLAGS += $(shell $(lhapdf) --cppflags)
+  alfas_functions=alfas_functions_lhapdf
+  llhapdf+= $(shell $(lhapdf) --cflags --libs) -lLHAPDF
+# check if we need to activate c++11 (for lhapdf6.2)
+  ifeq ($(origin CXX),default)
+    ifeq ($lhapdfversion$lhapdfsubversion,62)
+      CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
+    else
+      CXX=$(DEFAULT_CPP_COMPILER)
+    endif
+  endif	     
 else
-alfas_functions=alfas_functions
-llhapdf=
+  alfas_functions=alfas_functions
+  llhapdf=
 endif
 
 # Helper function to check MG5 version

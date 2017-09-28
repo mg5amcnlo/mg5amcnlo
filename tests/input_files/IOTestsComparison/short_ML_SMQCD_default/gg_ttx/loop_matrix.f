@@ -1499,6 +1499,16 @@ C     The following is used instead
       ENDDO
       ACC  = ACC / ( ABS(AVG) / 3.0D0)
 
+C     If NaN are present in the evaluation, automatically set the
+C      accuracy to 1.0d99.
+      DO I=1,3
+        DO J=1,MAXSTABILITYLENGTH
+          IF (ISNAN(FULLLIST(I,J))) THEN
+            ACC = 1.0D99
+          ENDIF
+        ENDDO
+      ENDDO
+
       END
 
       SUBROUTINE ML5_0_SET_N_EVALS(N_DP_EVALS,N_QP_EVALS)

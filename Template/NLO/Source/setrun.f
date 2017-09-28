@@ -71,12 +71,14 @@ c check that the event normalization input is reasoble
       buff = event_norm 
       call case_trap2(buff) ! requires a string of length 20 at least
       event_norm=buff 
-      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum'
-     $     .and. event_norm(1:5).ne.'unity')then
+      if ( event_norm(1:7).ne.'average' .and.
+     $     event_norm(1:3).ne.'sum' .and.
+     $     event_norm(1:5).ne.'unity'.and.
+     $     event_norm(1:4).ne.'bias')then
          write (*,*) 'Do not understand the event_norm parameter'/
      &        /' in the run_card.dat. Possible options are'/
-     &        /' "average", "sum" or "unity". Current input is: ',
-     &        event_norm
+     &        /' "average", "sum", "unity" or "bias". '/
+     &        /'Current input is: ', event_norm
          stop 1
       endif
 c Check parameters for FxFx/UNLOPS/NNLL-veto

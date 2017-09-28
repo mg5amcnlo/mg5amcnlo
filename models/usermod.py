@@ -149,8 +149,29 @@ class UFOModel(object):
                 misc.sprint(particle.get('name'), particle.replace.get('name'))
         
         pattern = re.compile(r'\b(%s)\b' % ('|'.join(to_change)))
+        
+        #need to check that all particle are written correctly <- Fix potential issue
+        #            of lower/upper case in FR
+        all_particles_name = [self.format_param(P)[2:] for P in self.particles]
+        all_lower = [p.lower() for p in all_particles_name]
+        pat2 = re.compile(r'\bP\.(\w+)\b')
+        
+        
         for line in open(inputpath):
             line =  pattern.sub(lambda mo: to_change[mo.group()], line)
+            part_in_line = set(pat2.findall(line))
+            
+            #handle the case of lower/upper case particle
+            to_replace = {}
+            for p in part_in_line:
+                if p in all_particles_name:
+                    continue
+                else:
+                    ind = all_lower.index(p.lower())
+                    to_replace[p] = all_particles_name[ind]
+            if to_replace:
+                pat3 = re.compile(r'\bP\.(%s)\b' % '|'.join(p for p in to_replace))
+                line =  pat3.sub(lambda mo: 'P.%s'%to_replace[mo.groups(0)[0]], line)
             fsock.write(line)
         
   

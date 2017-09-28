@@ -29,6 +29,13 @@ c is the number of color flows at Born level
       double precision particle_charge(nexternal)
       common /c_charges/particle_charge
 
+c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      include 'born_conf.inc'
+      include 'born_coloramps.inc'
+c
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
@@ -77,19 +84,33 @@ c colour and anticolour
 c
       if (split_type(qcd_pos)) then
         ! identify the color partners 
+c consider only leading colour flows
+        num_leading_cflows=0
         do i=1,max_bcol
+          is_leading_cflow(i)=.false.
+          do j=1,mapconfig(0)
+            if(icolamp(i,j,1))then
+               is_leading_cflow(i)=.true.
+               num_leading_cflows=num_leading_cflows+1
+               exit
+            endif
+          enddo
+        enddo
+c
+        do i=1,max_bcol
+          if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
-         isspecial0=.false.
+          isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
 c colour singlets in the Born process, according to the information 
 c stored in ICOLUP
-         nglu=0
-         nsngl=0
-         mothercol(1)=ICOLUP(1,fksfather,i)
-         mothercol(2)=ICOLUP(2,fksfather,i)
-         notagluon=(mothercol(1).eq.0 .or. mothercol(2).eq.0)
+          nglu=0
+          nsngl=0
+          mothercol(1)=ICOLUP(1,fksfather,i)
+          mothercol(2)=ICOLUP(2,fksfather,i)
+          notagluon=(mothercol(1).eq.0 .or. mothercol(2).eq.0)
 c
-         do j=1,nexternal-1
+          do j=1,nexternal-1
 c Loop over Born-level particles; j is the possible colour partner of father,
 c and whether this is the case is determined inside this loop
             if (j.ne.fksfather) then
@@ -173,14 +194,14 @@ c by one unit, so decrease it
                   endif
                enddo
             endif
-         enddo
-         if( ((nglu+nsngl).gt.(nexternal-2)) .or.
+          enddo
+          if( ((nglu+nsngl).gt.(nexternal-2)) .or.
      #       (isspecial0.and.(nglu+nsngl).ne.(nexternal-2)) )then
            write(*,*)'Error #4 in set_matrices'
            write(*,*)isspecial0,nglu,nsngl
            stop
-         endif
-         isspecial=isspecial.or.isspecial0
+          endif
+          isspecial=isspecial.or.isspecial0
         enddo
 
       else if (split_type(qed_pos)) then
@@ -215,6 +236,10 @@ c      include "fks.inc"
       include 'orders.inc'
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
       if(ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
@@ -272,22 +297,26 @@ c
           enddo
 c
         enddo
+c
+        if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
+     #    ( (.not.notagluon).and.
+     #      ( (.not.isspecial).and.ntot.ne.(2*num_leading_cflows) .or.
+     #        (isspecial.and.ntot.ne.num_leading_cflows) ) ) )then
+          write(*,*)'Error #6 in check_mc_matrices',
+     #     notagluon,ntot,num_leading_cflows,max_bcol
+          stop
+        endif
+c
+        if(num_leading_cflows.gt.max_bcol)then
+          write(*,*)'Error #7 in check_mc_matrices',
+     #     num_leading_cflows,max_bcol
+          stop
+        endif
 
       else if (split_type(QED_pos)) then
         ! write here possible checks for QED-type splittings
         continue
       endif
-c
-C     DOES NOT APPLY FOR EW CORRECTIONS
-CMZ      if( (notagluon.and.ntot.ne.max_bcol) .or.
-C     #    ( (.not.notagluon).and.
-C     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
-C     #        (isspecial.and.ntot.ne.max_bcol) ) ) )then
-C         write(*,*)'Error #6 in check_mc_matrices',
-C     #     notagluon,ntot,max_bcol
-C         stop
-C      endif
-c
       return
       end
 
@@ -411,7 +440,6 @@ c
       do i = 1, max_bcol
         colorflow(ipartners(0),i)=i
       enddo
-
       return
       end
 
@@ -1336,6 +1364,11 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
 
 c
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      
+c
 C BORN/BORNTILDE
 
 C check if momenta have to be rotated
@@ -1500,7 +1533,7 @@ CMZ! this has to be all changed according to the correct jamps
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
-        sumborn=sumborn+jamp2(i)
+         if(is_leading_cflow(i))sumborn=sumborn+jamp2(i)
 c sumborn is the sum of the leading-color amplitudes squared
       enddo
       
@@ -1508,7 +1541,7 @@ c sumborn is the sum of the leading-color amplitudes squared
 c BARRED AMPLITUDES
       do i=1,max_bcol
         do iord=1,nsplitorders
-          if (sumborn.ne.0d0) then
+          if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
             bornbars(i,iord)=jamp2(i)/sumborn * born(iord) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
@@ -1523,7 +1556,7 @@ c BARRED AMPLITUDES
             write (*,*) 'ERROR #1, dividing by zero'
             stop
           endif
-          if (sumborn.ne.0d0) then
+          if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
             bornbarstilde(i,iord)=jamp2(i)/sumborn * dble(borntilde(iord)) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 

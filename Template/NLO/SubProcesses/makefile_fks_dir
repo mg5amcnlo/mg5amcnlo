@@ -68,7 +68,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o chooser_functions.o 		\
-	pythia_unlops.o recluster.o splitorders_stuff.o weight_lines.o
+	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
+	weight_lines.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<

@@ -391,10 +391,11 @@ c do the same as above for the counterevents
       n_proc=1
       call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
+         write(*,*)n_ctr_str(i)
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
      &        ,idum,(pdg(j,i),j=1,nexternal),QCDpower(i),(bjx(j,i),j=1
      &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
-     &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i)
+     &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i)
          do ii=1,2
             do j=1,nexternal
                do k=0,3
@@ -459,10 +460,6 @@ c call the PDFs
                   call weight_lines_allocated(nexternal,max_contr,iwgt
      $                 ,max_iproc)
 c add the weights to the array
-
-                  write (*,*) 'ERROR: need cpower here'
-                  stop 1
-                  
                   wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
      $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
      $                 /mu2_q))*g(kr)**QCDpower(i)

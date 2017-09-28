@@ -36,7 +36,7 @@ logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
     import madgraph.various.misc as misc
-    from madgraph import MG5DIR
+    from madgraph import MG5DIR, MadGraph5Error
     MADEVENT = False
 except ImportError, error:
     try:
@@ -862,7 +862,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
 
-
     if MADEVENT:
         plugin_path = []
     else:
@@ -1135,7 +1134,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         # Execute the card
         self.import_command_file(args[1])
-         
+    
+        
     def check_import(self, args):
         """check import command"""
         
@@ -1200,8 +1200,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len (possibility)==1:
                 return possibility[0]
         if '=' in line and ' ' in line.strip():
+            leninit = len(line)
             line,n = re.subn('\s*=\s*','=', line)
-            if n:
+            if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
             

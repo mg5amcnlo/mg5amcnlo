@@ -340,7 +340,7 @@ C     JAMPs contributing to orders QCD=2
 
       END
 
-      SUBROUTINE ML5_0_GET_ME(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE ML5_0_GET_VALUE(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE
 C     
 C     CONSTANT
@@ -373,10 +373,10 @@ C     the include file with the values of the parameters and masses
       RETURN
       END
 
-      SUBROUTINE ML5_0_INITIALISE(PATH)
+      SUBROUTINE ML5_0_INITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.    
       IMPLICIT NONE
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters    
       RETURN

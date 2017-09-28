@@ -68,6 +68,8 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+C     put in common block to expose this variable to python interface
+      COMMON/ML5_0_PROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 ML5_0_MATRIX
       INTEGER IHEL,IDEN, I, J
@@ -265,7 +267,7 @@ C     Amplitude(s) for diagram number 2
 
       END
 
-      SUBROUTINE ML5_0_GET_ME(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE ML5_0_GET_VALUE(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE
 C     
 C     CONSTANT
@@ -298,10 +300,10 @@ C     the include file with the values of the parameters and masses
       RETURN
       END
 
-      SUBROUTINE ML5_0_INITIALISE(PATH)
+      SUBROUTINE ML5_0_INITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.    
       IMPLICIT NONE
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters    
       RETURN

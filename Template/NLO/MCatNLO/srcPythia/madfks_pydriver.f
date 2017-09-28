@@ -318,7 +318,7 @@ C HOW TO RESET BRANCHING RATIOS FOR PYTHIA?
 C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
-      if (NORM_EVENT.eq.'average')MQQ=1
+      if (NORM_EVENT(1:3).ne.'sum')MQQ=1
 
 C---USER'S INITIAL CALCULATIONS
       CALL PYABEG

@@ -1358,7 +1358,10 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     if isinstance(sig_fig, int):
         if not a or not b:
             if zero_limit:
-                power = sig_fig + 1
+                if zero_limit is not True:
+                    power = zero_limit
+                else:
+                    power = sig_fig + 1
             else:
                 return a == b  
         else:
@@ -1801,7 +1804,23 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
     
     
 
-
+def plugin_import(module, error_msg, fcts=[]):
+    """convenient way to import a plugin file/function"""
+    
+    try:
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+    except ImportError:
+        try:
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        except ImportError:
+            raise MadGraph5Error, error_msg
+    
+    if not fcts:
+        return _temp
+    elif len(fcts) == 1:
+        return getattr(_temp,fcts[0])
+    else:
+        return [getattr(_temp,name) for name in fcts]
 
 
 python_lhapdf=None
@@ -1872,6 +1891,20 @@ def import_python_lhapdf(lhapdfconfig):
     else:
         python_lhapdf = None
     return python_lhapdf
+
+def newtonmethod(f, df, x0, error=1e-10,maxiter=10000):
+    """implement newton method for solving f(x)=0, df is the derivate"""
+    x = x0
+    iter=0
+    while abs(f(x)) > error:
+        iter+=1
+        x = x - f(x)/df(x)
+        if iter ==maxiter:
+            sprint('fail to solve equation')
+            raise Exception
+    return x
+
+
 
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()

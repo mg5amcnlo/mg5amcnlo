@@ -27,8 +27,7 @@ rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
 #***********************************************************************
 # PDFs and non-perturbative modelling                                  *
 #***********************************************************************
-pdfcode      = -1     # 0 = internal, 1 = same as NLO, other = lhaglue
-                      # -1 is equivalent to 0 at LO and 1 at NLO
+pdfcode      = 1     # 0 = internal, 1 = same as NLO, other = lhaglue
 ue_enabled   = F      # underlying event
 hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
 lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!

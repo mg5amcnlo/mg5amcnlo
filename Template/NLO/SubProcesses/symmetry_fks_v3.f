@@ -350,12 +350,13 @@ c
       RETURN
       END
 
-      subroutine unweight_function(p_born,unwgtfun)
+      subroutine bias_weight_function(p,ipdg,bias_wgt)
 c Dummy function. Should always retrun 1.
       implicit none
       include 'nexternal.inc'
-      double precision unwgtfun,p_born(0:3,nexternal-1)
-      unwgtfun=1d0
+      integer ipdg(nexternal)
+      double precision bias_wgt,p(0:3,nexternal)
+      bias_wgt=1d0
       return
       end
 

@@ -14,7 +14,7 @@ C
       include 'pdf.inc'
 C      
       call fdist(ih,x, q, pdf)
-      
+
       return	
       end
 

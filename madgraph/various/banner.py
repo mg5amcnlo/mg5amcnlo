@@ -333,7 +333,6 @@ class Banner(dict):
 
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
-
         assert isinstance(cross, dict)
 #        assert "all" in cross
         assert "init" in self
@@ -1214,6 +1213,9 @@ class ConfigFile(dict):
                     value = int(value)
                 elif value[1:].isdigit() and value[0] == '-':
                     value = int(value)
+                elif value.endswith(('k', 'M')) and value[:-1].isdigit():
+                    convert = {'k':1000, 'M':1000000}
+                    value =int(value[:-1]) * convert[value[-1]] 
                 else:
                     try:
                         value = float(value.replace('d','e'))
@@ -2750,9 +2752,11 @@ class RunCardLO(RunCard):
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
+                self['use_syst'] = False
             else:
                 self['lpp1'] = 0
-                self['lpp2'] = 0                
+                self['lpp2'] = 0    
+                self['use_syst'] = False            
                 
         # Check if need matching
         min_particle = 99
@@ -3292,7 +3296,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy")
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
