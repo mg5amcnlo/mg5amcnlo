@@ -114,7 +114,7 @@ c For checking the consistency of the grouping and the cuts defined here
 c
 c     count the number of j/bjet/photon/lepton
 c
-      integer nb_j, nb_b, nb_a, nb_l, nb_nocut
+      integer nb_j, nb_b, nb_a, nb_l, nb_nocut,nb_pdg
       double precision smin_p, smin_m ! local variable to compute smin
 c
 c     setup masses for the final-state particles
@@ -638,6 +638,20 @@ c     check for lepton
          endif
         smin = smin + max(smin_p**2, smin_m, mmnl**2, ptllmin**2, misset**2)
       endif
+c  check for other PDG particle
+      do i = 1,pdg_cut(0)
+         nb_pdg=0
+         do j=nincoming, nexternal
+            if (abs(idup(i,1,iproc)).eq.pdg_cut(i))then
+               k = j ! use to get the mass
+               if(do_cuts(i)) nb_pdg = nb_pdg + 1
+            endif
+         enddo
+         smin_p = nb_pdg *(pmass(k)**2 + ptmin4pdg(i)**2)
+         smin_m = nb_pdg*((2-nb_pdg)*pmass(k)**2 + (nb_pdg-1)/2.*mxxmin4pdg(i)**2)
+         smin = smin + max(smin_p, smin_m)
+      enddo
+
 c     ensure symmetry of s_min(i,j)
       do i=nincoming+1,nexternal-1
         do j=nincoming+1,nexternal-1
