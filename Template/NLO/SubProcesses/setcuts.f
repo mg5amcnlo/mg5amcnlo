@@ -248,13 +248,13 @@ c event could.
 c Add the minimal jet pTs to tau
                if(IS_A_J(i) .and. i.ne.nexternal)then
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
-                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+max(ptj,emass(i))
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
                   elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
                      taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+max(ptj,emass(i))
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
                   elseif (j_fks.eq.nexternal) then
                      write (*,*)
      &                    'ERROR, j_fks cannot be the final parton'
@@ -281,11 +281,13 @@ c Add the minimal photon pTs to tau
                   xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  if (j_fks.gt.nincoming)
-     &                 taumin(iFKS,ichan)=taumin(iFKS,ichan)+ptl
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)+ptl
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)+ptl
+                  if (j_fks.gt.nincoming) then
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  else
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
+                  endif
+                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(emass(i)**2+ptl**2)
+                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(emass(i)**2+ptl**2)
                   xm(i)=emass(i)+ptl
 c Add the lepton invariant mass to tau if there is at least another
 c lepton of opposite charge. (Only add half of it, i.e. 'the part
@@ -295,23 +297,23 @@ c lepton pT
                      if (is_a_lm(j) .and. idup(i,1).eq.-idup(j,1) .and.
      $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                              max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
                      elseif (is_a_lm(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan)= taumin(iFKS,ichan)-ptl-emass(i) +
-     &                                     max(mll/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan)= taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                                     max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0, dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
      $                       +emass(i))
                         exit
@@ -319,11 +321,13 @@ c lepton pT
                   enddo
                elseif (is_a_lm(i)) then
 c Add the negatively charged lepton pTs to tau
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  if (j_fks.gt.nincoming)
-     &                 taumin(iFKS,ichan)=taumin(iFKS,ichan)+ptl
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)+ptl
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)+ptl
+                  if (j_fks.gt.nincoming) then
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  else
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
+                  endif
+                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
                   xm(i)=emass(i)+ptl
 c Add the lepton invariant mass to tau if there is at least another
 c lepton of opposite charge. (Only add half of it, i.e. 'the part
@@ -333,23 +337,23 @@ c lepton pT
                      if (is_a_lp(j) .and. idup(i,1).eq.-idup(j,1) .and.
      $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                              max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
                      elseif (is_a_lp(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                                      max(mll/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                                      max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
      $                       +emass(i))
                         exit
@@ -363,12 +367,12 @@ c lepton pT
                         xm(i) = emass(i)
                   else
                      if  (j_fks.gt.nincoming) then
-                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + max(etmin(i), emass(i))
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
                      else
                         taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
                      endif
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + max(etmin(i), emass(i))
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + max(etmin(i),emass(i))
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
                      xm(i) = emass(i)+etmin(i)
                   endif
                endif
