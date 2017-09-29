@@ -3436,12 +3436,14 @@ class RunCardNLO(RunCard):
         self.add_param('g',{'__type__':0.}, include=False)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
         
         #hidden parameter that are transfer to the fortran code
         self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
         self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
-    
+        self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
+        
     def check_validity(self):
         """check the validity of the various input"""
         
@@ -3589,8 +3591,8 @@ class RunCardNLO(RunCard):
     def update_system_parameter_for_include(self):
         
         # set the pdg_for_cut fortran parameter
-        pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys() + 
-                         self['eta_min_pdg'].keys() +self['eta_max_pdg'].keys())
+        pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys()+
+                         self['mxx_min_pdg'].keys())
         pdg_to_cut.discard('__type__')
         if len(pdg_to_cut)>25:
             raise Exception, "Maximum 25 different pdg are allowed for pdg specific cut"
@@ -3606,12 +3608,13 @@ class RunCardNLO(RunCard):
         if pdg_to_cut:
             self['pdg_cut'] = list(pdg_to_cut)
             self['ptmin4pdg'] = []
-            self['etamin4pdg'] =[]
             self['ptmax4pdg'] = []
-            self['etamax4pdg'] =[]
+            self['mxxmin4pdg'] = []
             for pdg in self['pdg_cut']:
-                for var in ['pt','eta']:
+                for var in ['pt','mxx']:
                     for minmax in ['min', 'max']:
+                        if var == 'mxx' and minmax == 'max':
+                            continue
                         new_var = '%s%s4pdg' % (var, minmax)
                         old_var = '%s_%s_pdg' % (var, minmax)
                         default = 0. if minmax=='min' else -1.
@@ -3619,9 +3622,9 @@ class RunCardNLO(RunCard):
         else:
             self['pdg_cut'] = [0]
             self['ptmin4pdg'] = [0.]
-            self['etamin4pdg'] =[0.]
             self['ptmax4pdg'] = [-1.]
-            self['etamax4pdg'] =[-1.] 
+            self['mxxmin4pdg'] = [0.]
+
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

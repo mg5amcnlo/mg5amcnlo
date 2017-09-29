@@ -162,6 +162,7 @@
 #***********************************************************************
   %(pt_min_pdg)s = pt_min_pdg ! Min PT for a massive particle
   %(pt_max_pdg)s = pt_max_pdg ! Max PT for a massive particle
+  %(mxx_min_pdg)s = mxx_min_pdg ! invariant mass for any pair of (anti)particule
 #***********************************************************************
 # For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
 #***********************************************************************

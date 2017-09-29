@@ -5176,7 +5176,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         # For NLO run forbid any pdg specific cut on massless particle
         if isinstance(self.run_card,banner_mod.RunCardNLO):
-            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()): 
+            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
+                           self.run_card['mxx_min_pdg'].keys()): 
             
                 if int(pdg)<0:
                     raise Exception, "For PDG specific cut, always use positive PDG code, the cut are applied on both particle and anti-particle"

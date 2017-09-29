@@ -19,7 +19,7 @@ c
 c
 c     LOCAL
 c
-      integer i,j
+      integer i,j,k
 C     
 C     GLOBAL
 C
@@ -39,7 +39,8 @@ C
 c 
       double precision etmin(nincoming+1:nexternal-1)
       double precision etmax(nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
 c
 c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
@@ -97,7 +98,11 @@ c
       do i=nincoming+1, nexternal-1 ! never include last particle
          etmin(i) = 0d0
          etmax(i) = -1d0
+         do j = i, nexternal-1
+            mxxmin(i,j) = 0d0
+         enddo
       enddo
+
       if (pdg_cut(1).ne.0)then
          do j=1,pdg_cut(0)
             do i=nincoming+1, nexternal-1 ! never include last particle
@@ -116,6 +121,14 @@ c                 fully ensure that this is not a jet/lepton/photon
                   endif
                   etmin(i) = ptmin4pdg(j)
                   etmax(i)= ptmax4pdg(j)
+                  !add the invariant mass cut
+                  if(mxxmin4pdg(j).ne.0d0)then
+                     do k=i+1, nexternal-1
+                        if (abs(idup(k, 1)).eq.pdg_cut(j))then
+                           mxxmin(i,k) = mxxmin4pdg(j)
+                        endif
+                     enddo
+                  endif
                endif
             enddo
          enddo
@@ -194,7 +207,10 @@ c Les Houches common block
 c     block for the (simple) cut bsed on the pdg
       double precision etmin(nincoming+1:nexternal-1)
       double precision etmax(nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,mxxmin
+      double precision smin_update , mxx
+      integer nb_iden_pdg
 c
       logical firsttime,firsttime_chans(maxchannels)
       data firsttime /.true./
@@ -358,14 +374,35 @@ c lepton pT
                         taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + emass(i)
                         xm(i) = emass(i)
                   else
+                     smin_update = 0
+                     nb_iden_pdg = 1
+                     mxx = 0d0
+c                    assume smin apply always on the same set of particle
+                     do j=nincoming+1,nexternal-1
+                        if (mxxmin(i,j).ne.0d0.or.mxxmin(j,i).ne.0d0) then
+                           nb_iden_pdg = nb_iden_pdg +1
+                           if (mxx.eq.0d0) mxx = max(mxxmin(i,j), mxxmin(j,i))
+                        endif
+                     enddo
+                     ! S >= (2*N-N^2)*M1^2 + (N^2-N)/2 * Mxx^2
+                     smin_update = nb_iden_pdg*((2-nb_iden_pdg)*emass(i)**2 + (nb_iden_pdg-1)/2.*mxx**2)
+                     ! compare with the update from pt cut
+                     if (smin_update.lt.nb_iden_pdg**2*(etmin(i)**2 + emass(i)**2))then
+                        ! the pt is more restrictive
+                        smin_update = dsqrt(etmin(i)**2 + emass(i)**2)
+                     else
+                        smin_update = dsqrt(smin_update)/nb_iden_pdg ! share over N particle, and change dimension
+                     endif
+                     smin_update = emass(i)
+                     ! update in sqrt(s) so take the 
                      if  (j_fks.gt.nincoming) then
-                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + smin_update
                      else
                         taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
                      endif
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + dsqrt(etmin(i)**2 + emass(i)**2)
-                     xm(i) = emass(i)+etmin(i)
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + smin_update
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + smin_update
+                     xm(i) = smin_update
                   endif
                endif
                xw(i)=0d0
