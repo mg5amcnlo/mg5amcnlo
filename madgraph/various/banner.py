@@ -2738,7 +2738,7 @@ class RunCardLO(RunCard):
                     self['mmjj'] = 0.0 
 
 
-
+    
         # check validity of the pdf set
         possible_set = ['lhapdf', 'mrs02nl','mrs02nn',
         'cteq4_m', 'cteq4_l','cteq4_d',
@@ -2763,6 +2763,11 @@ class RunCardLO(RunCard):
         pdg_to_cut.discard('__type__')
         if len(pdg_to_cut)>25:
             raise Exception, "Maximum 25 different pdgs are allowed for pdg specific cut"
+        
+        if any(int(pdg)<0 for pdg in pdg_to_cut):
+            logger.warning('PDG specific cut always applied symmetrically on particle/anti-particle. Always use positve PDG code')
+            raise MadGraph5Error, 'some PDG specific cut are defined with negative pdg code'
+        
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
             raise Exception, "Can not use PDG related cut for light quark/b quark/lepton/gluon/photon"
@@ -3431,15 +3436,11 @@ class RunCardNLO(RunCard):
         self.add_param('g',{'__type__':0.}, include=False)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
         
         #hidden parameter that are transfer to the fortran code
         self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
         self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
-        self.add_param('etamin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
     
     def check_validity(self):
         """check the validity of the various input"""
@@ -3593,6 +3594,11 @@ class RunCardNLO(RunCard):
         pdg_to_cut.discard('__type__')
         if len(pdg_to_cut)>25:
             raise Exception, "Maximum 25 different pdg are allowed for pdg specific cut"
+        
+        if any(int(pdg)<0 for pdg in pdg_to_cut):
+            logger.warning('PDG specific cut always applied symmetrically on particle/anti-particle. Always use positve PDG code')
+            raise MadGraph5Error, 'some PDG specific cut are defined with negative pdg code'
+        
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
             # Note that this will double check in the fortran code

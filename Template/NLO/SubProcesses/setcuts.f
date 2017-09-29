@@ -39,9 +39,7 @@ C
 c 
       double precision etmin(nincoming+1:nexternal-1)
       double precision etmax(nincoming+1:nexternal-1)
-      double precision etamin(nincoming+1:nexternal-1)
-      double precision etamax(nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax,etamin,etamax
+      common /to_cuts/etmin,etmax
 c
 c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
@@ -99,8 +97,6 @@ c
       do i=nincoming+1, nexternal-1 ! never include last particle
          etmin(i) = 0d0
          etmax(i) = -1d0
-         etamin(i) = 0d0
-         etamax(i) =-1d0
       enddo
       if (pdg_cut(1).ne.0)then
          do j=1,pdg_cut(0)
@@ -120,8 +116,6 @@ c                 fully ensure that this is not a jet/lepton/photon
                   endif
                   etmin(i) = ptmin4pdg(j)
                   etmax(i)= ptmax4pdg(j)
-                  etamin(i)= etamin4pdg(j)
-                  etamax(i)= etamax4pdg(j)
                endif
             enddo
          enddo
@@ -200,9 +194,7 @@ c Les Houches common block
 c     block for the (simple) cut bsed on the pdg
       double precision etmin(nincoming+1:nexternal-1)
       double precision etmax(nincoming+1:nexternal-1)
-      double precision etamin(nincoming+1:nexternal-1)
-      double precision etamax(nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax,etamin,etamax
+      common /to_cuts/etmin,etmax
 c
       logical firsttime,firsttime_chans(maxchannels)
       data firsttime /.true./

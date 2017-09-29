@@ -119,7 +119,7 @@
  %(ptamax)s  = ptamax    ! maximum pt for the photons
  %(ptlmax)s  = ptlmax    ! maximum pt for the charged leptons
  %(missetmax)s  = missetmax ! maximum missing Et (sum of neutrino's momenta)
- %(pt_min_pdg)s = pt_min_pdg ! pt cut for other pdg code (e.g. {6: 100, 23: 50})
+ %(pt_min_pdg)s = pt_min_pdg ! pt cut for other pdg code. Applied on particle and anti-particle
  %(pt_max_pdg)s	= pt_max_pdg ! pt cut for other pdg code (e.g. {6: 100, 25, 50}) 
 #*********************************************************************
 # Minimum and maximum E's (in the center of mass frame)              *
@@ -132,7 +132,7 @@
  %(ebmax)s   = ebmax ! maximum E for the b
  %(eamax)s   = eamax ! maximum E for the photons
  %(elmax)s   = elmax ! maximum E for the charged leptons
- %(e_min_pdg)s = e_min_pdg ! E cut for other pdg code (e.g. {6: 100, 23: 50})
+ %(e_min_pdg)s = e_min_pdg ! E cut for other pdg code. Applied on particle and anti-particle
  %(e_max_pdg)s	= e_max_pdg ! E cut for other pdg code (e.g. {6: 100, 25, 50}) 
 #*********************************************************************
 # Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
@@ -145,7 +145,7 @@
  %(etabmin)s  = etabmin ! min rap for the b
  %(etaamin)s  = etaamin ! min rap for the photons
  %(etalmin)s  = etalmin ! main rap for the charged leptons
- %(eta_min_pdg)s	= eta_min_pdg ! rap cut for other pdg code ({6: 2.5, 23: 5})
+ %(eta_min_pdg)s	= eta_min_pdg ! rap cut for other pdg code. Applied on particle and anti-particle
  %(eta_max_pdg)s	= eta_max_pdg ! rap cut for other pdg code ({6: 2.5, 23: 5})
 #*********************************************************************
 # Minimum and maximum DeltaR distance                                *
@@ -183,7 +183,7 @@
  %(mmbbmax)s  = mmbbmax ! max invariant mass of a b pair
  %(mmaamax)s  = mmaamax ! max invariant mass of gamma gamma pair
  %(mmllmax)s  = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
- %(mxx_min_pdg)s = mxx_min_pdg ! min invariant mass of a pair of particle X (e.g. {6:250})
+ %(mxx_min_pdg)s = mxx_min_pdg ! min invariant mass of a pair of particle X/X~ (e.g. {6:250})
 #*********************************************************************
 # Minimum and maximum invariant mass for all letpons                 *
 #*********************************************************************

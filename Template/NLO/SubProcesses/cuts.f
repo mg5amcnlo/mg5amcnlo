@@ -67,9 +67,7 @@ c The UNLOPS cut
 c PDG specific cut
       double precision etmin(nincoming+1:nexternal-1)
       double precision etmax(nincoming+1:nexternal-1)
-      double precision etamin(nincoming+1:nexternal-1)
-      double precision etamax(nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax,etamin,etamax
+      common /to_cuts/etmin,etmax
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
@@ -391,16 +389,6 @@ C
                passcuts_user=.false.
                return
             else if(tmpvar.gt.etmax(i).and.etmax(i).gt.0d0) then
-               passcuts_user=.false.
-               return
-            endif
-         endif
-         if(etamin(i).ne.0d0.or.etamax(i).gt.0d0)then
-            tmpvar = eta_04(p(0,i))
-            if (tmpvar.lt.etamin(i)) then
-               passcuts_user=.false.
-               return
-            else if(tmpvar.gt.etamax(i).and.etamax(i).gt.0d0) then
                passcuts_user=.false.
                return
             endif

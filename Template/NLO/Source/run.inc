@@ -85,7 +85,4 @@ c
       integer pdg_cut(0:25)
       double precision ptmin4pdg(0:25) 
       double precision ptmax4pdg(0:25) 
-      double precision etamin4pdg(0:25) 
-      double precision etamax4pdg(0:25) 
-      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, etamin4pdg,
-     &etamax4pdg
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg

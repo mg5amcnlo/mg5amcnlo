@@ -156,6 +156,13 @@
   %(epsgamma)s  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
  %(isoem)s  = isoEM  ! isolate photons from EM energy (photons and leptons)
 #***********************************************************************
+# Cut associated to a MASSIVE particles identified by their PDG code
+# all cut are applied on both particles and anti-particles, so use POSITIVE PDG 
+# example of syntax {6 : 100} or {6:100, 23:200} for multiple particle
+#***********************************************************************
+  %(pt_min_pdg)s = pt_min_pdg ! Min PT for a massive particle
+  %(pt_max_pdg)s = pt_max_pdg ! Max PT for a massive particle
+#***********************************************************************
 # For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
 #***********************************************************************
  %(iappl)s = iappl ! aMCfast switch (0=OFF, 1=prepare grids, 2=fill grids)
