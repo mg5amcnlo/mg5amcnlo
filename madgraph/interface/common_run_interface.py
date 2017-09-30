@@ -5109,8 +5109,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
+
         self.run_card.set(name, value, user=True)
+        new_value = self.run_card.get(name)
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
+
 
     def setML(self, name, value, default=False):
         
