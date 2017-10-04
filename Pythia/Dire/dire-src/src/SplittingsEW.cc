@@ -109,76 +109,6 @@ double fsr_ew_Q2QZ::overestimateDiff(double z, double m2dip, int) {
 }
 
 // Return kernel for new splitting.
-double fsr_ew_Q2QZ::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int, map<string,double> extras) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  int iRad = int(extras["iRadBef"]);
-  if (false) cout << iRad << endl;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with z to project out Q->QQ,
-  // i.e. the gluon is soft and the quark is identified.
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  double kappa2 = pT2/m2dip;
-  wt   = preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt  += -preFac * ( 1.+z );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double pipj = 0., vijkt = 1., vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2RadBef = m2RadBef/m2dip; 
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      double Q2mass = m2dip + m2Rad + m2Rec + m2Emt;
-      vijkt         = pow2(Q2mass/m2dip - nu2RadBef - nu2Rec)
-                    - 4.*nu2RadBef*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
-      pipj          = m2dip * yCS/2.;
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      vijkt  = 1.;
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Add B1 for massive splittings.
-    double massCorr = -1.*vijkt/vijk*( 1. + z + m2RadBef/pipj);
-    wt += preFac*massCorr;
-
-  }
-
-  // Now multiply with z to project out Q->QG,
-  // i.e. the gluon is soft and the quark is identified.
-  wt *= z; 
-
-  return wt;
-}
-
-// Return kernel for new splitting.
 bool fsr_ew_Q2QZ::calc(const Event& state, int orderNow) {
 
   // Dummy statement to avoid compiler warnings.
@@ -376,77 +306,6 @@ double fsr_ew_Q2ZQ::overestimateDiff(double z, double m2dip, int) {
 }
 
 // Return kernel for new splitting.
-double fsr_ew_Q2ZQ::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int, map<string,double> extras) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  int iRad = int(extras["iRadBef"]);
-  if (false) cout << iRad << endl;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with 1-z to project out Q->GQ,
-  // i.e. the quark is soft and the gluon is identified.
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  double kappa2 = pT2/m2dip;
-  wt   = preFac
-       * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt  += -preFac * ( 1.+z );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double pipj = 0., vijkt = 1., vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2RadBef = m2RadBef/m2dip; 
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      double Q2mass = m2dip + m2Rad + m2Rec + m2Emt;
-      vijkt         = pow2(Q2mass/m2dip - nu2RadBef - nu2Rec)
-                    - 4.*nu2RadBef*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
-      pipj          = m2dip * yCS/2.;
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      vijkt  = 1.;
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Add B1 for massive splittings.
-    double massCorr = -1.*vijkt/vijk*( 1. + z + m2RadBef/pipj);
-    wt += preFac*massCorr;
-
-  }
-
-  // Now multiply with (1-z) to project out Q->GQ,
-  // i.e. the quark is soft and the gluon is identified.
-  wt *= ( 1. - z ); 
-
-  return wt;
-}
-
-// Return kernel for new splitting.
 bool fsr_ew_Q2ZQ::calc(const Event& state, int orderNow) {
 
   // Dummy statement to avoid compiler warnings.
@@ -627,74 +486,6 @@ double fsr_ew_Z2QQ1::overestimateDiff(double, double, int) {
 }
 
 // Return kernel for new splitting.
-double fsr_ew_Z2QQ1::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  double kappa2 = pT2/m2dip;
-  wt  = preFac 
-      * (pow(1.-z,2.) + pow(z,2.));
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  if (doMassive) {
-
-    double vijk = 1., pipj = 0.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      pipj          = m2dip * yCS /2.;
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Reset kernel for massive splittings.
-    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                    + m2Emt / ( pipj + m2Emt) );  
-  }
-
-  // Multiply with z to project out part where emitted quark is soft,
-  // and antiquark is identified.
-  wt *= z;
-
-  // Trivial map of values, since kernel does not depend on coupling.
-  map<string,double> wts;
-  wts.insert( make_pair("base", wt ));
-  if (doVariations) {
-    // Create muR-variations.
-    if (settingsPtr->parm("Variations:muRfrDown") != 1.)
-      wts.insert( make_pair("Variations:muRfsrDown", wt ));
-    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-      wts.insert( make_pair("Variations:muRfsrUp", wt ));
-  }
-
-  // Store kernel values.
-  clearKernels();
-  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
-    kernelVals.insert(make_pair( it->first, it->second ));
-
-  return true;
-}
-
-// Return kernel for new splitting.
 bool fsr_ew_Z2QQ1::calc(const Event& state, int orderNow) {
 
   // Dummy statement to avoid compiler warnings.
@@ -814,57 +605,6 @@ double fsr_ew_Z2QQ2::overestimateDiff(double, double, int) {
   double wt = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   wt  = 2.*preFac * 0.5;
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_ew_Z2QQ2::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  double kappa2 = pT2/m2dip;
-  wt  = preFac 
-      * (pow(1.-z,2.) + pow(z,2.));
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  if (doMassive) {
-
-    double vijk = 1., pipj = 0.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      pipj          = m2dip * yCS /2.;
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Reset kernel for massive splittings.
-    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                    + m2Emt / ( pipj + m2Emt) );  
-  }
-
-  // and quark is identified.
-  wt *= (1.-z);
-
   return wt;
 }
 
@@ -989,22 +729,6 @@ double fsr_ew_W2QQ1::overestimateDiff(double, double, int) {
   double wt = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   wt  = 2.*preFac * 0.5;
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_ew_W2QQ1::kernel(double z, double, double,
-  int, double, double, double, double, const Event&, int, map<string,double>) {
-
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  wt  = preFac 
-      * (pow(1.-z,2.) + pow(z,2.));
-
-  // Multiply with z to project out part where emitted quark is soft,
-  // and antiquark is identified.
-  wt *= z;
-
   return wt;
 }
 
@@ -1225,21 +949,6 @@ double fsr_ew_W2QQ2::overestimateDiff(double, double, int) {
 }
 
 // Return kernel for new splitting.
-double fsr_ew_W2QQ2::kernel(double z, double, double,
-  int, double, double, double, double, const Event&, int, map<string,double>) {
-
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  wt  = preFac 
-      * (pow(1.-z,2.) + pow(z,2.));
-
-  // and quark is identified.
-  wt *= (1.-z);
-
-  return wt;
-}
-
-// Return kernel for new splitting.
 bool fsr_ew_W2QQ2::calc(const Event& state, int orderNow) {
 
   // Dummy statement to avoid compiler warnings.
@@ -1343,24 +1052,6 @@ double isr_ew_Q2QZ::overestimateDiff(double z, double m2dip, int ) {
   wt  = preFac * 2.* (1.-z) / ( pow2(1.-z) + kappaOld2);
   return wt;
 }
-
-// Return kernel for new splitting.
-double isr_ew_Q2QZ::kernel(double z, double pT2, double m2dip,
-  int, double, double, double, double, const Event& state, int,
-  map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  double kappa2 = pT2/m2dip;
-  wt   =  preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-  wt  += -preFac * (1.+z);
-
-  return wt;
-}
-
 
 // Return kernel for new splitting.
 bool isr_ew_Q2QZ::calc(const Event& state, int orderNow) {

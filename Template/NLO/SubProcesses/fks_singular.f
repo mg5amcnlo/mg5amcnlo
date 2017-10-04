@@ -383,6 +383,8 @@ c respectively.
       integer emscav(2*nexternal)
       double precision p_read(0:3,nexternal)
       double precision wgt_read
+      double precision wgt_sudakov
+
 C     To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
@@ -460,6 +462,7 @@ c     H-event kinematics, filled in read_leshouche_info
                call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
                firsttime1=.false.
             endif
+               write (*,*) 'd'
             do j=1,niprocs_d(nFKSprocess)
                do i=1,nexternal
                   IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
@@ -502,13 +505,24 @@ c               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
                call clear_HEPEUP_event()
                call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
      &                istup_local, mothup_h, icolup_h, spinup_local, emscav)
-               if (is_pythia_active.eq.0) then
-                 call pythia_init_default()
-               endif
-               call pythia_setevent()
-               call pythia_next()
-               call pythia_stat()
+c               if (is_pythia_active.eq.0) then
+c                 call pythia_init_default()
+c               endif
+c               call pythia_setevent()
+c               call pythia_next()
+c               call pythia_stat()
 
+               if (is_pythia_active.eq.0) then
+                 call dire_init_default()
+               endif
+               call dire_setevent()
+               call dire_next()
+
+               call dire_get_mergingweight(wgt_sudakov)
+               write(*,*) wgt_sudakov
+
+               call dire_stat()
+               call abort
             enddo
             
          enddo

@@ -1,1 +1,0 @@
-../Processes_sm/PY8MEs_R3_P6_sm_gg_zqq.h

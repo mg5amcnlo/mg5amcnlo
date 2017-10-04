@@ -1874,6 +1874,10 @@ int MyMergingHooks::getNumberOfClusteringSteps(const Event& event,
   // Return the difference to the core process outgoing particles
   int nsteps = nFinal - nHardOutPartons() - nHardOutLeptons();
 
+  nsteps =  nFinalPartons     + nFinalLeptons     + nFinalBosons
+         - (nHardOutPartons() + nHardOutLeptons() + nHardOutBosons());
+  nRequestedSave = nsteps;
+
   // For inclusive handling, the number of reclustering steps
   // can be different within a single sample.
   if ( getProcessString().find("inc") != string::npos ) {
@@ -2234,7 +2238,6 @@ double MyMergingHooks::scalems( const Event& event){
         if ( i != j ){
           // Check with first initial as recoiler
           double temp = rhoPythia(event,in1,FinalPartPos[i],FinalPartPos[j],0);
-          //cout << "IF1 " << temp << " " << pt12 << endl;
           pt12 = min(pt12, temp);
         }
       }
@@ -2247,7 +2250,6 @@ double MyMergingHooks::scalems( const Event& event){
         if ( i != j ){
           // Check with first initial as recoiler
           double temp = rhoPythia(event,in2,FinalPartPos[i],FinalPartPos[j],0);
-          //cout << "IF2 " << temp << " " << pt12 << endl;
           pt12 = min(pt12, temp);
         }
       }

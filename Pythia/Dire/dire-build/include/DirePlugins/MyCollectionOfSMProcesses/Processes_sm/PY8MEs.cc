@@ -21,10 +21,9 @@ PY8MEs::PY8MEs(string card_path)
   releaseModelOnExit = true; 
   load_processes(); 
 }
-PY8MEs::PY8MEs(Parameters_sm * model_input)
+PY8MEs::PY8MEs(Parameters_sm * model_input) : model(model_input)
 {
   releaseModelOnExit = false; 
-  model = model_input; 
   load_processes(); 
 }
 
@@ -45,7 +44,7 @@ PY8MEs::~PY8MEs()
   }
 }
 
-// Static function to instantiate a model. The user can do that himself, but
+// Function to instantiate a model. The user can do that himself, but
 // when using the function below he will not need to know the class name of the
 // model.
 Parameters_sm * PY8MEs::instantiateModel(string param_card_path) 
@@ -56,8 +55,8 @@ Parameters_sm * PY8MEs::instantiateModel(string param_card_path)
     SLHAReader slha(param_card_path); 
     new_model->setIndependentParameters(slha); 
     new_model->setIndependentCouplings(); 
-    // new_model->printIndependentParameters();
-    // new_model->printIndependentCouplings();
+    //new_model->printIndependentParameters(); 
+    //new_model->printIndependentCouplings(); 
   }
   return new_model; 
 }
@@ -185,8 +184,8 @@ void PY8MEs::initModelFromSLHACard(string card_path)
   SLHAReader slha(card_path); 
   model->setIndependentParameters(slha); 
   model->setIndependentCouplings(); 
-  // model->printIndependentParameters();
-  // model->printIndependentCouplings();
+  //model->printIndependentParameters(); 
+  //model->printIndependentCouplings(); 
 }
 
 //--------------------------------------------------------------------------

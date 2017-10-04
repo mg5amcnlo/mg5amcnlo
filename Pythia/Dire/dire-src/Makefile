@@ -11,11 +11,14 @@
 # Include the PYTHIA (!) and DIRE configuration files (note that Dire conf. is
 # included first, to get the paths to Pythia, and then again, to overwrite
 # dangerous Pythia variables)
-#-include $(PYTHIA8_EXAMPLES)/Makefile.inc
 -include Makefile.inc
+ifneq ("$(wildcard $(PYTHIA8_PREFIX)/Makefile.inc)","")
 -include $(PYTHIA8_PREFIX)/Makefile.inc Makefile.inc
+else
+-include $(PYTHIA8_PREFIX)/share/Pythia8/examples/Makefile.inc Makefile.inc
+endif
 
-CXX_COMMON:=-I$(PYTHIA8_INCLUDE) $(CXX_COMMON) -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC
+CXX_COMMON:=-I$(PYTHIA8_INCLUDE) $(CXX_COMMON) -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC -g
 
 # Handle GZIP support.
 LIB_COMMON=-Wl,-rpath,$(PREFIX_LIB) -ldl

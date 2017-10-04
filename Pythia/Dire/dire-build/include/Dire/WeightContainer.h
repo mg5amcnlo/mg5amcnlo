@@ -6,6 +6,8 @@
 
 #include "Pythia8/PythiaStdlib.h"
 #include "Pythia8/Settings.h"
+//#include "Pythia8/BeamParticle.h"
+#include "Dire/Basics.h"
 #include "Dire/MEwrap.h"
 
 namespace Pythia8 {
@@ -72,15 +74,19 @@ private:
 
 // Container for all shower weights, including handling.
 
+//class BeamParticle;
+
 class WeightContainer {
 
 public:
 
   // Constructor.
-  WeightContainer() : card(""), PY8MEs_accessor(card) { init(); }
+  WeightContainer() : card(""), PY8MEs_accessor(card), beamA(NULL), beamB(NULL),
+    debugPtr(NULL)
+    { init(); }
 
-  WeightContainer(Settings* settingsPtrIn) :
-    card(""), PY8MEs_accessor(card), settingsPtr(settingsPtrIn)
+  WeightContainer(Settings* settingsPtrIn) : card(""), PY8MEs_accessor(card),
+    settingsPtr(settingsPtrIn), beamA(NULL), beamB(NULL), debugPtr(NULL)
     { init(); }
 
   // Destructor.
@@ -94,6 +100,32 @@ public:
   }
   void setup();
 
+  void initPtrs(BeamParticle* beamAIn, BeamParticle* beamBIn,
+    DebugInfo* debugPtrIn) {
+    beamA    = beamAIn;
+    beamB    = beamBIn;
+    debugPtr = debugPtrIn;
+
+    //bool doVar = settingsPtr->flag("Variations:doVariations");
+    //int iMemberMin = settingsPtr->mode("Variations:PDFmemberMin");
+    //int iMemberMax = settingsPtr->mode("Variations:PDFmemberMax");
+    //if (iMemberMax < 0) iMemberMax = max(beamA->nSets(), beamB->nSets());
+    //if ( doVar && iMemberMin >= 0) {
+    //  string pdfname=settingsPtr->word("PDF:pSet");
+    //  for (int i = iMemberMin; i <= iMemberMax; ++i) {
+    //    //bookWeightVar("Variations:PDFmember "+STRING(i), false);
+    //    string suffix="_";
+    //    if (i-1<1000) suffix+="0";
+    //    if (i-1<100)  suffix+="0";
+    //    if (i-1<10)   suffix+="0";
+    //    suffix = (i==0) ? "" : suffix+STRING(i-1);
+    //    bookWeightVar("Variations:" + pdfname + suffix, false);
+    //  }
+    //}
+
+    return;
+  }
+
   // Reset current accept/reject probabilities.
   void reset() {
     for ( map<string, map<unsigned long, PSWeight> >::iterator
@@ -105,12 +137,12 @@ public:
   }
 
   // Function to initialize new maps for a new shower variation.
-  void bookWeightVar(string varKey);
+  void bookWeightVar(string varKey, bool checkSettings = true);
 
   // To avoid rounding problems, maps will be indexed with long keys.
   // Round double inputs to four decimals, as long will should be >10 digits.
-  unsigned long key(double a) { return (int)(a*1e4+0.5); }
-  double dkey(unsigned long a) { return (double(a)/1e4-0.5); }
+  unsigned long key(double a) { return (int)(a*1e5+0.5); }
+  double dkey(unsigned long a) { return (double(a)/1e5); }
 
   void resetAcceptWeight( double pT2key, double value, string varKey);
   void resetRejectWeight( double pT2key, double value, string varKey);
@@ -130,12 +162,30 @@ public:
 
   // Function to return weight of the shower evolution.
   double getShowerWeight(string valKey = "base") { 
-    map<string, double>::iterator it = showerWeight.find( valKey );
-    if ( it == showerWeight.end() ) return 0.;
-    return showerWeight[valKey];
+    // First try to return an individual shower weight indexed by "valKey".
+    map<string, double>::iterator it1 = showerWeight.find( valKey );
+    if ( it1 != showerWeight.end() ) return it1->second;
+
+    // If not possible, return a product of shower weights indexed by "valKey".
+    map<string, vector<string> >::iterator it2
+      = weightCombineList.find(valKey);
+    if ( it2 != weightCombineList.end() ) {
+      double wtNow = 1.;
+      // Loop through group of weights and combine all weights into one weight.
+      for (int iwgtname=0; iwgtname < int(it2->second.size()); ++iwgtname) {
+        map<string, double>::iterator it3
+          = showerWeight.find( it2->second[iwgtname] );
+       if ( it3 != showerWeight.end() ) wtNow *= it3->second;
+      }
+      return wtNow;
+    }
+    // Done.
+    return 0.;
   }
+
   map<string,double>* getShowerWeights() { return &showerWeight; }
-  double sizeWeights() { return showerWeight.size(); }
+  double sizeWeights() const { return showerWeight.size(); }
+  string weightName (int i) const  { return weightNames[i]; }
 
   // Returns additional user-supplied enhancements factors.
   double enhanceOverestimate( string name );
@@ -144,6 +194,8 @@ public:
   string card;
   PY8MEs_namespace::PY8MEs PY8MEs_accessor;
   //PY8MEs_sm::PY8MEs PY8MEs_accessor;
+  bool hasME(vector <int> in_pdgs, vector<int> out_pdgs)
+    { return isAvailableME(PY8MEs_accessor, in_pdgs, out_pdgs); }
   bool hasME(const Event& event);
   double getME(const Event& event);
 
@@ -154,9 +206,15 @@ private:
   map<string, map<unsigned long, PSWeight> > acceptWeight;
   map<string, map<unsigned long, PSWeight> > rejectWeight;
   map<string, double> showerWeight;
+  vector<string> weightNames;
+  map<string, vector<string> > weightCombineList;
 
   // Additonal enhancement factors to boost emission probabilities.
   map<string,double> enhanceFactors;
+
+  BeamParticle* beamA;
+  BeamParticle* beamB;
+  DebugInfo* debugPtr;
 
 };
 

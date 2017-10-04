@@ -772,6 +772,9 @@ private:
   double getShowerPluginScale(const Event& event, int rad, int emt, int rec,
     string name, string key, double scalePythia);
 
+  pair<int,double> getCoupling(const Event& event, int rad, int emt,
+    int rec, string name);
+
   //----------------------------------------------------------------------//
   // Class members.
   //----------------------------------------------------------------------//

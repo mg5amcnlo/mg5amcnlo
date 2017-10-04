@@ -26,61 +26,12 @@ bool validEvent( const Event& event ) {
   bool validMomenta = true;
   double mTolErr=1e-2;
 
-  /*// Check if event is coloured
-  for ( int i = 0; i < event.size(); ++i)
-   // Check colour of quarks
-   if ( event[i].isFinal() && event[i].colType() == 1
-          // No corresponding anticolour in final state
-       && ( FindCol(event[i].col(),vector<int>(1,i),event,1) == 0
-          // No corresponding colour in initial state
-         && FindCol(event[i].col(),vector<int>(1,i),event,2) == 0 )) {
-     validColour = false;
-     break;
-   // Check anticolour of antiquarks
-   } else if ( event[i].isFinal() && event[i].colType() == -1
-          // No corresponding colour in final state
-       && ( FindCol(event[i].acol(),vector<int>(1,i),event,2) == 0
-          // No corresponding anticolour in initial state
-         && FindCol(event[i].acol(),vector<int>(1,i),event,1) == 0 )) {
-     validColour = false;
-     break;
-   // No uncontracted colour (anticolour) charge of gluons
-   } else if ( event[i].isFinal() && event[i].colType() == 2
-          // No corresponding anticolour in final state
-       && ( FindCol(event[i].col(),vector<int>(1,i),event,1) == 0
-          // No corresponding colour in initial state
-         && FindCol(event[i].col(),vector<int>(1,i),event,2) == 0 )
-          // No corresponding colour in final state
-       && ( FindCol(event[i].acol(),vector<int>(1,i),event,2) == 0
-          // No corresponding anticolour in initial state
-         && FindCol(event[i].acol(),vector<int>(1,i),event,1) == 0 )) {
-     validColour = false;
-     break;
-   }*/
-
   // Check charge sum in initial and final state
   double initCharge = event[3].charge() + event[4].charge();
   double finalCharge = 0.0;
   for(int i = 0; i < event.size(); ++i)
     if (event[i].isFinal()) finalCharge += event[i].charge();
   if (abs(initCharge-finalCharge) > 1e-12) validCharge = false;
-
-  /*// Check if particles are on mass shell
-  for ( int i = 0; i < event.size(); ++i) {
-    if (i==3 || i==4 || event[i].isFinal()) {
-      int id = event[i].id();
-      // Get mass. Zero for incoming.
-      double mNow = (i==3 || i==4) ? 0.
-                  : ((abs(id) < 6) ? getMass(id,2) : getMass(id,1));
-      mNow = sqrt(mNow);
-      // Do not check on-shell condition for massive intermediate (!)
-      // resonances. Assuming all non-SM particles are heavy here! 
-      if ( abs(id) == 6 || abs(id) > 22) mNow = event[i].mCalc();
-      double errMass = abs(event[i].mCalc() - mNow)
-                     / max( 1.0, event[i].e());
-      if ( errMass > mTolErr ) validMomenta = false;
-    }
-  }*/
 
   // Check that overall pT is vanishing.
   Vec4 pSum(0.,0.,0.,0.);
@@ -173,6 +124,8 @@ int MyMerging::mergeProcess(Event& process){
     processNow.erase(processNow.begin()+processNow.find(" ",0));
   mergingHooksPtr->processSave = processNow;
 
+cout << __LINE__ << endl;
+
   mergingHooksPtr->doUserMergingSave
     = settingsPtr->flag("Merging:doUserMerging");
   mergingHooksPtr->doMGMergingSave
@@ -204,6 +157,8 @@ int MyMerging::mergeProcess(Event& process){
   mergingHooksPtr->nReclusterSave
     = settingsPtr->mode("Merging:nRecluster");
 
+cout << __LINE__ << endl;
+
   mergingHooksPtr->hasJetMaxLocal  = false;
   mergingHooksPtr->nJetMaxLocal
     = mergingHooksPtr->nJetMaxSave;
@@ -214,6 +169,8 @@ int MyMerging::mergeProcess(Event& process){
 
   // Reset to default merging scale.
   mergingHooksPtr->tms(mergingHooksPtr->tmsCut());
+
+cout << __LINE__ << endl;
 
   // Ensure that merging weight is not counted twice.
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
@@ -252,7 +209,7 @@ int MyMerging::mergeProcess(Event& process){
 
     // Set number of requested partons.
     settingsPtr->mode("Merging:nRequested", nPartons);
- 
+
     mergingHooksPtr->hasJetMaxLocal  = false;
     mergingHooksPtr->nJetMaxLocal
       = mergingHooksPtr->nJetMaxSave;
@@ -282,9 +239,8 @@ int MyMerging::mergeProcess(Event& process){
 
     double RNpath = getPathIndex(useAll);
     if ( (settingsPtr->flag("Dire:doMOPS") && returnCode > 0)
-      || settingsPtr->flag("Dire:doGenerateSudakovs") )
+      || settingsPtr->flag("Dire:doGenerateMergingWeights") )
       returnCode = calculateWeights(RNpath, useAll);
-    else cout << foundHistories << endl;
 
     //if (!generateHistories(process) ) return -1;
     //return calculateWeights(rndmPtr->flat());
@@ -293,16 +249,7 @@ int MyMerging::mergeProcess(Event& process){
     int tmp_code = getStartingConditions( RNpath, process);
     if (returnCode > 0) returnCode = tmp_code;
 
-//if (returnCode > 0 ) {
-//
-//cout << "found event " << returnCode << endl;
-//process.list(true, true);
-//abort();
-//}
-
     if (returnCode == 0) mergingHooksPtr->setWeightCKKWL(0.);
-
-cout << returnCode << " " << mergingHooksPtr->getWeightCKKWL() << endl;
 
     if (!allowReject && returnCode < 1) returnCode=1;
 
@@ -312,7 +259,8 @@ cout << returnCode << " " << mergingHooksPtr->getWeightCKKWL() << endl;
     }
 
     // Always veto, since we do not want to do event generation.
-    return -1;
+    //return -1;
+    return 1;
   }
 
   // Possibility to perform CKKW-L merging on this event.
@@ -402,13 +350,13 @@ int MyMerging::mergeProcessCKKWL( Event& process) {
   // Reset the minimal tms value, if necessary.
   tmsNowMin     = (nSteps == 0) ? 0. : min(tmsNowMin, tmsnow);
 
-//  cout << "\n\n\n\n\n New Event\n";
   // Set dummy process scale.
   newProcess.scale(0.0);
   // Generate all histories.
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, 
+            true, true, 1.0, 1.0, 1.0, 0);
 
   // Project histories onto desired branches, e.g. only ordered paths.
   FullHistory.projectOntoDesiredHistories();
@@ -1502,6 +1450,7 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     string message="Warning in MyMerging::calculateWeights: Les Houches Event";
     message+=" after removing decay products does not contain enough partons.";
     infoPtr->errorMsg(message);
+
     //if (allowReject) return -1;
     return -1;
   }
@@ -1648,13 +1597,9 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     double wgtsum(0.);
     double lastp(0.);
 
-cout << "nbranches " << myHistory->goodBranches.size() << endl;
-int i(0);
     for ( map<double, MyHistory*>::iterator it = myHistory->goodBranches.begin();
       it != myHistory->goodBranches.end(); ++it ) {
 
-cout << "\n\n\n " << i << endl; 
-++i;
       // Double to access path.
       double indexNow =  (lastp + 0.5*(it->first - lastp))/sumAll;
       lastp = it->first;
@@ -1669,8 +1614,6 @@ cout << "\n\n\n " << i << endl;
         mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
         mergingHooksPtr->AlphaEM_FSR(), mergingHooksPtr->AlphaEM_ISR(),
         indexNow);
-
-cout << "sum=" << wgtsum << " probPath=" << probPath << " w=" << w << endl;
 
       wgtsum += probPath*w;
     }

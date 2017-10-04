@@ -61,9 +61,11 @@ public:
 
   // Generate name for a splitting
   vector<int> getSplittingRadBefID(const Event& event, int rad, int emt);
+  vector<int> getSplittingRadBefID_new(const Event& event, int rad, int emt);
 
   // Generate name for a splitting
   vector<string> getSplittingName(const Event& event, int rad, int emt);
+  vector<string> getSplittingName_new(const Event& event, int rad, int emt);
 
   // Check number of particles produced in splitting.
   int nEmissions(string name);

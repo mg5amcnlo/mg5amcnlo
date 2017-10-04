@@ -18,6 +18,7 @@ void fill_COL_vec(const Pythia8::Event& event, vector<int>& colors);
 //bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor, vector<int> in_pdgs,
 //    vector<int> out_pdgs, set<int> req_s_channels = set<int> ());
 
+bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor, vector <int> in_pdgs, vector<int> out_pdgs);
 bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor, const Pythia8::Event& event);
 double calcME(PY8MEs_namespace::PY8MEs& accessor, const Pythia8::Event& event);
 

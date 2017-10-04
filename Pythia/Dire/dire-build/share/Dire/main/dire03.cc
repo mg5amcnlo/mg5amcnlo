@@ -94,8 +94,9 @@ int main( int argc, char* argv[] ){
   vector<double> sigmaTot, errorTot;
   if ( pythia.settings.flag("Variations:doVariations") ) { 
     //for (int iwt=0; iwt < dire.weightsPtr->sizeWeights(); ++iwt) {
-    //  ostringstream c; c << iwt;
-    //  string newfile = hepmcfile + c.str();
+    //  string newfile = hepmcfile + "-" + dire.weightsPtr->weightName(iwt);
+    //  std::replace(newfile.begin(), newfile.end(),' ', '_');
+    //  std::replace(newfile.begin(), newfile.end(),':', '_');
     //  ev.push_back( new HepMC::IO_GenEvent(newfile, std::ios::out));
     //  sigmaTot.push_back(0.);
     //  errorTot.push_back(0.);
@@ -132,8 +133,6 @@ int main( int argc, char* argv[] ){
   double sumwt = 0.;
   double sumwtsq = 0.;
 
-  double wwmax[3] = {-1e15,-1e15,-1e15};
-
   // Start generation loop
   for( int iEvent=0; iEvent<nEvent; ++iEvent ){
 
@@ -165,6 +164,8 @@ int main( int argc, char* argv[] ){
         << endl;
         evtweight = 0.;
       }
+      // Print diagnostic output.
+      //dire.debugInfo.print(1);
     }
     // Do not print zero-weight events.
     if ( evtweight == 0. ) continue;
@@ -172,6 +173,13 @@ int main( int argc, char* argv[] ){
     // Now retrieve additional shower weights, and combine these
     // into muR-up and muR-down variations.
     vector<double> pswts;
+    //if (pythia.settings.flag("Variations:doVariations")) { 
+    //  for (int iwt=0; iwt < dire.weightsPtr->sizeWeights(); ++iwt) {
+    //    string key = dire.weightsPtr->weightName(iwt);
+    //    pswts.push_back(dire.weightsPtr->getShowerWeight(key));
+    //  }
+    //}
+
     if (pythia.settings.flag("Variations:doVariations")) { 
       pswts.push_back(dire.weightsPtr->getShowerWeight("base"));
       bool hasupvar(false), hasdownvar(false);
@@ -207,10 +215,6 @@ int main( int argc, char* argv[] ){
     wmin = min(wmin,pswt);
     wmax = max(wmax,pswt);
 
-    wwmax[0] = max(wwmax[0],pswts[0]);
-    wwmax[1] = max(wwmax[1],pswts[1]);
-    wwmax[2] = max(wwmax[2],pswts[2]);
-
     sumwt += pswt;
     sumwtsq+=pow2(pswt);
     histWT.fill( pswt, 1.0);
@@ -230,6 +234,8 @@ int main( int argc, char* argv[] ){
       && pythia.info.lhaStrategy() != 3
       && nAcceptSH == 0)
       normhepmc = 1. / (1e9*nA);
+
+    if (pythia.settings.flag("PhaseSpace:bias2Selection")) { normhepmc = 1. / (1e9*nA);}
 
     if (pythia.event.size() > 3) {
 
@@ -283,10 +289,6 @@ int main( int argc, char* argv[] ){
        << "\t Variance of shower weight = "
        << sqrt(1/double(nAccepted)*(sumwtsq - pow(sumwt,2)/double(nAccepted)))
        << endl;
-
-  cout << scientific << setprecision(6)
-       << "\t Maximal shower weight     = " << wwmax[0] << " "
-       << wwmax[1] << " " << wwmax[2]  << "\n";
 
   cout << "Inclusive cross section    : " << sigmaInc << endl;
   cout << "Cross section after shower : " << sigmaTotal << endl;

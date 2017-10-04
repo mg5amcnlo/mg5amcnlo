@@ -173,6 +173,40 @@ protected:
 //  vector<int> getEmtIDs() { return allowedEmtID; }
 //  vector<int> allowedEmtID;
 
+  // Function to allow effective gg -> EW boson couplings.
+  bool hasEffectiveG2EW() {
+    if ( getProcessString().compare("pp>h") == 0 ) return true;
+    return false; }
+
+  // Function to allow effective gg -> EW boson couplings.
+  bool allowEffectiveVertex( vector<int> in, vector<int> out) {
+    if ( getProcessString().compare("ta+ta->jj") == 0 
+      || getProcessString().compare("ta-ta+>jj") == 0 ) {
+      int nInFermions(0), nOutFermions(0), nOutBosons(0);
+      for (int i=0; i < int(in.size()); ++i)
+        if (abs(in[i])<20) nInFermions++;
+      for (int i=0; i < int(out.size()); ++i) {
+        if (abs(out[i])<20) nOutFermions++;
+        if (abs(out[i])>20) nOutBosons++;
+      }
+      return (nInFermions%2==0 && nOutFermions%2==0);
+    }
+
+    int nInG(0), nOutWp(0), nOutWm(0), nOutH(0);
+    for (int i=0; i < int(in.size()); ++i)
+        if (in[i]==21) nInG++;
+    for (int i=0; i < int(out.size()); ++i) {
+      if (out[i] == 24) nOutWp++;
+      if (out[i] ==-24) nOutWm++;
+      if (out[i] == 25) nOutH++;
+    }
+
+    if (nInG==2 && nOutWp+nOutWp > 0 && nOutWp-nOutWm == 0) return true;
+    if (nInG==2 && nOutH > 0) return true;
+
+    return false;
+  }
+
 };
 
 //==========================================================================

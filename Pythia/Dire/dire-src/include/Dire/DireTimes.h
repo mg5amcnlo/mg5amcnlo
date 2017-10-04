@@ -43,7 +43,8 @@ public:
     chgType(0), gamType(0), weakType(0), isrType(0), system(0), systemRec(0),
     MEtype(0), iMEpartner(-1), weakPol(0), isOctetOnium(false),
     isHiddenValley(false), colvType(0), MEmix(0.), MEorder(true),
-    MEsplit(true), MEgluinoRec(false), isFlexible(false) {
+    MEsplit(true), MEgluinoRec(false), isFlexible(false), idRadAft(0),
+    idEmtAft(0) {
     mRad = m2Rad = mRec = m2Rec = mDip = m2Dip = m2DipCorr = pT2 = m2 = z
          = mFlavour = asymPol = flexFactor = phi = 0.;
     sa1  = xa = phia1 = pT2start = pT2stop = pT2Old = 0.;
@@ -55,16 +56,19 @@ public:
     int weakPolIn = 0, bool isOctetOniumIn = false,
     bool isHiddenValleyIn = false, int colvTypeIn = 0, double MEmixIn = 0.,
     bool MEorderIn = true, bool MEsplitIn = true, bool MEgluinoRecIn = false,
-    bool isFlexibleIn = false,
+    bool isFlexibleIn = false, int idRadAftIn = 0, int idEmtAftIn = 0,
     vector<int> iSpectatorIn = vector<int>(),
-    vector<double> massIn = vector<double>() ) :
+    vector<double> massIn = vector<double>(),
+    vector<int> allowedIn = vector<int>() ) :
     iRadiator(iRadiatorIn), iRecoiler(iRecoilerIn), pTmax(pTmaxIn),
     colType(colIn), chgType(chgIn), gamType(gamIn), weakType(weakTypeIn),
     isrType(isrIn), system(systemIn), systemRec(systemIn), MEtype(MEtypeIn),
     iMEpartner(iMEpartnerIn), weakPol(weakPolIn), isOctetOnium(isOctetOniumIn),
     isHiddenValley(isHiddenValleyIn), colvType(colvTypeIn), MEmix(MEmixIn),
     MEorder (MEorderIn), MEsplit(MEsplitIn), MEgluinoRec(MEgluinoRecIn),
-    isFlexible(isFlexibleIn), mass(massIn), iSpectator(iSpectatorIn) { 
+    isFlexible(isFlexibleIn), mass(massIn), idRadAft(idRadAftIn),
+    idEmtAft(idEmtAftIn), iSpectator(iSpectatorIn),
+    allowedEmissions(allowedIn) { 
     mRad = m2Rad = mRec = m2Rec = mDip = m2Dip = m2DipCorr = pT2 = m2 = z
          = mFlavour = asymPol = flexFactor = phi = 0.;
     sa1  = xa = phia1 = 0.;
@@ -86,7 +90,9 @@ public:
     m2(dip.m2), z(dip.z), mFlavour(dip.mFlavour), asymPol(dip.asymPol),
     flexFactor(dip.flexFactor), phi(dip.phi), pT2start(dip.pT2start),
     pT2stop(dip.pT2stop), pT2Old(dip.pT2Old), sa1(dip.sa1), xa(dip.xa),
-    phia1(dip.phia1), mass(dip.mass), iSpectator(dip.iSpectator) {}
+    phia1(dip.phia1), mass(dip.mass), idRadAft(dip.idRadAft),
+    idEmtAft(dip.idEmtAft), iSpectator(dip.iSpectator),
+    allowedEmissions(dip.allowedEmissions) {}
 
   // Basic properties related to dipole and matrix element corrections.
   int    iRadiator, iRecoiler;
@@ -110,8 +116,34 @@ public:
   // Stored masses.
   vector<double> mass;
 
+  int idRadAft, idEmtAft;
+
   // Extended list of recoilers.
   vector<int> iSpectator;
+  // List of allowed emissions (to avoid double-counting, since one
+  // particle can be part of many different dipoles.
+  void appendAllowedEmt( int id) {
+    if ( find(allowedEmissions.begin(), allowedEmissions.end(), id)
+      == allowedEmissions.end() ) allowedEmissions.push_back(id);
+  }
+  void removeAllowedEmt( int id) {
+    if ( find(allowedEmissions.begin(), allowedEmissions.end(), id)
+      != allowedEmissions.end() ) allowedEmissions.erase ( 
+      remove(allowedEmissions.begin(), allowedEmissions.end(), id),
+      allowedEmissions.end());
+  }
+  void clearAllowedEmt() { allowedEmissions.resize(0); }
+  vector<int> allowedEmissions;
+  bool canEmit() { return int(allowedEmissions.size() > 0); }
+
+  void init(const Event& state) {
+    mRad   = state[iRadiator].m();
+    mRec   = state[iRecoiler].m();
+    mDip   = sqrt( abs(2. * state[iRadiator].p() * state[iRecoiler].p()));
+    m2Rad  = pow2(mRad);
+    m2Rec  = pow2(mRec);
+    m2Dip  = pow2(mDip);
+  }
 
 };
 
@@ -137,8 +169,9 @@ public:
     mergingHooksPtr   = pythiaPtr->mergingHooksPtr;
     splittingsPtr     = 0;
     weights           = 0;
+    debugPtr          = 0;
     printBanner       = true;
-    dipEnd.reserve(1000000);
+    //dipEnd.reserve(1000000);
   }
 
   // Destructor.
@@ -158,7 +191,8 @@ public:
   void reinitPtr(Info* infoPtrIn, Settings* settingsPtrIn,
        ParticleData* particleDataPtrIn, Rndm* rndmPtrIn,
        PartonSystems* partonSystemsPtrIn, UserHooks* userHooksPtrIn,
-       MergingHooks* mergingHooksPtrIn, SplittingLibrary* splittingsPtrIn) {
+       MergingHooks* mergingHooksPtrIn, SplittingLibrary* splittingsPtrIn,
+       DebugInfo* debugPtrIn) {
        infoPtr = infoPtrIn;
        settingsPtr = settingsPtrIn;
        particleDataPtr = particleDataPtrIn;
@@ -167,7 +201,10 @@ public:
        userHooksPtr = userHooksPtrIn;
        mergingHooksPtr = mergingHooksPtrIn;
        splittingsPtr = splittingsPtrIn;
+       debugPtr      = debugPtrIn;
   }
+
+  void initVariations();
 
   void setWeightContainerPtr(WeightContainer* weightsIn){weights = weightsIn;}
 
@@ -207,11 +244,6 @@ public:
   // Select next pT in downwards evolution. Wrapper function inherited from
   // Pythia.
   virtual double pTnext( Event& event, double pTbegAll, double pTendAll,
-    bool = false, bool = false);
-
-  // Function that actually picks the next pT. Different from wrapper
-  // to allow for different implementations of the veto algorithm.
-  double pTnextVetoMax( Event& event, double pTbegAll, double pTendAll,
     bool = false, bool = false);
 
   // Setup branching kinematics.
@@ -310,6 +342,15 @@ public:
 
   virtual vector<int> getRecoilers( const Event& state, int iRad, int iEmt, string name);
 
+  //virtual double getCoupling( const Event& state, double mu2Ren, int iRad,
+  //  int iEmt, int iRec, string name) {
+  virtual double getCoupling( const Event&, double mu2Ren, int, int, int,
+    string name) { 
+    if (splits.find(name) != splits.end()) 
+      return splits[name]->coupling(mu2Ren);
+    return 1.;
+  }
+
   // Return Jacobian for final-final phase space factorisation.
   double jacobian_FF(double z, double pT2, double m2dip, double q2,
     double m2RadBef = 0., double m2r = 0., double m2s = 0.,
@@ -348,6 +389,9 @@ public:
 
   Event makeHardEvent( int iSys, const Event& state, bool isProcess = false );
   //bool hasME(const Event& event);
+
+  // Check that particle has sensible momentum.
+  bool validMomentum( const Vec4& p, int id, int status);
 
   // Check colour/flavour correctness of state.
   bool validEvent( const Event& state, bool isProcess = false );
@@ -391,8 +435,10 @@ protected:
 private:
 
   // Constants: could only be changed in the code itself.
+  static const int MAXLOOPTINYPDF;
   static const double MCMIN, MBMIN, SIMPLIFYROOT, XMARGIN, XMARGINCOMB,
-         TINYPDF, LARGEM2, THRESHM2, LAMBDA3MARGIN, TINYMASS;
+         TINYPDF, LARGEM2, THRESHM2, LAMBDA3MARGIN, TINYMASS, TINYOVERESTIMATE,
+         TRECOMBINE, PT2_INCREASE_OVERESTIMATE;
 
   // Initialization data, normally only set once.
   bool   doQCDshower, doQEDshowerByQ, doQEDshowerByL, doMEcorrections,
@@ -412,6 +458,30 @@ private:
   double alphaS2piOverestimate;
   bool usePDFalphas, usePDFmasses, useSummedPDF;
 
+  map<int,double> pT2cutSave;
+  double pT2cut(int id) {
+    if (pT2cutSave.find(id) != pT2cutSave.end()) return pT2cutSave[id];
+    // Else return maximal value.
+    double ret = 0.;
+    for ( map<int,double>::iterator it = pT2cutSave.begin();
+      it != pT2cutSave.end(); ++it ) ret = max(ret, it->second);
+    return ret;
+  }
+  double pT2cutMax(DireTimesEnd* dip) {
+    double ret = 0.;
+    for (int i=0; i < int(dip->allowedEmissions.size()); ++i)
+      ret = max( ret, pT2cut(dip->allowedEmissions[i]));
+    return ret;
+  }
+  double pT2cutMin(DireTimesEnd* dip) {
+    double ret = 1e15;
+    for (int i=0; i < int(dip->allowedEmissions.size()); ++i)
+      ret = min( ret, pT2cut(dip->allowedEmissions[i]));
+    return ret;
+  }
+
+  bool doDecaysAsShower;
+
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;
   AlphaEM     alphaEM;
@@ -423,15 +493,40 @@ private:
   // All dipole ends and a pointer to the selected hardest dipole end.
   vector<DireTimesEnd> dipEnd;
   DireTimesEnd* dipSel;
+  SplitInfo splitSel;
   int iDipSel;
+  map<string,double> kernelSel, kernelNow;
+  double auxSel, overSel, boostSel, auxNow, overNow, boostNow;
 
+
+  double tinypdf( double x) {
+    double xref = 0.01;
+    return TINYPDF*log(1-x)/log(1-xref);
+  }
+
+  // Evolve a QCD dipole end near heavy quark threshold region.
   // Setup a dipole end, either QCD, QED/photon, weak or Hidden Valley one.
   void setupQCDdip( int iSys, int i, int colTag,  int colSign, Event& event,
     bool isOctetOnium = false, bool limitPTmaxIn = true);
+  void getGenDip( int iSys, int i, int iRad, const Event& event,
+    bool limitPTmaxIn, vector<DireTimesEnd>& dipEnds );
   void getQCDdip( int iRad, int colTag, int colSign, const Event& event,
     vector<DireTimesEnd>& dipEnds );
   void setupDecayDip( int iSys, int iRad, const Event& event,
     vector<DireTimesEnd>& dipEnds);
+
+  // Function to set up and append a new dipole.
+  bool appendDipole( const Event& state, int iRad, int iRec, double pTmax,
+    int colType, int chgType, int gamType, int weakType, int isrType, int iSys,
+    int MEtype, int iMEpartner, int weakPol, bool isOctetOnium);
+
+  vector<int> sharedColor(const Particle& rad, const Particle& rec);
+
+  // Function to set up and append a new dipole.
+  void updateDipoles(const Event& state);
+  void checkDipoles(const Event& state);
+  bool updateAllowedEmissions( const Event& state, DireTimesEnd* dip);
+  bool appendAllowedEmissions( const Event& state, DireTimesEnd* dip);
 
   // Evolve a QCD dipole end.
   void pT2nextQCD( double pT2begDip, double pT2sel, DireTimesEnd& dip,
@@ -453,6 +548,7 @@ private:
   // Return headroom factors for integrated/differential overestimates.
   double overheadFactors(DireTimesEnd*, const Event&, string, double,
     double, double);
+  double enhanceOverestimateFurther( string, int, double );
 
   // Function to fill map of integrated overestimates.
   void getNewOverestimates( DireTimesEnd*, const Event&, double, double,
@@ -462,7 +558,7 @@ private:
   void addNewOverestimates( multimap<double,string>, double&);
 
   // Function to attach the correct alphaS weights to the kernels.
-  void alphasReweight(double pT2, int iSys, double& weight,
+  void alphasReweight(double t, double talpha, int iSys, double& weight,
     double& fullWeight, double& overWeight, double renormMultFacNow);
 
   // Function to evaluate the accept-probability, including picking of z.
@@ -470,20 +566,25 @@ private:
     double, double, int, string, int&, int&, double&, double&, 
     map<string,double>&, double&);
 
-  pair<double,double> generateMEC ( const Event& state, const int type, Splitting* split);
+  bool applyMEC ( const Event& state, SplitInfo* splitInfo);
 
   // Get particle masses.
   double getMass(int id, int strategy, double mass = 0.) {
     BeamParticle* beam = NULL;
     if (beamAPtr != NULL || beamBPtr != NULL) {
-      beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
-         : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
+      //beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
+      //   : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
+      beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
+           : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id())) ? beamBPtr : NULL;
     }
+    bool usePDFmass = usePDFmasses
+      && (toLower(settingsPtr->word("PDF:pSet")).find("lhapdf")
+         != string::npos);
     double mRet = 0.;
     if (strategy == 1) mRet = particleDataPtr->m0(id);
-    if (strategy == 2 &&  usePDFmasses && beam != NULL)
+    if (strategy == 2 &&  usePDFmass && beam != NULL)
       mRet = beam->mQuarkPDF(id);
-    if (strategy == 2 && (!usePDFmasses || beam == NULL))
+    if (strategy == 2 && (!usePDFmass || beam == NULL))
       mRet = particleDataPtr->m0(id);
     if (strategy == 3) mRet = mass;
     if (mRet < TINYMASS) mRet = 0.;
@@ -530,6 +631,7 @@ private:
 public:
 
   WeightContainer* weights;
+  DebugInfo* debugPtr;
 
 private:
 
@@ -537,6 +639,12 @@ private:
 
   // List of splitting kernels.
   map<string, Splitting* > splits;
+  map<string, double > overhead;
+  void scaleOverheadFactor(string name, double scale)
+    { overhead[name] *= scale; return; }
+  void resetOverheadFactors()
+    { for ( map<string,double>::iterator it = overhead.begin();
+      it != overhead.end(); ++it ) it->second = 1.0; return; }
 
   double octetOniumColFac;
   bool useLocalRecoilNow;

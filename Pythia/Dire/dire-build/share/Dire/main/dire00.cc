@@ -60,10 +60,10 @@ int main( int argc, char* argv[]  ){
 
     if (abs(wt) > 1e3) {
       cout << scientific << setprecision(8)
-      << "Warning in DIRE main program dire03.cc: Large shower weight wt="
+      << "Warning in DIRE main program dire00.cc: Large shower weight wt="
       << wt << endl;
       if (abs(wt) > 1e4) { 
-        cout << "Warning in DIRE main program dire03.cc: Shower weight larger"
+        cout << "Warning in DIRE main program dire00.cc: Shower weight larger"
         << " than 10000. Discard event with rare shower weight fluctuation."
         << endl;
         evtweight = 0.;

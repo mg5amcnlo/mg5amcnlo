@@ -1,0 +1,67 @@
+
+# Number of events to generate.
+Main:numberOfEvents       = 10000
+Next:numberCount          = 100
+
+# Use external PDF sets from LHAPDF for incoming hadrons.
+#PDF:useHard               = on
+#PDF:pSet                  = LHAPDF6:CT10nlo 
+#PDF:pHardSet              = LHAPDF6:CT10nlo 
+
+# No distribution for incoming leptons.
+PDF:lepton                = off
+
+# Set reference value of alphaS(Mz).
+SpaceShower:alphaSvalue   = 0.1201
+TimeShower:alphaSvalue    = 0.1201
+
+# Set hard process.
+WeakBosonExchange:ff2ff(t:W) = on
+Beams:idA                 = 12
+Beams:idB                 = 2212
+Beams:frameType           = 2
+Beams:eA                  = 1000.0
+Beams:eB                  = 1.0
+PhaseSpace:Q2min          = 10.0
+
+# Merging and Madgraph settings.
+Dire:doMECs                     = on
+Dire:MG5card                    = param_card_sm.dat
+Merging:doPTLundMerging         = on
+Merging:Process                 = vep>e-j
+Merging:useShowerPlugin         = on
+Merging:TMS                     = 1000000
+Dire:doMerging                  = on
+Merging:applyVeto               = off
+Merging:includeWeightInXsection = off
+Merging:mayRemoveDecayProducts  = on
+
+# Use masses of PDF sets also for shower evolution.
+# Note: Only correctly handled when using external PDF sets from LHAPDF
+ShowerPDF:usePDFalphas    = off
+ShowerPDF:useSummedPDF    = off
+ShowerPDF:usePDFmasses    = off
+DireSpace:forceMassiveMap = on
+
+# Disallow 'power shower'.
+SpaceShower:pTmaxMatch    = 1
+TimeShower:pTmaxMatch     = 1
+
+# Use NLO corrections to timelike evolution.
+#DireTimes:kernelOrder = 3
+# Use NLO corrections to spacelike evolution.
+#DireSpace:kernelOrder = 3
+
+# Vary renormalization scale used in shower.
+#Variations:doVariations = on 
+#Variations:muRisrDown = 0.25
+#Variations:muRisrUp   = 4.0
+#Variations:muRfsrDown = 0.25
+#Variations:muRfsrUp   = 4.0
+
+#PartonLevel:fsr = off
+PartonLevel:MPI              = off
+HadronLevel:all              = off
+BeamRemnants:primordialKT    = off
+PartonLevel:Remnants         = off
+Check:event                  = off

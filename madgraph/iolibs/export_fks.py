@@ -665,8 +665,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'timing_variables.inc',
                      'pythia8_fortran_dummy.cc',
                      'pythia8_fortran.cc',
+                     'pythia8_wrapper.cc',
                      'pythia8_control_setup.inc',
                      'pythia8_control.inc',
+                     'dire_fortran.cc',
                      'LHAFortran_aMCatNLO.h',
                      'hep_event_streams.inc']
 

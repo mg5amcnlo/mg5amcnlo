@@ -26,8 +26,8 @@ public:
   // Constructor and destructor.
   SplittingQCD(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
-    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    Splitting(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info)
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) : Splitting(idIn,
+      softRS, settings, particleData, rndm, beamA, beamB, coupSM, info)
     { init(); }
   virtual ~SplittingQCD() {}
 
@@ -40,6 +40,8 @@ public:
   double alphaS2pi;
 
   AlphaStrong alphaS;
+
+  static const double SMALL_TEVOL;
 
   // AUXILIARY FUNCTIONS
   double getNF(double pT2);
@@ -60,6 +62,289 @@ public:
   double polevl(double x,double* coef,int N );
   double  DiLog(double x);
 
+  vector<int> sharedColor(const Event& event, int iRad, int iRec);
+  int findCol(int col, vector<int> iExc, const Event&, int type);
+
+  virtual vector <int> radAndEmt(int idDaughter, int)
+   { return createvector<int>(motherID(idDaughter))(sisterID(idDaughter)); } 
+  virtual bool isPartial()  { return true; }
+
+  virtual double coupling (double pT2) { return as2Pi(pT2); }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_Q2QGG : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_Q2QGG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+
+  vector <int> radAndEmt(int idDaughter, int)
+    { return createvector<int>(idDaughter)(21)(21);}
+  int nEmissions()          { return 2; }
+  int kinMap()              { return 2;}
+  bool canUseForBranching() { return true; }
+
+  vector<pair<int,int> > radAndEmtCols(int iRad, int colType, Event state); 
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2GGG : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_G2GGG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+
+  vector <int> radAndEmt(int,int) { return createvector<int>(21)(21)(21);}
+  int nEmissions()                { return 2; }
+  int kinMap()                    { return 2;}
+  bool canUseForBranching()       { return true; }
+
+  vector<pair<int,int> > radAndEmtCols(int iRad, int colType, Event state);
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2QQG : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_G2QQG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info)
+      { nGluonToQuark = settingsPtr->mode("TimeShower:nGluonToQuark"); }
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+
+  virtual vector <int> radAndEmt(int, int) { return vector<int>(); } 
+
+  int nEmissions()            { return 2; }
+  int kinMap()                { return 2;}
+  bool canUseForBranching()   { return true; }
+
+  vector<pair<int,int> > radAndEmtCols(int iRad, int colType, Event state);
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+  int nGluonToQuark;
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2DDG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2DDG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 1;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2UUG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2UUG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 2;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2SSG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2SSG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 3;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2CCG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2CCG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 4;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
+};
+//==========================================================================
+
+class fsr_qcd_G2BBG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2BBG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 5;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2TTG : public fsr_qcd_G2QQG {
+
+public:  
+
+  fsr_qcd_G2TTG(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    fsr_qcd_G2QQG(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info) {}
+
+  vector <int> radAndEmt(int, int colType) { 
+    int sign = (colType > 0) ? 1 : -1; 
+    int idRadAft = sign * 6;
+    return createvector<int>(idRadAft)(-idRadAft)(21);
+  }
+
 };
 
 //==========================================================================
@@ -71,11 +356,13 @@ public:
   fsr_qcd_Q2QG(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -87,6 +374,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -105,16 +394,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>() );
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_Q2GQ : public SplittingQCD {
 
@@ -123,11 +408,13 @@ public:
   fsr_qcd_Q2GQ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -139,6 +426,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -157,16 +446,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_G2GG1 : public SplittingQCD {
 
@@ -175,11 +460,13 @@ public:
   fsr_qcd_G2GG1(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -191,6 +478,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -209,16 +498,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_G2GG2 : public SplittingQCD {
 
@@ -227,11 +512,13 @@ public:
   fsr_qcd_G2GG2(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -243,6 +530,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -261,16 +550,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_G2QQ1 : public SplittingQCD {
 
@@ -279,12 +564,14 @@ public:
   fsr_qcd_G2QQ1(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
-
+  int nEmissions() { return 1; }
+  bool isPartial() { return false; }
   int kinMap ();
 
   // Return id of mother after splitting.
@@ -295,6 +582,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -313,16 +602,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_G2QQ2 : public SplittingQCD {
 
@@ -331,11 +616,14 @@ public:
   fsr_qcd_G2QQ2(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -347,6 +635,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -365,16 +655,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_Q2qQqbarDist : public SplittingQCD {
 
@@ -383,11 +669,14 @@ public:
   fsr_qcd_Q2qQqbarDist(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 2; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -399,6 +688,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -417,16 +708,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class fsr_qcd_Q2QbarQQId : public SplittingQCD {
 
@@ -435,11 +722,14 @@ public:
   fsr_qcd_Q2QbarQQId(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 2; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -451,6 +741,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -469,16 +761,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_Q2QG : public SplittingQCD {
 
@@ -487,11 +775,13 @@ public:
   isr_qcd_Q2QG(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -503,6 +793,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -521,15 +813,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int, double, double, 
-    double, double, const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_G2GG1 : public SplittingQCD {
 
@@ -538,11 +827,13 @@ public:
   isr_qcd_G2GG1(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -554,6 +845,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -572,16 +865,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_G2GG2 : public SplittingQCD {
 
@@ -590,11 +879,13 @@ public:
   isr_qcd_G2GG2(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
 
   int kinMap ();
 
@@ -606,6 +897,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -624,16 +917,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0, 
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_G2QQ : public SplittingQCD {
 
@@ -642,11 +931,14 @@ public:
   isr_qcd_G2QQ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -658,6 +950,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -676,15 +970,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int, double, double, 
-    double, double, const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_Q2GQ : public SplittingQCD {
 
@@ -693,11 +984,14 @@ public:
   isr_qcd_Q2GQ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -709,6 +1003,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -727,16 +1023,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 // Class inheriting from SplittingQCD class.
 class isr_qcd_Q2qQqbarDist : public SplittingQCD {
@@ -746,11 +1038,14 @@ public:
   isr_qcd_Q2qQqbarDist(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 2; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -762,6 +1057,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -780,15 +1077,12 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  //// Return kernel for new splitting.
-  //double kernel(double z, double pT2, double m2dip, int, double, double, 
-  //  double, double, const Event& state = Event(), int order = -1,
-  //  map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
 
 class isr_qcd_Q2QbarQQId : public SplittingQCD {
 
@@ -797,11 +1091,14 @@ public:
   isr_qcd_Q2QbarQQId(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
     PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 2; }
+  bool isPartial() { return false; }
 
   int kinMap ();
 
@@ -813,6 +1110,8 @@ public:
 
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
+
+  //vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -831,16 +1130,175 @@ public:
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
 
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
-
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
 
 };
+
+//==========================================================================
+
+class fsr_qcd_Q2QG_notPartial : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_Q2QG_notPartial(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+
+  int kinMap ();
+
+  // Return id of mother after splitting.
+  int motherID(int idDaughter);
+
+  // Return id of emission.
+  int sisterID(int idDaughter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+  bool isPartial()  { return false; }
+
+};
+
+
+//==========================================================================
+
+class fsr_qcd_G2GG_notPartial : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_G2GG_notPartial(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+
+  int kinMap ();
+
+  // Return id of mother after splitting.
+  int motherID(int idDaughter);
+
+  // Return id of emission.
+  int sisterID(int idDaughter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+  bool isPartial()  { return false; }
+
+};
+
+//==========================================================================
+
+class fsr_qcd_G2QQ_notPartial : public SplittingQCD {
+
+public:  
+
+  fsr_qcd_G2QQ_notPartial(string idIn, int softRS, Settings* settings,
+    ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
+    SplittingQCD(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
+
+  bool canRadiate ( const Event&, map<string,int>,
+    map<string,bool> = map<string,bool>(), Settings* = NULL,
+    PartonSystems* = NULL, BeamParticle* = NULL);
+  int nEmissions() { return 1; }
+
+  int kinMap ();
+
+  // Return id of mother after splitting.
+  int motherID(int idDaughter);
+
+  // Return id of emission.
+  int sisterID(int idDaughter);
+
+  // Return id of recombined radiator (before splitting!)
+  int radBefID(int idRadAfter, int idEmtAfter);
+
+  vector <int> recPositions( const Event&, int, int);
+
+  // Return colours of recombined radiator (before splitting!)
+  pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
+    int colEmtAfter, int acolEmtAfter);
+
+  double gaugeFactor ( int=0, int=0 );
+  double symmetryFactor ( int=0, int=0 );
+
+  // Pick z for new splitting.
+  double zSplit(double zMinAbs, double zMaxAbs, double m2dip);
+
+  // New overestimates, z-integrated versions.
+  double overestimateInt(double zMinAbs,double zMaxAbs,
+    double pT2Old, double m2dip, int order = -1);
+
+  // Return kernel for new splitting.
+  double overestimateDiff(double z, double m2dip, int order = -1);
+
+  // Functions to calculate the kernel from SplitInfo information.
+  bool calc(const Event& state = Event(), int order = -1);
+
+  bool isPartial()  { return false; }
+
+};
+
+//==========================================================================
 
 } // end namespace Pythia8
 

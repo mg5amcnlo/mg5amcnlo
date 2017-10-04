@@ -1,8 +1,7 @@
 
 # Main run settings.
-Main:numberOfEvents        = 10000000
-
-Next:numberCount = 10000
+Main:numberOfEvents        = 10000
+next:numbercount = 1
 
 # Allow no substructure in e+- beams: normal for corrected LEP data.
 PDF:lepton                 = off
@@ -11,9 +10,9 @@ PDF:lepton                 = off
 #PDF:pSet                   = LHAPDF6:CT10nlo 
 #PDF:pHardSet               = LHAPDF6:CT10nlo
 
-# Set alphaS(mZ) to value used in PDF fit.
-SpaceShower:alphaSvalue    = 0.118
-TimeShower:alphaSvalue     = 0.118
+# Set alphaS(mZ) value.
+SpaceShower:alphaSvalue    = 0.1201
+TimeShower:alphaSvalue     = 0.1201
 
 # Set Pythia hard process.
 WeakSingleBoson:ffbar2gmZ  = on
@@ -21,7 +20,7 @@ WeakSingleBoson:ffbar2gmZ  = on
 23:onIfAny                 = 1 2 3 4 5 
 Beams:idA                  =  11
 Beams:idB                  = -11
-Beams:eCM                  = 1000
+Beams:eCM                  = 91.2
 
 # Example on how to use LHEF input.
 #Beams:frameType = 4
@@ -32,10 +31,10 @@ Beams:eCM                  = 1000
 #LesHouches:matchInOut      = off
 
 # Set shower cut-off and alphaS running.
-SpaceShower:pTmin          = 1.0
-TimeShower:pTmin           = 1.0
-SpaceShower:alphaSorder    = 2
-TimeShower:alphaSorder     = 2
+#SpaceShower:pTmin          = 1.0
+#TimeShower:pTmin           = 1.0
+#SpaceShower:alphaSorder    = 2
+#TimeShower:alphaSorder     = 2
 
 # Do not use "power shower".
 SpaceShower:pTmaxMatch     = 1
@@ -48,15 +47,8 @@ ShowerPDF:useSummedPDF     = on
 ShowerPDF:usePDFmasses     = off
 DireSpace:forceMassiveMap  = off
 
-1:m0 = 0
-2:m0 = 0
-3:m0 = 0
-4:m0 = 0
-5:m0 = 0
-
-
 # Use NLO corrections to timelike evolution.
-DireTimes:kernelOrder = 1
+#DireTimes:kernelOrder = 3
 
 # Vary renormalization scale used in shower.
 #Variations:doVariations = on
@@ -64,16 +56,9 @@ DireTimes:kernelOrder = 1
 #Variations:muRfsrUp   = 4.0
 
 # Switch off event generation steps
-PartonLevel:MPI            = off
-HadronLevel:all            = off
+#HadronLevel:all            = off
 #PartonLevel:FSR            = off
-PartonLevel:ISR            = off
-HadronLevel:all            = off
-BeamRemnants:primordialKT  = off
-PartonLevel:Remnants       = off
-Check:event                = off
-TimeShower:QEDshowerByQ    = off
-TimeShower:QEDshowerByL    = off
-SpaceShower:QEDshowerByQ   = off
-SpaceShower:QEDshowerByL   = off
+#HadronLevel:all            = off
+#TimeShower:QEDshowerByQ    = off
+#TimeShower:QEDshowerByL    = off
 #PartonLevel:FSRinResonances = off

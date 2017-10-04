@@ -69,24 +69,41 @@ void WeightContainer::setup() {
   rejectWeight.insert( make_pair(vkey, map<unsigned long, PSWeight>() ));
   acceptWeight.insert( make_pair(vkey, map<unsigned long, PSWeight>() ));
   showerWeight.insert( make_pair(vkey, 1.) );
+  weightNames.push_back( vkey );
 
   bool doVar = settingsPtr->flag("Variations:doVariations");
   if ( doVar ) {
-    bookWeightVar("Variations:muRisrDown");
-    bookWeightVar("Variations:muRisrUp");
-    bookWeightVar("Variations:muRfsrUp");
-    bookWeightVar("Variations:muRfsrDown");
+    if (settingsPtr->parm("Variations:muRisrDown") != 1.)
+      bookWeightVar("Variations:muRisrDown");
+    if (settingsPtr->parm("Variations:muRisrUp") != 1.)
+      bookWeightVar("Variations:muRisrUp");
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      bookWeightVar("Variations:muRfsrDown");
+    if (settingsPtr->parm("Variations:muRfsrUp") != 1.)
+      bookWeightVar("Variations:muRfsrUp");
   }
+
+  // Remember groups of weights that should be combined into one weight.
+  vector<string> group;
+  group = createvector<string>("Variations:muRfsrUp")
+    ("Variations:muRisrUp");
+  weightCombineList.insert ( make_pair("scaleUp", group) );
+  group = createvector<string>("Variations:muRfsrDown")
+    ("Variations:muRisrDown");
+  weightCombineList.insert ( make_pair("scaleDown", group) );
 
 }
 
 //--------------------------------------------------------------------------
 
-void WeightContainer::bookWeightVar( string vkey) {
-  if (settingsPtr->parm(vkey) != 1.0) {
+void WeightContainer::bookWeightVar( string vkey, bool checkSettings) {
+  bool insert =  !checkSettings
+              || (checkSettings && settingsPtr->parm(vkey) != 1.0);
+  if (insert) {
     rejectWeight.insert( make_pair(vkey, map<unsigned long, PSWeight>() ));
     acceptWeight.insert( make_pair(vkey, map<unsigned long, PSWeight>() ));
     showerWeight.insert( make_pair(vkey, 1.) );
+    weightNames.push_back( vkey );
   }
 }
 
@@ -215,8 +232,26 @@ void WeightContainer::calcWeight(double pT2) {
 
     // Remember weights
     map<string, double>::iterator itW = showerWeight.find(it->first);
-
     if (itW != showerWeight.end()) itW->second *= acceptWt*rejectWt;
+
+    // Diagnostic messages.
+    if (abs(acceptWt) > 5.) debugPtr->message(1) << scientific
+      << setprecision(8) << __FILE__ << " " << __func__ << " "
+      << __LINE__ << " : Found large accept weight=" << acceptWt
+      << " at pT2=" << pT2 << endl;
+    if ( abs(rejectWt) > 5.) {
+      for ( map<unsigned long, PSWeight>::reverse_iterator itR
+        = it->second.rbegin(); itR != it->second.rend(); ++itR ){
+        if ( itR->first > key(pT2) ) {
+          if ( abs(itR->second.weight()) > 5.) debugPtr->message(1)
+            << scientific << setprecision(8) << __FILE__ << " " << __func__
+            << " " << __LINE__ << " : Found large reject weight="
+            << itR->second.weight() << " at index=" << itR->first
+            << " (pT2 approx. " << dkey(itR->first) << ")" << endl;
+        }
+        if ( itR->first < key(pT2) || itR->first-key(pT2) == 0) break;
+      }
+    }
 
   }
 
@@ -252,8 +287,26 @@ pair<double,double> WeightContainer::getWeight(double pT2, string varKey) {
 
   // Remember weights
   map<string, double>::iterator itW = showerWeight.find(varKey);
-
   if (itW != showerWeight.end()) rejectWt *= itW->second;
+
+  // Diagnostic messages.
+  if (abs(acceptWt) > 5.) debugPtr->message(1) << scientific
+    << setprecision(8) << __FILE__ << " " << __func__ << " "
+    << __LINE__ << " : Found large accept weight=" << acceptWt
+    << " at pT2=" << pT2 << endl;
+  if ( abs(rejectWt) > 5.) {
+    for ( map<unsigned long, PSWeight>::reverse_iterator itR
+      = itRW->second.rbegin(); itR != itRW->second.rend(); ++itR ){
+      if ( itR->first > key(pT2) ) {
+        if ( abs(itR->second.weight()) > 5.) debugPtr->message(1)
+          << scientific << setprecision(8) << __FILE__ << " " << __func__
+          << " " << __LINE__ << " : Found large reject weight="
+          << itR->second.weight() << " at index=" << itR->first
+          << " (pT2 approx. " << dkey(itR->first) << ")" << endl;
+      }
+      if ( itR->first < key(pT2) || itR->first-key(pT2) == 0) break;
+    }
+  }
 
   // Done.
   return make_pair(acceptWt,rejectWt);
@@ -274,31 +327,6 @@ double WeightContainer::enhanceOverestimate( string name ) {
 
 bool WeightContainer::hasME(const Event& event) {
 
-/*  vector <int> vec_in_pdgs;
-  vec_in_pdgs.push_back(event[3].id());
-  vec_in_pdgs.push_back(event[4].id());
-  vector <int> vec_out_pdgs;
-  for (int i = 4; i < event.size(); ++i) {
-    if ( event[i].id() == 21 ) continue;
-    if ( event[i].idAbs() < 6 ) continue;
-    if ( event[i].isFinal() ) vec_out_pdgs.push_back(event[i].id());
-  }
-  for (int i = 4; i < event.size(); ++i) {
-    if ( event[i].id() != 21 ) continue;
-    if ( event[i].isFinal() ) vec_out_pdgs.push_back(event[i].id());
-  }
-  for (int i = 4; i < event.size(); ++i) {
-    if ( event[i].idAbs() > 5 ) continue;
-    if ( event[i].isFinal() ) vec_out_pdgs.push_back(event[i].id());
-  }
-
-  set<int> set_req_s_channels; 
-  bool found = isAvailableME(PY8MEs_accessor, vec_in_pdgs, vec_out_pdgs,
-         set_req_s_channels);
-
-  return found;
-*/
-
   int nfinal(0), ng(0), nq(0), nlq(0);
   for (int i = 4; i < event.size(); ++i) {
     if ( event[i].isFinal() && event[i].colType()!=0) nfinal++;
@@ -307,10 +335,8 @@ bool WeightContainer::hasME(const Event& event) {
     if ( event[i].isFinal() && event[i].id()==21) ng++;
     if ( event[i].isFinal() && event[i].idAbs()<10) nq++;
   }
-//  if (nfinal>2) return false;
   if (nlq>2) return false;
-//  if (ng>0) return false;
-//return false;
+  //if (nfinal>2) return false;
 
   return isAvailableME(PY8MEs_accessor,event);
 

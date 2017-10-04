@@ -4,6 +4,8 @@
 
 #define DIRE_BASICS_VERSION "2.000"
 
+#define STRING( x ) static_cast < std::ostringstream& > ((std::ostringstream() << std::dec << x)).str()
+
 // Pythia includes.
 #include "Pythia8/Pythia.h"
 #include <limits>
@@ -32,7 +34,29 @@ public:
 
 };
 
-//--------------------------------------------------------------------------
+//==========================================================================
+
+// Template to make initializing maps simpler, while not relying on C++11.
+// Usage: map(createmap<T,U>(a,b)(c,d)(e,f));
+
+template <typename T> class createvector {
+
+private:
+
+  vector<T> m_vector;
+
+public:
+
+  createvector(const T& val) { m_vector.push_back(val); }
+  createvector<T>& operator()(const T& val) {
+    m_vector.push_back(val);
+    return *this;
+  }
+  operator vector<T>() { return m_vector; }
+
+};
+
+//==========================================================================
 
 // Helper function to calculate dilogarithm.
 
@@ -40,8 +64,7 @@ double polev(double x,double* coef,int N );
 // Function to calculate dilogarithm.
 double dilog(double x);
 
-//--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
+//==========================================================================
 
 class Function {
 
@@ -151,6 +174,53 @@ public:
     return std::numeric_limits<double>::quiet_NaN();
 
   }
+
+};
+
+//==========================================================================
+
+// Abort function.
+int puppybort( string input, int iPuppy = 0);
+
+
+//==========================================================================
+
+class DebugInfo {
+
+  public:
+
+  void clear() {
+    messageStream0.str("");
+    messageStream1.str("");
+    messageStream2.str("");
+  }
+
+  void print( int verbosity = 0) {
+    cout << "\n"
+      << "*------------------------------------------------------------*\n"
+      << "*----------------- Begin diagnostic output ------------------*\n\n";
+    if (verbosity == 0) cout << scientific << setprecision(8)
+    << messageStream0.str();
+    if (verbosity == 1) cout << scientific << setprecision(8)
+    << messageStream1.str();
+    if (verbosity == 2) cout << scientific << setprecision(8)
+    << messageStream2.str();
+    cout << "\n\n"
+      << "*----------------- End diagnostic output -------------------*\n"
+      << "*-----------------------------------------------------------*"
+      << endl;
+  }
+
+  // Add debug messages to message stream.
+  ostream & message ( int verbosity = 0) {
+    if (verbosity == 0) return messageStream0;
+    if (verbosity == 1) return messageStream1;
+    if (verbosity == 2) return messageStream2;
+    return messageStream0;
+  }
+
+  // Debug message streams.
+  ostringstream messageStream0, messageStream1, messageStream2;
 
 };
 

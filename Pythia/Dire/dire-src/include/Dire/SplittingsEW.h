@@ -1,6 +1,6 @@
 
-#ifndef Pythia8_SplittingEWsEW_H
-#define Pythia8_SplittingEWsEW_H
+#ifndef Pythia8_SplittingsEW_H
+#define Pythia8_SplittingsEW_H
 
 #define DIRE_SPLITTINGSEW_VERSION "2.000"
 
@@ -24,8 +24,8 @@ public:
   // Constructor and destructor.
   SplittingEW(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
-    BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingQCD(idIn,softRS,settings,particleData,rndm,beamA,beamB,coupSM,info)
+    BeamParticle* beamB, CoupSM* coupSM, Info* info) : SplittingQCD(idIn,
+      softRS,settings,particleData,rndm,beamA,beamB,coupSM,info)
     { init(); }
   virtual ~SplittingEW() {}
 
@@ -42,6 +42,11 @@ public:
   // renormalisation scale variations + threshold matching.
   double aem2Pi ( double pT2);
 
+  virtual vector <int> radAndEmt(int idDaughter, int)
+   { return createvector<int>(motherID(idDaughter))(sisterID(idDaughter)); } 
+  virtual int nEmissions() { return 1; }
+  virtual bool isPartial()  { return true; }
+
 };
 
 //==========================================================================
@@ -53,7 +58,8 @@ public:
   fsr_ew_Q2QZ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -86,12 +92,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>() );
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -105,7 +105,8 @@ public:
   fsr_ew_Q2ZQ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -138,12 +139,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -157,7 +152,8 @@ public:
   fsr_ew_Z2QQ1(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -190,12 +186,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -209,7 +199,8 @@ public:
   fsr_ew_Z2QQ2(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -242,12 +233,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -261,7 +246,8 @@ public:
   fsr_ew_W2QQ1(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -294,12 +280,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -313,7 +293,8 @@ public:
   fsr_ew_W2QQ2(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -346,12 +327,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>());
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
@@ -367,7 +342,8 @@ public:
   fsr_ew_H2WW(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -415,7 +391,8 @@ public:
   isr_ew_Q2QZ(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSM, Info* info) :
-    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB, coupSM, info){}
+    SplittingEW(idIn, softRS, settings, particleData, rndm, beamA, beamB,
+      coupSM, info){}
 
   bool canRadiate ( const Event&, map<string,int>,
     map<string,bool> = map<string,bool>(), Settings* = NULL,
@@ -448,12 +425,6 @@ public:
 
   // Return kernel for new splitting.
   double overestimateDiff(double z, double m2dip, int order = -1);
-
-  // Return kernel for new splitting.
-  double kernel(double z, double pT2, double m2dip, int splitType = 0,
-    double m2RadBef = 0., double m2Rad = 0., double m2Rec = 0.,
-    double m2Emt = 0., const Event& state = Event(), int order = -1,
-    map<string,double> aux= map<string,double>() );
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);

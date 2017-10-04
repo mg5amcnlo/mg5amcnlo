@@ -100,7 +100,28 @@ void SplittingLibrary::initFSR() {
   splittings.insert( make_pair( name, new fsr_qcd_Q2QbarQQId( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  /*// QED splittings
+  name = "fsr_qcd_1->1&21_notPartial";
+  splittings.insert( make_pair( name, new fsr_qcd_Q2QG_notPartial( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
+  /*// New 1->3 kernels.
+  // Q -> Q G G
+  name = "fsr_qcd_1->1&21&21_CS";
+  splittings.insert( make_pair( name, new fsr_qcd_Q2QGG( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+  // G -> G G G
+  name = "fsr_qcd_21->21&21&21_CS";
+  splittings.insert( make_pair( name, new fsr_qcd_G2GGG( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+  // G -> Q Q~ G, one kernel for each flavor.
+  name = "fsr_qcd_21->1&1&21_CS";
+  splittings.insert( make_pair( name, new fsr_qcd_G2DDG( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+  name = "fsr_qcd_21->2&2&21_CS";
+  splittings.insert( make_pair( name, new fsr_qcd_G2UUG( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );*/
+
+  // QED splittings
 
   // Q -> Q A, soft part + collinear
   name = "fsr_qed_1->1&22_CS";
@@ -112,7 +133,17 @@ void SplittingLibrary::initFSR() {
   splittings.insert( make_pair( name, new fsr_qed_Q2AQ( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  // A -> Q Q~ (regular DGLAP kernel)
+  // Q -> Q A, soft part + collinear
+  name = "fsr_qed_11->11&22_CS";
+  splittings.insert( make_pair( name, new fsr_qed_L2LA( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
+  // Q -> A Q, soft part + collinear
+  name = "fsr_qed_11->22&11_CS";
+  splittings.insert( make_pair( name, new fsr_qed_L2AL( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
+  /*// A -> Q Q~ (regular DGLAP kernel)
   name = "fsr_qed_22->1&1a_CS";
   splittings.insert( make_pair( name, new fsr_qed_A2QQ1( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
@@ -216,21 +247,11 @@ void SplittingLibrary::initISR() {
   splittings.insert( make_pair( name, new isr_qcd_Q2QbarQQId( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  /*// QED splittings
+  // QED splittings
 
   // Q -> Q A, soft and collinear part.
   name = "isr_qed_1->1&22_CS";
   splittings.insert( make_pair( name, new isr_qed_Q2QA( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-
-  // A -> Q Q~ (regular DGLAP kernel)
-  name = "isr_qed_22->1&1_CS";
-  splittings.insert( make_pair( name, new isr_qed_A2QQ( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-
-  // Q -> A Q (regular DGLAP kernel)
-  name = "isr_qed_1->22&1_CS";
-  splittings.insert( make_pair( name, new isr_qed_Q2AQ( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
   // L -> L A, soft and collinear part.
@@ -238,15 +259,26 @@ void SplittingLibrary::initISR() {
   splittings.insert( make_pair( name, new isr_qed_L2LA( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  // A -> L L~ (regular DGLAP kernel)
-  name = "isr_qed_22->11&11_CS";
-  splittings.insert( make_pair( name, new isr_qed_A2LL( name, order,
+  /*// Q -> A Q (regular DGLAP kernel)
+  name = "isr_qed_1->22&1_CS";
+  splittings.insert( make_pair( name, new isr_qed_Q2AQ( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
   // L -> A L (regular DGLAP kernel)
   name = "isr_qed_11->22&11_CS";
   splittings.insert( make_pair( name, new isr_qed_L2AL( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
+  // A -> Q Q~ (regular DGLAP kernel)
+  name = "isr_qed_22->1&1_CS";
+  splittings.insert( make_pair( name, new isr_qed_A2QQ( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
+  // A -> L L~ (regular DGLAP kernel)
+  name = "isr_qed_22->11&11_CS";
+  splittings.insert( make_pair( name, new isr_qed_A2LL( name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+
   */
 
   /*// EW splittings
@@ -256,6 +288,10 @@ void SplittingLibrary::initISR() {
   splittings.insert( make_pair( name, new isr_ew_Q2QZ( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
   */
+
+  // Read more kernels.
+  if (hasExternalHook && hooksPtr->canLoadISRKernels())
+    hooksPtr->doLoadISRKernels(splittings);
 
   // Done.
 }
@@ -280,6 +316,8 @@ const Splitting* SplittingLibrary::operator[](string id) const {
 
 vector<int> SplittingLibrary::getSplittingRadBefID(const Event& event,
   int rad, int emt) {
+
+return getSplittingRadBefID_new(event, rad, emt);
 
   // Get ID of radiator before branching.
   int type = event[rad].isFinal() ? 1 :-1;
@@ -447,10 +485,70 @@ vector<int> SplittingLibrary::getSplittingRadBefID(const Event& event,
 
 //--------------------------------------------------------------------------
 
+vector<int> SplittingLibrary::getSplittingRadBefID_new(const Event& event,
+  int rad, int emt) {
+
+  vector<int>radBefIDs;
+  for ( map<string,Splitting*>::iterator it = splittings.begin();
+    it != splittings.end(); ++it ) {
+    int idNow = it->second->radBefID(event[rad].id(), event[emt].id());
+    if (idNow != 0) radBefIDs.push_back(idNow);
+  }
+
+  return radBefIDs;
+
+}
+
+//--------------------------------------------------------------------------
+
+// Generate name for a splitting
+
+vector<string> SplittingLibrary::getSplittingName_new(const Event& event, int rad,
+  int emt) {
+
+  vector<string> names;
+  for ( map<string,Splitting*>::iterator it = splittings.begin();
+    it != splittings.end(); ++it ) {
+
+    int type = event[rad].isFinal() ? 1 :-1;
+    if (type < 0 && it->first.find("isr") == string::npos) continue;
+    if (type > 0 && it->first.find("fsr") == string::npos) continue;
+
+    // Find radiator before emission.
+    int idNow = it->second->radBefID(event[rad].id(), event[emt].id());
+
+    // Now check that after emission, we would find same flavors.
+    vector <int> radAndEmt;
+    if (idNow != 0) radAndEmt = it->second->radAndEmt(idNow,0);
+
+    bool valid = false;
+    if (radAndEmt.size() == 2) {
+      if (radAndEmt[1] == event[emt].id())
+        valid = true;
+      if (event[emt].isQuark() && event[emt].colType() > 0
+        && radAndEmt[1] == 1)
+        valid = true;
+      if (event[emt].isQuark() && event[emt].colType() < 0
+        && radAndEmt[1] == 1)
+        valid = true;
+    }
+
+    // Found valid splitting name.
+    if (valid && idNow != 0) { names.push_back(it->first);}
+  }
+
+  return names;
+
+}
+
+//--------------------------------------------------------------------------
+
 // Generate name for a splitting
 
 vector<string> SplittingLibrary::getSplittingName(const Event& event, int rad,
   int emt) {
+
+  return getSplittingName_new(event, rad, emt);
 
   // Get ID of radiator before branching.
   int type               = event[rad].isFinal() ? 1 :-1;
@@ -527,6 +625,9 @@ vector<string> SplittingLibrary::getSplittingName(const Event& event, int rad,
 // Return the total number of emissions for a particular splitting 
 
 int SplittingLibrary::nEmissions( string name ) {
+
+  map<string, Splitting*>::iterator it = splittings.find(name);
+  if (it != splittings.end() && abs(it->second->kinMap()) == 2) return 2;
 
   // Flavour-changing 1->3 splitting for FSR implemented.
   if ( name.find("fsr_qcd_1->2&1&2_CS") != string::npos ) return 2;

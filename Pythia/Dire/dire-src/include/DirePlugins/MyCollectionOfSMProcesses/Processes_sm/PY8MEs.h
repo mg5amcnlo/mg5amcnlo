@@ -20,6 +20,72 @@ using namespace std;
 namespace PY8MEs_namespace
 {
 
+//==========================================================================
+ 
+// Template to make initializing sets simpler, while not relying on C++11.
+// Usage: set(createset<T>(a)(b)(c));
+
+template <typename T> class createset {
+
+private:
+
+  set<T> m_set;
+
+public:
+
+  createset(const T& val) { m_set.insert(val); }
+  createset<T>& operator()(const T& val) {
+    m_set.insert(val);
+    return *this;
+  }
+  operator set<T>() { return m_set; }
+
+};
+
+//==========================================================================
+
+// Template to make initializing maps simpler, while not relying on C++11.
+// Usage: map(createmap<T,U>(a,b)(c,d)(e,f));
+
+template <typename T, typename U> class createmap {
+
+private:
+
+  map<T, U> m_map;
+
+public:
+
+  createmap(const T& key, const U& val) { m_map[key] = val; }
+  createmap<T, U>& operator()(const T& key, const U& val) {
+    m_map[key] = val;
+    return *this;
+  }
+  operator map<T, U>() { return m_map; }
+
+};
+
+//==========================================================================
+
+// Template to make initializing maps simpler, while not relying on C++11.
+// Usage: vector(creatvector<T>(a)(b)(c));
+
+template <typename T> class createvector {
+
+private:
+
+  vector<T> m_vector;
+
+public:
+
+  createvector(const T& val) { m_vector.push_back(val); }
+  createvector<T>& operator()(const T& val) {
+    m_vector.push_back(val);
+    return *this;
+  }
+  operator vector<T>() { return m_vector; }
+
+};
+
 typedef vector<int> vec_int; 
 typedef set<int> set_int; 
 
@@ -118,7 +184,14 @@ class PY8MEs
     // to release it and we should no longer do it on his behalf in the
     // destructor as he
     // could be using it elsewhere.
-    Parameters_sm * getModel() {releaseModelOnExit = false; return model;}
+    Parameters_sm * getModel(bool changeReleaseModelOnExit = true) 
+    {
+      if(changeReleaseModelOnExit)
+      {
+        releaseModelOnExit = false; 
+      }
+      return model; 
+    }
     // If the model pointer is replace, we must release the old one if
     // necessary and
     // make sure that the new one will not be released by this class since it

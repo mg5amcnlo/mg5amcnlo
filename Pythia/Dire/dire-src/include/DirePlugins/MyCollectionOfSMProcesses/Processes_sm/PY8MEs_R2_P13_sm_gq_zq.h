@@ -147,7 +147,7 @@ class PY8MEs_R2_P13_sm_gq_zq : public PY8ME
     static int helicities[ncomb][nexternal]; 
 
     // required s-channels specified
-    static int req_s_channels[nreq_s_channels]; 
+    //static int req_s_channels[nreq_s_channels]; 
 
     // Color flows, used when selecting color
     vector < vec_double > jamp2; 

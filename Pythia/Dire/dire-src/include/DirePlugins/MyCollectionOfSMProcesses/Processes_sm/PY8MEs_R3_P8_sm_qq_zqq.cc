@@ -74,7 +74,7 @@ class PY8MEs_R3_P8_sm_qq_zqqException : public exception
 PY8MEs_R3_P8_sm_qq_zqq_exception; 
 
 // Required s-channel initialization
-int PY8MEs_R3_P8_sm_qq_zqq::req_s_channels[nreq_s_channels] = {}; 
+//int PY8MEs_R3_P8_sm_qq_zqq::req_s_channels[nreq_s_channels] = {}; 
 
 int PY8MEs_R3_P8_sm_qq_zqq::helicities[ncomb][nexternal] = {{-1, -1, -1, -1,
     -1}, {-1, -1, -1, -1, 1}, {-1, -1, -1, 1, -1}, {-1, -1, -1, 1, 1}, {-1, -1,
@@ -529,7 +529,7 @@ int PY8MEs_R3_P8_sm_qq_zqq::getColorIDForConfig(vector<int> color_config, int
         {
           int color_linked_pos = -1; 
           // Find the other end of the line in the user color config
-          for (int k = 0; j < (nexternal * 2); k++ )
+          for (int k = 0; k < (nexternal * 2); k++ )
           {
             if (k == j)
               continue; 
@@ -641,8 +641,7 @@ pair < vector<int> , int > PY8MEs_R3_P8_sm_qq_zqq::static_getPY8ME(vector<int>
   // Check if s-channel requirements match
   if (nreq_s_channels > 0)
   {
-    std::set<int> s_channel_proc(req_s_channels, req_s_channels +
-        nreq_s_channels);
+    std::set<int> s_channel_proc;
     if (schannels != s_channel_proc)
       return NA; 
   }

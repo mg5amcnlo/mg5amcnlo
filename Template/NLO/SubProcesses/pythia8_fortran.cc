@@ -456,6 +456,13 @@ extern "C" {
     cout<<"Using default initialization of Pythia8."<<endl;
     pythia.readString("Beams:frameType=5");
     pythia.readString("Check:epTolErr=1.0000000000e-02");
+    pythia.readString("merging:doptlundmerging = on");
+    pythia.readString("merging:process = pp>LEPTONS,NEUTRINOS");
+    pythia.readString("merging:tms = 1000000");
+    pythia.readString("merging:includeWeightInXSection = off");
+    pythia.readString("merging:njetmax = 1000");
+    pythia.readString("merging:applyveto = off");
+
     pythia.setLHAupPtr(& lhareader);
     pythia.init();
     // Flag that Pythia8 intiialisation has been performed.

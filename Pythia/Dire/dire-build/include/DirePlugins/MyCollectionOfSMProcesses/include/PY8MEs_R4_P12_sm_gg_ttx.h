@@ -1,1 +1,0 @@
-../Processes_sm/PY8MEs_R4_P12_sm_gg_ttx.h

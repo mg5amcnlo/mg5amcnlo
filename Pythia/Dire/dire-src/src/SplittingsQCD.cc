@@ -10,6 +10,8 @@ namespace Pythia8 {
 
 // The SplittingQCD class.
 
+const double SplittingQCD::SMALL_TEVOL = 2.0;
+
 //-------------------------------------------------------------------------
 
 void SplittingQCD::init() {
@@ -35,8 +37,8 @@ void SplittingQCD::init() {
 
   BeamParticle* beam = NULL;
   if (beamAPtr != NULL || beamBPtr != NULL) {
-    beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
-         : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
+    beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
+         : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id())) ? beamBPtr : NULL;
     if (beam == NULL && beamAPtr != 0) beam = beamAPtr;
     if (beam == NULL && beamBPtr != 0) beam = beamBPtr;
   }
@@ -61,8 +63,8 @@ double SplittingQCD::getNF(double pT2) {
 
   BeamParticle* beam = NULL;
   if (beamAPtr != NULL || beamBPtr != NULL) {
-    beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
-         : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
+    beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
+         : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id())) ? beamBPtr : NULL;
     if (beam == NULL && beamAPtr != 0) beam = beamAPtr;
     if (beam == NULL && beamBPtr != 0) beam = beamBPtr;
   }
@@ -124,8 +126,8 @@ double SplittingQCD::as2Pi( double pT2, int orderNow, double renormMultFacNow){
   // Get beam for PDF alphaS, if necessary.
   BeamParticle* beam = NULL;
   if (beamAPtr != NULL || beamBPtr != NULL) {
-    beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
-         : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
+    beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
+         : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id())) ? beamBPtr : NULL;
     if (beam == NULL && beamAPtr != 0) beam = beamAPtr;
     if (beam == NULL && beamBPtr != 0) beam = beamBPtr;
   }
@@ -297,6 +299,440 @@ double SplittingQCD::softRescaleDiff(int order, double pT2,
   return rescale;
 }
 
+//--------------------------------------------------------------------------
+
+vector<int> SplittingQCD::sharedColor(const Event& event, int iRad,
+  int iRec) {
+  vector<int> ret;
+  int radCol(event[iRad].col()), radAcl(event[iRad].acol()),
+      recCol(event[iRec].col()), recAcl(event[iRec].acol());
+  if ( event[iRad].isFinal() && event[iRec].isFinal() ) {
+    if (radCol != 0 && radCol == recAcl) ret.push_back(radCol);
+    if (radAcl != 0 && radAcl == recCol) ret.push_back(radAcl);
+  } else if ( event[iRad].isFinal() && !event[iRec].isFinal() ) {
+    if (radCol != 0 && radCol == recCol) ret.push_back(radCol);
+    if (radAcl != 0 && radAcl == recAcl) ret.push_back(radAcl);
+  } else if (!event[iRad].isFinal() && event[iRec].isFinal() )  {
+    if (radCol != 0 && radCol == recCol) ret.push_back(radCol);
+    if (radAcl != 0 && radAcl == recAcl) ret.push_back(radAcl);
+  } else if (!event[iRad].isFinal() && !event[iRec].isFinal() ) {
+    if (radCol != 0 && radCol == recAcl) ret.push_back(radCol);
+    if (radAcl != 0 && radAcl == recCol) ret.push_back(radAcl);
+  }
+  return ret;
+}
+
+//--------------------------------------------------------------------------
+
+int SplittingQCD::findCol(int col, vector<int> iExc, const Event& event,
+    int type) {
+
+  int index = 0;
+
+  int inA = 0, inB = 0;
+  for (int i=event.size()-1; i > 0; --i) {
+    if ( event[i].mother1() == 1 && event[i].status() != -31
+      && event[i].status() != -34) { if (inA == 0) inA = i; }
+    if ( event[i].mother1() == 2 && event[i].status() != -31
+      && event[i].status() != -34) { if (inB == 0) inB = i; }
+  }
+
+  // Search event record for matching colour & anticolour
+  for(int n = 0; n < event.size(); ++n) {
+    // Skip if this index is excluded.
+    if ( find(iExc.begin(), iExc.end(), n) != iExc.end() ) continue;
+    if ( event[n].colType() != 0 &&  event[n].status() > 0 ) {
+       if ( event[n].acol() == col ) {
+        index = -n;
+        break;
+      }
+      if ( event[n].col()  == col ) {
+        index =  n;
+        break;
+      }
+    }
+  }
+  // Search event record for matching colour & anticolour
+  for(int n = event.size()-1; n > 0; --n) {
+    // Skip if this index is excluded.
+    if ( find(iExc.begin(), iExc.end(), n) != iExc.end() ) continue;
+    if ( index == 0 && event[n].colType() != 0
+      && ( n == inA || n == inB) ) {  // Check incoming
+       if ( event[n].acol() == col ) {
+        index = -n;
+        break;
+      }
+      if ( event[n].col()  == col ) {
+        index =  n;
+        break;
+      }
+    }
+  }
+  // if no matching colour / anticolour has been found, return false
+  if ( type == 1 && index < 0) return abs(index);
+  if ( type == 2 && index > 0) return abs(index);
+  return 0;
+
+}
+
+//==========================================================================
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_Q2QGG::canRadiate (const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
+        && state[ints["iRad"]].isQuark() );
+}
+
+double fsr_qcd_Q2QGG::gaugeFactor ( int, int )        { return CF;}
+double fsr_qcd_Q2QGG::symmetryFactor ( int, int )     { return 1.;}
+
+vector<pair<int,int> > fsr_qcd_Q2QGG::radAndEmtCols(int iRad, int colType,
+  Event state) { 
+  int newCol1     = state.nextColTag();
+  int newCol2     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol2 : state[iRad].col();
+  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol2;
+  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
+  int colEmtAft2  = (colType > 0) ? newCol1 : newCol2;
+  int acolEmtAft2 = (colType > 0) ? newCol2 : newCol1;
+
+  // Also remember colors for "intermediate" particles in 1->3 splitting.
+  if ( colType > 0) {
+    splitInfo.extras.insert(make_pair("colRadInt",  newCol1));
+    splitInfo.extras.insert(make_pair("acolRadInt", state[iRad].acol()));
+    splitInfo.extras.insert(make_pair("colEmtInt",  state[iRad].col()));
+    splitInfo.extras.insert(make_pair("acolEmtInt", newCol1));
+  } else {
+    splitInfo.extras.insert(make_pair("colRadInt",  state[iRad].col()));
+    splitInfo.extras.insert(make_pair("acolRadInt", newCol1));
+    splitInfo.extras.insert(make_pair("colEmtInt",  newCol1));
+    splitInfo.extras.insert(make_pair("acolEmtInt", state[iRad].acol()));
+  }
+
+  return createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1))
+    (make_pair(colEmtAft2, acolEmtAft2));
+}
+
+int fsr_qcd_Q2QGG::radBefID(int idRA, int) {
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+}
+
+pair<int,int> fsr_qcd_Q2QGG::radBefCols(
+  int, int, 
+  int, int) {
+  return make_pair(0,0);
+}
+
+// Pick z for new splitting.
+double fsr_qcd_Q2QGG::zSplit(double zMinAbs, double, double m2dip) {
+  double Rz        = rndmPtr->flat();
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin2, Rz );
+  double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin2);
+  return res;
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_Q2QGG::overestimateInt(double zMinAbs, double,
+  double, double m2dip, int orderNow) {
+  // Q -> QG, soft part (currently also used for collinear part).
+  double preFac    = symmetryFactor() * gaugeFactor();
+  //int order        = (orderNow > 0) ? orderNow : correctionOrder;
+  int order        = (orderNow > -1) ? orderNow : correctionOrder;
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  //double wt        = 1e2;
+  double wt        = preFac * softRescaleInt(order)
+                     *2. * 0.5 * log( 1. + pow2(1.-zMinAbs)/kappaMin2);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_Q2QGG::overestimateDiff(double z, double m2dip, int orderNow) {
+  double preFac    = symmetryFactor() * gaugeFactor();
+  //int order        = (orderNow > 0) ? orderNow : correctionOrder;
+  int order        = (orderNow > -1) ? orderNow : correctionOrder;
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac * softRescaleInt(order)
+                     *2. * (1.-z) / ( pow2(1.-z) + kappaMin2);
+  return wt;
+}
+
+// Return kernel for new splitting.
+//bool fsr_qcd_Q2QGG::calc(const Event& state, int) { 
+bool fsr_qcd_Q2QGG::calc(const Event&, int) { 
+
+  //// Required kinematics.
+  //double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2);
+  //
+  //Event trialEvent(state);
+  //bool physical = false;
+  //if (splitInfo.recBef()->isFinal)
+  //  physical = fsr->branch_FF(trialEvent, true, &splitInfo);
+  //else
+  //  physical = fsr->branch_FI(trialEvent, true, &splitInfo);
+  //
+  //// Get invariants.
+  //Vec4 pa(trialEvent[splitInfo.iRadAft].p());
+  //Vec4 pk(trialEvent[splitInfo.iRecAft].p());
+  //Vec4 pi(trialEvent[splitInfo.iEmtAft].p());
+  //Vec4 pj(trialEvent[splitInfo.iEmtAft2].p());
+
+  map<string,double> wts;
+  wts.insert(make_pair("base", 1e5));
+
+  // Store kernel values and return.
+  clearKernels();
+  for (map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+    kernelVals.insert(make_pair( it->first, it->second));
+  return true;
+
+}
+
+//==========================================================================
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_G2GGG::canRadiate (const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
+        && state[ints["iRad"]].id() == 21);
+}
+
+
+double fsr_qcd_G2GGG::gaugeFactor ( int, int )        { return 2.*CA;}
+double fsr_qcd_G2GGG::symmetryFactor ( int, int )     { return 0.5;}
+
+vector<pair<int,int> > fsr_qcd_G2GGG::radAndEmtCols(int iRad, int colType,
+  Event state) { 
+  int newCol1     = state.nextColTag();
+  int newCol2     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol2 : state[iRad].col();
+  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol2;
+  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
+  int colEmtAft2  = (colType > 0) ? newCol1 : newCol2;
+  int acolEmtAft2 = (colType > 0) ? newCol2 : newCol1;
+
+  // Also remember colors for "intermediate" particles in 1->3 splitting.
+  if ( colType > 0) {
+    splitInfo.extras.insert(make_pair("colRadInt",  newCol1));
+    splitInfo.extras.insert(make_pair("acolRadInt", state[iRad].acol()));
+    splitInfo.extras.insert(make_pair("colEmtInt",  state[iRad].col()));
+    splitInfo.extras.insert(make_pair("acolEmtInt", newCol1));
+  } else {
+    splitInfo.extras.insert(make_pair("colRadInt",  state[iRad].col()));
+    splitInfo.extras.insert(make_pair("acolRadInt", newCol1));
+    splitInfo.extras.insert(make_pair("colEmtInt",  newCol1));
+    splitInfo.extras.insert(make_pair("acolEmtInt", state[iRad].acol()));
+  }
+
+  return createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1))
+    (make_pair(colEmtAft2, acolEmtAft2));
+} 
+
+int fsr_qcd_G2GGG::radBefID(int, int) {
+  return 21;
+}
+
+pair<int,int> fsr_qcd_G2GGG::radBefCols(
+  int, int, 
+  int, int) {
+  return make_pair(0,0);
+}
+
+// Pick z for new splitting.
+double fsr_qcd_G2GGG::zSplit(double zMinAbs, double, double m2dip) {
+  // Just pick according to soft.
+  double R         = rndmPtr->flat();
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin2, R );
+  double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin2);
+  return res;
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_G2GGG::overestimateInt(double zMinAbs, double,
+  double, double m2dip, int orderNow) {
+
+  // Overestimate by soft
+  double preFac    = symmetryFactor() * gaugeFactor();
+  //int order        = (orderNow > 0) ? orderNow : correctionOrder;
+  int order        = (orderNow > -1) ? orderNow : correctionOrder;
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  //double wt        = 1e2;
+  double wt        = preFac * softRescaleInt(order)
+                     *0.5 * log( 1. + pow2(1.-zMinAbs)/kappaMin2);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_G2GGG::overestimateDiff(double z, double m2dip, int orderNow) {
+  // Overestimate by soft
+  double preFac    = symmetryFactor() * gaugeFactor();
+  //int order        = (orderNow > 0) ? orderNow : correctionOrder;
+  int order        = (orderNow > -1) ? orderNow : correctionOrder;
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac * softRescaleInt(order)
+                     *(1.-z) / ( pow2(1.-z) + kappaMin2);
+  return wt;
+}
+
+// Return kernel for new splitting.
+//bool fsr_qcd_G2GGG::calc(const Event& state, int) { 
+bool fsr_qcd_G2GGG::calc(const Event&, int) { 
+
+  //// Required kinematics.
+  //double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2);
+  //
+  //Event trialEvent(state);
+  //bool physical = false;
+  //if (splitInfo.recBef()->isFinal)
+  //  physical = fsr->branch_FF(trialEvent, true, &splitInfo);
+  //else
+  //  physical = fsr->branch_FI(trialEvent, true, &splitInfo);
+  //
+  //// Get invariants.
+  //Vec4 pa(trialEvent[splitInfo.iRadAft].p());
+  //Vec4 pk(trialEvent[splitInfo.iRecAft].p());
+  //Vec4 pi(trialEvent[splitInfo.iEmtAft].p());
+  //Vec4 pj(trialEvent[splitInfo.iEmtAft2].p());
+
+  map<string,double> wts;
+  wts.insert(make_pair("base", 1e5));
+
+  // Store kernel values and return.
+  clearKernels();
+  for (map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+    kernelVals.insert(make_pair( it->first, it->second));
+  return true;
+
+}
+
+//==========================================================================
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_G2QQG::canRadiate (const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
+        && state[ints["iRad"]].id() == 21);
+}
+
+double fsr_qcd_G2QQG::gaugeFactor ( int, int )        { return NF_qcd_fsr*TR;}
+double fsr_qcd_G2QQG::symmetryFactor ( int, int )     { return 0.5;}
+
+
+vector<pair<int,int> > fsr_qcd_G2QQG::radAndEmtCols(int iRad, int colType,
+  Event state) { 
+  int newCol1     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol1 : 0;
+  int acolRadAft  = (colType > 0) ? 0 : newCol1;
+  int colEmtAft1  = (colType > 0) ? 0 : state[iRad].col();
+  int acolEmtAft1 = (colType > 0) ? state[iRad].acol() : 0;
+  int colEmtAft2  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft2 = (colType > 0) ? newCol1 : state[iRad].acol();
+
+  // Also remember colors for "intermediate" particles in 1->3 splitting.
+  if ( colType > 0) {
+    splitInfo.extras.insert(make_pair("colRadInt", state[iRad].col()));
+    splitInfo.extras.insert(make_pair("acolRadInt", 0));
+  } else {
+    splitInfo.extras.insert(make_pair("colRadInt", 0));
+    splitInfo.extras.insert(make_pair("acolRadInt", state[iRad].acol()));
+  }
+  splitInfo.extras.insert(make_pair("colEmtInt", colEmtAft1));
+  splitInfo.extras.insert(make_pair("acolEmtInt", acolEmtAft1));
+
+  return createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1))
+    (make_pair(colEmtAft2, acolEmtAft2));
+}
+
+int fsr_qcd_G2QQG::radBefID(int, int) {
+  return 21;
+}
+
+pair<int,int> fsr_qcd_G2QQG::radBefCols(
+  int, int, 
+  int, int) {
+  return make_pair(0,0);
+}
+
+// Pick z for new splitting.
+double fsr_qcd_G2QQG::zSplit(double zMinAbs, double, double m2dip) {
+  // Just pick according to soft.
+  double R         = rndmPtr->flat();
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin2, R );
+  double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin2);
+  return res;
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_G2QQG::overestimateInt(double zMinAbs, double zMaxAbs,
+  double, double, int) {
+  // Overestimate by soft
+  double preFac = symmetryFactor() * gaugeFactor();
+  //double wt        = 1e2;
+  double wt     = 2.*preFac * 0.5 * ( zMaxAbs - zMinAbs);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_G2QQG::overestimateDiff(double z, double m2dip, int orderNow) {
+  // Overestimate by soft
+  double preFac    = symmetryFactor() * gaugeFactor();
+  //int order        = (orderNow > 0) ? orderNow : correctionOrder;
+  int order        = (orderNow > -1) ? orderNow : correctionOrder;
+  double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac * softRescaleInt(order)
+                     *(1.-z) / ( pow2(1.-z) + kappaMin2);
+  return wt;
+}
+
+// Return kernel for new splitting.
+//bool fsr_qcd_G2QQG::calc(const Event& state, int) { 
+bool fsr_qcd_G2QQG::calc(const Event&, int) { 
+
+  //// Required kinematics.
+  //double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2);
+  //
+  //Event trialEvent(state);
+  //bool physical = false;
+  //if (splitInfo.recBef()->isFinal)
+  //  physical = fsr->branch_FF(trialEvent, true, &splitInfo);
+  //else
+  //  physical = fsr->branch_FI(trialEvent, true, &splitInfo);
+  //
+  //// Get invariants.
+  //Vec4 pa(trialEvent[splitInfo.iRadAft].p());
+  //Vec4 pk(trialEvent[splitInfo.iRecAft].p());
+  //Vec4 pi(trialEvent[splitInfo.iEmtAft].p());
+  //Vec4 pj(trialEvent[splitInfo.iEmtAft2].p());
+
+  map<string,double> wts;
+  wts.insert(make_pair("base", 1e5));
+
+  // Store kernel values and return.
+  clearKernels();
+  for (map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+    kernelVals.insert(make_pair( it->first, it->second));
+  return true;
+
+}
+
 //==========================================================================
 
 // Class inheriting from SplittingQCD class.
@@ -307,6 +743,8 @@ double SplittingQCD::softRescaleDiff(int order, double pT2,
 bool fsr_qcd_Q2QG::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -316,7 +754,11 @@ int fsr_qcd_Q2QG::sisterID(int)            { return 21;}
 double fsr_qcd_Q2QG::gaugeFactor ( int, int )        { return CF;}
 double fsr_qcd_Q2QG::symmetryFactor ( int, int )     { return 1.;}
 
-int fsr_qcd_Q2QG::radBefID(int idRA, int){ return idRA;}
+int fsr_qcd_Q2QG::radBefID(int idRA, int) {
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+}
+
 pair<int,int> fsr_qcd_Q2QG::radBefCols(
   int colRadAfter, int, 
   int colEmtAfter, int acolEmtAfter) {
@@ -325,9 +767,43 @@ pair<int,int> fsr_qcd_Q2QG::radBefCols(
   return make_pair(0,acolEmtAfter);
 }
 
+vector <int> fsr_qcd_Q2QG::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
+} 
+
 // Pick z for new splitting.
-double fsr_qcd_Q2QG::zSplit(double zMinAbs, double, double m2dip) {
+double fsr_qcd_Q2QG::zSplit(double zMinAbs, double /*zMaxAbs*/, double m2dip) {
   double Rz        = rndmPtr->flat();
+
+  /*// For testing only. 
+  return zMinAbs + Rz*(zMaxAbs-zMinAbs);*/
+
   double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
   double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin2, Rz );
   double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin2);
@@ -335,8 +811,12 @@ double fsr_qcd_Q2QG::zSplit(double zMinAbs, double, double m2dip) {
 }
 
 // New overestimates, z-integrated versions.
-double fsr_qcd_Q2QG::overestimateInt(double zMinAbs, double,
+double fsr_qcd_Q2QG::overestimateInt(double zMinAbs, double /*zMaxAbs*/,
   double, double m2dip, int orderNow) {
+
+  /*// For testing only. 
+  return 0.5*10.*(zMaxAbs - zMinAbs);*/
+
   // Q -> QG, soft part (currently also used for collinear part).
   double preFac    = symmetryFactor() * gaugeFactor();
   //int order        = (orderNow > 0) ? orderNow : correctionOrder;
@@ -349,98 +829,16 @@ double fsr_qcd_Q2QG::overestimateInt(double zMinAbs, double,
 
 // Return overestimate for new splitting.
 double fsr_qcd_Q2QG::overestimateDiff(double z, double m2dip, int orderNow) {
+
+  /*// For testing only. 
+  return 0.5*10.;*/
+
   double preFac    = symmetryFactor() * gaugeFactor();
   //int order        = (orderNow > 0) ? orderNow : correctionOrder;
   int order        = (orderNow > -1) ? orderNow : correctionOrder;
   double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
   double wt        = preFac * softRescaleInt(order)
                      *2. * (1.-z) / ( pow2(1.-z) + kappaMin2);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_Q2QG::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with z to project out Q->QQ,
-  // i.e. the gluon is soft and the quark is identified.
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt   = preFac * softRescaleDiff( order, pT2)
-       * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt  += -preFac * ( 1.+z );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double pipj = 0., vijkt = 1., vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2RadBef = m2RadBef/m2dip; 
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      double Q2mass = m2dip + m2Rad + m2Rec + m2Emt;
-      vijkt         = pow2(Q2mass/m2dip - nu2RadBef - nu2Rec)
-                    - 4.*nu2RadBef*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
-      pipj          = m2dip * yCS/2.;
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      vijkt  = 1.;
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Add B1 for massive splittings.
-    double massCorr = -1.*vijkt/vijk*( 1. + z + m2RadBef/pipj);
-    wt += preFac*massCorr;
-
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double pqq1 = preFac / (18*(z-1)) * (
-((-1 + z)*(4*TF*(-10 + z*(-37 + z*(29 + 28*z))) + z*(90*CF*(-1 + z) + CA*(53 - 187*z + 3*(1 + z)*pow2(M_PI)))) +
-     3*z*log(z)*(34*TF + 12*(CF - CF*z + 2*TF*z) - 2*(9*CF + TF*(17 + 8*z))*pow2(z) - 12*CF*log(1 - z)*(1 + pow2(z)) -
-        CA*(17 + 5*pow2(z)) - 3*log(z)*(CA - 3*CF + 2*TF + (CA - 5*CF - 2*TF)*pow2(z))))/z
-    ); 
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    pqq1 += - preFac * 0.5 * 40./9. * TF * ( z /(z*z + kappa2) - 1./z);
-    // Add NLO term.
-    wt  += alphasPT2pi*pqq1;
-  }
-
-  // Now multiply with z to project out Q->QG,
-  // i.e. the gluon is soft and the quark is identified.
-  wt *= z; 
-
   return wt;
 }
 
@@ -458,6 +856,30 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
     m2Rec(splitInfo.kinematics()->m2Rec),
     m2Emt(splitInfo.kinematics()->m2EmtAft);
   int splitType(splitInfo.type);
+
+  /*// For testing only. 
+  map<string,double> w;
+  double ww = 10.*(z-0.5);
+  //if (z < 0.3) ww *= -1.;
+  //if (z > 0.9) ww *= -z;
+  //double ww = 10.*(z-0.5) / 1.2;
+  if (z < 0.3) ww *= -1.;
+  if (z > 0.9) ww *= -z;
+
+  w.insert( make_pair("base", ww) );
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      w.insert( make_pair("Variations:muRfsrDown", ww ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      w.insert( make_pair("Variations:muRfsrUp", ww ));
+  }
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = w.begin(); it != w.end(); ++it )
+    kernelVals.insert(make_pair( it->first, it->second ));
+  return true;*/
 
   // Calculate kernel.
   // Note: We are calculating the z <--> 1-z symmetrised kernel here,
@@ -529,6 +951,7 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
       vijk          = sqrt(vijk) / (1-yCS);
       vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
       pipj          = m2dip * yCS/2.;
+
     // splitType ==-2 -> Massive FI
     } else if (splitType ==-2) {
 
@@ -586,7 +1009,6 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   if (order > 0) wts.insert( make_pair("base_order_as2",
     wts["base"] - wt_base_as1 ));
 
-//cout << name() << " " << doMassive << " " << order << " " << orderNow << " m2dip=" << m2dip << " pT2=" << pT2 << " z=" << z << " m2RadBef=" << m2RadBef << " m2Rad=" << m2Rad << " m2Rec=" << m2Rec << " m2Emt=" << m2Emt << "\t\t" << wt_base_as1 << " " << wts["base"] << endl;
   // Store kernel values.
   clearKernels();
   for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
@@ -608,6 +1030,8 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
 bool fsr_qcd_Q2GQ::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -617,7 +1041,13 @@ int fsr_qcd_Q2GQ::sisterID(int)            { return 21;}
 double fsr_qcd_Q2GQ::gaugeFactor ( int, int )        { return CF;}
 double fsr_qcd_Q2GQ::symmetryFactor ( int, int )     { return 1.;}
 
-int fsr_qcd_Q2GQ::radBefID(int idRad, int idEmt){ return (idRad == 21) ? idEmt : idRad;}
+int fsr_qcd_Q2GQ::radBefID(int idRad, int idEmt) {
+  if (idRad == 21 && particleDataPtr->isQuark(idEmt)) return idEmt;
+  if (idEmt == 21 && particleDataPtr->isQuark(idRad)) return idRad;
+  return 0;
+  //return (idRad == 21) ? idEmt : idRad;
+}
+
 pair<int,int> fsr_qcd_Q2GQ::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -634,6 +1064,40 @@ pair<int,int> fsr_qcd_Q2GQ::radBefCols(
   bool isQuark = (colE > 0);
   if (isQuark) return make_pair(colR,0);
   return make_pair(0,acolR);
+}
+
+vector <int> fsr_qcd_Q2GQ::recPositions( const Event& state, int iRad, int iEmt) {
+
+  // For Q->GQ, swap radiator and emitted, since we now have to trace the
+  // radiator's colour connections.
+  if ( state[iEmt].idAbs() < 20 && state[iRad].id() == 21) swap( iRad, iEmt);
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -678,103 +1142,6 @@ double fsr_qcd_Q2GQ::overestimateDiff(double z, double m2dip, int orderNow) {
     //|| ( orderNow > 0        && orderNow <= 2 ) )
     || ( orderNow > -1       && orderNow <= 2 ) )
     wt *= softRescaleInt(order);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_Q2GQ::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with 1-z to project out Q->GQ,
-  // i.e. the quark is soft and the gluon is identified.
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt   = preFac
-       * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-
-  // Rescale with soft cusp term only if NLO corrections are absent.
-  // This choice is purely heuristical to improve LEP description.
-  if ( ( correctionOrder > 0 && correctionOrder <= 2 )
-    //|| ( orderNow > 0        && orderNow <= 2 ) )
-    || ( orderNow > -1       && orderNow <= 2 ) )
-    wt *= softRescaleDiff( order, pT2);
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt  += -preFac * ( 1.+z );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double pipj = 0., vijkt = 1., vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2RadBef = m2RadBef/m2dip; 
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      double Q2mass = m2dip + m2Rad + m2Rec + m2Emt;
-      vijkt         = pow2(Q2mass/m2dip - nu2RadBef - nu2Rec)
-                    - 4.*nu2RadBef*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
-      pipj          = m2dip * yCS/2.;
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      vijkt  = 1.;
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Add B1 for massive splittings.
-    double massCorr = -1.*vijkt/vijk*( 1. + z + m2RadBef/pipj);
-    wt += preFac*massCorr;
-
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3){
-    // Evaluate kernel copied from Mathematica with 1-z!
-    double x = 1.-z;
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double pqg1 = preFac * (
- (9*CF*x*(-1 + 9*x) + 144*(CA - CF)*(2 + (-2 + x)*x)*DiLog(x) + 36*CA*(2 + x*(2 + x))*DiLog(1/(1 + x)) -
-     2*CA*(-17 + 9*(-5 + x)*x + 44*pow(x,3) + 3*pow2(M_PI)*(2 + pow2(x))) +
-     3*(12*log(1 - x)*((3*CA - 2*CF)*(2 + (-2 + x)*x)*log(x) + (-CA + CF)*pow2(x)) +
-        log(x)*(3*CF*(-16 + x)*x + 2*CA*(-18 + x*(24 + x*(27 + 8*x))) - 3*log(x)*(CF*(-2 + x)*x + CA*(8 + 4*x + 6*pow2(x)))) -
-        6*(CA - CF)*(2 + (-2 + x)*x)*pow2(log(1 - x)) + 6*CA*(2 + x*(2 + x))*pow2(log(1 + x))))/(18.*x) 
-    );
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    pqg1 += preFac * 0.5 * 40./9. * TF * ( x /(x*x + kappa2) - 1./x);
-    // Add NLO term.
-    wt  += alphasPT2pi*pqg1;
-  }
-
-  // Now multiply with (1-z) to project out Q->GQ,
-  // i.e. the quark is soft and the gluon is identified.
-  wt *= ( 1. - z ); 
-
   return wt;
 }
 
@@ -845,7 +1212,6 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   // Correction for massive splittings.
   bool doMassive = (abs(splitType) == 2);
 
-//cout << name() << " " << doMassive << " " << order << " m2dip=" << m2dip << " pT2=" << pT2 << " z=" << z << " m2RadBef=" << m2RadBef << " m2Rad=" << m2Rad << " m2Rec=" << m2Rec << " m2Emt=" << m2Emt << endl;
   // Add collinear term for massless splittings.
   if (!doMassive) {
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
@@ -957,6 +1323,8 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
 bool fsr_qcd_G2GG1::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -979,6 +1347,36 @@ pair<int,int> fsr_qcd_G2GG1::radBefCols(
   return make_pair(col,acol);
 }
 
+vector <int> fsr_qcd_G2GG1::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
+}
+
 // Pick z for new splitting.
 double fsr_qcd_G2GG1::zSplit(double zMinAbs, double, double m2dip) {
   // Just pick according to soft.
@@ -992,6 +1390,7 @@ double fsr_qcd_G2GG1::zSplit(double zMinAbs, double, double m2dip) {
 // New overestimates, z-integrated versions.
 double fsr_qcd_G2GG1::overestimateInt(double zMinAbs, double,
   double, double m2dip, int orderNow) {
+
   // Overestimate by soft
   double preFac    = symmetryFactor() * gaugeFactor();
   //int order        = (orderNow > 0) ? orderNow : correctionOrder;
@@ -1011,92 +1410,6 @@ double fsr_qcd_G2GG1::overestimateDiff(double z, double m2dip, int orderNow) {
   double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
   double wt        = preFac * softRescaleInt(order)
                      *(1.-z) / ( pow2(1.-z) + kappaMin2);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_G2GG1::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with z to project out one part.
-  wt   = preFac
-       * softRescaleDiff( order, pT2)
-       * (1.-z) / ( pow2(1.-z) + kappa2);
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt += preFac * ( -1. + 0.5 * z*(1.-z) );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // No changes, as initial recoiler is massless!
-      vijk          = 1.; 
-    }
-
-    // Add correction for massive splittings.
-    wt += preFac * 1./ vijk * ( -1. + 0.5 * z*(1.-z) );
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3 ) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    // Anatomy of factors of two:
-    // One factor of 0.5 since LO kernel is split into "z" and "1-z" parts, 
-    // while the NLO kernel is NOT split into these structures.
-    // Another factor of 0.5 enters because the LO kernel above does not
-    // include a "2" (this "2" is in preFac), while the NLO kernel in the
-    // Mathematica file does include the factor of "2".
-    double x=z;
-    double pgg1   = preFac * 0.5 * 0.5 / ( 18*x*(pow2(x)-1) ) * (
-TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*x*(3 + x*(-3 + 2*x)))*log(x)) +
-   (CF*TF*(-12*(1 + x)*(8 + x*(7 - x*(2 + x)*(-3 + 8*x)))*log(x) - 8*(1 + x)*(23 + x*(14 + 41*x))*pow2(-1 + x) +
-        36*(-1 + x)*x*pow2(1 + x)*pow2(log(x))))/CA + 72*CA*(-1 + x)*DiLog(1/(1 + x))*pow2(1 + x + pow2(x)) +
-   CA*(-6*(1 + x)*(-22 + x*(11 + x*(30 + x*(-19 + 22*x))))*log(x) +
-      (1 - x)*(x*(1 + x)*(25 + 109*x) + 6*(2 + x*(1 + 2*x*(1 + x)))*pow2(M_PI)) - 72*(1 + x)*log(1 - x)*log(x)*pow2(1 + (-1 + x)*x) +
-      36*(2 + x*(1 + (-4 + x)*(-1 + x)*x*(1 + x)))*pow2(log(x)) + 36*(-1 + x)*pow2(log(1 + x))*pow2(1 + x + pow2(x))) 
-    ); 
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    // Note: Colour factor is CA, not CF!
-    pgg1 += preFac * 0.5 * 0.5 * 40./9. * TF * ( x /(x*x + kappa2) - 1./x);
-    // Add NLO term.
-    wt  += alphasPT2pi*pgg1;
-  }
-
-  // Multiply with z to project out part where emitted gluon is soft.
-  // (the radiator is identified)
-  wt *= z;
-
   return wt;
 }
 
@@ -1230,7 +1543,7 @@ TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*
 
   // Multiply with z to project out part where emitted gluon is soft.
   // (the radiator is identified)
-  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
     it->second *= z;    
 
   wt_base_as1 *= z;
@@ -1240,7 +1553,7 @@ TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*
 
   // Store kernel values.
   clearKernels();
-  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
     kernelVals.insert(make_pair( it->first, it->second ));
 
   return true;
@@ -1260,6 +1573,8 @@ TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*
 bool fsr_qcd_G2GG2::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -1280,6 +1595,39 @@ pair<int,int> fsr_qcd_G2GG2::radBefCols(
   int acol      = (acolRadAfter == colRemove)
                 ? acolEmtAfter : acolRadAfter;
   return make_pair(col,acol);
+}
+
+vector <int> fsr_qcd_G2GG2::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  // Find partons connected via radiator colour line.
+  if ( colRad != 0 && colRad != colShared) {
+    int acolF = findCol(colRad, iExc, state, 1);
+    int  colI = findCol(colRad, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+
+  // Find partons connected via radiator anticolour line.
+  if ( acolRad != 0 && acolRad != colShared) {
+    int  colF = findCol(acolRad, iExc, state, 2);
+    int acolI = findCol(acolRad, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -1315,94 +1663,6 @@ double fsr_qcd_G2GG2::overestimateDiff(double z, double m2dip, int orderNow) {
   double kappaMin2 = pow2(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
   double wt        = preFac * softRescaleInt(order)
                      *(1.-z) / ( pow2(1.-z) + kappaMin2);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_G2GG2::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-
-  // Calculate kernel.
-  // Note: We are calculating the z <--> 1-z symmetrised kernel here,
-  // and later multiply with 1-z to project out one part.
-  wt   = preFac
-       * softRescaleDiff( order, pT2)
-       * (1.-z) / ( pow2(1.-z) + kappa2);
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  // Add collinear term for massless splittings.
-  if (!doMassive) wt += preFac * ( -1. + 0.5 *z*(1.-z) );
-
-  // Add collinear term for massive splittings.
-  if (doMassive) {
-
-    double vijk = 1.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // No changes, as initial recoiler is massless!
-      vijk          = 1.; 
-    }
-
-    // Add correction for massive splittings.
-    wt += preFac * 1./ vijk * ( -1. + 0.5 * z*(1.-z) );
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    // Evaluate everything at x = 1-z, because this is the kernel where
-    // the radiating gluon becomes soft and the emission is identified.
-    double x = 1.-z;
-    // Anatomy of factors of two:
-    // One factor of 0.5 since LO kernel is split into "z" and "1-z" parts, 
-    // while the NLO kernel is NOT split into these structures.
-    // Another factor of 0.5 enters because the LO kernel above does not
-    // include a "2" (this "2" is in preFac), while the NLO kernel in the
-    // Mathematica file does include the factor of "2".
-    double pgg1   = preFac * 0.5 * 0.5 / ( 18*x*(pow2(x)-1) ) * (
-TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*x*(3 + x*(-3 + 2*x)))*log(x)) +
-   (CF*TF*(-12*(1 + x)*(8 + x*(7 - x*(2 + x)*(-3 + 8*x)))*log(x) - 8*(1 + x)*(23 + x*(14 + 41*x))*pow2(-1 + x) +
-        36*(-1 + x)*x*pow2(1 + x)*pow2(log(x))))/CA + 72*CA*(-1 + x)*DiLog(1/(1 + x))*pow2(1 + x + pow2(x)) +
-   CA*(-6*(1 + x)*(-22 + x*(11 + x*(30 + x*(-19 + 22*x))))*log(x) +
-      (1 - x)*(x*(1 + x)*(25 + 109*x) + 6*(2 + x*(1 + 2*x*(1 + x)))*pow2(M_PI)) - 72*(1 + x)*log(1 - x)*log(x)*pow2(1 + (-1 + x)*x) +
-      36*(2 + x*(1 + (-4 + x)*(-1 + x)*x*(1 + x)))*pow2(log(x)) + 36*(-1 + x)*pow2(log(1 + x))*pow2(1 + x + pow2(x))) 
-    ); 
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    // Note: Colour factor is CA, not CF!
-    pgg1 += preFac * 0.5 * 0.5 * 40./9. * TF * ( x /(x*x + kappa2) - 1./x);
-    // Add NLO term.
-    wt  += alphasPT2pi*pgg1;
-  }
-
-  // Multiply with 1-z to project out part where radiating gluon is soft.
-  // (the emission is identified)
-  wt *= 1.-z;
-
   return wt;
 }
 
@@ -1564,6 +1824,8 @@ TF*(4*(-1 + x)*(-23 + x*(6 + x*(10 + x*(4 + 23*x)))) + 24*(1 + x)*(2 + (-1 + x)*
 bool fsr_qcd_G2QQ1::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -1580,6 +1842,39 @@ pair<int,int> fsr_qcd_G2QQ1::radBefCols(
   int col  = (colRadAfter  > 0) ? colRadAfter  : colEmtAfter;
   int acol = (acolRadAfter > 0) ? acolRadAfter : acolEmtAfter;
   return make_pair(col,acol);
+}
+
+vector <int> fsr_qcd_G2QQ1::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+
+  // Find partons connected via emitted colour line.
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -1601,82 +1896,6 @@ double fsr_qcd_G2QQ1::overestimateDiff(double, double, int) {
   double wt     = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   wt            = 2.*preFac * 0.5;
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_G2QQ1::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt            = preFac 
-                * (pow(1.-z,2.) + pow(z,2.));
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  if (doMassive) {
-
-    double vijk = 1., pipj = 0.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      pipj          = m2dip * yCS /2.;
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Reset kernel for massive splittings.
-    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                    + m2Emt / ( pipj + m2Emt) );  
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double pgq1 = preFac * (
-(TF*(-8./3. - (8*(1 + 2*(-1 + z)*z)*(2 + 3*log(1 - z) + 3*log(z)))/9.) +
-     CF*(-2 + 3*z - 4*log(1 - z) + (-7 + 8*z)*log(z) + (1 - 2*z)*pow2(log(z)) -
-        (2*(1 + 2*(-1 + z)*z)*(15 - 24*DiLog(z) + 3*log(-1 + 1/z) - 24*log(1 - z)*log(z) + pow2(M_PI) + 3*pow2(log(-((-1 + z)*z)))))/3.) +
-     (CA*(-152 - 40/z + 166*z + 36*log(1 - z) - 12*(1 + 19*z)*log(z) +
-          (1 + 2*(-1 + z)*z)*(178 - 144*DiLog(z) + log(1 - z)*(30 - 72*log(z)) - 3*log(z)*(4 + 3*log(z)) + 3*pow2(M_PI) +
-             18*pow2(log(1 - z))) + 9*(2 + 8*z)*pow2(log(z)) +
-          3*(1 + 2*z*(1 + z))*(-12*DiLog(1/(1 + z)) + pow2(M_PI) + 3*pow2(log(z)) - 6*pow2(log(1 + z)))))/9.)/2. 
-    );
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    // Include additional factor of 0.5 as we have two g->qq kernels.
-    pgq1 += - preFac * 0.5 * 40./9. * CA * ( z /(z*z + kappa2) - 1./z);
-    // Add NLO term.
-    wt  += alphasPT2pi*pgq1;
-
-  }
-
-  // Multiply with z to project out part where emitted quark is soft,
-  // and antiquark is identified.
-  wt *= z;
-
   return wt;
 }
 
@@ -1819,6 +2038,8 @@ bool fsr_qcd_G2QQ1::calc(const Event& state, int orderNow) {
 bool fsr_qcd_G2QQ2::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -1835,6 +2056,39 @@ pair<int,int> fsr_qcd_G2QQ2::radBefCols(
   int col  = (colRadAfter  > 0) ? colRadAfter  : colEmtAfter;
   int acol = (acolRadAfter > 0) ? acolRadAfter : acolEmtAfter;
   return make_pair(col,acol);
+}
+
+vector <int> fsr_qcd_G2QQ2::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+
+  // Find partons connected via radiator colour line.
+  if ( colRad != 0 && colRad != colShared) {
+    int acolF = findCol(colRad, iExc, state, 1);
+    int  colI = findCol(colRad, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via radiator anticolour line.
+  if ( acolRad != 0 && acolRad != colShared) {
+    int  colF = findCol(acolRad, iExc, state, 2);
+    int acolI = findCol(acolRad, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -1856,82 +2110,6 @@ double fsr_qcd_G2QQ2::overestimateDiff(double, double, int) {
   double wt     = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   wt            = 2.*preFac * 0.5;
-  return wt;
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_G2QQ2::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt            = preFac 
-                * (pow(1.-z,2.) + pow(z,2.));
-
-  // Correction for massive splittings.
-  bool doMassive = (abs(splitType) == 2);
-
-  if (doMassive) {
-
-    double vijk = 1., pipj = 0.;
-
-    // splitType == 2 -> Massive FF
-    if (splitType == 2) {
-      // Calculate CS variables.
-      double yCS = kappa2 / (1.-z);
-      double nu2Rad = m2Rad/m2dip; 
-      double nu2Emt = m2Emt/m2dip; 
-      double nu2Rec = m2Rec/m2dip; 
-      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
-      vijk          = sqrt(vijk) / (1-yCS);
-      pipj          = m2dip * yCS /2.;
-
-    // splitType ==-2 -> Massive FI
-    } else if (splitType ==-2) {
-      // Calculate CS variables.
-      double xCS = 1 - kappa2/(1.-z);
-      vijk   = 1.; 
-      pipj   = m2dip/2. * (1-xCS)/xCS;
-    }
-
-    // Reset kernel for massive splittings.
-    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                    + m2Emt / ( pipj + m2Emt) );  
-  }
-
-  // Add NLO term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double x = 1-z;
-    double pgq1 = preFac * (
-(TF*(-8./3. - (8*(1 + 2*(-1 + x)*x)*(2 + 3*log(1 - x) + 3*log(x)))/9.) +
-     CF*(-2 + 3*x - 4*log(1 - x) + (-7 + 8*x)*log(x) + (1 - 2*x)*pow2(log(x)) -
-        (2*(1 + 2*(-1 + x)*x)*(15 - 24*DiLog(x) + 3*log(-1 + 1/x) - 24*log(1 - x)*log(x) + pow2(M_PI) + 3*pow2(log(-((-1 + x)*x)))))/3.) +
-     (CA*(-152 - 40/x + 166*x + 36*log(1 - x) - 12*(1 + 19*x)*log(x) +
-          (1 + 2*(-1 + x)*x)*(178 - 144*DiLog(x) + log(1 - x)*(30 - 72*log(x)) - 3*log(x)*(4 + 3*log(x)) + 3*pow2(M_PI) +
-             18*pow2(log(1 - x))) + 9*(2 + 8*x)*pow2(log(x)) +
-          3*(1 + 2*x*(1 + x))*(-12*DiLog(1/(1 + x)) + pow2(M_PI) + 3*pow2(log(x)) - 6*pow2(log(1 + x)))))/9.)/2. 
-    );
-    // replace 1/z term in NLO kernel with z/(z*z+kappa2) to restore sum rule.
-    // Include additional factor of 0.5 as we have two g->qq kernels.
-    pgq1 += - preFac * 0.5 * 40./9. * CA * ( x /(x*x + kappa2) - 1./x);
-    // Add NLO term.
-    wt  += alphasPT2pi*pgq1;
-  }
-
-  // Multiply with z to project out part where emitted antiquark is soft,
-  // and quark is identified.
-  wt *= (1.-z);
-
   return wt;
 }
 
@@ -2075,6 +2253,8 @@ bool fsr_qcd_Q2qQqbarDist::canRadiate ( const Event& state,
   map<string,int> ints, map<string,bool>, Settings*, PartonSystems*,
   BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -2084,7 +2264,11 @@ int fsr_qcd_Q2qQqbarDist::sisterID(int)            { return 1;}
 double fsr_qcd_Q2qQqbarDist::gaugeFactor ( int, int )        { return CF;}
 double fsr_qcd_Q2qQqbarDist::symmetryFactor ( int, int )     { return 1.;}
 
-int fsr_qcd_Q2qQqbarDist::radBefID(int idRA, int){ return idRA;}
+int fsr_qcd_Q2qQqbarDist::radBefID(int idRA, int) {
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+  //return idRA;
+}
 pair<int,int> fsr_qcd_Q2qQqbarDist::radBefCols(
   int colRadAfter, int, 
   int colEmtAfter, int acolEmtAfter) {
@@ -2153,43 +2337,6 @@ double fsr_qcd_Q2qQqbarDist::overestimateDiff(double z, double m2dip,
 
   return wt;
 
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_Q2qQqbarDist::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-  if (false) cout << splitType << m2RadBef << m2Rad
-    << m2Rec << m2Emt << endl;
-
-  // Do nothing without other NLO kernels!
-  //int order          = (orderNow > 0) ? orderNow : correctionOrder;
-  int order          = (orderNow > -1) ? orderNow : correctionOrder;
-  if (order < 3) return 0.0;
-
-  // Calculate kernel.
-  double wt          = 0.;
-  double preFac      = symmetryFactor() * gaugeFactor()
-                     * 2. * ( NF_qcd_fsr - 1. );
-                     //* 2. * NF_qcd_fsr;
-  double alphasPT2pi = as2Pi(pT2, order);
-  double kappa2      = pT2/m2dip;
-  double TF          = TR;
-  double pqqprime    = preFac * (
-TF*((4*(-1 + z)*(5 + z*(23 + 14*z)))/(9.*z) + log(z)*(-5 - 9*z + (1 + z)*log(z) - (8*pow2(z))/3.))
-);
-
-  // Regularise 1/x term
-  pqqprime += - preFac * TF * 20./9.* ( z /(pow2(z) + kappa2) - 1/z);
-  wt = alphasPT2pi*pqqprime;
-
-  // Multiply the almighty z.
-  wt *= z;
-
-  return wt;
 }
 
 // Return kernel for new splitting.
@@ -2363,6 +2510,8 @@ bool fsr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
 bool fsr_qcd_Q2QbarQQId::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -2372,7 +2521,11 @@ int fsr_qcd_Q2QbarQQId::sisterID(int)            { return 1;}
 double fsr_qcd_Q2QbarQQId::gaugeFactor ( int, int )        { return CF;}
 double fsr_qcd_Q2QbarQQId::symmetryFactor ( int, int )     { return 1.;}
 
-int fsr_qcd_Q2QbarQQId::radBefID(int idRA, int){ return idRA;}
+int fsr_qcd_Q2QbarQQId::radBefID(int idRA, int) { 
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+  //return idRA;
+}
 pair<int,int> fsr_qcd_Q2QbarQQId::radBefCols(
   int colRadAfter, int, 
   int colEmtAfter, int acolEmtAfter) {
@@ -2435,44 +2588,6 @@ double fsr_qcd_Q2QbarQQId::overestimateDiff(double z, double m2dip,
   wt *= as2Pi(pT2min);
   return wt;
 
-}
-
-// Return kernel for new splitting.
-double fsr_qcd_Q2QbarQQId::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-  if (false) cout << m2dip << splitType << m2RadBef << m2Rad
-    << m2Rec << m2Emt;
-
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  // Do nothing without other NLO kernels!
-  if (order < 3) return 0.0;
-
-  // Calculate kernel.
-  double wt          = 0.;
-  double preFac      = symmetryFactor() * gaugeFactor();
-  double kappa2      = pT2/m2dip;
-  double alphasPT2pi = as2Pi(pT2, order);
-  double TF          = TR;
-  double pqqbprime   = preFac * (
-(TF*((4.*(-1. + z)*(5. + z*(23. + 14.*z)))/(9.*z) + log(z)*(-5. - 9.*z + (1. + z)*log(z) - (8.*pow2(z))/3.)) + 
-     (-CA/2. + CF)*(4. - 4.*z + 2.*(1. + z)*log(z) + ((1. + pow2(z))*(-12.*DiLog(1./(1. + z)) + pow2(M_PI) + 3.*pow2(log(z)) - 6.*pow2(log(1. + z))))/
-         (3.*(1. + z))))
-);
-
-  // Regularise 1/x term
-  pqqbprime += - preFac * TF * 20./9.* ( z /(pow2(z) + kappa2) - 1./z);
-
-  wt = alphasPT2pi*pqqbprime;
-
-  // Multiply the almighty z.
-  wt *= z;
-
-  return wt;
 }
 
 // Return kernel for new splitting.
@@ -2675,6 +2790,8 @@ bool fsr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
 bool isr_qcd_Q2QG::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -2684,7 +2801,11 @@ int isr_qcd_Q2QG::sisterID(int)            { return 21;}
 double isr_qcd_Q2QG::gaugeFactor ( int, int )        { return CF;}
 double isr_qcd_Q2QG::symmetryFactor ( int, int )     { return 1.;}
 
-int isr_qcd_Q2QG::radBefID(int idRA, int){ return idRA;}
+int isr_qcd_Q2QG::radBefID(int idRA, int) { 
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+  //return idRA;
+}
 pair<int,int> isr_qcd_Q2QG::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -2734,45 +2855,6 @@ double isr_qcd_Q2QG::overestimateDiff(double z, double m2dip, int orderNow) {
       * 2.* (1.-z) / ( pow2(1.-z) + kappaOld2);
   return wt;
 }
-
-// Return kernel for new splitting.
-double isr_qcd_Q2QG::kernel(double z, double pT2, double m2dip,
-  int, double, double, double, double, const Event& state, int orderNow,
-  map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt   =  preFac * softRescaleDiff( order, pT2)
-       * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-  wt  += -preFac * (1.+z);
-
-  // Add NLO term, subtracted by ~ 1/(1-z)*Gamma2,
-  // since latter already present in soft rescaling term.
-  if (order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double pqq1   = preFac * 1 / ( 18*z*(z-1) ) * (
-      (-1 + z)*(-8*TF*(-5 + (-1 + z)*z*(-5 + 14*z)) 
-                + z*(90*CF*(-1 + z) + CA*(53 - 187*z + 3*(1 + z)*pow2(M_PI))))
-      +3*z*log(z)*(-2*(TF + CF*(-9 + 6*(-1 + z)*z) + TF*z*(12 - z*(9 + 8*z)))
-                  + 12*CF*log(1 - z)*(1 + pow2(z)) - CA*(17 + 5*pow2(z)))
-      -9*z*(CA - CF - 2*TF + (CA + CF + 2*TF)*pow2(z))*pow2(log(z)));
-    // replace 1/z term in NLO kernel with z/(z^2+kappa^2)
-    pqq1 += preFac * 20./9.*TF * ( z/(pow2(z)+kappa2) - 1./z); 
-    // Add NLO term.
-    wt  += alphasPT2pi*pqq1;
-  }
-
-  return wt;
-}
-
 
 // Return kernel for new splitting.
 bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
@@ -2876,6 +2958,8 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
 bool isr_qcd_G2GG1::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -2942,73 +3026,6 @@ double isr_qcd_G2GG1::overestimateDiff(double z, double m2dip, int orderNow) {
   // Overestimate by soft + 1/z
   wt  = preFac * softRescaleInt(order)
       * ((1.-z) / ( pow2(1.-z) + kappaOld2) + 1./z);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double isr_qcd_G2GG1::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << m2Rad << m2Emt << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt   = preFac * softRescaleDiff( order, pT2)
-       * (1.-z) / ( pow2(1.-z) + kappa2);
-  wt  += preFac 
-       * 0.5 * ( z / ( pow2(z) + kappa2) - 1. );
-  wt  += preFac
-       * -1.;
-
-  // Correction for massive IF splittings.
-  bool doMassive = ( m2Rec > 0. && splitType == 2);
-
-  if (doMassive) {
-    // Construct CS variables.
-    double uCS = kappa2 / (1-z);
-    double massCorr = - m2Rec / m2dip * uCS / (1.-uCS);
-    // Mass correction shared in equal parts between both g->gg kernels.
-    wt += preFac * 0.5 * massCorr;
-  }
-
-  // Add NLO term, subtracted by 1/(1-z)*(Gamma2+beta0*log(z)),
-  // since latter already present in soft rescaling term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    // SplittingQCD function directly taken from Mathematica file.
-    // Note: After removal of the cusp anomalous dimensions, the NLO kernel
-    // is a purely collinear term. As such, it should not distinguish between
-    // colour structures, and hence should contribute equally to isr_qcd_G2GG1
-    // and isr_qcd_G2GG2. Hence one factor of 0.5 . Then, another factor of 0.5
-    // is necessary, since the NLO kernel in the Mathematica file is normalised
-    // to CA, and not 2*CA (as is the case for the LO kernel above).
-    double pgg1   = preFac * 0.5 / ( 18*z*(pow2(z)-1) ) * 0.5 * (
-      TF*(-1 + pow2(z))*((4*(-1 + z)*(-23 + z*(6 + z*(10 + z*(4 + 23*z)))))/(-1 + pow2(z))
-                        +(24*(1 - z)*z*log(z)*pow2(1 + z))/(-1 + pow2(z)))
-     +(CF*TF*(-1 + pow2(z))*((36*(1 - z)*z*(1 + z)*(3 + 5*z)*log(z))/(-1 + pow2(z))
-                            +(24*(1 + z)*(-1 + z*(11 + 5*z))*pow2(-1 + z))/(-1 + pow2(z))
-                            -(36*(-1 + z)*z*pow2(1 + z)*pow2(log(z)))/(-1 + pow2(z))))/CA
-     -72*CA*(-1 + z)*DiLog(1/(1 + z))*pow2(1 + z + pow2(z))
-     +CA*(-1 + pow2(z))*((6*(1 - z)*z*(1 + z)*(25 + 11*z*(-1 + 4*z))*log(z))/(-1 + pow2(z))
-                        +((1 - z)*(z*(1 + z)*(25 + 109*z) + 6*(2 + z*(1 + 2*z*(1 + z)))*pow2(M_PI)))/(-1 + pow2(z))
-                        +(72*(1 + z)*log(1 - z)*log(z)*pow2(1 + (-1 + z)*z))/(-1 + pow2(z))
-                        -(36*z*pow2(log(z))*pow2(1 + z - pow2(z)))/(-1 + pow2(z))
-                        +(144*DiLog(1/(1 + z))*pow2(1 + z + pow2(z)))/(1 + z)
-                        +(36*(-1 + z)*pow2(log(1 + z))*pow2(1 + z + pow2(z)))/(-1 + pow2(z))) );
-
-    // replace 1/x term in NLO kernel with x/(x^2+kappa^2)
-    pgg1 += -preFac * 0.5 * 40./9.*TF * 0.5 * ( z/(pow2(z)+kappa2) - 1./z); 
-    // Add NLO term.
-    wt  += alphasPT2pi*pgg1;
-  }
-
   return wt;
 }
 
@@ -3148,6 +3165,8 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
 bool isr_qcd_G2GG2::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -3174,6 +3193,11 @@ pair<int,int> isr_qcd_G2GG2::radBefCols(
 double isr_qcd_G2GG2::zSplit(double zMinAbs, double, double m2dip) {
   double R      = rndmPtr->flat();
   double kappa2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+  // For small values of pT, increase overestimate to avoid large weights.
+  double tOld(splitInfo.kinematics()->pT2Old);
+  if (tOld > 0. && tOld < SMALL_TEVOL) kappa2 *= sqrt(kappa2);
+
   // Pick according to soft + 1/z
   double res = (-2.*pow(kappa2,R)*pow(zMinAbs,2.*R) +
              sqrt(4.*pow(kappa2,2.*R)
@@ -3195,6 +3219,11 @@ double isr_qcd_G2GG2::overestimateInt(double zMinAbs, double,
   double wt     = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   double kappa2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+  // For small values of pT, increase overestimate to avoid large weights.
+  double tOld(splitInfo.kinematics()->pT2Old);
+  if (tOld > 0. && tOld < SMALL_TEVOL) kappa2 *= sqrt(kappa2);
+
   // Overestimate by soft + 1/z
   wt   = preFac
        *0.5*( log(1./pow2(zMinAbs) + pow2(1.-zMinAbs)/(kappa2*pow2(zMinAbs))));
@@ -3206,73 +3235,15 @@ double isr_qcd_G2GG2::overestimateInt(double zMinAbs, double,
 double isr_qcd_G2GG2::overestimateDiff(double z, double m2dip, int) {
   double wt        = 0.;
   double preFac    = symmetryFactor() * gaugeFactor();
-  double kappaOld2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+  double kappa2    = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+  // For small values of pT, increase overestimate to avoid large weights.
+  double tOld(splitInfo.kinematics()->pT2Old);
+  if (tOld > 0. && tOld < SMALL_TEVOL) kappa2 *= sqrt(kappa2);
+
   // Overestimate by soft + 1/z
   wt  = preFac
-      * ((1.-z) / ( pow2(1.-z) + kappaOld2) + 1./z);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double isr_qcd_G2GG2::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << m2Rad << m2Emt << state[0].e() << endl;
-
-  double wt = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2/m2dip;
-  wt   = preFac 
-       * 0.5 * ( z / ( pow2(z) + kappa2) - 1. );
-  wt  += preFac * z*(1.-z);
-
-  // Correction for massive IF splittings.
-  bool doMassive = ( m2Rec > 0. && splitType == 2);
-
-  if (doMassive) {
-    // Construct CS variables.
-    double uCS = kappa2 / (1-z);
-    double massCorr = - m2Rec / m2dip * uCS / (1.-uCS);
-    // Mass correction shared in equal parts between both g->gg kernels.
-    wt += preFac * 0.5 * massCorr;
-  }
-
-  // Add NLO term, subtracted by 1/(1-z)*(Gamma2+beta0*log(z)),
-  // since latter already present in soft rescaling term.
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    // SplittingQCD function directly taken from Mathematica file.
-    // Note: After removal of the cusp anomalous dimensions, the NLO kernel
-    // is a purely collinear term. As such, it should not distinguish between
-    // colour structures, and hence should contribute equally to isr_qcd_G2GG1
-    // and isr_qcd_G2GG2. Hence one factor of 0.5 . Then, another factor of 0.5
-    // is necessary, since the NLO kernel in the Mathematica file is normalised
-    // to CA, and not 2*CA (as is the case for the LO kernel above).
-    double pgg1   = preFac * 0.5 / ( 18*z*(pow2(z)-1) ) * 0.5 * (
-      TF*(-1 + pow2(z))*((4*(-1 + z)*(-23 + z*(6 + z*(10 + z*(4 + 23*z)))))/(-1 + pow2(z))
-                         +(24*(1 - z)*z*log(z)*pow2(1 + z))/(-1 + pow2(z)))
-     +(CF*TF*(-1 + pow2(z))*((36*(1 - z)*z*(1 + z)*(3 + 5*z)*log(z))/(-1 + pow2(z))
-                            +(24*(1 + z)*(-1 + z*(11 + 5*z))*pow2(-1 + z))/(-1 + pow2(z))
-                            -(36*(-1 + z)*z*pow2(1 + z)*pow2(log(z)))/(-1 + pow2(z))))/CA
-     -72*CA*(-1 + z)*DiLog(1/(1 + z))*pow2(1 + z + pow2(z))
-     +CA*(-1 + pow2(z))*((6*(1 - z)*z*(1 + z)*(25 + 11*z*(-1 + 4*z))*log(z))/(-1 + pow2(z))
-                        +((1 - z)*(z*(1 + z)*(25 + 109*z) + 6*(2 + z*(1 + 2*z*(1 + z)))*pow2(M_PI)))/(-1 + pow2(z))
-                        +(72*(1 + z)*log(1 - z)*log(z)*pow2(1 + (-1 + z)*z))/(-1 + pow2(z))
-                        -(36*z*pow2(log(z))*pow2(1 + z - pow2(z)))/(-1 + pow2(z))
-                        +(144*DiLog(1/(1 + z))*pow2(1 + z + pow2(z)))/(1 + z)
-                        +(36*(-1 + z)*pow2(log(1 + z))*pow2(1 + z + pow2(z)))/(-1 + pow2(z))) );
-    // replace 1/z term in NLO kernel with z/(z^2+kappa^2)
-    pgg1 += -preFac * 0.5 * 40./9.*TF * 0.5 * ( z/(pow2(z)+kappa2) - 1./z); 
-    // Add NLO term.
-    wt  += alphasPT2pi*pgg1;
-  }
-
+      * ((1.-z) / ( pow2(1.-z) + kappa2) + 1./z);
   return wt;
 }
 
@@ -3400,6 +3371,8 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
 bool isr_qcd_G2QQ::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -3409,7 +3382,11 @@ int isr_qcd_G2QQ::sisterID(int idDaughter) { return -idDaughter;}
 double isr_qcd_G2QQ::gaugeFactor ( int, int )        { return TR;}
 double isr_qcd_G2QQ::symmetryFactor ( int, int )     { return 1.0;}
 
-int isr_qcd_G2QQ::radBefID(int, int idEA){ return -idEA;}
+int isr_qcd_G2QQ::radBefID(int, int idEA){ 
+  if (particleDataPtr->isQuark(idEA)) return -idEA;
+  return 0;
+  //return -idEA;
+}
 pair<int,int> isr_qcd_G2QQ::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -3454,43 +3431,6 @@ double isr_qcd_G2QQ::overestimateDiff(double, double, int) {
   // better than using the full splitting kernel as overestimate. 
   wt = preFac 
      * 2.;
-  return wt;
-}
-
-// Return kernel for new splitting.
-double isr_qcd_G2QQ::kernel(double z, double pT2, double m2dip,
-  int, double, double, double, double, const Event& state, int orderNow,
-  map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2 / m2dip;
-  wt  = preFac
-      * (pow(1.-z,2.) + pow(z,2.));
-
-  if (order >= 3) {
-    double alphasPT2pi = as2Pi(pT2, order);
-    double pgq1 = preFac * (
-      (CF*(4 - 9*z + 4*log(1 - z) + (-1 + 4*z)*log(z)
-          -(2*(1 + 2*(-1 + z)*z)*(-15 - 3*(-2 + log(-1 + 1/z))*log(-1 + 1/z) + pow2(M_PI)))/3.
-          +(-1 + 2*z)*pow2(log(z)))
-      +(2*CA*(20 - 18*z*(1 + 2*z*(1 + z))*DiLog(1/(1 + z))
-             +z*(-18 + (225 - 218*z)*z + pow2(M_PI)*(3 + 6*pow2(z)))
-             +3*z*(12*(-1 + z)*z*log(1 - z)
-                  +log(z)*(3 + 4*z*(6 + 11*z) - 3*(1 + 2*z)*log(z))
-                  +(-3 - 6*(-1 + z)*z)*pow2(log(1 - z))
-                  -3*(1 + 2*z*(1 + z))*pow2(log(1 + z)))))/(9.*z))/2. );
-    // replace 1/z term in NLO kernel with z/(z^2+kappa^2)
-    pgq1 += preFac * 20./9.*CA * ( z/(pow2(z)+kappa2) - 1./z); 
-    // Add NLO term.
-    wt  += alphasPT2pi*pgq1;
-  }
-
   return wt;
 }
 
@@ -3589,6 +3529,8 @@ bool isr_qcd_G2QQ::calc(const Event& state, int orderNow) {
 bool isr_qcd_Q2GQ::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].id() == 21 );
 }
 
@@ -3631,59 +3573,6 @@ double isr_qcd_Q2GQ::overestimateDiff(double z, double, int) {
   double wt     = 0.;
   double preFac = symmetryFactor() * gaugeFactor();
   wt            = preFac * 2. / pow(z,11./8.);
-  return wt;
-}
-
-// Return kernel for new splitting.
-double isr_qcd_Q2GQ::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double> ) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << m2RadBef << m2Rad << m2Emt << state[0].e() << endl;
-
-  double wt     = 0.;
-  double preFac = symmetryFactor() * gaugeFactor();
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  double kappa2 = pT2 / m2dip;
-  wt   = preFac
-       * ( z + 2.*z / (pow2(z)+kappa2) - 2. );
-
-  // Correction for massive IF splittings.
-  bool doMassive = ( m2Rec > 0. && splitType == 2);
-
-  if (doMassive) {
-    // Construct CS variables.
-    double uCS = kappa2 / (1-z);
-
-    double massCorr = -2. * m2Rec / m2dip * uCS / (1.-uCS);
-    // Add correction.
-    wt += preFac * massCorr;
-
-  }
-
-  if (!doMassive && order >= 3) {
-    double NF          = getNF(pT2*renormMultFac);
-    double alphasPT2pi = as2Pi(pT2, order);
-    double TF          = TR*NF;
-    double pqg1 = preFac * (
-      (-9*CF*z*(5 + 7*z) - 16*TF*(5 + z*(-5 + 4*z))
-       +36*CA*(2 + z*(2 + z))*DiLog(1/(1 + z))
-       +2*CA*(9 + z*(19 + z*(37 + 44*z)) - 3*pow2(M_PI)*(2 + pow2(z)))
-       +3*(-2*log(1 - z)*(CA*(-22 + (22 - 17*z)*z)
-                         +4*TF*(2 + (-2 + z)*z) + 3*CF*(6 + z*(-6 + 5*z))
-                         +6*CA*(2 + (-2 + z)*z)*log(z))
-       +z*log(z)*(3*CF*(4 + 7*z) - 2*CA*(36 + z*(15 + 8*z))
-                 +3*(CF*(-2 + z) + 2*CA*(2 + z))*log(z))
-       +6*(CA - CF)*(2 + (-2 + z)*z)*pow2(log(1 - z))
-       +6*CA*(2 + z*(2 + z))*pow2(log(1 + z))))/(18.*z) );
-    // replace 1/z term in NLO kernel with z/(z^2+kappa^2)
-    pqg1 +=  - preFac * 40./9.*TF * ( z/(pow2(z)+kappa2) - 1./z); 
-    // Add NLO term.
-    wt  += alphasPT2pi*pqg1;
-  }
-
   return wt;
 }
 
@@ -3803,6 +3692,8 @@ bool isr_qcd_Q2qQqbarDist::canRadiate ( const Event& state,
   map<string,int> ints, map<string,bool>, Settings*, PartonSystems*,
   BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -3812,7 +3703,11 @@ int isr_qcd_Q2qQqbarDist::sisterID(int)            { return 1;}
 double isr_qcd_Q2qQqbarDist::gaugeFactor ( int, int )        { return CF;}
 double isr_qcd_Q2qQqbarDist::symmetryFactor ( int, int )     { return 1.;}
 
-int isr_qcd_Q2qQqbarDist::radBefID(int idRA, int){ return idRA;}
+int isr_qcd_Q2qQqbarDist::radBefID(int idRA, int) { 
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+  return idRA;
+}
 pair<int,int> isr_qcd_Q2qQqbarDist::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -4087,6 +3982,8 @@ bool isr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
 bool isr_qcd_Q2QbarQQId::canRadiate ( const Event& state, map<string,int> ints,
   map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
   return (!state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() != 0
+        && int(sharedColor(state, ints["iRad"], ints["iRec"]).size()) > 0
         && state[ints["iRad"]].isQuark() );
 }
 
@@ -4096,7 +3993,11 @@ int isr_qcd_Q2QbarQQId::sisterID(int)            { return 1;}
 double isr_qcd_Q2QbarQQId::gaugeFactor ( int, int )        { return CF;}
 double isr_qcd_Q2QbarQQId::symmetryFactor ( int, int )     { return 1.;}
 
-int isr_qcd_Q2QbarQQId::radBefID(int idRA, int){ return idRA;}
+int isr_qcd_Q2QbarQQId::radBefID(int idRA, int) { 
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+  //return idRA;
+}
 pair<int,int> isr_qcd_Q2QbarQQId::radBefCols(
   int colRadAfter, int, 
   int colEmtAfter, int acolEmtAfter) {
@@ -4190,42 +4091,6 @@ double isr_qcd_Q2QbarQQId::overestimateDiff(double z, double m2dip,
 
   return wt;
 }
-
-// Return kernel for new splitting.
-double isr_qcd_Q2QbarQQId::kernel(double z, double pT2, double m2dip,
-  int splitType, double m2RadBef, double m2Rad, double m2Rec,
-  double m2Emt, const Event& state, int orderNow, map<string,double>) {
-
-  // Dummy statement to avoid compiler warnings.
-  if (false) cout << state[0].e() << endl;
-  if (false) cout << m2dip << splitType << m2RadBef << m2Rad
-    << m2Rec << m2Emt;
-
-  //int order     = (orderNow > 0) ? orderNow : correctionOrder;
-  int order     = (orderNow > -1) ? orderNow : correctionOrder;
-  // Do nothing without other NLO kernels!
-  if (order < 3) return 0.0;
-
-  // Calculate kernel.
-  double wt          = 0.;
-  double preFac      = symmetryFactor() * gaugeFactor();
-  double kappa2      = pT2/m2dip;
-  double alphasPT2pi = as2Pi(pT2, order);
-  double TF          = TR;
-  double pqqbprime   = preFac * (
-((TF*(3*z*log(z)*(3 + z*(15 + 8*z) - 3*(1 + z)*log(z)) - 2*(-1 + z)*(10 + z + 28*pow2(z))))/(9.*z) + 
-     (-CA/2. + CF)*(4 - 4*z + 2*(1 + z)*log(z) + ((1 + pow2(z))*(-12*DiLog(1/(1 + z)) + pow2(M_PI) + 3*pow2(log(z)) - 6*pow2(log(1 + z))))/
-         (3.*(1 + z))))
-);
-
-  // Regularise 1/x term
-  pqqbprime += - preFac * TF * 20./9.* ( z /(pow2(z) + kappa2) - 1./z);
-
-  wt = alphasPT2pi*pqqbprime;
-
-  return wt;
-}
-
 
 // Return kernel for new splitting.
 bool isr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
@@ -4422,5 +4287,443 @@ bool isr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
 }
 
 //==========================================================================
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_Q2QG_notPartial::canRadiate ( const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() == 0
+        && state[ints["iRad"]].isQuark() );
+}
+
+int fsr_qcd_Q2QG_notPartial::kinMap()                 { return 1;}
+int fsr_qcd_Q2QG_notPartial::motherID(int idDaughter) { return idDaughter;}
+int fsr_qcd_Q2QG_notPartial::sisterID(int)            { return 21;}
+double fsr_qcd_Q2QG_notPartial::gaugeFactor ( int, int )        { return CF;}
+double fsr_qcd_Q2QG_notPartial::symmetryFactor ( int, int )     { return 1.;}
+
+int fsr_qcd_Q2QG_notPartial::radBefID(int idRA, int) {
+  if (particleDataPtr->isQuark(idRA)) return idRA;
+  return 0;
+}
+
+pair<int,int> fsr_qcd_Q2QG_notPartial::radBefCols(
+  int colRadAfter, int, 
+  int colEmtAfter, int acolEmtAfter) {
+  bool isQuark = (colRadAfter > 0);
+  if (isQuark) return make_pair(colEmtAfter,0);
+  return make_pair(0,acolEmtAfter);
+}
+
+vector <int> fsr_qcd_Q2QG_notPartial::recPositions( const Event&,
+  int, int) {
+  return vector<int>();
+} 
+
+// Pick z for new splitting.
+double fsr_qcd_Q2QG_notPartial::zSplit(double zMinAbs, double, double m2dip) {
+  double Rz        = rndmPtr->flat();
+
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin4, Rz );
+  double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin4);
+  return res;
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_Q2QG_notPartial::overestimateInt(double zMinAbs, double,
+  double, double m2dip, int) {
+
+  // Q -> QG, soft part (currently also used for collinear part).
+  double preFac    = symmetryFactor() * gaugeFactor();
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac
+                     *2. * 0.5 * log( 1. + pow2(1.-zMinAbs)/kappaMin4);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_Q2QG_notPartial::overestimateDiff(double z, double m2dip, int) {
+
+  double preFac    = symmetryFactor() * gaugeFactor();
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac
+                     *2. * (1.-z) / ( pow2(1.-z) + kappaMin4);
+  return wt;
+}
+
+// Return kernel for new splitting.
+bool fsr_qcd_Q2QG_notPartial::calc(const Event& state, int) { 
+
+  // Dummy statement to avoid compiler warnings.
+  if (false) cout << state[0].e() << endl;
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft);
+  int splitType(splitInfo.type);
+
+  // Calculate kernel.
+  // Note: We are calculating the z <--> 1-z symmetrised kernel here.
+  double preFac = symmetryFactor() * gaugeFactor();
+  double kappa2 = pT2/m2dip;
+
+  map<string,double> wts;
+  double wt_base_as1 = preFac * 2. / (1.-z);
+
+  wts.insert( make_pair("base", wt_base_as1 ) );
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1 ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      wts.insert( make_pair("Variations:muRfsrUp",   wt_base_as1 ));
+  }
+
+  // Correction for massive splittings.
+  bool doMassive = (abs(splitType) == 2);
+
+  // Add collinear term for massless splittings.
+  if (!doMassive) {
+    wt_base_as1 += -preFac * ( 1.+z );
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second +=  -preFac * ( 1.+z );
+  }
+
+  // Add collinear term for massive splittings.
+  if (doMassive) {
+
+    double pipj = 0., vijkt = 1., vijk = 1.;
+
+    // splitType == 2 -> Massive FF
+    if (splitType == 2) {
+
+      // Calculate CS variables.
+      double yCS = kappa2 / (1.-z);
+      double nu2RadBef = m2RadBef/m2dip; 
+      double nu2Rad = m2Rad/m2dip; 
+      double nu2Emt = m2Emt/m2dip; 
+      double nu2Rec = m2Rec/m2dip; 
+      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
+      double Q2mass = m2dip + m2Rad + m2Rec + m2Emt;
+      vijkt         = pow2(Q2mass/m2dip - nu2RadBef - nu2Rec)
+                    - 4.*nu2RadBef*nu2Rec;
+      vijk          = sqrt(vijk) / (1-yCS);
+      vijkt         = sqrt(vijkt)/ (Q2mass/m2dip - nu2RadBef - nu2Rec);
+      pipj          = m2dip * yCS/2.;
+
+    // splitType ==-2 -> Massive FI
+    } else if (splitType ==-2) {
+
+      // Calculate CS variables.
+      double xCS = 1 - kappa2/(1.-z);
+      vijk   = 1.; 
+      vijkt  = 1.;
+      pipj   = m2dip/2. * (1-xCS)/xCS;
+    }
+
+    // Add B1 for massive splittings.
+    double massCorr = -1.*vijkt/vijk*( 1. + z + m2RadBef/pipj);
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second += preFac * massCorr;
+
+    wt_base_as1 += preFac * massCorr;
+  }
+
+  // Store higher order correction separately.
+  wts.insert( make_pair("base_order_as2", wts["base"] - wt_base_as1 ));
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+    kernelVals.insert(make_pair( it->first, it->second ));
+
+  return true;
+
+}
+
+//==========================================================================
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_G2GG_notPartial::canRadiate ( const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() == 0
+        && state[ints["iRad"]].id() == 21 );
+}
+
+int fsr_qcd_G2GG_notPartial::kinMap()                 { return 1;}
+int fsr_qcd_G2GG_notPartial::motherID(int)            { return 21;}
+int fsr_qcd_G2GG_notPartial::sisterID(int)            { return 21;}
+double fsr_qcd_G2GG_notPartial::gaugeFactor ( int, int )        { return 2.*CA;}
+//double fsr_qcd_G2GG_notPartial::symmetryFactor ( int, int )     { return 0.5;}
+double fsr_qcd_G2GG_notPartial::symmetryFactor ( int, int )     { return 1.0;}
+
+int fsr_qcd_G2GG_notPartial::radBefID(int, int){ return 21;}
+pair<int,int> fsr_qcd_G2GG_notPartial::radBefCols(
+  int colRadAfter, int acolRadAfter, 
+  int colEmtAfter, int acolEmtAfter) {
+  int colRemove = (colRadAfter == acolEmtAfter)
+                ? colRadAfter : acolRadAfter;
+  int col       = (colRadAfter == colRemove)
+                ? colEmtAfter : colRadAfter;
+  int acol      = (acolRadAfter == colRemove)
+                ? acolEmtAfter : acolRadAfter;
+  return make_pair(col,acol);
+}
+
+vector <int> fsr_qcd_G2GG_notPartial::recPositions( const Event&, int, int) {
+  return vector <int>();
+}
+
+// Pick z for new splitting.
+double fsr_qcd_G2GG_notPartial::zSplit(double zMinAbs, double, double m2dip) {
+  // Just pick according to soft.
+  double R         = rndmPtr->flat();
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double p         = pow( 1. + pow2(1-zMinAbs)/kappaMin4, R );
+  double res       = 1. - sqrt( p - 1. )*sqrt(kappaMin4);
+  return res;
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_G2GG_notPartial::overestimateInt(double zMinAbs, double,
+  double, double m2dip, int) {
+
+  // Overestimate by soft
+  double preFac    = symmetryFactor() * gaugeFactor();
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac * 0.5 * log( 1. + pow2(1.-zMinAbs)/kappaMin4);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_G2GG_notPartial::overestimateDiff(double z, double m2dip, int) {
+  // Overestimate by soft
+  double preFac    = symmetryFactor() * gaugeFactor();
+  double kappaMin4 = pow4(settingsPtr->parm("TimeShower:pTmin"))/m2dip;
+  double wt        = preFac * (1.-z) / ( pow2(1.-z) + kappaMin4);
+  return wt;
+}
+
+// Return kernel for new splitting.
+bool fsr_qcd_G2GG_notPartial::calc(const Event& state, int) {
+
+  // Dummy statement to avoid compiler warnings.
+  if (false) cout << state[0].e() << endl;
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    //m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft);
+  int splitType(splitInfo.type);
+
+  double preFac = symmetryFactor() * gaugeFactor();
+  double kappa2 = pT2/m2dip;
+
+  // Calculate kernel.
+  // Note: We are calculating the z <--> 1-z symmetrised kernel here.
+  map<string,double> wts;
+  double wt_base_as1 = preFac * 1. / (1.-z);
+
+  wts.insert( make_pair("base", wt_base_as1 ));
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1 ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      wts.insert( make_pair("Variations:muRfsrUp", wt_base_as1 ));
+  }
+
+  // Correction for massive splittings.
+  bool doMassive = (abs(splitType) == 2);
+
+  // Add collinear term for massless splittings.
+  if (!doMassive) {
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second += preFac * ( -1. + 0.5 * z*(1.-z) );
+    wt_base_as1 += preFac * ( -1. + 0.5 * z*(1.-z) );
+  }
+
+  // Add collinear term for massive splittings.
+  if (doMassive) {
+
+    double vijk = 1.;
+
+    // splitType == 2 -> Massive FF
+    if (splitType == 2) {
+      // Calculate CS variables.
+      double yCS = kappa2 / (1.-z);
+      double nu2Rad = m2Rad/m2dip; 
+      double nu2Emt = m2Emt/m2dip; 
+      double nu2Rec = m2Rec/m2dip; 
+      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
+      vijk          = sqrt(vijk) / (1-yCS);
+
+    // splitType ==-2 -> Massive FI
+    } else if (splitType ==-2) {
+      // No changes, as initial recoiler is massless!
+      vijk          = 1.; 
+    }
+
+    // Add correction for massive splittings.
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second += preFac * 1./ vijk * ( -1. + 0.5 * z*(1.-z) );
+
+    wt_base_as1 += preFac * 1./ vijk * ( -1. + 0.5 * z*(1.-z) );
+  }
+
+  // Store higher order correction separately.
+  wts.insert( make_pair("base_order_as2", wts["base"] - wt_base_as1 ));
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+    kernelVals.insert(make_pair( it->first, it->second ));
+
+  return true;
+
+}
+
+//==========================================================================
+
+// Class inheriting from SplittingQCD class.
+
+// SplittingQCD function G->QQ (FSR)
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qcd_G2QQ_notPartial::canRadiate ( const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*) {
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRec"]].colType() == 0
+        && state[ints["iRad"]].id() == 21 );
+}
+
+int fsr_qcd_G2QQ_notPartial::kinMap()                 { return 1;}
+int fsr_qcd_G2QQ_notPartial::motherID(int)            { return 1;} // Use 1 as dummy variable.
+int fsr_qcd_G2QQ_notPartial::sisterID(int)            { return 1;} // Use 1 as dummy variable.
+double fsr_qcd_G2QQ_notPartial::gaugeFactor ( int, int )        { return NF_qcd_fsr*TR;}
+double fsr_qcd_G2QQ_notPartial::symmetryFactor ( int, int )     { return 1.0;}
+
+int fsr_qcd_G2QQ_notPartial::radBefID(int, int){ return 21;}
+pair<int,int> fsr_qcd_G2QQ_notPartial::radBefCols(
+  int colRadAfter, int acolRadAfter, 
+  int colEmtAfter, int acolEmtAfter) {
+  int col  = (colRadAfter  > 0) ? colRadAfter  : colEmtAfter;
+  int acol = (acolRadAfter > 0) ? acolRadAfter : acolEmtAfter;
+  return make_pair(col,acol);
+}
+
+vector <int> fsr_qcd_G2QQ_notPartial::recPositions( const Event&, int, int) {
+  return vector<int>();
+}
+
+// Pick z for new splitting.
+double fsr_qcd_G2QQ_notPartial::zSplit(double zMinAbs, double zMaxAbs, double) {
+  return (zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs));
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qcd_G2QQ_notPartial::overestimateInt(double zMinAbs,double zMaxAbs,
+  double, double, int) {
+  double wt     = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt            = 2.*preFac * 0.5 * ( zMaxAbs - zMinAbs);
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qcd_G2QQ_notPartial::overestimateDiff(double, double, int) {
+  double wt     = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt            = 2.*preFac * 0.5;
+  return wt;
+}
+
+// Return kernel for new splitting.
+bool fsr_qcd_G2QQ_notPartial::calc(const Event& state, int) {
+
+  // Dummy statement to avoid compiler warnings.
+  if (false) cout << state[0].e() << endl;
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft);
+  int splitType(splitInfo.type);
+
+  double preFac = symmetryFactor() * gaugeFactor();
+  double kappa2 = pT2/m2dip;
+
+  map<string,double> wts;
+  double wt_base_as1 = preFac * ( pow(1.-z,2.) + pow(z,2.) );
+  wts.insert( make_pair("base", wt_base_as1 ));
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1 ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      wts.insert( make_pair("Variations:muRfsrUp", wt_base_as1 ));
+  }
+
+  // Correction for massive splittings.
+  bool doMassive = (abs(splitType) == 2);
+
+  if (doMassive) {
+
+    double vijk = 1., pipj = 0.;
+
+    // splitType == 2 -> Massive FF
+    if (splitType == 2) {
+      // Calculate CS variables.
+      double yCS = kappa2 / (1.-z);
+      double nu2Rad = m2Rad/m2dip; 
+      double nu2Emt = m2Emt/m2dip; 
+      double nu2Rec = m2Rec/m2dip; 
+      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
+      vijk          = sqrt(vijk) / (1-yCS);
+      pipj          = m2dip * yCS /2.;
+
+    // splitType ==-2 -> Massive FI
+    } else if (splitType ==-2) {
+      // Calculate CS variables.
+      double xCS = 1 - kappa2/(1.-z);
+      vijk   = 1.; 
+      pipj   = m2dip/2. * (1-xCS)/xCS;
+    }
+
+    // Reset kernel for massive splittings.
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
+                                         + m2Emt / ( pipj + m2Emt) );
+
+    wt_base_as1 =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
+                                        + m2Emt / ( pipj + m2Emt) );
+  }
+
+  // Store higher order correction separately.
+  wts.insert( make_pair("base_order_as2", wts["base"] - wt_base_as1 ));
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+    kernelVals.insert(make_pair( it->first, it->second ));
+
+  return true;
+
+}
+
+//==========================================================================
+
+
 
 } // end namespace Pythia8

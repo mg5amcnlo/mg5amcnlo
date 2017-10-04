@@ -22,19 +22,11 @@ ifeq ($(GZIP_USE),true)
   CXX_COMMON+= -L$(GZIP_LIB) -Wl,-rpath $(GZIP_LIB) -lz
 endif
 
-CXX_COMMON:=-I$(PYTHIA8_INCLUDE) $(CXX_COMMON) -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC -Wl,-rpath $(PYTHIA8_LIB) -ldl
+CXX_COMMON:=-I$(PYTHIA8_INCLUDE) $(CXX_COMMON) -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC -g -Wl,-rpath $(PYTHIA8_LIB) -ldl
 
 DIRE_INCLUDE=$(PREFIX_INCLUDE)
 DIRE_SRC=$(PREFIX_SRC)
 DIRE_LIB=$(PREFIX_LIB)
-
-ROOT_DIR=/nfs/farm/g/theory/qcdsim/sp/hepsoft/pythia/Pythia8/pythia8/pythia82/branches/sp-dev/share/Pythia8/examples/VINCIA/software/root/build/root-5.34.13
-ROOT_USE=true
-ROOT_LIB=$(ROOT_DIR)/lib/root
-ROOT_BIN=$(ROOT_DIR)/bin/root-config
-ROOT_INCLUDE=$(ROOT_DIR)/include/root
-#CXX_ROOT=`$(ROOT_BIN) --cflags` -Wno-c++11-long-long -ldl
-CXX_ROOT=`$(ROOT_BIN) --cflags`
 
 ################################################################################
 # RULES: Definition of the rules used to build the PYTHIA examples.
@@ -49,17 +41,22 @@ $(PYTHIA8_LIB)/libpythia8.a :
 	$(error Error: PYTHIA must be built, please run "make"\
                 in the top PYTHIA directory $(PYTHIA8_LIB))
 
-# Make DIRE libraries again, if necessary.
+# Try to make DIRE libraries again, if necessary.
 $(DIRE_LIB)/libdire.a : $(DIRE_SRC)/*.cc \
 	$(wildcard $(DIRE_INCLUDE)/*/*.h)
-	cd ..; $(MAKE) ; cd main
+ifeq ("$(wildcard $(PWD)/../Makefile)","") 
+	@echo "Dire source has been changed. Please recompile source."
+else
+	@echo "Dire source has been changed. Recompiling in source directory."
+	cd ..; $(MAKE) install; cd main
+endif
 
 # Examples without external dependencies.
 dire% : $$@.cc $(DIRE_LIB)/libdire.a $(PYTHIA8_LIB)/libpythia8.a
 	$(CXX) $^ -o $@ -I$(DIRE_INCLUDE) $(CXX_COMMON)
 
 # Make DIRE main programs with HepMC dependence.
-dire01 dire02 dire03 pythia03: $$@.cc $(DIRE_LIB)/libdire.a\
+dire01 dire02 dire03: $$@.cc $(DIRE_LIB)/libdire.a\
 	$(PYTHIA8_LIB)/libpythia8.a
 ifeq ($(HEPMC2_USE),true)
 	$(CXX) $^ -o $@ -I$(DIRE_INCLUDE) -I$(HEPMC2_INCLUDE) $(CXX_COMMON)\
@@ -68,27 +65,6 @@ else
 	@echo "Error: $@ requires HEPMC2"
 endif
 
-
-# Make DIRE main programs with HepMC dependence.
-dire-hermes: $$@.cc $(DIRE_LIB)/libdire.a\
-	$(PYTHIA8_LIB)/libpythia8.a
-ifeq ($(ROOT_USE),true)
-	$(CXX) $^ -o $@ -I$(DIRE_INCLUDE) -I$(ROOT_INCLUDE) $(CXX_COMMON) $(CXX_ROOT)\
-	-Wl,-rpath -L$(ROOT_LIB) `$(ROOT_BIN) --libs`
-else
-	@echo "Error: $@ requires ROOT"
-endif
-
-
-
-# FASTJET3 with modified Mass-Drop Tagger.
-dire-fj: $$@.cc $(DIRE_LIB)/libdire.a $(PYTHIA8_LIB)/libpythia8.a
-ifeq ($(FASTJET3_USE),true)
-	$(CXX) $^ -o $@ -I$(DIRE_INCLUDE) -I$(FASTJET3_INCLUDE) $(CXX_COMMON)\
-	 -L$(FASTJET3_LIB) -Wl,-rpath,$(FASTJET3_LIB) -lfastjet -lRecursiveTools -lClusteringVetoPlugin -lConstituentSubtractor -lEnergyCorrelator -lGenericSubtractor -lJetCleanser -lJetFFMoments -lJetsWithoutJets -lNsubjettiness -lQCDAwarePlugin -lScJet -lSoftKiller -lSubjetCounting -lValenciaPlugin -lVariableR -lfastjetplugins -lfastjettools -lsiscone -lsiscone_spherical
-else
-	@echo "Error: $@ requires FASTJET3"
-endif
 
 # PROMC.
 dire04: $$@.cc $(DIRE_LIB)/libdire.a $(PYTHIA8_LIB)/libpythia8.a
@@ -101,17 +77,6 @@ else
 	@echo "Error: $@ requires PROMC"
 endif
 
-
-# Make DIRE main programs with HepMC dependence.
-dire-mess dire-mecs dire-mops: $$@.cc $(DIRE_LIB)/libdire.a\
-	$(PYTHIA8_LIB)/libpythia8.a
-ifeq ($(HEPMC2_USE),true)
-	$(CXX) $^ -o $@ -I$(DIRE_INCLUDE) -I$(HEPMC2_INCLUDE) \
-	$(CXX_COMMON)\
-	 -L$(HEPMC2_LIB) -Wl,-rpath $(HEPMC2_LIB) -lHepMC
-else
-	@echo "Error: $@ requires HEPMC2"
-endif
 
 # Clean.
 clean:

@@ -3,10 +3,11 @@ Installation instructions:
 1) Install PYTHIA.
 
    Some installation scripts for PYTHIA and
-   its dependences can be found at slac.stanford.edu/~prestel/DIRE .
-   The most complete option would be to download an installation script
+   its dependences can be found at https://dire.gitlab.io in the Downloads
+   section. The most complete option would be to download an installation
+   script
 
-   wget slac.stanford.edu/~prestel/DIRE/installHEPTOOLS.sh
+   wget https://dire.gitlab.io/Downloads/installHEPTOOLS.sh
 
    making it executable
 
@@ -18,30 +19,48 @@ Installation instructions:
    start experimenting with the code (see e.g. step 6) )
 
 2) Download DIRE from
-   https://direforpythia.hepforge.org
+   https://dire.gitlab.io
    by e.g. using
 
-   wget http://www.hepforge.org/archive/direforpythia/DIRE-1.500.tar.gz
+   wget https://dire.gitlab.io/Downloads/DIRE-2.002.tar.gz
 
 3) Untar the DIRE tarball in the PYTHIA examples
    directory of your PYTHIA installation directory
    (e.g. /some/path/share/Pythia8/examples/)
    e.g. by executing
 
-   tar xvfz DIRE-1.500.tar.gz
+   tar xvfz DIRE-2.002.tar.gz
 
-4) cd into the DIRE-1.500 directory
+4) cd into the DIRE-2.002 directory
 
-5) Type
- 
+5) Configure the code with
+
+   ./configure --prefix=/path/where/to/install/dire --with-pythia8=/path/to/pythia
+
+   where /path/to/pythia is your Pythia install or build directory (the
+   code assumes that Pythia's Makefile.inc is located at either 
+   /path/to/pythia/Makefile.inc or
+   /path/to/pythia/share/Pythia8/examples/Makefile.inc)
+
+6) Compile the Dire core code by executing
+
+   make
+   make install
+
+7) Now go into the directory in which you've installed Dire, e.g.
+
+    cd /path/where/to/install/dire
+
+   The subdirectory share/Dire/main contains a few example Dire main programs.
+   Go into this directory and compile dire00.cc by typing
+
    make dire00
 
-   to compile the simplest DIRE main program.
    Note that the dire01, dire02 and dire03 main program link
    against HEPMC2, which means PYTHIA has to be configured to
    support this. The main program dire04 links against ProMC.
 
-6) Run with
+8) Run with
 
    ./dire00
 
@@ -54,7 +73,7 @@ Installation instructions:
    where myinput.cmnd is an appropriate input file
    (examples could be dis.cmnd, lhc.cmnd and lep.cmnd)
 
-7) Compile dire01 and run with
+9) Compile dire01 and run with
 
    ./dire01 myinput.cmnd myoutput.hepmc
 

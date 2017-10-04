@@ -150,15 +150,15 @@ MyHistory::MyHistory( int depth,
       psweights(psweightsIn)
     {
 
+//cout << "history, new state" << endl;
+//state.list();
+
   // Remember how many steps in total were supposed to be taken.
   if (!mother) nStepsMax = depth;
   else         nStepsMax = mother->nStepsMax;
 
   // Dummy statement to avoid compiler warnings, for now.
   if (false) cout << isAllowedOrdering;
-
-//cout << clusterIn.pT() << endl;
-//state.list();
 
   // Initialise beam particles
   setupBeams();
@@ -209,8 +209,6 @@ MyHistory::MyHistory( int depth,
     if (hasMEweight) MECnum = psweights->getME(state);
   }
 
-//cout << state.size() << " " << MECnum << " " << clusterings.size() << endl;
-
   // If no clusterings were found, the recursion is done and we
   // register this node.
   if ( clusterings.empty() ) {
@@ -228,10 +226,6 @@ MyHistory::MyHistory( int depth,
       || ( mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
         && mergingHooksPtr->settingsPtr->mode("Merging:nRequested") < 2) ) 
       isOrdered = isOrdered && (scale < hardStartScale(state) );
-
-//      if ( scale > hardStartScale(state) ) cout << "unordered wrt muf" << endl;
-//state.list();
-//cout << scale << " " << hardStartScale(state) << endl;
 
     registerPath( *this, isOrdered, isAllowed, depth == 0 );
     return;
@@ -274,8 +268,6 @@ MyHistory::MyHistory( int depth,
       allowed = false;
     }
 
-//cout << "get prob for " << it->second->name() << endl;
-
     pair <double,double> probs = getProb(*it->second);
 
     // Perform the clustering and recurse and construct the next
@@ -300,11 +292,8 @@ bool MyHistory::projectOntoDesiredHistories() {
   if ( mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")) {
     for ( map<double, MyHistory*>::iterator it = paths.begin();
       it != paths.end(); ++it ) {
-      //it->second->printScales();
-      //cout << endl << __LINE__  << " " << it->second->hasScalesAboveCutoff() << endl;
       if ( !it->second->hasScalesAboveCutoff() ) { foundGoodMOPS=false; break; }
-//abort();
-      }
+    }
   }
 
   // Loop through good branches and set the set of "good" children in mother
@@ -365,11 +354,6 @@ bool MyHistory::projectOntoDesiredHistories() {
 double MyHistory::weightMOPS(PartonLevel* trial, AlphaStrong * asFSR,
   AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN) {
 
-//  // Keep only unordered paths, since all ordered paths have been corrected 
-//  // with matrix element corrections.
-//  if (foundOrderedPath) { return 0.;}
-
-//cout <<__LINE__ << " " << RN << endl;
   // Read alpha_S in ME calculation and maximal scale (eCM)
   double asME     = infoPtr->alphaS();
   double aemME    = infoPtr->alphaEM();
@@ -379,32 +363,12 @@ double MyHistory::weightMOPS(PartonLevel* trial, AlphaStrong * asFSR,
   // Select a path of clusterings
   MyHistory *  selected = select(RN);
 
-//cout <<__LINE__ << endl;
-//selected->printScales();
-//cout << endl;
-
-//selected->state.list();
-
-//cout <<__LINE__ << endl;
   // Set scales in the states to the scales pythia would have set
   selected->setScalesInMyHistory();
-
-//cout << selected->clusterIn.pT() << endl;
-//selected->state.list();
-//cout <<__LINE__ << endl;
 
   // Keep only unordered paths, since all ordered paths have been corrected 
   // with matrix element corrections.
   if (foundOrderedPath) { return 0.;}
-
-//cout << " try path " << maxScale << " " << scaleEffective << endl;
-//selected->printScales();
-//cout <<  " " << maxScale << endl;
-//selected->printScales();
-//selected->printStates();
-//abort();
-
-
 
   // Get weight.
   double sudakov   = 1.;
@@ -487,10 +451,6 @@ double MyHistory::weightMOPS(PartonLevel* trial, AlphaStrong * asFSR,
                   * (*aemFSR).alphaEM(newQ2Ren) / aemME;
     }
   }
-
-cout << "weights=" << sudakov << " " << asWeight << " " << pdfWeight << endl;
-//abort();
-
 
   // Done
   return (sudakov*asWeight*aemWeight*pdfWeight*mpiwt);
@@ -1046,8 +1006,6 @@ double MyHistory::weight_UNLOPS_CORRECTION( int order, PartonLevel* trial,
 
 void MyHistory::getStartingConditions( const double RN, Event& outState ) {
 
-//cout << __LINE__ << endl;
-
   // Select the history
   MyHistory *  selected = select(RN);
 
@@ -1095,9 +1053,6 @@ void MyHistory::getStartingConditions( const double RN, Event& outState ) {
     infoPtr->hasHistory(true);
 
   }
-
-//cout << __LINE__ << endl;
-//outState.list(true,true);
 
   // Copy the output state.
   outState = state;
@@ -1345,22 +1300,16 @@ void MyHistory::setScalesInMyHistory() {
 
 void MyHistory::findPath(vector<int>& out) {
 
-//cout << __LINE__ << endl;
-
   // If the initial and final nodes are identical, return
   if (!mother && int(children.size()) < 1) return;
-//cout << __LINE__ << " " << mother << endl;
-//state.list();
-//abort();
+
   // Find the child by checking the children vector for the perfomed
   // clustering
   int iChild=-1;
   if ( mother ) {
     int size = int(mother->children.size());
-//cout << " set path " << endl;
     // Loop through children and identify child chosen
     for ( int i=0; i < size; ++i) {
-//cout << " check child " << i << endl;
       if ( mother->children[i]->scale == scale
         && mother->children[i]->prodOfProbs == prodOfProbs
         && equalClustering(mother->children[i]->clusterIn,clusterIn)) {
@@ -1399,9 +1348,6 @@ void MyHistory::findPath(vector<int>& out) {
 void MyHistory::setScales( vector<int> index, bool forward) {
 
   // Scale setting less conventional for MOPS --> separate code.
-
-//cout << __LINE__ << " " << endl;
-//abort();
 
   // CKKW-L scale setting.
   if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")) {
@@ -1554,16 +1500,9 @@ void MyHistory::setScales( vector<int> index, bool forward) {
   // MOPS scale setting.
   } else {
 
-//cout << __LINE__ << " " << children.size() << " " << forward << endl; 
-//state.list();
-//abort();
-//if(mother) abort();
-
   // First, set the scales of the hard process to the kinematial
   // limit (=s)
   if ( children.empty() && forward ) {
-//cout << __LINE__ << endl; 
-//abort();
     // New "incomplete" configurations showered from mu
     if (!mother) {
       double scaleNew = 1.;
@@ -1615,56 +1554,17 @@ void MyHistory::setScales( vector<int> index, bool forward) {
           || mergingHooksPtr->getProcessString().compare("e-p>e-j") == 0) )
         state.scale( hardFacScale(state) );
 
-//cout << __LINE__ << " " << state.size() << " " << scale << " " << scaleEffective << " " << state.scale() << endl;
     }
   }
-//cout << __LINE__ << " " << mother << " " << forward << " children " << children.size() << endl; 
 
   // Set all particle production scales, starting from lowest
   // multiplicity (final) state
   if (mother && forward) {
-    // When choosing splitting scale, beware of unordered splittings:
-    //double scaleNew = 1.;
-    //if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
-    //  &&  mergingHooksPtr->unorderedScalePrescip() == 0) {
-    //  // Use larger scale as common splitting scale for mother and child
-    //  scaleNew = max( mergingHooksPtr->pTcut(), max(scale,mother->scale));
-    //} else if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
-    //  &&         mergingHooksPtr->unorderedScalePrescip() == 1) {
-    //  // Use smaller scale as common splitting scale for mother and child
-    //  if (scale < mother->scale)
-    //    scaleNew = max( mergingHooksPtr->pTcut(), min(scale,mother->scale));
-    //  else
-    //    scaleNew = max( mergingHooksPtr->pTcut(), max(scale,mother->scale));
-    // //} else if (mergingHooksPtr->doMOPS()) {
-    //} 
-
-//       scaleNew = max( mergingHooksPtr->pTcut(), max(mother->scaleEffective);
-//    scaleNew = scale;
-//    scaleNew = max( scaleNew, mother->scale);
-//    scaleNew = max( scaleNew, mother->scaleEffective);
     double scaleNew = (scaleEffective > 0.) ? scaleEffective : scale;
     scale = max(mergingHooksPtr->pTcut(), scaleNew);
 
     double scaleProduction = max( mergingHooksPtr->pTcut(), mother->scaleEffective);
-
-scaleProduction = max(scaleProduction,scaleNew);
-
-//cout << __LINE__ << " " << state.size() << " " << scale << " " << scaleEffective << " " << scaleNew << endl;
-    //// Rescale the mother state partons to the clustering scales
-    //// that have been found along the path
-    //mother->state[clusterIn.emtPos()].scale(scaleNew);
-    //mother->state[clusterIn.radPos()].scale(scaleNew);
-    //mother->state[clusterIn.recPos()].scale(scaleNew);
-
-    //// Find unchanged copies of partons in higher multiplicity states
-    //// and rescale those
-    //mother->scaleCopies(clusterIn.emtPos(), mother->state, scaleNew);
-    //mother->scaleCopies(clusterIn.radPos(), mother->state, scaleNew);
-    //mother->scaleCopies(clusterIn.recPos(), mother->state, scaleNew);
-
-//cout << __LINE__ << " " << scaleProduction << endl;
-//abort();
+    scaleProduction = max(scaleProduction,scaleNew);
 
     // Rescale the mother state partons to the clustering scales
     // that have been found along the path
@@ -1682,14 +1582,9 @@ scaleProduction = max(scaleProduction,scaleNew);
     mother->setScales(index,true);
   }
 
-//cout << __LINE__ << " " << mother << " " << forward << " children " << children.size() << endl;
   // Now, check and correct ordering from the highest multiplicity
   // state backwards to all the clustered states
   if (!mother || !forward) {
-//cout << __LINE__ << " " << mother << " " << forward << " index " << index.size()  << endl;
-//state.list();
-
-//abort();
 
     // Get index of child along the path
     int iChild = -1;
@@ -1703,55 +1598,17 @@ scaleProduction = max(scaleProduction,scaleNew);
       scale = max(mergingHooksPtr->pTcut(), scale);
       if (mergingHooksPtr->settingsPtr->flag("Dire:doMOPS"))
         scale = max(scale,mother->scaleEffective);
-//cout << __LINE__ << endl;
     }
     // If this is NOT the 2->2 process, check and enforce ordering
     if (iChild != -1 && !children.empty()) {
-//cout << __LINE__ << endl;
       if (scale > children[iChild]->scale ) {
 
-//        if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
-//          &&  mergingHooksPtr->unorderedScalePrescip() == 0) {
-//          // Use larger scale as common splitting scale for mother and child
-//          double scaleNew = max( mergingHooksPtr->pTcut(),
-//                              max(scale,children[iChild]->scale));
-//          // Enforce ordering in particle production scales
-//          for( int i = 0; i < int(children[iChild]->state.size()); ++i)
-//            if (children[iChild]->state[i].scale() == children[iChild]->scale)
-//              children[iChild]->state[i].scale(scaleNew);
-//          // Enforce ordering in saved clustering scale
-//          children[iChild]->scale = scaleNew;
-//
-//        } else if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
-//          &&         mergingHooksPtr->unorderedScalePrescip() == 1) {
-//           // Use smaller scale as common splitting scale for mother & child
-//           double scaleNew = max(mergingHooksPtr->pTcut(),
-//                               min(scale,children[iChild]->scale));
-//           // Enforce ordering in particle production scales
-//           for( int i = 0; i < int(state.size()); ++i)
-//             if (state[i].scale() == scale)
-//               state[i].scale(scaleNew);
-//           // Enforce ordering in saved clustering scale
-//           scale = scaleNew;
-//        }
-//
-//      } else if (mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")) {
-        //double scaleNew = max( mergingHooksPtr->pTcut(), mother->scaleEffective);
-        double scaleNew = max( mergingHooksPtr->pTcut(), max(children[iChild]->scale, scaleEffective));
-           //// Enforce ordering in particle production scales
-           //for( int i = 0; i < int(state.size()); ++i)
-           //  if (state[i].scale() == scale)
-           //    state[i].scale(scaleNew);
-           //// Enforce ordering in saved clustering scale
-           //scale = scaleNew;
+        double scaleNew = max( mergingHooksPtr->pTcut(), 
+          max(children[iChild]->scale, scaleEffective));
+        if (mother) scaleNew = max(scaleNew, mother->scaleEffective); 
 
-if (mother) scaleNew = max(scaleNew, mother->scaleEffective); 
-
-//cout << __LINE__ << " " << state.size() << " " << scale << " " << scaleEffective << " " << scaleNew << "\t\t" << children[iChild]->scale << endl;
-//cout << state.size() << " " << scale << " " << scaleEffective << " "<< children[iChild]->scale << " " << scaleNew << endl;
         // Enforce ordering in particle production scales
         for( int i = 0; i < int(children[iChild]->state.size()); ++i) {
-//cout << "\t" << state.size() << " " << int(children[iChild]->state.size()) << " " << children[iChild]->state[i].scale() << " " << children[iChild]->scale << " " << scaleNew << endl;
           if (children[iChild]->state[i].scale() == children[iChild]->scale)
             children[iChild]->state[i].scale(scaleNew);
         }
@@ -1759,22 +1616,17 @@ if (mother) scaleNew = max(scaleNew, mother->scaleEffective);
         children[iChild]->scale = scaleNew;
 
       } else {
-//cout << __LINE__ << " " << endl;
-//abort();
-
         double scalemin = state[0].e();
         for( int i = 0; i < int(state.size()); ++i)
           if (state[i].colType() != 0)
             scalemin = max(mergingHooksPtr->pTcut(),
                          min(scalemin,state[i].scale()));
         state.scale(scalemin);
-//cout << __LINE__ << " " << state.size() << " " << scale << " " << scaleEffective << endl;
         scale = max(mergingHooksPtr->pTcut(), scale);
       }
       //Recurse
       children[iChild]->setScales(index, false);
     }
-//cout << __LINE__ << " " << endl;
   }
 
   // Done with MOPS scale setting.
@@ -1805,7 +1657,6 @@ void MyHistory::scaleCopies(int iPart, const Event& refEvent, double rho) {
           && mother->state[i].col()        == refEvent[iPart].col()
           && mother->state[i].acol()       == refEvent[iPart].acol() )
          ) {
-//cout << "scaleCopies " << mother->state.size() << " " << i << " " << mother->state[i].id () << " " << mother->state[i].scale() << "-->" << rho << endl;
         // Rescale the unchanged parton
         mother->state[i].scale(rho);
         // Recurse
@@ -2071,9 +1922,6 @@ bool MyHistory::foundAnyOrderedPaths() {
 // shower cut-off.
 
 bool MyHistory::hasScalesAboveCutoff() {
-
-//cout << clusterIn.pT() << " " << mergingHooksPtr->pTcut() << endl;
-
   if ( !mother ) return true;
   return ( clusterIn.pT() > mergingHooksPtr->pTcut()
         && mother->hasScalesAboveCutoff() );
@@ -2120,7 +1968,6 @@ double MyHistory::weightTree(PartonLevel* trial, double as0, double aem0,
       double ratio = getPDFratio(sideRad, false, false, flav, x, scaleNum,
                        flav, x, scaleDen);
       pdfWeight *= ratio;
-cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
     }
 
     // Calculate PDF ratio for second leg
@@ -2135,7 +1982,6 @@ cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
       double ratio = getPDFratio(sideRec, false, false, flav, x, scaleNum,
                        flav, x, scaleDen);
       pdfWeight *= ratio;
-cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
     }
 
     return 1.0;
@@ -2164,8 +2010,25 @@ cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
   if ( abs(w) < 1e-12 ) return 0.0;
 
   int emtType = mother->state[clusterIn.emtPos()].colType();
+  bool isQCD = emtType != 0;
+  bool isQED = emtType == 0;
+
+  pair<int,double> coup = getCoupling(mother->state, clusterIn.emittor,
+    clusterIn.emtPos(), clusterIn.recoiler, clusterIn.name());
+
+  if (coup.first > 0) { 
+    //isQCD = (coup.first == 1);
+    //isQED = (coup.first == 2 || coup.first == 3);
+    isQCD = isQED = false;
+    if (coup.first == 1)
+      asWeight  *= coup.second / as0;
+    if (coup.first == 2 || coup.first == 3)
+      aemWeight *= coup.second / aem0;
+  }
+
   // Calculate alpha_s ratio for current state.
-  if ( asFSR && asISR && emtType != 0) {
+  //if ( asFSR && asISR && emtType != 0) {
+  if ( asFSR && asISR && isQCD) {
     double asScale = pow2( newScale );
     if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
       &&  mergingHooksPtr->unorderedASscalePrescip() == 1)
@@ -2187,14 +2050,10 @@ cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
     double alphaSinPS = (FSR) ? (*asFSR).alphaS(asScale)
                               : (*asISR).alphaS(asScale);
     asWeight *= alphaSinPS / as0;
-
-cout << state.size() << "as=" << sqrt(asScale) << " " << alphaSinPS / as0 << endl;
-
-
   }
 
   // Calculate alpha_em ratio for current state.
-  if ( aemFSR && aemISR && emtType == 0 ) {
+  if ( aemFSR && aemISR && isQED ) {
     double aemScale = pow2( newScale );
     if ( !mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
       &&  mergingHooksPtr->unorderedASscalePrescip() == 1)
@@ -2242,7 +2101,6 @@ cout << state.size() << "as=" << sqrt(asScale) << " " << alphaSinPS / as0 << end
                      flav, x, scaleDen);
 
     pdfWeight *= ratio;
-cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
   }
 
   if ( mother->state[inM].colType() != 0 ) {
@@ -2263,7 +2121,6 @@ cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
                      flav, x, scaleDen);
 
     pdfWeight *= ratio;
-cout << state.size() << " pdf=" << scaleNum << " " << scaleDen << endl;
   }
 
   // Done
@@ -3042,8 +2899,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Get pT before reclustering
     double minScale = (minscaleIn > 0.) ? minscaleIn : scale;
 
-cout << "trial shower " << process.size() << " " << startingScale << " " << minScale << endl;
-
     mergingHooksPtr->setShowerStoppingScale(minScale);
 
     // Give up generating no-MPI probability if ISR completely dominates.
@@ -3100,10 +2955,6 @@ cout << "trial shower " << process.size() << " " << startingScale << " " << minS
 
     // Done if evolution scale has fallen below minimum
     //if ( pTtrial < minScale ) break;
-
-process.list();
-cout << " trial " << startingScale << " " << pTtrial << " " << minScale << endl;
-
     if ( pTtrial < minScale ) { wt *= wtShower.second; break;}
 
     // Reset starting scale.
@@ -3135,8 +2986,8 @@ cout << " trial " << startingScale << " " << pTtrial << " " << minScale << endl;
     if (process[3].colType() != 0 || process[4].colType() != 0 ) {
       bool usePDFalphas  = mergingHooksPtr->useShowerPlugin()
         ? mergingHooksPtr->settingsPtr->flag("ShowerPDF:usePDFalphas") : false;
-      BeamParticle* beam = (abs(beamA.id()) == 2212) ? &beamA
-                         : (abs(beamB.id()) == 2212) ? &beamB
+      BeamParticle* beam = (particleDataPtr->isHadron(beamA.id())) ? &beamA
+                         : (particleDataPtr->isHadron(beamB.id())) ? &beamB
                                                         : NULL;
       double m2cPhys     = (usePDFalphas) ? pow2(max(0.,beam->mQuarkPDF(4)))
                          : mergingHooksPtr->AlphaS_ISR()->muThres2(4);
@@ -3170,8 +3021,6 @@ cout << " trial " << startingScale << " " << pTtrial << " " << minScale << endl;
 
     // Continue producing trial emissions in case of enhanced showers.
     if ( canEnhanceTrial && pTtrial > minScale) continue;
-
-cout << wtShower.second << " " << wtShower.first << endl;
 
     if ( pTtrial > minScale) wt *= wtShower.second*(1. - wtShower.first);
     if ( wt == 0.) break;
@@ -3626,23 +3475,32 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
     isISR = isr->allowedSplitting(event, rad, emt);
   }
 
+//event.list();
+//cout << rad << " " << emt << "\t\t" << isISR << " " << isFSR << endl;
+
   if ( isFSR ) {
     vector<string> names = hasPartonLevel
       ? showers->timesPtr->getSplittingName(event,rad,emt,0)
       : hasShowers ? fsr->getSplittingName(event,rad,emt,0) : vector<string>();
     for ( int iName=0; iName < int(names.size()); ++iName) {
+
       vector<int> recsNow = hasPartonLevel
         ? showers->timesPtr->getRecoilers(event, rad, emt, names[iName])
         : (hasShowers ? fsr->getRecoilers(event, rad, emt, names[iName])
                       : vector<int>());
       for ( int i = 0; i < int(recsNow.size()); ++i ) {
         if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) ) {
+//cout << "possible fsr triple " << rad << " " << emt << " " << recsNow[i] << "\t\t" << names[iName] << endl;
           double pT = pTLund(event, rad, emt, recsNow[i], names[iName]);
           if (names[iName].compare("fsr_qcd_1->21&1_CS") == 0)
             pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
+          if (names[iName].compare("fsr_qcd_1->22&1_CS") == 0)
+            pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
+          if (names[iName].compare("fsr_qcd_11->22&11_CS") == 0)
+            pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
           attachClusterings (clus, emt, rad, recsNow[i], recsNow[i], pT, names[iName], event);
         }
-      } 
+      }
     }
   }
 
@@ -3656,10 +3514,12 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
         : (hasShowers ? isr->getRecoilers(event, rad, emt, names[iName])
                       : vector<int>());
       for ( int i = 0; i < int(recsNow.size()); ++i ) {
-        if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) )
+        if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) ) {
+//cout << "possible isr triple " << rad << " " << emt << " " << recsNow[i] << "\t\t" << names[iName] << endl;
           attachClusterings (clus, emt, rad, recsNow[i], recsNow[i],
             pTLund(event, rad, emt, recsNow[i], names[iName]),
             names[iName], event);
+        }
       }
     }
   }
@@ -3685,7 +3545,7 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
 
   // If the splitting resulted in disallowed evolution variable,
   // disallow the splitting
-  if (SystemIn.pT() <= 0.) { cout << "impossible pT" << endl; return make_pair(1.,0.);}
+  if (SystemIn.pT() <= 0.) { return make_pair(1.,0.);}
 
   double pr(0.), coupling(1.);
 
@@ -3703,14 +3563,17 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
 
   name += "-0";
 
+//SystemIn.list();
+//cout << isISR << " " << isFSR << endl;
+
   if (isFSR) {
 
     // Ask shower for splitting probability.
     pr += hasPartonLevel
-       ? showers->timesPtr->getSplittingProb( state, rad, emt, rec, name)
-       : hasShowers ? fsr->getSplittingProb( state, rad, emt, rec, name) : 0.;
+      ? showers->timesPtr->getSplittingProb( state, rad, emt, rec, name)
+      : hasShowers ? fsr->getSplittingProb( state, rad, emt, rec, name) : 0.;
 
-    // Scale with correct coupling factor.
+    /*// Scale with correct coupling factor.
     double mu2Ren = pow2(mergingHooksPtr->muR());
     if (name.find("qcd") != string::npos)
       coupling = mergingHooksPtr->AlphaS_FSR()->alphaS(mu2Ren); 
@@ -3722,18 +3585,21 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
       coupling = 4.*M_PI
            * (pow2(coupSMPtr->rf( flav )) + pow2(coupSMPtr->lf( flav )))
            / (coupSMPtr->sin2thetaW() * coupSMPtr->cos2thetaW());
-    }
+    }*/
+
+    // Scale with correct coupling factor.
+    double mu2Ren = pow2(mergingHooksPtr->muR());
+    coupling      = fsr->getCoupling( state, mu2Ren, rad, emt, rec, name);
 
   }
 
   if (isISR) {
-
     // Ask shower for splitting probability.
     pr += hasPartonLevel
        ? showers->spacePtr->getSplittingProb( state, rad, emt, rec, name)
        : hasShowers ? isr->getSplittingProb( state, rad, emt, rec, name) : 0.;
 
-    // Scale with correct coupling factor.
+    /*// Scale with correct coupling factor.
     double mu2Ren = pow2(mergingHooksPtr->muR());
     if (name.find("qcd") != string::npos)
       coupling = mergingHooksPtr->AlphaS_ISR()->alphaS(mu2Ren); 
@@ -3745,9 +3611,15 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
       coupling = 4.*M_PI
            * (pow2(coupSMPtr->rf( flav )) + pow2(coupSMPtr->lf( flav )))
            / (coupSMPtr->sin2thetaW() * coupSMPtr->cos2thetaW());
-    }
+    }*/
+
+    // Scale with correct coupling factor.
+    double mu2Ren = pow2(mergingHooksPtr->muR());
+    coupling      = isr->getCoupling( state, mu2Ren, rad, emt, rec, name);
 
   }
+
+//cout << name << " " << state[rad].id() << " " << state[rec].id() << " prob=" << pr << endl;
 
   // Done.
   return make_pair(coupling,pr);
@@ -5175,8 +5047,9 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   map<string,double> stateVars;
   //bool isFSR = showers->timesPtr->isTimelike(event, rad, emt, rec, "");
 
-//cout << __FILE__<< " " << __func__ << " " << __LINE__ << " " << name << endl;
   if (name.compare("fsr_qcd_1->21&1_CS") == 0) swap(rad,emt);
+  if (name.compare("fsr_qcd_1->22&1_CS") == 0) swap(rad,emt);
+  if (name.compare("fsr_qcd_11->22&11_CS") == 0) swap(rad,emt);
 
   bool hasPartonLevel(showers && showers->timesPtr && showers->spacePtr),
        hasShowers(fsr && isr);
@@ -5199,9 +5072,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   // Get colour partner of reclustered parton
   vector<int> radBeforeColP = getReclusteredPartners(rad, emt, event);
 
-//  if (name.compare("fsr_qcd_1->21&1_CS") == 0) swap(rad,emt);
-
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << stateVars["t"] << endl;
   // Only allow clustering if the evolution scale is well-defined.
   if ( stateVars["t"] < 0.0) return false;
 
@@ -5308,6 +5178,21 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
     if (abs(radBeforeFlav) > 10 && abs(radBeforeFlav) < 20 ) nInitialLepton++;
   }
 
+  // Store incoming and outgoing flavours after clustering.
+  vector<int> in;
+  for(int i=0; i < int(event.size()); ++i)
+    if ( i!=emt && i!=rad && i!=rec
+      && (event[i].mother1() == 1 || event[i].mother1() == 2))
+      in.push_back(event[i].id());
+  if (!event[rad].isFinal()) in.push_back(radBeforeFlav);
+  if (!event[rec].isFinal()) in.push_back(event[rec].id());
+  vector<int> out;
+  for(int i=0; i < int(event.size()); ++i)
+    if ( i!=emt && i!=rad && i!=rec && event[i].isFinal())
+      out.push_back(event[i].id());
+  if (event[rad].isFinal()) out.push_back(radBeforeFlav);
+  if (event[rec].isFinal()) out.push_back(event[rec].id());
+
   // BEGIN CHECKING THE CLUSTERING
 
   // Do not allow clusterings that lead to a disallowed proton content.
@@ -5355,7 +5240,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   if (hasColour && isSing && abs(radBeforeFlav)<10 && nPartons == 0
     && nInitialPartons == 1)
     allowed = true;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   // Never recluster any outgoing partons of the core V -> qqbar' splitting!
   if ( mergingHooksPtr->hardProcess->matchesAnyOutgoing(emt,event) ) {
@@ -5368,7 +5252,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
     if (canReplace) allowed = true;
     else allowed = false;
   }
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   // Never remove so many particles that the hard process cannot
   // be set up afterwards.
@@ -5389,25 +5272,22 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   if (event[rad].isFinal() && particleDataPtr->colType(radBeforeFlav) != 0)
     nOutPartNow++;
   if (nOutPartNow < nOutPartHardProc) allowed = false;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << radBeforeFlav << " " << nPartons << " " << nOutPartNow << " " << nOutPartHardProc << " " << allowed << endl;
 
   // Never allow clustering of any outgoing partons of the hard process
   // which would change the flavour of one of the hard process partons!
   if ( mergingHooksPtr->hardProcess->matchesAnyOutgoing(rad,event)
       && event[rad].id() != radBeforeFlav )
     allowed = false;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   // If only gluons in initial state and no quarks in final state,
   // reject (no electroweak vertex can be formed)
   if ( nFinalEW   != 0     && nInitialQuark == 0 && nFinalQuark == 0
-    && nFinalQuarkExc == 0 && nInitialLepton == 0)
+    && nFinalQuarkExc == 0 && nInitialLepton == 0 
+    && !mergingHooksPtr->allowEffectiveVertex( in, out) )
     allowed = false;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   if ( (nInitialQuark + nFinalQuark + nFinalQuarkExc)%2 != 0 )
     allowed = false;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   map<int,int> nIncIDs, nOutIDs;
   for ( int i = 0; i < event.size(); ++i) {
@@ -5434,7 +5314,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   }
 
   if (!canConnectFlavs(nIncIDs,nOutIDs) ) allowed = false;
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
 
   // Disallow clusterings that lead to a 2->1 massless state.
   // To check, only look at final state flavours.
@@ -5446,14 +5325,13 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
     else nOther++;
   if (nMassless == 1 && nOther == 0) allowed = false;
 
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
   // Disallow final state splittings that lead to a purely gluonic final
   // state, while having a completely colour-connected initial state.
   // This means that the clustering is discarded if it does not lead to the
   // t-channel gluon needed to connect the final state to a qq~ initial state.
   // Here, partons excluded from clustering are not counted as possible
   // partners to form a t-channel gluon
-  vector<int> in;
+  /*vector<int> in;
   for(int i=0; i < int(event.size()); ++i)
     if ( i!=emt && i!=rad && i!=rec
       && (event[i].mother1() == 1 || event[i].mother1() == 2))
@@ -5465,7 +5343,7 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
     if ( i!=emt && i!=rad && i!=rec && event[i].isFinal())
       out.push_back(event[i].id());
   if (event[rad].isFinal()) out.push_back(radBeforeFlav);
-  if (event[rec].isFinal()) out.push_back(event[rec].id());
+  if (event[rec].isFinal()) out.push_back(event[rec].id());*/
   if (event[3].col() == event[4].acol()
     && event[3].acol() == event[4].col()
     && !mergingHooksPtr->allowEffectiveVertex( in, out)
@@ -5514,8 +5392,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
     && (event[rad].p() + event[emt].p() + event[rec].p()).m2Calc() < 0.)
     return false;
 
-//cout << __FILE__<< " " << __LINE__ << " " << name << " " << allowed << endl;
-
   // No problems with gluon radiation
   if (event[emt].id() == 21)
     return allowed;
@@ -5528,7 +5404,6 @@ bool MyHistory::allowedClustering( int rad, int emt, int rec, int partner,
   if (event[emt].id() == 1000021)
     return allowed;
 
-//cout << __FILE__<< " " << __LINE__ << name << endl;
   // No problems if radiator is gluon, emitted is (anti)quark.
 
   // No problems if radiator is photon/Z/Higgs, and emitted is fermion.
@@ -6889,9 +6764,6 @@ void MyHistory::setProbabilities() {
     double denominator_unconstrained=0.;
     double contrib_unconstrained=0.;
 
-//cout << scientific << setprecision(8);
-//cout << "\tBegin sister " << i << " of " << goodSisters.size() << " MECnum=" << sisterNow->MECnum << " MECden=" << sisterNow->MECden << " MECcontrib=" << sisterNow->MECcontrib << endl;
-
     for (int j = 0;j < int(sisterNow->goodChildren.size());++j) {
 
       MyHistory* childNow = sisterNow->children[j];
@@ -6909,7 +6781,7 @@ void MyHistory::setProbabilities() {
       //
       //foundOrdered=true;
 
-      double massSign   = childNow->clusterIn.rad()->isFinal() ? 1. : -1.;
+      //double massSign   = childNow->clusterIn.rad()->isFinal() ? 1. : -1.;
       //double virtuality = massSign*(childNow->clusterIn.rad()->p()
       //                   + massSign*childNow->clusterIn.emt()->p()).m2Calc();
       double virtuality = 2.*(childNow->clusterIn.rad()->p()*
@@ -6933,7 +6805,6 @@ void MyHistory::setProbabilities() {
         else       stateVars = isr->getStateVariables(sisterNow->state,rad,emt,rec,"");
       }
 
-//cout << "\t  Child " << j << " of " << sisterNow->goodChildren.size() << ": " << childNow->clusterIn.name() << " MECnum=" << childNow->MECnum << "  MECden=" << childNow->MECden << " MECcontrib=" << childNow->MECcontrib;
       double z   = stateVars["z"];
       double t   = stateVars["t"];
       double xCS = 1.;
@@ -6945,19 +6816,14 @@ void MyHistory::setProbabilities() {
                       +2.*sisterNow->state[rad].p()*sisterNow->state[rec].p());
         double kappa2 = t/Q2;
         xCS = (z*(1-z) - kappa2) / (1 -z);
-//cout << "  II" << endl;
       } else if ( !isFSR &&  sisterNow->state[rec].isFinal() ) {
         xCS = z;
-//cout << "  IF" << endl;
       } else if (  isFSR && !sisterNow->state[rec].isFinal() ) {
         double Q2=abs(2.*sisterNow->state[emt].p()*sisterNow->state[rad].p()
                     - 2.*sisterNow->state[rec].p()*sisterNow->state[rad].p()
                     - 2.*sisterNow->state[emt].p()*sisterNow->state[rec].p());
         double kappa2 = t/Q2;
         xCS    = 1 - kappa2/(1.-z);
-//cout << "  FI" << endl;
-//      } else {
-//cout << "  FF" << endl;
       }
 
       double dd = childNow->MECnum
@@ -6967,13 +6833,18 @@ void MyHistory::setProbabilities() {
                 // the propagator factor 1/(2.*pipj)
                 * pow2(childNow->clusterIn.pT()) / virtuality
                 // extra factor left-over from 8*Pi*alphaS of dipole ME
-                // factorization
-                //* 2.
+                // factorization:
+                // |Mn+1|^2 ~ 8*Pi*alphaS*1/(2.pipj)*1/x*dipole*|Mn|^2
+                //          = 2g^2 *1/(2.pipj)*1/x*dipole*|Mn|^2
+                //          compared with using g^2=1 in MG5 MEs.
+                * 2.
                 // Part of the definition of dipole factorization.
                 * 1 / xCS
                 / childNow->MECden * childNow->MECcontrib;
       //if ( isISR && sisterNow->state[rad].id() == 21) dd *= 4.;
-      if ( sisterNow->state[rad].id() == 21) dd *= 4.;
+ 
+      //if ( sisterNow->state[rad].id() == 21) dd *= 4.; // ?????????????? 
+
       //denominator += dd;
       //
       //// Remember if this child contributes to the next-higher denominator.
@@ -7001,32 +6872,29 @@ void MyHistory::setProbabilities() {
         if (childNow->clusterIn.pT() > sisterNow->clusterIn.pT())
           contrib += dd;
       }
-//cout << "\t  Child " << j << " of " << sisterNow->goodChildren.size()
-//<< "   prob=" << childNow->clusterProb*pow2(childNow->clusterIn.pT()) << "     dd=" << dd
-//<< "     den(constrained)  =" << denominator               << " contrib(constrained)  =" << contrib << endl;
-//cout << "\t  Child " << j << " of " << sisterNow->goodChildren.size()
-//<< "   prob=" << childNow->clusterProb*pow2(childNow->clusterIn.pT()) << "     dd=" << dd
-//<< "     den(unconstrained)=" << denominator_unconstrained << " contrib(unconstrained)=" << contrib_unconstrained << endl;
-//cout << "\t  xCS=" << xCS << " pT2=" << t << " pT2=" << pow2(childNow->clusterIn.pT()) << " m2=" << virtuality << endl;
+
+//childNow->clusterIn.list();
+//cout << scientific << setprecision(8) << "current denominator " << denominator_unconstrained << " " << dd << " " << denominator << "\t\t prob=" << childNow->clusterProb* childNow->clusterIn.pT()* childNow->clusterIn.pT() << " num=" << childNow->MECnum << endl;
+//if (hardStartScale(childNow->state) < childNow->clusterIn.pT() ) cout << "do not include since " << hardStartScale(childNow->state) << " < " << childNow->clusterIn.pT() << endl;
 
     }
 
-    if (denominator != 0.0) goodSisters[i]->MECden = denominator;
+    if (denominator != 0.0) { /*cout << __LINE__ << " set den=" << denominator << endl;*/ goodSisters[i]->MECden = denominator;}
     goodSisters[i]->MECcontrib = contrib;
 
     if (denominator == 0. && contrib == 0.) {
-      if (denominator_unconstrained != 0.0)
-        goodSisters[i]->MECden = denominator_unconstrained;
+      if (denominator_unconstrained != 0.0) { /*cout << __LINE__ << " set den=" << denominator_unconstrained << endl;*/ 
+        goodSisters[i]->MECden = denominator_unconstrained;}
       goodSisters[i]->MECcontrib = contrib_unconstrained;
     }
 
     if (!foundOrdered) goodSisters[i]->foundOrderedChildren = false;
 
-//cout << "\tDone sister " << i << " of " << goodSisters.size() << " MECnum=" << sisterNow->MECnum << " MECden=" << sisterNow->MECden << " MECcontrib=" << sisterNow->MECcontrib << endl;
-
   }
 
   if (mother) mother->setProbabilities();
+
+//cout << MECnum << " " << MECden << endl; 
 
   return;
 
@@ -7058,9 +6926,6 @@ void MyHistory::setEffectiveScales() {
   for (int i = 0;i < int(goodSisters.size());++i) {
 
     MyHistory* sisterNow = goodSisters[i];
-
-//cout << scientific << setprecision(8);
-//cout << "\tBegin sister " << i << " of " << goodSisters.size() << endl;
 
     double alphasOftEff_num(0.), alphasOftEff_den(0.), tmin(1e15), tmax(-1.0);
 
@@ -7147,8 +7012,6 @@ void MyHistory::setEffectiveScales() {
 
       if ( sisterNow->state[rad].id() == 21) prob *= 4.;
 
-//cout << "\t  Child " << j << " of " << sisterNow->goodChildren.size() << ": " << childNow->clusterIn.name() << " pT=" << sqrt(t) << endl;
-
       // Include alphaS at effective scale of previous order.
       double alphasOftEffPrev(1.0);
       double tEffPrev(pow2(childNow->scaleEffective));
@@ -7173,8 +7036,6 @@ void MyHistory::setEffectiveScales() {
     double headroom = 1.;
     bool failed = false;
 
-//cout << sqrt(tmin) << " " << sqrt(tmax) << " " << headroom << endl;
-
     double alphasOftEffRatio =
       pow(alphasOftEff_num/alphasOftEff_den,1.0/sisterNow->generation);
     while ( tmin/headroom < tmax*headroom
@@ -7192,13 +7053,8 @@ void MyHistory::setEffectiveScales() {
     double teff = (failed) ? 1. : as.solveForZ( tmin/headroom, tmax*headroom,
       alphasOftEffRatio);
 
-    // Set the effective scale of all children.
-    //for (int j = 0;j < int(sisterNow->goodChildren.size());++j)
-      //sisterNow->children[j]->scaleEffective = teff;
     // Set the effective scale for currect sister.
     sisterNow->scaleEffective = sqrt(teff);
-
-//cout << "\tEnd sister " << i << " of " << goodSisters.size() << " tEff=" << sqrt(teff) << endl;
 
   }
 
@@ -7233,6 +7089,44 @@ double MyHistory::getShowerPluginScale(const Event& event, int rad, int emt,
 
   return ( (stateVars.size() > 0 && stateVars.find(key) != stateVars.end())
            ? stateVars[key] : -1.0 );
+
+}
+
+//--------------------------------------------------------------------------
+
+// Function to retrieve type of splitting from external showers.
+
+pair<int,double> MyHistory::getCoupling(const Event& event, int rad, int emt,
+  int rec, string name) {
+
+  // Done if no shower plugin is used.
+  if ( !mergingHooksPtr->useShowerPlugin() ) return make_pair(-1,-1.0);
+
+  // Retrieve state variables.
+  map<string,double> stateVars;
+  bool hasPartonLevel(showers && showers->timesPtr && showers->spacePtr),
+       hasShowers(fsr && isr);
+  if (hasPartonLevel) {
+    bool isFSR = showers->timesPtr->isTimelike(event, rad, emt, rec, "");
+    if (isFSR) stateVars = showers->timesPtr->getStateVariables(event, rad, emt, rec, name);
+    else       stateVars = showers->spacePtr->getStateVariables(event, rad, emt, rec, name);
+  } else if (hasShowers) {
+    bool isFSR = fsr->isTimelike(event, rad, emt, rec, "");
+    if (isFSR) stateVars = fsr->getStateVariables(event, rad, emt, rec, name);
+    else       stateVars = isr->getStateVariables(event, rad, emt, rec, name);
+  }
+
+  // Get coupling type (identifier of interaction), and get coupling value for
+  // the current splitting, i.e. 1 / [4\pi] * g^2 {splitting variables}
+  int type     = ( (stateVars.size() > 0
+                 && stateVars.find("couplingType") != stateVars.end())
+               ?  stateVars["couplingType"] : -1);
+  double value = ( (stateVars.size() > 0
+                 && stateVars.find("couplingValue") != stateVars.end())
+               ?  stateVars["couplingValue"] : -1.0);
+
+  // Done.
+  return make_pair(type,value);
 
 }
 

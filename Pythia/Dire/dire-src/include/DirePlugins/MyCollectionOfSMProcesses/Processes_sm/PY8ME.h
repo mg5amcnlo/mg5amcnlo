@@ -78,6 +78,8 @@ class PY8ME
         -1, vector<int> permutation = vector<int> ()) = 0;
     virtual int getColorIDForConfig(vector<int> color_config, int
         specify_proc_ID = -1, vector<int> permutation = vector<int> ()) = 0;
+    //virtual int getColorFlowRelativeNCPower(int color_flow_ID, int
+    //    specify_proc_ID = -1) = 0;
 
     // Access previously computed results
     virtual vector < vec_double > getAllResults(int specify_proc_ID = -1) = 0; 
@@ -86,8 +88,8 @@ class PY8ME
 
     vector< int > invert_mapping(vector< int > mapping) {
       vector< int > inverted_mapping;
-      for (int i = 0; i < mapping.size(); i++ ) {
-        for (int j = 0; j < mapping.size(); j++ ) {
+      for (int i = 0; i < int(mapping.size()); i++ ) {
+        for (int j = 0; j < int(mapping.size()); j++ ) {
           if (mapping[j]==i) {
             inverted_mapping.push_back(j);
             break;
@@ -96,6 +98,10 @@ class PY8ME
       }
       return inverted_mapping;
     }
+
+    // Control whether to include the symmetry factors or not
+    //virtual void set_include_symmetry_factors(bool OnOff) = 0; 
+    //virtual bool get_include_symmetry_factors() = 0; 
 
 }; 
 

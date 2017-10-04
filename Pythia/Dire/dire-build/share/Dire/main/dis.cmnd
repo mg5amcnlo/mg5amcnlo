@@ -11,8 +11,8 @@ Main:numberOfEvents       = 10000
 PDF:lepton                = off
 
 # Set reference value of alphaS(Mz).
-SpaceShower:alphaSvalue   = 0.118
-TimeShower:alphaSvalue    = 0.118
+SpaceShower:alphaSvalue   = 0.1201
+TimeShower:alphaSvalue    = 0.1201
 
 # Set hard process.
 WeakBosonExchange:ff2ff(t:gmZ) = on
@@ -20,13 +20,8 @@ Beams:idA                 = -11
 Beams:idB                 = 2212
 Beams:frameType           = 2
 Beams:eA                  = 27.5
-Beams:eB                  = 10
-PhaseSpace:mHatMin        = 5
-PhaseSpace:pTHatMin       = 5
-
-# Set shower cut-off.
-SpaceShower:pTmin         = 1.732
-TimeShower:pTmin          = 1.732
+Beams:eB                  = 920
+PhaseSpace:Q2min          = 1000
 
 # Use masses of PDF sets also for shower evolution.
 # Note: Only correctly handled when using external PDF sets from LHAPDF

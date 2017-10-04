@@ -45,15 +45,18 @@ public:
     int chgTypeIn = 0, int weakTypeIn = 0,  int MEtypeIn = 0,
     bool normalRecoilIn = true, int weakPolIn = 0,
     vector<int> iSpectatorIn = vector<int>(),
-    vector<double> massIn = vector<double>() ) :
+    vector<double> massIn = vector<double>(),
+    vector<int> allowedIn = vector<int>() ) :
     system(systemIn), side(sideIn), iRadiator(iRadiatorIn),
     iRecoiler(iRecoilerIn), pTmax(pTmaxIn), colType(colTypeIn),
     chgType(chgTypeIn), weakType(weakTypeIn), MEtype(MEtypeIn),
     normalRecoil(normalRecoilIn), weakPol(weakPolIn), nBranch(0),
-    pT2Old(0.), zOld(0.5), mass(massIn), iSpectator(iSpectatorIn) { 
+    pT2Old(0.), zOld(0.5), mass(massIn), iSpectator(iSpectatorIn),
+    allowedEmissions(allowedIn) { 
     idDaughter = idMother = idSister = iFinPol = 0;
     x1  = x2 = m2Dip = pT2 = z = xMo = Q2 = mSister = m2Sister = pT2corr
         = pT2Old = zOld = asymPol = sa1 = xa = pT2start = pT2stop = 0.;
+    mRad = m2Rad = mRec = m2Rec = mDip = 0.;
     phi = phia1 = -1.;
   }
 
@@ -68,8 +71,11 @@ public:
       m2Dip(dip.m2Dip), pT2(dip.pT2), z(dip.z), xMo(dip.xMo), Q2(dip.Q2),
       mSister(dip.mSister), m2Sister(dip.m2Sister), pT2corr(dip.pT2corr),
       pT2Old(dip.pT2Old), zOld(dip.zOld), asymPol(dip.asymPol), phi(dip.phi),
-      pT2start(dip.pT2start), pT2stop(dip.pT2stop), sa1(dip.sa1), xa(dip.xa),
-      phia1(dip.phia1), mass(dip.mass), iSpectator(dip.iSpectator) {}
+      pT2start(dip.pT2start), pT2stop(dip.pT2stop), 
+      mRad(dip.mRad), m2Rad(dip.m2Rad), mRec(dip.mRec), m2Rec(dip.m2Rec),
+      mDip(dip.mDip), sa1(dip.sa1), xa(dip.xa),
+      phia1(dip.phia1), mass(dip.mass), iSpectator(dip.iSpectator),
+      allowedEmissions(dip.allowedEmissions) {}
 
   // Store values for trial emission.
   void store( int idDaughterIn, int idMotherIn, int idSisterIn,
@@ -81,6 +87,7 @@ public:
     idSister = idSisterIn; x1 = x1In; x2 = x2In; m2Dip = m2DipIn;
     pT2 = pT2In; z = zIn; sa1 = sa1In; xa = xaIn; xMo = xMoIn; Q2 = Q2In;
     mSister = mSisterIn; m2Sister = m2SisterIn; pT2corr = pT2corrIn;
+    mRad = m2Rad = mRec = m2Rec = mDip = 0.;
     phi = phiIn; phia1 = phia1In; }
  
   // Basic properties related to evolution and matrix element corrections.
@@ -93,7 +100,8 @@ public:
   // Properties specific to current trial emission.
   int    nBranch, idDaughter, idMother, idSister, iFinPol;
   double x1, x2, m2Dip, pT2, z, xMo, Q2, mSister, m2Sister, pT2corr,
-         pT2Old, zOld, asymPol, phi, pT2start, pT2stop;
+         pT2Old, zOld, asymPol, phi, pT2start, pT2stop,
+         mRad, m2Rad, mRec, m2Rec, mDip;
 
   // Properties of 1->3 splitting.
   double sa1, xa, phia1;
@@ -103,6 +111,24 @@ public:
 
   // Extended list of recoilers.
   vector<int> iSpectator;
+  // List of allowed emissions (to avoid double-counting, since one
+  // particle can be part of many different dipoles.
+  void appendAllowedEmt( int id) {
+    if ( find(allowedEmissions.begin(), allowedEmissions.end(), id)
+        == allowedEmissions.end() ) { allowedEmissions.push_back(id);}
+  }
+  void clearAllowedEmt() { allowedEmissions.resize(0); }
+  vector<int> allowedEmissions;
+  bool canEmit() { return int(allowedEmissions.size() > 0); }
+
+  void init(const Event& state) {
+    mRad   = state[iRadiator].m();
+    mRec   = state[iRecoiler].m();
+    mDip   = sqrt( abs(2. * state[iRadiator].p() * state[iRecoiler].p()));
+    m2Rad  = pow2(mRad);
+    m2Rec  = pow2(mRec);
+    m2Dip  = pow2(mDip);
+  }
 
 } ;
  
@@ -129,9 +155,10 @@ public:
     mergingHooksPtr   = pythiaPtr->mergingHooksPtr;
     splittingsPtr     = 0;
     weights           = 0;
+    debugPtr          = 0;
     printBanner       = true;
     nWeightsSave      = 0;
-    dipEnd.reserve(1000000);
+    //dipEnd.reserve(1000000);
 
     // Other variables
     nMPI = 0;
@@ -154,7 +181,8 @@ public:
   void reinitPtr(Info* infoPtrIn, Settings* settingsPtrIn,
        ParticleData* particleDataPtrIn, Rndm* rndmPtrIn,
        PartonSystems* partonSystemsPtrIn, UserHooks* userHooksPtrIn,
-       MergingHooks* mergingHooksPtrIn, SplittingLibrary* splittingsPtrIn) {
+       MergingHooks* mergingHooksPtrIn, SplittingLibrary* splittingsPtrIn,
+       DebugInfo* debugPtrIn) {
        infoPtr = infoPtrIn;
        settingsPtr = settingsPtrIn;
        particleDataPtr = particleDataPtrIn;
@@ -163,7 +191,10 @@ public:
        userHooksPtr = userHooksPtrIn;
        mergingHooksPtr = mergingHooksPtrIn;
        splittingsPtr = splittingsPtrIn;
+       debugPtr = debugPtrIn;
   }
+
+  void initVariations();
 
   void setWeightContainerPtr(WeightContainer* weightsIn) { weights = weightsIn;}
 
@@ -175,6 +206,7 @@ public:
   virtual double enhancePTmax() const {return pTmaxFudge;}
 
   // Prepare system for evolution; identify ME.
+  void resetWeights();
   virtual void prepare( int iSys, Event& event, bool limitPTmaxIn = true);
 
   // Update dipole list after each FSR emission.
@@ -287,6 +319,15 @@ public:
 
   virtual vector<int> getRecoilers( const Event& state, int iRad, int iEmt, string name);
 
+  //virtual double getCoupling( const Event& state, double mu2Ren, int iRad,
+  //  int iEmt, int iRec, string name) {
+  virtual double getCoupling( const Event&, double mu2Ren, int, int, int,
+    string name) { 
+    if (splits.find(name) != splits.end()) 
+      return splits[name]->coupling(mu2Ren);
+    return 1.;
+  }
+
   // Return Jacobian for initial-initial phase space factorisation.
   double jacobian_II(double z, double pT2, double m2dip, double = 0.,
     double = 0., double = 0., double = 0., double = 0.) {
@@ -316,6 +357,9 @@ public:
 
   Event makeHardEvent( int iSys, const Event& state, bool isProcess = false );
   //bool hasME(const Event& event);
+
+  // Check that particle has sensible momentum.
+  bool validMomentum( const Vec4& p, int id, int status);
 
   // Check colour/flavour correctness of state.
   bool validEvent( const Event& state, bool isProcess = false );
@@ -366,7 +410,7 @@ private:
          TINYPDF, TINYKERNELPDF, TINYPT2, HEAVYPT2EVOL, HEAVYXEVOL, 
          EXTRASPACEQ, LAMBDA3MARGIN, PT2MINWARN, LEPTONXMIN, LEPTONXMAX, 
          LEPTONPT2MIN, LEPTONFUDGE, HEADROOMQ2Q, HEADROOMQ2G, 
-         HEADROOMG2G, HEADROOMG2Q, TINYMASS;
+         HEADROOMG2G, HEADROOMG2Q, TINYMASS, PT2_INCREASE_OVERESTIMATE;
   static const double G2QQPDFPOW1, G2QQPDFPOW2; 
 
   // Initialization data, normally only set once.
@@ -386,6 +430,30 @@ private:
   bool usePDFalphas, usePDFmasses, useSummedPDF;
   bool useGlobalMapIF, forceMassiveMap;
 
+  map<int,double> pT2cutSave;
+  double pT2cut(int id) {
+    if (pT2cutSave.find(id) != pT2cutSave.end()) return pT2cutSave[id];
+    // Else return maximal value.
+    double ret = 0.;
+    for ( map<int,double>::iterator it = pT2cutSave.begin();
+      it != pT2cutSave.end(); ++it ) ret = max(ret, it->second);
+    return ret;
+  }
+  double pT2cutMax(DireSpaceEnd* dip) {
+    double ret = 0.;
+    for (int i=0; i < int(dip->allowedEmissions.size()); ++i)
+      ret = max( ret, pT2cut(dip->allowedEmissions[i]));
+    return ret;
+  }
+  double pT2cutMin(DireSpaceEnd* dip) {
+    double ret = 1e15;
+    for (int i=0; i < int(dip->allowedEmissions.size()); ++i)
+      ret = min( ret, pT2cut(dip->allowedEmissions[i]));
+    return ret;
+  }
+
+  bool doDecaysAsShower;
+
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;
 
@@ -403,14 +471,34 @@ private:
   // Pointers to the current and hardest (so far) dipole ends.
   int iDipNow, iSysNow;
   DireSpaceEnd* dipEndNow;
+  SplitInfo splitSel;
   int iDipSel;
   DireSpaceEnd* dipEndSel;
+  map<string,double> kernelSel, kernelNow;
+  double auxSel, overSel, boostSel, auxNow, overNow, boostNow;
 
   void setupQCDdip( int iSys, int side, int colTag, int colSign,
     const Event& event, int MEtype, bool limitPTmaxIn);
 
+  void getGenDip( int iSys, int side, const Event& event,
+    bool limitPTmaxIn, vector<DireSpaceEnd>& dipEnds );
+
   void getQCDdip( int iRad, int colTag, int colSign,
     const Event& event, vector<DireSpaceEnd>& dipEnds);
+
+  // Function to set up and append a new dipole.
+  bool appendDipole( const Event& state, int sys = 0, int side = 0,
+    int iRad = 0, int iRecNow = 0, double pTmax = 0., int colType = 0,
+    int chgType = 0, int weakType = 0, int MEtype = 0, bool normalRecoil = true,
+    int weakPolIn = 0, vector<int> iSpectatorIn = vector<int>(),
+    vector<double> massIn = vector<double>() );
+
+  vector<int> sharedColor(const Particle& rad, const Particle& rec);
+
+  // Function to set up and append a new dipole.
+  void updateDipoles(const Event& state);
+  bool updateAllowedEmissions( const Event& state, DireSpaceEnd* dip);
+  bool appendAllowedEmissions( const Event& state, DireSpaceEnd* dip);
 
   virtual int system() const { return iSysSel;}
  
@@ -431,7 +519,7 @@ private:
   double evalpdfstep(int idRad, double pT2, double m2cp = -1.,
     double m2bp = -1.) {
 
-    return 1.;
+    return 0.5;
 
     double ret = 0.1;
     if (m2cp < 0.) m2cp = particleDataPtr->m0(4);
@@ -440,6 +528,11 @@ private:
     if ( abs(idRad) == 4 && pT2 < 1.2*m2cp && pT2 > m2cp) ret = 1.0;
     if ( abs(idRad) == 5 && pT2 < 1.2*m2bp && pT2 > m2bp) ret = 1.0;
     return ret;
+  }
+
+  double tinypdf( double x) {
+    double xref = 0.01;
+    return TINYPDF*log(1-x)/log(1-xref);
   }
 
   // Evolve a QCD dipole end near heavy quark threshold region.
@@ -464,7 +557,7 @@ private:
   void addNewOverestimates( multimap<double,string>, double&);
 
   // Function to attach the correct alphaS weights to the kernels.
-  void alphasReweight(double pT2, int iSys, double& weight,
+  void alphasReweight(double t, double talpha, int iSys, double& weight,
     double& fullWeight, double& overWeight, double renormMultFacNow);
 
   // Function to evaluate the accept-probability, including picking of z.
@@ -472,16 +565,20 @@ private:
     double, double, int, string, int&, int&, double&, double&, 
     map<string,double>&, double&);
 
-  //double generateMEC ( const Event& state, const int type, Splitting* split);
-  pair<double,double> generateMEC ( const Event& state, const int type, Splitting* split);
+  bool applyMEC ( const Event& state, SplitInfo* splitInfo);
 
   // Get particle masses.
   double getMass(int id, int strategy, double mass = 0.) {
-    BeamParticle& beam = (abs(beamAPtr->id()) == 2212) ? *beamAPtr : *beamBPtr;
+    //BeamParticle& beam = (abs(beamAPtr->id()) == 2212) ? *beamAPtr : *beamBPtr;
+    BeamParticle& beam = ( particleDataPtr->isHadron(beamAPtr->id()) )
+                       ? *beamAPtr : *beamBPtr;
+    bool usePDFmass = usePDFmasses
+      && (toLower(settingsPtr->word("PDF:pSet")).find("lhapdf")
+         != string::npos);
     double mRet = 0.;
     if (strategy == 1) mRet = particleDataPtr->m0(id);
-    if (strategy == 2 &&  usePDFmasses) mRet = beam.mQuarkPDF(id);
-    if (strategy == 2 && !usePDFmasses) mRet = particleDataPtr->m0(id);
+    if (strategy == 2 &&  usePDFmass) mRet = beam.mQuarkPDF(id);
+    if (strategy == 2 && !usePDFmass) mRet = particleDataPtr->m0(id);
     if (strategy == 3) mRet = mass;
     if (mRet < TINYMASS) mRet = 0.;
     return pow2(max(0.,mRet));
@@ -528,6 +625,7 @@ private:
 public:
 
   WeightContainer* weights;
+  DebugInfo* debugPtr;
 
 private:
 
@@ -535,6 +633,12 @@ private:
 
   // List of splitting kernels.
   map<string, Splitting* > splits;
+  map<string, double > overhead;
+  void scaleOverheadFactor(string name, double scale)
+    { overhead[name] *= scale; return; }
+  void resetOverheadFactors()
+    { for ( map<string,double>::iterator it = overhead.begin();
+      it != overhead.end(); ++it ) it->second = 1.0; return; }
 
 };
  
