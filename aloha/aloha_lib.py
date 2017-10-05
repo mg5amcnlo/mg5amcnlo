@@ -133,6 +133,7 @@ class Computation(dict):
                  'theta_function', 'exp']
     def add_function_expression(self, fct_tag, *args):
 
+        
         if not (fct_tag.startswith('cmath.') or fct_tag in self.known_fct or
                                        (fct_tag, len(args)) in self.unknow_fct):
             self.unknow_fct.append( (fct_tag, len(args)) )
@@ -155,6 +156,7 @@ class Computation(dict):
                 argument.append(new)
             else:
                 argument.append(expression)
+
         for arg in argument:
             val = re.findall(r'''\bFCT(\d*)\b''', str(arg))
             for v in val:
@@ -185,6 +187,7 @@ class Computation(dict):
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))
+            
             return 'FCT(%s)' % id
         
 KERNEL = Computation()
@@ -472,6 +475,13 @@ class AddVariable(list):
         text += ' + '.join([str(item) for item in self])
         text += ' )'
         return text
+    
+    def __repr__(self):
+        text = ''
+        if self.prefactor != 1:
+            text += str(self.prefactor) + ' * '
+        text += super(AddVariable,self).__repr__()
+        return text        
     
     def count_term(self):
         # Count the number of appearance of each variable and find the most 

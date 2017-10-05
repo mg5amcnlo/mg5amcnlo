@@ -2019,10 +2019,11 @@ RESTART = %(mint_mode)s
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
         if fixed_order:
-            cross, error = sum_html.make_all_html_results(self, jobs=jobs_to_collect)
+            cross, error = self.make_make_all_html_results(folder_names=['%s*' % run_mode], 
+                                                           jobs=jobs_to_collect)
         else:
             name_suffix={'born' :'B' , 'all':'F'}
-            cross, error = sum_html.make_all_html_results(self, folder_names=['G%s*' % name_suffix[run_mode]])
+            cross, error = self.make_make_all_html_results(folder_names=['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 # Combine grids from split fixed order jobs

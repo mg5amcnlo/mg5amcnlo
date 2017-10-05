@@ -687,6 +687,7 @@ def collect_result(cmd, folder_names, jobs=None):
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
+
     
     for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
         Pdir = Pdir.strip()
@@ -714,6 +715,7 @@ def collect_result(cmd, folder_names, jobs=None):
                         else:
                             dir = folder.replace('*', '_G' + name)
                         P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+
             if jobs:
                 for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
                     P_comb.add_results(os.path.basename(job['dirname']),\
@@ -723,6 +725,9 @@ def collect_result(cmd, folder_names, jobs=None):
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
+
+
+
     return all
 
 
@@ -735,7 +740,6 @@ def make_all_html_results(cmd, folder_names = [], jobs=[]):
     unit = cmd.results.unit
     P_text = ""      
     Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs)
-            
     
     for P_comb in Presults:
         P_text += P_comb.get_html(run, unit, cmd.me_dir) 
@@ -743,15 +747,15 @@ def make_all_html_results(cmd, folder_names = [], jobs=[]):
         if cmd.proc_characteristics['ninitial'] == 1:
             P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
                                            '%s_results.dat' % run))
-
     
     Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
     
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
     fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)         
-    
-    return Presults.xsec, Presults.xerru   
+    fsock.write('%s </dl></body>' % P_text)
+
+    return Presults.xsec, Presults.xerru
+
             
 

@@ -50,10 +50,9 @@ pjoin = os.path.join
 logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
-                
 try:
     import madgraph
-except ImportError:    
+except ImportError:
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.banner as banner_mod
@@ -67,7 +66,9 @@ except ImportError:
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.lhe_parser as lhe_parser
     import internal.FO_analyse_card as FO_analyse_card 
+    import internal.sum_html as sum_html
     from internal import InvalidCmd, MadGraph5Error
+    
     MADEVENT=True    
 else:
     # import from madgraph directory
@@ -82,6 +83,7 @@ else:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
+    import madgraph.madevent.sum_html as sum_html
 #    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
@@ -674,6 +676,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.ninitial = self.proc_characteristics['ninitial']
 
+    def make_make_all_html_results(self, folder_names = [], jobs=[]):
+        return sum_html.make_all_html_results(self, folder_names, jobs)
+
 
     ############################################################################
     def split_arg(self, line, error=False):
@@ -1172,7 +1177,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 uncertainties=[], 
                 ratio_correlations=True,
                 arg_string='Automatic plotting from MG5aMC', 
-                jet_samples_to_keep=[],
+                jet_samples_to_keep=None,
                 use_band=[],
                 auto_open=False)
         return True
@@ -3157,7 +3162,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except Exception:
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
-            if mass and width/mass < 1e-12:
+            if mass and abs(width/mass) < 1e-12:
                 logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
@@ -3706,6 +3711,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.mkdir(pjoin(libdir, 'PDFsets'))
         self.make_opts_var['lhapdf'] = self.options['lhapdf']
         self.make_opts_var['lhapdfversion'] = lhapdf_version[0]
+        self.make_opts_var['lhapdfsubversion'] = lhapdf_version.split('.',2)[1]
         self.make_opts_var['lhapdf_config'] = self.options['lhapdf']
 
 
@@ -3854,7 +3860,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # lhapdf-config
             getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
-            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            if lhapdf_version.startswith('6.1'): 
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            else:
+                #for python 6.2.1, import lhapdf should be working to download pdf
+                lhapdf = misc.import_python_lhapdf(lhapdf_config)
+                if lhapdf:
+                    if 'PYTHONPATH' in os.environ:
+                        os.environ['PYTHONPATH']+= ':' + os.path.dirname(lhapdf.__file__)
+                    else:
+                        os.environ['PYTHONPATH'] = ':'.join(sys.path) + ':' + os.path.dirname(lhapdf.__file__)
+                else:
+                    logger.warning('lhapdf 6.2.1 requires python integration in order to download pdf set. Trying anyway')
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -3944,7 +3962,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
-
+        if self.lhapdf_version.startswith('6.2'):
+            logger.warning('Support of LHAPDF 6.2.x is still in beta phase. Consider to use LHAPDF 6.1.x in case of problem.')
         return self.lhapdf_version
 
 
@@ -5332,6 +5351,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        if not param_card:
+            return False
         logger.info('Update the dependent parameter of the param_card.dat')
         modify = True
         class TimeOutError(Exception): 

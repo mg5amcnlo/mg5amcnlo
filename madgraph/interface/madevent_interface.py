@@ -3294,7 +3294,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
-            cross, error = sum_html.make_all_html_results(self)
+            cross, error = self.make_make_all_html_results()
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)  
             self.exec_cmd("print_results %s" % self.run_name,
@@ -3444,7 +3444,7 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             self.refine_mode = "new"
             
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 
@@ -4677,13 +4677,13 @@ tar -czf split_$1.tar.gz split_$1
             # From the log file
             if all(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
                         PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
-                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
+                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))      
+                else:
+                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1. YYYYY')
 
             if not any(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 self.results.add_detail('cross_pythia', PY8_extracted_information['sigma_m'])
@@ -4710,12 +4710,13 @@ tar -czf split_$1.tar.gz split_$1
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
             if os.path.isfile(djr_output) and len(PY8_extracted_information['cross_sections'])==0:
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                    PY8_extracted_information['cross_sections'] = {} 
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
+                else:
+                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1.XXXXX')
+                    PY8_extracted_information['cross_sections'] = {} 
+                    
             cross_sections = PY8_extracted_information['cross_sections']
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -5545,7 +5546,8 @@ tar -czf split_$1.tar.gz split_$1
         
         if self.configured >= time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
             #just ensure that cluster specific are correctly handled
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             return
         else:
             self.configured = time_mod
@@ -6429,7 +6431,7 @@ class GridPackCmd(MadEventCmd):
         combine_runs.CombineRuns(self.me_dir)
         
         #update html output
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
         
