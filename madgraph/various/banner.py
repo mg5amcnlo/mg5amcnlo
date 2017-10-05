@@ -2362,6 +2362,7 @@ class RunCard(ConfigFile):
                 # Special treatment for strings containing a list of
                 # strings. Convert it to a list of strings
                 if isinstance(value, list):
+                    print key,value
                     # in case of a list, add the length of the list as 0th
                     # element in fortran. Only in case of integer or float
                     # list (not for bool nor string)
@@ -2645,6 +2646,7 @@ class RunCardLO(RunCard):
         self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
         self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
         self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
@@ -2654,6 +2656,7 @@ class RunCardLO(RunCard):
         self.add_param('etamin4pdg',[0.], hidden=True, system=True) # store pt min
         self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
         self.add_param('mxxmin4pdg',[-1.], hidden=True, system=True)
+        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
         # Not implemetented right now (double particle cut)
         #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
         # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
@@ -2781,6 +2784,7 @@ class RunCardLO(RunCard):
             self['Emax4pdg'] = []
             self['etamax4pdg'] =[]
             self['mxxmin4pdg'] =[]
+            self['mxxpart_antipart']  = []
             for pdg in self['pdg_cut']:
                 for var in ['pt','e','eta', 'Mxx']:
                     for minmax in ['min', 'max']:
@@ -2790,6 +2794,12 @@ class RunCardLO(RunCard):
                         old_var = '%s_%s_pdg' % (var, minmax)
                         default = 0. if minmax=='min' else -1.
                         self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                #special for mxx_part_antipart
+                old_var = 'mxx_only_part_antipart'
+                new_var = 'mxxpart_antipart'
+                default = self[old_var]['default']
+                self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+
         else:
             self['pdg_cut'] = [0]
             self['ptmin4pdg'] = [0.]
@@ -2799,6 +2809,7 @@ class RunCardLO(RunCard):
             self['Emax4pdg'] = [-1.]
             self['etamax4pdg'] =[-1.]
             self['mxxmin4pdg'] =[0.] 
+            self['mxx_part_antipart'] = [False]
             
                     
            
@@ -3437,12 +3448,14 @@ class RunCardNLO(RunCard):
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         #hidden parameter that are transfer to the fortran code
         self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
         self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
         self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
+        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
         
     def check_validity(self):
         """check the validity of the various input"""
@@ -3610,6 +3623,7 @@ class RunCardNLO(RunCard):
             self['ptmin4pdg'] = []
             self['ptmax4pdg'] = []
             self['mxxmin4pdg'] = []
+            self['mxxpart_antipart']  = []
             for pdg in self['pdg_cut']:
                 for var in ['pt','mxx']:
                     for minmax in ['min', 'max']:
@@ -3619,12 +3633,17 @@ class RunCardNLO(RunCard):
                         old_var = '%s_%s_pdg' % (var, minmax)
                         default = 0. if minmax=='min' else -1.
                         self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                #special for mxx_part_antipart
+                old_var = 'mxx_only_part_antipart'
+                new_var = 'mxxpart_antipart'
+                default = self[old_var]['default']
+                self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
         else:
             self['pdg_cut'] = [0]
             self['ptmin4pdg'] = [0.]
             self['ptmax4pdg'] = [-1.]
             self['mxxmin4pdg'] = [0.]
-
+            self['mxx_part_antipart'] = [False]
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

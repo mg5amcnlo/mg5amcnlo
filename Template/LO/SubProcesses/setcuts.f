@@ -413,13 +413,21 @@ c
                if(.not.cut_decays.and.from_decay(i))then
                   cycle
                endif
+               if (abs(idup(i, 1, iproc)).ne.pdg_cut(k))then
+                  cycle
+               endif
                do j = i+1,nexternal
                   if(.not.cut_decays.and.from_decay(j))then
                      cycle
                   endif
-                  if (abs(idup(i, 1, iproc)).eq.pdg_cut(k).and.
-     &                 abs(idup(j, 1, iproc)).eq.pdg_cut(k))then
+                  if (mxxpart_antipart(k))then
+                     if  (idup(j, 1, iproc).eq.-1*idup(i, 1, iproc))then
                         s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
+                  else
+                     if  (abs(idup(j, 1, iproc)).eq.pdg_cut(k))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
                   endif
                enddo
             enddo

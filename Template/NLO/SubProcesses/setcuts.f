@@ -124,8 +124,15 @@ c                 fully ensure that this is not a jet/lepton/photon
                   !add the invariant mass cut
                   if(mxxmin4pdg(j).ne.0d0)then
                      do k=i+1, nexternal-1
-                        if (abs(idup(k, 1)).eq.pdg_cut(j))then
-                           mxxmin(i,k) = mxxmin4pdg(j)
+                        if (mxxpart_antipart(j))then
+                           if (idup(k, 1).eq.-1*idup(i,1))then
+                              mxxmin(i,k) = mxxmin4pdg(j)
+                           endif
+
+                        else
+                           if (abs(idup(k, 1)).eq.pdg_cut(j))then
+                              mxxmin(i,k) = mxxmin4pdg(j)
+                           endif
                         endif
                      enddo
                   endif
