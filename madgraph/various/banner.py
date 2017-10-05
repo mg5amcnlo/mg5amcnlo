@@ -2762,8 +2762,9 @@ class RunCardLO(RunCard):
         pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys() + 
                          self['e_min_pdg'].keys() +self['e_max_pdg'].keys() +
                          self['eta_min_pdg'].keys() +self['eta_max_pdg'].keys()+
-                         self['mxx_min_pdg'].keys())
+                         self['mxx_min_pdg'].keys() + self['mxx_only_part_antipart'].keys())
         pdg_to_cut.discard('__type__')
+        pdg_to_cut.discard('default')
         if len(pdg_to_cut)>25:
             raise Exception, "Maximum 25 different pdgs are allowed for pdg specific cut"
         
@@ -3605,8 +3606,9 @@ class RunCardNLO(RunCard):
         
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys()+
-                         self['mxx_min_pdg'].keys())
+                         self['mxx_min_pdg'].keys()+ self['mxx_only_part_antipart'].keys())
         pdg_to_cut.discard('__type__')
+        pdg_to_cut.discard('default')
         if len(pdg_to_cut)>25:
             raise Exception, "Maximum 25 different pdg are allowed for pdg specific cut"
         
