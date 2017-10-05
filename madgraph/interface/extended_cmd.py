@@ -1215,13 +1215,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
-        
+
         if hasattr(question_instance, 'special_check_answer_in_input_file'):
             out = question_instance.special_check_answer_in_input_file(line, default)
+            
             if out is not None:
                 return out
-        else:
-            misc.sprint('No special check')
+            
+        #else:
+        #    misc.sprint('No special check', type(question_instance))
         
             
         # No valid answer provides
@@ -2372,6 +2374,10 @@ class ControlSwitch(SmartQuestion):
         if key in self.switch:
             return line
         if key in [str(i+1) for i in range(len(self.to_control))]:
+            self.value='reask'
+            return line
+        if hasattr(self, 'ans_%s' % key.lower()):
+            self.value='reask'
             return line
 
         return None
@@ -2444,7 +2450,7 @@ class ControlSwitch(SmartQuestion):
             return out
         
         if '=' in line:
-            base, value = line.split('=')
+            base, value = line.split('=',1)
             # allow 1=OFF
             if base.isdigit() :
                 try:
@@ -2534,6 +2540,7 @@ class ControlSwitch(SmartQuestion):
             line= [l for l in line.split(';') if l][-1] 
         if line in self.quit_on:
             return True
+        self.create_question()
         return self.reask(True)
         
 

@@ -1807,7 +1807,7 @@ class Event(list):
             if part.status == 1:
                 old_momenta.append(FourMomentum(part))
                 new_masses.append(new_param_card.get_value('mass', abs(part.pid)))
-                if part.mass != new_masses[-1]:
+                if not misc.equal(part.mass, new_masses[-1], 4, zero_limit=10):
                     change_mass = True
         
         if not change_mass:

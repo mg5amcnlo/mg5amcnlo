@@ -1802,8 +1802,8 @@ c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
 c               vol = 1d0/(knt*itm)
-               sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
-     .              / dble(knt-1) / dble(knt)
+               sigma = DABS((sigma/vol/vol-non_zero*mean*mean*navg)  ! knt replaced by non_zero
+     .              / dble(knt-1) / dble(knt))                       ! DABS is to catch numerical error
             else
 
                sigma = (sigma/vol/vol - knt*mean*mean)

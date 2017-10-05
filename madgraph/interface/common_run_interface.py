@@ -892,6 +892,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
                                   self.ask, first_cmd=first_cmd)
+        
+        for c in cards:
+            if not os.path.isabs(c):
+                c = pjoin(self.me_dir, c) 
+            if not os.path.exists(c):
+                default = c.replace('dat', '_default.dat')
+                if os.path.exists(default):
+                    files.cp(default, c)
+            
+                
 
     @staticmethod
     def ask_edit_card_static(cards, mode='fixed', plot=True,
@@ -1217,7 +1227,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             PY8_plots_root_path = pjoin(self.me_dir,'HTML',
                                                self.run_name,'%s_PY8_plots'%tag)
-            
+        
         if 'ickkw' in self.run_card:
             if int(self.run_card['ickkw']) and mode == 'Pythia':
                 self.update_status('Create matching plots for Pythia', level='pythia')
@@ -3173,7 +3183,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except Exception:
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
-            if mass and width/mass < 1e-12:
+            if mass and abs(width/mass) < 1e-12:
                 logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
@@ -3871,7 +3881,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # lhapdf-config
             getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
-            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            if lhapdf_version.startswith('6.1'): 
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            else:
+                #for python 6.2.1, import lhapdf should be working to download pdf
+                lhapdf = misc.import_python_lhapdf(lhapdf_config)
+                if lhapdf:
+                    if 'PYTHONPATH' in os.environ:
+                        os.environ['PYTHONPATH']+= ':' + os.path.dirname(lhapdf.__file__)
+                    else:
+                        os.environ['PYTHONPATH'] = ':'.join(sys.path) + ':' + os.path.dirname(lhapdf.__file__)
+                else:
+                    logger.warning('lhapdf 6.2.1 requires python integration in order to download pdf set. Trying anyway')
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -5293,7 +5315,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.do_set('run_card store_rwgt_info True')
         
         # @LO if PY6 shower => event_norm on sum
-        if 'pythia_card.dat' in self.cards:
+        if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
             if self.run_card['event_norm'] != 'sum':
                 logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
                 self.do_set('run_card event_norm sum') 
@@ -5455,7 +5477,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """
         if not param_card:
             return False
-        
+
         logger.info('Update the dependent parameter of the param_card.dat')
         modify = True
         class TimeOutError(Exception): 
