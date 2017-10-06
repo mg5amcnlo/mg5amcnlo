@@ -2017,7 +2017,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
-        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             

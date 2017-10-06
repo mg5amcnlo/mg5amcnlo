@@ -601,12 +601,12 @@ class AskRun(cmd.ControlSwitch):
         if 'PY6' not in self.available_module:
             logger.info('pythia-pgs not available. Ignore commmand')
             return
-        
+
         if value is None:
             self.set_all_off()
             self.switch['shower'] = 'Pythia6'
         elif value == 'on':
-            return self.ans_pythia(None)
+            self.switch['shower'] = 'Pythia6'
         elif value == 'off':
             self.set_switch('shower', 'OFF')
         else:
@@ -4271,7 +4271,7 @@ Please install this tool with the following MG5_aMC command:
         else: 
             shell_exe = misc.which(shell)
             if not shell_exe:
-                self.InvalidCmd('No s hell could be found in your environment.\n'+
+                raise self.InvalidCmd('No s hell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
@@ -6134,11 +6134,11 @@ tar -czf split_$1.tar.gz split_$1
             cards.append('madspin_card.dat')
         if switch['reweight'] != 'OFF':
             cards.append('reweight_card.dat')
-        if switch['analysis'] in ['MADANALYSIS5']:
+        if switch['analysis'].upper() in ['MADANALYSIS5']:
             cards.append('madanalysis5_parton_card.dat')
-        if switch['analysis'] in ['MADANALYSIS5'] and not switch['shower']=='OFF':
+        if switch['analysis'].upper() in ['MADANALYSIS5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
-        if switch['analysis'] in ['MADANALYSIS4']:
+        if switch['analysis'].upper() in ['MADANALYSIS4']:
             cards.append('plot_card.dat')
 
         self.keep_cards(cards)
