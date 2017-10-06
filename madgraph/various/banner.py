@@ -57,7 +57,7 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
+                     'slha','initrwgt','mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard',
                      'ma5card_parton','ma5card_hadron','run_settings']
 
@@ -74,6 +74,8 @@ class Banner(dict):
             'mgdelphescard': 'MGDelphesCard',
             'mgdelphestrigger': 'MGDelphesTrigger',
             'mgshowercard': 'MGShowerCard' }
+    
+    forbid_cdata = ['initrwgt']
     
     def __init__(self, banner_path=None):
         """ """
@@ -387,7 +389,8 @@ class Banner(dict):
                 continue
             capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             start_data, stop_data = '', ''
-            if '<' in self[tag] or '@' in self[tag]:
+            if capitalized_tag not in self.forbid_cdata and \
+                                          ('<' in self[tag] or '@' in self[tag]):
                 start_data = '\n<![CDATA['
                 stop_data = ']]>\n'
             ff.write('<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
@@ -1980,6 +1983,9 @@ class PY8Card(ConfigFile):
                 line = line.replace('\n','')
                 raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
                                                                           line
+            if '!' in value:
+                value,_ = value.split('!',1)                                                             
+                                                                          
             # Read a subrun if detected:
             if param=='Main:subrun':
                 if read_subrun:
