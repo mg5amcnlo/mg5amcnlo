@@ -1931,11 +1931,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        force=False, starttime=starttime)
 
                 all_lhe = []
+                #check for the pyton2.6 bug with s
+                to_zip=True
+                if not os.path.exists(new_args[0]) and new_args[0].endswith('.gz') and\
+                    os.path.exists(new_args[0][:-3]):
+                    to_zip = False
                 devnull= open(os.devnull)
+                
                 for i in range(nb_file):
                     new_command = list(command) 
-                    new_command.append('%s_%s.lhe' % (new_args[0],i))
-                    all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    if to_zip:
+                        new_command.append('%s_%s.lhe' % (new_args[0],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    else:
+                        new_command.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                    
                     if '-from_cards' not in command:
                         new_command.append('-from_cards')
                     if i==0:
@@ -1952,6 +1963,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
+
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
