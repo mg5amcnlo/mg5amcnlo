@@ -657,6 +657,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.set_configuration()
         self.configure_run_mode(self.options['run_mode'])
 
+        # update the path to the PLUGIN directory of MG%
+        if MADEVENT and 'mg5_path' in self.options :
+            mg5dir = self.options['mg5_path']
+            if mg5dir not in sys.path:
+                sys.path.append(mg5dir)
+            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
+
         # Define self.proc_characteristics
         self.get_characteristics()
         
@@ -1825,6 +1833,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             multicore=False
             
+        # plugin option
+        plugin = False
+        if '--plugin=' in line:
+            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
+        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF']:
+            plugin=self.switch['reweight']
+            
+            
+            
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
@@ -1864,6 +1881,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not isinstance(self, cmd.CmdShell):
                 command.append('--web')
             command.append('reweight')
+            if plugin:
+                command.append('--plugin=%s' % plugin)
             
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
@@ -1991,7 +2010,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
+        rwgt_interface = reweight_interface.ReweightInterface 
+        if plugin:
+            rwgt_interface = misc.from_plugin_import(self.plugin_path, 'new_reweight', 
+                                        plugin, warning=False, 
+                                        info="Will use re-weighting from pluging %(plug)s")    
+        
+        reweight_cmd = rwgt_interface(args[0], mother=self)
         #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
@@ -2004,7 +2029,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
-        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             
@@ -3074,8 +3098,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
         if run_mode in [0, 2]:
-            self.cluster = cluster.MultiCore(
-                             **self.options)
+            self.cluster = cluster.MultiCore(**self.options)
             self.cluster.nb_core = nb_core
         #cluster_temp_path=self.options['cluster_temp_path'],
 
@@ -3085,44 +3108,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if cluster_name in cluster.from_name:
                 self.cluster = cluster.from_name[cluster_name](**opt)
             else:
-                if MADEVENT and ('mg5_path' not in self.options or not self.options['mg5_path']):
-                    if not self.plugin_path:
-                        raise self.InvalidCmd('%s not native cluster type and no PLUGIN directory available')
-                elif MADEVENT:
-                    mg5dir = self.options['mg5_path']
-                    if mg5dir not in sys.path:
-                        sys.path.append(mg5dir)
-                    newpath = pjoin(mg5dir, 'PLUGIN')
-                    if newpath not in self.plugin_path:
-                        self.plugin_path.append(newpath)
-                else:
-                    mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plugpath in self.plugin_path: 
-                    plugindirname = os.path.basename(plugpath)
-                    for plug in os.listdir(plugpath):
-                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):   
-                            try:
-                                __import__('%s.%s' % (plugindirname,plug))
-                            except Exception:
-                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it', plugindirname, plug)
-                                continue
-                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
-                            if not hasattr(plugin, 'new_cluster'):
-                                continue
-                            if not misc.is_plugin_supported(plugin):
-                                continue              
-                            if cluster_name in plugin.new_cluster:
-                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                                self.cluster = plugin.new_cluster[cluster_name](**opt)
-                                break
-                    else:
-                        continue
-                    break
+                cluster_class = misc.from_plugin_import(self.plugin_path, 
+                                            'new_cluster', cluster_name,
+                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                if cluster_class:
+                    self.cluster = cluster_class(**self.options)
                 else:
-                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
-                
+                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name              
                 
     def check_param_card(self, path, run=True, dependent=False):
         """

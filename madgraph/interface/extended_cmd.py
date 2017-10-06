@@ -16,6 +16,7 @@
 
 
 import logging
+import math
 import os
 import pydoc
 import re
@@ -1041,7 +1042,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, text_format='4', **opt):
+            first_cmd=None, text_format='4', force=False, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -1095,26 +1096,29 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
         
-
-            
-            
-        answer = self.check_answer_in_input_file(question_instance, default, path_msg)
-        if answer is not None:
-            if answer in alias:
-                answer = alias[answer]
-            if ask_class:
-                line=answer
-                answer = question_instance.default(line)
-                question_instance.postcmd(answer, line)
-                return question_instance.answer 
-            if hasattr(question_instance, 'check_answer_consistency'):
-                question_instance.check_answer_consistency()
-            return answer
+        if force:
+            answer = default
+        else:
+            answer = self.check_answer_in_input_file(question_instance, default, path_msg)
+            if answer is not None:
+                if answer in alias:
+                    answer = alias[answer]
+                if ask_class:
+                    line=answer
+                    answer = question_instance.default(line)
+                    question_instance.postcmd(answer, line)
+                    return question_instance.answer 
+                if hasattr(question_instance, 'check_answer_consistency'):
+                    question_instance.check_answer_consistency()
+                return answer
         
         question = question_instance.question
-        value =   Cmd.timed_input(question, default, timeout=timeout,
+        if not force:
+            value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-        
+        else:
+            value = default
+
         try:
             if value in alias:
                 value = alias[value]
@@ -1123,6 +1127,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if value == default and ask_class:
             value = question_instance.default(default)
+
         return value
  
     def do_import(self, line):
@@ -1153,12 +1158,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
 
+
         if not self.inputfile:
             return None# interactive mode
 
         if line is None:
             line = self.get_stored_line()
             # line define if a previous answer was not answer correctly 
+
         if not line:
             try:
                 line = self.inputfile.next()
@@ -1178,8 +1185,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if not line:
             # Comment or empty line, pass to the next one
             return self.check_answer_in_input_file(question_instance, default, path)
+
         options = question_instance.allow_arg
         if line in options or line.lower() in options:
+            return line
+        elif '%s;' % line in options or '%s;' % line.lower() in options:
             return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
@@ -1205,7 +1215,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
+
+        if hasattr(question_instance, 'special_check_answer_in_input_file'):
+            out = question_instance.special_check_answer_in_input_file(line, default)
             
+            if out is not None:
+                return out
+            
+        #else:
+        #    misc.sprint('No special check', type(question_instance))
+        
             
         # No valid answer provides
         if self.haspiping:
@@ -2014,7 +2033,7 @@ class SmartQuestion(BasicCmd):
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
-            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            out[' Recognized command'] = super(SmartQuestion, self).completenames(text,line, *ignored)
             
             return self.deal_multiple_categories(out)
         except Exception, error:
@@ -2067,10 +2086,7 @@ class SmartQuestion(BasicCmd):
         if prev_timer:     
             if pat.search(self.question):
                 timeout = int(pat.search(self.question).groups()[0])
-            else:
-                timeout=20
-            print
-            signal.alarm(timeout)
+                signal.alarm(timeout)
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
@@ -2139,7 +2155,7 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
-            elif self.value == 'repeat':
+            elif self.value in ['repeat', 'reask']:
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
@@ -2202,7 +2218,7 @@ class OneLinePathCompletion(SmartQuestion):
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
-            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            out[' Recognized command'] = BasicCmd.completenames(self, text, line, begidx, endidx)
             
             return self.deal_multiple_categories(out, formatting)
         except Exception, error:
@@ -2231,8 +2247,9 @@ class OneLinePathCompletion(SmartQuestion):
 
             return Cmd.path_completion(text,
                                         os.path.join('.',*[a for a in args \
-                                               if a.endswith(os.path.sep)]))
-        self.completenames(line+text)
+                                               if a.endswith(os.path.sep)]),
+                                       begidx, endidx)
+        return self.completenames(text, line, begidx, endidx)
 
 
     def postcmd(self, stop, line):
@@ -2266,6 +2283,777 @@ def raw_path_input(input_text, allow_arg=[], default=None):
     print input_text
     obj = OneLinePathCompletion(allow_arg=allow_arg, default=default )
     return obj.cmdloop()
+
+
+
+class ControlSwitch(SmartQuestion):
+    """A class for asking a question on which program to run.
+       This is the abstract class
+       
+       Behavior for each switch can be customize via:
+       set_default_XXXX() -> set default value
+       get_allowed_XXXX() -> return list of possible value
+       check_value_XXXX(value) -> return True/False if the user can set such value
+       switch_off_XXXXX()      -> set it off (called for special mode)
+       color_for_XXXX(value)   -> return the representation on the screen for value
+
+       consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+       
+       consistency_XX(val_XX):
+            check the consistency of the other switch given the new status of this one. 
+            return a dict {key:replaced_value} or {} if nothing to do
+            
+       user typing "NAME" will result to a call to self.ans_NAME(None)
+       user typing "NAME=XX" will result to a call to self.ans_NAME('XX')    
+       
+       Note on case sensitivity:
+       -------------------------
+       the XXX is displayed with the case in self.to_control
+           but ALL functions should use the lower case version.
+       for key associated to get_allowed_keys(), 
+           if (user) value not in that list.
+              -> try to find the first entry matching up to the case
+       for ans_XXX, set the value to lower case, but if case_XXX is set to True 
+       """
+       
+    case_sensitive = False
+    quit_on = ['0','done', 'EOF','','auto']
+
+    def __init__(self, to_control, motherinstance, *args, **opts):
+        """to_control is a list of ('KEY': 'Choose the shower/hadronization program')
+        """
+    
+        self.to_control = to_control
+        self.mother_interface = motherinstance
+        self.inconsistent_keys = {} #flag parameter which are currently not consistent
+                                    # and the value by witch they will be replaced if the
+                                    # inconsistency remains.  
+        self.inconsistent_details = {} # flag to list 
+        self.last_changed = []         # keep the order in which the flag have been modified 
+                                       # to choose the resolution order of conflict
+        #initialise the main return value
+        self.switch = {}
+        for key, _ in to_control:
+            self.switch[key.lower()] = 'temporary'
+            
+        self.set_default_switch()
+        question = self.create_question()
+        
+        #check all default for auto-completion
+        allowed_args = [ `i`+';' for i in range(1, 1+len(self.to_control))] 
+        for key in self.switch:
+            allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
+        # adding special mode
+        allowed_args += [key[4:]+';' for key in dir(self) if key.startswith('ans_')]
+        if 'allow_arg' in opts:
+            allowed_args += opts['allow_arg']
+            del opts['allow_arg']
+
+        super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
+        self.options = self.mother_interface.options
+
+    def special_check_answer_in_input_file(self, line, default):
+        """this is called after the standard check if the asnwer were not valid
+           in particular all input in the auto-completion have been already validated.
+           (this include all those with ans_xx and the XXXX=YYY for YYY in self.get_allowed(XXXX)
+           We just check here the XXXX = YYYY for YYYY not in self.get_allowed(XXXX)
+           but for which self.check_value(XXXX,YYYY) returns True.
+           We actually allowed XXXX = YYY even if check_value is False to allow case
+           where some module are missing
+        """
+
+        if '=' not in line:
+            if line.strip().startswith('set'):
+                self.mother_interface.store_line(line)
+                return str(default) 
+            return None
+        key, value = line.split('=',1)
+        if key in self.switch:
+            return line
+        if key in [str(i+1) for i in range(len(self.to_control))]:
+            self.value='reask'
+            return line
+        if hasattr(self, 'ans_%s' % key.lower()):
+            self.value='reask'
+            return line
+
+        return None
+        
+        
+        
+
+
+    def set_default_switch(self):
+        
+        for key,_ in self.to_control:
+            key = key.lower()
+            if hasattr(self, 'set_default_%s' % key):
+                getattr(self, 'set_default_%s' % key)()
+            else:
+                self.default_switch_for(key)
+    
+    def default_switch_for(self, key):
+        """use this if they are no dedicated function for such key"""
+        
+        if hasattr(self, 'get_allowed_%s' % key):
+            return getattr(self, 'get_allowed_%s' % key)()[0]
+        else:
+            self.switch[key] = 'OFF'
+    
+    def set_all_off(self):
+        """set all valid parameter to OFF --call before special keyword--
+        """
+        
+        for key in self.switch:
+            if hasattr(self, 'switch_off_%s' % key):
+                getattr(self, 'switch_off_%s' % key)()
+            elif self.check_value(key, self.switch[key]):
+                self.switch[key] = 'OFF'
+        self.inconsistent_details = {}
+        self.inconsistent_keys = {}
+    
+        
+    def check_value(self, key, value):
+        """return True/False if the value is a correct value to be set by the USER.
+           other value than those can be set by the system --like-- Not available.
+           This does not check the full consistency of the switch
+           """
+           
+        if hasattr(self, 'check_value_%s' % key):
+            return getattr(self, 'check_value_%s' % key)(value)
+        elif value in self.get_allowed(key):
+            return True
+        else:
+            return False
+        
+        
+        
+    def get_allowed(self, key):
+        """return the list of possible value for key"""
+
+        if hasattr(self, 'get_allowed_%s' % key):
+            return getattr(self, 'get_allowed_%s' % key)()
+        else:
+            return ['ON', 'OFF']    
+        
+    def default(self, line):
+        """Default action if line is not recognized"""
+        
+        line=line.strip().replace('@', '__at__')
+        if ';' in line:
+            for l in line.split(';'):
+                if l:
+                    out = self.default(l)
+            return out
+        
+        if '=' in line:
+            base, value = line.split('=',1)
+            # allow 1=OFF
+            if base.isdigit() :
+                try:
+                    base = self.to_control[int(base)-1][0]
+                except:
+                    pass
+        elif ' ' in line:
+            base, value = line.split(' ', 1)
+        elif hasattr(self, 'ans_%s' % line.lower()):
+            base, value = line.lower(), None
+        elif line.isdigit() and line in [`i` for i in range(1, len(self.switch)+1)]:
+            # go from one valid option to the next in the get_allowed for that option
+            base = self.to_control[int(line)-1][0].lower()
+            return self.default(base) # just recall this function with the associate name
+        elif line.lower() in self.switch:
+            # go from one valid option to the next in the get_allowed for that option
+            base = line.lower()
+            try:
+                cur = self.get_allowed(base).index(self.switch[base])
+            except:
+                if self.get_allowed(base):
+                    value = self.get_allowed(base)[0]
+                else:                                            
+                    logger.warning('Can not switch "%s" to another value via number', base)
+                    self.value='reask'
+                    return
+            else:
+                try:
+                    value = self.get_allowed(base)[cur+1]
+                except IndexError:
+                    value = self.get_allowed(base)[0]
+        elif line in ['', 'done', 'EOF', 'eof','0']:
+            super(ControlSwitch, self).default(line)
+            return self.answer
+        elif line in 'auto':
+            self.switch['dynamical'] = True
+            return super(ControlSwitch, self).default(line)
+        else:
+            logger.warning('unknow command: %s' % line)
+            self.value = 'reask'
+            return
+        
+        self.value = 'reask'   
+        base = base.lower()               
+        if hasattr(self, 'ans_%s' % base):
+            if value and not self.is_case_sensitive(base):
+                value = value.lower()
+            getattr(self, 'ans_%s' % base)(value)
+        elif base in self.switch:
+            self.set_switch(base, value)        
+        else:
+            logger.warning('Not valid command: %s' % line)
+   
+    def is_case_sensitive(self, key):
+        """check if a key is case sensitive"""
+        
+        case = self.case_sensitive 
+        if hasattr(self, 'case_%s' % key):
+            case = getattr(self, 'case_%s' % key)
+        return case
+    
+    def onecmd(self, line, **opt):
+        """ensure to rewrite the function if a call is done directly"""
+        out = super(ControlSwitch, self).onecmd(line, **opt)
+        self.create_question()
+        return out
+
+    @property
+    def answer(self):
+        
+        #avoid key to Not Avail in the output
+        for key,_ in self.to_control:
+            if not self.check_value(key, self.switch[key]):
+                self.switch[key] = 'OFF'
+        
+        if not self.inconsistent_keys:
+            return self.switch
+        else:
+            out = dict(self.switch)
+            out.update(self.inconsistent_keys)
+            return out
+
+    def postcmd(self, stop, line):
+        
+        line = line.strip()
+        if ';' in line:
+            line= [l for l in line.split(';') if l][-1] 
+        if line in self.quit_on:
+            return True
+        self.create_question()
+        return self.reask(True)
+        
+
+    def set_switch(self, key, value, user=True):
+        """change a switch to a given value"""
+
+        assert key in self.switch
+
+        
+        
+        if hasattr(self, 'ans_%s' % key):
+            if not self.is_case_sensitive(key):
+                value = value.lower()
+            return getattr(self, 'ans_%s' % key)(value)
+        
+        if not self.is_case_sensitive(key) and value not in self.get_allowed(key):
+            lower = [t.lower() for t in self.get_allowed(key)]
+            try:
+                ind = lower.index(value.lower())
+            except ValueError:
+                pass # keep the current case, in case check_value accepts it anyway.
+            else:
+                value = self.get_allowed(key)[ind]
+        
+        check = self.check_value(key, value) 
+        if not check:
+            logger.warning('"%s" not valid option for "%s"', value, key)
+            return
+        if isinstance(check, str):
+            value = check
+        
+        self.switch[key] = value
+        
+        if user:
+            self.check_consistency(key, value)
+        
+    def remove_inconsistency(self, keys=[]):
+        
+        if not keys:
+            self.inconsistent_keys = {} 
+            self.inconsistent_details = {} 
+        elif isinstance(keys, list):
+            for key in keys:
+                if key in self.inconsistent_keys:
+                    del self.inconsistent_keys[keys]
+                    del self.inconsistent_details[keys]                
+        else:
+            if keys in self.inconsistent_keys:
+                del self.inconsistent_keys[keys]
+                del self.inconsistent_details[keys]
+        
+    def check_consistency(self, key, value):
+        """check the consistency of the new flag with the old ones"""
+        
+        if key in self.last_changed:
+            self.last_changed.remove(key)
+        self.last_changed.append(key)
+        
+        # this is used to update self.consistency_keys which contains:
+        #  {key: replacement value with solved conflict}
+        # it is based on self.consistency_details which is a dict
+        # key:  {'orig_value': 
+        #                'changed_key':
+        #                'new_changed_key_val':
+        #                'replacement': 
+        # which keeps track of all conflict and of their origin.
+        
+        
+        # rules is a dict: {keys:None} if the value for that key is consistent.
+        #                  {keys:value_to_replace} if that key is inconsistent
+        if hasattr(self, 'consistency_%s' % key):
+            rules = dict([(key2, None) for key2 in self.switch])
+            rules.update(getattr(self, 'consistency_%s' % key)(value, self.switch))
+        else:
+            rules = {}
+            for key2,value2 in self.switch.items():
+                if hasattr(self, 'consistency_%s_%s' % (key,key2)):
+                    rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+                    # check that the suggested value is allowed. 
+                    # can happen that it is not if some program are not installed
+                    if rules[key2] is not None and not self.check_value(key2, rules[key2]):
+                        if rules[key2] != 'OFF':
+                            logger.debug('consistency_%s_%s returns invalid output. Assume no conflict')
+                        rules[key2] = None
+                else:
+                    rules[key2] = None
+                    
+        #
+        
+        #update the self.inconsisten_details adding new conflict
+        # start by removing the inconsistency for the newly set parameter
+        self.remove_inconsistency(key)
+        # then add the new ones
+        for key2 in self.switch:
+            if rules[key2]:
+                info = {'orig_value': self.switch[key2],
+                        'changed_key': key,
+                        'new_changed_key_val': value,
+                        'replacement': rules[key2]}
+                if key2 in self.inconsistent_details:
+                    self.inconsistent_details[key2].append(info)
+                else:
+                    self.inconsistent_details[key2] = [info]
+        
+        if not self.inconsistent_details:
+            return
+          
+        # review the status of all conflict
+        for key2 in dict(self.inconsistent_details):
+            for conflict in list(self.inconsistent_details[key2]):
+                keep_conflict = True
+                # check that we are still at the current value
+                if conflict['orig_value'] != self.switch[key2]:
+                    keep_conflict = False
+                # check if the reason of the conflict still in place
+                if self.switch[conflict['changed_key']] != conflict['new_changed_key_val']:
+                    keep_conflict = False
+                if not keep_conflict:
+                    self.inconsistent_details[key2].remove(conflict)
+            if not self.inconsistent_details[key2]:
+                del self.inconsistent_details[key2]
+
+
+        # create the valid set of replacement for this current conflict
+        # start by current status to avoid to keep irrelevant conflict
+        tmp_switch = dict(self.switch)
+        
+        # build the order in which we have to check the various conflict reported
+        to_check = [(c['changed_key'], c['new_changed_key_val']) \
+                         for k in self.inconsistent_details.values() for c in k
+                         if c['changed_key'] != key] 
+
+        to_check.sort(lambda x, y: -1 if self.last_changed.index(x[0])>self.last_changed.index(y[0]) else 1)
+
+        # validate tmp_switch.
+        to_check = [(key, value)] + to_check
+
+        i = 0
+        while len(to_check) and i < 50:
+            #misc.sprint(i, to_check, tmp_switch)
+            # check in a iterative way the consistency of the tmp_switch parameter
+            i +=1
+            key2, value2 = to_check.pop(0)
+            if hasattr(self, 'consistency_%s' % key2):
+                rules2 = dict([(key2, None) for key2 in self.switch])
+                rules2.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
+            else:
+                rules = {}
+                for key3,value3 in self.switch.items():
+                    if hasattr(self, 'consistency_%s_%s' % (key2,key3)):
+                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value3)
+                    else:
+                        rules[key3] = None
+                        
+            for key, replacement in rules.items():
+                if replacement:
+                    tmp_switch[key] = replacement
+                    to_check.append((key, replacement))
+            # avoid situation like
+            # to_check = [('fixed_order', 'ON'), ('fixed_order', 'OFF')]
+            # always keep the last one
+            pos = {}
+            for i, (key,value) in enumerate(to_check):
+                pos[key] = i
+            to_check_new = []
+            for i, (key,value) in enumerate(to_check):
+                if pos[key] == i:
+                    to_check_new.append((key,value))
+            to_check = to_check_new
+        if i>=50:
+            logger.critical('Failed to find a consistent set of switch values.')
+            
+        # Now tmp_switch is to a fully consistent setup for sure.
+        # fill self.inconsistent_key
+        self.inconsistent_keys = {}
+        for key2, value2 in tmp_switch.items():
+            if value2 != self.switch[key2]:
+                # check that not available module stays on that switch
+                if value2 == 'OFF' and not self.check_value(key2, 'OFF'):
+                    continue
+                self.inconsistent_keys[key2] = value2
+            
+    #    
+    # Helper routine for putting questions with correct color 
+    #
+    green = '\x1b[32m%s\x1b[0m' 
+    yellow = '\x1b[33m%s\x1b[0m'
+    red   = '\x1b[31m%s\x1b[0m'
+    bold = '\x1b[01m%s\x1b[0m'
+    def color_for_value(self, key, switch_value, consistency=True):
+        
+        if consistency and key in self.inconsistent_keys:
+            return self.color_for_value(key, self.inconsistent_keys[key], consistency=False) +\
+                                u' \u21d0 '+ self.yellow % switch_value
+        
+        if self.check_value(key, switch_value):
+            if  hasattr(self, 'color_for_%s' % key):
+                return getattr(self, 'color_for_%s' % key)(switch_value)            
+            if switch_value in ['OFF']:
+                # inconsistent key are the list of key which are inconsistent with the last change
+                return self.red % switch_value
+            else:
+                return self.green % switch_value
+        else:
+            if ' ' in switch_value:
+                return self.bold % switch_value 
+            else:
+                return self.red % switch_value
+
+    def print_info(self,key):
+    
+        if hasattr(self, 'print_info_%s' % key):
+            return getattr(self, 'print_info_%s' % key)
+
+        #re-order the options in order to have those in cycling order    
+        try:
+            ind =  self.get_allowed(key).index(self.switch[key])
+        except Exception, err:
+            options = self.get_allowed(key)
+        else:
+            options = self.get_allowed(key)[ind:]+ self.get_allowed(key)[:ind] 
+
+        info = '|'.join([v for v in options if v != self.switch[key]])
+        if info == '':
+            info = 'Please install module'
+        return info
+
+    def question_formatting(self, nb_col = 80,
+                                  ldescription=0,
+                                  lswitch=0,
+                                  lname=0,
+                                  ladd_info=0,
+                                  lpotential_switch=0,
+                                  lnb_key=0,
+                                  key=None):
+        """should return four lines:
+        1. The upper band (typically /========\ 
+        2. The lower band (typically \========/
+        3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
+        4. The line with    conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
+        # Be carefull to include the size of the color flag for the switch
+        green/red/yellow are  adding 9 in length 
+        
+        line should be like '| %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |'
+
+           the total lenght of the line (for defining the upper/lower line)
+           available key : nb
+                           descrip
+                           name
+                           switch          # formatted with color + conflict handling
+                           conflict_switch # color formatted value from self.inconsistent_keys
+                           switch_nc # self.switch without color formatting
+                           conflict_switch_nc # self.inconsistent_keys without color formatting
+                           add_info
+        """
+        
+        if key:
+            # key is only provided for conflict
+            len_switch = len(self.switch[key])
+            if key in self.inconsistent_keys:
+                len_cswitch = len(self.inconsistent_keys[key])
+            else:
+                len_cswitch = 0
+        else:
+            len_switch = 0 
+            len_cswitch = 0 
+            
+        list_length = []
+        # | 1. KEY = VALUE |
+        list_length.append(lnb_key + lname + lswitch + 9)
+        #1. DESCRIP KEY = VALUE
+        list_length.append(lnb_key + ldescription+ lname + lswitch + 6)
+        #1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT
+        list_length.append(list_length[-1] - lswitch + max(lswitch,lpotential_switch))
+        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        list_length.append(list_length[-1] +4)
+        # 1. DESCRIP KEY = VALUE_MAXSIZE
+        list_length.append(lnb_key + ldescription+ lname + max((2*lpotential_switch+3),lswitch) + 6)
+        #| 1. DESCRIP KEY = VALUE_MAXSIZE |
+        list_length.append(list_length[-1] +4)
+        #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
+        list_length.append(list_length[-1] +3+ max(15,6+ladd_info))
+        #| 1. DESCRIP    |   KEY = VALUE_MAXSIZE |     INFO     |
+        list_length.append(list_length[-2] +13+ max(15,10+ladd_info))        
+        
+        selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
+        selected = selected[-1]
+        
+        # upper and lower band
+        if selected !=0:
+            size = list_length[selected-1]
+        else:
+            size = nb_col
+        
+        
+        # default for upper/lower:
+        upper = "/%s\\" % ("=" * (size-2))
+        lower = "\\%s/" % ("=" * (size-2))        
+        
+        if selected==0:
+            f1= '%(nb){0}d \x1b[1m%(name){1}s\x1b[0m=%(switch)-{2}s'.format(lnb_key,
+                                                                  lname,lswitch)
+            f2= f1
+        # | 1. KEY = VALUE |
+        elif selected == 1:
+            upper = "/%s\\" % ("=" * (nb_col-2))
+            lower = "\\%s/" % ("=" * (nb_col-2))
+            to_add = nb_col -size
+            f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
+                                                                  lname,lswitch+9+to_add)
+            
+            f = u'| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
+            f2 =f.format(lnb_key, lname, len_cswitch+9, lswitch-len_cswitch+len_switch+to_add-1)
+        #1. DESCRIP KEY = VALUE
+        elif selected == 2:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key, ldescription,lname,lswitch)
+            f2 = f1
+        #1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT
+        elif selected == 3:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key, ldescription,lname,max(lpotential_switch, lswitch))
+            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
+            if l_conflict_line <= nb_col:
+                f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
+            elif l_conflict_line -4 <= nb_col:
+                f = u'%(nb){0}d.%(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
+            else:
+                ldescription -= (l_conflict_line - nb_col)
+                f = u'%(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
+        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        elif selected == 4:
+            upper = "/%s\\" % ("=" * (nb_col-2))
+            lower = "\\%s/" % ("=" * (nb_col-2))
+            to_add = nb_col -size
+            f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f1 = f.format(lnb_key,ldescription,lname,max(lpotential_switch, lswitch)+9+to_add)
+            l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
+            if l_conflict_line <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
+            elif l_conflict_line -1 <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
+            elif l_conflict_line -3 <= nb_col:
+                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
+                        
+            else:
+                ldescription -= (l_conflict_line - nb_col)
+                f=u'| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
+                
+        # 1. DESCRIP KEY = VALUE_MAXSIZE
+        elif selected == 5:
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
+            f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch))
+            f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, max(2*lpotential_switch+3, lswitch)-lpotential_switch+len_switch)
+        #| 1. DESCRIP KEY = VALUE_MAXSIZE |
+        elif selected == 6: 
+            f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9)
+            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch)
+        #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
+        elif selected == 7:
+            ladd_info = max(15,6+ladd_info)
+            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4,
+                                                    lname+max(2*lpotential_switch+3, lswitch)+5,
+                                                    ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ') 
+            
+            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
+            f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-4)
+            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
+            f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,
+                          max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-4)
+        elif selected == 8:
+            ladd_info = max(15,10+ladd_info)
+            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
+                                                    lname+max(3+2*lpotential_switch,lswitch)+10,
+                                                    ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ') 
+            lower = "\\%s/" % ("=" * (size-2)) 
+            
+            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
+            f1 = f.format(lnb_key,ldescription+5,5+lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-5)
+            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
+            f2 = f.format(lnb_key,ldescription+5,5+lname,
+                          lpotential_switch+9,
+                          max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
+        
+        
+        return upper, lower, f1, f2
+                
+    def create_question(self):
+        """ create the question  with correct formatting"""
+        
+        # geth the number of line and column of the shell to adapt the printing
+        # accordingly  
+        try:
+            nb_rows, nb_col = os.popen('stty size', 'r').read().split()
+            nb_rows, nb_col = int(nb_rows), int(nb_col)
+        except Exception,error:
+            nb_rows, nb_col = 20, 80
+        
+        #compute information on the length of element to display
+        max_len_description = 0 
+        max_len_switch = 0
+        max_len_name = 0
+        max_len_add_info = 0
+        max_len_potential_switch = 0
+        max_nb_key = 1 + int(math.log10(len(self.to_control)))
+
+        for key, descrip in self.to_control:
+            if len(descrip) > max_len_description: max_len_description = len(descrip)
+            if len(key) >  max_len_name: max_len_name = len(key)
+            if key in self.inconsistent_keys:
+                to_display = '%s < %s' % (self.switch[key], self.inconsistent_keys[key])
+            else:
+                to_display = self.switch[key]
+            if len(to_display) > max_len_switch: max_len_switch=len(to_display)
+            
+            info = self.print_info(key)
+            if len(info)> max_len_add_info: max_len_add_info = len(info)
+
+            if self.get_allowed(key):
+                max_k = max(len(k) for k in self.get_allowed(key))
+            else:
+                max_k = 0
+            if max_k > max_len_potential_switch: max_len_potential_switch = max_k
+
+        upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
+                                         max_len_name, max_len_add_info, 
+                                         max_len_potential_switch, max_nb_key)
+        
+        text = \
+        ["The following switches determine which programs are run:",
+         upper_line
+        ]                     
+        
+
+        
+        for i,(key, descrip) in enumerate(self.to_control):
+
+
+            
+            data_to_format = {'nb': i+1,
+                           'descrip': descrip,
+                           'name': key,
+                           'switch': self.color_for_value(key,self.switch[key]),
+                           'add_info': self.print_info(key),
+                           'switch_nc': self.switch[key],
+                           'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
+                           }
+            if key in self.inconsistent_keys:
+                # redefine the formatting here, due to the need to know the conflict size
+                _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
+                                         max_len_name, max_len_add_info, 
+                                         max_len_potential_switch, max_nb_key,
+                                         key=key)
+                
+                data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
+                data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
+                text.append(f2 % data_to_format)
+            else:
+                text.append(f1 % data_to_format)
+
+                                
+        text.append(lower_line)
+        
+        # find a good example of switch to set for the lower part of the description
+        example = None
+        for key in self.switch:
+            if len(self.get_allowed(key)) > 1:
+                    for val in self.get_allowed(key):
+                        if val != self.switch[key]:
+                            example = (key, val)
+                            break
+                    else:
+                        continue
+                    break
+                
+        if not example:
+            example = ('KEY', 'VALUE')
+            
+        text += \
+          ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
+           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
+           "Type 'help' for the list of all valid option",
+           "Type '0', 'auto', 'done' or just press enter when you are done."]
+        
+        # check on the number of row:
+        if len(text) > nb_rows:
+            # too many lines. Remove some
+            to_remove = [ -2, #Type 'help' for the list of all valid option
+                          -5,  # \====/
+                          -4, #Either type the switch number (1 to %s) to change its setting,
+                          -3, # Set any switch explicitly
+                          -1, # Type '0', 'auto', 'done' or just press enter when you are done.
+                         ] 
+            to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
+            text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
+        
+        self.question =    "\n".join(text)                                                              
+        return self.question
+    
+
+
 
 #===============================================================================
 # 
