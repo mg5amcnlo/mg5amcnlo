@@ -2912,7 +2912,7 @@ class ControlSwitch(SmartQuestion):
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
-            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4,
+            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4,
                                                     lname+max(2*lpotential_switch+3, lswitch)+5,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
@@ -2924,7 +2924,7 @@ class ControlSwitch(SmartQuestion):
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
-            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
+            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4+5,
                                                     lname+max(3+2*lpotential_switch,lswitch)+10,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
