@@ -150,9 +150,6 @@ MyHistory::MyHistory( int depth,
       psweights(psweightsIn)
     {
 
-//cout << "history, new state" << endl;
-//state.list();
-
   // Remember how many steps in total were supposed to be taken.
   if (!mother) nStepsMax = depth;
   else         nStepsMax = mother->nStepsMax;
@@ -586,6 +583,12 @@ double MyHistory::weightTREE(PartonLevel* trial, AlphaStrong * asFSR,
                   * (*aemFSR).alphaEM(newQ2Ren) / aemME;
     }
   }
+
+//selected->state.list();
+//state.list();
+cout << scientific << setprecision(6) << sudakov << " " << asWeight << " " << pdfWeight << endl;
+if (sudakov > 1. || sudakov < 0.) cout << "warning " << endl;
+if (sudakov < 0.) cout << "negative!!! " << endl;
 
   // Done
   return (sudakov*asWeight*aemWeight*pdfWeight*mpiwt);
@@ -2004,10 +2007,10 @@ double MyHistory::weightTree(PartonLevel* trial, double as0, double aem0,
   // Do nothing for empty state
   if (state.size() < 3) return 1.0;
   // If up to now, trial shower was not successful, return zero
-  if ( abs(w) < 1e-12 ) return 0.0;
+  //if ( abs(w) < 1e-12 ) return 0.0;
   // Do trial shower on current state, return zero if not successful
   w *= doTrialShower(trial, 1, maxscale);
-  if ( abs(w) < 1e-12 ) return 0.0;
+  //if ( abs(w) < 1e-12 ) return 0.0;
 
   int emtType = mother->state[clusterIn.emtPos()].colType();
   bool isQCD = emtType != 0;
@@ -2021,9 +2024,9 @@ double MyHistory::weightTree(PartonLevel* trial, double as0, double aem0,
     //isQED = (coup.first == 2 || coup.first == 3);
     isQCD = isQED = false;
     if (coup.first == 1)
-      asWeight  *= coup.second / as0;
+      asWeight  *= coup.second * 2.*M_PI / as0;
     if (coup.first == 2 || coup.first == 3)
-      aemWeight *= coup.second / aem0;
+      aemWeight *= coup.second * 2.*M_PI / aem0;
   }
 
   // Calculate alpha_s ratio for current state.
@@ -2876,11 +2879,13 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
   if ( mergingHooksPtr->getNumberOfClusteringSteps(process) == 0 )
     startingScale = hardStartScale(process);
 
+//cout << "enter trial shower" << endl;
+
   // Set output.
   //bool doVeto          = false;
   double wt            = 1.;
-  bool canEnhanceTrial = (trial->userHooksPtr!=0)
-         && trial->userHooksPtr->canEnhanceTrial();
+  /*bool canEnhanceTrial = (trial->userHooksPtr!=0)
+         && trial->userHooksPtr->canEnhanceTrial();*/
   int nFSRtry(0), nISRtry(0), nMPItry(0);
 
   while ( true ) {
@@ -2938,15 +2943,24 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     trial->resetTrial();
 
     // Get enhanced trial emission weight.
-    double pTEnhanced = (canEnhanceTrial)
+    /*double pTEnhanced = (canEnhanceTrial)
                       ? trial->userHooksPtr->getEnhancedTrialPT() : 0.;
     double wtEnhanced = (canEnhanceTrial)
                       ? trial->userHooksPtr->getEnhancedTrialWeight() : 1.;
-    if ( canEnhanceTrial && pTEnhanced > 0.) pTtrial = pTEnhanced;
+    if ( canEnhanceTrial && pTEnhanced > 0.) pTtrial = pTEnhanced;*/
 
     pair<double,double> wtShower
       = psweights->getWeight( (pTtrial <= 0.) ? pow2(minScale) : pow2(pTtrial));
+
+    //double wrnew = psweights->getRejectWeight( pow2(pTtrial), "base");
+    double enhancement = 1.; 
+    if ( pTtrial > minScale) enhancement
+      = psweights->getTrialEnhancement( pow2(pTtrial));
+
     psweights->reset();
+    psweights->clearTrialEnhancements();
+
+//cout << minScale << " " << typeTrial << " " << pTtrial << " " << wt << " " << enhancement<< endl;
 
     // Get veto (merging) scale value
     double vetoScale  = (mother) ? 0. : mergingHooksPtr->tms();
@@ -3014,15 +3028,17 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Only allow ISR or FSR for radiative no-emission probability.
     if ( type ==  1 && !(typeTrial == 2 || typeTrial >= 3) ) continue;
 
-    // Update enhanced trial shower weight.
+    /*// Update enhanced trial shower weight.
     if (canEnhanceTrial && pTtrial > minScale) wt *= (1. - 1./wtEnhanced);
     // Done with enhanced trial showers if weight is zero.
     if ( canEnhanceTrial && wt == 0.) break;
 
     // Continue producing trial emissions in case of enhanced showers.
-    if ( canEnhanceTrial && pTtrial > minScale) continue;
+    if ( canEnhanceTrial && pTtrial > minScale) continue;*/
 
-    if ( pTtrial > minScale) wt *= wtShower.second*(1. - wtShower.first);
+    //if ( pTtrial > minScale) wt *= wtShower.second*(1. - wtShower.first);
+    if ( pTtrial > minScale) wt *= wtShower.first*wtShower.second
+                                 * (1.-1./enhancement);
     if ( wt == 0.) break;
     if ( pTtrial > minScale) continue;
 
@@ -3475,9 +3491,6 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
     isISR = isr->allowedSplitting(event, rad, emt);
   }
 
-//event.list();
-//cout << rad << " " << emt << "\t\t" << isISR << " " << isFSR << endl;
-
   if ( isFSR ) {
     vector<string> names = hasPartonLevel
       ? showers->timesPtr->getSplittingName(event,rad,emt,0)
@@ -3490,7 +3503,6 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
                       : vector<int>());
       for ( int i = 0; i < int(recsNow.size()); ++i ) {
         if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) ) {
-//cout << "possible fsr triple " << rad << " " << emt << " " << recsNow[i] << "\t\t" << names[iName] << endl;
           double pT = pTLund(event, rad, emt, recsNow[i], names[iName]);
           if (names[iName].compare("fsr_qcd_1->21&1_CS") == 0)
             pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
@@ -3515,7 +3527,6 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
                       : vector<int>());
       for ( int i = 0; i < int(recsNow.size()); ++i ) {
         if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) ) {
-//cout << "possible isr triple " << rad << " " << emt << " " << recsNow[i] << "\t\t" << names[iName] << endl;
           attachClusterings (clus, emt, rad, recsNow[i], recsNow[i],
             pTLund(event, rad, emt, recsNow[i], names[iName]),
             names[iName], event);
@@ -3563,9 +3574,6 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
 
   name += "-0";
 
-//SystemIn.list();
-//cout << isISR << " " << isFSR << endl;
-
   if (isFSR) {
 
     // Ask shower for splitting probability.
@@ -3594,6 +3602,7 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
   }
 
   if (isISR) {
+
     // Ask shower for splitting probability.
     pr += hasPartonLevel
        ? showers->spacePtr->getSplittingProb( state, rad, emt, rec, name)
@@ -3618,8 +3627,6 @@ pair<double,double> MyHistory::getProb(const MyClustering & SystemIn) {
     coupling      = isr->getCoupling( state, mu2Ren, rad, emt, rec, name);
 
   }
-
-//cout << name << " " << state[rad].id() << " " << state[rec].id() << " prob=" << pr << endl;
 
   // Done.
   return make_pair(coupling,pr);

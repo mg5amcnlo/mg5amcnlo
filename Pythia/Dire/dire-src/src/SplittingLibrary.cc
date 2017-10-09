@@ -534,7 +534,7 @@ vector<string> SplittingLibrary::getSplittingName_new(const Event& event, int ra
     }
 
     // Found valid splitting name.
-    if (valid && idNow != 0) { names.push_back(it->first);}
+    if (valid && idNow != 0) names.push_back(it->first);
   }
 
   return names;

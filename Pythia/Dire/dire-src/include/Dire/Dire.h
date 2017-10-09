@@ -28,7 +28,8 @@ class Dire {
   Dire() : weightsPtr(NULL), timesPtr(NULL), timesDecPtr(NULL), spacePtr(NULL),
     splittings(NULL), hooksPtr(NULL), userHooksPtr(NULL), hasOwnWeights(false),
     hasOwnTimes(false), hasOwnTimesDec(false), hasOwnSpace(false),
-    hasOwnSplittings(false), hasOwnHooks(false), hasUserHooks(false) {}
+    hasOwnSplittings(false), hasOwnHooks(false), hasUserHooks(false),
+    initNewSettings(false) {}
 
  ~Dire() {
     if (hasOwnWeights)    delete weightsPtr;
@@ -58,7 +59,7 @@ class Dire {
   DebugInfo debugInfo;
 
   bool hasOwnWeights, hasOwnTimes, hasOwnTimesDec, hasOwnSpace,
-       hasOwnSplittings, hasOwnHooks, hasUserHooks;
+       hasOwnSplittings, hasOwnHooks, hasUserHooks, initNewSettings;
 
 };
 

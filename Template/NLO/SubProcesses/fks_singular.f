@@ -462,7 +462,7 @@ c     H-event kinematics, filled in read_leshouche_info
                call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
                firsttime1=.false.
             endif
-               write (*,*) 'd'
+
             do j=1,niprocs_d(nFKSprocess)
                do i=1,nexternal
                   IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
@@ -492,14 +492,14 @@ c               write(*,*)
 c               write(*,*)j,(ICOLUP_H(1,i,j),i=1,nexternal)
 c               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
 
-               write (*,*) 'Color configuration j=', j
-               do i=1,nexternal
-                 write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
-     &                      ' col_h=', icolup_h(1,i,j), ' acol_h=', icolup_h(2,i,j)
-               enddo
-               do i=1,nexternal
-                 write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-               enddo
+c               write (*,*) 'Color configuration j=', j
+c               do i=1,nexternal
+c                 write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
+c     &                      ' col_h=', icolup_h(1,i,j), ' acol_h=', icolup_h(2,i,j)
+c               enddo
+c               do i=1,nexternal
+c                 write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+c               enddo
                nexternal_now=nexternal
 
                call clear_HEPEUP_event()
@@ -520,9 +520,9 @@ c               call pythia_stat()
 
                call dire_get_mergingweight(wgt_sudakov)
                write(*,*) wgt_sudakov
+               write(*,*)
 
-               call dire_stat()
-               call abort
+c               call abort
             enddo
             
          enddo
@@ -533,7 +533,7 @@ cccccccccccccccccc
 cccccccccccccccccc
 cccccccccccccccccc
 cccccccccccccccccc
-      if ( hevents ) call abort
+c      if ( hevents ) call abort
 cccccccccccccccccc
 cccccccccccccccccc
 cccccccccccccccccc

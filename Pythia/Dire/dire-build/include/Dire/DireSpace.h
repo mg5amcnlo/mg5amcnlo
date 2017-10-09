@@ -322,7 +322,7 @@ public:
   //virtual double getCoupling( const Event& state, double mu2Ren, int iRad,
   //  int iEmt, int iRec, string name) {
   virtual double getCoupling( const Event&, double mu2Ren, int, int, int,
-    string name) { 
+    string name) {
     if (splits.find(name) != splits.end()) 
       return splits[name]->coupling(mu2Ren);
     return 1.;

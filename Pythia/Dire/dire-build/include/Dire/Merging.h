@@ -29,6 +29,9 @@
 
 namespace Pythia8 {
 
+class DireSpace;
+class DireTimes;
+
 //==========================================================================
 
 // Merging is a wrapper class for the interface of matrix element merging and
@@ -41,9 +44,14 @@ public:
   // Constructor.
   MyMerging() { settingsPtr = 0; infoPtr = 0; particleDataPtr = 0;
     rndmPtr = 0; beamAPtr = 0; beamBPtr = 0; trialPartonLevelPtr = 0;
-    mergingHooksPtr = 0; myHistory = 0; myLHEF3Ptr = 0; }
+    mergingHooksPtr = 0; myHistory = 0; myLHEF3Ptr = 0; fsr = 0; isr = 0; }
 
   void setWeightsPtr( WeightContainer* wgtsIn ) { psweights = wgtsIn; } 
+  void setShowerPtrs( DireTimes* timesPtr, DireSpace* spacePtr) {
+    fsr = timesPtr; isr = spacePtr; }
+
+  DireTimes* fsr;
+  DireSpace* isr;
 
   // Destructor.
   ~MyMerging(){ if (myLHEF3Ptr) delete myLHEF3Ptr; }
@@ -101,11 +109,6 @@ public:
     psppoint[helper.size()] = '\0';
     return;
   }
-
-  double MEC;
-  void setMEC(double in) {MEC = in;}
-  double getMEC() {return MEC;}
-
 
 protected:
 

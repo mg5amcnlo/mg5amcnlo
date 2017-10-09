@@ -2822,6 +2822,36 @@ pair<int,int> isr_qcd_Q2QG::radBefCols(
   return make_pair(0,acol); 
 }
 
+vector <int> isr_qcd_Q2QG::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == colEmt) ? colEmt
+                : (acolRad > 0 && acolEmt == acolRad) ? acolEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
+} 
+
 // Pick z for new splitting.
 double isr_qcd_Q2QG::zSplit(double zMinAbs, double, double m2dip) {
   double Rz = rndmPtr->flat();
@@ -2969,7 +2999,10 @@ int isr_qcd_G2GG1::sisterID(int)            { return 21;}
 double isr_qcd_G2GG1::gaugeFactor ( int, int )        { return 2.*CA;}
 double isr_qcd_G2GG1::symmetryFactor ( int, int )     { return 0.5;}
 
-int isr_qcd_G2GG1::radBefID(int, int){ return 21;}
+int isr_qcd_G2GG1::radBefID(int idRA, int){
+  if (idRA == 21) return 21;
+  return 0;
+}
 pair<int,int> isr_qcd_G2GG1::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -2980,6 +3013,36 @@ pair<int,int> isr_qcd_G2GG1::radBefCols(
   int acol      = (acolRadAfter == colRemove)
                 ? colEmtAfter : acolRadAfter;
   return make_pair(col,acol);
+}
+
+vector <int> isr_qcd_G2GG1::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == colEmt) ? colEmt
+                : (acolRad > 0 && acolEmt == acolRad) ? acolEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -3176,7 +3239,10 @@ int isr_qcd_G2GG2::sisterID(int)            { return 21;}
 double isr_qcd_G2GG2::gaugeFactor ( int, int )        { return 2.*CA;}
 double isr_qcd_G2GG2::symmetryFactor ( int, int )     { return 0.5;}
 
-int isr_qcd_G2GG2::radBefID(int, int){ return 21;}
+int isr_qcd_G2GG2::radBefID(int idRA, int){
+ if (idRA==21) return 21;
+ return 0;
+}
 pair<int,int> isr_qcd_G2GG2::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -3187,6 +3253,37 @@ pair<int,int> isr_qcd_G2GG2::radBefCols(
   int acol      = (acolRadAfter == colRemove)
                 ? colEmtAfter : acolRadAfter;
   return make_pair(col,acol);
+}
+
+vector <int> isr_qcd_G2GG2::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == colEmt) ? colEmt
+                : (acolRad > 0 && acolEmt == acolRad) ? acolEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colRad != 0 && colRad != colShared) {
+    int acolF = findCol(colRad, iExc, state, 1);
+    int  colI = findCol(colRad, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolRad != 0 && acolRad != colShared) {
+    int  colF = findCol(acolRad, iExc, state, 2);
+    int acolI = findCol(acolRad, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.
@@ -3403,6 +3500,36 @@ pair<int,int> isr_qcd_G2QQ::radBefCols(
   return make_pair(0,acol);
 }
 
+vector <int> isr_qcd_G2QQ::recPositions( const Event& state, int iRad, int iEmt) {
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colRad != 0 && colRad != colShared) {
+    int acolF = findCol(colRad, iExc, state, 1);
+    int  colI = findCol(colRad, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolRad != 0 && acolRad != colShared) {
+    int  colF = findCol(acolRad, iExc, state, 2);
+    int acolI = findCol(acolRad, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
+}
+
 // Pick z for new splitting.
 double isr_qcd_G2QQ::zSplit(double zMinAbs, double zMaxAbs, double) {
   // Note: Combined with PDF ratio, flat overestimate performs
@@ -3540,13 +3667,50 @@ int isr_qcd_Q2GQ::sisterID(int)            { return 1;} // Use 1 as dummy
 double isr_qcd_Q2GQ::gaugeFactor ( int, int )        { return CF;}
 double isr_qcd_Q2GQ::symmetryFactor ( int, int )     { return 0.5;}
 
-int isr_qcd_Q2GQ::radBefID(int, int){ return 21;}
+int isr_qcd_Q2GQ::radBefID(int idRA, int){
+  if (particleDataPtr->isQuark(idRA)) return 21;
+  return 0;
+}
 pair<int,int> isr_qcd_Q2GQ::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
   int col  = (colRadAfter  > 0) ? colRadAfter  : acolEmtAfter;
   int acol = (acolRadAfter > 0) ? acolRadAfter : colEmtAfter;
   return make_pair(col,acol);
+}
+
+vector <int> isr_qcd_Q2GQ::recPositions( const Event& state, int iRad, int iEmt) {
+
+  // For Q->GQ, swap radiator and emitted, since we now have to trace the
+  // radiator's colour connections.
+  if ( state[iEmt].idAbs() < 20 && state[iRad].id() == 21) swap( iRad, iEmt);
+
+  int colRad  = state[iRad].col();
+  int acolRad = state[iRad].acol();
+  int colEmt  = state[iEmt].col();
+  int acolEmt = state[iEmt].acol();
+  int colShared = (colRad  > 0 && colRad == acolEmt) ? colRad
+                : (acolRad > 0 && colEmt == acolRad) ? colEmt : 0;
+  // Particles to exclude from colour tracing.
+  vector<int> iExc(1,iRad); iExc.push_back(iEmt);
+
+  // Find partons connected via emitted colour line.
+  vector<int> recs;
+  if ( colEmt != 0 && colEmt != colShared) {
+    int acolF = findCol(colEmt, iExc, state, 1);
+    int  colI = findCol(colEmt, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  // Find partons connected via emitted anticolour line.
+  if ( acolEmt != 0 && acolEmt != colShared) {
+    int  colF = findCol(acolEmt, iExc, state, 2);
+    int acolI = findCol(acolEmt, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  // Done.
+  return recs;
 }
 
 // Pick z for new splitting.

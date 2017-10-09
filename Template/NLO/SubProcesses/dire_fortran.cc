@@ -464,29 +464,55 @@ extern "C" {
     pythia4dire.setMergingPtr(merging);
 
     cout<<"Using default initialization of Pythia8."<<endl;
-    pythia4dire.readString("Beams:frameType=5");
-    pythia4dire.readString("Check:epTolErr=1.0000000000e-02");
-    pythia4dire.readString("merging:doptlundmerging = on");
-    pythia4dire.readString("merging:process = pp>LEPTONS,NEUTRINOS");
-    pythia4dire.readString("merging:tms = 1000000");
+    pythia4dire.readString("Beams:frameType                 = 5");
+    pythia4dire.readString("Check:epTolErr                  = 1.000000e-02");
+    pythia4dire.readString("merging:doptlundmerging         = on");
+    pythia4dire.readString("merging:process                 = pp>LEPTONS,NEUTRINOS");
+    pythia4dire.readString("merging:tms                     = -1.0");
     pythia4dire.readString("merging:includeWeightInXSection = off");
-    pythia4dire.readString("merging:njetmax = 1000");
-    pythia4dire.readString("merging:applyveto = off");
+    pythia4dire.readString("merging:njetmax                 = 1000");
+    pythia4dire.readString("merging:applyveto               = off");
     pythia4dire.readString("Merging:useShowerPlugin         = on");
+    pythia4dire.readString("PartonLevel:MPI                 = off");
 
-    pythia4dire.setLHAupPtr(& lhareader4dire);
-    dire.init(pythia4dire,"", -999, &printFirstEmission4dire);
+    pythia4dire.setLHAupPtr(&lhareader4dire);
+    dire.initSettings(pythia4dire);
 
     //pythia4dire.readString("Dire:doMECs                     = on");
     //pythia4dire.readString("Dire:MG5card                    = param_card_sm.dat");
     pythia4dire.readString("Merging:useShowerPlugin         = on");
     pythia4dire.readString("Dire:doMerging                  = on");
+    pythia4dire.readString("Dire:doExitAfterMerging         = on");
+    pythia4dire.readString("Check:abortIfVeto               = on");
     pythia4dire.readString("Merging:mayRemoveDecayProducts  = on");
-    pythia4dire.readString("Dire:doGenerateMergingWeights = on");
-    pythia4dire.readString("Dire:doGenerateSubtractions = on");
+    pythia4dire.readString("Dire:doGenerateMergingWeights   = on");
+    pythia4dire.readString("Dire:doGenerateSubtractions     = on");
+    pythia4dire.readString("1:m0 = 0.0");
+    pythia4dire.readString("2:m0 = 0.0");
+    pythia4dire.readString("3:m0 = 0.0");
+    pythia4dire.readString("4:m0 = 0.0");
+
+    pythia4dire.readString("Enhance:fsr_qcd_1->1&21_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->21&1_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->21&21a_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->21&21b_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->1&1a_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->1&1b_CS = 5.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->2&1&2_CS = 1.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->1&1&1_CS = 1.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->1&21_CS = 5.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->1&1_CS = 5.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->21&21a_CS = 5.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->21&21b_CS = 5.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->21&1_CS = 5.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->2&1&2_CS = 1.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->1&1&1_CS = 1.0");
+
+    dire.init(pythia4dire,"", -999, &printFirstEmission4dire);
 
     // Transfer initialized shower weights pointer to merging class. 
     merging->setWeightsPtr(dire.weightsPtr);
+    merging->setShowerPtrs(dire.timesPtr, dire.spacePtr);
 
     // Flag that Pythia8 intiialisation has been performed.
     pythia_control_.is_pythia_active = 1;

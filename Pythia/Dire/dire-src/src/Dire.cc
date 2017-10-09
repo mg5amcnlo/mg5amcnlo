@@ -75,6 +75,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doGenerateMergingWeights",false);
   pythia.settings.addFlag("Dire:doMECs",false);
   pythia.settings.addFlag("Dire:doMOPS",false);
+  pythia.settings.addFlag("Dire:doExitAfterMerging",false);
 
   // Teach Pythia MG5 inputs for external MEs
   pythia.settings.addWord("Dire:MG5card", "");
@@ -85,6 +86,9 @@ void Dire::initSettings( Pythia& pythia ) {
 
   // Teach Pythia tune settings.
   pythia.settings.addMode("Dire:Tune",1,true,false,0,10);
+
+  // Done.
+  initNewSettings = true;
 
 }
 
@@ -250,7 +254,7 @@ void Dire::init(Pythia& pythia, char const* settingsFile, int subrun,
   UserHooks* userHooks, Hooks* hooks) {
 
   // Initialize new settings.
-  initSettings(pythia);
+  if (!initNewSettings) initSettings(pythia);
 
   // Construct showers.
   initShowersAndWeights(pythia, userHooks, hooks); 

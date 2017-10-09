@@ -965,10 +965,6 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   // Remember if this is a trial emission.
   doTrialNow    = doTrialIn;
 
-//cout << __PRETTY_FUNCTION__ << endl;
-//event.list();
-//list();
-
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnd.size()); ++iDipEnd) {
     iDipNow        = iDipEnd;
@@ -1040,11 +1036,12 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
           splittingSelName = splittingNowName;
           splitSel.store(splits[splittingSelName]->splitInfo);
 
+//cout << "select pT " << splittingSelName << " " << sqrt(pT2sel) << endl;
+
           kernelSel = kernelNow;
           auxSel    = auxNow;
           overSel   = overNow;
           boostSel  = boostNow;
-
         }
 
       }
@@ -1642,6 +1639,8 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
 
 bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
 
+  return false;
+
   double MECnum(1.0), MECden(1.0);
 
   bool hasME = weights->hasME(makeHardEvent(0, state,true));
@@ -2123,6 +2122,9 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     if ( fullWeightNow != 0. && overWeightNow != 0. ) {
       double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
 
+
+if (doTrialNow) enhanceFurther = 1.;
+
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
@@ -2511,6 +2513,12 @@ boostNow = enhanceFurther;
   if ( fullWeightNow != 0. && overWeightNow != 0. ) {
     double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
 
+
+
+if (doTrialNow) { weights->addTrialEnhancement(tnow, enhanceFurther); enhanceFurther = 1.;}
+
+
+
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
@@ -2518,9 +2526,16 @@ boostNow = enhanceFurther;
 
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it ) {
+
+//cout << " found emission " << splittingNowName << " at " << sqrt(tnow); 
+
       acceptProbability[it->first].insert(make_pair(tnow,
         auxWeightNow/overWeightNow * 1./enhanceFurther
         * it->second/fullWeightNow ) );
+
+//cout << " " << auxWeightNow/overWeightNow * 1./enhanceFurther
+//        * it->second/fullWeightNow;
+
       if (auxWeightNow == fullWeightNow && overWeightNow == fullWeightNow)
         rejectProbability[it->first].insert( make_pair(tnow, 1.0));
       else {
@@ -2528,8 +2543,18 @@ boostNow = enhanceFurther;
                   * (overWeightNow- it->second/enhanceFurther)
                   / (auxWeightNow - fullWeightNow);
         rejectProbability[it->first].insert( make_pair(tnow, wv));
+
+//cout << " " << wv << endl;
+
       }
+
+
+
+
     }
+
+
+
   }
 
   double zStore   = dip.z;
@@ -3578,6 +3603,9 @@ bool DireSpace::branch_II( Event& event, bool trial,
         if (printWarnings)
           infoPtr->errorMsg("Warning in DireSpace::branch_II: Could not set up "
                             "state after branching, thus reject.");
+event.list();
+NewEvent.list();
+abort();
         physical = false; break;
       }
 

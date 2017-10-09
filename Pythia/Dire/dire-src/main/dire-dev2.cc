@@ -52,6 +52,7 @@ pythia.settings.forceParm("StandardModel:Vtb", 1.);
 
   // Transfer initialized shower weights pointer to merging class. 
   merging->setWeightsPtr(dire.weightsPtr);
+  merging->setShowerPtrs(dire.timesPtr, dire.space.Ptr);
 
   // Gluon histograms.
   Hist zglue("zglue",50,0.,1.0);

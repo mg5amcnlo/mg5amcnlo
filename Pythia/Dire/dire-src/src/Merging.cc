@@ -65,8 +65,6 @@ void MyMerging::init(){
   // Reset minimal tms value.
   tmsNowMin             = infoPtr->eCM();
 
-  MEC=1.0;
-
   if (!myLHEF3Ptr) myLHEF3Ptr = new LHEF3FromPythia8(0, settingsPtr,
     infoPtr, particleDataPtr, 15, false);
 
@@ -81,7 +79,8 @@ void MyMerging::statistics() {
   bool enforceCutOnLHE  = settingsPtr->flag("Merging:enforceCutOnLHE");
   // Recall merging scale value.
   double tmsval         = mergingHooksPtr->tms();
-  bool printBanner      = enforceCutOnLHE && tmsNowMin > TMSMISMATCH*tmsval;
+  bool printBanner      = enforceCutOnLHE && tmsNowMin > TMSMISMATCH*tmsval
+                        && tmsval > 0.;
   // Reset minimal tms value.
   tmsNowMin             = infoPtr->eCM();
 
@@ -124,8 +123,6 @@ int MyMerging::mergeProcess(Event& process){
     processNow.erase(processNow.begin()+processNow.find(" ",0));
   mergingHooksPtr->processSave = processNow;
 
-cout << __LINE__ << endl;
-
   mergingHooksPtr->doUserMergingSave
     = settingsPtr->flag("Merging:doUserMerging");
   mergingHooksPtr->doMGMergingSave
@@ -157,8 +154,6 @@ cout << __LINE__ << endl;
   mergingHooksPtr->nReclusterSave
     = settingsPtr->mode("Merging:nRecluster");
 
-cout << __LINE__ << endl;
-
   mergingHooksPtr->hasJetMaxLocal  = false;
   mergingHooksPtr->nJetMaxLocal
     = mergingHooksPtr->nJetMaxSave;
@@ -169,8 +164,6 @@ cout << __LINE__ << endl;
 
   // Reset to default merging scale.
   mergingHooksPtr->tms(mergingHooksPtr->tmsCut());
-
-cout << __LINE__ << endl;
 
   // Ensure that merging weight is not counted twice.
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
@@ -184,8 +177,6 @@ cout << __LINE__ << endl;
 
   // Done if only a cut should be applied.
   if ( applyTMSCut ) return 1;
-
-  MEC=1.0;
 
   if (settingsPtr->flag("Dire:doMerging") ){
 
@@ -258,8 +249,9 @@ cout << __LINE__ << endl;
       return returnCode;
     }
 
-    // Always veto, since we do not want to do event generation.
-    //return -1;
+    // Veto if we do not want to do event generation.
+    if (settingsPtr->flag("Dire:doExitAfterMerging")) return -1;
+
     return 1;
   }
 
@@ -355,7 +347,7 @@ int MyMerging::mergeProcessCKKWL( Event& process) {
   // Generate all histories.
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, 
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, 
             true, true, 1.0, 1.0, 1.0, 0);
 
   // Project histories onto desired branches, e.g. only ordered paths.
@@ -580,7 +572,7 @@ int MyMerging::mergeProcessUMEPS( Event& process) {
   // Generate all histories.
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
   FullHistory.projectOntoDesiredHistories();
 
@@ -762,7 +754,7 @@ int MyMerging::mergeProcessNL3( Event& process) {
   // Generate all histories
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
   FullHistory.projectOntoDesiredHistories();
 
@@ -979,7 +971,7 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
   // Generate all histories
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
   FullHistory.projectOntoDesiredHistories();
 
@@ -991,7 +983,7 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
   // criterion.
   bool enforceCutOnLHE  = settingsPtr->flag("Merging:enforceCutOnLHE");
   if ( enforceCutOnLHE && applyCut && nSteps == nRequested
-    && tmsnow < tmsval ) {
+    && tmsnow < tmsval && tmsval > 0.) {
     string message="Warning in MyMerging::mergeProcessUNLOPS: Les Houches";
     message+=" Event fails merging scale cut. Reject event.";
     infoPtr->errorMsg(message);
@@ -1044,7 +1036,7 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
     double tnowNew  = mergingHooksPtr->tmsNow( dummy );
     // Veto if underlying Born kinematics do not pass merging scale cut.
     if ( enforceCutOnLHE && nSteps > 0 && nRequested > 0
-      && tnowNew < tmsval ) {
+      && tnowNew < tmsval && tmsval > 0.) {
       string message="Warning in MyMerging::mergeProcessUNLOPS: Les Houches";
       message+=" Event fails merging scale cut. Reject event.";
       infoPtr->errorMsg(message);
@@ -1273,7 +1265,7 @@ bool MyMerging::generateHistories( const Event& process) {
   // Generate all histories
   myHistory = new MyHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
   bool foundHistories = myHistory->projectOntoDesiredHistories();
 
@@ -1466,7 +1458,7 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   // criterion.
   bool enforceCutOnLHE  = settingsPtr->flag("Merging:enforceCutOnLHE");
   if ( enforceCutOnLHE && applyCut && nSteps == nRequested
-    && tmsnow < tmsval ) {
+    && tmsnow < tmsval && tmsval > 0.) {
     string message="Warning in MyMerging::calculateWeights: Les Houches";
     message+=" Event fails merging scale cut. Reject event.";
     infoPtr->errorMsg(message);
@@ -1516,7 +1508,7 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     double tnowNew  = mergingHooksPtr->tmsNow( dummy );
     // Veto if underlying Born kinematics do not pass merging scale cut.
     if ( enforceCutOnLHE && nSteps > 0 && nRequested > 0
-      && tnowNew < tmsval ) {
+      && tnowNew < tmsval && tmsval > 0.) {
       string message="Warning in MyMerging::calculateWeights: Les Houches";
       message+=" Event fails merging scale cut. Reject event.";
       infoPtr->errorMsg(message);
@@ -1592,10 +1584,15 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     wgt *= (nRecluster == 2 && nloTilde) ? 1. : kFactor;
   }
 
+cout << wgt << endl;
+
+
   } else if (useAll && settingsPtr->flag("Dire:doMOPS") ) {
     // Calculate CKKWL reweighting for all paths.
     double wgtsum(0.);
     double lastp(0.);
+
+cout << __LINE__ << endl;
 
     for ( map<double, MyHistory*>::iterator it = myHistory->goodBranches.begin();
       it != myHistory->goodBranches.end(); ++it ) {
@@ -1822,7 +1819,7 @@ bool MyMerging::cutOnProcess( Event& process) {
   // Generate all histories
   MyHistory FullHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
-            trialPartonLevelPtr, NULL, NULL, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
+            trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
   FullHistory.projectOntoDesiredHistories();
 
@@ -1847,7 +1844,7 @@ bool MyMerging::cutOnProcess( Event& process) {
 
   // Now enfore merging scale cut if the event did not pass the merging scale
   // criterion.
-  if ( nSteps > 0 && nSteps == nRequested && tmsnow < tmsval ) {
+  if ( nSteps > 0 && nSteps == nRequested && tmsnow < tmsval && tmsval > 0.) {
     string message="Warning in MyMerging::cutOnProcess: Les Houches Event";
     message+=" fails merging scale cut. Reject event.";
     infoPtr->errorMsg(message);
@@ -1895,7 +1892,7 @@ bool MyMerging::cutOnProcess( Event& process) {
     FullHistory.getClusteredEvent( RN, nSteps, dummy );
     double tnowNew  = mergingHooksPtr->tmsNow( dummy );
     // Veto if underlying Born kinematics do not pass merging scale cut.
-    if ( nSteps > 0 && nRequested > 0 && tnowNew < tmsval ) {
+    if ( nSteps > 0 && nRequested > 0 && tnowNew < tmsval && tmsval > 0.) {
       string message="Warning in MyMerging::cutOnProcess: Les Houches Event";
       message+=" fails merging scale cut. Reject event.";
       infoPtr->errorMsg(message);

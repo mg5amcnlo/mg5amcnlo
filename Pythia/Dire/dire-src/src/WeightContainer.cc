@@ -325,6 +325,14 @@ double WeightContainer::enhanceOverestimate( string name ) {
 
 //--------------------------------------------------------------------------
 
+double WeightContainer::getTrialEnhancement( double pT2key ) {
+  map<unsigned long,double>::iterator it = trialEnhancements.find(key(pT2key));
+  if ( it == trialEnhancements.end() ) return 1.;
+  return it->second;
+}
+
+//--------------------------------------------------------------------------
+
 bool WeightContainer::hasME(const Event& event) {
 
   int nfinal(0), ng(0), nq(0), nlq(0);

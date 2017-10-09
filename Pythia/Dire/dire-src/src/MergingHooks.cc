@@ -1609,7 +1609,8 @@ bool MyMergingHooks::doVetoEmission( const Event& event) {
   // samples containing reclusterings!
   if ( nRecluster() > 0 ) nSteps = max(1, min(nJetMax-2, 1));
   // Check veto condition
-  if ( nSteps - 1 < nJetMax && nSteps >= 1 && tnow > tms() ) veto = true;
+  if ( nSteps - 1 < nJetMax && nSteps >= 1 && tnow > tms() && tms() > 0. )
+    veto = true;
 
   // Do not veto if state already includes MPI.
   if ( infoPtr->nMPI() > 1 ) veto = false;
@@ -1675,7 +1676,8 @@ bool MyMergingHooks::doVetoStep( const Event& process, const Event& event,
 
     // Check merging veto condition.
     bool veto = false;
-    if ( nSteps > nMaxJetsNLO() && nSteps < nJetMax && tnow > tms() ) {
+    if ( nSteps > nMaxJetsNLO() && nSteps < nJetMax && tnow > tms()
+      && tms() > 0. ) {
       // Set weight to zero if event should be vetoed.
       weightCKKWL1Save = 0.;
       // Save weight before veto, in case veto needs to be revoked.
@@ -1798,7 +1800,8 @@ bool MyMergingHooks::doVetoStep( const Event& process, const Event& event,
     }
 
     // Check veto condition.
-    if ( !check && nSteps > nMaxJetsNLO() && nSteps < nJetMax && tnow > tms()){
+    if ( !check && nSteps > nMaxJetsNLO() && nSteps < nJetMax && tnow > tms()
+      && tms() > 0.){
       // Set stored weights to zero.
       if ( !includeWGTinXSEC() ) setWeightCKKWL(0.);
       if (  includeWGTinXSEC() ) infoPtr->updateWeight(0.);

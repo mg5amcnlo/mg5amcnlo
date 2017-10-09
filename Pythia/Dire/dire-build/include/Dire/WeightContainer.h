@@ -189,6 +189,11 @@ public:
 
   // Returns additional user-supplied enhancements factors.
   double enhanceOverestimate( string name );
+  double getTrialEnhancement(double pT2key);
+  void   clearTrialEnhancements() { trialEnhancements.clear(); }
+  void   addTrialEnhancement( double pT2key, double value) {
+    trialEnhancements.insert(make_pair(key(pT2key), value));
+  }
 
   // PY8MEs accessor
   string card;
@@ -211,6 +216,7 @@ private:
 
   // Additonal enhancement factors to boost emission probabilities.
   map<string,double> enhanceFactors;
+  map<unsigned long, double> trialEnhancements;
 
   BeamParticle* beamA;
   BeamParticle* beamB;

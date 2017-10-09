@@ -46,6 +46,7 @@ public:
   virtual int nEmissions()  { return 1; }
   virtual bool isPartial()  { return true; }
 
+  virtual int couplingType (int, int) { return 2; }
   virtual double coupling( double ) { return (aem0 / (2.*M_PI)); }
 
 };

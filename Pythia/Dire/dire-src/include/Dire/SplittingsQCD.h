@@ -69,6 +69,7 @@ public:
    { return createvector<int>(motherID(idDaughter))(sisterID(idDaughter)); } 
   virtual bool isPartial()  { return true; }
 
+  virtual int couplingType (int, int) { return 1; }
   virtual double coupling (double pT2) { return as2Pi(pT2); }
 
 };
@@ -794,7 +795,7 @@ public:
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
 
-  //vector <int> recPositions( const Event&, int, int);
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -846,7 +847,7 @@ public:
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
 
-  //vector <int> recPositions( const Event&, int, int);
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -898,7 +899,7 @@ public:
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
 
-  //vector <int> recPositions( const Event&, int, int);
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -951,7 +952,7 @@ public:
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
 
-  //vector <int> recPositions( const Event&, int, int);
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
@@ -1004,7 +1005,7 @@ public:
   // Return id of recombined radiator (before splitting!)
   int radBefID(int idRadAfter, int idEmtAfter);
 
-  //vector <int> recPositions( const Event&, int, int);
+  vector <int> recPositions( const Event&, int, int);
 
   // Return colours of recombined radiator (before splitting!)
   pair<int,int> radBefCols(int colRadAfter, int acolRadAfter, 
