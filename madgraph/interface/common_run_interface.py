@@ -3550,6 +3550,55 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("--format=short (only if --path is define)")
         logger.info("        allows to have a multi-column output easy to parse")
 
+
+    ############################################################################
+    def find_model_name(self):
+        """ return the model name """
+        if hasattr(self, 'model_name'):
+            return self.model_name
+        
+        def join_line(old, to_add):
+            if old.endswith('\\'):
+                newline = old[:-1] + to_add
+            else:
+                newline = old + line
+            return newline
+            
+        
+        
+        model = 'sm'
+        proc = []
+        continuation_line = None
+        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
+            line = line.split('#')[0]
+            if continuation_line:
+                line = line.strip()
+                if continuation_line == 'model':
+                    model = join_line(model, line)
+                elif continuation_line == 'proc':
+                    proc = join_line(proc, line)
+                if not line.endswith('\\'):
+                    continuation_line = None
+                continue
+            #line = line.split('=')[0]
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]   
+                proc = []
+                if model.endswith('\\'):
+                    continuation_line = 'model'
+            elif line.startswith('generate'):
+                proc.append(line.split(None,1)[1])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+            elif line.startswith('add process'):
+                proc.append(line.split(None,2)[2])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+        self.model = model
+        self.process = proc 
+        return model
+
+
     ############################################################################
     def do_check_events(self, line):
         """ Run some sanity check on the generated events."""

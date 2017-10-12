@@ -5808,29 +5808,6 @@ tar -czf split_$1.tar.gz split_$1
 
         return get_last_tag(self, level)
             
-
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
     
     
     ############################################################################
