@@ -1106,6 +1106,13 @@ class AskRunNLO(cmd.ControlSwitch):
     consistency_reweight_fixed_order = consistency_shower_fixed_order
     consistency_madanalysis_fixed_order = consistency_shower_fixed_order
 
+    def get_cardcmd_for_fixed_order(self):
+        """command for the edition of the card according to this switch value"""
+        
+        if self.switch['fixed_order'] == 'ON':
+            return ['set parton_shower not_possible_for_fix_order_run']
+        return []
+            
 #
 #   Shower
 #
@@ -1177,6 +1184,13 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'ON'
         return None
     
+    def get_cardcmd_for_shower(self):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if self.switch['shower'] != 'OFF':
+            return  ['set parton_shower %s' % self.switch['shower']]
+        return []
+    
 #
 #   madspin
 #
@@ -1187,7 +1201,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if self.proc_characteristics['ninitial'] == 1:
             return ['OFF']
         else:
-            return ['ON', 'OFF']
+            return ['OFF', 'ON', 'onshell']
             
     def set_default_madspin(self):
         
@@ -1198,6 +1212,14 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.switch['madspin'] = 'OFF'
         else:
             self.switch['madspin'] = 'Not Avail.'  
+            
+    def get_cardcmd_for_madspin(self):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if self.switch['madspin'] == 'onshell':
+            return ["add madspin_card --before_line='decay' set spinmode onshell"]
+        else:
+            return []
             
         
 #
@@ -5153,9 +5175,10 @@ RESTART = %(mint_mode)s
         elif mode:
             passing_cmd.append(mode)
 
-        switch = self.ask('', '0', [], ask_class = self.action_switcher,
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=force,
-                              first_cmd=passing_cmd)
+                              first_cmd=passing_cmd,
+                              return_instance=True)
 
         if 'mode' in switch:
             mode = switch['mode']
@@ -5198,9 +5221,9 @@ RESTART = %(mint_mode)s
             ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
         else:
-            if switch['madspin'] == 'ON':
+            if switch['madspin'] != 'OFF':
                 cards.append('madspin_card.dat')
-            if switch['reweight'] == 'ON':
+            if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
             if switch['madanalysis'] == 'HADRON':
                 cards.append('madanalysis5_hadron_card.dat')                
@@ -5218,12 +5241,8 @@ RESTART = %(mint_mode)s
         
         
         # automatically switch to keep_wgt option
-        first_cmd = [] # force to change some switch
-        if switch['shower'] != 'OFF':
-            first_cmd.append('set parton_shower %s' % switch['shower'])
-        elif switch['fixed_order'] == 'ON':
-            first_cmd.append('set parton_shower not_possible_for_fix_order_run')
-        
+        first_cmd = cmd_switch.get_cardcmd()
+                
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 

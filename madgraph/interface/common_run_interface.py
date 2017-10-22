@@ -5796,7 +5796,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -5808,7 +5808,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
@@ -5824,7 +5824,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line

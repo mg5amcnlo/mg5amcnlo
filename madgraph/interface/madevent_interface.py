@@ -786,6 +786,18 @@ class AskRun(cmd.ControlSwitch):
 #
 #   MADSPIN handling
 #
+    def get_allowed_madspin(self):
+        """ ON|OFF|onshell """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        if 'MadSpin'  in self.available_module:
+            self.allowed_madspin = ['OFF',"ON",'onshell']
+        return self.allowed_madspin
+    
+    
     def set_default_madspin(self):
         """initialise the switch for madspin"""
         
@@ -796,6 +808,15 @@ class AskRun(cmd.ControlSwitch):
                 self.switch['madspin'] = 'OFF'
         else:
             self.switch['madspin'] = 'Not Avail.'
+            
+    def get_cardcmd_for_madspin(self):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if self.switch['madspin'] == 'onshell':
+            return ["add madspin_card --before_line='decay' set spinmode onshell"]
+        else:
+            return []
+        
 #
 #   ReWeight handling
 #
@@ -6083,9 +6104,9 @@ tar -czf split_$1.tar.gz split_$1
         if '-M' in args or '--madspin' in args:
             passing_cmd.append('madspin=ON')
         
-        switch = self.ask('', '0', [], ask_class = self.action_switcher,
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, line_args=args, force=self.force,
-                              first_cmd=passing_cmd)
+                              first_cmd=passing_cmd, return_instance=True)
         #
         self.switch = switch # store the value of the switch for plugin purpose 
         if 'dynamical' in switch:
@@ -6120,17 +6141,20 @@ tar -czf split_$1.tar.gz split_$1
 
         self.keep_cards(cards)
         
+        first_cmd = cmd_switch.get_cardcmd()
+        
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
             cards.append('MadLoopParams.dat')
         
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return switch
+        
 
         if 'dynamical' in switch and switch['dynamical']:
-            self.ask_edit_cards(cards, plot=False, mode='auto')
+            self.ask_edit_cards(cards, plot=False, mode='auto', first_cmd=first_cmd)
         else:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
         return switch
     
     ############################################################################
