@@ -2446,10 +2446,11 @@ class ControlSwitch(SmartQuestion):
         """ return the list of command that need to be run to have a consistent 
             set of cards with the switch value choosen """
         
+        switch = self.answer
         cmd= []
         for key in self.switch:
             if hasattr(self, 'get_cardcmd_for_%s' % key):
-                cmd += getattr(self, 'get_cardcmd_for_%s' % key)()
+                cmd += getattr(self, 'get_cardcmd_for_%s' % key)(switch[key])
         return cmd
         
         

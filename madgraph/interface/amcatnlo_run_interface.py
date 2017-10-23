@@ -1107,10 +1107,10 @@ class AskRunNLO(cmd.ControlSwitch):
     consistency_reweight_fixed_order = consistency_shower_fixed_order
     consistency_madanalysis_fixed_order = consistency_shower_fixed_order
 
-    def get_cardcmd_for_fixed_order(self):
+    def get_cardcmd_for_fixed_order(self, value):
         """command for the edition of the card according to this switch value"""
         
-        if self.switch['fixed_order'] == 'ON':
+        if value == 'ON':
             return ['set parton_shower not_possible_for_fix_order_run']
         return []
             
@@ -1185,10 +1185,10 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'ON'
         return None
     
-    def get_cardcmd_for_shower(self):
+    def get_cardcmd_for_shower(self, value):
         """ adpat run_card according to this setup. return list of cmd to run"""
         
-        if self.switch['shower'] != 'OFF':
+        if value != 'OFF':
             return  ['set parton_shower %s' % self.switch['shower']]
         return []
     
@@ -1248,15 +1248,15 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             self.switch['madspin'] = 'Not Avail.'  
             
-    def get_cardcmd_for_madspin(self):
+    def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if self.switch['madspin'] == 'onshell':
-            return ["add madspin_card --before_line='decay' set spinmode onshell"]
-        elif self.switch['madspin'] in ['full', 'madspin']:
-            return ["add madspin_card --before_line='decay' set spinmode madspin"]
-        elif self.switch['madspin'] == 'none':
-            return ["add madspin_card --before_line='decay' set spinmode none"]
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
         else:
             return []            
         
@@ -1264,14 +1264,21 @@ class AskRunNLO(cmd.ControlSwitch):
 #   reweight
 #
     def get_allowed_reweight(self):
-        """ """
+        """set the valid (visible) options for reweight"""
         
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        self.allowed_reweight = []
         if 'reweight' not in self.available_module:
-            return []
+            return self.allowed_reweight
         if self.proc_characteristics['ninitial'] == 1:
-            return ['OFF']
+            self.available_module.remove('reweight')
+            self.allowed_reweight.append('OFF')
+            return self.allowed_reweight
         else:
-            return ['ON', 'OFF']        
+            self.allowed_reweight = [ 'OFF', 'ON', 'NLO', 'NLO_TREE','LO']
+            return self.allowed_reweight     
     
     def set_default_reweight(self):
         """initialise the switch for reweight"""
@@ -1283,6 +1290,20 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.switch['reweight'] = 'OFF'
         else:
             self.switch['reweight'] = 'Not Avail.'      
+            
+    def get_cardcmd_for_reweight(self, value):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if value == 'LO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode LO"]
+        elif  value == 'NLO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO",
+                    "set store_rwgt_info T"]
+        elif value == 'NLO_TREE':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO_tree",
+                    "set store_rwgt_info T"]            
+        return []
+            
 #
 #   MadAnalysis5
 #    

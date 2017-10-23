@@ -5700,14 +5700,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '  and define it to PROC.'
         print '  if --add is present, just add a new decay for the associate particle.'
         
-    def complete_compute_widths(self, *args, **opts):
+    def complete_compute_widths(self, text, line, begidx, endidx, **opts):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-        return self.mother_interface.complete_compute_widths(*args,**opts)
+        return self.mother_interface.complete_compute_widths(text, line, begidx, endidx,**opts)
 
 
     def help_add(self):
@@ -5717,15 +5717,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add pythia8_card NAME VALUE')
         logger.info( "   add a definition of name in the pythia8_card with the given value")
         logger.info( "   Do not work for the param_card"        )
+        logger.info('')
         logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info()
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
-        logger.info('      --clean remove all previously existing line in  the file')
+        logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
+        logger.info( '     --clean remove all previously existing line in  the file')
+        logger.info('')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
+        logger.info('    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('********************* HELP ADD ***************************') 
 
 
@@ -5786,7 +5791,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
-
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -5810,12 +5814,42 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
+            elif args[1].startswith('--replace_line='):
+                # catch the line/regular expression and replace the associate line
+                # if no line match go to check if args[2] has other instruction starting with --
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        break
+                else:
+                    new_line = re.split(search_pattern,line)[-1].strip()
+                    if new_line.startswith(('--before_line=','--after_line')):
+                        return self.do_add('%s %s' % (args[0], new_line))   
+                    raise Exception, 'invalid regular expression: not found in file'
+                # found the line position "posline"
+                # need to check if the a fail savety is present
+                new_line = re.split(search_pattern,line)[-1].strip()
+                if new_line.startswith(('--before_line=','--after_line')):
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    new_line = re.split(search_pattern,new_line)[-1]
+                # overwrite the previous line
+                old_line = split[posline]
+                split[posline] = new_line
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
+                         (old_line, posline, card, new_line ),'$MG:color:BLACK')                
+                                            
+            
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[13:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5831,7 +5865,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[12:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5849,7 +5883,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
-
+    do_edit = do_add
 
     def help_asperge(self):
         """Help associated to the asperge command"""
