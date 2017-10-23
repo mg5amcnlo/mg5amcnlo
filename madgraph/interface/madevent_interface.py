@@ -797,6 +797,22 @@ class AskRun(cmd.ControlSwitch):
             self.allowed_madspin = ['OFF',"ON",'onshell']
         return self.allowed_madspin
     
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            return True
+        elif value.lower() in self.get_allowed_madspin():
+            return True
+        
+        if 'MadSpin' not in self.available_module:
+            return False
+             
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
+        
     
     def set_default_madspin(self):
         """initialise the switch for madspin"""
@@ -814,6 +830,10 @@ class AskRun(cmd.ControlSwitch):
         
         if self.switch['madspin'] == 'onshell':
             return ["add madspin_card --before_line='decay' set spinmode onshell"]
+        elif self.switch['madspin'] in ['full', 'madspin']:
+            return ["add madspin_card --before_line='decay' set spinmode madspin"]
+        elif self.switch['madspin'] == 'none':
+            return ["add madspin_card --before_line='decay' set spinmode none"]
         else:
             return []
         

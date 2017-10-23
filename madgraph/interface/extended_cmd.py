@@ -1108,10 +1108,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     line=answer
                     answer = question_instance.default(line)
                     question_instance.postcmd(answer, line)
-                    return question_instance.answer 
+                    if not return_instance:
+                        return question_instance.answer 
+                    else:
+                        return question_instance.answer , question_instance
                 if hasattr(question_instance, 'check_answer_consistency'):
                     question_instance.check_answer_consistency()
-                return answer
+                if not return_instance:
+                    return answer
+                else:
+                    return answer, question_instance
         
         question = question_instance.question
         if not force:

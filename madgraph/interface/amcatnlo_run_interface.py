@@ -949,6 +949,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if options['madanalysis5_path']:
             self.available_module.add('MA5')
         if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
+            
             self.available_module.add('MadSpin')
             if misc.has_f2py()  or options['f2py_compiler']:
                 self.available_module.add('reweight')
@@ -1196,12 +1197,46 @@ class AskRunNLO(cmd.ControlSwitch):
 #
     def get_allowed_madspin(self):
         """ """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        
+        
         if 'MadSpin' not in self.available_module:
-            return []
+            return self.allowed_madspin
         if self.proc_characteristics['ninitial'] == 1:
-            return ['OFF']
+            self.available_module.remove('MadSpin')
+            self.allowed_madspin = ['OFF']
+            return self.allowed_madspin
         else:
-            return ['OFF', 'ON', 'onshell']
+            self.allowed_madspin = ['OFF', 'ON', 'onshell']
+            return  self.allowed_madspin
+        
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin
+        remember that this mode should always be OFF for 1>N. (ON not in allowed value)"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
+        elif value.lower() in self.get_allowed_madspin():
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
+                        
+        if 'MadSpin' not in self.available_module or \
+           'ON' not in self.get_allowed_madspin():
+            return False   
+        
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
             
     def set_default_madspin(self):
         
@@ -1218,9 +1253,12 @@ class AskRunNLO(cmd.ControlSwitch):
         
         if self.switch['madspin'] == 'onshell':
             return ["add madspin_card --before_line='decay' set spinmode onshell"]
+        elif self.switch['madspin'] in ['full', 'madspin']:
+            return ["add madspin_card --before_line='decay' set spinmode madspin"]
+        elif self.switch['madspin'] == 'none':
+            return ["add madspin_card --before_line='decay' set spinmode none"]
         else:
-            return []
-            
+            return []            
         
 #
 #   reweight
