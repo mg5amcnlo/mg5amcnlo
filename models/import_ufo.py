@@ -66,7 +66,7 @@ def find_ufo_path(model_name):
     global last_model_path
 
     # Check for a valid directory
-    if model_name.startswith('./') and os.path.isdir(model_name):
+    if model_name.startswith(('./','../')) and os.path.isdir(model_name):
         return model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
         return os.path.join(MG5DIR, 'models', model_name)
