@@ -4041,7 +4041,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif lhapdf_version.startswith('6.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
                          stdout = subprocess.PIPE).stdout.read().strip()
-
+        
+        if ':' in datadir:
+            for totry in datadir.split(':'):
+                if os.path.exists(pjoin(totry, 'pdfsets.index')):
+                    return totry
+            else:
+                return None
+        
         return datadir
 
     def get_lhapdf_libdir(self):
