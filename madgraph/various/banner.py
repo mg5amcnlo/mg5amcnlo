@@ -2362,7 +2362,6 @@ class RunCard(ConfigFile):
                 # Special treatment for strings containing a list of
                 # strings. Convert it to a list of strings
                 if isinstance(value, list):
-                    print key,value
                     # in case of a list, add the length of the list as 0th
                     # element in fortran. Only in case of integer or float
                     # list (not for bool nor string)
@@ -2769,8 +2768,8 @@ class RunCardLO(RunCard):
             raise Exception, "Maximum 25 different pdgs are allowed for pdg specific cut"
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cut always applied symmetrically on particle/anti-particle. Always use positve PDG code')
-            raise MadGraph5Error, 'some PDG specific cut are defined with negative pdg code'
+            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
+            raise MadGraph5Error, 'Some PDG specific cuts are defined with negative pdg code'
         
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
@@ -3610,16 +3609,16 @@ class RunCardNLO(RunCard):
         pdg_to_cut.discard('__type__')
         pdg_to_cut.discard('default')
         if len(pdg_to_cut)>25:
-            raise Exception, "Maximum 25 different pdg are allowed for pdg specific cut"
+            raise Exception, "Maximum 25 different PDGs are allowed for PDG specific cut"
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cut always applied symmetrically on particle/anti-particle. Always use positve PDG code')
-            raise MadGraph5Error, 'some PDG specific cut are defined with negative pdg code'
+            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
+            raise MadGraph5Error, 'Some PDG specific cuts are defined with negative PDG codes'
         
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
             # Note that this will double check in the fortran code
-            raise Exception, "Can not use PDG related cut for light quark/b quark/lepton/gluon/photon"
+            raise Exception, "Can not use PDG related cuts for massless SM particles"
         if pdg_to_cut:
             self['pdg_cut'] = list(pdg_to_cut)
             self['ptmin4pdg'] = []

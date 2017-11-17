@@ -5183,9 +5183,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                            self.run_card['mxx_min_pdg'].keys()): 
             
                 if int(pdg)<0:
-                    raise Exception, "For PDG specific cut, always use positive PDG code, the cut are applied on both particle and anti-particle"
+                    raise Exception, "For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles"
                 if self.param_card.get_value('mass', int(pdg), default=0) ==0:
-                    raise Exception, "For NLO run, you can use PDG specific cut only for massive particles: (failed for %s)" % pdg
+                    raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
         
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
