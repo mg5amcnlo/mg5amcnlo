@@ -1107,12 +1107,6 @@ class AskRunNLO(cmd.ControlSwitch):
     consistency_reweight_fixed_order = consistency_shower_fixed_order
     consistency_madanalysis_fixed_order = consistency_shower_fixed_order
 
-    def get_cardcmd_for_fixed_order(self, value):
-        """command for the edition of the card according to this switch value"""
-        
-        if value == 'ON':
-            return ['set parton_shower not_possible_for_fix_order_run']
-        return []
             
 #
 #   Shower
