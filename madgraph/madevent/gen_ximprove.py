@@ -27,6 +27,7 @@ import re
 import subprocess
 import shutil
 import stat
+import sys
 
 try:
     import madgraph
@@ -1598,7 +1599,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
     max_event_in_iter = 5000
     min_event_in_iter = 1000
-    combining_job = 10000000
+    combining_job = sys.maxint
 
     def __init__(self, *args, **opts):
         
@@ -1687,10 +1688,11 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
                     'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
-                    'nevents': int(nevents*self.gen_events_security)+1,
+                    'nevents': nevents, #int(nevents*self.gen_events_security)+1,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
-                    'precision': needed_event,
+                    'precision': -1*int(needed_event+1)/C.get('axsec'),
+                    'requested_event': needed_event,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
                     'grid_refinment' : 0,    #no refinment of the grid
@@ -1732,7 +1734,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             P = job_info['P_dir']   
             G = job_info['channel']
             axsec = C.get('axsec')
-            requested_events = job_info['precision']        
+            requested_events= job_info['requested_event']          
     
 
             new_results = sum_html.OneResult((P,G))
@@ -1740,9 +1742,10 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     
             # need to resubmit?
             if new_results.get('nunwgt') < requested_events:
-                pwd = pjoin(os.getcwd(),job_info['P_dir']) if self.readonly else \
-                           pjoin(self.me_dir, 'SubProcesses', job_info['P_dir'])
-                job_info['precision'] -= new_results.get('nunwgt')
+                pwd = pjoin(os.getcwd(),job_info['P_dir'],'G%s'%G) if self.readonly else \
+                           pjoin(self.me_dir, 'SubProcesses', job_info['P_dir'],'G%s'%G)
+                job_info['requested_event'] -= new_results.get('nunwgt')
+                job_info['precision'] -= -1*job_info['requested_event']/axsec
                 job_info['offset'] += 1
                 new_jobs.append(job_info)
                 files.mv(pjoin(pwd, 'events.lhe'), pjoin(pwd, 'events.lhe.previous'))
@@ -1754,16 +1757,17 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             for j in new_jobs:
                 if j['P_dir'] in done:
                     continue
-
+                G = j['channel']
                 # set the working directory path.
-                pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
+                pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly \
+                    else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
                 exe = pjoin(pwd, 'ajob1')
                 st = os.stat(exe)
                 os.chmod(exe, st.st_mode | stat.S_IEXEC)
 
                 # run the code
                 cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
-
+                pwd = pjoin(pwd, 'G%s'%G)
                 # concatanate with old events file
                 files.put_at_end(pjoin(pwd, 'events.lhe'),pjoin(pwd, 'events.lhe.previous'))
 
