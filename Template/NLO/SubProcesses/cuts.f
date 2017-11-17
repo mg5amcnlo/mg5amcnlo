@@ -380,16 +380,15 @@ c End photon isolation
       endif
 
 C
-C     PDG SPECIFIC CUT. (PT/ETA)
+C     PDG SPECIFIC CUTS (PT/ETA/M_IJ)
 C
       do i=nincoming+1,nexternal-1
-         if(etmin(i).ne.0d0.or.etmax(i).gt.0d0)then
+         if(etmin(i).ne.0d0 .or. etmax(i).gt.0d0)then
             tmpvar = pt_04(p(0,i))
-            write(*,*) 'cut on ', i, ipdg(i)
             if (tmpvar.lt.etmin(i)) then
                passcuts_user=.false.
                return
-            else if(tmpvar.gt.etmax(i).and.etmax(i).gt.0d0) then
+            elseif (tmpvar.gt.etmax(i) .and. etmax(i).gt.0d0) then
                passcuts_user=.false.
                return
             endif

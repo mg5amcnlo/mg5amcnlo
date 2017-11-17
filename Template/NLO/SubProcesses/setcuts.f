@@ -106,36 +106,37 @@ c
       if (pdg_cut(1).ne.0)then
          do j=1,pdg_cut(0)
             do i=nincoming+1, nexternal-1 ! never include last particle
-               if (abs(idup(i, 1)).eq.pdg_cut(j))then
-c                 fully ensure that only massive particles are allowed at NLO
-                  if(pmass(i).eq.0d0) then
-                     write(*,*) 'Illegal use of pdg specific cut.'
-                     write(*,*)'For NLO process, only massive particle can be included'
-                     stop 1
-                  endif
-c                 fully ensure that this is not a jet/lepton/photon
-                  if(is_a_lp(i).or.is_a_lm(i).or.is_a_j(i).or.is_a_ph(i))then
-                     write(*,*) 'Illegal use of pdg specific cut.'
-                     write(*,*) 'This can not be used for jet/lepton/photon/gluon'
-                     stop 1
-                  endif
-                  etmin(i) = ptmin4pdg(j)
-                  etmax(i)= ptmax4pdg(j)
-                  !add the invariant mass cut
-                  if(mxxmin4pdg(j).ne.0d0)then
-                     do k=i+1, nexternal-1
-                        if (mxxpart_antipart(j))then
-                           if (idup(k, 1).eq.-1*idup(i,1))then
-                              mxxmin(i,k) = mxxmin4pdg(j)
-                           endif
-
-                        else
-                           if (abs(idup(k, 1)).eq.pdg_cut(j))then
-                              mxxmin(i,k) = mxxmin4pdg(j)
-                           endif
+               if (abs(idup(i,1)).ne.pdg_cut(j)) cycle
+c     fully ensure that only massive particles are allowed at NLO
+               if(pmass(i).eq.0d0) then
+                  write(*,*) 'Illegal use of pdg specific cut.'
+                  write(*,*) 'For NLO process, '/
+     $                 /'only massive particle can be included'
+                  stop 1
+               endif
+c     fully ensure that this is not a jet/lepton/photon
+               if(is_a_lp(i) .or. is_a_lm(i) .or. is_a_j(i) .or.
+     $              is_a_ph(i)) then
+                  write(*,*) 'Illegal use of pdg specific cut.'
+                  write(*,*) 'This can not be used for '/
+     $                 /'jet/lepton/photon/gluon'
+                  stop 1
+               endif
+               etmin(i) = ptmin4pdg(j)
+               etmax(i) = ptmax4pdg(j)
+!     add the invariant mass cut
+               if(mxxmin4pdg(j).ne.0d0)then
+                  do k=i+1, nexternal-1
+                     if (mxxpart_antipart(j))then
+                        if (idup(k, 1).eq.-1*idup(i,1))then
+                           mxxmin(i,k) = mxxmin4pdg(j)
                         endif
-                     enddo
-                  endif
+                     else
+                        if (abs(idup(k, 1)).eq.pdg_cut(j))then
+                           mxxmin(i,k) = mxxmin4pdg(j)
+                        endif
+                     endif
+                  enddo
                endif
             enddo
          enddo
