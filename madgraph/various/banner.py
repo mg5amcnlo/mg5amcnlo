@@ -2797,9 +2797,13 @@ class RunCardLO(RunCard):
                 #special for mxx_part_antipart
                 old_var = 'mxx_only_part_antipart'
                 new_var = 'mxxpart_antipart'
-                default = self[old_var]['default']
-                self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
-
+                if 'default' in self[old_var]:
+                    default = self[old_var]['default']
+                    self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                else:
+                    if str(pdg) not in self[old_var]:
+                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                    self[new_var].append(self[old_var][str(pdg)])
         else:
             self['pdg_cut'] = [0]
             self['ptmin4pdg'] = [0.]
@@ -3616,9 +3620,9 @@ class RunCardNLO(RunCard):
             raise MadGraph5Error, 'Some PDG specific cuts are defined with negative PDG codes'
         
         
-        if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
+        if any(pdg in pdg_to_cut for pdg in [21,22,11,13,15]+ range(self['maxjetflavor']+1)):
             # Note that this will double check in the fortran code
-            raise Exception, "Can not use PDG related cuts for massless SM particles"
+            raise Exception, "Can not use PDG related cuts for massless SM particles/leptons"
         if pdg_to_cut:
             self['pdg_cut'] = list(pdg_to_cut)
             self['ptmin4pdg'] = []
@@ -3637,8 +3641,13 @@ class RunCardNLO(RunCard):
                 #special for mxx_part_antipart
                 old_var = 'mxx_only_part_antipart'
                 new_var = 'mxxpart_antipart'
-                default = self[old_var]['default']
-                self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                if 'default' in self[old_var]:
+                    default = self[old_var]['default']
+                    self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                else:
+                    if str(pdg) not in self[old_var]:
+                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                    self[new_var].append(self[old_var][str(pdg)])
         else:
             self['pdg_cut'] = [0]
             self['ptmin4pdg'] = [0.]

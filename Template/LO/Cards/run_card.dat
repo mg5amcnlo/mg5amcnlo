@@ -184,7 +184,7 @@
  %(mmaamax)s  = mmaamax ! max invariant mass of gamma gamma pair
  %(mmllmax)s  = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
  %(mxx_min_pdg)s = mxx_min_pdg ! min invariant mass of a pair of particles X/X~ (e.g. {6:250})
- %(mxx_only_part_anti_part)s = mxx_only_part_anti_part ! if True the invariant mass is applied only 
+ %(mxx_only_part_antipart)s = mxx_only_part_antipart ! if True the invariant mass is applied only 
                        ! to pairs of particle/antiparticle and not to pairs of the same pdg codes.  
 #*********************************************************************
 # Minimum and maximum invariant mass for all letpons                 *
