@@ -6549,13 +6549,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                         mg5_version = None
                     # If version not reckognized, then carry on as it's probably a development version
                     if mg5_version:
-                        if mg5_version < LooseVersion("2.6.0") and ma5_version >= LooseVersion("1.6.32"):
+                        if mg5_version < LooseVersion("2.6.1") and ma5_version >= LooseVersion("1.6.32"):
                             logger.warning("This active MG5aMC version is too old (v%s) for your selected version of MadAnalysis5 (v%s)"%(mg5_version,ma5_version))
                             logger.warning("Upgrade MG5aMC or re-install MA5 from within MG5aMC to fix this compatibility issue.")
                             logger.warning("MadAnalysis5 will be disabled in your session.")
                             self.options['madanalysis5_path'] = None
                             continue
-                        if mg5_version >= LooseVersion("2.6.0") and ma5_version < LooseVersion("1.6.32"):
+                        if mg5_version >= LooseVersion("2.6.1") and ma5_version < LooseVersion("1.6.32"):
                             logger.warning("Your selected version of MadAnalysis5 (v%s) is too old for this active version of MG5aMC (v%s)."%(ma5_version,mg5_version))
                             logger.warning("Re-install MA5 from within MG5aMC to fix this compatibility issue.")
                             logger.warning("MadAnalysis5 will be disabled in your session.")
