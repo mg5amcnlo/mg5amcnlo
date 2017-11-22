@@ -4105,6 +4105,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.cards = cards
         self.all_vars = set()
 
+        #update default path by custom one if specify in cards
+        for card in cards:
+            if os.path.exists(card):
+                card_name = CommonRunCmd.detect_card_type(card)
+                card_name = card_name.split('_',1)[0] 
+                self.paths[card_name] = card
+                misc.sprint(card_name, self.paths[card_name])
+                
         # go trough the initialisation of each card and detect conflict
         for name in self.to_init_card:
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
