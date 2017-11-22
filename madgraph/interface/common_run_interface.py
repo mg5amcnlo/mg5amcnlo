@@ -1970,11 +1970,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        force=False, starttime=starttime)
 
                 all_lhe = []
+                #check for the pyton2.6 bug with s
+                to_zip=True
+                if not os.path.exists(new_args[0]) and new_args[0].endswith('.gz') and\
+                    os.path.exists(new_args[0][:-3]):
+                    to_zip = False
                 devnull= open(os.devnull)
+                
                 for i in range(nb_file):
                     new_command = list(command) 
-                    new_command.append('%s_%s.lhe' % (new_args[0],i))
-                    all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    if to_zip:
+                        new_command.append('%s_%s.lhe' % (new_args[0],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    else:
+                        new_command.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                    
                     if '-from_cards' not in command:
                         new_command.append('-from_cards')
                     if plugin:
@@ -1993,6 +2004,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
+
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
@@ -3560,6 +3572,55 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("--format=short (only if --path is define)")
         logger.info("        allows to have a multi-column output easy to parse")
 
+
+    ############################################################################
+    def find_model_name(self):
+        """ return the model name """
+        if hasattr(self, 'model_name'):
+            return self.model_name
+        
+        def join_line(old, to_add):
+            if old.endswith('\\'):
+                newline = old[:-1] + to_add
+            else:
+                newline = old + line
+            return newline
+            
+        
+        
+        model = 'sm'
+        proc = []
+        continuation_line = None
+        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
+            line = line.split('#')[0]
+            if continuation_line:
+                line = line.strip()
+                if continuation_line == 'model':
+                    model = join_line(model, line)
+                elif continuation_line == 'proc':
+                    proc = join_line(proc, line)
+                if not line.endswith('\\'):
+                    continuation_line = None
+                continue
+            #line = line.split('=')[0]
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]   
+                proc = []
+                if model.endswith('\\'):
+                    continuation_line = 'model'
+            elif line.startswith('generate'):
+                proc.append(line.split(None,1)[1])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+            elif line.startswith('add process'):
+                proc.append(line.split(None,2)[2])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+        self.model = model
+        self.process = proc 
+        return model
+
+
     ############################################################################
     def do_check_events(self, line):
         """ Run some sanity check on the generated events."""
@@ -3983,8 +4044,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
-        if self.lhapdf_version.startswith('6.2'):
-            logger.warning('Support of LHAPDF 6.2.x is still in beta phase. Consider to use LHAPDF 6.1.x in case of problem.')
         return self.lhapdf_version
 
 
@@ -4002,7 +4061,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif lhapdf_version.startswith('6.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
                          stdout = subprocess.PIPE).stdout.read().strip()
-
+        
+        if ':' in datadir:
+            for totry in datadir.split(':'):
+                if os.path.exists(pjoin(totry, 'pdfsets.index')):
+                    return totry
+            else:
+                return None
+        
         return datadir
 
     def get_lhapdf_libdir(self):
@@ -5773,14 +5839,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '  and define it to PROC.'
         print '  if --add is present, just add a new decay for the associate particle.'
         
-    def complete_compute_widths(self, *args, **opts):
+    def complete_compute_widths(self, text, line, begidx, endidx, **opts):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-        return self.mother_interface.complete_compute_widths(*args,**opts)
+        return self.mother_interface.complete_compute_widths(text, line, begidx, endidx,**opts)
 
 
     def help_add(self):
@@ -5790,15 +5856,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add pythia8_card NAME VALUE')
         logger.info( "   add a definition of name in the pythia8_card with the given value")
         logger.info( "   Do not work for the param_card"        )
+        logger.info('')
         logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info()
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
-        logger.info('      --clean remove all previously existing line in  the file')
+        logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
+        logger.info( '     --clean remove all previously existing line in  the file')
+        logger.info('')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
+        logger.info('    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('********************* HELP ADD ***************************') 
 
 
@@ -5859,7 +5930,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
-
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -5883,12 +5953,42 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
+            elif args[1].startswith('--replace_line='):
+                # catch the line/regular expression and replace the associate line
+                # if no line match go to check if args[2] has other instruction starting with --
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        break
+                else:
+                    new_line = re.split(search_pattern,line)[-1].strip()
+                    if new_line.startswith(('--before_line=','--after_line')):
+                        return self.do_add('%s %s' % (args[0], new_line))   
+                    raise Exception, 'invalid regular expression: not found in file'
+                # found the line position "posline"
+                # need to check if the a fail savety is present
+                new_line = re.split(search_pattern,line)[-1].strip()
+                if new_line.startswith(('--before_line=','--after_line')):
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    new_line = re.split(search_pattern,new_line)[-1]
+                # overwrite the previous line
+                old_line = split[posline]
+                split[posline] = new_line
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
+                         (old_line, posline, card, new_line ),'$MG:color:BLACK')                
+                                            
+            
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[13:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5904,7 +6004,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[12:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5922,7 +6022,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
-
+    do_edit = do_add
 
     def help_asperge(self):
         """Help associated to the asperge command"""

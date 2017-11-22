@@ -601,7 +601,7 @@ class AskRun(cmd.ControlSwitch):
         if 'PY6' not in self.available_module:
             logger.info('pythia-pgs not available. Ignore commmand')
             return
-        misc.sprint(value)
+
         if value is None:
             self.set_all_off()
             self.switch['shower'] = 'Pythia6'
@@ -786,6 +786,34 @@ class AskRun(cmd.ControlSwitch):
 #
 #   MADSPIN handling
 #
+    def get_allowed_madspin(self):
+        """ ON|OFF|onshell """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        if 'MadSpin'  in self.available_module:
+            self.allowed_madspin = ['OFF',"ON",'onshell']
+        return self.allowed_madspin
+    
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            return True
+        elif value.lower() in self.get_allowed_madspin():
+            return True
+        
+        if 'MadSpin' not in self.available_module:
+            return False
+             
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
+        
+    
     def set_default_madspin(self):
         """initialise the switch for madspin"""
         
@@ -796,6 +824,19 @@ class AskRun(cmd.ControlSwitch):
                 self.switch['madspin'] = 'OFF'
         else:
             self.switch['madspin'] = 'Not Avail.'
+            
+    def get_cardcmd_for_madspin(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        else:
+            return []
+        
 #
 #   ReWeight handling
 #
@@ -5808,29 +5849,6 @@ tar -czf split_$1.tar.gz split_$1
 
         return get_last_tag(self, level)
             
-
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
     
     
     ############################################################################
@@ -6106,9 +6124,9 @@ tar -czf split_$1.tar.gz split_$1
         if '-M' in args or '--madspin' in args:
             passing_cmd.append('madspin=ON')
         
-        switch = self.ask('', '0', [], ask_class = self.action_switcher,
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, line_args=args, force=self.force,
-                              first_cmd=passing_cmd)
+                              first_cmd=passing_cmd, return_instance=True)
         #
         self.switch = switch # store the value of the switch for plugin purpose 
         if 'dynamical' in switch:
@@ -6143,17 +6161,20 @@ tar -czf split_$1.tar.gz split_$1
 
         self.keep_cards(cards)
         
+        first_cmd = cmd_switch.get_cardcmd()
+        
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
             cards.append('MadLoopParams.dat')
         
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return switch
+        
 
         if 'dynamical' in switch and switch['dynamical']:
-            self.ask_edit_cards(cards, plot=False, mode='auto')
+            self.ask_edit_cards(cards, plot=False, mode='auto', first_cmd=first_cmd)
         else:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
         return switch
     
     ############################################################################

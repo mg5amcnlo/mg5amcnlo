@@ -949,6 +949,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if options['madanalysis5_path']:
             self.available_module.add('MA5')
         if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
+            
             self.available_module.add('MadSpin')
             if misc.has_f2py()  or options['f2py_compiler']:
                 self.available_module.add('reweight')
@@ -1106,6 +1107,7 @@ class AskRunNLO(cmd.ControlSwitch):
     consistency_reweight_fixed_order = consistency_shower_fixed_order
     consistency_madanalysis_fixed_order = consistency_shower_fixed_order
 
+            
 #
 #   Shower
 #
@@ -1177,17 +1179,58 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'ON'
         return None
     
+    def get_cardcmd_for_shower(self, value):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if value != 'OFF':
+            return  ['set parton_shower %s' % self.switch['shower']]
+        return []
+    
 #
 #   madspin
 #
     def get_allowed_madspin(self):
         """ """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        
+        
         if 'MadSpin' not in self.available_module:
-            return []
+            return self.allowed_madspin
         if self.proc_characteristics['ninitial'] == 1:
-            return ['OFF']
+            self.available_module.remove('MadSpin')
+            self.allowed_madspin = ['OFF']
+            return self.allowed_madspin
         else:
-            return ['ON', 'OFF']
+            self.allowed_madspin = ['OFF', 'ON', 'onshell']
+            return  self.allowed_madspin
+        
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin
+        remember that this mode should always be OFF for 1>N. (ON not in allowed value)"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
+        elif value.lower() in self.get_allowed_madspin():
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
+                        
+        if 'MadSpin' not in self.available_module or \
+           'ON' not in self.get_allowed_madspin():
+            return False   
+        
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
             
     def set_default_madspin(self):
         
@@ -1199,19 +1242,37 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             self.switch['madspin'] = 'Not Avail.'  
             
+    def get_cardcmd_for_madspin(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        else:
+            return []            
         
 #
 #   reweight
 #
     def get_allowed_reweight(self):
-        """ """
+        """set the valid (visible) options for reweight"""
         
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        self.allowed_reweight = []
         if 'reweight' not in self.available_module:
-            return []
+            return self.allowed_reweight
         if self.proc_characteristics['ninitial'] == 1:
-            return ['OFF']
+            self.available_module.remove('reweight')
+            self.allowed_reweight.append('OFF')
+            return self.allowed_reweight
         else:
-            return ['ON', 'OFF']        
+            self.allowed_reweight = [ 'OFF', 'ON', 'NLO', 'NLO_TREE','LO']
+            return self.allowed_reweight     
     
     def set_default_reweight(self):
         """initialise the switch for reweight"""
@@ -1223,6 +1284,20 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.switch['reweight'] = 'OFF'
         else:
             self.switch['reweight'] = 'Not Avail.'      
+            
+    def get_cardcmd_for_reweight(self, value):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if value == 'LO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode LO"]
+        elif  value == 'NLO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO",
+                    "set store_rwgt_info T"]
+        elif value == 'NLO_TREE':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO_tree",
+                    "set store_rwgt_info T"]            
+        return []
+            
 #
 #   MadAnalysis5
 #    
@@ -5121,29 +5196,6 @@ RESTART = %(mint_mode)s
             file.write(content)
         file.close()
 
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
-
 
     action_switcher = AskRunNLO
     ############################################################################
@@ -5176,9 +5228,10 @@ RESTART = %(mint_mode)s
         elif mode:
             passing_cmd.append(mode)
 
-        switch = self.ask('', '0', [], ask_class = self.action_switcher,
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=force,
-                              first_cmd=passing_cmd)
+                              first_cmd=passing_cmd,
+                              return_instance=True)
 
         if 'mode' in switch:
             mode = switch['mode']
@@ -5221,9 +5274,9 @@ RESTART = %(mint_mode)s
             ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
         else:
-            if switch['madspin'] == 'ON':
+            if switch['madspin'] != 'OFF':
                 cards.append('madspin_card.dat')
-            if switch['reweight'] == 'ON':
+            if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
             if switch['madanalysis'] == 'HADRON':
                 cards.append('madanalysis5_hadron_card.dat')                
@@ -5241,12 +5294,8 @@ RESTART = %(mint_mode)s
         
         
         # automatically switch to keep_wgt option
-        first_cmd = [] # force to change some switch
-        if switch['shower'] != 'OFF':
-            first_cmd.append('set parton_shower %s' % switch['shower'])
-        elif switch['fixed_order'] == 'ON':
-            first_cmd.append('set parton_shower not_possible_for_fix_order_run')
-        
+        first_cmd = cmd_switch.get_cardcmd()
+                
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 

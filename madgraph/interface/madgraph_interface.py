@@ -2507,7 +2507,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             args.insert(1, 'all')
             mode = 'all'
 
-
         completion_categories = {}
         # restriction continuation (for UFO)
         if mode in ['model', 'all'] and '-' in  text:
@@ -2539,7 +2538,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except Exception:
+                except Exception, error:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -2590,7 +2589,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 completion_categories['model name'] = all_path
                 is_model = False
 
-            if is_model:
+            if is_model and os.path.sep not in text:
                 model_list = [mod_name(name) for name in \
                                                 self.path_completion(text,
                                                 pjoin(MG5DIR,'models'),
@@ -2598,13 +2597,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 if file_cond(name)]
                 if mode == 'model' and 'PYTHONPATH' in os.environ:
                     for modeldir in os.environ['PYTHONPATH'].split(':'):
-                        if not modeldir:
+                        if not modeldir or not os.path.exists(modeldir):
                             continue
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
-                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
-                    
-                    
+                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
 
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
@@ -2624,6 +2621,14 @@ class CompleteForCmd(cmd.CompleteCmd):
                     completion_categories['model name'] = all_path + all_name
                 elif mode == 'model':
                     completion_categories['model name'] = all_name
+            elif os.path.sep in text:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                            if a.endswith(os.path.sep)])
+                except Exception:
+                    cur_path = os.getcwd()
+                all_path =  self.path_completion(text, cur_path)                
+                completion_categories['model name'] = all_path 
 
         # Options
         if mode == 'all' and len(args)>1:
@@ -2638,7 +2643,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
         return self.deal_multiple_categories(completion_categories,formatting) 
-    
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 

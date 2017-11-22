@@ -2270,7 +2270,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
-            new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
+            pat = re.compile('smatrix', re.I)
+            new_text, n  = re.subn(pat, '%ssmatrix' % proc_prefix, text)
             with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
                 f.write(new_text)
             linkfiles.pop(0)

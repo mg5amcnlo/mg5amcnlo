@@ -1042,7 +1042,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, text_format='4', force=False, **opt):
+            first_cmd=None, text_format='4', force=False, 
+            return_instance=False, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -1107,10 +1108,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     line=answer
                     answer = question_instance.default(line)
                     question_instance.postcmd(answer, line)
-                    return question_instance.answer 
+                    if not return_instance:
+                        return question_instance.answer 
+                    else:
+                        return question_instance.answer , question_instance
                 if hasattr(question_instance, 'check_answer_consistency'):
                     question_instance.check_answer_consistency()
-                return answer
+                if not return_instance:
+                    return answer
+                else:
+                    return answer, question_instance
         
         question = question_instance.question
         if not force:
@@ -1128,7 +1135,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if value == default and ask_class:
             value = question_instance.default(default)
 
-        return value
+        if not return_instance:
+            return value
+        else:
+            return value, question_instance
  
     def do_import(self, line):
         """Advanced commands: Import command files"""
@@ -2296,6 +2306,8 @@ class ControlSwitch(SmartQuestion):
        check_value_XXXX(value) -> return True/False if the user can set such value
        switch_off_XXXXX()      -> set it off (called for special mode)
        color_for_XXXX(value)   -> return the representation on the screen for value
+       get_cardcmd_for_XXXX(value)> return the command to run to customize the cards to 
+                                  match the status
 
        consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
@@ -2429,6 +2441,17 @@ class ControlSwitch(SmartQuestion):
         else:
             return False
         
+        
+    def get_cardcmd(self):
+        """ return the list of command that need to be run to have a consistent 
+            set of cards with the switch value choosen """
+        
+        switch = self.answer
+        cmd= []
+        for key in self.switch:
+            if hasattr(self, 'get_cardcmd_for_%s' % key):
+                cmd += getattr(self, 'get_cardcmd_for_%s' % key)(switch[key])
+        return cmd
         
         
     def get_allowed(self, key):
@@ -2918,7 +2941,7 @@ class ControlSwitch(SmartQuestion):
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
-            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4,
+            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4,
                                                     lname+max(2*lpotential_switch+3, lswitch)+5,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
@@ -2930,7 +2953,7 @@ class ControlSwitch(SmartQuestion):
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
-            upper = "/{:=^%s}|{:=^%s}|{:=^%s}\\" % (lnb_key+ldescription+4+5,
+            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4+5,
                                                     lname+max(3+2*lpotential_switch,lswitch)+10,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
