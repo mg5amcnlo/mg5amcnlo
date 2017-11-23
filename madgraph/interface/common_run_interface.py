@@ -2661,8 +2661,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Make sure to only run over one analysis over each fifo.
         used_up_fifos = []
         # Now loop over the different MA5_runs
-        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+        for MA5_run_number, (MA5_runtag, MA5_cmds) in enumerate(MA5_cmds_list):
             
+            # Since we place every MA5 run in a fresh new folder, the MA5_run_number
+            # is always zero.
+            MA5_run_number = 0
             # Bypass the banner.
             MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
@@ -2689,7 +2692,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
                 # Unsuccessful MA5 run, we therefore stop here.
                 return
-            
+
             if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first link the event file
                 # created with MA5 reconstruction and then directly proceed to the
@@ -2712,8 +2715,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events'))+\
-                                      misc.glob('*.root',pjoin(reco_output,'Output','_reco_events'))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events','lheEvents0_%d'%MA5_run_number))+\
+                                       misc.glob('*.root',pjoin(reco_output,'Output','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2722,13 +2725,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     shutil.move(reco_output,pjoin(self.me_dir,'HTML',
                                  self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%
                                     (self.run_tag,mode.upper(),MA5_runtag,i+1)))
+                    
                     # link the reconstructed event file to the run directory
                     links_created.append(os.path.basename(reco_event_file))
+                    parent_dir_name = os.path.basename(os.path.dirname(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
                       '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
-                      MA5_runtag,i+1),'Output','_reco_events',links_created[-1]),
+                      MA5_runtag,i+1),'Output','_reco_events',parent_dir_name,links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
-                    
+
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
                   "'%s'. Links to the reconstructed event files are:"%MA5_runtag[6:])
                 for link in links_created:
@@ -2740,7 +2745,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
               %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
             else:
                 target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
-                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+                    %(mode.upper(),MA5_runtag),'Output','PDF','MadAnalysis5job_%d'%MA5_run_number,'main.pdf')
             has_pdf = True
             if not os.path.isfile(target):
                 has_pdf = False

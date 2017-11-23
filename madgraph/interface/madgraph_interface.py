@@ -39,7 +39,6 @@ import inspect
 import urllib
 import random
 
-
 #useful shortcut
 pjoin = os.path.join
 
@@ -6527,7 +6526,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     if not os.path.isfile(pjoin(path,'bin','ma5')):
                         self.options['madanalysis5_path'] = None
                     else:
-                        continue
+                        ma5path = pjoin(MG5DIR, path) if os.path.isfile(pjoin(MG5DIR, path)) else path
+                        message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+                        if not message is None:
+                            self.options['madanalysis5_path'] = None
+                            logger.warning(message)
+                            continue
+ 
                 #this is for hw++
                 if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
@@ -7208,6 +7213,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+
+        elif args[0] == 'madanalysis5_path':
+            ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
+            message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+            if message is None:
+                self.options['madanalysis5_path'] = args[1]
+            else:
+                logger.warning(message)
 
         elif args[0] == 'OLP':
             # Reset the amplitudes, MatrixElements and exporter as they might
