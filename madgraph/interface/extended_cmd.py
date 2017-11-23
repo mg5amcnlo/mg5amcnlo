@@ -2496,8 +2496,6 @@ class ControlSwitch(SmartQuestion):
             except:
                 if self.get_allowed(base):
                     value = self.get_allowed(base)[0]
-                elif raise_error:
-                    raise NotValidInput('Can not switch "%s" to another value via number' % base)
                 else:                      
                     logger.warning('Can not switch "%s" to another value via number', base)
                     self.value='reask'
