@@ -5725,7 +5725,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('')
         logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
-        logger.info()
+        logger.info( '')
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
