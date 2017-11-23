@@ -2760,7 +2760,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
             else:
                 logger.error('MadAnalysis5 failed to create PDF output')
-                stop
             if MA5_runtag!='default':
                 logger.info("MadAnalysis5 successfully completed the "+
                   "%s. Reported results are placed in:"%("analysis '%s'"%MA5_runtag 
