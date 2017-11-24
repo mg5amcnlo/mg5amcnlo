@@ -5,6 +5,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           - design modular, designed for PLUGIN interactions
           - the length of the question auto adapts to the size of the shell
       OM: Fix a bug in matching/merging forbiding the pdf reweighting for some processes (since 2.4.0)
+      OM: Creation of online database with the name of known UFO model. If a use try to import a model
+          which does not exits locally, the code will automatically check that database and download the 
+          associate model if it exists. You can contact us if you are the author of one model which is not
+          on our database.
 
 2.6.0 (16/08/17)
       New Functionalities:
