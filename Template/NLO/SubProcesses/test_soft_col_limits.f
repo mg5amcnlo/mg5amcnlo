@@ -421,7 +421,7 @@ c because otherwise fresh random will be used...
                      enddo
                      call checkres2(limit_split(1,iamp),fxl_split(1
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,nexternal,i_fks,j_fks
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
      $                    ,iret)
                      write(*,*) 'RETURN CODE', iret
                   endif
@@ -443,7 +443,7 @@ c
             else
                iflag=0
                call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
-     &              iflag,imax,j,nexternal,i_fks,j_fks,iret)
+     &              iflag,imax,j,i_fks,j_fks,iret)
                nerr=nerr+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
@@ -452,7 +452,7 @@ c
      $                 ,iamp).ne.0d0) then
                      call checkres2(limit_split(1,iamp),fxl_split(1
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,nexternal,i_fks,j_fks
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
      $                    ,iret)
                      nerr=nerr+iret
                   endif
@@ -629,7 +629,7 @@ c
                      enddo
                      call checkres2(limit_split(1,iamp),fxl_split(1
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,nexternal,i_fks,j_fks
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
      $                    ,iret)
                      write(*,*) 'RETURN CODE', iret
                   endif
@@ -651,7 +651,7 @@ c
             else
                iflag=1
                call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
-     &              iflag,imax,j,nexternal,i_fks,j_fks,iret)
+     &              iflag,imax,j,i_fks,j_fks,iret)
                nerr=nerr+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
@@ -660,7 +660,7 @@ c
      $                 ,iamp).ne.0d0) then
                      call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
      &                    wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
-     &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
+     &                    iflag,imax,j,i_fks,j_fks,iret)
                      nerr=nerr+iret
                   endif
                enddo

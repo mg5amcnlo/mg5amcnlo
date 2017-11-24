@@ -5284,13 +5284,14 @@ c
 c The following has been derived with minor modifications from the
 c analogous routine written for VBF
       subroutine checkres2(xsecvc,xseclvc,wgt,wgtl,xp,lxp,
-     #                    iflag,imax,iev,nexternal,i_fks,j_fks,iret)
+     #                    iflag,imax,iev,i_fks,j_fks,iret)
 c     same as checkres, but also limits are arrays.
       implicit none
-      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(15,0:3,21)
-     &     ,xp(15,0:3,21)
+      include 'nexternal.inc'
+      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(15,0:3,nexternal+1)
+     &     ,xp(15,0:3,nexternal+1)
       real*8 ckc(15),rckc(15),rat
-      integer iflag,imax,iev,nexternal,i_fks,j_fks,iret,ithrs,istop,
+      integer iflag,imax,iev,i_fks,j_fks,iret,ithrs,istop,
      # iwrite,i,k,l,imin,icount
       parameter (ithrs=3)
       parameter (istop=0)
