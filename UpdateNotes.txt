@@ -11,6 +11,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           on our database. 
       OM: Model with __arxiv__ attribute will display "please cite XXXX.XXXXX when using this model" when
           loaded for the first time.
+      OM: Removal of all v4 models (sm_v4, heft_v4, mssm_v4, usermod_v4)
 
 2.6.0 (16/08/17)
       New Functionalities:
