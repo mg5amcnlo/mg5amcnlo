@@ -45,3 +45,4 @@ gauge = [0]
 __author__ = "C. Degrande"
 __date__ = "08.04. 2013"
 __version__= "1.1"
+__arxiv__="1205.4231"

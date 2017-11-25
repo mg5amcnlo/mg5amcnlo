@@ -8,7 +8,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Creation of online database with the name of known UFO model. If a use try to import a model
           which does not exits locally, the code will automatically check that database and download the 
           associate model if it exists. You can contact us if you are the author of one model which is not
-          on our database.
+          on our database. 
+      OM: Model with __arxiv__ attribute will display "please cite XXXX.XXXXX when using this model" when
+          loaded for the first time.
 
 2.6.0 (16/08/17)
       New Functionalities:

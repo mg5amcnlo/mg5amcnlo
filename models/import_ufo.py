@@ -403,6 +403,9 @@ class UFOMG5Converter(object):
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
        
+        if hasattr(model, '__arxiv__'):
+            logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
+       
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.wavefunction_CT_couplings = []
