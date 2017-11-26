@@ -5174,8 +5174,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
+
         self.run_card.set(name, value, user=True)
+        new_value = self.run_card.get(name)
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
+
 
     def setML(self, name, value, default=False):
         
@@ -5239,6 +5242,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """This is run on quitting the class. Apply here all the self-consistency
         rule that you want. Do the modification via the set command."""
 
+        # For NLO run forbid any pdg specific cut on massless particle
+        if isinstance(self.run_card,banner_mod.RunCardNLO):
+            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
+                           self.run_card['mxx_min_pdg'].keys()): 
+            
+                if int(pdg)<0:
+                    raise Exception, "For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles"
+                if self.param_card.get_value('mass', int(pdg), default=0) ==0:
+                    raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
+        
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
