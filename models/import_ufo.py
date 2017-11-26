@@ -91,7 +91,7 @@ def find_ufo_path(model_name, web_search=True):
     else:
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     
-
+    raise UFOImportError("Path %s is not a valid pathname" % model_name)
     return
 
 def import_model_from_db(model_name):

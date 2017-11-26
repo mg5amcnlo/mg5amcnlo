@@ -5041,18 +5041,11 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
-                try:
-                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
-                    if os.path.sep in args[1] and "import" in self.history[-1]:
-                        self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
-                except import_ufo.UFOImportError, error:
-                    if 'not a valid UFO model' in str(error):
-                        logger_stderr.warning('WARNING: %s' % error)
-                        logger_stderr.warning('Try to recover by running '+\
-                         'automatically `import model_v4 %s` instead.'% args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
-                    return
+                if os.path.sep in args[1] and "import" in self.history[-1]:
+                    self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
+
                 if self.options['gauge']=='unitary':
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
@@ -5708,8 +5701,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
 
-            r = random.randint(0,1)
-            r = [r, (1-r)]
 #           Force here to choose one particular server
             if any(a.startswith('--source=') for a in args):
                 source = [a[9:] for a in args if a.startswith('--source=')][-1]

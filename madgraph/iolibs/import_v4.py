@@ -36,13 +36,28 @@ logger = logging.getLogger('madgraph.import_v4')
 #===============================================================================
 # import_v4model
 #===============================================================================
-def import_model(model_path, mgme_dir = MG4DIR, absolute=True):
+def import_model(model_path, mgme_dir = MG4DIR, absolute=True, web=True):
     """create a model from a MG4 model directory."""
 
     # Check for a valid directory
     model_path_old = model_path
-    model_path = find_model_path(model_path, mgme_dir, absolute)
+    try:
+        model_path = find_model_path(model_path, mgme_dir, absolute)
+    except Exception, error:
+        if not web:
+            raise
+        import models.import_ufo as import_ufo
+        if model_path_old.endswith('_v4'):
+            found = import_ufo.import_model_from_db(model_path_old)
+        else:
+            found = import_ufo.import_model_from_db(model_path_old+'_v4')
+             
+        if found and absolute:
+            return import_model(model_path_old, mgme_dir, absolute, web=False)
 
+        else:
+            raise
+        
     files_list = [os.path.join(model_path, 'particles.dat'),\
                   os.path.join(model_path, 'interactions.dat')]
     
