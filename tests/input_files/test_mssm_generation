@@ -1,4 +1,4 @@
-import model mssm
+import model MSSM_SLHA2
 set automatic_html_opening False --no-save
 set notification_center False --no-save
 generate p p > go go

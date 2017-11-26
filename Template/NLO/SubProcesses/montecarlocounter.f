@@ -1178,7 +1178,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 c BARRED AMPLITUDES
       do i=1,max_bcol
-         if (sumborn.ne.0d0) then
+         if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
             bornbars(i)=jamp2(i)/sumborn * born *iden_comp
          elseif (born.eq.0d0 .or. jamp2(i).eq.0d0
      &           .or..not.is_leading_cflow(i)) then
@@ -1187,7 +1187,7 @@ c BARRED AMPLITUDES
             write (*,*) 'ERROR #1, dividing by zero'
             stop
          endif
-         if (sumborn.ne.0d0) then
+         if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
             bornbarstilde(i)=jamp2(i)/sumborn * borntilde *iden_comp
          elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0
      &           .or..not.is_leading_cflow(i)) then

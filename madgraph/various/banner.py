@@ -57,7 +57,7 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
+                     'slha','initrwgt','mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard',
                      'ma5card_parton','ma5card_hadron','run_settings']
 
@@ -74,6 +74,8 @@ class Banner(dict):
             'mgdelphescard': 'MGDelphesCard',
             'mgdelphestrigger': 'MGDelphesTrigger',
             'mgshowercard': 'MGShowerCard' }
+    
+    forbid_cdata = ['initrwgt']
     
     def __init__(self, banner_path=None):
         """ """
@@ -387,7 +389,8 @@ class Banner(dict):
                 continue
             capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             start_data, stop_data = '', ''
-            if '<' in self[tag] or '@' in self[tag]:
+            if capitalized_tag not in self.forbid_cdata and \
+                                          ('<' in self[tag] or '@' in self[tag]):
                 start_data = '\n<![CDATA['
                 stop_data = ']]>\n'
             ff.write('<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
@@ -935,7 +938,7 @@ class ConfigFile(dict):
         self.auto_set = set()
         self.system_only = set()
         self.lower_to_case = {}
-        self.list_parameter = set()
+        self.list_parameter = {} #key -> type of list (int/float/bool/str/...
         self.dict_parameter = {}
         self.comments = {} # comment associated to parameters. can be display via help message
         
@@ -1010,11 +1013,7 @@ class ConfigFile(dict):
             
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
-            if isinstance(self[name], list):
-                targettype = type(self[name][0])
-            else:
-                #should not happen but better save than sorry
-                targettype = type(dict.__getitem__(self,name)) 
+            targettype = self.list_parameter[lower_name] 
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1046,7 +1045,7 @@ class ConfigFile(dict):
             #format each entry    
             values =[self.format_variable(v, targettype, name=name) 
                                                                  for v in value]
-            dict.__setitem__(self, lower_name, values)
+            dict.__setitem__(self, lower_name, values) 
             if change_userdefine:
                 self.user_set.add(lower_name)
             return  
@@ -1120,7 +1119,7 @@ class ConfigFile(dict):
         if change_userdefine:
             self.user_set.add(lower_name)
 
-    def add_param(self, name, value, system=False, comment=False):
+    def add_param(self, name, value, system=False, comment=False, typelist=None):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1131,9 +1130,14 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
         if isinstance(value, list):
-            if any([type(value[0]) != type(v) for v in value]):
+            if len(value):
+                targettype = type(value[0])
+            else:
+                targettype=typelist
+                assert typelist
+            if any([targettype != type(v) for v in value]):
                 raise Exception, "All entry should have the same type"
-            self.list_parameter.add(lower_name)
+            self.list_parameter[lower_name] = targettype
         elif isinstance(value, dict):
             allvalues = value.values()
             if any([type(allvalues[0]) != type(v) for v in allvalues]):
@@ -1958,7 +1962,7 @@ class PY8Card(ConfigFile):
             finput = file_input
         else:
             raise MadGraph5Error("Incorrect type for argument 'file_input': %s"%
-                                                    file_inp .__class__.__name__)
+                                                    file_input.__class__.__name__)
 
         # Read the template
         last_pos = finput.tell()
@@ -1980,6 +1984,9 @@ class PY8Card(ConfigFile):
                 line = line.replace('\n','')
                 raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
                                                                           line
+            if '!' in value:
+                value,_ = value.split('!',1)                                                             
+                                                                          
             # Read a subrun if detected:
             if param=='Main:subrun':
                 if read_subrun:
@@ -2353,12 +2360,13 @@ class RunCard(ConfigFile):
                     # in case of a list, add the length of the list as 0th
                     # element in fortran. Only in case of integer or float
                     # list (not for bool nor string)
-                    if isinstance(value[0], bool):
+                    targettype = self.list_parameter[key]                        
+                    if targettype is bool:
                         pass
-                    elif isinstance(value[0], int):
+                    elif targettype is int:
                         line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
                         fsock.writelines(line)
-                    elif isinstance(value[0], float):
+                    elif targettype is float:
                         line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
                         fsock.writelines(line)
                     # output the rest of the list in fortran
@@ -2735,7 +2743,7 @@ class RunCardLO(RunCard):
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
         self['pdgs_for_merging_cut'] = proc_characteristic['colored_pdgs']
-
+                    
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()

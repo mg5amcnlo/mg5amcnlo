@@ -187,7 +187,7 @@ void combine_root(){
   if(myverbose){
     cout << " " << endl;
     cout << "List of final histograms " << endl;
-    cout << FinalFile.GetListOfKeys()->Print() << endl;
+    FinalFile.GetListOfKeys()->Print();
   }
   FinalFile.Close();
   

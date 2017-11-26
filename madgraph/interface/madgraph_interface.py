@@ -39,7 +39,6 @@ import inspect
 import urllib
 import random
 
-
 #useful shortcut
 pjoin = os.path.join
 
@@ -1503,29 +1502,13 @@ This will take effect only in a NEW terminal
             self._export_format = args.pop(0)
         elif args:
             # check for PLUGIN format
-            for plugpath in self.plugin_path:
-                plugindirname = os.path.basename(plugpath)
-                for plug in os.listdir(plugpath):
-                    if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                        try:
-                            __import__('%s.%s' % (plugindirname,plug))
-                        except Exception, error:
-                            logger.warning("error detected in plugin: %s.", plug)
-                            logger.warning("%s", error)
-                            continue
-                        plugin = sys.modules['%s.%s' % (plugindirname,plug)]                
-                        if hasattr(plugin, 'new_output'):
-                            if not misc.is_plugin_supported(plugin):
-                                continue
-                            if args[0] in plugin.new_output:
-                                self._export_format = 'plugin'
-                                self._export_plugin = plugin.new_output[args[0]]
-                                logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
-                                args.pop(0)
-                                break
-                else:
-                    continue
-                break
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 args[0], warning=True, 
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                self._export_format = 'plugin'
+                self._export_plugin = output_cls
+                args.pop(0)
             else:
                 self._export_format = default
         else:
@@ -2524,7 +2507,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             args.insert(1, 'all')
             mode = 'all'
 
-
         completion_categories = {}
         # restriction continuation (for UFO)
         if mode in ['model', 'all'] and '-' in  text:
@@ -2556,7 +2538,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except Exception:
+                except Exception, error:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -2607,7 +2589,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 completion_categories['model name'] = all_path
                 is_model = False
 
-            if is_model:
+            if is_model and os.path.sep not in text:
                 model_list = [mod_name(name) for name in \
                                                 self.path_completion(text,
                                                 pjoin(MG5DIR,'models'),
@@ -2615,13 +2597,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 if file_cond(name)]
                 if mode == 'model' and 'PYTHONPATH' in os.environ:
                     for modeldir in os.environ['PYTHONPATH'].split(':'):
-                        if not modeldir:
+                        if not modeldir or not os.path.exists(modeldir):
                             continue
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
-                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
-                    
-                    
+                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
 
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
@@ -2641,6 +2621,14 @@ class CompleteForCmd(cmd.CompleteCmd):
                     completion_categories['model name'] = all_path + all_name
                 elif mode == 'model':
                     completion_categories['model name'] = all_name
+            elif os.path.sep in text:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                            if a.endswith(os.path.sep)])
+                except Exception:
+                    cur_path = os.getcwd()
+                all_path =  self.path_completion(text, cur_path)                
+                completion_categories['model name'] = all_path 
 
         # Options
         if mode == 'all' and len(args)>1:
@@ -2655,7 +2643,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
         return self.deal_multiple_categories(completion_categories,formatting) 
-    
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 
@@ -6539,7 +6526,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     if not os.path.isfile(pjoin(path,'bin','ma5')):
                         self.options['madanalysis5_path'] = None
                     else:
-                        continue
+                        ma5path = pjoin(MG5DIR, path) if os.path.isfile(pjoin(MG5DIR, path)) else path
+                        message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+                        if not message is None:
+                            self.options['madanalysis5_path'] = None
+                            logger.warning(message)
+                            continue
+ 
                 #this is for hw++
                 if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
@@ -7220,6 +7213,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+
+        elif args[0] == 'madanalysis5_path':
+            ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
+            message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+            if message is None:
+                self.options['madanalysis5_path'] = args[1]
+            else:
+                logger.warning(message)
 
         elif args[0] == 'OLP':
             # Reset the amplitudes, MatrixElements and exporter as they might

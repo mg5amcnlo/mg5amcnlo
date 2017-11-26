@@ -1194,7 +1194,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
                         pwidth = totwidth
-                    br = pwidth / totwidth
+                    br *= pwidth / totwidth
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     nb_needed = int(efficiency*nb_needed) +nevents_for_max *nb_mult
@@ -1208,7 +1208,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
                             pwidth = totwidth
-                        br = pwidth / totwidth**nb_mult
+                        br *= pwidth / totwidth**nb_mult
                         br *= math.factorial(nb_mult)
                     else:
                         evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
@@ -1217,13 +1217,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         elif pwidth > totwidth:
                             pwidth = totwidth
                         br *= (pwidth / totwidth)**nb_mult
+                        
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
-        
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)

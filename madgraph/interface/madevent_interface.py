@@ -494,6 +494,378 @@ class HelpToCmd(object):
         logger.info("   The banner can be remove only if all files are removed first.")
 
 
+class AskRun(cmd.ControlSwitch):
+    """a class for the question on what to do on a madevent run"""
+
+    to_control = [('shower', 'Choose the shower/hadronization program'),
+                      ('detector', 'Choose the detector simulation program'),
+                      ('analysis', 'Choose an analysis package (plot/convert)'),
+                      ('madspin', 'Decay onshell particles'),
+                      ('reweight', 'Add weights to events for new hypp.')
+                ]
+    
+    def __init__(self, question, line_args=[], mode=None, force=False,
+                                                                  *args, **opt):
+        
+        self.check_available_module(opt['mother_interface'].options)
+        self.me_dir = opt['mother_interface'].me_dir
+        super(AskRun,self).__init__(self.to_control, opt['mother_interface'],
+                                     *args, **opt)
+        
+        
+    def check_available_module(self, options):
+        
+        self.available_module = set()
+        
+        if options['pythia-pgs_path']:
+            self.available_module.add('PY6')
+            self.available_module.add('PGS')
+        if options['pythia8_path']:
+            self.available_module.add('PY8')
+        if options['madanalysis_path']:
+            self.available_module.add('MA4')
+        if options['madanalysis5_path']:
+            self.available_module.add('MA5')
+        if options['exrootanalysis_path']:
+            self.available_module.add('ExRoot')
+        if options['delphes_path']:
+            if 'PY6' in self.available_module or 'PY8' in self.available_module:
+                self.available_module.add('Delphes')
+        if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
+            self.available_module.add('MadSpin')
+            if misc.has_f2py() or options['f2py_compiler']:
+                self.available_module.add('reweight')
+
+#   old mode to activate the shower            
+    def ans_parton(self, value=None):
+        """None: means that the user type 'pythia'
+           value: means that the user type pythia=value"""
+        
+        if value is None:
+            self.set_all_off()
+        else:
+            logger.warning('Invalid command: parton=%s' % value)
+            
+                
+#
+#   HANDLING SHOWER 
+#
+    def get_allowed_shower(self):
+        """return valid entry for the shower switch"""
+        
+        if hasattr(self, 'allowed_shower'):
+            return self.allowed_shower
+        
+        self.allowed_shower = []
+        if 'PY6' in self.available_module:
+            self.allowed_shower.append('Pythia6')
+        if 'PY8' in self.available_module:
+            self.allowed_shower.append('Pythia8')
+        if self.allowed_shower:
+            self.allowed_shower.append('OFF')
+        return self.allowed_shower
+    
+    def set_default_shower(self):
+        
+        if 'PY6' in self.available_module and\
+                   os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+            self.switch['shower'] = 'Pythia6'
+        elif 'PY8' in self.available_module and\
+                  os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+            self.switch['shower'] = 'Pythia8'
+        elif self.get_allowed_shower():
+            self.switch['shower'] = 'OFF'
+        else:
+            self.switch['shower'] = 'Not Avail.'
+
+    def check_value_shower(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        if value in self.get_allowed_shower():
+            return True
+        
+        value =value.lower()
+        if value in ['py6','p6','pythia_6'] and 'PY6' in self.available_module:
+            return 'Pythia6'
+        elif value in ['py8','p8','pythia_8'] and 'PY8' in self.available_module:
+            return 'Pythia8'
+        else:
+            return False
+            
+            
+#   old mode to activate the shower            
+    def ans_pythia(self, value=None):
+        """None: means that the user type 'pythia'
+           value: means that the user type pythia=value"""
+        
+        if 'PY6' not in self.available_module:
+            logger.info('pythia-pgs not available. Ignore commmand')
+            return
+
+        if value is None:
+            self.set_all_off()
+            self.switch['shower'] = 'Pythia6'
+        elif value == 'on':
+            self.switch['shower'] = 'Pythia6'
+        elif value == 'off':
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: pythia=%s' % value)
+            
+            
+    def consistency_shower_detector(self, vshower, vdetector):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower == 'OFF':
+            if self.check_value('detector', vdetector) and  vdetector!= 'OFF':
+                return 'OFF'
+        if vshower == 'Pythia8' and vdetector == 'PGS':
+            return 'OFF'
+        
+        return None
+#
+#   HANDLING DETECTOR
+#
+    def get_allowed_detector(self):
+        """return valid entry for the switch"""
+ 
+        if hasattr(self, 'allowed_detector'):
+            return self.allowed_detector 
+        
+        self.allowed_detector = []
+        if 'PGS' in self.available_module:
+            self.allowed_detector.append('PGS')
+        if 'Delphes' in self.available_module:
+            self.allowed_detector.append('Delphes')
+
+            
+        if self.allowed_detector:
+            self.allowed_detector.append('OFF')
+        return self.allowed_detector  
+
+    def set_default_detector(self):
+        
+        self.set_default_shower() #ensure that this one is called first!
+        
+        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6':
+            self.switch['detector'] = 'PGS'
+        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF':
+            self.switch['detector'] = 'Delphes'
+        elif self.get_allowed_detector():
+            self.switch['detector'] = 'OFF'
+        else: 
+            self.switch['detector'] =  'Not Avail.'
+                
+#   old mode to activate pgs            
+    def ans_pgs(self, value=None):
+        """None: means that the user type 'pgs'
+           value: means that the user type pgs=value"""        
+        
+        if 'PGS' not in self.available_module:
+            logger.info('pythia-pgs not available. Ignore commmand')
+            return
+        
+        if value is None:
+            self.set_all_off()
+            self.switch['shower'] = 'Pythia6'
+            self.switch['detector'] = 'PGS'
+        elif value == 'on':
+            self.switch['shower'] = 'Pythia6'
+            self.switch['detector'] = 'PGS'
+        elif value == 'off':
+            self.set_switch('detector', 'OFF')
+        else:
+            logger.warning('Invalid command: pgs=%s' % value)
+
+            
+#   old mode to activate Delphes
+    def ans_delphes(self, value=None):
+        """None: means that the user type 'delphes'
+           value: means that the user type delphes=value"""          
+        
+        if 'Delphes' not in self.available_module:
+            logger.warning('Delphes not available. Ignore commmand')
+            return
+        
+        if value is None:
+            self.set_all_off()
+            if 'PY6' in self.available_module:
+                self.switch['shower'] = 'Pythia6'
+            else:
+                self.switch['shower'] = 'Pythia8'
+            self.switch['detector'] = 'Delphes'
+        elif value == 'on':
+            return self.ans_delphes(None)
+        elif value == 'off':
+            self.set_switch('detector', 'OFF')
+        else:
+            logger.warning('Invalid command: pgs=%s' % value)        
+
+    def consistency_detector_shower(self,vdetector, vshower):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+        
+        if vdetector == 'PGS' and vshower != 'Pythia6':
+            return 'Pythia6'
+        if vdetector == 'Delphes' and vshower  not in ['Pythia6', 'Pythia8']:
+            if 'PY8' in self.available_module:
+                return 'Pythia8'
+            elif 'PY6' in self.available_module:
+                return 'Pythia6'
+            else:
+                raise Exception
+        return None
+
+
+#
+#   HANDLING ANALYSIS
+#
+    def get_allowed_analysis(self):
+        """return valid entry for the shower switch"""
+        
+        if hasattr(self, 'allowed_analysis'):
+            return self.allowed_analysis
+        
+        self.allowed_analysis = []
+        if 'ExRoot' in self.available_module:
+            self.allowed_analysis.append('ExRoot')
+        if 'MA4' in self.available_module:
+            self.allowed_analysis.append('MadAnalysis4')
+        if 'MA5' in self.available_module:
+            self.allowed_analysis.append('MadAnalysis5')            
+            
+        if self.allowed_analysis:
+            self.allowed_analysis.append('OFF')
+            
+        return self.allowed_analysis
+   
+    def check_analysis(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        if value in self.get_allowed_analysis():
+            return True
+        if value.lower() in ['ma4', 'madanalysis4', 'madanalysis_4','4']:
+            return 'MadAnalysis4'
+        if value.lower() in ['ma5', 'madanalysis5', 'madanalysis_5','5']:
+            return 'MadAnalysis5'
+        if value.lower() in ['ma', 'madanalysis']:
+            if 'MA5' in self.available_module:
+                return 'MadAnalysis5'
+            elif 'MA4' in self.available_module:
+                return 'MadAnalysis4'
+            else:
+                return False
+        else:
+            return False
+        
+        
+    def set_default_analysis(self):
+        """initialise the switch for analysis"""
+        
+        if 'MA4' in self.available_module and \
+                     os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
+            self.switch['analysis'] = 'MadAnalysis4'
+        elif 'MA5' in self.available_module and\
+             (os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'))\
+             or os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat'))):
+            self.switch['analysis'] = 'MadAnalysis5'
+        elif 'ExRoot' in self.available_module:
+            self.switch['analysis'] = 'ExRoot'   
+        elif self.get_allowed_analysis(): 
+            self.switch['analysis'] = 'OFF'
+        else:
+            self.switch['analysis'] = 'Not Avail.'
+            
+#
+#   MADSPIN handling
+#
+    def get_allowed_madspin(self):
+        """ ON|OFF|onshell """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        if 'MadSpin'  in self.available_module:
+            self.allowed_madspin = ['OFF',"ON",'onshell']
+        return self.allowed_madspin
+    
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            return True
+        elif value.lower() in self.get_allowed_madspin():
+            return True
+        
+        if 'MadSpin' not in self.available_module:
+            return False
+             
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
+        
+    
+    def set_default_madspin(self):
+        """initialise the switch for madspin"""
+        
+        if 'MadSpin' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                self.switch['madspin'] = 'ON'
+            else:
+                self.switch['madspin'] = 'OFF'
+        else:
+            self.switch['madspin'] = 'Not Avail.'
+            
+    def get_cardcmd_for_madspin(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        else:
+            return []
+        
+#
+#   ReWeight handling
+#
+    def get_allowed_reweight(self):
+        """ return the list of valid option for reweight=XXX """
+        
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        if 'reweight' not in self.available_module:
+            self.allowed_reweight = []
+            return
+        self.allowed_reweight = ['ON', 'OFF']
+        
+        # check for plugin mode
+        plugin_path = self.mother_interface.plugin_path
+        opts = misc.from_plugin_import(plugin_path, 'new_reweight', warning=False)
+        self.allowed_reweight += opts
+        
+    def set_default_reweight(self):
+        """initialise the switch for reweight"""
+        
+        if 'reweight' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                self.switch['reweight'] = 'ON'
+            else:
+                self.switch['reweight'] = 'OFF'
+        else:
+            self.switch['reweight'] = 'Not Avail.'        
 
 #===============================================================================
 # CheckValidForCmd
@@ -1723,6 +2095,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         'pgs': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
+    
+    asking_for_run = AskRun
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -3938,7 +4312,7 @@ Please install this tool with the following MG5_aMC command:
         else: 
             shell_exe = misc.which(shell)
             if not shell_exe:
-                self.InvalidCmd('No s hell could be found in your environment.\n'+
+                raise self.InvalidCmd('No s hell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
@@ -5475,29 +5849,6 @@ tar -czf split_$1.tar.gz split_$1
 
         return get_last_tag(self, level)
             
-
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
     
     
     ############################################################################
@@ -5762,307 +6113,55 @@ tar -czf split_$1.tar.gz split_$1
         return True   
 
 
-
+    action_switcher = AskRun
     ############################################################################
     def ask_run_configuration(self, mode=None, args=[]):
         """Ask the question when launching generate_events/multi_run"""
-        
-        available_mode = ['0']
-        void = 'Not installed'
-        switch_order = ['shower', 'detector', 'analysis', 'madspin', 'reweight']
-        
-        switch = dict((k, void) for k in switch_order)
 
-        description = {'shower': 'Choose the shower/hadronization program:',
-                       'detector': 'Choose the detector simulation program:',
-                       'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight':'Add weights to events for different model hypothesis:',
-                       'analysis':'Run an analysis package on the events generated:'
-                       }
-
-        force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
-                       ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
-
-        switch_assign = lambda key, value: switch.__setitem__(key, value if value \
-                                         in valid_options[key] else switch[key])
-
-        valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
-        options =  ['auto', 'done']
-        options_legacy = []
-                
-        # Init the switch value according to the current status
-        if self.options['pythia-pgs_path']:
-            available_mode.append('1')
-            available_mode.append('2')
-            valid_options['shower'].append('PYTHIA6')
-            valid_options['detector'].append('PGS')
-            options_legacy += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                switch['shower'] = 'PYTHIA6'
-            else:
-                switch['shower'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                switch['detector'] = 'PGS'
-            else:
-                switch['detector'] = 'OFF'
-        
-        if self.options['pythia8_path']:
-            available_mode.append('1')
-            valid_options['shower'].append('PYTHIA8')
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
-                switch['shower'] = 'PYTHIA8'
-            elif switch['shower'] == void:
-                switch['shower'] = 'OFF'            
-        
-        # MadAnalysis4 options
-        if self.options['madanalysis_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
-                valid_options['analysis'].insert(0,'MADANALYSIS_4')
-
-            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
-                switch['analysis'] = 'MADANALYSIS_4'
-        
-        # MadAnalysis5 options
-        if self.options['madanalysis5_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')) or \
-               os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
-                valid_options['analysis'].append('MADANALYSIS_5')
-
-            parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
-                                                'madanalysis5_parton_card.dat'))
-            hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
-                                                'madanalysis5_hadron_card.dat'))
-            if hadron_card_present or parton_card_present:
-                switch['analysis'] = 'MADANALYSIS_5'
-
-        # ExRootanalysis
-        eradir = self.options['exrootanalysis_path']
-        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
-            valid_options['analysis'].insert(0,'EXROOTANALYSIS')
-            if switch['analysis'] in ['OFF', void]:
-                switch['analysis'] = 'EXROOTANALYSIS'
-
-                 
-
-        if len(valid_options['analysis'])>1:                
-            available_mode.append('3')
-            if switch['analysis'] == void:
-                switch['analysis'] = 'OFF'
-        else:
-            switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
-
-        # Need to allow Delphes only if a shower exists                
-        if self.options['delphes_path']:
-            if valid_options['shower'] != ['OFF']:
-                available_mode.append('2')
-                valid_options['detector'].append('DELPHES') 
-                options += ['delphes',   'delphes=ON', 'delphes=OFF']             
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    switch['detector'] = 'DELPHES'
-                elif switch['detector'] not in ['PGS']:
-                    switch['detector'] = 'OFF'
-            elif valid_options['detector'] == ['OFF']:
-                switch['detector'] = "Requires a shower"
-                        
-        # Check switch status for MS/reweight
-        if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('4')
-            valid_options['madspin'] = ['ON', 'OFF']
-            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-                switch['madspin'] = 'ON'
-            else:
-                switch['madspin'] = 'OFF'
-            if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('5')
-                valid_options['reweight'] = ['ON', 'OFF']
-                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                    switch['reweight'] = 'ON'
-                else:
-                    switch['reweight'] = 'OFF'
-            else: 
-                switch['reweight'] = 'Not available (requires NumPy/f2py)'
-                       
+        passing_cmd = []
         if '-R' in args or '--reweight' in args:
-            if switch['reweight'] == 'OFF':
-                switch['reweight'] = 'ON'
-            elif switch['reweight'] != 'ON':
-                logger.critical("Cannot run reweight: %s", switch['reweight'])
+            passing_cmd.append('reweight=ON')
         if '-M' in args or '--madspin' in args:
-            if switch['madspin'] == 'OFF':
-                switch['madspin'] = 'ON'
-            elif switch['madspin'] != 'ON':
-                logger.critical("Cannot run madspin: %s", switch['reweight'])            
-
-        for id, key in enumerate(switch_order):
-            if len(valid_options[key]) >1:
-                options += ['%s=%s' % (key, s) for s in valid_options[key]]
-                options.append(key)
-            else:
-                options.append('%s=OFF' % (key))
-                
-        options += ['parton'] + sorted(list(set(available_mode)))
-        options += options_legacy
-        #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
-        #ask the question
+            passing_cmd.append('madspin=ON')
         
-        def color(switch_value):
-            green = '\x1b[32m%s\x1b[0m' 
-            bold = '\x1b[33m%s\x1b[0m'
-            red   = '\x1b[31m%s\x1b[0m'
-            if switch_value in ['OFF',void,'Requires a shower',
-                    'Not available (requires NumPy)',
-                    'Not available yet for this output/process']:
-                return red%switch_value
-            elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
-                                  'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
-                                  'DELPHES-CMS','DELPHES', 'EXROOTANALYSIS']:
-                return green%switch_value
-            else:
-                return bold%switch_value                
-
-        if mode or not self.force:
-            answer = ''
-            while answer not in ['0', 'done', 'auto']:
-                if mode:
-                    answer = mode
-                else:      
-                    switch_format = " \x1b[31m%i\x1b[0m. %-60s %12s = %s"
-                    question = "The following switches determine which programs are run:\n"
-                    question += '/'+'-'*98+'\\\n'
-                    for id, key in enumerate(switch_order):
-                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
-                    question += '\\'+'-'*98+'/\n'
-                    question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
-                    question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
-                    question += '  Type \'help\' for the list of all valid option\n' 
-                    question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-                    answer = self.ask(question, '0', options, casesensitive=False)
-                if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
-                    if answer.isdigit():
-                        key = switch_order[int(answer) - 1]
-                    else:
-                        key = answer
-                    for i, opt in enumerate(valid_options[key]):
-                        if opt == switch[key]:
-                            break
-                    i +=1
-                    if i == len(valid_options[key]):
-                        i=0
-                    answer = '%s=%s' % (key, valid_options[key][i])
-
-                if '=' in answer:
-                    key, status = answer.split('=')
-                    key, status = key.lower().strip(), status.upper().strip()
-                    
-                    if key not in switch:
-                        # this means use use outdated switch. Use converter to new syntax
-                        logger.warning("Using old syntax. Please check that we run what you expect.")
-                        if key == "pythia" and status == "ON":
-                            key, status = "shower", "PYTHIA6"
-                        elif key == "pythia" and status == "OFF":
-                            key, status = "shower", "OFF"
-                        elif key == "pgs" and status == "ON":
-                            if switch["detector"] in ["OFF", "PGS"] :
-                                key, status = "detector", "PGS"
-                            else:
-                                key, status = "detector", "DELPHES+PGS"
-                        elif key == "delphes" and status == "ON":
-                            if switch["detector"] in ["OFF", "DELPHES"] :
-                                key, status = "detector", "DELPHES"
-                            else:
-                                key, status = "detector", "DELPHES+PGS"                                
-                        elif key == "pgs" and status == "OFF":
-                            if switch["detector"] in ["OFF", "PGS"] :
-                                key, status = "detector", "OFF"
-                            elif switch["detector"] == "DELPHES+PGS":
-                                key, status = "detector", "DELPHES"
-                            else:
-                                key, status = "detector", switch['detector']
-                        elif key == "delphes" and status == "OFF":
-                            if switch["detector"] in ["OFF", "DELPHES"] :
-                                key, status = "detector", "OFF"
-                            elif switch["detector"] == "DELPHES+PGS":
-                                key, status = "detector", "PGS"
-                            else:
-                                key, status = "detector", switch['detector']                            
-                                                  
-
-                    switch[key] = status
-                    if (key, status) in force_switch:
-                        for key2, status2 in force_switch[(key, status)].items():
-                            if isinstance(status2, str):
-                                if switch[key2] not in  [status2, void]:
-                                    logger.info('For coherence \'%s\' is set to \'%s\''
-                                                % (key2, status2), '$MG:color:BLACK')
-                                    switch[key2] = status2
-                            else:
-                                if switch[key2] not in  status2 + [void]:
-                                    logger.info('For coherence \'%s\' is set to \'%s\''
-                                                % (key2, status2[0]), '$MG:color:BLACK')
-                                    switch[key2] = status2[0]
-                elif answer in ['0', 'auto', 'done']:
-                    continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
-                    logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
-                    switch_assign('madspin', 'OFF')
-                    switch_assign('reweight', 'OFF')
-                    if answer == 'parton':
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'pythia':
-                        switch_assign('shower', 'PYTHIA6')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'pgs':
-                        switch_assign('shower', 'PYTHIA6')
-                        switch_assign('detector', 'PGS')
-                    elif answer == 'delphes':
-                        switch_assign('shower', 'PYTHIA6')
-                        if switch['shower'] == 'OFF':
-                            switch_assign('shower', 'PYTHIA8')
-                        switch_assign('detector', 'DELPHES')
-                    elif answer == 'madspin':
-                        switch_assign('madspin', 'ON')
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'reweight':
-                        switch_assign('reweight', 'ON')
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF') 
-                    
-                if mode:
-                    answer =  '0' #mode auto didn't pass here (due to the continue)
-            else:
-                answer = 'auto'                        
-                                                                     
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
+                              mode=mode, line_args=args, force=self.force,
+                              first_cmd=passing_cmd, return_instance=True)
+        #
+        self.switch = switch # store the value of the switch for plugin purpose 
+        if 'dynamical' in switch:
+            mode = 'auto'
+        
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
     
         cards = ['param_card.dat', 'run_card.dat']
-        if switch['shower'] in ['PY6', 'PYTHIA6']:
+        if switch['shower'] == 'Pythia6':
             cards.append('pythia_card.dat')
-        if switch['shower'] in ['PY8', 'PYTHIA8']:
+        if switch['shower'] == 'Pythia8':
             cards.append('pythia8_card.dat')            
         if switch['detector'] in  ['PGS','DELPHES+PGS']:
             cards.append('pgs_card.dat')
-        if switch['detector'] in ['DELPHES', 'DELPHES+PGS']:
+        if switch['detector'] in ['Delphes', 'DELPHES+PGS']:
             cards.append('delphes_card.dat')
             delphes3 = True
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        if switch['madspin'] == 'ON':
+        if switch['madspin'] != 'OFF':
             cards.append('madspin_card.dat')
-        if switch['reweight'] == 'ON':
+        if switch['reweight'] != 'OFF':
             cards.append('reweight_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_5']:
+        if switch['analysis'].upper() in ['MADANALYSIS5']:
             cards.append('madanalysis5_parton_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_5'] and not switch['shower']=='OFF':
+        if switch['analysis'].upper() in ['MADANALYSIS5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_4']:
+        if switch['analysis'].upper() in ['MADANALYSIS4']:
             cards.append('plot_card.dat')
 
         self.keep_cards(cards)
+        
+        first_cmd = cmd_switch.get_cardcmd()
         
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
             cards.append('MadLoopParams.dat')
@@ -6070,11 +6169,12 @@ tar -czf split_$1.tar.gz split_$1
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return switch
+        
 
-        if answer == 'auto':
-            self.ask_edit_cards(cards, plot=False, mode='auto')
+        if 'dynamical' in switch and switch['dynamical']:
+            self.ask_edit_cards(cards, plot=False, mode='auto', first_cmd=first_cmd)
         else:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
         return switch
     
     ############################################################################

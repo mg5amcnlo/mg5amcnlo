@@ -444,7 +444,7 @@ class EventFile(object):
                     max_wgt = max(min_max_wgt, needed_max_wgt)
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        if nb_keep <= event_target and log_level>=10:
+                        if nb_keep < event_target and log_level>=10:
                             logger.log(log_level+10,"fail to reach target %s", event_target)
                             break   
                         else:

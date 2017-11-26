@@ -201,8 +201,9 @@ c         Set right sign for ANS, based on sign of chosen helicity
         ENDDO
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
-        ELSE
-            ANS=0D0
+        ELSE IF(ANS.ne.0d0) THEN
+			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+	        stop 1
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
