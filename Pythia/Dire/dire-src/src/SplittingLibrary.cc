@@ -143,16 +143,72 @@ void SplittingLibrary::initFSR() {
   splittings.insert( make_pair( name, new fsr_qed_L2AL( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  /*// A -> Q Q~ (regular DGLAP kernel)
+  // A -> Q Q~ (regular DGLAP kernel)
   name = "fsr_qed_22->1&1a_CS";
-  splittings.insert( make_pair( name, new fsr_qed_A2QQ1( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-
-  // A -> Q~ Q (regular DGLAP kernel)
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 1, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
   name = "fsr_qed_22->1&1b_CS";
-  splittings.insert( make_pair( name, new fsr_qed_A2QQ2( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-  */
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-1, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->2&2a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 2, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->2&2b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-2, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->3&3a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 3, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->3&3b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-3, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->4&4a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 4, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->4&4b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-4, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->5&5a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 5, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->5&5b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-5, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  // A -> L L~ (regular DGLAP kernel)
+  name = "fsr_qed_22->11&11a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 11, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->11&11b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-11, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->13&13a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 13, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->13&13b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-13, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->15&15a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 15, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->15&15b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-15, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
 
   /*// EW splittings
 

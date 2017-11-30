@@ -97,6 +97,16 @@ bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
   set<int> req_s_channels; 
   PY8MEs_namespace::PY8ME * query = 0;
 
+//event.list();
+/*for (int i=0; i < cols.size(); ++i)
+cout << cols[i] << " ";
+cout << endl;
+for (int i=0; i < in_pdgs.size(); ++i)
+cout << in_pdgs[i] << " ";
+for (int i=0; i < out_pdgs.size(); ++i)
+cout << out_pdgs[i] << " ";
+cout << endl;*/
+
   int iperm(0), colID(-2);
   do {
     do {
@@ -106,11 +116,23 @@ bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
       new_pairs.insert(new_pairs.end(), fi_pairs.begin(), fi_pairs.end());
       cols = fillColVec(new_pairs);
 
+/*for (int i=0; i < cols.size(); ++i)
+cout << cols[i] << " ";
+cout << endl;
+for (int i=0; i < in_pdgs.size(); ++i)
+cout << in_pdgs[i] << " ";
+for (int i=0; i < out_pdgs.size(); ++i)
+cout << out_pdgs[i] << " ";
+cout << endl;*/
+
       query = accessor.getProcess(in_pdgs, out_pdgs, req_s_channels);
+
+//if (query == 0) cout << "cycle" << endl;
 
       if (query != 0) {
         query->setColors(cols);
         colID = query->getColorIDForConfig(cols);
+//cout << "blaaaaaaa " << colID << endl;
         if ( colID != -2) break;
       }
       if ( colID != -2) break;
@@ -120,7 +142,13 @@ bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
     std::next_permutation(in_pdgs.begin(),in_pdgs.end());
   } while(std::next_permutation(in_pairs.begin(),in_pairs.end()));
 
-  return (query != 0 && colID != -2);
+  if (query != 0 && colID != -2) return (query != 0 && colID != -2);
+
+//cout << "no ME found for ";
+//event.list();
+// abort();
+
+  return false;
 
 }
 
@@ -160,6 +188,7 @@ double calcME(PY8MEs_namespace::PY8MEs& accessor, const Pythia8::Event& event) {
       pvec2.insert(pvec2.end(), pi_mg5.begin(), pi_mg5.end());
       pvec2.insert(pvec2.end(), pf_mg5.begin(), pf_mg5.end());
 
+//event.list();
       PY8MEs_namespace::PY8ME * query = accessor.getProcess(in_pdgs, out_pdgs, req_s_channels);
       res = accessor.calculateME(in_pdgs, out_pdgs, pvec2, req_s_channels, cols, helicities);
       query->setColors(cols);
@@ -176,7 +205,10 @@ double calcME(PY8MEs_namespace::PY8MEs& accessor, const Pythia8::Event& event) {
     std::next_permutation(pi_mg5.begin(),pi_mg5.end());
   } while(std::next_permutation(in_pairs.begin(),in_pairs.end()));
 
+//  if (res.second && res.first < 0.) { event.list(); abort();}
   if (res.second) return res.first;
+
+//event.list(); abort();
 
   // Done
   return 0.0;

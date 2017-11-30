@@ -1786,6 +1786,9 @@ bool Pythia::next() {
 
     info.addCounter(11);
 
+//process.list(true);
+//abort();
+
     // Update tried and selected events immediately after next event was
     // generated. Note: This does not accumulate cross section.
     processLevel.accumulate(false);

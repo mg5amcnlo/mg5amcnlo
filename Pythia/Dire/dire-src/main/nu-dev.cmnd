@@ -1,6 +1,6 @@
 
 # Number of events to generate.
-Main:numberOfEvents       = 10000
+Main:numberOfEvents       = 100000
 Next:numberCount          = 100
 
 # Use external PDF sets from LHAPDF for incoming hadrons.
@@ -21,8 +21,8 @@ Beams:idA                 = 12
 Beams:idB                 = 2212
 Beams:frameType           = 2
 Beams:eA                  = 1000.0
-Beams:eB                  = 1.0
-PhaseSpace:Q2min          = 10.0
+Beams:eB                  = 1000.0
+PhaseSpace:Q2min          = 1000.0
 
 # Merging and Madgraph settings.
 Dire:doMECs                     = on

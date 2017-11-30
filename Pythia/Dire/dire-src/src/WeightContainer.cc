@@ -343,11 +343,17 @@ bool WeightContainer::hasME(const Event& event) {
     if ( event[i].isFinal() && event[i].id()==21) ng++;
     if ( event[i].isFinal() && event[i].idAbs()<10) nq++;
   }
+
   if (nlq>2) return false;
   //if (nfinal>2) return false;
 
   return isAvailableME(PY8MEs_accessor,event);
 
+}
+
+bool WeightContainer::hasME(vector <int> in_pdgs, vector<int> out_pdgs) {
+  if (int(out_pdgs.size()) > 5) return false;
+  return isAvailableME(PY8MEs_accessor, in_pdgs, out_pdgs);
 }
 
 double WeightContainer::getME(const Event& event) {

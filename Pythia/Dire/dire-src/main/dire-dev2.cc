@@ -52,7 +52,7 @@ pythia.settings.forceParm("StandardModel:Vtb", 1.);
 
   // Transfer initialized shower weights pointer to merging class. 
   merging->setWeightsPtr(dire.weightsPtr);
-  merging->setShowerPtrs(dire.timesPtr, dire.space.Ptr);
+  merging->setShowerPtrs(dire.timesPtr, dire.spacePtr);
 
   // Gluon histograms.
   Hist zglue("zglue",50,0.,1.0);
@@ -113,6 +113,22 @@ pythia.settings.forceParm("StandardModel:Vtb", 1.);
     }
     // Do not print zero-weight events.
     if ( evtweight == 0. ) continue;
+
+/*int nleptons=0;
+for (int i=0; i < pythia.event.size(); ++i)
+if (pythia.event[i].isFinal() && pythia.event[i].isLepton() && pythia.event[i].isCharged()) nleptons++;
+int nphotons=0;
+for (int i=0; i < pythia.event.size(); ++i)
+if (pythia.event[i].isFinal() && pythia.event[i].id() == 22) nphotons++;
+int nquarks=0;
+for (int i=0; i < pythia.event.size(); ++i)
+if (pythia.event[i].isFinal() && pythia.event[i].isQuark()) nquarks++;
+
+if (nleptons > 1 && nphotons > 0) pythia.event.list();
+if (nleptons > 3) pythia.event.list();
+if (nquarks > 1 && nphotons > 0) pythia.event.list();
+if (nquarks > 3) pythia.event.list();*/
+
 
     double evtweightMax = evtweight*wtMax;
     double evtweightMin = evtweight*wtMin;

@@ -82,7 +82,7 @@ PY8ME * PY8MEs::getProcess(vec_int in_pdgs, vec_int out_pdgs, set_int
   {
     // Make sure to initialize the instance properly
     proc.first->setPermutation(proc.second.first); 
-    proc.first->setProcID(proc.second.second); 
+    proc.first->setProcID(proc.second.second);
     return proc.first; 
   }
   else
@@ -157,6 +157,16 @@ process_accessor PY8MEs::getProcess(struct process_specifier proc, bool
   vec_int out_pdgs = proc.out_pdgs; 
   set_int schannels = proc.required_s_channels; 
 
+/*cout << __LINE__ << " check availability for flavours\t";
+for (int ii = 0; ii < proc.in_pdgs.size(); ii++ )
+cout << proc.in_pdgs[ii] << " ";
+cout << "\t --> \t";
+for (int ii = 0; ii < proc.out_pdgs.size(); ii++ )
+cout << proc.out_pdgs[ii] << " ";
+cout << endl; 
+if (proc.out_pdgs.size() > 5) abort();*/
+
+
   // Loop over loaded processes to try and find the required process
   for (int i = 0; i < loaded_processes.size(); i++ )
   {
@@ -164,6 +174,15 @@ process_accessor PY8MEs::getProcess(struct process_specifier proc, bool
         schannels);
     if (proc_handle.second >= 0)
     {
+
+/*cout << __LINE__ << " found process " << proc_handle.second << " for flavours\t";
+for (int ii = 0; ii < proc.in_pdgs.size(); ii++ )
+cout << proc.in_pdgs[ii] << " ";
+cout << "\t --> \t";
+for (int ii = 0; ii < proc.out_pdgs.size(); ii++ )
+cout << proc.out_pdgs[ii] << " ";
+cout << endl;*/
+
       process_accessor returned_process_accessor =
           make_pair(loaded_processes[i], proc_handle);
       if (create_entry)

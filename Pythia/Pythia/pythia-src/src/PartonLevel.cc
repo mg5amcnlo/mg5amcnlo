@@ -548,6 +548,9 @@ bool PartonLevel::next( Event& process, Event& event) {
     pTsaveISR       = pTmaxISR;
     pTsaveFSR       = pTmaxFSR;
 
+//cout << "blaaaaaa" << endl;
+//event.list(true);
+
     // Prepare the classes to begin the generation.
     if (doMPI) multiPtr->prepare( event, pTmaxMPI, (iHardDiffLoop == 2) );
     if (doISR) spacePtr->prepare( 0, event, limitPTmaxISR);

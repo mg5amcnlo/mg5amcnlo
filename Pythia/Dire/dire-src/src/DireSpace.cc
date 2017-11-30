@@ -708,6 +708,8 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
   int side     = (event[iRad].pz() > 0.) ? 1 : 2;
   int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
 
+//testtest  pTmax = min(pTmax, event[iRad].scale());
+
   if (iPartner > 0) {
     dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
       pTmax, colType, 0, 0, 0, true));
@@ -965,12 +967,18 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   // Remember if this is a trial emission.
   doTrialNow    = doTrialIn;
 
+//cout << __PRETTY_FUNCTION__ << endl;
+//event.list(true);
+//list();
+
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnd.size()); ++iDipEnd) {
     iDipNow        = iDipEnd;
     dipEndNow      = &dipEnd[iDipEnd];
     iSysNow        = dipEndNow->system;
     double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
+
+//cout << "isr ptmax " << dipEndNow->pTmax << " " << pTbegDip << endl;
 
     // Limit final state multiplicity. For debugging only
     int nFinal = 0;
@@ -2648,6 +2656,8 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     if ( fullWeightNow != 0. && overWeightNow != 0. ) {
       double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
 
+if (doTrialNow) enhanceFurther = 1.;
+
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
@@ -3119,6 +3129,8 @@ boostNow = enhanceFurther;
   // "pseudo-emission" step in 1->3 splitting.
   if ( fullWeightNow != 0. && overWeightNow != 0. ) {
     double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
+
+if (doTrialNow) { weights->addTrialEnhancement(tnow, enhanceFurther); enhanceFurther = 1.;}
 
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
@@ -3603,9 +3615,6 @@ bool DireSpace::branch_II( Event& event, bool trial,
         if (printWarnings)
           infoPtr->errorMsg("Warning in DireSpace::branch_II: Could not set up "
                             "state after branching, thus reject.");
-event.list();
-NewEvent.list();
-abort();
         physical = false; break;
       }
 

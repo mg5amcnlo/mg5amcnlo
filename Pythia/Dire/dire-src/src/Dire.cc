@@ -75,6 +75,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doGenerateMergingWeights",false);
   pythia.settings.addFlag("Dire:doMECs",false);
   pythia.settings.addFlag("Dire:doMOPS",false);
+  pythia.settings.addFlag("Dire:doMcAtNloDelta",false);
   pythia.settings.addFlag("Dire:doExitAfterMerging",false);
 
   // Teach Pythia MG5 inputs for external MEs

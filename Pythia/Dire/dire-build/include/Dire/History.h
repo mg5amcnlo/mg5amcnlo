@@ -240,6 +240,10 @@ public:
     AlphaStrong* asFSR, AlphaStrong * asISR, AlphaEM * aemFSR,
     AlphaEM * aemISR, double RN, Rndm* rndmPtr );
 
+  double weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
+    AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN,
+    int depth = -1);
+
   // Function to check if any allowed histories were found
   bool foundAllowedHistories() {
     return (children.size() > 0 && foundAllowedPath); }
@@ -415,12 +419,13 @@ private:
 
   // Function to return the \alpha_s-ratio part of the CKKWL weight.
   double weightTreeALPHAS( double as0, AlphaStrong * asFSR,
-    AlphaStrong * asISR, int njetMax = -1 );
+    AlphaStrong * asISR,  int njetMin = -1 , int njetMax = -1 );
   // Function to return the \alpha_em-ratio part of the CKKWL weight.
   double weightTreeALPHAEM( double aem0, AlphaEM * aemFSR,
-    AlphaEM * aemISR, int njetMax = -1 );
+    AlphaEM * aemISR, int njetMin = -1, int njetMax = -1 );
   // Function to return the PDF-ratio part of the CKKWL weight.
-  double weightTreePDFs( double maxscale, double pdfScale, int njetMax = -1 );
+  double weightTreePDFs( double maxscale, double pdfScale, int njetMin = -1,
+    int njetMax = -1 );
   // Function to return the no-emission probability part of the CKKWL weight.
   double weightTreeEmissions( PartonLevel* trial, int type, int njetMin,
     int njetMax, double maxscale );
