@@ -4535,7 +4535,7 @@ This implies that with decay chains:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
         # Apply the keyword 'all' for perturbed coupling orders.
-        if perturbation_couplings.lower()=='all':
+        if perturbation_couplings.lower() in ['all', 'loonly']:
             perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
