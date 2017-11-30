@@ -125,7 +125,7 @@ C Fill common block for Les Houches init info
          else
             idbmup(i)=lpp(i)
          endif
-        ebmup(i)=ebeam(i)
+         ebmup(i)=ebeam(i)
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
 c Fill the nmemPDF(i) array with the number of PDF error set. This we

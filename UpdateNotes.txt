@@ -1,4 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
+2.6.1 (XX/XX/17)
+      New Functionalities:
+      --------------------
+      RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
+             to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
 
 2.6.1
       OM: Re-factoring the code asking which program to use (both at LO and NLO)
