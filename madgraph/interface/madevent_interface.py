@@ -4394,8 +4394,10 @@ You can follow PY8 run with the following command (in a separate terminal):
                         argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                 else:
-                    ret_code = misc.call(wrapper_path, stdout=open(pythia_log,'w'), stderr=subprocess.STDOUT,
+                    stdout = open(pythia_log,'w')
+                    ret_code = misc.call(wrapper_path, stdout=stdout, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
+                    stdout.close()
                 if ret_code != 0:
                     raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
                         ' code %d.\n'%ret_code+\
