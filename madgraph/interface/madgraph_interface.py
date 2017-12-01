@@ -4653,7 +4653,10 @@ This implies that with decay chains:
 
         # Apply the keyword 'all' for perturbed coupling orders.
         if perturbation_couplings.lower() in ['all', 'loonly']:
+            if perturbation_couplings.lower() in ['loonly']:
+                LoopOption = 'LOonly'
             perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
+
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
@@ -4731,7 +4734,6 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-                        
             
             out = base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
