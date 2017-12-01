@@ -2517,12 +2517,14 @@ class CompleteForCmd(cmd.CompleteCmd):
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
+
             if os.environ['PYTHONPATH']:
                 for modeldir in os.environ['PYTHONPATH'].split(':'):
                     if not modeldir:
                             continue
                     all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=modeldir)
+            all_name = list(set(all_name))
             # select the possibility according to the current line
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
@@ -2546,7 +2548,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         completion_categories['Path Completion'] = all_dir
                     # Only UFO model here
                     new = []
-                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                 for name in all_dir]
                     if data:
                         completion_categories['Path Completion'] = all_dir + new
@@ -2560,7 +2562,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                     all_path =  self.path_completion(text, cur_path)
                     if mode == 'all':
                         new = []
-                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                for name in all_path]
                         if data:
                             completion_categories['Path Completion'] = data[0]
@@ -2602,7 +2604,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
                                        if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
-
+                if mode == 'model':
+                    model_list += [name for name in self._online_model if name.startswith(text)]
+                    
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
                 elif allow_restrict:
@@ -2613,7 +2617,10 @@ class CompleteForCmd(cmd.CompleteCmd):
                                             base_dir=pjoin(MG5DIR,'models'))
                 else:
                     all_name = model_list
-                    
+                
+                #avoid duplication
+                all_name = list(set(all_name))
+                
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
@@ -2642,8 +2649,27 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-        return self.deal_multiple_categories(completion_categories,formatting) 
-    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
+        return self.deal_multiple_categories(completion_categories,formatting)
+    
+    _online_model = {'2HDM':[], 
+                         'loop_qcd_qed_sm':['full','no_widths','with_b_mass ', 'with_b_mass_no_widths'],
+                         'loop_qcd_qed_sm_Gmu':['ckm', 'full', 'no_widths'], 
+                         '4Gen':[],
+                         'DY_SM':[],
+                         'EWdim6':['full'],
+                         'heft':['ckm','full', 'no_b_mass','no_masses','no_tau_mass','zeromass_ckm'],
+                         'nmssm':['full'],
+                         'SMScalars':['full'],
+                         'RS':[''],
+                         'sextet_diquarks':[''],
+                         'TopEffTh':[''],
+                         'triplet_diquarks':[''],
+                         'uutt_sch_4fermion':[''],
+                         'uutt_tch_scalar':['']
+                         }    
+    
+    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True,
+                           online=True):
         """find the restriction file associate to a given model"""
 
         # check if the model_name should be keeped as a possibility
@@ -2652,8 +2678,13 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             output = []
 
+        local_model = os.path.exists(pjoin(base_dir, model_name, 'couplings.py'))
         # check that the model is a valid model
-        if not os.path.exists(pjoin(base_dir, model_name, 'couplings.py')):
+        if online and not local_model and model_name in self._online_model:
+            output += ['%s-%s' % (model_name, tag) for tag in self._online_model[model_name]]
+            return output  
+        
+        if not local_model:
             # not valid UFO model
             return output
 
