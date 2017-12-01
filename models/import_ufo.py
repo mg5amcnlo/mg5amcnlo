@@ -94,7 +94,9 @@ def find_ufo_path(model_name, web_search=True):
     raise UFOImportError("Path %s is not a valid pathname" % model_name)
     return
 
-def import_model_from_db(model_name):
+
+def get_model_db():
+    """return the file with the online model database"""
 
     data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
                      'http://madgraph.physics.illinois.edu/models_db.dat']
@@ -113,7 +115,12 @@ def import_model_from_db(model_name):
     else:
         raise MadGraph5Error, '''Model not found locally and Impossible to connect any of us servers.
         Please check your internet connection or retry later'''
-    
+    return data
+
+def import_model_from_db(model_name):
+    """ import the model with a given name """
+
+    data =get_model_db()
     link = None
     for line in data:
         split = line.split()

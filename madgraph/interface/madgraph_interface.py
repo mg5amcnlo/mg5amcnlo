@@ -322,6 +322,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        Specify model_name-full to get unrestricted model.")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
+        logger.info("      Type 'display modellist' to have the list of all model available.",'$MG:color:GREEN')
+        logger.info("")
         logger.info("   import model_v4 MODEL [--modelname] :",'$MG:color:BLACK')
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
@@ -843,7 +845,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if len(args) < 1:
             self.help_display()
             raise self.InvalidCmd, 'display requires an argument specifying what to display'
-        if args[0] not in self._display_opts:
+        if args[0] not in self._display_opts + ['model_list']:
             self.help_display()
             raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
@@ -2605,7 +2607,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                        modeldir, only_dirs=True)
                                        if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
                 if mode == 'model':
-                    model_list += [name for name in self._online_model if name.startswith(text)]
+                    model_list += [name for name in self._online_model.keys()+self._online_model2
+                                    if name.startswith(text)]
                     
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
@@ -2666,7 +2669,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                          'triplet_diquarks':[''],
                          'uutt_sch_4fermion':[''],
                          'uutt_tch_scalar':['']
-                         }    
+                         }   
+    _online_model2 = [] # fill by model on the db if user do "display modellist" 
     
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True,
                            online=True):
@@ -2749,7 +2753,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
-                     'checks', 'parameters', 'options', 'coupling_order','variable']
+                     'checks', 'parameters', 'options', 'coupling_order','variable',
+                     'modellist']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -3518,7 +3523,88 @@ This implies that with decay chains:
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
+            
+        elif args[0] in ["modellist", "model_list"]:
+            outstr = []
+            template = """%-30s | %-60s | %-25s """
+            outstr.append(template % ('name', 'restriction', 'comment'))
+            outstr.append('*'*150)
+            already_done = []
+            #local model #use
+            
+            if 'PYTHONPATH' in os.environ:
+                pythonpath = os.environ['PYTHONPATH'].split(':')
+            else:
+                pythonpath = []
 
+            for base in [pjoin(MG5DIR,'models')] + pythonpath:
+                if not os.path.exists(base):
+                    continue
+                file_cond = lambda p : os.path.exists(pjoin(base,p,'particles.py'))
+                mod_name = lambda name: name
+                
+                model_list = [mod_name(name) for name in \
+                                                self.path_completion('',
+                                                base,
+                                                only_dirs = True) \
+                                                if file_cond(name)]
+                
+                for model_name in model_list:
+                    if model_name in already_done:
+                        continue
+                    all_name = self.find_restrict_card(model_name,
+                                            base_dir=base,
+                                            online=False)
+                    already_done.append(model_name)
+                    restrict = [name[len(model_name):] for name in all_name 
+                                if len(name)>len(model_name)]
+                    
+                    comment = 'from models directory'
+                    if base != pjoin(MG5DIR,'models'):
+                        comment = 'from PYTHONPATH: %s' % base
+                    lrestrict = ', '.join(restrict)
+                    if len(lrestrict) > 50:
+                        for i in range(-1,-len(restrict), -1):
+                            lrestrict = ', '.join(restrict[:i])
+                            if len(lrestrict)<50:
+                                break
+                        outstr.append(template % (model_name, lrestrict, comment))
+                        outstr.append(template % ('', ', '.join(restrict[i:]), ''))
+                    else:
+                        outstr.append(template % (model_name, ', '.join(restrict), comment))
+                outstr.append('*'*150)
+                
+            # Still have to add the one with internal information 
+            for model_name in self._online_model:
+                if model_name in already_done:
+                    continue
+                restrict = [tag for tag in self._online_model[model_name]]
+                comment = 'automatic download from MG5aMC server'
+                outstr.append(template % (model_name, ','.join(restrict), comment))
+                already_done.append(model_name)
+                
+            outstr.append('*'*150)  
+            # other downloadable model
+            data   = import_ufo.get_model_db()
+            self._online_model2 = []
+            for line in data:
+                model_name, path = line.split()
+                if model_name in already_done:
+                    continue
+                if model_name.endswith('_v4'):
+                    continue
+                
+                if 'feynrules' in path:
+                    comment = 'automatic download from FeynRules website'
+                elif 'madgraph.phys' in path:
+                     comment = 'automatic download from MG5aMC server'
+                else:
+                    comment = 'automatic download.'
+                restrict = 'unknown'
+                outstr.append(template % (model_name, restrict, comment))
+                self._online_model2.append(model_name)
+            pydoc.pager('\n'.join(outstr))
+            
 
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
