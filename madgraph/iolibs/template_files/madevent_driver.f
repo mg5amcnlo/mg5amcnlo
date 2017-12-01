@@ -26,6 +26,7 @@ C
       integer NextUnopen
       external NextUnopen
       double precision t_before
+      logical fopened
 c
 c     Global
 c
@@ -79,7 +80,11 @@ C-----
 c
 c     Read process number
 c
-      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
+      call open_file(lun+1, 'dname.mg', fopened)
+      if (.not.fopened)then
+         goto 11
+      endif
+c      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
       l2=index(buf,'_')
@@ -89,7 +94,11 @@ c
 
 c     Read weight from results.dat if present, to allow event generation
 c     in first iteration for gridpacks
-      open (unit=lun+1,file='results.dat',status='unknown',err=13)
+      call open_file_local(lun+1, 'results.dat', fopened)
+      if (.not.fopened)then
+         goto 13
+      endif
+c      open (unit=lun+1,file='results.dat',status='unknown',err=13)
       read (lun+1,'(a130)',err=12,end=12) buf
       close (lun+1)
       read(buf,'(3e12.5,2i9,i5,i9,e10.3,e12.5)',err=13) xdum,xdum,xdum,
@@ -314,13 +323,83 @@ c     $E$ get_user_params $E$ ! tag for MadWeight
 c     change this routine to read the input in a file
 c
 
+      subroutine open_file_local(lun,filename,fopened)
+c***********************************************************************
+c     opens file input-card.dat in current directory or above
+c***********************************************************************
+      implicit none
+      include 'nexternal.inc'
+c
+c     Arguments
+c
+      integer lun
+      logical fopened
+      character*(*) filename
+      character*300  tempname
+      character*300  tempname2
+      character*300 path ! path of the executable
+      character*30  upname ! sequence of ../
+      character*30 buffer,buffer2
+      integer fine,fine2
+      integer i, pos
 
+      integer           mincfig, maxcfig
+      common/to_configs/mincfig, maxcfig
 
+      integer        lbw(0:nexternal)  !Use of B.W.
+      common /to_BW/ lbw
+      integer jconfig
+c-----
+c  Begin Code
+c-----
+c
+c     first check that we will end in the main directory
+c
 
+c
+cv    check local file
+c
+      fopened=.false.
+      tempname=filename 	 
+      fine=index(tempname,' ') 	 
+      fine2=index(path,' ')-1	 
+      if(fine.eq.0) fine=len(tempname)
+      open(unit=lun,file=tempname,status='old',ERR=20)
+      fopened=.true.
+      return
 
-
-
-
+c      
+c     getting the path of the executable
+c
+ 20   call getarg(0,path) !path is the PATH to the madevent executable (either global or from launching directory)
+      pos = index(path,'/', .true.)
+      path = path(:pos)
+      fine2 = index(path, ' ')-1
+c
+c     getting the name of the directory
+c
+      if (lbw(0).eq.0)then
+         ! No BW separation
+         write(buffer,*) mincfig 
+         path = path(:fine2)//'G'//adjustl(buffer)
+         fine2 = index(path, ' ') -1
+      else
+         ! BW separation
+         call Encode(jconfig,lbw(1),3,nexternal)
+         write(buffer,*) mincfig
+         buffer = adjustl(buffer)
+         fine = index(buffer, ' ')-1
+         write(buffer2,*) jconfig
+         buffer2=adjustl(buffer2)
+         path = path(:fine2)//'G'//buffer(:fine)//'.'//buffer2
+         fine2 = index(path, ' ')-1
+      endif
+      tempname = path(:fine2)//filename
+      open(unit=lun,file=tempname,status='old',ERR=30)
+      fopened = .true.
+      
+ 30    return
+       end
 
 
 

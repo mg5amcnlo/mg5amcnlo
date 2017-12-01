@@ -26,6 +26,8 @@ import math
 import re
 import subprocess
 import shutil
+import stat
+import sys
 
 try:
     import madgraph
@@ -791,11 +793,11 @@ class gen_ximprove(object):
 
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
-        
+
         if cmd.proc_characteristics['loop_induced']:
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-            raise Exception, "Not implemented"
+            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack, cmd, opt)
         elif cmd.run_card["job_strategy"] == 2:
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         else:
@@ -836,7 +838,6 @@ class gen_ximprove(object):
         # parameter for the gridpack run
         self.nreq = 2000
         self.iseed = 4321
-        self.ngran = 1
         
         # placeholder for information
         self.results = 0 #updated in launch/update_html
@@ -854,9 +855,8 @@ class gen_ximprove(object):
         
         #start the run
         self.handle_seed()
-        
-        self.results = sum_html.collect_result(self.cmd, None)
-        
+        self.results = sum_html.collect_result(self.cmd, 
+                                main_dir=pjoin(self.cmd.me_dir,'SubProcesses'))  #main_dir is for gridpack readonly mode
         if self.gen_events:
             # We run to provide a given number of events
             self.get_job_for_event()
@@ -1076,6 +1076,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
@@ -1102,11 +1103,14 @@ class gen_ximprove_v4(gen_ximprove):
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)    
                 
 
-    def create_ajob(self, template, jobs):
+    def create_ajob(self, template, jobs, write_dir=None):
         """create the ajob"""
         
         if not jobs:
             return
+        
+        if not write_dir:
+            write_dir =  pjoin(self.me_dir, 'SubProcesses')
         
         #filter the job according to their SubProcess directory # no mix submition
         P2job= collections.defaultdict(list)
@@ -1114,11 +1118,12 @@ class gen_ximprove_v4(gen_ximprove):
             P2job[j['P_dir']].append(j)
         if len(P2job) >1:
             for P in P2job.values():
-                self.create_ajob(template, P)
+                self.create_ajob(template, P, write_dir)
             return
         
+        
         #Here we can assume that all job are for the same directory.
-        path = pjoin(self.me_dir, 'SubProcesses' ,jobs[0]['P_dir'])
+        path = pjoin(write_dir, jobs[0]['P_dir'])
         
         template_text = open(template, 'r').read()
         # special treatment if needed to combine the script
@@ -1128,12 +1133,15 @@ class gen_ximprove_v4(gen_ximprove):
             n_channels = len(jobs)
             nb_sub = n_channels // self.combining_job
             nb_job_in_last = n_channels % self.combining_job
+            if nb_sub == 0:
+                nb_sub = 1
+                nb_job_in_last =0
             if nb_job_in_last:
                 nb_sub +=1
                 skip1 = self.combining_job - nb_job_in_last
                 if skip1 > nb_sub:
                     self.combining_job -=1
-                    return self.create_ajob(template, jobs)
+                    return self.create_ajob(template, jobs, write_dir)
             combining_job = self.combining_job
         else:
             #define the variable for combining jobs even in not combine mode
@@ -1149,7 +1157,7 @@ class gen_ximprove_v4(gen_ximprove):
             if i < skip1:
                 nb_job = combining_job -1
             else:
-                nb_job = combining_job
+                nb_job = min(combining_job, len(jobs))
             fsock = open(pjoin(path, 'ajob%i' % script_number), 'w')
             for j in range(nb_use, nb_use + nb_job):
                 if j> len(jobs):
@@ -1160,7 +1168,10 @@ class gen_ximprove_v4(gen_ximprove):
                 if "base_directory" not in info:
                     info["base_directory"] = "./"
                 fsock.write(template_text % info)
-            nb_use += nb_job 
+            nb_use += nb_job
+        
+        fsock.close()
+        return script_number
 
     def get_job_for_precision(self):
         """create the ajob to achieve a give precision on the total cross-section"""
@@ -1581,5 +1592,189 @@ class gen_ximprove_share(gen_ximprove, gensym):
     
     
     
+class gen_ximprove_gridpack(gen_ximprove_v4):
     
+    min_iter = 1    
+    max_iter = 12
+    max_request_event = 1e12         # split jobs if a channel if it needs more than that 
+    max_event_in_iter = 5000
+    min_event_in_iter = 1000
+    combining_job = sys.maxint
+
+    def __init__(self, *args, **opts):
         
+        self.ngran = -1
+        self.gscalefact = {}
+        self.readonly = False
+        if 'ngran' in opts:
+            self.gran = opts['ngran']
+#            del opts['ngran']
+        if 'readonly' in opts:
+            self.readonly = opts['readonly']
+        super(gen_ximprove_gridpack,self).__init__(*args, **opts)
+        if self.ngran == -1:
+            self.ngran = 1 
+     
+    def find_job_for_event(self):
+        """return the list of channel that need to be improved"""
+        import random
+    
+        assert self.err_goal >=1
+        self.err_goal = int(self.err_goal)
+        self.gscalefact = {}
+        
+        xtot = self.results.axsec
+        goal_lum = self.err_goal/(xtot+1e-99)    #pb^-1 
+#        logger.info('Effective Luminosity %s pb^-1', goal_lum)
+        
+        all_channels = sum([list(P) for P in self.results],[])
+        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
+                                                x.get('luminosity') > 0 else -1) 
+                          
+        to_refine = []
+        for C in all_channels:
+            tag = C.get('name')
+            self.gscalefact[tag] = 0
+            R = random.random()
+            if C.get('axsec') == 0:
+                continue
+            if (goal_lum * C.get('axsec') < R*self.ngran ):
+                continue # no event to generate events
+            self.gscalefact[tag] = max(1, 1/(goal_lum * C.get('axsec')/ self.ngran))
+            #need to generate events
+            logger.debug('request events for ', C.get('name'), 'cross=',
+                  C.get('axsec'), 'needed events = ', goal_lum * C.get('axsec'))
+            to_refine.append(C) 
+         
+        logger.info('need to improve %s channels' % len(to_refine))    
+        return goal_lum, to_refine
+
+    def get_job_for_event(self):
+        """generate the script in order to generate a given number of event"""
+        # correspond to write_gen in the fortran version
+        
+        
+        goal_lum, to_refine = self.find_job_for_event()
+
+        jobs = [] # list of the refine if some job are split is list of
+                  # dict with the parameter of the run.
+                                                
+        # loop over the channel to refine
+        for C in to_refine:
+            #1. Compute the number of points are needed to reach target
+            needed_event = max(goal_lum*C.get('axsec'), self.ngran)
+            nb_split = 1
+            
+            #2. estimate how many points we need in each iteration
+            if C.get('nunwgt') > 0:
+                nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
+                #split by iter
+                nevents = int(nevents / (2**self.min_iter-1))
+            else:
+                nevents = self.max_event_in_iter
+
+            if nevents < self.min_event_in_iter:
+                nevents = self.min_event_in_iter
+            #
+            # forbid too low/too large value
+            nevents = max(self.min_event_in_iter, min(self.max_event_in_iter, nevents))
+            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
+            
+
+            #create the  info dict  assume no splitting for the default
+            info = {'name': self.cmd.results.current['run_name'],
+                    'script_name': 'unknown',
+                    'directory': C.name,    # need to be change for splitted job
+                    'P_dir': os.path.basename(C.parent_name), 
+                    'offset': 1,            # need to be change for splitted job
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    'nevents': nevents, #int(nevents*self.gen_events_security)+1,
+                    'maxiter': self.max_iter,
+                    'miniter': self.min_iter,
+                    'precision': -1*int(needed_event+1)/C.get('axsec'),
+                    'requested_event': needed_event,
+                    'nhel': self.run_card['nhel'],
+                    'channel': C.name.replace('G',''),
+                    'grid_refinment' : 0,    #no refinment of the grid
+                    'base_directory': '',   #should be change in splitted job if want to keep the grid
+                    'packet': None, 
+                    }
+
+
+            jobs.append(info)
+          
+
+        write_dir = '.' if self.readonly else None  
+        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir) 
+        
+        done = []
+        for j in jobs:
+            if j['P_dir'] in done:
+                continue
+
+            # set the working directory path.
+            pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
+            exe = pjoin(pwd, 'ajob1')
+            st = os.stat(exe)
+            os.chmod(exe, st.st_mode | stat.S_IEXEC)
+
+            # run the code
+            cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+
+        write_dir = '.' if self.readonly else pjoin(self.me_dir, 'SubProcesses')
+        self.check_events(goal_lum, to_refine, jobs, write_dir)
+        
+    
+    def check_events(self, goal_lum, to_refine, jobs, Sdir):
+        """check that we get the number of requested events if not resubmit."""
+        
+        new_jobs = []
+        
+        for C, job_info in zip(to_refine, jobs):
+            P = job_info['P_dir']   
+            G = job_info['channel']
+            axsec = C.get('axsec')
+            requested_events= job_info['requested_event']          
+    
+
+            new_results = sum_html.OneResult((P,G))
+            new_results.read_results(pjoin(Sdir,P, 'G%s'%G, 'results.dat'))
+    
+            # need to resubmit?
+            if new_results.get('nunwgt') < requested_events:
+                pwd = pjoin(os.getcwd(),job_info['P_dir'],'G%s'%G) if self.readonly else \
+                           pjoin(self.me_dir, 'SubProcesses', job_info['P_dir'],'G%s'%G)
+                job_info['requested_event'] -= new_results.get('nunwgt')
+                job_info['precision'] -= -1*job_info['requested_event']/axsec
+                job_info['offset'] += 1
+                new_jobs.append(job_info)
+                files.mv(pjoin(pwd, 'events.lhe'), pjoin(pwd, 'events.lhe.previous'))
+        
+        if new_jobs:
+            self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), new_jobs, Sdir) 
+            
+            done = []
+            for j in new_jobs:
+                if j['P_dir'] in done:
+                    continue
+                G = j['channel']
+                # set the working directory path.
+                pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly \
+                    else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
+                exe = pjoin(pwd, 'ajob1')
+                st = os.stat(exe)
+                os.chmod(exe, st.st_mode | stat.S_IEXEC)
+
+                # run the code
+                cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+                pwd = pjoin(pwd, 'G%s'%G)
+                # concatanate with old events file
+                files.put_at_end(pjoin(pwd, 'events.lhe'),pjoin(pwd, 'events.lhe.previous'))
+
+            return self.check_events(goal_lum, to_refine, new_jobs, Sdir)
+                                 
+        
+        
+
+        
+

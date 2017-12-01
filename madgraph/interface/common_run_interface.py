@@ -643,11 +643,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
                 raise AlreadyRunning, message
             else:
-                pid = os.getpid()
-                fsock = open(pjoin(me_dir,'RunWeb'),'w')
-                fsock.write(`pid`)
-                fsock.close()
-                self.gen_card_html()
+                self.write_RunWeb(me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -679,6 +675,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def make_make_all_html_results(self, folder_names = [], jobs=[]):
         return sum_html.make_all_html_results(self, folder_names, jobs)
 
+
+    def write_RunWeb(self, me_dir):
+        pid = os.getpid()
+        fsock = open(pjoin(me_dir,'RunWeb'),'w')
+        fsock.write(`pid`)
+        fsock.close()
+        self.gen_card_html()
 
     ############################################################################
     def split_arg(self, line, error=False):
@@ -4053,6 +4056,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return None
         
         return datadir
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        return self.Pdirs
 
     def get_lhapdf_libdir(self):
         lhapdf_version = self.get_lhapdf_version()
