@@ -222,7 +222,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if not order:
             #NO NLO tag => nothing to do actually return input
             return proc
-        elif not order.startswith(('virt','loonly','noborn')):
+        elif not order.startswith(('virt','LOonly','noborn')):
             # OK this a standard NLO process            
             if real_only:
                 commandline= '' 
@@ -259,7 +259,9 @@ class ReweightInterface(extended_cmd.Cmd):
         elif order.startswith(('noborn=')):
             # pass in sqrvirt=
             return "add process %s ;" % proc.replace('noborn=', 'sqrvirt=')
-            
+        elif order.startswith('LOonly'):
+            #remove [LOonly] flag
+            return "add process %s %s;" % (process, final)
         else:
             #just return the input. since this Madloop.
             return "add process %s ;" % proc                                       
