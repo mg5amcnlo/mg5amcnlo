@@ -2006,6 +2006,7 @@ class SmartQuestion(BasicCmd):
 
     def __init__(self, question, allow_arg=[], default=None, 
                                             mother_interface=None, *arg, **opt):
+
         self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
@@ -2484,7 +2485,7 @@ class ControlSwitch(SmartQuestion):
             base, value = line.split(' ', 1)
         elif hasattr(self, 'ans_%s' % line.lower()):
             base, value = line.lower(), None
-        elif line.isdigit() and line in [`i` for i in range(1, len(self.switch)+1)]:
+        elif line.isdigit() and line in [`i` for i in range(1, len(self.to_control)+1)]:
             # go from one valid option to the next in the get_allowed for that option
             base = self.to_control[int(line)-1][0].lower()
             return self.default(base) # just recall this function with the associate name

@@ -4105,7 +4105,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
-    set command define and modifying the param_card/run_card correctly"""
+    set command define and modifying the param_card/run_card correctly
+    
+    special action can be trigger via trigger_XXXX when the user start a line
+    with XXXX. the output of such function should be new line that can be handle.
+    (return False to repeat the question)
+    """
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
                      'madweight_card', 'MadLoopParams', 'shower_card']
@@ -4113,6 +4118,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     'shower', 'pythia8','delphes','madspin']
     special_shortcut = {}
     special_shortcut_help = {}
+    
+    integer_bias = 1 # integer corresponding to the first entry in self.cards
     
     PY8Card_class = banner_mod.PY8Card
     
@@ -4183,6 +4190,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         self.load_default()        
         self.define_paths(**opt)
+
+        if 'allow_arg' not in opt or not opt['allow_arg']:
+            # add some mininal content for this:
+            opt['allow_arg'] = range(self.integer_bias, self.integer_bias+len(cards))
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
         self.conflict = set()
@@ -4196,7 +4208,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card_name = CommonRunCmd.detect_card_type(card)
                 card_name = card_name.split('_',1)[0] 
                 self.paths[card_name] = card
-                misc.sprint(card_name, self.paths[card_name])
                 
         # go trough the initialisation of each card and detect conflict
         for name in self.to_init_card:
@@ -5751,12 +5762,34 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('     set run_card default')
         logger.info('********************* HELP SET ***************************')
 
+    def trigger(self, line):
+        
+        line = line.strip()
+        args = line.split()
+
+        if not args:
+            return line
+        if not hasattr(self, 'trigger_%s' % args[0]):
+            return line
+
+        triggerfct = getattr(self, 'trigger_%s' % args[0])
+        
+        # run the trigger function
+        outline = triggerfct(' '.join(args[1:]))
+        if not outline:
+            return 'repeat'
+        return outline
 
     def default(self, line):
         """Default action if line is not recognized"""
 
+        # check if the line need to be modified by a trigger
+        line = self.trigger(line)
+        
+        # splitting the line
         line = line.strip()
         args = line.split()
+            
         if line == '' and self.default_value is not None:
             self.value = self.default_value
         # check if input is a file
@@ -5792,6 +5825,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.value = line
 
         return line
+
 
     def do_decay(self, line):
         """edit the madspin_card to define the decay of the associate particle"""
@@ -6158,7 +6192,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if answer == '9':
                 answer = 'plot'
             else:
-                answer = self.cards[int(answer)-1]
+                answer = self.cards[int(answer)-self.integer_bias]
 
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
