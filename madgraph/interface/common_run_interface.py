@@ -6003,8 +6003,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, self.paths[card_name.split('_',1)[0]])
-            self.reload_card(self.paths[card_name.split('_',1)[0]])
+            files.cp(path, self.paths[card_name.rsplit('_',1)[0]])
+            self.reload_card(self.paths[card_name.rsplit('_',1)[0]])
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')
