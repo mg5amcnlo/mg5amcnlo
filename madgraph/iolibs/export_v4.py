@@ -6392,7 +6392,7 @@ class UFO_model_to_mg4(object):
               if(condition)then
                  mp_crecms=conjg(expr)
               else
-                 mp_recms=cmplx(real(expr),kind=16)
+                 mp_crecms=cmplx(real(expr),kind=16)
               endif
               end
               
