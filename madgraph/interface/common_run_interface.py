@@ -651,11 +651,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
                 raise AlreadyRunning, message
             else:
-                pid = os.getpid()
-                fsock = open(pjoin(me_dir,'RunWeb'),'w')
-                fsock.write(`pid`)
-                fsock.close()
-                self.gen_card_html()
+                self.write_RunWeb(me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -687,6 +683,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def make_make_all_html_results(self, folder_names = [], jobs=[]):
         return sum_html.make_all_html_results(self, folder_names, jobs)
 
+
+    def write_RunWeb(self, me_dir):
+        pid = os.getpid()
+        fsock = open(pjoin(me_dir,'RunWeb'),'w')
+        fsock.write(`pid`)
+        fsock.close()
+        self.gen_card_html()
 
     ############################################################################
     def split_arg(self, line, error=False):
@@ -2683,8 +2686,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Make sure to only run over one analysis over each fifo.
         used_up_fifos = []
         # Now loop over the different MA5_runs
-        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+        for MA5_run_number, (MA5_runtag, MA5_cmds) in enumerate(MA5_cmds_list):
             
+            # Since we place every MA5 run in a fresh new folder, the MA5_run_number
+            # is always zero.
+            MA5_run_number = 0
             # Bypass the banner.
             MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
@@ -2711,7 +2717,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
                 # Unsuccessful MA5 run, we therefore stop here.
                 return
-            
+
             if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first link the event file
                 # created with MA5 reconstruction and then directly proceed to the
@@ -2734,8 +2740,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events'))+\
-                                      misc.glob('*.root',pjoin(reco_output,'Output','_reco_events'))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events','lheEvents0_%d'%MA5_run_number))+\
+                                       misc.glob('*.root',pjoin(reco_output,'Output','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2744,13 +2750,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     shutil.move(reco_output,pjoin(self.me_dir,'HTML',
                                  self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%
                                     (self.run_tag,mode.upper(),MA5_runtag,i+1)))
+                    
                     # link the reconstructed event file to the run directory
                     links_created.append(os.path.basename(reco_event_file))
+                    parent_dir_name = os.path.basename(os.path.dirname(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
                       '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
-                      MA5_runtag,i+1),'Output','_reco_events',links_created[-1]),
+                      MA5_runtag,i+1),'Output','_reco_events',parent_dir_name,links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
-                    
+
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
                   "'%s'. Links to the reconstructed event files are:"%MA5_runtag[6:])
                 for link in links_created:
@@ -2762,7 +2770,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
               %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
             else:
                 target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
-                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+                    %(mode.upper(),MA5_runtag),'Output','PDF','MadAnalysis5job_%d'%MA5_run_number,'main.pdf')
             has_pdf = True
             if not os.path.isfile(target):
                 has_pdf = False
@@ -4071,6 +4079,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         return datadir
 
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        return self.Pdirs
+
     def get_lhapdf_libdir(self):
         lhapdf_version = self.get_lhapdf_version()
 
@@ -5302,8 +5321,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
+
         self.run_card.set(name, value, user=True)
+        new_value = self.run_card.get(name)
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
+
 
     def setML(self, name, value, default=False):
         
@@ -5367,6 +5389,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """This is run on quitting the class. Apply here all the self-consistency
         rule that you want. Do the modification via the set command."""
 
+        # For NLO run forbid any pdg specific cut on massless particle
+        if isinstance(self.run_card,banner_mod.RunCardNLO):
+            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
+                           self.run_card['mxx_min_pdg'].keys()): 
+            
+                if int(pdg)<0:
+                    raise Exception, "For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles"
+                if self.param_card.get_value('mass', int(pdg), default=0) ==0:
+                    raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
+        
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
@@ -5859,7 +5891,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('')
         logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
-        logger.info()
+        logger.info( '')
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')

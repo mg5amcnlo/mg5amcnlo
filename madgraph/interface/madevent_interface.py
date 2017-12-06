@@ -18,6 +18,7 @@
 from __future__ import division
 
 import collections
+import itertools
 import glob
 import logging
 import math
@@ -3533,127 +3534,73 @@ Beware that this can be dangerous for local multicore runs.""")
 
         
 
-        if self.run_card['gridpack']: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
-            try:
-                os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-            except Exception:
-                pass
-
-            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
-                                       args=[self.run_name],
-                                       cwd=pjoin(self.me_dir,'SubProcesses'),
-                                       stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-
-            #self.cluster.launch_and_wait('../bin/internal/run_combine', 
-            #                                cwd=pjoin(self.me_dir,'SubProcesses'),
-            #                                stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-            #                                required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-            
-            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            # Store the number of unweighted events for the results object
-            pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-            try:      
-                nb_event = pat.search(output).groups()[0]
-            except AttributeError:
-                time.sleep(10)
-                output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-                try:
-                    nb_event = pat.search(output).groups()[0]
-                except AttributeError:
-                    logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                    nb_event = 0
-
-            self.results.add_detail('nb_event', nb_event)
-            
-            
-            # Define The Banner
-            tag = self.run_card['run_tag']
-            
-            # Update the banner with the pythia card
-            if not self.banner:
-                self.banner = banner_mod.recover_banner(self.results, 'parton')
-            self.banner.load_basic(self.me_dir)
-            # Add cross-section/event information
-            self.banner.add_generation_info(self.results.current['cross'], nb_event)
-            if not hasattr(self, 'random_orig'): self.random_orig = 0
-            self.banner.change_seed(self.random_orig)
-            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                         '%s_%s_banner.txt' % (self.run_name, tag)))
-            
-            
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
-                                    out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
-                                    out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
-
-        else:
-            # Define The Banner
-            tag = self.run_card['run_tag']
-            # Update the banner with the pythia card
-            if not self.banner:
-                self.banner = banner_mod.recover_banner(self.results, 'parton')
-            self.banner.load_basic(self.me_dir)
-            # Add cross-section/event information
-            self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
-            if not hasattr(self, 'random_orig'): self.random_orig = 0
-            self.banner.change_seed(self.random_orig)
-            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                    '%s_%s_banner.txt' % (self.run_name, tag)))
-            
-            
-            get_wgt = lambda event: event.wgt            
-            AllEvent = lhe_parser.MultiEventFile()
-            AllEvent.banner = self.banner
-            
-            partials = 0 # if too many file make some partial unweighting
-            sum_xsec, sum_xerru, sum_axsec = 0,[],0
-            for Gdir,mfactor in self.get_Gdir():
-                if os.path.exists(pjoin(Gdir, 'events.lhe')):
-                    result = sum_html.OneResult('')
-                    result.read_results(pjoin(Gdir, 'results.dat'))
-                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
-                                 result.get('xsec'),
-                                 result.get('xerru'),
-                                 result.get('axsec')
-                                 )
-
-                    sum_xsec += result.get('xsec')
-                    sum_xerru.append(result.get('xerru'))
-                    sum_axsec += result.get('axsec')
-                    
-                    if len(AllEvent) >= 80: #perform a partial unweighting
-                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                              get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
-                        AllEvent = lhe_parser.MultiEventFile()
-                        AllEvent.banner = self.banner
-                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                                     sum_xsec,
-                                     math.sqrt(sum(x**2 for x in sum_xerru)),
-                                     sum_axsec) 
-                        partials +=1
-            
-            if not hasattr(self,'proc_characteristic'):
-                self.proc_characteristic = self.get_characteristics()
-                
-            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
-                              get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                              proc_charac=self.proc_characteristic)
-            
-            if partials:
-                for i in range(partials):
-                    try:
-                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
-                    except Exception:
-                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
-                       
-            self.results.add_detail('nb_event', nb_event)
+        if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
+            return GridPackCmd.do_combine_events(self, line)
+    
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                '%s_%s_banner.txt' % (self.run_name, tag)))
         
+        
+        get_wgt = lambda event: event.wgt            
+        AllEvent = lhe_parser.MultiEventFile()
+        AllEvent.banner = self.banner
+        
+        partials = 0 # if too many file make some partial unweighting
+        sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        for Gdir in self.get_Gdir():
+            if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                result = sum_html.OneResult('')
+                result.read_results(pjoin(Gdir, 'results.dat'))
+                AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                             result.get('xsec'),
+                             result.get('xerru'),
+                             result.get('axsec')
+                             )
+
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+                
+                if len(AllEvent) >= 80: #perform a partial unweighting
+                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
+                    AllEvent = lhe_parser.MultiEventFile()
+                    AllEvent.banner = self.banner
+                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                 sum_xsec,
+                                 math.sqrt(sum(x**2 for x in sum_xerru)),
+                                 sum_axsec) 
+                    partials +=1
+        
+        if not hasattr(self,'proc_characteristic'):
+            self.proc_characteristic = self.get_characteristics()
+            
+        nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                          get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                          log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                          proc_charac=self.proc_characteristic)
+        
+        if partials:
+            for i in range(partials):
+                try:
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
+                except Exception:
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
+                   
+        self.results.add_detail('nb_event', nb_event)
+    
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
         
@@ -3757,48 +3704,44 @@ Beware that this can be dangerous for local multicore runs.""")
                            "    cd Subprocesses; ../bin/internal/combine_events\n"+
                            "  to have your events if those one are missing.")
         else:
-            for P_path in SubProcesses.get_subP(self.me_dir):
-                G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
-                                                    os.path.isdir(pjoin(P_path,G))]
-                for G in G_dir:
-                    G_path = pjoin(P_path,G)
-                    try:
-                        # Remove events file (if present)
-                        if os.path.exists(pjoin(G_path, 'events.lhe')):
-                            os.remove(pjoin(G_path, 'events.lhe'))
-                    except Exception:
-                        continue
-                    #try:
-                    #    # Store results.dat
-                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
-                    #        input = pjoin(G_path, 'results.dat')
-                    #        output = pjoin(G_path, '%s_results.dat' % run)
-                    #        files.cp(input, output) 
-                    #except Exception:
-                    #    continue                    
-                    # Store log
-                    try:
-                        if os.path.exists(pjoin(G_path, 'log.txt')):
-                            input = pjoin(G_path, 'log.txt')
-                            output = pjoin(G_path, '%s_log.txt' % run)
-                            files.mv(input, output) 
-                    except Exception:
-                        continue
-                    #try:   
-                    #    # Grid
-                    #    for name in ['ftn26']:
-                    #        if os.path.exists(pjoin(G_path, name)):
-                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                    #            input = pjoin(G_path, name)
-                    #            output = pjoin(G_path, '%s_%s' % (run,name))
-                    #            files.mv(input, output)
-                    #            misc.gzip(pjoin(G_path, output), error=None) 
-                    #except Exception:
-                    #    continue
-                    # Delete ftn25 to ensure reproducible runs
-                    if os.path.exists(pjoin(G_path, 'ftn25')):
-                        os.remove(pjoin(G_path, 'ftn25'))
+            for G_path in self.get_Gdir():
+                try:
+                    # Remove events file (if present)
+                    if os.path.exists(pjoin(G_path, 'events.lhe')):
+                        os.remove(pjoin(G_path, 'events.lhe'))
+                except Exception:
+                    continue
+                #try:
+                #    # Store results.dat
+                #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                #        input = pjoin(G_path, 'results.dat')
+                #        output = pjoin(G_path, '%s_results.dat' % run)
+                #        files.cp(input, output) 
+                #except Exception:
+                #    continue                    
+                # Store log
+                try:
+                    if os.path.exists(pjoin(G_path, 'log.txt')):
+                        input = pjoin(G_path, 'log.txt')
+                        output = pjoin(G_path, '%s_log.txt' % run)
+                        files.mv(input, output) 
+                except Exception:
+                    continue
+                #try:   
+                #    # Grid
+                #    for name in ['ftn26']:
+                #        if os.path.exists(pjoin(G_path, name)):
+                #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                #            input = pjoin(G_path, name)
+                #            output = pjoin(G_path, '%s_%s' % (run,name))
+                #            files.mv(input, output)
+                #            misc.gzip(pjoin(G_path, output), error=None) 
+                #except Exception:
+                #    continue
+                # Delete ftn25 to ensure reproducible runs
+                if os.path.exists(pjoin(G_path, 'ftn25')):
+                    os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
         self.gen_card_html()
@@ -4394,8 +4337,10 @@ You can follow PY8 run with the following command (in a separate terminal):
                         argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                 else:
-                    ret_code = misc.call(wrapper_path, stdout=open(pythia_log,'w'), stderr=subprocess.STDOUT,
+                    stdout = open(pythia_log,'w')
+                    ret_code = misc.call(wrapper_path, stdout=stdout, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
+                    stdout.close()
                 if ret_code != 0:
                     raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
                         ' code %d.\n'%ret_code+\
@@ -5719,35 +5664,39 @@ tar -czf split_$1.tar.gz split_$1
         else:
             return default
 
-    ############################################################################
-    def get_Pdir(self):
-        """get the list of Pdirectory if not yet saved."""
-        
-        if hasattr(self, "Pdirs"):
-            if self.me_dir in self.Pdirs[0]:
-                return self.Pdirs
-        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
-                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
-        return self.Pdirs
+
         
     ############################################################################
-    def get_Gdir(self):
+    def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
         if hasattr(self, "Gdirs"):
             if self.me_dir in self.Gdirs[0]:
-                return self.Gdirs
+                if Pdir is None:
+                    if not symfact:
+                        return list(itertools.chain(*self.Gdirs[0].values()))
+                    else:
+                        return list(itertools.chain(*self.Gdirs[0].values())), self.Gdirs[1]
+                else:
+                    if not symfact:
+                        return self.Gdirs[0][Pdir]
+                    else:
+                        return self.Gdirs[0][Pdir], self.Gdirs[1]
+
 
         Pdirs = self.get_Pdir()
-        Gdirs = []        
+        Gdirs = {self.me_dir:[]}   
+        mfactors = {}     
         for P in Pdirs:
-            for line in open(pjoin(P, "symfact.dat")):
+            Gdirs[P] = []
+            #for the next line do not use P, since in readonly mode it might not have symfact
+            for line in open(pjoin(self.me_dir, 'SubProcesses',os.path.basename(P), "symfact.dat")):
                 tag, mfactor = line.split()
-                Gdirs.append( (pjoin(P, "G%s" % tag), int(mfactor)) )
-            
-        
-        self.Gdirs = Gdirs
-        return self.Gdirs
+                if int(mfactor) > 0:
+                    Gdirs[P].append( pjoin(P, "G%s" % tag) )
+                    mfactors[pjoin(P, "G%s" % tag)] = mfactor
+        self.Gdirs = (Gdirs, mfactors)
+        return self.get_Gdir(Pdir, symfact=symfact)
                 
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
@@ -6345,16 +6294,22 @@ class SubProcesses(object):
 class GridPackCmd(MadEventCmd):
     """The command for the gridpack --Those are not suppose to be use interactively--"""
 
-    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+    def __init__(self, me_dir = None, nb_event=0, seed=0, gran=-1, *completekey, **stdin):
         """Initialize the command and directly run"""
 
         # Initialize properly
-        
+        self.readonly = False
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.random = seed
         self.random_orig = self.random
+        self.granularity = gran
+        
         self.options['automatic_html_opening'] = False
+        #write the grid_card.dat on disk
+        self.nb_event = int(nb_event)
+        self.write_gridcard(nb_event, seed, gran) # set readonly on True if needed
+        self.prepare_local_dir()                  # move to gridpack dir or create local structure
         # Now it's time to run!
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
@@ -6363,16 +6318,89 @@ class GridPackCmd(MadEventCmd):
                   'Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
                   str(seed)
 
+
+    def update_status(self, *args, **opts):
+        return
+
+    def load_results_db(self):
+        """load the current results status"""
+        model = self.find_model_name()
+        process = self.process # define in find_model_name
+        self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+        self.last_mode=''
+
+    def save_random(self):
+        """save random number in appropirate file"""
+
+        if not self.readonly:
+            fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
+        else:
+            fsock = open('randinit','w')
+        fsock.writelines('r=%s\n' % self.random)
+
+    def write_RunWeb(self, me_dir):
+        try:
+            super(GridPackCmd, self).write_RunWeb(me_dir)
+        except IOError:
+            self.readonly  =True
+
+    def write_gridcard(self, nb_event, seed, gran):
+        """write the grid_card.dat file at appropriate location"""
+        
+        # first try to write grid_card within the gridpack.
+        print "WRITE GRIDCARD", self.me_dir
+        if self.readonly:
+            if not os.path.exists('Cards'):
+                os.mkdir('Cards')
+            fsock = open('grid_card.dat','w')
+        else:
+            fsock = open(pjoin(self.me_dir, 'Cards', 'grid_card.dat'),'w')
+                
+        gridpackcard = banner_mod.GridpackCard()
+        gridpackcard['GridRun'] = True
+        gridpackcard['gevents'] = nb_event
+        gridpackcard['gseed'] = seed
+        gridpackcard['ngran'] = gran
+        
+        gridpackcard.write(fsock)
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+            
+        if not self.readonly:
+            self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        else:
+            self.Pdirs = [l.strip() 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))] 
+          
+        return self.Pdirs
+        
+    def prepare_local_dir(self):
+        """create the P directory structure in the local directory"""
+        
+        if not self.readonly:
+            os.chdir(self.me_dir)
+        else:
+            for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
+                os.mkdir(line.strip())
+            
+
     def launch(self, nb_event, seed):
         """ launch the generation for the grid """
 
         # 1) Restore the default data
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
-        self.update_status('restoring default data', level=None)
-        misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
-                         'default'],
-            cwd=self.me_dir)
+        if not self.readonly:
+            self.update_status('restoring default data', level=None)
+            misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
+                         'default'], cwd=self.me_dir)
 
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
@@ -6383,9 +6411,11 @@ class GridPackCmd(MadEventCmd):
 
         # 3) Combine the events/pythia/...
         self.exec_cmd('combine_events')
-        self.exec_cmd('store_events')
-        self.print_results_in_shell(self.results.current)
-        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        if not self.readonly:
+            self.exec_cmd('store_events')
+            self.print_results_in_shell(self.results.current)
+        else:
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""
@@ -6393,6 +6423,9 @@ class GridPackCmd(MadEventCmd):
         
         precision = nb_event
 
+        self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
+        
         # initialize / remove lhapdf mode
         # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
@@ -6402,7 +6435,31 @@ class GridPackCmd(MadEventCmd):
         
         self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)
+
+        refine_opt = {'err_goal': nb_event, 'split_channels': False,
+                      'ngran':self.granularity, 'readonly': self.readonly}   
+        x_improve = gen_ximprove.gen_ximprove_gridpack(self, refine_opt)
+        x_improve.launch() # create the ajob for the refinment and run those!
+        self.gscalefact = x_improve.gscalefact #store jacobian associate to the gridpack 
         
+        
+        #bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
+        #print 'run combine!!!'
+        #combine_runs.CombineRuns(self.me_dir)
+        
+        #update html output
+        Presults = sum_html.collect_result(self)
+        cross, error = Presults.xsec, Presults.xerru
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)
+        
+        
+        #self.update_status('finish refine', 'parton', makehtml=False)
+        #devnull.close()
+        
+        
+        
+        return
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
@@ -6459,6 +6516,154 @@ class GridPackCmd(MadEventCmd):
         
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()
+
+    def do_combine_events(self, line):
+        """Advanced commands: Launch combine events""" 
+
+        if self.readonly:
+            outdir = 'Events'
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+        else:
+            outdir = pjoin(self.me_dir, 'Events')
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_combine_events(args)
+        gscalefact = self.gscalefact # {(C.get('name')): jac}
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        
+        
+        if not os.path.exists(pjoin(outdir, self.run_name)):
+                os.mkdir(pjoin(outdir, self.run_name))
+        self.banner.write(pjoin(outdir, self.run_name, 
+                                '%s_%s_banner.txt' % (self.run_name, tag)))
+        
+        get_wgt = lambda event: event.wgt            
+        AllEvent = lhe_parser.MultiEventFile()
+        AllEvent.banner = self.banner
+        
+        partials = 0 # if too many file make some partial unweighting
+        sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        for Gdir in self.get_Gdir():
+            #mfactor already taken into accoun in auto_dsig.f
+            if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                result = sum_html.OneResult('')
+                result.read_results(pjoin(Gdir, 'results.dat'))
+                AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                             result.get('xsec')*gscalefact[Gdir],
+                             result.get('xerru')*gscalefact[Gdir],
+                             result.get('axsec')*gscalefact[Gdir]
+                             )
+
+                sum_xsec += result.get('xsec')*gscalefact[Gdir]
+                sum_xerru.append(result.get('xerru')*gscalefact[Gdir])
+                sum_axsec += result.get('axsec')*gscalefact[Gdir]
+                
+                if len(AllEvent) >= 80: #perform a partial unweighting
+                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
+                    AllEvent = lhe_parser.MultiEventFile()
+                    AllEvent.banner = self.banner
+                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                 sum_xsec,
+                                 math.sqrt(sum(x**2 for x in sum_xerru)),
+                                 sum_axsec) 
+                    partials +=1
+        
+        if not hasattr(self,'proc_characteristic'):
+            self.proc_characteristic = self.get_characteristics()
+            
+        nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
+                          get_wgt, trunc_error=1e-2, event_target=self.nb_event,
+                          log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                          proc_charac=self.proc_characteristic)
+        
+        
+        if partials:
+            for i in range(partials):
+                try:
+                    os.remove(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % i))
+                except Exception:
+                    os.remove(pjoin(outdir, self.run_name, "partials%s.lhe" % i))
+                   
+        self.results.add_detail('nb_event', nb_event)
+    
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+            self.correct_bias()
+
+    def do_combine_events_v4(self, line):
+        """Advanced commands: Launch combine events"""    
+        
+        args = self.split_arg(line)
+    
+        # Check argument's validity
+        self.check_combine_events(args)
+
+        self.update_status('Combining Events', level='parton')
+
+        try:
+            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
+        except Exception:
+            pass
+        
+        if not self.readonly:        
+            run_dir = pjoin(self.me_dir,'SubProcesses')
+            stdout_file = pjoin(self.me_dir,'SubProcesses', 'combine.log')
+        else:
+            run_dir = pjoin('SubProcesses')
+            stdout_file = pjoin('SubProcesses', 'combine.log')
+
+        cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
+                                       args=[self.run_name],
+                                       cwd=run_dir,
+                                       stdout=stdout_file,
+                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+            
+        output = misc.mult_try_open(stdout_file).read()
+        # Store the number of unweighted events for the results object
+        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+        try:      
+            nb_event = pat.search(output).groups()[0]
+        except AttributeError:
+            time.sleep(10)
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+            try:
+                nb_event = pat.search(output).groups()[0]
+            except AttributeError:
+                logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                nb_event = 0
+        self.results.add_detail('nb_event', nb_event)
+        
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                     '%s_%s_banner.txt' % (self.run_name, tag)))
+        
+        
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
+                                out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
+                                out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
 
 class MadLoopInitializer(object):
@@ -6915,7 +7120,6 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print os.path.join(root_path, 'internal', 'me5_logging.conf')
         logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)

@@ -4184,6 +4184,27 @@ RESTART = %(mint_mode)s
         self.to_store = []
 
 
+    ############################################################################
+    def get_Gdir(self, Pdir=None):
+        """get the list of Gdirectory if not yet saved."""
+        
+        if hasattr(self, "Gdirs"):
+            if self.me_dir in self.Gdirs:
+                if Pdir is None:
+                    return sum(self.Gdirs.values())
+                else:
+                    return self.Gdirs[Pdir]
+                
+        Pdirs = self.get_Pdir()
+        Gdirs = {self.me_dir:[]}             
+        for P in Pdirs:
+            Gdirs[P] = [pjoin(P,G) for G in os.listdir(P) if G.startswith('G') and 
+                                                os.path.isdir(pjoin(P,G))]
+
+        self.Gdirs = Gdirs
+        return self.getGdir(Pdir)
+
+
     def get_init_dict(self, evt_file):
         """reads the info in the init block and returns them in a dictionary"""
         ev_file = open(evt_file)

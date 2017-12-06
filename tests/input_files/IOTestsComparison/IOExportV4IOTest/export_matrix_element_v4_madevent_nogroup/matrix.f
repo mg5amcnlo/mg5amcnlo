@@ -204,8 +204,10 @@ C       Include the Jacobian from helicity sampling
         ENDDO
         IF (XTOT.NE.0D0) THEN
           ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
-        ELSE
-          ANS=0D0
+        ELSE IF(ANS.NE.0D0) THEN
+          WRITE(*,*) 'Problem in the multi-channeling. All amp2 are'
+     $     //' zero but not the total matrix-element'
+          STOP 1
         ENDIF
       ENDIF
       ANS=ANS/DBLE(IDEN)
