@@ -66,7 +66,8 @@ class UFOExpressionParser(object):
     tokens = (
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN', 'ATAN',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
-        'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','RECMS','ARG'
+        'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','GRREGLOG','RECMS',
+        'CRECMS','ARG'
         )
     literals = "=+-*/(),"
 
@@ -96,11 +97,17 @@ class UFOExpressionParser(object):
     def t_REGLOGP(self, t):
         r'(?<!\w)reglogp(?=\()'
         return t
+    def t_GRREGLOG(self, t):
+        r'(?<!\w)grreglog(?=\()'
+        return t
     def t_REGLOGM(self, t):
         r'(?<!\w)reglogm(?=\()'
         return t
     def t_RECMS(self, t):
         r'(?<!\w)recms(?=\()'
+        return t
+    def t_CRECMS(self, t):
+        r'(?<!\w)crecms(?=\()'
         return t
     def t_COND(self, t):
         r'(?<!\w)cond(?=\()'
@@ -189,8 +196,10 @@ class UFOExpressionParser(object):
         ('left','POWER'),
         ('right','REGLOG'),
         ('right','REGLOGP'),
+        ('right','GRREGLOG'),
         ('right','REGLOGM'),
         ('right','RECMS'),
+        ('right','CRECMS'),
         ('right','ARG'),
         ('right','CSC'),
         ('right','SEC'),
@@ -342,10 +351,20 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         p[0] = 'COND(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
         self.to_define.add('cond')
 
+    def p_expression_grreglog(self, p):
+        "expression :  GRREGLOG '(' expression ',' expression ')'"
+        p[0] = 'GRREGLOG(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'))'
+        self.to_define.add('grreglog')
+
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'RECMS('+p[3]+',DCMPLX('+p[5]+'))'
         self.to_define.add('recms')
+
+    def p_expression_crecms(self, p):
+        "expression : CRECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'CRECMS('+p[3]+',DCMPLX('+p[5]+'))'
+        self.to_define.add('crecms')
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
@@ -460,10 +479,21 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                                           ',KIND=16),CMPLX('+p[7]+',KIND=16))'
         self.to_define.add('mp_cond')
 
+    def p_expression_grreglog(self, p):
+        "expression :  GRREGLOG '(' expression ',' expression ')'"
+        p[0] = 'MP_GRREGLOG(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
+                                          ',KIND=16))'
+        self.to_define.add('mp_grreglog')
+
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'MP_RECMS('+p[3]+',CMPLX('+p[5]+',KIND=16))'
         self.to_define.add('mp_recms')
+
+    def p_expression_crecms(self, p):
+        "expression : CRECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'MP_CRECMS('+p[3]+',CMPLX('+p[5]+',KIND=16))'
+        self.to_define.add('mp_crecms')
 
     def p_expression_func(self, p):
         '''expression : CSC group
@@ -565,9 +595,17 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
 
+    def p_expression_grreglog(self, p):
+        "expression :  GRREGLOG '(' expression ',' expression ')'"
+        p[0] = 'GRREGLOG('+p[3]+','+p[5]+')'
+
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'RECMS('+p[3]+','+p[5]+')'
+
+    def p_expression_crecms(self, p):
+        "expression : CRECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'CRECMS('+p[3]+','+p[5]+')'
 
     def p_expression_power(self, p):
         'expression : expression POWER expression'
@@ -742,6 +780,10 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         # get simplified, ever.
         p[0] = 'cond('+p[3]+','+p[5]+','+p[7]+')'
 
+    def p_expression_grreglog(self, p):
+        "expression :  GRREGLOG '(' expression ',' expression ')'"
+        p[0] = 'grreglog('+p[3]+','+p[5]+')'
+
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
@@ -749,6 +791,10 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'recms('+p[3]+','+p[5]+')'
+
+    def p_expression_crecms(self, p):
+        "expression : CRECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'crecms('+p[3]+','+p[5]+')'
 
     def p_expression_func(self, p):
         '''expression : CSC group
