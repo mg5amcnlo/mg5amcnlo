@@ -38,16 +38,20 @@ cond = Function(name = 'cond',
                 expression = '(ExprTrue if condition==0.0 else ExprFalse)')
 
 reglog = Function(name = 'reglog',
-                arguments = ('z'),
+                arguments = ('z',),
                 expression = '(0.0 if z==0.0 else cmath.log(z))')
 
 reglogp = Function(name = 'reglogp',
-                   arguments = ('z'),
+                   arguments = ('z',),
                    expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) + 2*cmath.pi*1j if (z.real < 0.0 and z.imag < 0.0) else cmath.log(z) ) )')
 
 reglogm = Function(name = 'reglogm',
-                arguments = ('z'),
+                arguments = ('z',),
                 expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) - 2*cmath.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
+
+grreglog = Function(name = 'grreglog',
+                arguments = ('logswitch','z1','z2'),
+                expression = '(cmath.log(z1) if (z1.real>=0.0 or z2.real>=0.0 or z1.imag*z2.imag>=0.0) else ( cmath.log(z1) - logswitch*2*cmath.pi*1j if (z1.imag > 0.0) else cmath.log(z1) + logswitch*2*cmath.pi*1j ) )')
 
 arg = Function(name = 'arg',
                 arguments = ('z',),
@@ -74,6 +78,10 @@ acsc = Function(name = 'acsc',
 recms = Function(name= 'recms',
                  arguments = ('cms','z'),
                  expression = '(z if cms else z.real)')
+
+crecms = Function(name= 'crecms',
+                 arguments = ('cms','z'),
+                 expression = '(z.conjugate() if cms else z.real)')
 
 
 # Overwriting of original definition of reglog for the CMS

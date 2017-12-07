@@ -1377,7 +1377,7 @@ contains
   real(kindr2) &  
     :: rr,yy
   integer :: jj
-!  include 'avh_olo_dp_real.h90'
+!  include 'avh_olo_real.h90'
 !    :: aa,zz,z2
 !  integer :: nn,ii
 !
@@ -9386,7 +9386,7 @@ contains
 !         rslt(1) = eps^(-1)-coefficient
 !         rslt(2) = eps^(-2)-coefficient
 !
-! Check the comments in  avh_olo_dp_onshell  to find out how this
+! Check the comments in  avh_olo_onshell  to find out how this
 ! routines decides when to return IR-divergent cases.
 !*******************************************************************
 

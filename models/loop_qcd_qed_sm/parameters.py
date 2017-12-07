@@ -30,6 +30,12 @@ vep = Parameter(name = 'vep',
                 value = '0.0',
                 texname = '\eps')
 
+ep = Parameter(name = 'ep',
+               nature = 'internal',
+               type = 'real',
+               value = '1e-10',
+               texname = '\ep')
+
 Ncol = Parameter(name = 'Ncol',
                  nature = 'internal',
                  type = 'real',
@@ -61,6 +67,30 @@ MU_R = Parameter(name = 'MU_R',
               texname = '\\text{\\mu_r}',
               lhablock = 'LOOP',
               lhacode = [ 666 ])
+
+epsUV = Parameter(name = 'epsUV',
+                  nature = 'external',
+                  type = 'real',
+                  value = '1.0',
+                  texname = '\text{\eps_{UV}}',
+                  lhablock = 'TECHNIQUE',
+                  lhacode = [ 1 ])
+
+epsIR = Parameter(name = 'epsIR',
+                  nature = 'external',
+                  type = 'real',
+                  value = '1.0',
+                  texname = '\text{\eps_{IR}}',
+                  lhablock = 'TECHNIQUE',
+                  lhacode = [ 2 ])
+
+LogSwitch = Parameter(name = 'LogSwitch',
+                      nature = 'external',
+                      type = 'real',
+                      value = '1.0',
+                      texname = '\text{LogSwitch}',
+                      lhablock = 'TECHNIQUE',
+                      lhacode = [ 3 ])
 
 CMSParam = Parameter(name = 'CMSParam',
                  nature = 'internal',

@@ -32,9 +32,9 @@ def xprec(srcdir,rctype,prec,xkind,xkindmod):
     lines.extend(open(srcdir+'avh_olo_boxc.f90'      ).readlines())
     lines.extend(open(srcdir+'avh_olo_main.f90'      ).readlines())
     avh_pc.incl(srcdir,lines)
-    avh_pc.subs('avh_olo','avh_olo_'+prec,lines)
-    avh_pc.subs('avh_olo_'+prec+'_version','avh_olo_version',lines)
-    avh_pc.subs('avh_olo_'+prec+'_units','avh_olo_units',lines)
+    avh_pc.subs('avh_olo_forIREGI','avh_olo_forIREGI_'+prec,lines)
+    avh_pc.subs('avh_olo_forIREGI_'+prec+'_version','avh_olo_forIREGI_version',lines)
+    avh_pc.subs('avh_olo_forIREGI_'+prec+'_units','avh_olo_forIREGI_units',lines)
     if rctype == 'intrinsic':
         avh_pc.case('RCTYPE','intrinsic',lines)
     else:
@@ -47,7 +47,7 @@ def full( srcdir_in ,dpkind,qpkind,kindmod ,ddtype,qdtype,mptype ,tlevel,cppintf
     srcdir = re.sub(r'\/*$','/',srcdir_in)
     callingme = 'no'
     protected = 'no'
-    filename = 'avh_olo.f90'
+    filename = 'avh_olo_foriregi.f90'
 
     if dpkind+qpkind+ddtype+qdtype+mptype == '':
         avh_pc.prnt('avh_pc_olo.py: no kind/type provided, putting -dpkind="kind(1d0)"')
