@@ -352,8 +352,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         self.to_define.add('cond')
 
     def p_expression_grreglog(self, p):
-        "expression :  GRREGLOG '(' expression ',' expression ')'"
-        p[0] = 'GRREGLOG(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'))'
+        "expression :  GRREGLOG '(' expression ',' expression ',' expression ')'"
+        p[0] = 'GRREGLOG('+p[3]+',DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
         self.to_define.add('grreglog')
 
     def p_expression_recms(self, p):
@@ -480,8 +480,8 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         self.to_define.add('mp_cond')
 
     def p_expression_grreglog(self, p):
-        "expression :  GRREGLOG '(' expression ',' expression ')'"
-        p[0] = 'MP_GRREGLOG(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
+        "expression :  GRREGLOG '(' expression ',' expression ',' expression ')'"
+        p[0] = 'MP_GRREGLOG('+p[3]+',CMPLX('+p[5]+',KIND=16),CMPLX('+p[7]+\
                                           ',KIND=16))'
         self.to_define.add('mp_grreglog')
 
@@ -596,8 +596,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_grreglog(self, p):
-        "expression :  GRREGLOG '(' expression ',' expression ')'"
-        p[0] = 'GRREGLOG('+p[3]+','+p[5]+')'
+        "expression :  GRREGLOG '(' expression ',' expression ',' expression ')'"
+        p[0] = 'GRREGLOG('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
@@ -781,8 +781,8 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         p[0] = 'cond('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_grreglog(self, p):
-        "expression :  GRREGLOG '(' expression ',' expression ')'"
-        p[0] = 'grreglog('+p[3]+','+p[5]+')'
+        "expression :  GRREGLOG '(' expression ',' expression ',' expression ')'"
+        p[0] = 'grreglog('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"

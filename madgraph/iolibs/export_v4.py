@@ -6313,11 +6313,12 @@ class UFO_model_to_mg4(object):
           endif
           end
 
-          double complex function grreglog(expr1,expr2)
+          double complex function grreglog(logsw,expr1,expr2)
           implicit none
           double complex TWOPII
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
           double complex expr1,expr2
+          double precision logsw
           double precision imagexpr
           logical firstsheet
           if(expr1.eq.(0.0d0,0.0d0))then
@@ -6331,9 +6332,9 @@ class UFO_model_to_mg4(object):
                 grreglog=log(expr1)
              else
                 if(dimag(expr1).gt.0.0d0)then
-                   grreglog=log(expr1) - TWOPII
+                   grreglog=log(expr1) - logsw*TWOPII
                 else
-                   grreglog=log(expr1) + TWOPII
+                   grreglog=log(expr1) + logsw*TWOPII
                 endif
              endif
           endif
@@ -6440,11 +6441,12 @@ class UFO_model_to_mg4(object):
               endif
               end
 
-              %(complex_mp_format)s function mp_grreglog(expr1,expr2)
+              %(complex_mp_format)s function mp_grreglog(logsw,expr1,expr2)
               implicit none
               %(complex_mp_format)s TWOPII
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
               %(complex_mp_format)s expr1,expr2
+              %(real_mp_format)s logsw
               %(real_mp_format)s imagexpr
               logical firstsheet
               if(expr1.eq.(0.0e0_16,0.0e0_16))then
@@ -6458,9 +6460,9 @@ class UFO_model_to_mg4(object):
                     mp_grreglog=log(expr1)
                  else
                     if(imagpart(expr1).gt.0.0e0_16)then
-                       mp_grreglog=log(expr1) - TWOPII
+                       mp_grreglog=log(expr1) - logsw*TWOPII
                     else
-                       mp_grreglog=log(expr1) + TWOPII
+                       mp_grreglog=log(expr1) + logsw*TWOPII
                     endif
                  endif 
               endif
