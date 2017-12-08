@@ -4652,8 +4652,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         arg = line[:begidx].split()
         if len(arg) <=1:
-            return self.list_completion(text, ['dependent', 'missing', 'to_slha1', 'to_slha2'], line)
-
+            return self.list_completion(text, ['dependent', 'missing', 'to_slha1', 'to_slha2', 'to_full'], line)
+        elif arg[0] == 'to_full':
+            return self.list_completion(text, self.cards , line)
 
     def complete_set(self, text, line, begidx, endidx, formatting=True):
         """ Complete the set command"""
@@ -5539,8 +5540,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ syntax: update dependent: Change the mass/width of particles which are not free parameter for the model.
                     update missing:   add to the current param_card missing blocks/parameters.
                     update to_slha1: pass SLHA2 card to SLHA1 convention. (beta)
-                    update to_slha2: pass SLHA1 card to SLHA2 convention. (beta)"""
-        
+                    update to_slha2: pass SLHA1 card to SLHA2 convention. (beta)
+                    update to_full [run_card]
+        """
         args = self.split_arg(line)
         if len(args)==0:
             logger.warning('miss an argument (dependent or missing). Please retry')
@@ -5585,7 +5587,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             except Exception, error:
                 logger.warning('failed to update to slha1 due to %s' % error)
             self.param_card = check_param_card.ParamCard(self.paths['param'])            
-            
+        elif args[0] == 'to_full':
+            return self.update_to_full(args[1:])
+
+
+    def update_to_full(self, line):
+        """ trigger via update to_full LINE"""
+        
+        logger.info("update the run_card by including all the hidden parameter")
+        self.run_card.write(self.paths['run'], self.paths['run_default'], write_hidden=True)
+
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0):
         """static method which can also be called from outside the class

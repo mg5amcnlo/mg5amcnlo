@@ -10,6 +10,9 @@
 #   Lines starting with a '# ' are info or comments                  *
 #                                                                    *
 #   mind the format:   value    = variable     ! comment             *
+#                                                                    *
+#   To display more options, you can type the command:               *
+*      update full_run_card                                          *
 #*********************************************************************
 #
 #*******************                                                 

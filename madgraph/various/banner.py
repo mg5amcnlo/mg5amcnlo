@@ -2185,7 +2185,8 @@ class RunCard(ConfigFile):
                         raise
                     
                 
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False,
+                    write_hidden=False):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -2231,14 +2232,20 @@ class RunCard(ConfigFile):
                                  (name, self.filename))
                     text += line 
 
-        if to_write:
+        if to_write or write_hidden:
             text+="""#********************************************************************* 
 #  Additional parameter
 #*********************************************************************
 """
-            
+            if write_hidden:
+                to_write = to_write.union(set(self.hidden_param))
+
             for key in to_write:
-                text += '  %s\t= %s # %s\n' % (self[key], key, 'hidden parameter')
+                if key in self.system_only:
+                    continue
+
+                comment = self.comments.get(key,'hidden_parameter').replace('\n','\n#')
+                text += '  %s\t= %s # %s\n' % (self[key], key, comment)
 
         if isinstance(output_file, str):
             fsock = open(output_file,'w')
@@ -2474,7 +2481,7 @@ class RunCardLO(RunCard):
         
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
-        self.add_param("time_of_flight", -1.0, include=False, hidden=True)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")
@@ -2661,17 +2668,17 @@ class RunCardLO(RunCard):
         self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
         self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
-        self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
-        self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
-        self.add_param('Emin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('Emax4pdg',[-1.], hidden=True, system=True)  
-        self.add_param('etamin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
-        self.add_param('mxxmin4pdg',[-1.], hidden=True, system=True)
-        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
+        self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
+        self.add_param('ptmin4pdg',[0.], system=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], system=True)
+        self.add_param('Emin4pdg',[0.], system=True) # store pt min
+        self.add_param('Emax4pdg',[-1.], system=True)  
+        self.add_param('etamin4pdg',[0.], system=True) # store pt min
+        self.add_param('etamax4pdg',[-1.], system=True)   
+        self.add_param('mxxmin4pdg',[-1.], system=True)
+        self.add_param('mxxpart_antipart', [False], system=True)
         # Not implemetented right now (double particle cut)
         #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
         # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
@@ -2929,7 +2936,8 @@ class RunCardLO(RunCard):
             self['use_syst'] = False
             self['systematics_program'] = 'none'
             
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False,
+              **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -2943,7 +2951,7 @@ class RunCardLO(RunCard):
                 python_template = False
        
         super(RunCardLO, self).write(output_file, template=template,
-                                    python_template=python_template)            
+                                    python_template=python_template, **opt)            
 
 
 class InvalidMadAnalysis5Card(InvalidCmd):
@@ -3671,7 +3679,7 @@ class RunCardNLO(RunCard):
             self['mxxmin4pdg'] = [0.]
             self['mxxpart_antipart'] = [False]
 
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False, **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -3685,7 +3693,7 @@ class RunCardNLO(RunCard):
                 python_template = False
        
         super(RunCardNLO, self).write(output_file, template=template,
-                                    python_template=python_template)
+                                    python_template=python_template, **opt)
 
 
     def create_default_for_process(self, proc_characteristic, history, proc_def):
