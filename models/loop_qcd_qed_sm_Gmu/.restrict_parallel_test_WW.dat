@@ -10,6 +10,14 @@ Block LOOP
   666 1.60770000e+02 # MU_R=2*MW
 
 ###################################
+## INFORMATION FOR TECHNIQUE
+###################################
+Block TECHNIQUE
+    1 1.00000001e+00 # epsUV
+    2 1.00000002e+00 # epsIR
+    3 1.00000003e+00 # LogSwitch
+
+###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
 Block SMINPUTS 
