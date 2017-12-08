@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+      OM: introduce "update to_full" command to display all the hidden parameter
+
 2.6.1 (XX/XX/17)
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
              to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
