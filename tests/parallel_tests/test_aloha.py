@@ -3254,12 +3254,8 @@ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<d
 }
 void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  P1[4];
- std::complex<double>  denom;
  int  i;
  std::complex<double>  Vtmp[6];
- double  OM1;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;
@@ -3271,12 +3267,8 @@ while (i < 6)
 }
 void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  P1[4];
- std::complex<double>  denom;
  int  i;
  std::complex<double>  Vtmp[6];
- double  OM1;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;

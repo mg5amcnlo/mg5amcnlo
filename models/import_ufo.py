@@ -179,10 +179,17 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         model_path = find_ufo_path(model_name)
     except UFOImportError:
         if '-' not in model_name:
+            if model_name == "mssm":
+                logger.error("mssm model has been replaced by MSSM_SLHA2 model.\n The new model require SLHA2 format. You can use the \"update to_slha2\" command to convert your slha1 param_card.\n That option is available at the time of the edition of the cards.")
             raise
         split = model_name.split('-')
         model_name = '-'.join([text for text in split[:-1]])
-        model_path = find_ufo_path(model_name)
+        try:
+            model_path = find_ufo_path(model_name)
+        except UFOImportError:
+            if model_name == "mssm":
+                logger.error("mssm model has been replaced by MSSM_SLHA2 model.\n The new model require SLHA2 format. You can use the \"update to_slha2\" command to convert your slha1 param_card.\n That option is available at the time of the edition of the cards.")
+            raise
         restrict_name = split[-1]
          
         restrict_file = os.path.join(model_path, 'restrict_%s.dat'% restrict_name)

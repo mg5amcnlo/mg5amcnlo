@@ -529,7 +529,6 @@ class ParamCard(dict):
         text = self.header
         text += ''.join([block.__str__(precision) for block in blocks])
         text += '\n'
-        misc.sprint(len(self.not_parsed_entry))
         text += '\n'.join(self.not_parsed_entry)
         if not outpath:
             return text

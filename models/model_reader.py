@@ -172,7 +172,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     else:
                         if isinstance(value, str) and value.lower() == 'auto':
                             value = '0.0' 
-                        if scale and parameter_dict[block][id].name == 'aS':
+                        if scale and parameter_dict[block][pid].name == 'aS':
                             runner = Alphas_Runner(value, nloop=2)
                             value = runner(scale)
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
