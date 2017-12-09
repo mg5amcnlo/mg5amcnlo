@@ -5448,6 +5448,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        
         if not param_card:
             return False
         logger.info('Update the dependent parameter of the param_card.dat')

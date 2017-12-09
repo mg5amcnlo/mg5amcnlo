@@ -2644,9 +2644,9 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
-        self.add_param('survey_splitting', -1, hidden=True, include=False)
-        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False)
-        self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+        self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
+        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
+        self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
