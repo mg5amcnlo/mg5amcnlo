@@ -73,7 +73,7 @@ epsUV = Parameter(name = 'epsUV',
                   type = 'real',
                   value = '1.0',
                   texname = '\text{\eps_{UV}}',
-                  lhablock = 'TECHNIQUE',
+                  lhablock = 'TECHNICAL',
                   lhacode = [ 1 ])
 
 epsIR = Parameter(name = 'epsIR',
@@ -81,7 +81,7 @@ epsIR = Parameter(name = 'epsIR',
                   type = 'real',
                   value = '1.0',
                   texname = '\text{\eps_{IR}}',
-                  lhablock = 'TECHNIQUE',
+                  lhablock = 'TECHNICAL',
                   lhacode = [ 2 ])
 
 LogSwitch = Parameter(name = 'LogSwitch',
@@ -89,7 +89,7 @@ LogSwitch = Parameter(name = 'LogSwitch',
                       type = 'real',
                       value = '1.0',
                       texname = '\text{LogSwitch}',
-                      lhablock = 'TECHNIQUE',
+                      lhablock = 'TECHNICAL',
                       lhacode = [ 3 ])
 
 CMSParam = Parameter(name = 'CMSParam',
