@@ -86,7 +86,11 @@ endif
 
 ifneq ($(lhapdf),)
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
-  alfas_functions=alfas_functions_lhapdf
+  ifeq ($(lhapdfversion),6)
+    alfas_functions=alfas_functions_lhapdf6
+  else
+    alfas_functions=alfas_functions_lhapdf
+  endif
   llhapdf = $(shell $(lhapdf) --libs)
   reweight_xsec_events_pdf_dummy=
   # check if we need to activate c++11 (for lhapdf6.2)
