@@ -784,11 +784,11 @@ c-----
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
             abrv='born'
-            if (ickkw.eq.3) then
-               write (*,*) 'FxFx merging not possible with'/
-     $              /' [LOonly=QCD] processes'
-               stop 1
-            endif
+c$$$            if (ickkw.eq.3) then
+c$$$               write (*,*) 'FxFx merging not possible with'/
+c$$$     $              /' [LOonly=QCD] processes'
+c$$$               stop 1
+c$$$            endif
          endif
       endif
 c

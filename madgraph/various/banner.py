@@ -57,7 +57,7 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
+                     'slha','initrwgt','mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard',
                      'ma5card_parton','ma5card_hadron','run_settings']
 
@@ -74,6 +74,8 @@ class Banner(dict):
             'mgdelphescard': 'MGDelphesCard',
             'mgdelphestrigger': 'MGDelphesTrigger',
             'mgshowercard': 'MGShowerCard' }
+    
+    forbid_cdata = ['initrwgt']
     
     def __init__(self, banner_path=None):
         """ """
@@ -387,7 +389,8 @@ class Banner(dict):
                 continue
             capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             start_data, stop_data = '', ''
-            if '<' in self[tag] or '@' in self[tag]:
+            if capitalized_tag not in self.forbid_cdata and \
+                                          ('<' in self[tag] or '@' in self[tag]):
                 start_data = '\n<![CDATA['
                 stop_data = ']]>\n'
             ff.write('<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
@@ -935,7 +938,7 @@ class ConfigFile(dict):
         self.auto_set = set()
         self.system_only = set()
         self.lower_to_case = {}
-        self.list_parameter = set()
+        self.list_parameter = {} #key -> type of list (int/float/bool/str/...
         self.dict_parameter = {}
         self.comments = {} # comment associated to parameters. can be display via help message
         
@@ -1010,11 +1013,7 @@ class ConfigFile(dict):
             
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
-            if isinstance(self[name], list):
-                targettype = type(self[name][0])
-            else:
-                #should not happen but better save than sorry
-                targettype = type(dict.__getitem__(self,name)) 
+            targettype = self.list_parameter[lower_name] 
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1046,7 +1045,7 @@ class ConfigFile(dict):
             #format each entry    
             values =[self.format_variable(v, targettype, name=name) 
                                                                  for v in value]
-            dict.__setitem__(self, lower_name, values)
+            dict.__setitem__(self, lower_name, values) 
             if change_userdefine:
                 self.user_set.add(lower_name)
             return  
@@ -1120,7 +1119,7 @@ class ConfigFile(dict):
         if change_userdefine:
             self.user_set.add(lower_name)
 
-    def add_param(self, name, value, system=False, comment=False):
+    def add_param(self, name, value, system=False, comment=False, typelist=None):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1131,9 +1130,14 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
         if isinstance(value, list):
-            if any([type(value[0]) != type(v) for v in value]):
+            if len(value):
+                targettype = type(value[0])
+            else:
+                targettype=typelist
+                assert typelist
+            if any([targettype != type(v) for v in value]):
                 raise Exception, "All entry should have the same type"
-            self.list_parameter.add(lower_name)
+            self.list_parameter[lower_name] = targettype
         elif isinstance(value, dict):
             allvalues = value.values()
             if any([type(allvalues[0]) != type(v) for v in allvalues]):
@@ -1388,7 +1392,7 @@ class GridpackCard(ConfigFile):
             else:
                 template = pjoin(MEDIR, 'Cards', 'grid_card_default.dat')
 
-        
+                
         text = ""
         for line in file(template,'r'):                  
             nline = line.split('#')[0]
@@ -1403,7 +1407,11 @@ class GridpackCard(ConfigFile):
                 logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                 text += line 
         
-        fsock = open(output_file,'w')
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+            
         fsock.write(text)
         fsock.close()
         
@@ -1958,7 +1966,7 @@ class PY8Card(ConfigFile):
             finput = file_input
         else:
             raise MadGraph5Error("Incorrect type for argument 'file_input': %s"%
-                                                    file_inp .__class__.__name__)
+                                                    file_input.__class__.__name__)
 
         # Read the template
         last_pos = finput.tell()
@@ -1980,6 +1988,9 @@ class PY8Card(ConfigFile):
                 line = line.replace('\n','')
                 raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
                                                                           line
+            if '!' in value:
+                value,_ = value.split('!',1)                                                             
+                                                                          
             # Read a subrun if detected:
             if param=='Main:subrun':
                 if read_subrun:
@@ -2321,7 +2332,16 @@ class RunCard(ConfigFile):
         for name, value in self.system_default.items():
                 self.set(name, value, changeifuserset=False)
 
+        for name in self.legacy_parameter:
+            if self[name] != self.legacy_parameter[name]:
+                logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
+               
     default_include_file = 'run_card.inc'
+
+    def update_system_parameter_for_include(self):
+        """update hidden system only parameter for the correct writtin in the 
+        include"""
+        return
 
     def write_include_file(self, output_dir):
         """Write the various include file in output_dir.
@@ -2330,6 +2350,9 @@ class RunCard(ConfigFile):
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
+        
+        #ensusre that system only parameter are correctly set
+        self.update_system_parameter_for_include()
         
         for incname in self.includepath:
             if incname is True:
@@ -2353,12 +2376,13 @@ class RunCard(ConfigFile):
                     # in case of a list, add the length of the list as 0th
                     # element in fortran. Only in case of integer or float
                     # list (not for bool nor string)
-                    if isinstance(value[0], bool):
+                    targettype = self.list_parameter[key]                        
+                    if targettype is bool:
                         pass
-                    elif isinstance(value[0], int):
+                    elif targettype is int:
                         line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
                         fsock.writelines(line)
-                    elif isinstance(value[0], float):
+                    elif targettype is float:
                         line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
                         fsock.writelines(line)
                     # output the rest of the list in fortran
@@ -2620,12 +2644,39 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
-        self.add_param('survey_splitting', -1, hidden=True, include=False)
-        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False)
-        self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+        self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
+        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
+        self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         
-        # Specify what particle IDs to use for the CKKWL merging cut ktdurham
+        # parameter allowing to define simple cut via the pdg
+        # Special syntax are related to those. (can not be edit directly)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
+        self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
+        self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
+        self.add_param('Emin4pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('Emax4pdg',[-1.], hidden=True, system=True)  
+        self.add_param('etamin4pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
+        self.add_param('mxxmin4pdg',[-1.], hidden=True, system=True)
+        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
+        # Not implemetented right now (double particle cut)
+        #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
+        # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
+        #self.add_param('M_max_pdg',[0.], hidden=True, system=True)               
+        # self.add_param('DR_min_pdg',[0.], hidden=True, system=True) # store pt min
+        #self.add_param('DR_max_pdg',[0.], hidden=True, system=True)               
+            
+            
+             
     def check_validity(self):
         """ """
         
@@ -2701,7 +2752,7 @@ class RunCardLO(RunCard):
                     self['mmjj'] = 0.0 
 
 
-
+    
         # check validity of the pdf set
         possible_set = ['lhapdf', 'mrs02nl','mrs02nn',
         'cteq4_m', 'cteq4_l','cteq4_d',
@@ -2716,13 +2767,68 @@ class RunCardLO(RunCard):
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
    
-        for name in self.legacy_parameter:
-            if self[name] != self.legacy_parameter[name]:
-                logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
-                
-
-            
+    def update_system_parameter_for_include(self):
         
+        # set the pdg_for_cut fortran parameter
+        pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys() + 
+                         self['e_min_pdg'].keys() +self['e_max_pdg'].keys() +
+                         self['eta_min_pdg'].keys() +self['eta_max_pdg'].keys()+
+                         self['mxx_min_pdg'].keys() + self['mxx_only_part_antipart'].keys())
+        pdg_to_cut.discard('__type__')
+        pdg_to_cut.discard('default')
+        if len(pdg_to_cut)>25:
+            raise Exception, "Maximum 25 different pdgs are allowed for pdg specific cut"
+        
+        if any(int(pdg)<0 for pdg in pdg_to_cut):
+            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
+            raise MadGraph5Error, 'Some PDG specific cuts are defined with negative pdg code'
+        
+        
+        if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
+            raise Exception, "Can not use PDG related cut for light quark/b quark/lepton/gluon/photon"
+        
+        if pdg_to_cut:
+            self['pdg_cut'] = list(pdg_to_cut)
+            self['ptmin4pdg'] = []
+            self['Emin4pdg'] = []
+            self['etamin4pdg'] =[]
+            self['ptmax4pdg'] = []
+            self['Emax4pdg'] = []
+            self['etamax4pdg'] =[]
+            self['mxxmin4pdg'] =[]
+            self['mxxpart_antipart']  = []
+            for pdg in self['pdg_cut']:
+                for var in ['pt','e','eta', 'Mxx']:
+                    for minmax in ['min', 'max']:
+                        if var in ['Mxx'] and minmax =='max':
+                            continue
+                        new_var = '%s%s4pdg' % (var, minmax)
+                        old_var = '%s_%s_pdg' % (var, minmax)
+                        default = 0. if minmax=='min' else -1.
+                        self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                #special for mxx_part_antipart
+                old_var = 'mxx_only_part_antipart'
+                new_var = 'mxxpart_antipart'
+                if 'default' in self[old_var]:
+                    default = self[old_var]['default']
+                    self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                else:
+                    if str(pdg) not in self[old_var]:
+                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                    self[new_var].append(self[old_var][str(pdg)])
+        else:
+            self['pdg_cut'] = [0]
+            self['ptmin4pdg'] = [0.]
+            self['Emin4pdg'] = [0.]
+            self['etamin4pdg'] =[0.]
+            self['ptmax4pdg'] = [-1.]
+            self['Emax4pdg'] = [-1.]
+            self['etamax4pdg'] =[-1.]
+            self['mxxmin4pdg'] =[0.] 
+            self['mxxpart_antipart'] = [False]
+            
+                    
+           
     def create_default_for_process(self, proc_characteristic, history, proc_def):
         """Rules
           process 1->N all cut set on off.
@@ -2735,7 +2841,7 @@ class RunCardLO(RunCard):
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
         self['pdgs_for_merging_cut'] = proc_characteristic['colored_pdgs']
-
+                    
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
@@ -3269,7 +3375,7 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-
+    
     def default_setup(self):
         """define the default value"""
         
@@ -3353,6 +3459,20 @@ class RunCardNLO(RunCard):
         self.add_param('FO_LHE_postprocessing',['grouping','random'], 
                        hidden=True, system=True, include=False)
     
+        # parameter allowing to define simple cut via the pdg
+        self.add_param('g',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
+        
+        #hidden parameter that are transfer to the fortran code
+        self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
+        self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
+        self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
+        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
+        
     def check_validity(self):
         """check the validity of the various input"""
         
@@ -3496,6 +3616,56 @@ class RunCardNLO(RunCard):
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard, "'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly."
 
+
+    def update_system_parameter_for_include(self):
+        
+        # set the pdg_for_cut fortran parameter
+        pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys()+
+                         self['mxx_min_pdg'].keys()+ self['mxx_only_part_antipart'].keys())
+        pdg_to_cut.discard('__type__')
+        pdg_to_cut.discard('default')
+        if len(pdg_to_cut)>25:
+            raise Exception, "Maximum 25 different PDGs are allowed for PDG specific cut"
+        
+        if any(int(pdg)<0 for pdg in pdg_to_cut):
+            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
+            raise MadGraph5Error, 'Some PDG specific cuts are defined with negative PDG codes'
+        
+        
+        if any(pdg in pdg_to_cut for pdg in [21,22,11,13,15]+ range(self['maxjetflavor']+1)):
+            # Note that this will double check in the fortran code
+            raise Exception, "Can not use PDG related cuts for massless SM particles/leptons"
+        if pdg_to_cut:
+            self['pdg_cut'] = list(pdg_to_cut)
+            self['ptmin4pdg'] = []
+            self['ptmax4pdg'] = []
+            self['mxxmin4pdg'] = []
+            self['mxxpart_antipart']  = []
+            for pdg in self['pdg_cut']:
+                for var in ['pt','mxx']:
+                    for minmax in ['min', 'max']:
+                        if var == 'mxx' and minmax == 'max':
+                            continue
+                        new_var = '%s%s4pdg' % (var, minmax)
+                        old_var = '%s_%s_pdg' % (var, minmax)
+                        default = 0. if minmax=='min' else -1.
+                        self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                #special for mxx_part_antipart
+                old_var = 'mxx_only_part_antipart'
+                new_var = 'mxxpart_antipart'
+                if 'default' in self[old_var]:
+                    default = self[old_var]['default']
+                    self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
+                else:
+                    if str(pdg) not in self[old_var]:
+                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                    self[new_var].append(self[old_var][str(pdg)])
+        else:
+            self['pdg_cut'] = [0]
+            self['ptmin4pdg'] = [0.]
+            self['ptmax4pdg'] = [-1.]
+            self['mxxmin4pdg'] = [0.]
+            self['mxxpart_antipart'] = [False]
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

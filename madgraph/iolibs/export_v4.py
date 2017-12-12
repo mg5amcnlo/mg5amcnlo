@@ -1739,7 +1739,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             f2py_compiler = ''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
-            f2py_compiler = default_compiler
+            f2py_compiler = default_compiler['f2py']
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
         elif sys.version_info[1] == 6:
@@ -2270,7 +2270,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
-            new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
+            pat = re.compile('smatrix', re.I)
+            new_text, n  = re.subn(pat, '%ssmatrix' % proc_prefix, text)
             with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
                 f.write(new_text)
             linkfiles.pop(0)

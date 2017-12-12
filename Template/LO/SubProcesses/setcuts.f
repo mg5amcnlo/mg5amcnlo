@@ -23,7 +23,7 @@ c
 c
 c     LOCAL
 c
-      integer i,j
+      integer i,j,k
       integer icollider,detail_level
       integer ncheck
       logical done,fopened
@@ -114,7 +114,7 @@ c For checking the consistency of the grouping and the cuts defined here
 c
 c     count the number of j/bjet/photon/lepton
 c
-      integer nb_j, nb_b, nb_a, nb_l, nb_nocut
+      integer nb_j, nb_b, nb_a, nb_l, nb_nocut,nb_pdg
       double precision smin_p, smin_m ! local variable to compute smin
 c
 c     setup masses for the final-state particles
@@ -204,7 +204,7 @@ c
          is_a_nu(i)=.false.
 
 
-c-do not apply cuts to these
+c-do not apply cuts to these. CAREFULL: PDG_CUT do not consider do_cuts (they simply check the cut_decays)
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
          if (abs(idup(i,1,iproc)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1,iproc)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
@@ -308,8 +308,27 @@ c                 etamax(i)=etaonium
 c            endif
          endif
       enddo
+c
+c     check for pdg specific cut
+c
+      if (pdg_cut(1).ne.0)then
 
-
+         do j=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               if (abs(idup(i, 1, iproc)).eq.pdg_cut(j))then
+                  etmin(i) = ptmin4pdg(j)
+                  etmax(i)= ptmax4pdg(j)
+                  emin(i)= Emin4pdg(j)
+                  emax(i)= Emax4pdg(j)
+                  etamin(i)= etamin4pdg(j)
+                  etamax(i)= etamax4pdg(j)
+               endif
+            enddo
+         enddo
+      endif
 
 c
 c     delta r cut
@@ -385,6 +404,35 @@ c
             endif
          enddo
       enddo      
+c
+c     smin cut from PDG cut 
+c
+      if (pdg_cut(1).ne.0)then
+         do k=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               if (abs(idup(i, 1, iproc)).ne.pdg_cut(k))then
+                  cycle
+               endif
+               do j = i+1,nexternal
+                  if(.not.cut_decays.and.from_decay(j))then
+                     cycle
+                  endif
+                  if (mxxpart_antipart(k))then
+                     if  (idup(j, 1, iproc).eq.-1*idup(i, 1, iproc))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
+                  else
+                     if  (abs(idup(j, 1, iproc)).eq.pdg_cut(k))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
+                  endif
+               enddo
+            enddo
+         enddo
+      endif      
 
 c     
 c     ptll cut (min and max)
@@ -598,6 +646,22 @@ c     check for lepton
          endif
         smin = smin + max(smin_p**2, smin_m, mmnl**2, ptllmin**2, misset**2)
       endif
+c  check for other PDG particle
+      do i = 1,pdg_cut(0)
+         nb_pdg=0
+         do j=nincoming, nexternal
+            if (abs(idup(i,1,iproc)).eq.pdg_cut(i))then
+               k = j ! use to get the mass
+               if(do_cuts(i)) nb_pdg = nb_pdg + 1
+            endif
+         enddo
+         if (nb_pdg.gt.0)then
+            smin_p = nb_pdg *(pmass(k)**2 + ptmin4pdg(i)**2)
+            smin_m = nb_pdg*((2-nb_pdg)*pmass(k)**2 + (nb_pdg-1)/2.*mxxmin4pdg(i)**2)
+            smin = smin + max(smin_p, smin_m)
+         endif
+      enddo
+
 c     ensure symmetry of s_min(i,j)
       do i=nincoming+1,nexternal-1
         do j=nincoming+1,nexternal-1

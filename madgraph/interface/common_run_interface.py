@@ -643,11 +643,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
                 raise AlreadyRunning, message
             else:
-                pid = os.getpid()
-                fsock = open(pjoin(me_dir,'RunWeb'),'w')
-                fsock.write(`pid`)
-                fsock.close()
-                self.gen_card_html()
+                self.write_RunWeb(me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -656,6 +652,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Load the configuration file
         self.set_configuration()
         self.configure_run_mode(self.options['run_mode'])
+
+        # update the path to the PLUGIN directory of MG%
+        if MADEVENT and 'mg5_path' in self.options :
+            mg5dir = self.options['mg5_path']
+            if mg5dir not in sys.path:
+                sys.path.append(mg5dir)
+            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
 
         # Define self.proc_characteristics
         self.get_characteristics()
@@ -671,6 +675,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def make_make_all_html_results(self, folder_names = [], jobs=[]):
         return sum_html.make_all_html_results(self, folder_names, jobs)
 
+
+    def write_RunWeb(self, me_dir):
+        pid = os.getpid()
+        fsock = open(pjoin(me_dir,'RunWeb'),'w')
+        fsock.write(`pid`)
+        fsock.close()
+        self.gen_card_html()
 
     ############################################################################
     def split_arg(self, line, error=False):
@@ -1825,6 +1836,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             multicore=False
             
+        # plugin option
+        plugin = False
+        if '--plugin=' in line:
+            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
+        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF']:
+            plugin=self.switch['reweight']
+            
+            
+            
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
@@ -1864,6 +1884,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not isinstance(self, cmd.CmdShell):
                 command.append('--web')
             command.append('reweight')
+            if plugin:
+                command.append('--plugin=%s' % plugin)
             
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
@@ -1931,11 +1953,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        force=False, starttime=starttime)
 
                 all_lhe = []
+                #check for the pyton2.6 bug with s
+                to_zip=True
+                if not os.path.exists(new_args[0]) and new_args[0].endswith('.gz') and\
+                    os.path.exists(new_args[0][:-3]):
+                    to_zip = False
                 devnull= open(os.devnull)
+                
                 for i in range(nb_file):
                     new_command = list(command) 
-                    new_command.append('%s_%s.lhe' % (new_args[0],i))
-                    all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    if to_zip:
+                        new_command.append('%s_%s.lhe' % (new_args[0],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    else:
+                        new_command.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                        all_lhe.append('%s_%s.lhe' % (new_args[0][:-3],i))
+                    
                     if '-from_cards' not in command:
                         new_command.append('-from_cards')
                     if i==0:
@@ -1952,6 +1985,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
+
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
@@ -1979,7 +2013,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
+        rwgt_interface = reweight_interface.ReweightInterface 
+        if plugin:
+            rwgt_interface = misc.from_plugin_import(self.plugin_path, 'new_reweight', 
+                                        plugin, warning=False, 
+                                        info="Will use re-weighting from pluging %(plug)s")    
+        
+        reweight_cmd = rwgt_interface(args[0], mother=self)
         #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
@@ -1992,7 +2032,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
-        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             
@@ -2625,8 +2664,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Make sure to only run over one analysis over each fifo.
         used_up_fifos = []
         # Now loop over the different MA5_runs
-        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+        for MA5_run_number, (MA5_runtag, MA5_cmds) in enumerate(MA5_cmds_list):
             
+            # Since we place every MA5 run in a fresh new folder, the MA5_run_number
+            # is always zero.
+            MA5_run_number = 0
             # Bypass the banner.
             MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
@@ -2653,7 +2695,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
                 # Unsuccessful MA5 run, we therefore stop here.
                 return
-            
+
             if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first link the event file
                 # created with MA5 reconstruction and then directly proceed to the
@@ -2676,8 +2718,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events'))+\
-                                      misc.glob('*.root',pjoin(reco_output,'Output','_reco_events'))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events','lheEvents0_%d'%MA5_run_number))+\
+                                       misc.glob('*.root',pjoin(reco_output,'Output','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2686,13 +2728,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     shutil.move(reco_output,pjoin(self.me_dir,'HTML',
                                  self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%
                                     (self.run_tag,mode.upper(),MA5_runtag,i+1)))
+                    
                     # link the reconstructed event file to the run directory
                     links_created.append(os.path.basename(reco_event_file))
+                    parent_dir_name = os.path.basename(os.path.dirname(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
                       '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
-                      MA5_runtag,i+1),'Output','_reco_events',links_created[-1]),
+                      MA5_runtag,i+1),'Output','_reco_events',parent_dir_name,links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
-                    
+
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
                   "'%s'. Links to the reconstructed event files are:"%MA5_runtag[6:])
                 for link in links_created:
@@ -2704,7 +2748,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
               %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
             else:
                 target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
-                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+                    %(mode.upper(),MA5_runtag),'Output','PDF','MadAnalysis5job_%d'%MA5_run_number,'main.pdf')
             has_pdf = True
             if not os.path.isfile(target):
                 has_pdf = False
@@ -3062,8 +3106,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
         if run_mode in [0, 2]:
-            self.cluster = cluster.MultiCore(
-                             **self.options)
+            self.cluster = cluster.MultiCore(**self.options)
             self.cluster.nb_core = nb_core
         #cluster_temp_path=self.options['cluster_temp_path'],
 
@@ -3073,44 +3116,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if cluster_name in cluster.from_name:
                 self.cluster = cluster.from_name[cluster_name](**opt)
             else:
-                if MADEVENT and ('mg5_path' not in self.options or not self.options['mg5_path']):
-                    if not self.plugin_path:
-                        raise self.InvalidCmd('%s not native cluster type and no PLUGIN directory available')
-                elif MADEVENT:
-                    mg5dir = self.options['mg5_path']
-                    if mg5dir not in sys.path:
-                        sys.path.append(mg5dir)
-                    newpath = pjoin(mg5dir, 'PLUGIN')
-                    if newpath not in self.plugin_path:
-                        self.plugin_path.append(newpath)
-                else:
-                    mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plugpath in self.plugin_path: 
-                    plugindirname = os.path.basename(plugpath)
-                    for plug in os.listdir(plugpath):
-                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):   
-                            try:
-                                __import__('%s.%s' % (plugindirname,plug))
-                            except Exception:
-                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it', plugindirname, plug)
-                                continue
-                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
-                            if not hasattr(plugin, 'new_cluster'):
-                                continue
-                            if not misc.is_plugin_supported(plugin):
-                                continue              
-                            if cluster_name in plugin.new_cluster:
-                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                                self.cluster = plugin.new_cluster[cluster_name](**opt)
-                                break
-                    else:
-                        continue
-                    break
+                cluster_class = misc.from_plugin_import(self.plugin_path, 
+                                            'new_cluster', cluster_name,
+                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                if cluster_class:
+                    self.cluster = cluster_class(**self.options)
                 else:
-                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
-                
+                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name              
                 
     def check_param_card(self, path, run=True, dependent=False):
         """
@@ -3167,7 +3181,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except Exception:
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
-            if mass and width/mass < 1e-12:
+            if mass and abs(width/mass) < 1e-12:
                 logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
@@ -3544,6 +3558,55 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("--format=short (only if --path is define)")
         logger.info("        allows to have a multi-column output easy to parse")
 
+
+    ############################################################################
+    def find_model_name(self):
+        """ return the model name """
+        if hasattr(self, 'model_name'):
+            return self.model_name
+        
+        def join_line(old, to_add):
+            if old.endswith('\\'):
+                newline = old[:-1] + to_add
+            else:
+                newline = old + line
+            return newline
+            
+        
+        
+        model = 'sm'
+        proc = []
+        continuation_line = None
+        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
+            line = line.split('#')[0]
+            if continuation_line:
+                line = line.strip()
+                if continuation_line == 'model':
+                    model = join_line(model, line)
+                elif continuation_line == 'proc':
+                    proc = join_line(proc, line)
+                if not line.endswith('\\'):
+                    continuation_line = None
+                continue
+            #line = line.split('=')[0]
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]   
+                proc = []
+                if model.endswith('\\'):
+                    continuation_line = 'model'
+            elif line.startswith('generate'):
+                proc.append(line.split(None,1)[1])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+            elif line.startswith('add process'):
+                proc.append(line.split(None,2)[2])
+                if proc[-1].endswith('\\'):
+                    continuation_line = 'proc'
+        self.model = model
+        self.process = proc 
+        return model
+
+
     ############################################################################
     def do_check_events(self, line):
         """ Run some sanity check on the generated events."""
@@ -3865,7 +3928,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # lhapdf-config
             getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
-            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            if lhapdf_version.startswith('6.1'): 
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+            else:
+                #for python 6.2.1, import lhapdf should be working to download pdf
+                lhapdf = misc.import_python_lhapdf(lhapdf_config)
+                if lhapdf:
+                    if 'PYTHONPATH' in os.environ:
+                        os.environ['PYTHONPATH']+= ':' + os.path.dirname(lhapdf.__file__)
+                    else:
+                        os.environ['PYTHONPATH'] = ':'.join(sys.path) + ':' + os.path.dirname(lhapdf.__file__)
+                else:
+                    logger.warning('lhapdf 6.2.1 requires python integration in order to download pdf set. Trying anyway')
+                misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -3955,8 +4030,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
-        if self.lhapdf_version.startswith('6.2'):
-            logger.warning('Support of LHAPDF 6.2.x is still in beta phase. Consider to use LHAPDF 6.1.x in case of problem.')
         return self.lhapdf_version
 
 
@@ -3974,8 +4047,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif lhapdf_version.startswith('6.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
                          stdout = subprocess.PIPE).stdout.read().strip()
-
+        
+        if ':' in datadir:
+            for totry in datadir.split(':'):
+                if os.path.exists(pjoin(totry, 'pdfsets.index')):
+                    return totry
+            else:
+                return None
+        
         return datadir
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        return self.Pdirs
 
     def get_lhapdf_libdir(self):
         lhapdf_version = self.get_lhapdf_version()
@@ -5097,8 +5188,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
+
         self.run_card.set(name, value, user=True)
+        new_value = self.run_card.get(name)
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
+
 
     def setML(self, name, value, default=False):
         
@@ -5162,6 +5256,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """This is run on quitting the class. Apply here all the self-consistency
         rule that you want. Do the modification via the set command."""
 
+        # For NLO run forbid any pdg specific cut on massless particle
+        if isinstance(self.run_card,banner_mod.RunCardNLO):
+            for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
+                           self.run_card['mxx_min_pdg'].keys()): 
+            
+                if int(pdg)<0:
+                    raise Exception, "For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles"
+                if self.param_card.get_value('mass', int(pdg), default=0) ==0:
+                    raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
+        
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
@@ -5344,6 +5448,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        
+        if not param_card:
+            return False
         logger.info('Update the dependent parameter of the param_card.dat')
         modify = True
         class TimeOutError(Exception): 
@@ -5631,14 +5738,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '  and define it to PROC.'
         print '  if --add is present, just add a new decay for the associate particle.'
         
-    def complete_compute_widths(self, *args, **opts):
+    def complete_compute_widths(self, text, line, begidx, endidx, **opts):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-        return self.mother_interface.complete_compute_widths(*args,**opts)
+        return self.mother_interface.complete_compute_widths(text, line, begidx, endidx,**opts)
 
 
     def help_add(self):
@@ -5648,15 +5755,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add pythia8_card NAME VALUE')
         logger.info( "   add a definition of name in the pythia8_card with the given value")
         logger.info( "   Do not work for the param_card"        )
+        logger.info('')
         logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info( '')
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
-        logger.info('      --clean remove all previously existing line in  the file')
+        logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
+        logger.info( '     --clean remove all previously existing line in  the file')
+        logger.info('')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
+        logger.info('    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('********************* HELP ADD ***************************') 
 
 
@@ -5717,7 +5829,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
-
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -5727,7 +5838,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -5739,14 +5850,44 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 
+            elif args[1].startswith('--replace_line='):
+                # catch the line/regular expression and replace the associate line
+                # if no line match go to check if args[2] has other instruction starting with --
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        break
+                else:
+                    new_line = re.split(search_pattern,line)[-1].strip()
+                    if new_line.startswith(('--before_line=','--after_line')):
+                        return self.do_add('%s %s' % (args[0], new_line))   
+                    raise Exception, 'invalid regular expression: not found in file'
+                # found the line position "posline"
+                # need to check if the a fail savety is present
+                new_line = re.split(search_pattern,line)[-1].strip()
+                if new_line.startswith(('--before_line=','--after_line')):
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    new_line = re.split(search_pattern,new_line)[-1]
+                # overwrite the previous line
+                old_line = split[posline]
+                split[posline] = new_line
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
+                         (old_line, posline, card, new_line ),'$MG:color:BLACK')                
+                                            
+            
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[13:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5755,14 +5896,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = re.search(search_pattern, line).group()[12:-1]
+                pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -5780,7 +5921,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
-
+    do_edit = do_add
 
     def help_asperge(self):
         """Help associated to the asperge command"""
@@ -5863,8 +6004,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, self.paths[card_name.split('_',1)[0]])
-            self.reload_card(self.paths[card_name.split('_',1)[0]])
+            files.cp(path, self.paths[card_name.rsplit('_',1)[0]])
+            self.reload_card(self.paths[card_name.rsplit('_',1)[0]])
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')

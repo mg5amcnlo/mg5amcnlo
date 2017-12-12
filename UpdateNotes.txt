@@ -1,5 +1,32 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.1 (12/12/17)
+      RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
+             to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
+      OM: Re-factoring the code asking which program to use (both at LO and NLO)
+          - design modular, designed for PLUGIN interactions
+          - the length of the question auto adapts to the size of the shell
+      OM: Allowing to have the gridpack stored on a readonly filesystem
+      OM: Fix a bug in matching/merging forbiding the pdf reweighting for some processes (since 2.4.0)
+      OM: Creation of online database with the name of known UFO model. If a use try to import a model
+          which does not exits locally, the code will automatically check that database and download the 
+          associate model if it exists. You can contact us if you are the author of one model which is not
+          on our database. 
+	  The list of all available model is available by typing "display model_list"
+      OM: Model with __arxiv__ attribute will display "please cite XXXX.XXXXX when using this model" when
+          loaded for the first time.
+      OM: A fail of importing a UFO model does not try anymore to import v4 model
+      OM: Many model present in models directory have been removed, however they can still be imported
+          since they are available via automatic-download
+      OM: Refactoring of the gridpack functionality with an infinite loop to reach the requested number of events
+      OM+RF: Adding new class of cut at LO/NLO defined via the pdg of the particle
+      VH: Support for the latest version of MA5
+      MZ: Adding support for lhapdf v6.2
+      OM: Fixing various bug in the spinmode=onshell mode of MadSpin
+      OM: Fix a bug for model with 4 fermion in presence of restrict_card
+      OM: Fix aloha bug in presence of complex form-factor.
+      OM: improve auto-detection and handling of slha1/slha2 input file when expecting slha2. 
+
 2.6.0 (16/08/17)
       New Functionalities:
       --------------------

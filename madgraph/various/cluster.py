@@ -140,6 +140,7 @@ class Cluster(object):
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir or \
             (input_files == [] == output_files):
+
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
             
@@ -633,7 +634,10 @@ class MultiCore(Cluster):
                             opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
-                        proc = misc.Popen([exe] + arg,  **opt)
+                        if arg:
+                            proc = misc.Popen([exe] + arg,  **opt)
+                        else:
+                            proc = misc.Popen(exe,  **opt)
                         pid = proc.pid
                         self.pids.put(pid)
                         proc.wait()

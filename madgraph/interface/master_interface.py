@@ -184,8 +184,11 @@ class Switcher(object):
             else:
                 # If not option is set the convention is that the mode is 'all'
                 # unless no perturbation orders is defined.
-                if len(orders)>0:
-                    return ('NLO','all',orders)
+                # if order is set to LOonly assume LOonly=QCD
+                if orders == ['LOonly']:
+                    return ('NLO', 'LOonly', ['QCD'])
+                elif len(orders)>0:
+                    return ('NLO','all',orders) 
                 else:
                     return ('tree',None,[])               
         else:

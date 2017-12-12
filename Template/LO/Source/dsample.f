@@ -570,6 +570,7 @@ c     Local
 c
       integer i, j
       integer get_maxsproc
+      logical fopened
 c
 c     Global
 c
@@ -713,7 +714,11 @@ c
 c     Try to read grid from file
 c
       flat_grid=.true.
-      open(unit=25,file='ftn25',status='unknown',err=102)
+      call open_file_local(25, 'ftn25', fopened)
+      if (.not.fopened)then
+         goto 102
+      endif
+!      open(unit=25,file='ftn25',status='unknown',err=102)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
       read(25,*) twgt, force_max_wgt
@@ -1802,8 +1807,8 @@ c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
 c               vol = 1d0/(knt*itm)
-               sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
-     .              / dble(knt-1) / dble(knt)
+               sigma = DABS((sigma/vol/vol-non_zero*mean*mean*navg)  ! knt replaced by non_zero
+     .              / dble(knt-1) / dble(knt))                       ! DABS is to catch numerical error
             else
 
                sigma = (sigma/vol/vol - knt*mean*mean)

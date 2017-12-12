@@ -1021,7 +1021,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
                     run_card["iseed"] = self.seed
                     run_card['gridpack'] = True
-                    run_card['systematics_program'] = False
+                    run_card['use_syst'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
@@ -1194,7 +1194,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
                         pwidth = totwidth
-                    br = pwidth / totwidth
+                    br *= pwidth / totwidth
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     nb_needed = int(efficiency*nb_needed) +nevents_for_max *nb_mult
@@ -1208,7 +1208,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
                             pwidth = totwidth
-                        br = pwidth / totwidth**nb_mult
+                        br *= pwidth / totwidth**nb_mult
                         br *= math.factorial(nb_mult)
                     else:
                         evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
@@ -1217,13 +1217,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         elif pwidth > totwidth:
                             pwidth = totwidth
                         br *= (pwidth / totwidth)**nb_mult
+                        
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
-        
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)
@@ -1462,8 +1462,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_me  
+                    mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
+            self.all_f2py[pdir] = mymod.get_value  
             return self.calculate_matrix_element(event)
         
         
