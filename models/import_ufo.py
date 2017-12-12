@@ -146,10 +146,7 @@ def import_model_from_db(model_name):
     except Exception:
         pass
     logger.info("download model from %s to the following directory: %s", link, target, '$MG:color:BLACK')
-    if sys.platform == "darwin":
-        misc.call(['curl', link, '-otmp.tgz'], cwd=target)
-    else:
-        misc.call(['wget', link, '--output-document=tmp.tgz'], cwd=target)
+    misc.wget(link, 'tmp.tgz', cwd=target)
 
     #untar the file.
     # .tgz

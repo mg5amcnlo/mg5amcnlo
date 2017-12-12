@@ -5467,16 +5467,10 @@ This implies that with decay chains:
                                                   HepToolsInstaller_web_address)
             # Guess if it is a local or web address
             if '//' in HepToolsInstaller_web_address:
-                if sys.platform == "darwin":
-                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
-                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                misc.wget(HepToolsInstaller_web_address,
+                          pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'),
+                          stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
                                                                          cwd=MG5DIR)
-                else:
-                    misc.call(['wget', HepToolsInstaller_web_address, 
-                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
-                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             else:
                 # If it is a local tarball, then just copy it
                 shutil.copyfile(HepToolsInstaller_web_address,
@@ -5922,10 +5916,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
-        if sys.platform == "darwin":
-            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
-        else:
-            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+        misc.wget(path[args[0]], '%s.tgz' % name, cwd=MG5DIR)
 
         # Untar the file
         returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
@@ -6152,8 +6143,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
-                misc.call(['curl', target, '-otd.tgz'],
-                                                  cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'tg.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
@@ -6167,7 +6157,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'td', cwd=pjoin(MG5DIR,'td'))
             os.chmod(pjoin(MG5DIR,'td','td'), 0775)
             self.options['td_path'] = pjoin(MG5DIR,'td')
 
@@ -6512,10 +6502,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if need_binary:
                     path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
-                    if sys.platform == "darwin":
-                        misc.call(['curl', path, '-o%s.tgz' % name], cwd=MG5DIR)
-                    else:
-                        misc.call(['wget', path, '--output-document=%s.tgz'% name], cwd=MG5DIR)
+                    misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
                     returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
                                      stdout=open(os.devnull, 'w'))
