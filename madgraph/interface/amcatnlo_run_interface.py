@@ -2602,7 +2602,13 @@ RESTART = %(mint_mode)s
             logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-            misc.call(['./combine_root.sh'] + folder_name, \
+            rootfiles = []
+            for job in jobs:
+                if job['dirname'].endswith('.root'):
+                    rootfiles.append(job['dirname'])
+                else:
+                    rootfiles.append(pjoin(job['dirname'],'MADatNLO.root'))
+            misc.call(['./combine_root.sh'] + folder_name + rootfiles, \
                       stdout=devnull, 
                       cwd=pjoin(self.me_dir, 'SubProcesses'))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),

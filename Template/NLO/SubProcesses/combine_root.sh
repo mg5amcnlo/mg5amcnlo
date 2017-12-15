@@ -58,6 +58,14 @@ mv -f definitely_temporary.txt temp_root_files.txt
 function steerall {
 combine_root_files $1
 
+rm -f temp_root_files.txt
+echo $[$#-1] >> temp_root_files.txt
+echo $thisdir >> temp_root_files.txt
+for i in ${@:2}
+do
+  echo $i >> temp_root_files.txt
+done
+
 if [ -f rootinput.txt ]
 then
   rm -f rootinput.txt
@@ -70,7 +78,7 @@ root -b < rootinput.txt
 rm -f rootinput.txt
 }
 
-steerall $1
+steerall $@
 
 rm -f AutoDict_vector_TH1D*
 
