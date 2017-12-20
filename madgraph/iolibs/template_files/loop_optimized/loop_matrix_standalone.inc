@@ -659,6 +659,14 @@ OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
 101  CONTINUE
 CLOSE(1)
 
+IF (.NOT.USELOOPFILTER) THEN
+  DO J=1,NLOOPGROUPS
+    DO I=1,NSQUAREDSO
+      GOODAMP(I,J)=.True.
+    ENDDO
+  ENDDO
+ENDIF
+
 IF (HelicityFilterLevel.eq.0) then
   FOUNDHELFILTER=.TRUE.
   DO J=1,NCOMB
