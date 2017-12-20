@@ -100,7 +100,6 @@ CMSParam = Parameter(name = 'CMSParam',
                      texname = 'CMSParam')
 
 # User-defined parameters.
-
 Gf = Parameter(name = 'Gf',
                nature = 'external',
                type = 'real',
@@ -355,17 +354,42 @@ sw2 = Parameter(name = 'sw2',
                 value = '1 - MW**2/MZ**2',
                 texname = '\\text{sw2}')
 
+GfRedefinitionChoice = Parameter(name = 'GfRedefinitionChoice',
+                                 nature = 'external',
+                                 type = 'real',
+                                 # A value equal to 1.0 means using an absolute value to make \alpha real.
+                                 # A value equal to -1.0 means using abs(m_x^2) (m_x being complex) in the gauge relation defining \alpha.
+                                 # A value in between [-1.0,1.0] interpolates between the two behavior in a linear way
+                                 value = '1.0',
+                                 texname = '\text{Gf\_redefinition\_choice}',
+                                 lhablock = 'TECHNICAL',
+                                 lhacode = [ 4 ])
+
+Gfbar = Parameter(name = 'Gfbar',
+                  nature = 'internal',
+                  type = 'real',
+                  value = '(( (GfRedefinitionChoice + 1.)/2.0 )*Gf*abs( (MW**2*(MZ**2-MW**2))/MZ**2 )*( MZ**2/(MW**2*(MZ**2-MW**2)) )) + (( (1. - GfRedefinitionChoice)/2.0 )*Gf*( (abs(MW**2)*(abs(MZ**2)-abs(MW**2)))/abs(MZ**2) )*( MZ**2/(MW**2*(MZ**2-MW**2)) ))',
+                  texname = '\\bar{G_f}')
+
 #aEW = Parameter(name = 'aEW',
 #                nature = 'internal',
 #                type = 'real',
 #                value = 'cmath.sqrt(2.)*Gf*re(MW**2)*(1-re(MW**2)/re(MZ**2))/cmath.pi',
 #                texname = '\\alpha _{\\text{EW}}')
 
+#aEW = Parameter(name = 'aEW',
+#                nature = 'internal',
+#                type = 'real',
+#                value = 'abs(cmath.sqrt(2.)*Gf*MW**2*(1-MW**2/MZ**2)/cmath.pi)',
+#                texname = '\\alpha _{\\text{EW}}')
+
+# We use Gfbar here which ensures that aEW will be real
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',
                 type = 'real',
-                value = 'abs(cmath.sqrt(2.)*Gf*MW**2*(1-MW**2/MZ**2)/cmath.pi)',
+                value = 'cmath.sqrt(2.)*Gfbar*MW**2*(1-MW**2/MZ**2)/cmath.pi',
                 texname = '\\alpha _{\\text{EW}}')
+
 
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'internal',
