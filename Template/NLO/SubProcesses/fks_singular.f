@@ -102,11 +102,9 @@ c its value to the list of weights using the add_wgt subroutine
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
-     $     ,wgt1,fx_ev,sudakov_damp
-      external dot,f_damp,fks_Sij
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
+     $     ,sudakov_damp
+      external fks_Sij
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -116,9 +114,6 @@ c its value to the list of weights using the add_wgt subroutine
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
-      x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-      ffact = f_damp(x)
-      if (ffact.le.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
@@ -330,10 +325,10 @@ c respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       integer nofpartners,i
-      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
-     $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
-     $     ,xmcxsec(nexternal),g22,wgt1,xlum_mc_fact,fks_Hij
-      external dot,fks_Sij,f_damp,fks_Hij
+      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
+     $     ,sevmc,dummy,zhw(nexternal),xmcxsec(nexternal),g22,wgt1
+     $     ,xlum_mc_fact,fks_Hij
+      external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -357,15 +352,9 @@ c respectively.
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
-         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-         ffact = f_damp(x)
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-         sevmc = sevmc*ffact
       else
-         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-         ffact = f_damp(x)
          sevmc = fks_Hij(p,i_fks,j_fks)
-         sevmc = sevmc*ffact
       endif
       if (sevmc.eq.0d0) return
       call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
