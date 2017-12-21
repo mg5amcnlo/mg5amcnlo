@@ -131,8 +131,9 @@ c
       common/ctau_lower_bound/tau_Born_lower_bound
      &     ,tau_lower_bound_resonance,tau_lower_bound
 c BW stuff
-      double precision mass_min(-nexternal:nexternal),masslow(
-     $     -nexternal:-1),widthlow(-nexternal:-1),sum_all_s
+      double precision mass_min(-nexternal:nexternal,maxchannels)
+     $     ,masslow(-nexternal:-1),widthlow(-nexternal:-1),sum_all_s
+      save mass_min
       integer t_channel
       integer cBW_FKS_level_max(fks_configs,maxchannels),
      &     cBW_FKS(fks_configs,-nexternal:-1,maxchannels),
@@ -185,7 +186,7 @@ c event could.
          do i=-nexternal,nexternal
             xm(i)=0d0
             xw(i)=0d0
-            mass_min(i)=0d0
+            mass_min(i,ichan)=0d0
          end do
          firsttime_chans(ichan)=.false.
          do iFKS=1,fks_configs
@@ -381,7 +382,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
             do i=nincoming+1,nexternal-1
-               mass_min(i)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
+               mass_min(i,ichan)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
             enddo
             cBW_FKS_level_max(iFKS,ichan)=0
             t_channel=0
@@ -394,17 +395,18 @@ c mass of the BW
                widthlow(i)=0d0
                if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
                if (t_channel.ne.0) exit ! only s-channels
-               mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
-               if (xm(i).lt.mass_min(i)-vtiny) then
+               mass_min(i,ichan)=mass_min(itree(1,i),ichan)
+     $              +mass_min(itree(2,i),ichan)
+               if (xm(i).lt.mass_min(i,ichan)-vtiny) then
                   write (*,*)
      $                 'ERROR in the determination of conflicting BW',i
-     $                 ,xm(i),mass_min(i)
+     $                 ,xm(i),mass_min(i,ichan)
                   stop
                endif
                if (pmass(i,iconf).lt.xm(i) .and.
      $              pwidth(i,iconf).gt.0d0) then
 c     Possible conflict in BW
-                  if (pmass(i,iconf).lt.mass_min(i)) then
+                  if (pmass(i,iconf).lt.mass_min(i,ichan)) then
 c     Resonance can never go on-shell due to the kinematics of the event
                      cBW_FKS(iFKS,i,ichan)=2
                      cBW_FKS_level(iFKS,i,ichan)=0
@@ -521,7 +523,7 @@ c
          s_mass(i)=s_mass_FKS(nFKSprocess,i,ichan)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess,ichan)
-      call set_granny(nFKSprocess,iconf,mass_min)
+      call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
       return
       end
 
