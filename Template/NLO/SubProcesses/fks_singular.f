@@ -364,7 +364,8 @@ c respectively.
       double precision xkern(2),xkernazi(2),factor
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision emscwgt(nexternal)
-
+      double precision MCsec(nexternal-1,max_bcol)
+      double precision xmcxsec2(max_bcol)
       include "genps.inc"
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
@@ -430,6 +431,7 @@ c -- call to MC counterterm functions
       first_MCcnt_call=.true.
       is_pt_hard=.false.
       xmcxsec=0d0
+      xmcxsec2=0d0
       do cflows=1,max_bcol
          if(is_pt_hard)cycle
          do npartner=1,ipartners(0)
@@ -440,9 +442,11 @@ c -- call to MC counterterm functions
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
             if(colorflow(npartner,cflows).eq.0)factor=0d0
-            xmcxsec(npartner)=xmcxsec(npartner)+factor*
+            MCsec(npartner,cflows)=factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
+            xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
 
 c$$$  Colour and flavour 
 c$$$  the emitter is min(i_fks,j_fks)
@@ -539,7 +543,7 @@ cccccccccccccccccc
 cccccccccccccccccc
 
 
-      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,probne)
 c -- end of call to MC counterterm functions
 
       MCcntcalled=.true.

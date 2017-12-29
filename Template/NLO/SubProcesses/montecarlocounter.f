@@ -1020,7 +1020,7 @@ c      enddo
       end
 
 
-      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,probne)
+      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,xmcxsec2,probne)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1030,7 +1030,8 @@ c      enddo
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
-      integer jpartner,mpartner
+      integer jpartner,mpartner,cflows,jflow
+      common/c_colour_flow/jflow
       logical emscasharp
 
       double precision emsca
@@ -1064,23 +1065,44 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       double precision emscav_tmp(nexternal)
       common/cemscav_tmp/emscav_tmp
 
-      double precision xmcxsec(nexternal),probne,wgt
+      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
       logical lzone(nexternal)
 
       integer i
+      double precision tiny
+      parameter(tiny=1d-7)
 
 c     Input check
-      if(xmcxsec(npartner).lt.0d0)then
-         write(*,*)'Fatal error in complete_xmcsubt'
-         write(*,*)npartner,xmcxsec(npartner)
-         stop
-      endif
+      do npartner=1,ipartners(0)
+         if(xmcxsec(npartner).lt.0d0)then
+            write(*,*)'Fatal error 1 in complete_xmcsubt'
+            write(*,*)npartner,xmcxsec(npartner)
+            stop
+         endif
+      enddo
+      do cflows=1,max_bcol
+         if(xmcxsec2(cflows).lt.0d0)then
+            write(*,*)'Fatal error 2 in complete_xmcsubt'
+            write(*,*)cflows,xmcxsec2(cflows)
+            stop
+         endif
+      enddo
 
 c     Compute MC cross section
       wgt=0d0
+      wgt2=0d0
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
       enddo
+      do cflows=1,max_bcol
+         wgt2=wgt2+xmcxsec2(cflows)
+      enddo
+c
+      if(abs(wgt-wgt2)/max(1d0,abs(wgt)).gt.tiny)then
+         write(*,*)'Fatal error 3 in complete_xmcsubt'
+         write(*,*)wgt,wgt2
+         stop
+      endif
 
 c     Assign emsca on statistical basis
       if(dampMCsubt.and.wgt.gt.1d-30)then
@@ -1125,6 +1147,24 @@ c min() avoids troubles if ran2()=1
             stop
          endif
       endif
+
+c Assign flow on statistical basis
+      rrnd=ran2()
+      wgt11=0d0
+      jflow=0
+      do cflows=1,max_bcol
+         wgt11=wgt11+xmcxsec2(cflows)
+         if(wgt11.ge.rrnd*wgt2.and.jflow.eq.0)jflow=cflows
+      enddo
+      if(jflow.eq.0)then
+         write(*,*)'Error in xmcsubt: flow unweighting failed'
+         stop
+      endif
+
+c PAOLO: INSERT HERE PROBNE COMPUTATION
+c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE
+c COMPUTATION IN ROUTINE XMCSUBT AND ALSO EMSCAV UNWEIGHTING
+c IN THIS ROUTINE, ABOVE
 
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne

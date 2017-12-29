@@ -120,6 +120,9 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+      integer jflow
+      common/c_colour_flow/jflow
+
 c
 c Set the leshouche info and fks info
 c
@@ -270,6 +273,10 @@ c
             jampsum=jampsum+jamp2(iflow)
          endif
       enddo
+
+c PAOLO: UNCOMMENT HERE DOWN, AND COMMENT UP
+c      iflow=jflow
+
       if (iflow.gt.max_bcol) then
          write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol
          stop
