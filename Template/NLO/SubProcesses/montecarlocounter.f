@@ -330,6 +330,7 @@ c
       logical lzone(nexternal),flagmc
 
       include "born_nhel.inc"
+      double precision xmcxsec2(max_bcol)
       integer npartner,cflows
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -348,6 +349,7 @@ c
       double precision p_read(0:4,2*nexternal-3), wgt_read
       integer jpart(7,-nexternal+3:2*nexternal-3)
       integer npart
+      double precision MCsec(nexternal-1,max_bcol)
 
 c True MC subtraction term
       first_MCcnt_call=.true.
@@ -384,12 +386,13 @@ c$$$        write(*,*) 'wgt_read=',wgt_read
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
             if(colorflow(npartner,cflows).eq.0)factor=0d0
-            xmcxsec(npartner)=xmcxsec(npartner)+factor*
+            MCsec(npartner,cflows)=factor*
      &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,xmcxsec2,probne)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 
