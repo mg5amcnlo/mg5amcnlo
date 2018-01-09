@@ -401,6 +401,9 @@ C     To access Pythia8 control variables
       common/SHevents/Hevents
       integer nexternal_now
 
+      double precision tiny
+      parameter (tiny=1d-7)
+
       do i=1,2
         istup_local(i) = -1
       enddo
@@ -447,7 +450,19 @@ c -- call to MC counterterm functions
      &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
             xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
             xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
-
+c -- positivity check
+            if(xmcxsec(npartner).le.-tiny)then
+               write(*,*)'Negative xmcxsec',npartner,xmcxsec(npartner)
+               stop
+            elseif(xmcxsec(npartner).le.0d0)then
+               xmcxsec(npartner)=0d0
+            endif
+            if(xmcxsec2(cflows).le.-tiny)then
+               write(*,*)'Negative xmcxsec2',cflows,xmcxsec2(cflows)
+               stop
+            elseif(xmcxsec2(cflows).le.0d0)then
+               xmcxsec2(cflows)=0d0
+            endif
 c$$$  Colour and flavour 
 c$$$  the emitter is min(i_fks,j_fks)
 c$$$  its partner is ipartners(npartner)

@@ -1101,7 +1101,8 @@ c     Compute MC cross section
          wgt2=wgt2+xmcxsec2(cflows)
       enddo
 c
-      if(abs(wgt-wgt2)/max(1d0,abs(wgt)).gt.tiny)then
+      if( (abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny) .or.
+     &    (abs(wgt).le.1.d-10 .and.abs(wgt-wgt2).gt.tiny) )then
          write(*,*)'Fatal error 3 in complete_xmcsubt'
          write(*,*)wgt,wgt2
          stop
@@ -1155,9 +1156,11 @@ c Assign flow on statistical basis
       rrnd=ran2()
       wgt11=0d0
       jflow=0
-      do cflows=1,max_bcol
-         wgt11=wgt11+xmcxsec2(cflows)
-         if(wgt11.ge.rrnd*wgt2.and.jflow.eq.0)jflow=cflows
+      cflows=0
+      do while(jflow.eq.0.and.cflows.lt.max_bcol)
+         cflows=cflows+1
+         wgt11=wgt11+abs(xmcxsec2(cflows))
+         if(wgt11.ge.rrnd*abs(wgt2))jflow=cflows
       enddo
       if(jflow.eq.0)then
          write(*,*)'Error in xmcsubt: flow unweighting failed'

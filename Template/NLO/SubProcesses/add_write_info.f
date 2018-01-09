@@ -274,7 +274,9 @@ c
          endif
       enddo
 
-c PAOLO: UNCOMMENT HERE DOWN, AND COMMENT UP
+c     PAOLO: UNCOMMENT NEXT LINE ('iflow=jflow') AND COMMENT DETERMINATION
+c     OF iflow ABOVE (SHOULD BE EVERYTHING BELOW COMMENT  'Get color flow
+c     that ..' BUT CROSS CHECK)    
 c      iflow=jflow
 
       if (iflow.gt.max_bcol) then
