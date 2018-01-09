@@ -1159,8 +1159,8 @@ c Assign flow on statistical basis
       cflows=0
       do while(jflow.eq.0.and.cflows.lt.max_bcol)
          cflows=cflows+1
-         wgt11=wgt11+abs(xmcxsec2(cflows))
-         if(wgt11.ge.rrnd*abs(wgt2))jflow=cflows
+         wgt11=wgt11+xmcxsec2(cflows)
+         if(wgt11.ge.rrnd*wgt2)jflow=cflows
       enddo
       if(jflow.eq.0)then
          write(*,*)'Error in xmcsubt: flow unweighting failed'
