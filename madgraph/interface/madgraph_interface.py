@@ -6218,6 +6218,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         def apply_patch(filetext):
             """function to apply the patch"""
             text = filetext.read()
+            
             pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #=== renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
@@ -6343,7 +6344,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             pattern=re.compile('''^=== link file \'(?P<new>[^\']*)\' \'(?P<old>[^\']*)\'''', re.M)
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
-                        files.ln(old, os.path.dirname(new), os.path.basename(new))
+                        files.ln(pjoin(MG5DIR,old), os.path.dirname(pjoin(MG5DIR,new)), os.path.basename(new))
 
             # Re-compile CutTools and IREGI
             if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
@@ -6493,7 +6494,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             for i in range(data['version_nb'], web_version):
                 try:
                     filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
-#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
                 except Exception:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
@@ -8028,6 +8028,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         #
         # add info from decay module
         #
+        
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()

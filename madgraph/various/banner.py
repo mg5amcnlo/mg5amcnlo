@@ -1024,7 +1024,7 @@ class ConfigFile(dict):
                 new_value = []
                 i = 0
                 while len(data) > i:
-                    current = filter(None, re.split(r'(?:(?<!\\)\s)|,', data[i], re.VERBOSE))
+                    current = filter(None, re.split(r'(?:(?<!\\)\s)|,', data[i]))
                     i+=1
                     if len(data) > i+1:
                         if current:
