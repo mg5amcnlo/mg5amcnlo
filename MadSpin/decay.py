@@ -2746,37 +2746,8 @@ class decay_all_events(object):
             decay_text = ', '.join(decay_text)
             commandline = ''
             for proc in processes:
-                if '[' in proc:
-                    new_command = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
-                    new_procs = new_command.split('add process')[1:]
-                else:
-                    new_procs = [proc]
-                    
-                for new_proc in new_procs:
-                    new_proc= new_proc.strip()
-                    if new_proc.endswith(';'):
-                        new_proc = new_proc[:-1]
+                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
                 
-                    # deal with @ syntax need to move it after the decay specification
-                    if '@' in new_proc:
-                        baseproc, proc_nb = new_proc.split('@')
-                        try:
-                            proc_nb = int(proc_nb)
-                        except ValueError:
-                            raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                        proc_nb = '@ %i' % proc_nb 
-                    else:
-                        baseproc = new_proc
-                        proc_nb = ''      
-                    nb_comma = baseproc.count(',')
-                    if nb_comma == 0:
-                        commandline+="add process %s, %s %s  --no_warning=duplicate;" % (baseproc, decay_text, proc_nb)
-                    elif nb_comma == 1:
-                        before, after = baseproc.split(',')
-                        commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
-                    else:
-                        raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
-
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -2860,7 +2831,68 @@ class decay_all_events(object):
 #                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
 #                    assert decay.shell_string() in self.all_decay
             
+    @staticmethod
+    def get_proc_with_decay(proc, decay_text, model):
         
+        commands = []
+        if '[' in proc:
+            new_command = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, model)
+            new_procs = new_command.split(';')
+        else:
+            new_procs = [proc]
+        for new_proc in new_procs:
+            new_proc= new_proc.strip()
+            if new_proc.endswith(';'):
+                new_proc = new_proc[:-1]
+            #catch line like "define" where no decay need to be added
+            if not new_proc.strip():
+                continue
+            if not new_proc.startswith(('add', 'generate')):
+                commands.append(new_proc)
+                continue
+            
+            # check options
+            tmp, options = [], set(["--no_warning=duplicate"])
+            for arg in new_proc.split():
+                if arg.startswith('--'):
+                    options.add(arg)
+                else:
+                    tmp.append(arg)
+            new_proc = ' '.join(tmp)
+            options = list(options)
+            options.sort()
+            options = ' '.join(options)
+        
+            # deal with @ syntax need to move it after the decay specification
+            if '@' in new_proc:
+                baseproc, proc_nb = new_proc.split('@')
+                try:
+                    proc_nb = int(proc_nb)
+                except ValueError:
+                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                proc_nb = '@%i' % proc_nb 
+            else:
+                baseproc = new_proc
+                proc_nb = ''      
+            nb_comma = baseproc.count(',')
+            if nb_comma == 0:
+                commands.append("%s, %s %s %s" % (baseproc, decay_text, proc_nb, options))
+            elif nb_comma == 1:
+                before, after = baseproc.split(',')
+                commands.append("%s, %s, (%s, %s) %s  %s" % (before, decay_text, after, decay_text, proc_nb, options))
+            else:
+                part = baseproc.split(',')
+                if any('(' in p for p in part):
+                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
+                else:
+                    decay_part = []
+                    for p in part[1:]:
+                        decay_part.append("(%s, %s)" % (p, decay_text))
+                    commands.append("%s, %s, %s %s %s" % (part[0], decay_text, ', '.join(decay_part), proc_nb, options))
+        commands.append('') #to have a ; at the end of the command
+        return ';'.join(commands)
+        
+    
     def get_branching_ratio(self):
         """compute the branching ratio of all the decaying particles"""
     
@@ -4047,52 +4079,9 @@ class decay_all_events_onshell(decay_all_events):
 #        commandline = ''
         
         for proc in processes:
-            if '[' in proc:
-                new_command = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
-                new_procs = new_command.split('add process')[1:]
-            else:
-                new_procs = [proc]
-                
-            for new_proc in new_procs:
-                new_proc= new_proc.strip()
-                if new_proc.endswith(';'):
-                    new_proc = new_proc[:-1]
-            
-                
-                # deal with @ syntax need to move it after the decay specification
-                if '@' in new_proc:
-                    baseproc, proc_nb = new_proc.split('@')
-                    try:
-                        proc_nb = int(proc_nb)
-                    except ValueError:
-                        raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                    proc_nb = '@ %i' % proc_nb 
-                else:
-                    baseproc = new_proc
-                    proc_nb = '' 
-                    
-                nb_comma = baseproc.count(',')
-                if nb_comma == 0:
-                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (baseproc, decay_text, proc_nb)
-                elif nb_comma == 1:
-                    before, after = baseproc.split(',')
-                    commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
-                else:
-                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
-        
-#        commandline = commandline.replace('add process', 'generate',1)
-#        logger.info(commandline)
-#        mgcmd.exec_cmd(commandline, precmd=True)
-        # remove decay with 0 branching ratio.
-#        mgcmd.remove_pointless_decay(self.banner.param_card)
-#        commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
-#                                                      ' '.join(self.list_branches.keys()))
-#        mgcmd.exec_cmd(commandline, precmd=True)
-#        logger.info('Done %.4g' % (time.time()-start))
-                 
-
-
-
+            if not proc.strip().startswith(('add','generate')):
+                proc = 'add process %s' % proc
+            commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
         # 5. add the decay information to the all_topology object --------------                        
 #        for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
 #            me_path = pjoin(path_me,'full_me', 'SubProcesses', \
@@ -4129,7 +4118,8 @@ class decay_all_events_onshell(decay_all_events):
         for processes in self.list_branches.values():
             for proc in processes:
                 commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                i+=1        
+                i+=1 
+
         commandline = commandline.replace('add process', 'generate',1)
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.

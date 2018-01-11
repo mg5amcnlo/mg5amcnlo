@@ -1239,9 +1239,6 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
-
-
-    
     def add_lorentz(self, name, spins , expr):
         """ Add a Lorentz expression which is not present in the UFO """
         

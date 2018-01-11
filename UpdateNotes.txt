@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.2 ()
+      OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
+
 2.6.1 (12/12/17)
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
              to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.

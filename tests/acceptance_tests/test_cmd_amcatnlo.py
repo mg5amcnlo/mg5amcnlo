@@ -24,6 +24,7 @@ import tempfile
 import time
 import math
 from cStringIO import StringIO
+from madgraph.various import lhe_parser
 
 logger = logging.getLogger('test_cmd')
 
@@ -53,7 +54,7 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = True
+    debugging = False
     
     def setUp(self):
         
@@ -68,12 +69,12 @@ class MECmdShell(IOTests.IOTestManager):
                 shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
             os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
             self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
-            
-        self.path = pjoin(self.tmpdir,'MGProcess')
+            self.path = pjoin(self.tmpdir,'MGProcess')
         
     def tearDown(self):
         if not self.debugging:
             shutil.rmtree(self.tmpdir)
+        self.assertFalse(self.debugging)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -241,7 +242,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( ' -1 = nevt_job' in card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no-save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -253,7 +254,168 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
 
+    def test_madspin_ON_and_onshell_atNLO(self):
 
+        text = """
+        set crash_on_error True
+        generate p p > t t~ [QCD]
+        output %s
+        launch
+        madspin=ON
+        set nevents 10
+        decay t > w+ b
+        decay t~ > w- b~
+        launch -i
+        decay_events run_01
+        add madspin --replace_line="set spinmode.*" --after_line="banner" set spinmode=onshell 
+        """ % self.path
+        
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+        
+        # perform some basic check
+        lhe_on = pjoin(self.path,'Events','run_01_decayed_1','events.lhe.gz')
+        lhe_onshell= pjoin(self.path,'Events','run_01_decayed_2','events.lhe.gz')
+        
+        self.assertTrue(lhe_on)
+        mt =174
+        wt = 1.5
+        
+        # check that each events has the decay ON mode
+        nb_event = 0
+        for event in lhe_parser.EventFile(lhe_on):
+            nb_event +=1
+            nb_final = 0
+            m_inv_t = 0
+            m_inv_tbar = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                else:
+                    if p.pdg == 6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two top decaying')
+                        m_inv_t = p.mass
+                        self.assertTrue( mt - 15*wt < m_inv_t < mt + 15*wt)
+                    elif p.pdg == -6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two antitop decaying')
+                        m_inv_tbar = p.mass
+                        self.assertTrue( mt - 15*wt < m_inv_tbar < mt + 15*wt)
+                    else:
+                        self.assertTrue(False, 'not top-antitop decaying')
+            self.assertTrue(nb_final in [4,5])
+        self.assertEqual(nb_event, 10)
+
+        # check that each events has the decay ON mode
+        nb_event = 0
+        for event in lhe_parser.EventFile(lhe_onshell):
+            nb_event +=1
+            nb_final = 0
+            m_inv_t = 0
+            m_inv_tbar = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                else:
+                    if p.pdg == 6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two top decaying')
+                        m_inv_t = p.mass
+                        self.assertTrue( mt - 1 < m_inv_t < mt + 1)
+                    elif p.pdg == -6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two antitop decaying')
+                        m_inv_tbar = p.mass
+                        self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
+                    else:
+                        self.assertTrue(False, 'not top-antitop decaying')
+            misc.sprint(nb_final)
+            self.assertTrue(nb_final in [4,5])
+        self.assertEqual(nb_event, 10)        
+
+        
+    def test_madspin_LOonly(self):
+        
+        text = """
+        set crash_on_error True
+        generate p p > w+ [LOonly]
+        output %s
+        launch
+        madspin=ON
+        set nevents 10
+        decay w+ > e+ ve
+        launch -i
+        decay_events run_01
+        add madspin --replace_line="set spinmode.*" --after_line="banner" set spinmode=onshell 
+        """ % self.path
+        
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+        
+     # perform some basic check
+        lhe_on = pjoin(self.path,'Events','run_01_decayed_1','events.lhe.gz')
+        lhe_onshell= pjoin(self.path,'Events','run_01_decayed_2','events.lhe.gz')
+        
+        self.assertTrue(lhe_on)        
+        # check that each events has the decay ON mode
+        nb_event = 0
+        for event in lhe_parser.EventFile(lhe_on):
+            nb_event +=1
+            nb_final = 0
+            m_inv_w = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                else:
+                    if p.pdg == 24:
+                        if m_inv_w != 0:
+                            self.assertTrue(False, 'two W')
+                        m_inv_w = p.mass
+                        self.assertTrue( 30 < m_inv_w < 150)
+                    else:
+                        misc.sprint(p.pdg, p.status)
+                        self.assertTrue(False, 'not W decaying')
+            self.assertTrue(nb_final in [2])
+        self.assertEqual(nb_event, 10)      
+        
+        self.assertTrue(lhe_onshell)        
+        # check that each events has the decay ON mode
+        nb_event = 0
+        for event in lhe_parser.EventFile(lhe_onshell):
+            nb_event +=1
+            nb_final = 0
+            m_inv_w = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                else:
+                    if p.pdg == 24:
+                        if m_inv_w != 0:
+                            self.assertTrue(False, 'two W')
+                        m_inv_w = p.mass
+                        self.assertTrue( 93 < m_inv_w < 95)
+                    else:
+                        self.assertTrue(False, 'not W decaying')
+            self.assertTrue(nb_final in [2])
+        self.assertEqual(nb_event, 10)  
+          
 
     def generate_production(self):
         """production"""

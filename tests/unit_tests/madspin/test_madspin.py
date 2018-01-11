@@ -74,6 +74,103 @@ class TestBanner(unittest.TestCase):
         self.assertEqual(fct('e+ e- > all all, all > e+ e-'), set([-11,11]))
         self.assertEqual(fct('e+ e- > j w+, j > e+ e-'), set([-11,11,24]))
 
+    def test_get_proc_with_decay_LO(self):
+
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('sm')
+        
+        # Note the ; at the end of the line is important!
+        #1 simple case
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~', 't> w+b', cmd._curr_model)
+        self.assertEqual(['generate p p > t t~, t> w+b  --no_warning=duplicate;'],[out])
+
+        #2 with @0
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ @0', 't> w+b', cmd._curr_model)
+        self.assertEqual(['generate p p > t t~ , t> w+b @0 --no_warning=duplicate;'],[out])
+
+        #3 with @0 and --no_warning=duplicate
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ @0 --no_warning=duplicate', 't> w+b', cmd._curr_model)
+        self.assertEqual(['generate p p > t t~ , t> w+b @0 --no_warning=duplicate;'],[out])
+
+        #4 test with already present decay chain
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~, t > w+ b @0 --no_warning=duplicate', 't~ > w+b', cmd._curr_model)
+        self.assertEqual(['generate p p > t t~, t~ > w+b, ( t > w+ b , t~ > w+b) @0  --no_warning=duplicate;'],[out])
+        
+        #4 test with already present decay chain
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~, t > w+ b, t~ > w- b~ @0 --no_warning=duplicate', 'w >  all all', cmd._curr_model)
+        self.assertEqual(['generate p p > t t~, w >  all all, ( t > w+ b, w >  all all), ( t~ > w- b~ , w >  all all) @0 --no_warning=duplicate;'],[out])
+
+        #6 case with noborn=QCD
+        # This is technically not yet supported by MS, but it is nice that this functions supports it.
+        out = madspin.decay_all_events.get_proc_with_decay('generate g g > h QED=1 [noborn=QCD]', 'h > b b~', cmd._curr_model)
+        self.assertEqual(['add process g g > h QED=1 [sqrvirt=QCD], h > b b~  --no_warning=duplicate;'], 
+                         [out]) 
+        
+        
+        self.assertRaises(Exception, madspin.decay_all_events.get_proc_with_decay, 'generate p p > t t~, (t> w+ b, w+ > e+ ve)')
+
+    def test_get_proc_with_decay_NLO(self):
+
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('sm')
+        
+        #1 simple case
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ [QCD]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~, t> w+b  --no_warning=duplicate',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+
+        #2 simple case with QED=1
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [QCD]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+
+        #3 simple case with options
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [QCD] --test', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate --test',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate --test'],
+                         out.split(';')[:-1])
+
+        #4 case with LOonly
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [LOonly]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+
+        #5 case with LOonly=QCD
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [LOonly=QCD]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+
+        #5 case with LOonly=QCD
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [LOonly=QCD,QED]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+
+        #5 case with LOonly=QCD
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [LOonly=QCD QED]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])
+        
+        
+        #6 case with all=QCD
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [all=QCD]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])       
+
+        #6 case with virt=QCD, technically not valid but I like that the function can do it
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [virt=QCD]', 't> w+b', cmd._curr_model)
+        self.assertEqual(['add process p p > t t~ QED=1 [virt=QCD], t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])       
+
+          
+
+
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
     
