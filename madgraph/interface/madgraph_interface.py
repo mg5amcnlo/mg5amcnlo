@@ -7505,7 +7505,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # That applies only if there is more than one subprocess of course.
             if self._curr_amps[0].get_ninitial() == 1 and \
                                                      len(self._curr_amps)>1:
-                processes = [amp.get('process') for amp in self._curr_amps]            
+                
+                processes = [amp.get('process') for amp in self._curr_amps if 'process' in  amp.keys()]
                 if len(set(proc.get('id') for proc in processes))!=len(processes):
                     # Special warning for loop-induced
                     if any(proc['perturbation_couplings'] != [] for proc in
