@@ -1211,6 +1211,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+            if line.startswith(('http', 'www')):
+                return line
         elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
             for entry in question_instance.allow_arg:
                 if line.lower() == entry.lower():

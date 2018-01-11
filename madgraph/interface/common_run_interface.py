@@ -5645,13 +5645,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock, path = tempfile.mkstemp()
             try:
                 text = urllib.urlopen(line.strip())
+                url = line.strip()
             except Exception:
                 logger.error('fail to load the file')
             else:
                 for line in text:
                     os.write(fsock, line)
                 os.close(fsock)
-                self.copy_file(path)
+                self.copy_file(path, pathname=url)
                 os.remove(path)
                 
                 
@@ -5984,8 +5985,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
 
 
-    def copy_file(self, path):
+    def copy_file(self, path, pathname=None):
         """detect the type of the file and overwritte the current file"""
+        
+        if not pathname:
+            pathname = path
         
         if path.endswith('.lhco'):
             #logger.info('copy %s as Events/input.lhco' % (path))
@@ -6003,7 +6007,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if card_name == 'unknown':
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
-            logger.info('copy %s as %s' % (path, card_name))
+            logger.info('copy %s as %s' % (pathname, card_name))
             files.cp(path, self.paths[card_name.rsplit('_',1)[0]])
             self.reload_card(self.paths[card_name.rsplit('_',1)[0]])
         elif card_name == 'banner':
