@@ -2365,7 +2365,8 @@ class ControlSwitch(SmartQuestion):
         if 'allow_arg' in opts:
             allowed_args += opts['allow_arg']
             del opts['allow_arg']
-
+            
+        allowed_args +=["0", "done"]
         super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
 
