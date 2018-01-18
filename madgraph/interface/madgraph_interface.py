@@ -2784,7 +2784,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge',
                     'EWscheme',
-                    'max_npoint_for_channel']
+                    'max_npoint_for_channel',
+                    'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
@@ -2843,7 +2844,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None,
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
-                          'max_npoint_for_channel': 0 # 0 means automaticly adapted
+                          'max_npoint_for_channel': 0, # 0 means automaticly adapted
+                          'default_unset_couplings': 99 # 99 means infinity
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -4551,10 +4553,22 @@ This implies that with decay chains:
                     constrained_orders[name] = (value, type)
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
-                                          
+             
             line = order_re.group('before')
             order_re = order_pattern.match(line)          
-            
+        
+        # handle the case where default is not 99 and some coupling defined
+        if self.options['default_unset_couplings'] != 99 and \
+                                                     (orders or squared_orders): 
+                           
+                to_set = [name for name in self._curr_model.get('coupling_orders')
+                          if name not in orders and name not in squared_orders]
+                if to_set:
+                    logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
+                            (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:color:BLACK')
+                for name in to_set:
+                    orders[name] = self.options['default_unset_couplings']
+        
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
             raise self.InvalidCmd, \
@@ -7207,6 +7221,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'default_unset_couplings':
+            self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
         elif args[0] == 'f2py_compiler':
             if args[1] != 'None':
                 if log:
