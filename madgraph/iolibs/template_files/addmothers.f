@@ -76,9 +76,14 @@ C     iproc has the present process number
       integer imirror, iproc
       common/to_mirror/imirror, iproc
       data iproc/1/
-
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
+
+c
+c     LOCAL
+c
+      logical is_LC ! for not leading color bypass the writing of intermediate particle since the diagram is a very good candididate (and that it leads to issue)
+
 
       double precision pt
       integer get_color,elim_indices,set_colmp,fix_tchannel_color,combid
@@ -116,6 +121,7 @@ c    structure of the chosen diagram and use that as an alternative
 c   
 
       nc = int(jamp2(0))
+      is_LC = .true.
       maxcolor=0
       if(nc.gt.0)then
       if(icolamp(1,%(iconfig)s,iproc)) then
@@ -135,6 +141,7 @@ c          print *,'Color flow ',ic,' allowed for config ',lconfig,targetamp(ic)
 c     ensure that at least one leading color is different of zero if not allow
 c     all subleading color. 
       if (targetamp(nc).eq.0)then
+       is_LC = .false.
        targetamp(1)=jamp2(1)
        do ic =2,nc
            targetamp(ic) = jamp2(ic)+targetamp(ic-1)
@@ -204,7 +211,7 @@ c     Ensure that mother-daughter information starts from 0
            jpart(3,i) = 0
         enddo
  
-
+        
 c     Loop over propagators to find mother-daughter information
         do i=-1,-nexternal+2,-1
 c       Daughters
@@ -217,12 +224,12 @@ c       Daughters
 c            Set idij (needed to keep track of BWs)
              if(ickkw.gt.0) idij(i)=combid(idij(ida(1)),idij(ida(2)))
           endif
-c       Decide s- or t-channel
-          if(i.gt.-nexternal+2.and.
+c       Decide s- or t-channel (for not LC -> set to none
+          if(i.gt.-nexternal+2.and.is_LC.and.
      $         iabs(sprop(numproc,i,lconfig)).gt.0) then ! s-channel propagator
             jpart(1,i)=sprop(numproc,i,lconfig)
             ns=ns+1
-          else if(nres.gt.0.and.maxcolor.gt.maxorg) then
+          else if(nres.gt.0.and.maxcolor.gt.maxorg.and.is_LC) then
 c         For t-channel propagators, just check that the colors are ok
              if(i.eq.-nexternal+2) then
 c            This is the final t-channel, combining with leg 2
@@ -324,6 +331,7 @@ c     Add new color indices to list of color indices
           enddo
 c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
 c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
+          if(is_LC)then
           if(mo_color.eq.1) then ! color singlet
              maxcolor=elim_indices(0,0,ncolmp,icolmp,i,icolalt,
      $            is_colors,maxcolor)
@@ -347,12 +355,13 @@ c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
              da_color(2) = get_color(jpart(1,ida(2)))
              call write_error(da_color(1), da_color(2), mo_color)
           endif
+         endif !end of check on LC
+
 c       Just zero helicity info for intermediate states
           jpart(7,i) = 0
         enddo                   ! do i
  100    continue
-        call check_pure_internal_flow(icolalt,jpart, maxcolor)
-
+        if (is_LC) call check_pure_internal_flow(icolalt,jpart, maxcolor)
 
 c    Remove non-resonant mothers, set position of particles
         ires=0
@@ -375,7 +384,6 @@ c    Remove non-resonant mothers, set position of particles
             jpart(3,i)=jpart(3,jpart(3,i))
           endif
         enddo
-        
 c
 c    Shift particles to right place and set mothers of particles
 c

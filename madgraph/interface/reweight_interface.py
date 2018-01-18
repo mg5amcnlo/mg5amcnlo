@@ -391,7 +391,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 os.mkdir(self.rwgt_dir)
             self.rwgt_dir = os.path.abspath(self.rwgt_dir)
         elif args[0] == 'systematics':
-            if self.output_type == 'default':
+            if self.output_type == 'default' and args[1].lower() not in ['none', 'off']:
                 logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
                 self.output_type = '2.0'
             if len(args) == 2:
