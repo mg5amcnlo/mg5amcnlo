@@ -358,7 +358,7 @@ GfRedefinitionChoice = Parameter(name = 'GfRedefinitionChoice',
                                  nature = 'external',
                                  type = 'real',
                                  # A value equal to 1.0 means using an absolute value to make \alpha real.
-                                 # A value equal to -1.0 means using abs(m_x^2) (m_x being complex) in the gauge relation defining \alpha.
+                                 # A value equal to -1.0 means using re(m_x^2) (m_x being complex) in the gauge relation defining \alpha.
                                  # A value in between [-1.0,1.0] interpolates between the two behavior in a linear way
                                  value = '1.0',
                                  texname = '\text{Gf\_redefinition\_choice}',
@@ -368,7 +368,7 @@ GfRedefinitionChoice = Parameter(name = 'GfRedefinitionChoice',
 Gfbar = Parameter(name = 'Gfbar',
                   nature = 'internal',
                   type = 'real',
-                  value = '(( (GfRedefinitionChoice + 1.)/2.0 )*Gf*abs( (MW**2*(MZ**2-MW**2))/MZ**2 )*( MZ**2/(MW**2*(MZ**2-MW**2)) )) + (( (1. - GfRedefinitionChoice)/2.0 )*Gf*( (abs(MW**2)*(abs(MZ**2)-abs(MW**2)))/abs(MZ**2) )*( MZ**2/(MW**2*(MZ**2-MW**2)) ))',
+                  value = '(( (GfRedefinitionChoice + 1.)/2.0 )*Gf*abs( (MW**2*(MZ**2-MW**2))/MZ**2 )*( MZ**2/(MW**2*(MZ**2-MW**2)) )) + (( (1. - GfRedefinitionChoice)/2.0 )*Gf*( (re(MW**2)*(re(MZ**2)-re(MW**2)))/re(MZ**2) )*( MZ**2/(MW**2*(MZ**2-MW**2)) ))',
                   texname = '\\bar{G_f}')
 
 #aEW = Parameter(name = 'aEW',
