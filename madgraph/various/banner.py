@@ -2110,6 +2110,8 @@ class RunCard(ConfigFile):
         self.cuts_parameter = []
         # parameter added where legacy requires an older value.
         self.system_default = {}
+        
+        self.warned=False
 
 
         
@@ -2136,10 +2138,7 @@ class RunCard(ConfigFile):
         if legacy:
             self.legacy_parameter[name] = value
             include = False
-        if include is True:
-            self.includepath[True].append(name)
-        elif include:
-            self.includepath[include].append(name)
+        self.includepath[include].append(name)
         if hidden or system:
             self.hidden_param.append(name)
         if cut:
@@ -2284,7 +2283,7 @@ class RunCard(ConfigFile):
         """for retro compatibility"""
         
         logger.debug("please use f77_formatting instead of format")
-        return self.f77_formatting(value, formatv=formatv)
+        return RunCard.f77_formatting(value, formatv=formatv)
     
     @staticmethod
     def f77_formatting(value, formatv=None):
@@ -2337,11 +2336,18 @@ class RunCard(ConfigFile):
                 return "'%s'" % value
         
 
-    def check_validity(self):
+    
+    def check_validity(self, log_level=30):
         """check that parameter missing in the card are set to the expected value"""
 
         for name, value in self.system_default.items():
                 self.set(name, value, changeifuserset=False)
+        
+
+        for name in self.includepath[False]:
+            to_bypass = self.hidden_param + self.legacy_parameter.keys()
+            if name not in to_bypass:
+                self.get_default(name, log_level=log_level) 
 
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
@@ -2360,6 +2366,7 @@ class RunCard(ConfigFile):
         The entry False will not be written anywhere"""
         
         # ensure that all parameter are coherent and fix those if needed
+        misc.sprint('pass to check')
         self.check_validity()
         
         #ensusre that system only parameter are correctly set
@@ -2368,6 +2375,8 @@ class RunCard(ConfigFile):
         for incname in self.includepath:
             if incname is True:
                 pathinc = self.default_include_file
+            elif incname is False:
+                continue
             else:
                 pathinc = incname
                 
