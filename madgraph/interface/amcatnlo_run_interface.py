@@ -1301,7 +1301,24 @@ class AskRunNLO(cmd.ControlSwitch):
 #
 #   MadAnalysis5
 #    
-    get_allowed_madanalysis = get_allowed_madspin
+    def get_allowed_madanalysis(self):
+        
+        if hasattr(self, 'allowed_madanalysis'):
+            return self.allowed_madanalysis
+        
+        self.allowed_madanalysis = []
+        
+        
+        if 'MA5' not in self.available_module:
+            return self.allowed_madanalysis
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.available_module.remove('MA5')
+            self.allowed_madanalysis = ['OFF']
+            return self.allowed_madanalysis
+        else:
+            self.allowed_madanalysis = ['OFF', 'ON']
+            return  self.allowed_madanalysis
     
     def set_default_madanalysis(self):
         """initialise the switch for reweight"""
