@@ -337,7 +337,7 @@ class OneResult(object):
         # this is for amcatnlo: the number of events has to be read from another file
         if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
                 os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
-            nevts = int(open(pjoin(os.path.split(filepath)[0], 'nevts')).read())
+            nevts = int((open(pjoin(os.path.split(filepath)[0], 'nevts')).read()).split()[0])
             self.nevents = nevts
             self.nunwgt = nevts
         
@@ -436,16 +436,21 @@ class Combine_results(list, OneResult):
         if update_statistics:
             self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
-    def compute_average(self):
+    def compute_average(self, error=None):
         """compute the value associate to this combination"""
 
         nbjobs = len(self)
         if not nbjobs:
             return
+        max_xsec = max(one.xsec for one in self)
+        min_xsec = min(one.xsec for one in self)
         self.axsec = sum([one.axsec for one in self]) / nbjobs
         self.xsec = sum([one.xsec for one in self]) /nbjobs
         self.xerrc = sum([one.xerrc for one in self]) /nbjobs
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
+        if error:
+            self.xerrc = error
+            self.xerru = error
 
         self.nevents = sum([one.nevents for one in self])
         self.nw = 0#sum([one.nw for one in self])
@@ -464,6 +469,20 @@ class Combine_results(list, OneResult):
             self.eff_iter += result.eff_iter
             self.maxwgt_iter += result.maxwgt_iter
 
+        #check full consistency
+        onefail = False
+        for one in list(self):
+            if one.xsec < (self.xsec - 25* one.xerru):
+                if not onefail:
+                    logger.debug('multi run are inconsistent: %s < %s - 25* %s: assign error %s', one.xsec, self.xsec, one.xerru, error if error else max_xsec-min_xsec)
+                onefail = True
+                self.remove(one)
+        if onefail:
+            if error:
+                return self.compute_average(error)
+            else:
+                return self.compute_average((max_xsec-min_xsec)/2.)
+            
 
     
     def compute_iterations(self):
@@ -663,47 +682,57 @@ function check_link(url,alt, id){
 </script>
 """ 
 
-def collect_result(cmd, folder_names, jobs=None):
+def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
     """ """ 
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
+
     
-    for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
-        Pdir = Pdir.strip()
+    for Pdir in cmd.get_Pdir():
         P_comb = Combine_results(Pdir)
         
-        P_path = pjoin(cmd.me_dir, 'SubProcesses', Pdir)
-        G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
-                                                os.path.isdir(pjoin(P_path,G))]
-
-        try:
-            for line in open(pjoin(P_path, 'symfact.dat')):
-                name, mfactor = line.split()
-                if float(mfactor) < 0:
-                    continue
-                if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
-                    continue
-                                      
-                if not folder_names and not jobs:
-                    name = 'G' + name
-                    P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
-                elif not jobs:
+        if jobs:
+            for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                    P_comb.add_results(os.path.basename(job['dirname']),\
+                                       pjoin(job['dirname'],'results.dat'))
+        elif folder_names:
+            try:
+                for line in open(pjoin(Pdir, 'symfact.dat')):
+                    name, mfactor = line.split()
+                    if float(mfactor) < 0:
+                        continue
+                    if os.path.exists(pjoin(Pdir, 'ajob.no_ps.log')):
+                        continue
+                    
                     for folder in folder_names:
                         if 'G' in folder:
                             dir = folder.replace('*', name)
                         else:
                             dir = folder.replace('*', '_G' + name)
-                        P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
-            if jobs:
-                for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
-                    P_comb.add_results(os.path.basename(job['dirname']),\
+                        P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), mfactor)
+                if jobs:
+                    for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                        P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
-        except IOError:
-            continue
+            except IOError:
+                continue
+        else:
+            G_dir, mfactors = cmd.get_Gdir(Pdir, symfact=True)
+            for G in G_dir:
+                if not folder_names:
+                    if main_dir:
+                        path = pjoin(main_dir, os.path.basename(Pdir), os.path.basename(G),'results.dat')
+                    else:
+                        path = pjoin(G,'results.dat')
+                    P_comb.add_results(os.path.basename(G), path, mfactors[G])
+                
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
+
+
+
     return all
 
 
@@ -716,7 +745,6 @@ def make_all_html_results(cmd, folder_names = [], jobs=[]):
     unit = cmd.results.unit
     P_text = ""      
     Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs)
-            
     
     for P_comb in Presults:
         P_text += P_comb.get_html(run, unit, cmd.me_dir) 
@@ -724,15 +752,15 @@ def make_all_html_results(cmd, folder_names = [], jobs=[]):
         if cmd.proc_characteristics['ninitial'] == 1:
             P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
                                            '%s_results.dat' % run))
-
     
     Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
     
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
     fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)         
-    
-    return Presults.xsec, Presults.xerru   
+    fsock.write('%s </dl></body>' % P_text)
+
+    return Presults.xsec, Presults.xerru
+
             
 

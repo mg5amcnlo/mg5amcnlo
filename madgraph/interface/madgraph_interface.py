@@ -39,7 +39,6 @@ import inspect
 import urllib
 import random
 
-
 #useful shortcut
 pjoin = os.path.join
 
@@ -322,6 +321,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        By default, restrict_default.dat is used.")
         logger.info("        Specify model_name-full to get unrestricted model.")
         logger.info("      '--modelname' keeps the original particle names for the model")
+        logger.info("")
+        logger.info("      Type 'display modellist' to have the list of all model available.",'$MG:color:GREEN')
         logger.info("")
         logger.info("   import model_v4 MODEL [--modelname] :",'$MG:color:BLACK')
         logger.info("      Import an MG4 model.")
@@ -844,7 +845,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if len(args) < 1:
             self.help_display()
             raise self.InvalidCmd, 'display requires an argument specifying what to display'
-        if args[0] not in self._display_opts:
+        if args[0] not in self._display_opts + ['model_list']:
             self.help_display()
             raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
@@ -1193,7 +1194,7 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                if (self._done_export[1] == 'plugin' and mode in self._export_formats):
                     args.append(mode)
                     args.append(self._done_export[0])
                 elif self._done_export[1].startswith(mode):
@@ -1503,29 +1504,13 @@ This will take effect only in a NEW terminal
             self._export_format = args.pop(0)
         elif args:
             # check for PLUGIN format
-            for plugpath in self.plugin_path:
-                plugindirname = os.path.basename(plugpath)
-                for plug in os.listdir(plugpath):
-                    if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                        try:
-                            __import__('%s.%s' % (plugindirname,plug))
-                        except Exception, error:
-                            logger.warning("error detected in plugin: %s.", plug)
-                            logger.warning("%s", error)
-                            continue
-                        plugin = sys.modules['%s.%s' % (plugindirname,plug)]                
-                        if hasattr(plugin, 'new_output'):
-                            if not misc.is_plugin_supported(plugin):
-                                continue
-                            if args[0] in plugin.new_output:
-                                self._export_format = 'plugin'
-                                self._export_plugin = plugin.new_output[args[0]]
-                                logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
-                                args.pop(0)
-                                break
-                else:
-                    continue
-                break
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 args[0], warning=True, 
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                self._export_format = 'plugin'
+                self._export_plugin = output_cls
+                args.pop(0)
             else:
                 self._export_format = default
         else:
@@ -2524,7 +2509,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             args.insert(1, 'all')
             mode = 'all'
 
-
         completion_categories = {}
         # restriction continuation (for UFO)
         if mode in ['model', 'all'] and '-' in  text:
@@ -2535,12 +2519,14 @@ class CompleteForCmd(cmd.CompleteCmd):
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
+
             if os.environ['PYTHONPATH']:
                 for modeldir in os.environ['PYTHONPATH'].split(':'):
                     if not modeldir:
                             continue
                     all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=modeldir)
+            all_name = list(set(all_name))
             # select the possibility according to the current line
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
@@ -2556,7 +2542,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except Exception:
+                except Exception, error:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -2564,7 +2550,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         completion_categories['Path Completion'] = all_dir
                     # Only UFO model here
                     new = []
-                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                 for name in all_dir]
                     if data:
                         completion_categories['Path Completion'] = all_dir + new
@@ -2578,7 +2564,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                     all_path =  self.path_completion(text, cur_path)
                     if mode == 'all':
                         new = []
-                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                for name in all_path]
                         if data:
                             completion_categories['Path Completion'] = data[0]
@@ -2607,7 +2593,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 completion_categories['model name'] = all_path
                 is_model = False
 
-            if is_model:
+            if is_model and os.path.sep not in text:
                 model_list = [mod_name(name) for name in \
                                                 self.path_completion(text,
                                                 pjoin(MG5DIR,'models'),
@@ -2615,14 +2601,15 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 if file_cond(name)]
                 if mode == 'model' and 'PYTHONPATH' in os.environ:
                     for modeldir in os.environ['PYTHONPATH'].split(':'):
-                        if not modeldir:
+                        if not modeldir or not os.path.exists(modeldir):
                             continue
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
-                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
+                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
+                if mode == 'model':
+                    model_list += [name for name in self._online_model.keys()+self._online_model2
+                                    if name.startswith(text)]
                     
-                    
-
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
                 elif allow_restrict:
@@ -2633,7 +2620,10 @@ class CompleteForCmd(cmd.CompleteCmd):
                                             base_dir=pjoin(MG5DIR,'models'))
                 else:
                     all_name = model_list
-                    
+                
+                #avoid duplication
+                all_name = list(set(all_name))
+                
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
@@ -2641,6 +2631,14 @@ class CompleteForCmd(cmd.CompleteCmd):
                     completion_categories['model name'] = all_path + all_name
                 elif mode == 'model':
                     completion_categories['model name'] = all_name
+            elif os.path.sep in text:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                            if a.endswith(os.path.sep)])
+                except Exception:
+                    cur_path = os.getcwd()
+                all_path =  self.path_completion(text, cur_path)                
+                completion_categories['model name'] = all_path 
 
         # Options
         if mode == 'all' and len(args)>1:
@@ -2654,9 +2652,28 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-        return self.deal_multiple_categories(completion_categories,formatting) 
+        return self.deal_multiple_categories(completion_categories,formatting)
     
-    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
+    _online_model = {'2HDM':[], 
+                         'loop_qcd_qed_sm':['full','no_widths','with_b_mass ', 'with_b_mass_no_widths'],
+                         'loop_qcd_qed_sm_Gmu':['ckm', 'full', 'no_widths'], 
+                         '4Gen':[],
+                         'DY_SM':[],
+                         'EWdim6':['full'],
+                         'heft':['ckm','full', 'no_b_mass','no_masses','no_tau_mass','zeromass_ckm'],
+                         'nmssm':['full'],
+                         'SMScalars':['full'],
+                         'RS':[''],
+                         'sextet_diquarks':[''],
+                         'TopEffTh':[''],
+                         'triplet_diquarks':[''],
+                         'uutt_sch_4fermion':[''],
+                         'uutt_tch_scalar':['']
+                         }   
+    _online_model2 = [] # fill by model on the db if user do "display modellist" 
+    
+    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True,
+                           online=True):
         """find the restriction file associate to a given model"""
 
         # check if the model_name should be keeped as a possibility
@@ -2665,8 +2682,13 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             output = []
 
+        local_model = os.path.exists(pjoin(base_dir, model_name, 'couplings.py'))
         # check that the model is a valid model
-        if not os.path.exists(pjoin(base_dir, model_name, 'couplings.py')):
+        if online and not local_model and model_name in self._online_model:
+            output += ['%s-%s' % (model_name, tag) for tag in self._online_model[model_name]]
+            return output  
+        
+        if not local_model:
             # not valid UFO model
             return output
 
@@ -2731,7 +2753,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
-                     'checks', 'parameters', 'options', 'coupling_order','variable']
+                     'checks', 'parameters', 'options', 'coupling_order','variable',
+                     'modellist']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -3500,7 +3523,88 @@ This implies that with decay chains:
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
+            
+        elif args[0] in ["modellist", "model_list"]:
+            outstr = []
+            template = """%-30s | %-60s | %-25s """
+            outstr.append(template % ('name', 'restriction', 'comment'))
+            outstr.append('*'*150)
+            already_done = []
+            #local model #use
+            
+            if 'PYTHONPATH' in os.environ:
+                pythonpath = os.environ['PYTHONPATH'].split(':')
+            else:
+                pythonpath = []
 
+            for base in [pjoin(MG5DIR,'models')] + pythonpath:
+                if not os.path.exists(base):
+                    continue
+                file_cond = lambda p : os.path.exists(pjoin(base,p,'particles.py'))
+                mod_name = lambda name: name
+                
+                model_list = [mod_name(name) for name in \
+                                                self.path_completion('',
+                                                base,
+                                                only_dirs = True) \
+                                                if file_cond(name)]
+                
+                for model_name in model_list:
+                    if model_name in already_done:
+                        continue
+                    all_name = self.find_restrict_card(model_name,
+                                            base_dir=base,
+                                            online=False)
+                    already_done.append(model_name)
+                    restrict = [name[len(model_name):] for name in all_name 
+                                if len(name)>len(model_name)]
+                    
+                    comment = 'from models directory'
+                    if base != pjoin(MG5DIR,'models'):
+                        comment = 'from PYTHONPATH: %s' % base
+                    lrestrict = ', '.join(restrict)
+                    if len(lrestrict) > 50:
+                        for i in range(-1,-len(restrict), -1):
+                            lrestrict = ', '.join(restrict[:i])
+                            if len(lrestrict)<50:
+                                break
+                        outstr.append(template % (model_name, lrestrict, comment))
+                        outstr.append(template % ('', ', '.join(restrict[i:]), ''))
+                    else:
+                        outstr.append(template % (model_name, ', '.join(restrict), comment))
+                outstr.append('*'*150)
+                
+            # Still have to add the one with internal information 
+            for model_name in self._online_model:
+                if model_name in already_done:
+                    continue
+                restrict = [tag for tag in self._online_model[model_name]]
+                comment = 'automatic download from MG5aMC server'
+                outstr.append(template % (model_name, ','.join(restrict), comment))
+                already_done.append(model_name)
+                
+            outstr.append('*'*150)  
+            # other downloadable model
+            data   = import_ufo.get_model_db()
+            self._online_model2 = []
+            for line in data:
+                model_name, path = line.split()
+                if model_name in already_done:
+                    continue
+                if model_name.endswith('_v4'):
+                    continue
+                
+                if 'feynrules' in path:
+                    comment = 'automatic download from FeynRules website'
+                elif 'madgraph.phys' in path:
+                     comment = 'automatic download from MG5aMC server'
+                else:
+                    comment = 'automatic download.'
+                restrict = 'unknown'
+                outstr.append(template % (model_name, restrict, comment))
+                self._online_model2.append(model_name)
+            pydoc.pager('\n'.join(outstr))
+            
 
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -4548,8 +4652,11 @@ This implies that with decay chains:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
         # Apply the keyword 'all' for perturbed coupling orders.
-        if perturbation_couplings.lower()=='all':
+        if perturbation_couplings.lower() in ['all', 'loonly']:
+            if perturbation_couplings.lower() in ['loonly']:
+                LoopOption = 'LOonly'
             perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
+
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
@@ -4627,7 +4734,6 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-                        
             
             out = base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
@@ -5054,18 +5160,11 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
-                try:
-                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
-                    if os.path.sep in args[1] and "import" in self.history[-1]:
-                        self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
-                except import_ufo.UFOImportError, error:
-                    if 'not a valid UFO model' in str(error):
-                        logger_stderr.warning('WARNING: %s' % error)
-                        logger_stderr.warning('Try to recover by running '+\
-                         'automatically `import model_v4 %s` instead.'% args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
-                    return
+                if os.path.sep in args[1] and "import" in self.history[-1]:
+                    self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
+
                 if self.options['gauge']=='unitary':
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
@@ -5721,8 +5820,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
 
-            r = random.randint(0,1)
-            r = [r, (1-r)]
 #           Force here to choose one particular server
             if any(a.startswith('--source=') for a in args):
                 source = [a[9:] for a in args if a.startswith('--source=')][-1]
@@ -6539,7 +6636,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     if not os.path.isfile(pjoin(path,'bin','ma5')):
                         self.options['madanalysis5_path'] = None
                     else:
-                        continue
+                        ma5path = pjoin(MG5DIR, path) if os.path.isfile(pjoin(MG5DIR, path)) else path
+                        message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+                        if not message is None:
+                            self.options['madanalysis5_path'] = None
+                            logger.warning(message)
+                            continue
+ 
                 #this is for hw++
                 if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
@@ -7221,6 +7324,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
             self.options[args[0]] = (int(first), int(second))
 
+        elif args[0] == 'madanalysis5_path':
+            ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
+            message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+            if message is None:
+                self.options['madanalysis5_path'] = args[1]
+            else:
+                logger.warning(message)
+
         elif args[0] == 'OLP':
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
@@ -7299,6 +7410,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
+        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -7427,9 +7539,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         #Exporter + Template
         if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                                             group_subprocesses=group_processes)
+                                             group_subprocesses=group_processes,
+                                             cmd_options=line_options)
         elif options['exporter'] == 'cpp':
-            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
+            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
+                                                              cmd_options=line_options)
         
         self._curr_exporter.pass_information_from_cmd(self)
         
@@ -7589,22 +7703,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
-            path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                          self._curr_helas_model)
             
-            # Write the procdef_mg5.dat file with process info
-            card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                self._curr_exporter.write_procdef_mg5(card_path,
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except Exception:
-                    misc.sprint('command history fails.', 10)
-                    pass
+                #try:
+                #    cmd.Cmd.onecmd(self, 'history .')
+                #except Exception:
+                #    misc.sprint('command history fails.', 10)
+                #    pass
 
         # Pythia 8
         elif self._export_format == 'pythia8':
@@ -7674,6 +7780,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         matrix_elements.remove(me)
                     else:
                         calls = calls + new_calls
+
+        if self._generate_info and hasattr(self._curr_exporter, 'write_procdef_mg5'):
+            # Write the procdef_mg5.dat file with process info
+            card_path = pjoin(self._export_dir ,'SubProcesses', \
+                                     'procdef_mg5.dat')
+            self._curr_exporter.write_procdef_mg5(card_path,
+                                self._curr_model['name'],
+                                self._generate_info)
+
 
         cpu_time2 = time.time() - cpu_time1
 

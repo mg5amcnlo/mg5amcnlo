@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -120,10 +120,14 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
-            misc.compile([test], cwd = this_dir, job_specs = False)
+            if test == 'test_ME' or test == 'test_MC':
+                test_exe='test_soft_col_limits'
+            else:
+                test_exe=test
+            misc.compile([test_exe], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
-            misc.call(['./%s' % (test)], cwd=this_dir, 
+            misc.call(['./%s' % (test_exe)], cwd=this_dir, 
                     stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'),
                     close_fds=True)
             if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
@@ -134,9 +138,7 @@ def compile_dir(*arguments):
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
-                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
             #compile madevent_mintMC/mintFO
@@ -905,6 +907,424 @@ class CompleteForCmd(CheckValidForCmd):
 class aMCatNLOAlreadyRunning(InvalidCmd):
     pass
 
+class AskRunNLO(cmd.ControlSwitch):
+    
+    to_control = [('order', 'Type of perturbative computation'),
+                  ('fixed_order', 'No MC@[N]LO matching / event generation'),
+                  ('shower', 'Shower the generated events'),
+                  ('madspin', 'Decay onshell particles'),
+                  ('reweight', 'Add weights to events for new hypp.'),
+                   ('madanalysis','Run MadAnalysis5 on the events generated')]
+    
+    quit_on = cmd.ControlSwitch.quit_on + ['onlyshower']
+    
+    def __init__(self, question, line_args=[], mode=None, force=False,
+                                                                  *args, **opt):
+        
+        self.check_available_module(opt['mother_interface'].options)
+        self.me_dir = opt['mother_interface'].me_dir
+        self.last_mode = opt['mother_interface'].last_mode
+        self.proc_characteristics = opt['mother_interface'].proc_characteristics
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+        super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
+                                     *args, **opt)
+
+    @property
+    def answer(self):
+        
+        out = super(AskRunNLO, self).answer
+        if out['shower'] == 'HERWIG7':
+            out['shower'] = 'HERWIGPP'
+        
+        if out['shower'] not in self.get_allowed('shower') or out['shower'] =='OFF':
+            out['runshower'] = False
+        else:
+            out['runshower'] = True
+        return out
+
+
+    def check_available_module(self, options):
+        
+        self.available_module = set()
+        if options['madanalysis5_path']:
+            self.available_module.add('MA5')
+        if not aMCatNLO or ('mg5_path' in options and options['mg5_path']):
+            
+            self.available_module.add('MadSpin')
+            if misc.has_f2py()  or options['f2py_compiler']:
+                self.available_module.add('reweight')
+        if options['pythia8_path']:
+            self.available_module.add('PY8')
+        if options['hwpp_path'] and options['thepeg_path'] and options['hepmc_path']:
+            self.available_module.add('HW7')
+#
+#   shorcut
+#
+    def ans_lo(self, value):
+        """ function called if the user type lo=value. or lo (then value is None)"""
+        
+        if value is None:            
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'ON'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: lo=%s' % value)
+
+    def ans_nlo(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'ON'
+            self.set_switch('shower', 'OFF')    
+        else:
+            logger.warning('Invalid command: nlo=%s' % value)
+            
+    def ans_amc__at__nlo(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'ON')
+        else:
+            logger.warning('Invalid command: aMC@NLO=%s' % value)
+            
+    def ans_amc__at__lo(self, value):
+        if value is None:
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'ON')    
+        else:
+            logger.warning('Invalid command: aMC@LO=%s' % value)  
+                  
+    def ans_noshower(self, value):
+        if value is None:
+            self.switch['order'] = 'NLO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: noshower=%s' % value)  
+        
+    def ans_onlyshower(self, value):
+        if value is None:
+            self.switch['mode'] = 'onlyshower'
+            self.switch['madspin'] = 'OFF'
+            self.switch['reweight'] = 'OFF'
+        else:
+            logger.warning('Invalid command: onlyshower=%s' % value)     
+              
+    def ans_noshowerlo(self, value):
+        if value is None:
+            self.switch['order'] = 'LO'
+            self.switch['fixed_order'] = 'OFF'
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: noshowerlo=%s' % value)    
+            
+    def ans_madanalysis5(self, value):
+        """ shortcut madanalysis5 -> madanalysis """
+        
+        if value is None:
+            return self.onecmd('madanalysis')
+        else:
+            self.set_switch('madanalysis', value)                
+#
+#   ORDER   
+#   
+    def get_allowed_order(self):
+        return ["LO", "NLO"]
+    
+    def set_default_order(self):  
+        
+        if self.last_mode in ['LO', 'aMC@L0', 'noshowerLO']:
+            self.switch['order'] = 'LO'       
+        self.switch['order'] = 'NLO'
+        
+    def set_switch_off_order(self):
+        return
+#
+#   Fix order
+#    
+    def get_allowed_fixed_order(self):
+        """ """
+        if self.proc_characteristics['ninitial'] == 1:
+            return ['ON']
+        else:
+            return ['ON', 'OFF']
+        
+    def set_default_fixed_order(self):  
+        
+        if self.last_mode in ['LO', 'NLO']:
+            self.switch['fixed_order'] = 'ON'
+        self.switch['fixed_order'] = 'OFF'
+
+    def color_for_fixed_order(self, switch_value):
+         
+        if switch_value in ['OFF']:
+            return self.green % switch_value
+        else:
+            return self.red % switch_value
+    
+    def color_for_shower(self, switch_value):
+         
+        if switch_value in ['ON']:
+            return self.green % switch_value
+        elif switch_value in self.get_allowed('shower'):
+            return self.green % switch_value
+        else:
+            return self.red % switch_value    
+    
+    def consistency_fixed_order_shower(self, vfix, vshower):
+        """ consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+        """
+        
+        if vfix == 'ON' and vshower != 'OFF' :
+            return 'OFF'
+        return None
+    
+    consistency_fixed_order_madspin = consistency_fixed_order_shower
+    consistency_fixed_order_reweight = consistency_fixed_order_shower
+
+    def consistency_fixed_order_madanalysis(self, vfix, vma5):
+        
+        if vfix == 'ON' and vma5 == 'ON' :
+            return 'OFF'
+        return None    
+
+
+    def consistency_shower_fixed_order(self, vshower, vfix):
+        """ consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key set by the user.
+           -> return value should be None or "replace_YY" 
+        """    
+        
+        if vshower != 'OFF' and vfix == 'ON':
+            return 'OFF'
+        return None
+
+    consistency_madspin_fixed_order = consistency_shower_fixed_order
+    consistency_reweight_fixed_order = consistency_shower_fixed_order
+    consistency_madanalysis_fixed_order = consistency_shower_fixed_order
+
+            
+#
+#   Shower
+#
+    def get_allowed_shower(self):
+        """ """
+        
+        if hasattr(self, 'allowed_shower'):
+            return self.allowed_shower
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.allowed_shower = ['OFF']
+            return ['OFF']
+        else:
+            allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            if 'PY8' in self.available_module:
+                allowed.append('PYTHIA8')
+            if 'HW7' in self.available_module:
+                allowed.append('HERWIGPP')
+            
+            self.allowed_shower = allowed
+            
+            return allowed
+    
+    def check_value_shower(self, value):
+        """ """
+        
+        if value.upper() in self.get_allowed_shower():
+            return True
+        if value.upper() in ['PYTHIA8', 'HERWIGPP']:
+            return True
+        if value.upper() == 'ON':
+            return self.run_card['parton_shower']
+        if value.upper() in ['P8','PY8','PYTHIA_8']:
+            return 'PYTHIA8'
+        if value.upper() in ['PY6','P6','PY6PT', 'PYTHIA_6', 'PYTHIA_6PT','PYTHIA6PT','PYTHIA6_PT']:
+            return 'PYTHIA6PT'
+        if value.upper() in ['PY6Q', 'PYTHIA_6Q','PYTHIA6Q', 'PYTHIA6_Q']:
+            return 'PYTHIA6Q'
+        if value.upper() in ['HW7', 'HERWIG7']:
+            return 'HERWIG7'
+        if value.upper() in ['HW++', 'HWPP', 'HERWIG++']:
+            return 'HERWIGPP'
+        if value.upper() in ['HW6', 'HERWIG_6']:
+            return 'HERWIG6'
+    
+    def set_default_shower(self): 
+        
+        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+            self.switch['shower'] = 'OFF'
+            return 
+         
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            self.switch['shower'] = self.run_card['parton_shower']  
+            #self.switch['shower'] = 'ON'
+            self.switch['fixed_order'] = "OFF"
+        else:
+            self.switch['shower'] = 'OFF'
+
+    def consistency_shower_madanalysis(self, vshower, vma5):
+        """ MA5 only possible with (N)LO+PS if shower is run"""
+        
+        if vshower == 'OFF' and vma5 == 'ON':
+            return 'OFF'
+        return None
+    
+    def consistency_madanalysis_shower(self, vma5, vshower):
+        
+        if vma5=='ON' and vshower == 'OFF':
+            return 'ON'
+        return None
+    
+    def get_cardcmd_for_shower(self, value):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if value != 'OFF':
+            return  ['set parton_shower %s' % self.switch['shower']]
+        return []
+    
+#
+#   madspin
+#
+    def get_allowed_madspin(self):
+        """ """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        
+        
+        if 'MadSpin' not in self.available_module:
+            return self.allowed_madspin
+        if self.proc_characteristics['ninitial'] == 1:
+            self.available_module.remove('MadSpin')
+            self.allowed_madspin = ['OFF']
+            return self.allowed_madspin
+        else:
+            self.allowed_madspin = ['OFF', 'ON', 'onshell']
+            return  self.allowed_madspin
+        
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin
+        remember that this mode should always be OFF for 1>N. (ON not in allowed value)"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
+        elif value.lower() in self.get_allowed_madspin():
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
+                        
+        if 'MadSpin' not in self.available_module or \
+           'ON' not in self.get_allowed_madspin():
+            return False   
+        
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
+            
+    def set_default_madspin(self):
+        
+        if 'MadSpin' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                self.switch['madspin'] = 'ON'
+            else:
+                self.switch['madspin'] = 'OFF'
+        else:
+            self.switch['madspin'] = 'Not Avail.'  
+            
+    def get_cardcmd_for_madspin(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        else:
+            return []            
+        
+#
+#   reweight
+#
+    def get_allowed_reweight(self):
+        """set the valid (visible) options for reweight"""
+        
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        self.allowed_reweight = []
+        if 'reweight' not in self.available_module:
+            return self.allowed_reweight
+        if self.proc_characteristics['ninitial'] == 1:
+            self.available_module.remove('reweight')
+            self.allowed_reweight.append('OFF')
+            return self.allowed_reweight
+        else:
+            self.allowed_reweight = [ 'OFF', 'ON', 'NLO', 'NLO_TREE','LO']
+            return self.allowed_reweight     
+    
+    def set_default_reweight(self):
+        """initialise the switch for reweight"""
+        
+        if 'reweight' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                self.switch['reweight'] = 'ON'
+            else:
+                self.switch['reweight'] = 'OFF'
+        else:
+            self.switch['reweight'] = 'Not Avail.'      
+            
+    def get_cardcmd_for_reweight(self, value):
+        """ adpat run_card according to this setup. return list of cmd to run"""
+        
+        if value == 'LO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode LO"]
+        elif  value == 'NLO':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO",
+                    "set store_rwgt_info T"]
+        elif value == 'NLO_TREE':
+            return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode NLO_tree",
+                    "set store_rwgt_info T"]            
+        return []
+            
+#
+#   MadAnalysis5
+#    
+    get_allowed_madanalysis = get_allowed_madspin
+    
+    def set_default_madanalysis(self):
+        """initialise the switch for reweight"""
+        
+        if 'MA5' not in self.available_module: 
+            self.switch['madanalysis'] =  'Not Avail.'
+        elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
+            self.switch['madanalysis'] = 'ON'
+        else:
+            self.switch['madanalysis'] = 'OFF'
+            
+    def check_value_madanalysis(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        if value.upper() in self.get_allowed('madanalysis'):
+            return True
+        value = value.lower()
+        if value == 'hadron':
+            return 'ON' if 'ON' in self.get_allowed_madanalysis5 else False
+        else:
+            return False
+        
+        
 #===============================================================================
 # aMCatNLOCmd
 #===============================================================================
@@ -1439,7 +1859,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             
             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
@@ -1455,11 +1874,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
                 if mint_step+1==2 and nevents==0:
                     self.print_summary(options,2,mode)
                     return
-                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
-                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
+
             # Sanity check on the event files. If error the jobs are resubmitted
             self.check_event_files(jobs_to_collect)
 
@@ -1541,6 +1961,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             try:
                 with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
                     jobs_to_collect=pickle.load(f)
+                    for job in jobs_to_collect:
+                        job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
                 raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
@@ -1672,10 +2094,11 @@ RESTART = %(mint_mode)s
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
         if fixed_order:
-            cross, error = sum_html.make_all_html_results(self, jobs=jobs_to_collect)
+            cross, error = self.make_make_all_html_results(folder_names=['%s*' % run_mode], 
+                                                           jobs=jobs_to_collect)
         else:
             name_suffix={'born' :'B' , 'all':'F'}
-            cross, error = sum_html.make_all_html_results(self, folder_names=['G%s*' % name_suffix[run_mode]])
+            cross, error = self.make_make_all_html_results(folder_names=['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 # Combine grids from split fixed order jobs
@@ -1751,7 +2174,10 @@ RESTART = %(mint_mode)s
         """write the nevts files in the SubProcesses/P*/G*/ directories"""
         for job in jobs:
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
-                f.write('%i\n' % job['nevents'])
+                if self.run_card['event_norm'].lower()=='bias':
+                    f.write('%i %f\n' % (job['nevents'],self.cross_sect_dict['xseca']))
+                else:
+                    f.write('%i\n' % job['nevents'])
 
     def combine_split_order_run(self,jobs_to_run):
         """Combines jobs and grids from split jobs that have been run"""
@@ -2465,37 +2891,13 @@ RESTART = %(mint_mode)s
             try:
                 self.cluster = cluster.from_name[cluster_name](**self.options)
             except KeyError:
-                if aMCatNLO and ('mg5_path' not in self.options or not self.options['mg5_path']):
-                    if not self.plugin_path:
-                        raise self.InvalidCmd('%s not native cluster type and no plugin directory available.' % cluster_name)
-                elif aMCatNLO:
-                    mg5dir = self.options['mg5_path']
-                    if mg5dir not in sys.path:
-                        sys.path.append(mg5dir)
-                    if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
-                        self.plugin_path.append(pjoin(mg5dir))
-                else:
-                    mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plugpath in self.plugin_path: 
-                    plugindirname = os.path.basename(plugpath)
-                    for plug in os.listdir(plugpath):
-                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                            try:
-                                __import__('%s.%s' % (plugindirname, plug))
-                            except Exception, error:
-                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it',plugindirname, plug)
-                                continue
-                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
-                            if not hasattr(plugin, 'new_cluster'):
-                                continue
-                            if not misc.is_plugin_supported(plugin):
-                                continue              
-                            if cluster_name in plugin.new_cluster:
-                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                                self.cluster = plugin.new_cluster[cluster_name](**self.options)
-                                break
+                cluster_class = misc.from_plugin_import(self.plugin_path, 
+                                            'new_cluster', cluster_name,
+                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                if cluster_class:
+                    self.cluster = cluster_class(**self.options)
         
         if self.cluster_mode == 2:
             try:
@@ -2575,6 +2977,8 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['unit']='pb'
             self.cross_sect_dict['xsec_string']='Total cross section'
             self.cross_sect_dict['axsec_string']='Total abs(cross section)'
+        if self.run_card['event_norm'].lower()=='bias':
+            self.cross_sect_dict['xsec_string']+=', incl. bias (DO NOT USE)'
 
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
@@ -3161,6 +3565,8 @@ RESTART = %(mint_mode)s
             p.communicate(input = '1\n')
         elif event_norm.lower() == 'unity':
             p.communicate(input = '3\n')
+        elif event_norm.lower() == 'bias':
+            p.communicate(input = '0\n')
         else:
             p.communicate(input = '2\n')
 
@@ -3572,7 +3978,7 @@ RESTART = %(mint_mode)s
 
                     if self.banner.get('run_card', 'event_norm').lower() == 'sum':
                         norm = 1.
-                    elif self.banner.get('run_card', 'event_norm').lower() == 'average':
+                    else:
                         norm = 1./float(self.shower_card['nsplit_jobs'])
 
                     plotfiles2 = []
@@ -3778,6 +4184,27 @@ RESTART = %(mint_mode)s
         self.to_store = []
 
 
+    ############################################################################
+    def get_Gdir(self, Pdir=None):
+        """get the list of Gdirectory if not yet saved."""
+        
+        if hasattr(self, "Gdirs"):
+            if self.me_dir in self.Gdirs:
+                if Pdir is None:
+                    return sum(self.Gdirs.values())
+                else:
+                    return self.Gdirs[Pdir]
+                
+        Pdirs = self.get_Pdir()
+        Gdirs = {self.me_dir:[]}             
+        for P in Pdirs:
+            Gdirs[P] = [pjoin(P,G) for G in os.listdir(P) if G.startswith('G') and 
+                                                os.path.isdir(pjoin(P,G))]
+
+        self.Gdirs = Gdirs
+        return self.getGdir(Pdir)
+
+
     def get_init_dict(self, evt_file):
         """reads the info in the init block and returns them in a dictionary"""
         ev_file = open(evt_file)
@@ -3816,6 +4243,7 @@ RESTART = %(mint_mode)s
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
+
         shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
@@ -3906,7 +4334,8 @@ RESTART = %(mint_mode)s
                 lhaid_list = [abs(int(self.shower_card['pdfcode']))]
                 content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif int(self.shower_card['pdfcode'])==1:
+        elif int(self.shower_card['pdfcode'])==1 or \
+            int(self.shower_card['pdfcode'])==-1 and True:
             # Try to use LHAPDF because user wants to use the same PDF
             # as was used for the event generation. However, for the
             # event generation, LHAPDF was not used, so non-trivial to
@@ -3975,6 +4404,8 @@ RESTART = %(mint_mode)s
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
+        if self.run_card['event_norm'].lower()=='bias' and self.run_card['nevents'] != 0:
+            evt_wghts[:]=[1./float(self.run_card['nevents']) for wgt in evt_wghts]
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
@@ -4560,8 +4991,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L/home/prestel/work/fermi201
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
-                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+
             self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
@@ -4801,49 +5231,25 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L/home/prestel/work/fermi201
         if test in ['test_ME', 'test_MC']:
             content = "-2 -2\n" #generate randomly energy/angle
             content+= "100 100\n" #run 100 points for soft and collinear tests
-            content+= "0\n" #sum over helicities
             content+= "0\n" #all FKS configs
-            content+= '\n'.join(["-1"] * 50) #random diagram
+            content+= '\n'.join(["-1"] * 50) #random diagram (=first diagram)
         elif test == 'check_poles':
             content = '20 \n -1\n'
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
             shower = self.run_card['parton_shower']
-            MC_header = "%s\n " % shower + \
-                        "1 \n1 -0.1\n-1 -0.1\n"
-            file.write(MC_header + content)
+            header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
+            file.write(header + content)
+        elif test == 'test_ME':
+            header = "2 \n"
+            file.write(header + content)
         else:
             file.write(content)
         file.close()
 
 
-
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
-
-
-
+    action_switcher = AskRunNLO
     ############################################################################
     def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
@@ -4853,206 +5259,46 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L/home/prestel/work/fermi201
         if 'reweightonly' not in options:
             options['reweightonly'] = False
         
-        
-        void = 'Not installed'
-        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight','madanalysis5']
-        switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
-                  'madspin': void,'reweight':'OFF','madanalysis5':void}
-        if not switch:
-            switch = switch_default
-        else:
-            switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
-        default_switch = ['ON', 'OFF']
-        
-
-        allowed_switch_value = {'order': ['LO', 'NLO'],
-                                'fixed_order': default_switch,
-                                'shower': default_switch,
-                                'madspin': default_switch,
-                                'reweight': default_switch,
-                                'madanalysis5':['OFF','HADRON']}
-
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 
-                                       'madanalysis5_hadron_card_default.dat')):
-            allowed_switch_value['madanalysis5']=[]
-
-        description = {'order':  'Perturbative order of the calculation:',
-                       'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
-                       'shower': 'Shower the generated events:',
-                       'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weights to the events based on changing model parameters:',
-                       'madanalysis5':'Run MadAnalysis5 on the events generated:'}
-
-        force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
-                       ('madspin', 'ON'): {'fixed_order':'OFF'},
-                       ('reweight', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF','madanalysis5':'OFF'},
-                       ('madanalysis5','HADRON'): {'shower': 'ON','fixed_order':'OFF'},
-                       ('shower','OFF'): {'madanalysis5': 'OFF'},   
-                       }
-        special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
-
-        assign_switch = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-
-        if self.proc_characteristics['ninitial'] == 1:
-            switch['fixed_order'] = 'ON'
-            switch['shower'] = 'Not available for decay'
-            switch['madspin'] = 'Not available for decay'
-            switch['reweight'] = 'Not available for decay'
-            switch['madanalysis5'] = 'Not available for decay'
-            allowed_switch_value['fixed_order'] = ['ON']
-            allowed_switch_value['shower'] = ['OFF']
-            allowed_switch_value['madspin'] = ['OFF']
-            allowed_switch_value['reweight'] = ['OFF']
-            allowed_switch_value['madanalysis5'] = ['OFF']
-            available_mode = ['0','1']
-            special_values = ['LO', 'NLO']
-        else: 
-            # Init the switch value according to the current status
-            available_mode = ['0', '1', '2','3']
-
         if mode == 'auto': 
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
-            mode = 'noshower'         
+            mode = 'noshower'  
         
-
-        if '3' in available_mode:
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-                switch['shower'] = 'ON'
-            else:
-                switch['shower'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card_default.dat')):
-                available_mode.append('6')
-                if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card.dat')):
-                    switch['madanalysis5'] = 'HADRON'
-                else:
-                    switch['madanalysis5'] = 'OFF'                
-                
-        if (not aMCatNLO or self.options['mg5_path']) and '3' in available_mode:
-            available_mode.append('4')
-            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-                switch['madspin'] = 'ON'
-            else:
-                switch['madspin'] = 'OFF'
-            if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('5')
-                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                    switch['reweight'] = 'ON'
-                else:
-                    switch['reweight'] = 'OFF'
-            else:
-                switch['reweight'] = 'Not available (requires NumPy)'
-
-        if 'do_reweight' in options and options['do_reweight'] and '3' in available_mode:
-            if switch['reweight'] == "OFF":
-                switch['reweight'] = "ON"
-            elif switch['reweight'] != "ON":
-                logger.critical("Cannot run REWEIGHT: %s" % switch['reweight'])
+        passing_cmd = []
+        for key,value in switch.keys():
+            passing_cmd.append('%s=%s' % (key,value))
+        
+        if 'do_reweight' in options and options['do_reweight']:
+            passing_cmd.append('reweight=ON')
         if 'do_madspin' in options and  options['do_madspin']:
-            if switch['madspin'] == "OFF":
-                switch['madspin'] = 'ON'
-            elif switch['madspin'] != "ON":
-                logger.critical("Cannot run MadSpin module: %s" % switch['reweight'])
-                        
-        answers = list(available_mode) + ['auto', 'done']
-        alias = {}
-        for id, key in enumerate(switch_order):
-            if switch[key] != void and switch[key] in allowed_switch_value[key] and \
-                                              len(allowed_switch_value[key])>1:
-                answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
-                #allow lower case for on/off
-                alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
-                                   for s in allowed_switch_value[key]))
-        answers += special_values
-        
-        def create_question(switch):
-            switch_format = " %i %-61s %12s=%s\n"
-            question = "The following switches determine which operations are executed:\n"
-            for id, key in enumerate(switch_order):
-                question += switch_format % (id+1, description[key], key, switch[key])
-            question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
-            question += '  or set any switch explicitly (e.g. type \'order=LO\' at the prompt)\n'
-            question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-            return question
+            passing_cmd.append('madspin=ON')
 
+        force = self.force
+        if mode == 'onlyshower':
+            passing_cmd.append('onlyshower')
+            force = True
+        elif mode:
+            passing_cmd.append(mode)
 
-        def modify_switch(mode, answer, switch):
-            if '=' in answer:
-                key, status = answer.split('=')
-                switch[key] = status
-                if (key, status) in force_switch:
-                    for key2, status2 in force_switch[(key, status)].items():
-                        if switch[key2] not in  [status2, void]:
-                            logger.info('For coherence \'%s\' is set to \'%s\''
-                                        % (key2, status2), '$MG:color:BLACK')
-                            switch[key2] = status2
-            elif answer in ['0', 'auto', 'done']:
-                return 
-            elif answer in special_values:
-                logger.info('Enter mode value: %s. Go to the related mode' % answer, '$MG:color:BLACK')
-                #assign_switch('reweight', 'OFF')
-                #assign_switch('madspin', 'OFF')
-                if answer == 'LO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'ON'
-                    assign_switch('shower', 'OFF')
-                elif answer == 'NLO':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'ON'
-                    assign_switch('shower', 'OFF')
-                elif answer == 'aMC@NLO':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'ON')
-                elif answer == 'aMC@LO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'ON')
-                elif answer == 'noshower':
-                    switch['order'] = 'NLO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')                                                  
-                elif answer == 'noshowerLO':
-                    switch['order'] = 'LO'
-                    switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')
-                if mode:
-                    return
-            return switch
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
+                              mode=mode, force=force,
+                              first_cmd=passing_cmd,
+                              return_instance=True)
 
-        modify_switch(mode, self.last_mode, switch)
-        if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-            assign_switch('madspin', 'ON')
-        
-        if not self.force:
-            answer = ''
-            while answer not in ['0', 'done', 'auto', 'onlyshower']:
-                question = create_question(switch)
-                if mode:
-                    answer = mode
-                else:
-                    answer = self.ask(question, '0', answers, alias=alias)
-                if answer.isdigit() and answer != '0':
-                    key = switch_order[int(answer) - 1]
-                    opt1 = allowed_switch_value[key][0]
-                    opt2 = allowed_switch_value[key][1]
-                    answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
-
-                if not modify_switch(mode, answer, switch):
-                    break
+        if 'mode' in switch:
+            mode = switch['mode']
 
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
             if switch['order'] == 'LO':
-                if switch['shower'] == 'ON':
+                if switch['runshower']:
                     mode = 'aMC@LO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'LO'
                 else:
                     mode =  'noshowerLO'
             elif switch['order'] == 'NLO':
-                if switch['shower'] == 'ON':
+                if switch['runshower']:
                     mode = 'aMC@NLO'
                 elif switch['fixed_order'] == 'ON':
                     mode = 'NLO'
@@ -5061,8 +5307,15 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L/home/prestel/work/fermi201
         logger.info('will run in mode: %s' % mode)                
 
         if mode == 'noshower':
-            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
-Please, shower the Les Houches events before using them for physics analyses.""")            
+            if switch['shower'] == 'OFF':
+                logger.warning("""You have chosen not to run a parton shower.
+    NLO events without showering are NOT physical.
+    Please, shower the LesHouches events before using them for physics analyses.
+    You have to choose NOW which parton-shower you WILL use and specify it in the run_card.""")   
+            else:
+                logger.info("""Your Parton-shower choice is not available for running.
+    The events will be generated for the  associated Parton-Shower.
+    Remember that NLO events without showering are NOT physical.""", '$MG:color:BLACK')           
 
         
         # specify the cards which are needed for this run.
@@ -5073,11 +5326,11 @@ Please, shower the Les Houches events before using them for physics analyses."""
             ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
         else:
-            if switch['madspin'] == 'ON':
+            if switch['madspin'] != 'OFF':
                 cards.append('madspin_card.dat')
-            if switch['reweight'] == 'ON':
+            if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
-            if switch['madanalysis5'] == 'HADRON':
+            if switch['madanalysis'] == 'HADRON':
                 cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
@@ -5093,8 +5346,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         
         # automatically switch to keep_wgt option
-        first_cmd = [] # force to change some switch
-        
+        first_cmd = cmd_switch.get_cardcmd()
+                
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 

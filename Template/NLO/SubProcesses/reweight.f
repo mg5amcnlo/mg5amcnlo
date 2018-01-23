@@ -48,7 +48,7 @@ c GeV
          stop
       endif
 
-      if (iipdg.eq.21) then
+      if (abs(iipdg).eq.21) then
 c Gluon sudakov         
 c     g->gg contribution
          gamma=CA*alphasq0*log(Q1/q0)/pi                     ! A1
@@ -211,7 +211,9 @@ c**************************************************
       integer ipdg, irfl
       integer get_color
 
-      isqcd=(iabs(get_color(ipdg)).gt.1)
+      irfl=ipdg
+      if (irfl.eq.-21)irfl=21
+      isqcd=(iabs(get_color(irfl)).gt.1)
 
       return
       end
@@ -276,6 +278,9 @@ c**************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
+      if (idmo.eq.-21) idmo=21
+      if (idda1.eq.-21) idda1=21
+      if (idda2.eq.-21) idda2=21
 
       if (btest(mlevel,4)) then
         write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
@@ -429,6 +434,7 @@ c***************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
+
 c     Check QCD vertex
       if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
@@ -795,7 +801,7 @@ c     Consider t-channel jet radiations as jets only if FS line is a jet
 c     line
                   if(goodjet(ida(3-i))) then
                      if(partonline(j).or.
-     $                    ipdgcl(ida(3-i),igraphs(1),nFKSprocess).eq.21)then
+     $                    abs(ipdgcl(ida(3-i),igraphs(1),nFKSprocess)).eq.21)then
 c     Need to include gluon to avoid soft singularity
                         iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                      else
@@ -1236,9 +1242,9 @@ c Common
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
 c External
       logical ispartonvx,isqcd,isparton,isjetvx,isjet
-      double precision alphas,getissud,pdg2pdf,sudwgt,sudwgt_exp
-      external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud
-     $     ,pdg2pdf,isjet,sudwgt,sudwgt_exp
+      double precision alphas,pdg2pdf,sudwgt,sudwgt_exp
+      external ispartonvx,alphas,isqcd,isparton,isjetvx,pdg2pdf,isjet
+     $     ,sudwgt,sudwgt_exp
 c FxFx
       integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal)
@@ -1476,17 +1482,17 @@ c     Perform Sudakov reweighting if ickkw=2
      $                 pt2prev(idacl(n,i)).lt.pt2ijcl(n))then
                      if (ickkw.ne.3) then
 c Sudakov including PDFs:
-                        tmp=min(1d0,max(
-     &                       getissud(ibeam(j),
-     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                       xnow(j),xnow(3-j),pt2ijcl(n)) ,
-     &                       1d-20 ) /
-     $                       max(
-     &                       getissud(ibeam(j),
-     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                       xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
-     &                       1d-20 ))
-                        tmp2=0d0
+c$$$                        tmp=min(1d0,max(
+c$$$     &                       getissud(ibeam(j),
+c$$$     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                       xnow(j),xnow(3-j),pt2ijcl(n)) ,
+c$$$     &                       1d-20 ) /
+c$$$     $                       max(
+c$$$     &                       getissud(ibeam(j),
+c$$$     &                       ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                       xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
+c$$$     &                       1d-20 ))
+c$$$                        tmp2=0d0
                      else
 c     Sudakov excluding PDFs:
                         tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),

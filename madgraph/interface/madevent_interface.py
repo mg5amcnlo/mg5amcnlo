@@ -18,6 +18,7 @@
 from __future__ import division
 
 import collections
+import itertools
 import glob
 import logging
 import math
@@ -42,7 +43,8 @@ except:
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
-sys.path.insert(0, os.path.join(root_path,'bin'))
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.join(root_path,'bin'))
 
 # usefull shortcut
 pjoin = os.path.join
@@ -52,7 +54,7 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-except ImportError: 
+except ImportError,error: 
     # import from madevent directory
     MADEVENT = True
     import internal.extended_cmd as cmd
@@ -425,6 +427,11 @@ class HelpToCmd(object):
         self.run_options_help([("--" + key,value[-1]) for (key,value) in \
                                self._survey_options.items()])
      
+     
+    def help_restart_gridpack(self):
+        logger.info("syntax: restart_gridpack --precision= --restart_zero")
+
+
     def help_launch(self):
         """exec generate_events for 2>N and calculate_width for 1>N"""
         logger.info("syntax: launch [run_name] [options])")
@@ -488,6 +495,378 @@ class HelpToCmd(object):
         logger.info("   The banner can be remove only if all files are removed first.")
 
 
+class AskRun(cmd.ControlSwitch):
+    """a class for the question on what to do on a madevent run"""
+
+    to_control = [('shower', 'Choose the shower/hadronization program'),
+                      ('detector', 'Choose the detector simulation program'),
+                      ('analysis', 'Choose an analysis package (plot/convert)'),
+                      ('madspin', 'Decay onshell particles'),
+                      ('reweight', 'Add weights to events for new hypp.')
+                ]
+    
+    def __init__(self, question, line_args=[], mode=None, force=False,
+                                                                  *args, **opt):
+        
+        self.check_available_module(opt['mother_interface'].options)
+        self.me_dir = opt['mother_interface'].me_dir
+        super(AskRun,self).__init__(self.to_control, opt['mother_interface'],
+                                     *args, **opt)
+        
+        
+    def check_available_module(self, options):
+        
+        self.available_module = set()
+        
+        if options['pythia-pgs_path']:
+            self.available_module.add('PY6')
+            self.available_module.add('PGS')
+        if options['pythia8_path']:
+            self.available_module.add('PY8')
+        if options['madanalysis_path']:
+            self.available_module.add('MA4')
+        if options['madanalysis5_path']:
+            self.available_module.add('MA5')
+        if options['exrootanalysis_path']:
+            self.available_module.add('ExRoot')
+        if options['delphes_path']:
+            if 'PY6' in self.available_module or 'PY8' in self.available_module:
+                self.available_module.add('Delphes')
+        if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
+            self.available_module.add('MadSpin')
+            if misc.has_f2py() or options['f2py_compiler']:
+                self.available_module.add('reweight')
+
+#   old mode to activate the shower            
+    def ans_parton(self, value=None):
+        """None: means that the user type 'pythia'
+           value: means that the user type pythia=value"""
+        
+        if value is None:
+            self.set_all_off()
+        else:
+            logger.warning('Invalid command: parton=%s' % value)
+            
+                
+#
+#   HANDLING SHOWER 
+#
+    def get_allowed_shower(self):
+        """return valid entry for the shower switch"""
+        
+        if hasattr(self, 'allowed_shower'):
+            return self.allowed_shower
+        
+        self.allowed_shower = []
+        if 'PY6' in self.available_module:
+            self.allowed_shower.append('Pythia6')
+        if 'PY8' in self.available_module:
+            self.allowed_shower.append('Pythia8')
+        if self.allowed_shower:
+            self.allowed_shower.append('OFF')
+        return self.allowed_shower
+    
+    def set_default_shower(self):
+        
+        if 'PY6' in self.available_module and\
+                   os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+            self.switch['shower'] = 'Pythia6'
+        elif 'PY8' in self.available_module and\
+                  os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+            self.switch['shower'] = 'Pythia8'
+        elif self.get_allowed_shower():
+            self.switch['shower'] = 'OFF'
+        else:
+            self.switch['shower'] = 'Not Avail.'
+
+    def check_value_shower(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        if value in self.get_allowed_shower():
+            return True
+        
+        value =value.lower()
+        if value in ['py6','p6','pythia_6'] and 'PY6' in self.available_module:
+            return 'Pythia6'
+        elif value in ['py8','p8','pythia_8'] and 'PY8' in self.available_module:
+            return 'Pythia8'
+        else:
+            return False
+            
+            
+#   old mode to activate the shower            
+    def ans_pythia(self, value=None):
+        """None: means that the user type 'pythia'
+           value: means that the user type pythia=value"""
+        
+        if 'PY6' not in self.available_module:
+            logger.info('pythia-pgs not available. Ignore commmand')
+            return
+
+        if value is None:
+            self.set_all_off()
+            self.switch['shower'] = 'Pythia6'
+        elif value == 'on':
+            self.switch['shower'] = 'Pythia6'
+        elif value == 'off':
+            self.set_switch('shower', 'OFF')
+        else:
+            logger.warning('Invalid command: pythia=%s' % value)
+            
+            
+    def consistency_shower_detector(self, vshower, vdetector):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower == 'OFF':
+            if self.check_value('detector', vdetector) and  vdetector!= 'OFF':
+                return 'OFF'
+        if vshower == 'Pythia8' and vdetector == 'PGS':
+            return 'OFF'
+        
+        return None
+#
+#   HANDLING DETECTOR
+#
+    def get_allowed_detector(self):
+        """return valid entry for the switch"""
+ 
+        if hasattr(self, 'allowed_detector'):
+            return self.allowed_detector 
+        
+        self.allowed_detector = []
+        if 'PGS' in self.available_module:
+            self.allowed_detector.append('PGS')
+        if 'Delphes' in self.available_module:
+            self.allowed_detector.append('Delphes')
+
+            
+        if self.allowed_detector:
+            self.allowed_detector.append('OFF')
+        return self.allowed_detector  
+
+    def set_default_detector(self):
+        
+        self.set_default_shower() #ensure that this one is called first!
+        
+        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6':
+            self.switch['detector'] = 'PGS'
+        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF':
+            self.switch['detector'] = 'Delphes'
+        elif self.get_allowed_detector():
+            self.switch['detector'] = 'OFF'
+        else: 
+            self.switch['detector'] =  'Not Avail.'
+                
+#   old mode to activate pgs            
+    def ans_pgs(self, value=None):
+        """None: means that the user type 'pgs'
+           value: means that the user type pgs=value"""        
+        
+        if 'PGS' not in self.available_module:
+            logger.info('pythia-pgs not available. Ignore commmand')
+            return
+        
+        if value is None:
+            self.set_all_off()
+            self.switch['shower'] = 'Pythia6'
+            self.switch['detector'] = 'PGS'
+        elif value == 'on':
+            self.switch['shower'] = 'Pythia6'
+            self.switch['detector'] = 'PGS'
+        elif value == 'off':
+            self.set_switch('detector', 'OFF')
+        else:
+            logger.warning('Invalid command: pgs=%s' % value)
+
+            
+#   old mode to activate Delphes
+    def ans_delphes(self, value=None):
+        """None: means that the user type 'delphes'
+           value: means that the user type delphes=value"""          
+        
+        if 'Delphes' not in self.available_module:
+            logger.warning('Delphes not available. Ignore commmand')
+            return
+        
+        if value is None:
+            self.set_all_off()
+            if 'PY6' in self.available_module:
+                self.switch['shower'] = 'Pythia6'
+            else:
+                self.switch['shower'] = 'Pythia8'
+            self.switch['detector'] = 'Delphes'
+        elif value == 'on':
+            return self.ans_delphes(None)
+        elif value == 'off':
+            self.set_switch('detector', 'OFF')
+        else:
+            logger.warning('Invalid command: pgs=%s' % value)        
+
+    def consistency_detector_shower(self,vdetector, vshower):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+        
+        if vdetector == 'PGS' and vshower != 'Pythia6':
+            return 'Pythia6'
+        if vdetector == 'Delphes' and vshower  not in ['Pythia6', 'Pythia8']:
+            if 'PY8' in self.available_module:
+                return 'Pythia8'
+            elif 'PY6' in self.available_module:
+                return 'Pythia6'
+            else:
+                raise Exception
+        return None
+
+
+#
+#   HANDLING ANALYSIS
+#
+    def get_allowed_analysis(self):
+        """return valid entry for the shower switch"""
+        
+        if hasattr(self, 'allowed_analysis'):
+            return self.allowed_analysis
+        
+        self.allowed_analysis = []
+        if 'ExRoot' in self.available_module:
+            self.allowed_analysis.append('ExRoot')
+        if 'MA4' in self.available_module:
+            self.allowed_analysis.append('MadAnalysis4')
+        if 'MA5' in self.available_module:
+            self.allowed_analysis.append('MadAnalysis5')            
+            
+        if self.allowed_analysis:
+            self.allowed_analysis.append('OFF')
+            
+        return self.allowed_analysis
+   
+    def check_analysis(self, value):
+        """check an entry is valid. return the valid entry in case of shortcut"""
+        
+        if value in self.get_allowed_analysis():
+            return True
+        if value.lower() in ['ma4', 'madanalysis4', 'madanalysis_4','4']:
+            return 'MadAnalysis4'
+        if value.lower() in ['ma5', 'madanalysis5', 'madanalysis_5','5']:
+            return 'MadAnalysis5'
+        if value.lower() in ['ma', 'madanalysis']:
+            if 'MA5' in self.available_module:
+                return 'MadAnalysis5'
+            elif 'MA4' in self.available_module:
+                return 'MadAnalysis4'
+            else:
+                return False
+        else:
+            return False
+        
+        
+    def set_default_analysis(self):
+        """initialise the switch for analysis"""
+        
+        if 'MA4' in self.available_module and \
+                     os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
+            self.switch['analysis'] = 'MadAnalysis4'
+        elif 'MA5' in self.available_module and\
+             (os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'))\
+             or os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat'))):
+            self.switch['analysis'] = 'MadAnalysis5'
+        elif 'ExRoot' in self.available_module:
+            self.switch['analysis'] = 'ExRoot'   
+        elif self.get_allowed_analysis(): 
+            self.switch['analysis'] = 'OFF'
+        else:
+            self.switch['analysis'] = 'Not Avail.'
+            
+#
+#   MADSPIN handling
+#
+    def get_allowed_madspin(self):
+        """ ON|OFF|onshell """
+        
+        if hasattr(self, 'allowed_madspin'):
+            return self.allowed_madspin
+        
+        self.allowed_madspin = []
+        if 'MadSpin'  in self.available_module:
+            self.allowed_madspin = ['OFF',"ON",'onshell']
+        return self.allowed_madspin
+    
+    def check_value_madspin(self, value):
+        """handle alias and valid option not present in get_allowed_madspin"""
+        
+        if value.upper() in self.get_allowed_madspin():
+            return True
+        elif value.lower() in self.get_allowed_madspin():
+            return True
+        
+        if 'MadSpin' not in self.available_module:
+            return False
+             
+        if value.lower() in ['madspin', 'full']:
+            return 'full'
+        elif value.lower() in ['none']:
+            return 'none'
+        
+    
+    def set_default_madspin(self):
+        """initialise the switch for madspin"""
+        
+        if 'MadSpin' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                self.switch['madspin'] = 'ON'
+            else:
+                self.switch['madspin'] = 'OFF'
+        else:
+            self.switch['madspin'] = 'Not Avail.'
+            
+    def get_cardcmd_for_madspin(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        
+        if value == 'onshell':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        elif value in ['full', 'madspin']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+        elif value == 'none':
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        else:
+            return []
+        
+#
+#   ReWeight handling
+#
+    def get_allowed_reweight(self):
+        """ return the list of valid option for reweight=XXX """
+        
+        if hasattr(self, 'allowed_reweight'):
+            return getattr(self, 'allowed_reweight')
+        
+        if 'reweight' not in self.available_module:
+            self.allowed_reweight = []
+            return
+        self.allowed_reweight = ['ON', 'OFF']
+        
+        # check for plugin mode
+        plugin_path = self.mother_interface.plugin_path
+        opts = misc.from_plugin_import(plugin_path, 'new_reweight', warning=False)
+        self.allowed_reweight += opts
+        
+    def set_default_reweight(self):
+        """initialise the switch for reweight"""
+        
+        if 'reweight' in self.available_module:
+            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                self.switch['reweight'] = 'ON'
+            else:
+                self.switch['reweight'] = 'OFF'
+        else:
+            self.switch['reweight'] = 'Not Avail.'        
 
 #===============================================================================
 # CheckValidForCmd
@@ -1718,6 +2097,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
+    asking_for_run = AskRun
+    
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
@@ -2014,6 +2395,57 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         return
 
     ############################################################################
+    
+    ############################################################################
+    def do_restart_gridpack(self, line):
+        """ syntax restart_gridpack --precision=1.0 --restart_zero
+        collect the result of the current run and relaunch each channel
+        not completed or optionally a completed one with a precision worse than 
+        a threshold (and/or the zero result channel)"""
+        
+    
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_survey(args)
+    
+        # initialize / remove lhapdf mode
+        #self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        #self.configure_directory()
+        
+        gensym = gen_ximprove.gensym(self)
+        
+        min_precision = 1.0
+        resubmit_zero=False
+        if '--precision=' in line:
+            s = line.index('--precision=') + len('--precision=')
+            arg=line[s:].split(1)[0]
+            min_precision = float(arg)
+        
+        if '--restart_zero' in line:
+            resubmit_zero = True
+            
+            
+        gensym.resubmit(min_precision, resubmit_zero)
+        self.monitor(run_type='All jobs submitted for gridpack', html=True)
+
+                        #will be done during the refine (more precisely in gen_ximprove)
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)  
+        self.exec_cmd("print_results %s" % self.run_name,
+                       errorhandling=False, printcmd=False, precmd=False, postcmd=False)      
+        
+        self.results.add_detail('run_statistics', dict(gensym.run_statistics))
+
+        
+        #self.exec_cmd('combine_events', postcmd=False)
+        #self.exec_cmd('store_events', postcmd=False)
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        self.exec_cmd('create_gridpack', postcmd=False)
+        
+    
+
+    ############################################################################    
 
     ############################################################################
     def do_generate_events(self, line):
@@ -2633,12 +3065,14 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+            self.run_card = run_card
+            self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-            
+                
             # Ensure that the bias parameters has all the required input from the
             # run_card
             if run_card['bias_module'].lower() not in ['dummy','none']:
@@ -2887,7 +3321,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         
         jobs, P_zero_result = ajobcreator.launch()
-        
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
@@ -2903,7 +3336,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
-            cross, error = sum_html.make_all_html_results(self)
+            cross, error = self.make_make_all_html_results()
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)  
             self.exec_cmd("print_results %s" % self.run_name,
@@ -2955,14 +3388,13 @@ Beware that this can be dangerous for local multicore runs.""")
         if len(args) == 2:
             refine_opt['max_process']= args[1]
 
-
         # initialize / remove lhapdf mode
         self.configure_directory()
 
         # Update random number
         self.update_random()
         self.save_random()
-
+        
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
@@ -3054,7 +3486,7 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             self.refine_mode = "new"
             
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 
@@ -3102,127 +3534,73 @@ Beware that this can be dangerous for local multicore runs.""")
 
         
 
-        if self.run_card['gridpack']: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
-            try:
-                os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-            except Exception:
-                pass
-
-            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
-                                       args=[self.run_name],
-                                       cwd=pjoin(self.me_dir,'SubProcesses'),
-                                       stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-
-            #self.cluster.launch_and_wait('../bin/internal/run_combine', 
-            #                                cwd=pjoin(self.me_dir,'SubProcesses'),
-            #                                stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-            #                                required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-            
-            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            # Store the number of unweighted events for the results object
-            pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-            try:      
-                nb_event = pat.search(output).groups()[0]
-            except AttributeError:
-                time.sleep(10)
-                output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-                try:
-                    nb_event = pat.search(output).groups()[0]
-                except AttributeError:
-                    logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                    nb_event = 0
-
-            self.results.add_detail('nb_event', nb_event)
-            
-            
-            # Define The Banner
-            tag = self.run_card['run_tag']
-            
-            # Update the banner with the pythia card
-            if not self.banner:
-                self.banner = banner_mod.recover_banner(self.results, 'parton')
-            self.banner.load_basic(self.me_dir)
-            # Add cross-section/event information
-            self.banner.add_generation_info(self.results.current['cross'], nb_event)
-            if not hasattr(self, 'random_orig'): self.random_orig = 0
-            self.banner.change_seed(self.random_orig)
-            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                         '%s_%s_banner.txt' % (self.run_name, tag)))
-            
-            
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
-                                    out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
-                                    out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
-
-        else:
-            # Define The Banner
-            tag = self.run_card['run_tag']
-            # Update the banner with the pythia card
-            if not self.banner:
-                self.banner = banner_mod.recover_banner(self.results, 'parton')
-            self.banner.load_basic(self.me_dir)
-            # Add cross-section/event information
-            self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
-            if not hasattr(self, 'random_orig'): self.random_orig = 0
-            self.banner.change_seed(self.random_orig)
-            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                    '%s_%s_banner.txt' % (self.run_name, tag)))
-            
-            
-            get_wgt = lambda event: event.wgt            
-            AllEvent = lhe_parser.MultiEventFile()
-            AllEvent.banner = self.banner
-            
-            partials = 0 # if too many file make some partial unweighting
-            sum_xsec, sum_xerru, sum_axsec = 0,[],0
-            for Gdir,mfactor in self.get_Gdir():
-                if os.path.exists(pjoin(Gdir, 'events.lhe')):
-                    result = sum_html.OneResult('')
-                    result.read_results(pjoin(Gdir, 'results.dat'))
-                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
-                                 result.get('xsec'),
-                                 result.get('xerru'),
-                                 result.get('axsec')
-                                 )
-
-                    sum_xsec += result.get('xsec')
-                    sum_xerru.append(result.get('xerru'))
-                    sum_axsec += result.get('axsec')
-                    
-                    if len(AllEvent) >= 80: #perform a partial unweighting
-                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                              get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
-                        AllEvent = lhe_parser.MultiEventFile()
-                        AllEvent.banner = self.banner
-                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                                     sum_xsec,
-                                     math.sqrt(sum(x**2 for x in sum_xerru)),
-                                     sum_axsec) 
-                        partials +=1
-            
-            if not hasattr(self,'proc_characteristic'):
-                self.proc_characteristic = self.get_characteristics()
-                
-            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
-                              get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                              proc_charac=self.proc_characteristic)
-            
-            if partials:
-                for i in range(partials):
-                    try:
-                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
-                    except Exception:
-                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
-                       
-            self.results.add_detail('nb_event', nb_event)
+        if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
+            return GridPackCmd.do_combine_events(self, line)
+    
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                '%s_%s_banner.txt' % (self.run_name, tag)))
         
+        
+        get_wgt = lambda event: event.wgt            
+        AllEvent = lhe_parser.MultiEventFile()
+        AllEvent.banner = self.banner
+        
+        partials = 0 # if too many file make some partial unweighting
+        sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        for Gdir in self.get_Gdir():
+            if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                result = sum_html.OneResult('')
+                result.read_results(pjoin(Gdir, 'results.dat'))
+                AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                             result.get('xsec'),
+                             result.get('xerru'),
+                             result.get('axsec')
+                             )
+
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+                
+                if len(AllEvent) >= 80: #perform a partial unweighting
+                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
+                    AllEvent = lhe_parser.MultiEventFile()
+                    AllEvent.banner = self.banner
+                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                 sum_xsec,
+                                 math.sqrt(sum(x**2 for x in sum_xerru)),
+                                 sum_axsec) 
+                    partials +=1
+        
+        if not hasattr(self,'proc_characteristic'):
+            self.proc_characteristic = self.get_characteristics()
+            
+        nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                          get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                          log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                          proc_charac=self.proc_characteristic)
+        
+        if partials:
+            for i in range(partials):
+                try:
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
+                except Exception:
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
+                   
+        self.results.add_detail('nb_event', nb_event)
+    
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
         
@@ -3326,53 +3704,48 @@ Beware that this can be dangerous for local multicore runs.""")
                            "    cd Subprocesses; ../bin/internal/combine_events\n"+
                            "  to have your events if those one are missing.")
         else:
-            for P_path in SubProcesses.get_subP(self.me_dir):
-                G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
-                                                    os.path.isdir(pjoin(P_path,G))]
-                for G in G_dir:
-                    G_path = pjoin(P_path,G)
-                    try:
-                        # Remove events file (if present)
-                        if os.path.exists(pjoin(G_path, 'events.lhe')):
-                            os.remove(pjoin(G_path, 'events.lhe'))
-                    except Exception:
-                        continue
-                    #try:
-                    #    # Store results.dat
-                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
-                    #        input = pjoin(G_path, 'results.dat')
-                    #        output = pjoin(G_path, '%s_results.dat' % run)
-                    #        files.cp(input, output) 
-                    #except Exception:
-                    #    continue                    
-                    # Store log
-                    try:
-                        if os.path.exists(pjoin(G_path, 'log.txt')):
-                            input = pjoin(G_path, 'log.txt')
-                            output = pjoin(G_path, '%s_log.txt' % run)
-                            files.mv(input, output) 
-                    except Exception:
-                        continue
-                    #try:   
-                    #    # Grid
-                    #    for name in ['ftn26']:
-                    #        if os.path.exists(pjoin(G_path, name)):
-                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                    #            input = pjoin(G_path, name)
-                    #            output = pjoin(G_path, '%s_%s' % (run,name))
-                    #            files.mv(input, output)
-                    #            misc.gzip(pjoin(G_path, output), error=None) 
-                    #except Exception:
-                    #    continue
-                    # Delete ftn25 to ensure reproducible runs
-                    if os.path.exists(pjoin(G_path, 'ftn25')):
-                        os.remove(pjoin(G_path, 'ftn25'))
+            for G_path in self.get_Gdir():
+                try:
+                    # Remove events file (if present)
+                    if os.path.exists(pjoin(G_path, 'events.lhe')):
+                        os.remove(pjoin(G_path, 'events.lhe'))
+                except Exception:
+                    continue
+                #try:
+                #    # Store results.dat
+                #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                #        input = pjoin(G_path, 'results.dat')
+                #        output = pjoin(G_path, '%s_results.dat' % run)
+                #        files.cp(input, output) 
+                #except Exception:
+                #    continue                    
+                # Store log
+                try:
+                    if os.path.exists(pjoin(G_path, 'log.txt')):
+                        input = pjoin(G_path, 'log.txt')
+                        output = pjoin(G_path, '%s_log.txt' % run)
+                        files.mv(input, output) 
+                except Exception:
+                    continue
+                #try:   
+                #    # Grid
+                #    for name in ['ftn26']:
+                #        if os.path.exists(pjoin(G_path, name)):
+                #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                #            input = pjoin(G_path, name)
+                #            output = pjoin(G_path, '%s_%s' % (run,name))
+                #            files.mv(input, output)
+                #            misc.gzip(pjoin(G_path, output), error=None) 
+                #except Exception:
+                #    continue
+                # Delete ftn25 to ensure reproducible runs
+                if os.path.exists(pjoin(G_path, 'ftn25')):
+                    os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
-        misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
-                            cwd=pjoin(self.me_dir))
-        
+        self.gen_card_html()
+
         
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
@@ -3882,7 +4255,7 @@ Please install this tool with the following MG5_aMC command:
         else: 
             shell_exe = misc.which(shell)
             if not shell_exe:
-                self.InvalidCmd('No s hell could be found in your environment.\n'+
+                raise self.InvalidCmd('No s hell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
@@ -3964,8 +4337,10 @@ You can follow PY8 run with the following command (in a separate terminal):
                         argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                 else:
-                    ret_code = misc.call(wrapper_path, stdout=open(pythia_log,'w'), stderr=subprocess.STDOUT,
+                    stdout = open(pythia_log,'w')
+                    ret_code = misc.call(wrapper_path, stdout=stdout, stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
+                    stdout.close()
                 if ret_code != 0:
                     raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
                         ' code %d.\n'%ret_code+\
@@ -4288,13 +4663,13 @@ tar -czf split_$1.tar.gz split_$1
             # From the log file
             if all(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
                         PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
-                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
+                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))      
+                else:
+                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1. YYYYY')
 
             if not any(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 self.results.add_detail('cross_pythia', PY8_extracted_information['sigma_m'])
@@ -4321,12 +4696,13 @@ tar -czf split_$1.tar.gz split_$1
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
             if os.path.isfile(djr_output) and len(PY8_extracted_information['cross_sections'])==0:
                 # When parallelization is enable we shouldn't have cannot look in the log in this way
-                if self.options ['run_mode']!=0:
-                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
-                       'Try turning parallelization off by setting the option nb_core to 1.')
-                    PY8_extracted_information['cross_sections'] = {} 
-                else:
+                if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                     PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
+                else:
+                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1.XXXXX')
+                    PY8_extracted_information['cross_sections'] = {} 
+                    
             cross_sections = PY8_extracted_information['cross_sections']
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -4777,7 +5153,7 @@ tar -czf split_$1.tar.gz split_$1
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         if not self.force:
-            self.ask_edit_cards([], args, plot=True)
+            self.ask_edit_cards(['plot_card.dat'], args, plot=True)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -5151,12 +5527,16 @@ tar -czf split_$1.tar.gz split_$1
         self.make_opts_var = {}
         
         #see when the last file was modified
-        time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
-                        os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        if self.configured > time_mod and hasattr(self, 'random'):
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+        
+        if self.configured >= time_mod and hasattr(self, 'random') and hasattr(self, 'run_card'):
+            #just ensure that cluster specific are correctly handled
+            if self.cluster:
+                self.cluster.modify_interface(self)
             return
         else:
-            self.configured = time.time()
+            self.configured = time_mod
         self.update_status('compile directory', level=None, update_results=True)
         if self.options['automatic_html_opening'] and html_opening:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -5198,7 +5578,9 @@ tar -czf split_$1.tar.gz split_$1
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
-            self.configured = time.time()
+            time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+            self.configured = time_mod
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -5263,6 +5645,12 @@ tar -czf split_$1.tar.gz split_$1
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
             self.compile(['clean'], cwd=Pdir)
 
+        #see when the last file was modified
+        time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
+                        os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
+
+        self.configured = time_mod
+
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################
@@ -5276,35 +5664,39 @@ tar -czf split_$1.tar.gz split_$1
         else:
             return default
 
-    ############################################################################
-    def get_Pdir(self):
-        """get the list of Pdirectory if not yet saved."""
-        
-        if hasattr(self, "Pdirs"):
-            if self.me_dir in self.Pdirs[0]:
-                return self.Pdirs
-        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
-                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
-        return self.Pdirs
+
         
     ############################################################################
-    def get_Gdir(self):
+    def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
         if hasattr(self, "Gdirs"):
             if self.me_dir in self.Gdirs[0]:
-                return self.Gdirs
+                if Pdir is None:
+                    if not symfact:
+                        return list(itertools.chain(*self.Gdirs[0].values()))
+                    else:
+                        return list(itertools.chain(*self.Gdirs[0].values())), self.Gdirs[1]
+                else:
+                    if not symfact:
+                        return self.Gdirs[0][Pdir]
+                    else:
+                        return self.Gdirs[0][Pdir], self.Gdirs[1]
+
 
         Pdirs = self.get_Pdir()
-        Gdirs = []        
+        Gdirs = {self.me_dir:[]}   
+        mfactors = {}     
         for P in Pdirs:
-            for line in open(pjoin(P, "symfact.dat")):
+            Gdirs[P] = []
+            #for the next line do not use P, since in readonly mode it might not have symfact
+            for line in open(pjoin(self.me_dir, 'SubProcesses',os.path.basename(P), "symfact.dat")):
                 tag, mfactor = line.split()
-                Gdirs.append( (pjoin(P, "G%s" % tag), int(mfactor)) )
-            
-        
-        self.Gdirs = Gdirs
-        return self.Gdirs
+                if int(mfactor) > 0:
+                    Gdirs[P].append( pjoin(P, "G%s" % tag) )
+                    mfactors[pjoin(P, "G%s" % tag)] = mfactor
+        self.Gdirs = (Gdirs, mfactors)
+        return self.get_Gdir(Pdir, symfact=symfact)
                 
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
@@ -5406,29 +5798,6 @@ tar -czf split_$1.tar.gz split_$1
 
         return get_last_tag(self, level)
             
-
-    ############################################################################
-    def find_model_name(self):
-        """ return the model name """
-        if hasattr(self, 'model_name'):
-            return self.model_name
-        
-        model = 'sm'
-        proc = []
-        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
-            line = line.split('#')[0]
-            #line = line.split('=')[0]
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]   
-                proc = []
-            elif line.startswith('generate'):
-                proc.append(line.split(None,1)[1])
-            elif line.startswith('add process'):
-                proc.append(line.split(None,2)[2])
-       
-        self.model = model
-        self.process = proc 
-        return model
     
     
     ############################################################################
@@ -5693,307 +6062,55 @@ tar -czf split_$1.tar.gz split_$1
         return True   
 
 
-
+    action_switcher = AskRun
     ############################################################################
     def ask_run_configuration(self, mode=None, args=[]):
         """Ask the question when launching generate_events/multi_run"""
-        
-        available_mode = ['0']
-        void = 'Not installed'
-        switch_order = ['shower', 'detector', 'analysis', 'madspin', 'reweight']
-        
-        switch = dict((k, void) for k in switch_order)
 
-        description = {'shower': 'Choose the shower/hadronization program:',
-                       'detector': 'Choose the detector simulation program:',
-                       'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight':'Add weights to events for different model hypothesis:',
-                       'analysis':'Run an analysis package on the events generated:'
-                       }
-
-        force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
-                       ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
-
-        switch_assign = lambda key, value: switch.__setitem__(key, value if value \
-                                         in valid_options[key] else switch[key])
-
-        valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
-        options =  ['auto', 'done']
-        options_legacy = []
-                
-        # Init the switch value according to the current status
-        if self.options['pythia-pgs_path']:
-            available_mode.append('1')
-            available_mode.append('2')
-            valid_options['shower'].append('PYTHIA6')
-            valid_options['detector'].append('PGS')
-            options_legacy += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                switch['shower'] = 'PYTHIA6'
-            else:
-                switch['shower'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                switch['detector'] = 'PGS'
-            else:
-                switch['detector'] = 'OFF'
-        
-        if self.options['pythia8_path']:
-            available_mode.append('1')
-            valid_options['shower'].append('PYTHIA8')
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
-                switch['shower'] = 'PYTHIA8'
-            elif switch['shower'] == void:
-                switch['shower'] = 'OFF'            
-        
-        # MadAnalysis4 options
-        if self.options['madanalysis_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
-                valid_options['analysis'].insert(0,'MADANALYSIS_4')
-
-            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
-                switch['analysis'] = 'MADANALYSIS_4'
-        
-        # MadAnalysis5 options
-        if self.options['madanalysis5_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')) or \
-               os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
-                valid_options['analysis'].append('MADANALYSIS_5')
-
-            parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
-                                                'madanalysis5_parton_card.dat'))
-            hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
-                                                'madanalysis5_hadron_card.dat'))
-            if hadron_card_present or parton_card_present:
-                switch['analysis'] = 'MADANALYSIS_5'
-
-        # ExRootanalysis
-        eradir = self.options['exrootanalysis_path']
-        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
-            valid_options['analysis'].insert(0,'EXROOTANALYSIS')
-            if switch['analysis'] in ['OFF', void]:
-                switch['analysis'] = 'EXROOTANALYSIS'
-
-                 
-
-        if len(valid_options['analysis'])>1:                
-            available_mode.append('3')
-            if switch['analysis'] == void:
-                switch['analysis'] = 'OFF'
-        else:
-            switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
-
-        # Need to allow Delphes only if a shower exists                
-        if self.options['delphes_path']:
-            if valid_options['shower'] != ['OFF']:
-                available_mode.append('2')
-                valid_options['detector'].append('DELPHES') 
-                options += ['delphes',   'delphes=ON', 'delphes=OFF']             
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    switch['detector'] = 'DELPHES'
-                elif switch['detector'] not in ['PGS']:
-                    switch['detector'] = 'OFF'
-            elif valid_options['detector'] == ['OFF']:
-                switch['detector'] = "Requires a shower"
-                        
-        # Check switch status for MS/reweight
-        if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('4')
-            valid_options['madspin'] = ['ON', 'OFF']
-            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
-                switch['madspin'] = 'ON'
-            else:
-                switch['madspin'] = 'OFF'
-            if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('5')
-                valid_options['reweight'] = ['ON', 'OFF']
-                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                    switch['reweight'] = 'ON'
-                else:
-                    switch['reweight'] = 'OFF'
-            else: 
-                switch['reweight'] = 'Not available (requires NumPy/f2py)'
-                       
+        passing_cmd = []
         if '-R' in args or '--reweight' in args:
-            if switch['reweight'] == 'OFF':
-                switch['reweight'] = 'ON'
-            elif switch['reweight'] != 'ON':
-                logger.critical("Cannot run reweight: %s", switch['reweight'])
+            passing_cmd.append('reweight=ON')
         if '-M' in args or '--madspin' in args:
-            if switch['madspin'] == 'OFF':
-                switch['madspin'] = 'ON'
-            elif switch['madspin'] != 'ON':
-                logger.critical("Cannot run madspin: %s", switch['reweight'])            
-
-        for id, key in enumerate(switch_order):
-            if len(valid_options[key]) >1:
-                options += ['%s=%s' % (key, s) for s in valid_options[key]]
-                options.append(key)
-            else:
-                options.append('%s=OFF' % (key))
-                
-        options += ['parton'] + sorted(list(set(available_mode)))
-        options += options_legacy
-        #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
-        #ask the question
+            passing_cmd.append('madspin=ON')
         
-        def color(switch_value):
-            green = '\x1b[32m%s\x1b[0m' 
-            bold = '\x1b[33m%s\x1b[0m'
-            red   = '\x1b[31m%s\x1b[0m'
-            if switch_value in ['OFF',void,'Requires a shower',
-                    'Not available (requires NumPy)',
-                    'Not available yet for this output/process']:
-                return red%switch_value
-            elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
-                                  'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
-                                  'DELPHES-CMS','DELPHES', 'EXROOTANALYSIS']:
-                return green%switch_value
-            else:
-                return bold%switch_value                
-
-        if mode or not self.force:
-            answer = ''
-            while answer not in ['0', 'done', 'auto']:
-                if mode:
-                    answer = mode
-                else:      
-                    switch_format = " \x1b[31m%i\x1b[0m. %-60s %12s = %s"
-                    question = "The following switches determine which programs are run:\n"
-                    question += '/'+'-'*98+'\\\n'
-                    for id, key in enumerate(switch_order):
-                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
-                    question += '\\'+'-'*98+'/\n'
-                    question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
-                    question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
-                    question += '  Type \'help\' for the list of all valid option\n' 
-                    question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-                    answer = self.ask(question, '0', options, casesensitive=False)
-                if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
-                    if answer.isdigit():
-                        key = switch_order[int(answer) - 1]
-                    else:
-                        key = answer
-                    for i, opt in enumerate(valid_options[key]):
-                        if opt == switch[key]:
-                            break
-                    i +=1
-                    if i == len(valid_options[key]):
-                        i=0
-                    answer = '%s=%s' % (key, valid_options[key][i])
-
-                if '=' in answer:
-                    key, status = answer.split('=')
-                    key, status = key.lower().strip(), status.upper().strip()
-                    
-                    if key not in switch:
-                        # this means use use outdated switch. Use converter to new syntax
-                        logger.warning("Using old syntax. Please check that we run what you expect.")
-                        if key == "pythia" and status == "ON":
-                            key, status = "shower", "PYTHIA6"
-                        elif key == "pythia" and status == "OFF":
-                            key, status = "shower", "OFF"
-                        elif key == "pgs" and status == "ON":
-                            if switch["detector"] in ["OFF", "PGS"] :
-                                key, status = "detector", "PGS"
-                            else:
-                                key, status = "detector", "DELPHES+PGS"
-                        elif key == "delphes" and status == "ON":
-                            if switch["detector"] in ["OFF", "DELPHES"] :
-                                key, status = "detector", "DELPHES"
-                            else:
-                                key, status = "detector", "DELPHES+PGS"                                
-                        elif key == "pgs" and status == "OFF":
-                            if switch["detector"] in ["OFF", "PGS"] :
-                                key, status = "detector", "OFF"
-                            elif switch["detector"] == "DELPHES+PGS":
-                                key, status = "detector", "DELPHES"
-                            else:
-                                key, status = "detector", switch['detector']
-                        elif key == "delphes" and status == "OFF":
-                            if switch["detector"] in ["OFF", "DELPHES"] :
-                                key, status = "detector", "OFF"
-                            elif switch["detector"] == "DELPHES+PGS":
-                                key, status = "detector", "PGS"
-                            else:
-                                key, status = "detector", switch['detector']                            
-                                                  
-
-                    switch[key] = status
-                    if (key, status) in force_switch:
-                        for key2, status2 in force_switch[(key, status)].items():
-                            if isinstance(status2, str):
-                                if switch[key2] not in  [status2, void]:
-                                    logger.info('For coherence \'%s\' is set to \'%s\''
-                                                % (key2, status2), '$MG:color:BLACK')
-                                    switch[key2] = status2
-                            else:
-                                if switch[key2] not in  status2 + [void]:
-                                    logger.info('For coherence \'%s\' is set to \'%s\''
-                                                % (key2, status2[0]), '$MG:color:BLACK')
-                                    switch[key2] = status2[0]
-                elif answer in ['0', 'auto', 'done']:
-                    continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
-                    logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
-                    switch_assign('madspin', 'OFF')
-                    switch_assign('reweight', 'OFF')
-                    if answer == 'parton':
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'pythia':
-                        switch_assign('shower', 'PYTHIA6')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'pgs':
-                        switch_assign('shower', 'PYTHIA6')
-                        switch_assign('detector', 'PGS')
-                    elif answer == 'delphes':
-                        switch_assign('shower', 'PYTHIA6')
-                        if switch['shower'] == 'OFF':
-                            switch_assign('shower', 'PYTHIA8')
-                        switch_assign('detector', 'DELPHES')
-                    elif answer == 'madspin':
-                        switch_assign('madspin', 'ON')
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'reweight':
-                        switch_assign('reweight', 'ON')
-                        switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF') 
-                    
-                if mode:
-                    answer =  '0' #mode auto didn't pass here (due to the continue)
-            else:
-                answer = 'auto'                        
-                                                                     
+        switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
+                              mode=mode, line_args=args, force=self.force,
+                              first_cmd=passing_cmd, return_instance=True)
+        #
+        self.switch = switch # store the value of the switch for plugin purpose 
+        if 'dynamical' in switch:
+            mode = 'auto'
+        
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
-
+    
         cards = ['param_card.dat', 'run_card.dat']
-        if switch['shower'] in ['PY6', 'PYTHIA6']:
+        if switch['shower'] == 'Pythia6':
             cards.append('pythia_card.dat')
-        if switch['shower'] in ['PY8', 'PYTHIA8']:
+        if switch['shower'] == 'Pythia8':
             cards.append('pythia8_card.dat')            
         if switch['detector'] in  ['PGS','DELPHES+PGS']:
             cards.append('pgs_card.dat')
-        if switch['detector'] in ['DELPHES', 'DELPHES+PGS']:
+        if switch['detector'] in ['Delphes', 'DELPHES+PGS']:
             cards.append('delphes_card.dat')
             delphes3 = True
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        if switch['madspin'] == 'ON':
+        if switch['madspin'] != 'OFF':
             cards.append('madspin_card.dat')
-        if switch['reweight'] == 'ON':
+        if switch['reweight'] != 'OFF':
             cards.append('reweight_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_5']:
+        if switch['analysis'].upper() in ['MADANALYSIS5']:
             cards.append('madanalysis5_parton_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_5'] and not switch['shower']=='OFF':
+        if switch['analysis'].upper() in ['MADANALYSIS5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
-        if switch['analysis'] in ['MADANALYSIS_4']:
+        if switch['analysis'].upper() in ['MADANALYSIS4']:
             cards.append('plot_card.dat')
 
         self.keep_cards(cards)
+        
+        first_cmd = cmd_switch.get_cardcmd()
         
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
             cards.append('MadLoopParams.dat')
@@ -6001,11 +6118,12 @@ tar -czf split_$1.tar.gz split_$1
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return switch
+        
 
-        if answer == 'auto':
-            self.ask_edit_cards(cards, plot=False, mode='auto')
+        if 'dynamical' in switch and switch['dynamical']:
+            self.ask_edit_cards(cards, plot=False, mode='auto', first_cmd=first_cmd)
         else:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
         return switch
     
     ############################################################################
@@ -6176,16 +6294,22 @@ class SubProcesses(object):
 class GridPackCmd(MadEventCmd):
     """The command for the gridpack --Those are not suppose to be use interactively--"""
 
-    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+    def __init__(self, me_dir = None, nb_event=0, seed=0, gran=-1, *completekey, **stdin):
         """Initialize the command and directly run"""
 
         # Initialize properly
-        
+        self.readonly = False
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.random = seed
         self.random_orig = self.random
+        self.granularity = gran
+        
         self.options['automatic_html_opening'] = False
+        #write the grid_card.dat on disk
+        self.nb_event = int(nb_event)
+        self.write_gridcard(nb_event, seed, gran) # set readonly on True if needed
+        self.prepare_local_dir()                  # move to gridpack dir or create local structure
         # Now it's time to run!
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
@@ -6194,16 +6318,89 @@ class GridPackCmd(MadEventCmd):
                   'Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
                   str(seed)
 
+
+    def update_status(self, *args, **opts):
+        return
+
+    def load_results_db(self):
+        """load the current results status"""
+        model = self.find_model_name()
+        process = self.process # define in find_model_name
+        self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+        self.last_mode=''
+
+    def save_random(self):
+        """save random number in appropirate file"""
+
+        if not self.readonly:
+            fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
+        else:
+            fsock = open('randinit','w')
+        fsock.writelines('r=%s\n' % self.random)
+
+    def write_RunWeb(self, me_dir):
+        try:
+            super(GridPackCmd, self).write_RunWeb(me_dir)
+        except IOError:
+            self.readonly  =True
+
+    def write_gridcard(self, nb_event, seed, gran):
+        """write the grid_card.dat file at appropriate location"""
+        
+        # first try to write grid_card within the gridpack.
+        print "WRITE GRIDCARD", self.me_dir
+        if self.readonly:
+            if not os.path.exists('Cards'):
+                os.mkdir('Cards')
+            fsock = open('grid_card.dat','w')
+        else:
+            fsock = open(pjoin(self.me_dir, 'Cards', 'grid_card.dat'),'w')
+                
+        gridpackcard = banner_mod.GridpackCard()
+        gridpackcard['GridRun'] = True
+        gridpackcard['gevents'] = nb_event
+        gridpackcard['gseed'] = seed
+        gridpackcard['ngran'] = gran
+        
+        gridpackcard.write(fsock)
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+            
+        if not self.readonly:
+            self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        else:
+            self.Pdirs = [l.strip() 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))] 
+          
+        return self.Pdirs
+        
+    def prepare_local_dir(self):
+        """create the P directory structure in the local directory"""
+        
+        if not self.readonly:
+            os.chdir(self.me_dir)
+        else:
+            for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
+                os.mkdir(line.strip())
+            
+
     def launch(self, nb_event, seed):
         """ launch the generation for the grid """
 
         # 1) Restore the default data
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
-        self.update_status('restoring default data', level=None)
-        misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
-                         'default'],
-            cwd=self.me_dir)
+        if not self.readonly:
+            self.update_status('restoring default data', level=None)
+            misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
+                         'default'], cwd=self.me_dir)
 
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
@@ -6214,9 +6411,11 @@ class GridPackCmd(MadEventCmd):
 
         # 3) Combine the events/pythia/...
         self.exec_cmd('combine_events')
-        self.exec_cmd('store_events')
-        self.print_results_in_shell(self.results.current)
-        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        if not self.readonly:
+            self.exec_cmd('store_events')
+            self.print_results_in_shell(self.results.current)
+        else:
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""
@@ -6224,6 +6423,9 @@ class GridPackCmd(MadEventCmd):
         
         precision = nb_event
 
+        self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
+        
         # initialize / remove lhapdf mode
         # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
@@ -6233,7 +6435,31 @@ class GridPackCmd(MadEventCmd):
         
         self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)
+
+        refine_opt = {'err_goal': nb_event, 'split_channels': False,
+                      'ngran':self.granularity, 'readonly': self.readonly}   
+        x_improve = gen_ximprove.gen_ximprove_gridpack(self, refine_opt)
+        x_improve.launch() # create the ajob for the refinment and run those!
+        self.gscalefact = x_improve.gscalefact #store jacobian associate to the gridpack 
         
+        
+        #bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
+        #print 'run combine!!!'
+        #combine_runs.CombineRuns(self.me_dir)
+        
+        #update html output
+        Presults = sum_html.collect_result(self)
+        cross, error = Presults.xsec, Presults.xerru
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)
+        
+        
+        #self.update_status('finish refine', 'parton', makehtml=False)
+        #devnull.close()
+        
+        
+        
+        return
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
@@ -6283,13 +6509,161 @@ class GridPackCmd(MadEventCmd):
         combine_runs.CombineRuns(self.me_dir)
         
         #update html output
-        cross, error = sum_html.make_all_html_results(self)
+        cross, error = self.make_make_all_html_results()
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()
+
+    def do_combine_events(self, line):
+        """Advanced commands: Launch combine events""" 
+
+        if self.readonly:
+            outdir = 'Events'
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+        else:
+            outdir = pjoin(self.me_dir, 'Events')
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_combine_events(args)
+        gscalefact = self.gscalefact # {(C.get('name')): jac}
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        
+        
+        if not os.path.exists(pjoin(outdir, self.run_name)):
+                os.mkdir(pjoin(outdir, self.run_name))
+        self.banner.write(pjoin(outdir, self.run_name, 
+                                '%s_%s_banner.txt' % (self.run_name, tag)))
+        
+        get_wgt = lambda event: event.wgt            
+        AllEvent = lhe_parser.MultiEventFile()
+        AllEvent.banner = self.banner
+        
+        partials = 0 # if too many file make some partial unweighting
+        sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        for Gdir in self.get_Gdir():
+            #mfactor already taken into accoun in auto_dsig.f
+            if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                result = sum_html.OneResult('')
+                result.read_results(pjoin(Gdir, 'results.dat'))
+                AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                             result.get('xsec')*gscalefact[Gdir],
+                             result.get('xerru')*gscalefact[Gdir],
+                             result.get('axsec')*gscalefact[Gdir]
+                             )
+
+                sum_xsec += result.get('xsec')*gscalefact[Gdir]
+                sum_xerru.append(result.get('xerru')*gscalefact[Gdir])
+                sum_axsec += result.get('axsec')*gscalefact[Gdir]
+                
+                if len(AllEvent) >= 80: #perform a partial unweighting
+                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
+                    AllEvent = lhe_parser.MultiEventFile()
+                    AllEvent.banner = self.banner
+                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                 sum_xsec,
+                                 math.sqrt(sum(x**2 for x in sum_xerru)),
+                                 sum_axsec) 
+                    partials +=1
+        
+        if not hasattr(self,'proc_characteristic'):
+            self.proc_characteristic = self.get_characteristics()
+            
+        nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
+                          get_wgt, trunc_error=1e-2, event_target=self.nb_event,
+                          log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                          proc_charac=self.proc_characteristic)
+        
+        
+        if partials:
+            for i in range(partials):
+                try:
+                    os.remove(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % i))
+                except Exception:
+                    os.remove(pjoin(outdir, self.run_name, "partials%s.lhe" % i))
+                   
+        self.results.add_detail('nb_event', nb_event)
+    
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+            self.correct_bias()
+
+    def do_combine_events_v4(self, line):
+        """Advanced commands: Launch combine events"""    
+        
+        args = self.split_arg(line)
+    
+        # Check argument's validity
+        self.check_combine_events(args)
+
+        self.update_status('Combining Events', level='parton')
+
+        try:
+            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
+        except Exception:
+            pass
+        
+        if not self.readonly:        
+            run_dir = pjoin(self.me_dir,'SubProcesses')
+            stdout_file = pjoin(self.me_dir,'SubProcesses', 'combine.log')
+        else:
+            run_dir = pjoin('SubProcesses')
+            stdout_file = pjoin('SubProcesses', 'combine.log')
+
+        cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
+                                       args=[self.run_name],
+                                       cwd=run_dir,
+                                       stdout=stdout_file,
+                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+            
+        output = misc.mult_try_open(stdout_file).read()
+        # Store the number of unweighted events for the results object
+        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+        try:      
+            nb_event = pat.search(output).groups()[0]
+        except AttributeError:
+            time.sleep(10)
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+            try:
+                nb_event = pat.search(output).groups()[0]
+            except AttributeError:
+                logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                nb_event = 0
+        self.results.add_detail('nb_event', nb_event)
+        
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
+        self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                     '%s_%s_banner.txt' % (self.run_name, tag)))
+        
+        
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
+                                out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
+                                out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
 
 class MadLoopInitializer(object):
@@ -6746,7 +7120,6 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print os.path.join(root_path, 'internal', 'me5_logging.conf')
         logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)
@@ -6761,9 +7134,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line = MadEventCmd(force_run=True)
+                cmd_line = MadEventCmd(os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line = MadEventCmdShell(force_run=True)
+                cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error

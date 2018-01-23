@@ -399,6 +399,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         text=''
         for i,e in enumerate(initial_states):
+            if len(e) ==1:
+                e.append(0)
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
                 text=text+'   '
@@ -524,7 +526,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                          ncolor,maxflow,fortran_model)
 
         filename = 'configs_and_props_info.dat'
-        nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
+        nconfigs,max_leg_number=self.write_configs_and_props_info_file(
                               filename, 
                               matrix_element)
 
@@ -611,7 +613,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_singular.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
-                     'c_weight.inc',
+                     'weight_lines.f',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
@@ -631,11 +633,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'q_es.inc',
                      'recluster.cc',
                      'Boosts.h',
-                     'reweight.inc',
-                     'reweight0.inc',
-                     'reweight1.inc',
-                     'reweightNLO.inc',
-                     'reweight_all.inc',
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
@@ -644,10 +641,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
-                     'symmetry_fks_test_MC.f',
-                     'symmetry_fks_test_ME.f',
+                     'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
-                     'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
                      'handling_lhe_events.f',
@@ -685,12 +680,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         else:
             os.system("ln -s ../BinothLHA_user.f ./BinothLHA.f")
 
-
-        #import nexternal/leshouches in Source
-#        ln('nexternal.inc', '../../Source', log=False)
-#        ln('born_leshouche.inc', '../../Source', log=False)
-
-
         # Return to SubProcesses dir
         os.chdir(os.path.pardir)
         # Add subprocess to subproc.mg
@@ -698,7 +687,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         files.append_to_file(filename,
                              self.write_subproc,
                              borndir)
-
             
         os.chdir(cwd)
         # Generate info page
@@ -970,9 +958,28 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
                              % (iFKS,len(links),real_configs))
 
+        # this is for 'LOonly' processes; in this case, a fake configuration 
+        # with all the born diagrams is written
+        if not matrix_element.get_fks_info_list():
+            # compute (again) the number of configurations at the born
+            base_diagrams = born_me.get('base_amplitude').get('diagrams')
+            minvert = min([max([len(vert.get('legs')) for vert in \
+                                    diag.get('vertices')]) for diag in base_diagrams])
+    
+            for idiag, diag in enumerate(base_diagrams):
+                if any([len(vert.get('legs')) > minvert for vert in
+                        diag.get('vertices')]):
+                # Only 3-vertices allowed in configs.inc
+                    continue
+                max_links = max_links + 1
+                
+            real_configs=', '.join(['%d' % i for i in range(1, max_links+1)])
+            lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
+                             % (1,max_links,real_configs))
+
         lines2.append("integer irfbc")
         lines2.append("integer real_from_born_conf(%d,%d)" \
-                         % (max_links,len(matrix_element.get_fks_info_list())))
+                         % (max_links, max(len(matrix_element.get_fks_info_list()),1)))
         # Write the file
         writer.writelines(lines2+lines)
 
@@ -1072,12 +1079,14 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append("# M -> PMASS_D/PWIDTH_D") 
         lines.append("# P -> POW_D") 
         lines2 = []
-        nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         max_iconfig=0
         max_leg_number=0
 
+        ########################################################
+        # this is for standard processes with [(real=)XXX]
+        ########################################################
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
             iFKS=iFKS+1
             iconfig = 0
@@ -1162,11 +1171,141 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                                      (iFKS,leg.get('number'), iconf + 1, leg.get('id')))
                     lines2.append("P   %4d   %4d   %4d   %4d " % \
                                      (iFKS,leg.get('number'), iconf + 1, pow_part))
+
+        ########################################################
+        # this is for [LOonly=XXX]
+        ########################################################
+        if not matrix_element.get_fks_info_list():
+            born_me = matrix_element.born_matrix_element
+            # as usual, in this case we assume just one FKS configuration 
+            # exists with diagrams corresponding to born ones X the ij -> i,j
+            # splitting. Here j is chosen to be the last colored particle in
+            # the particle list
+            bornproc = born_me.get('processes')[0]
+            colors = [l.get('color') for l in bornproc.get('legs')] 
+
+            fks_i = len(colors)
+            # use the last colored particle if it exists, or 
+            # just the last
+            fks_j=1
+            for cpos, col in enumerate(colors):
+                if col != 1:
+                    fks_j = cpos+1
+                    fks_j_id = [l.get('id') for l in bornproc.get('legs')][cpos]
+
+            # for the moment, if j is initial-state, we do nothing
+            if fks_j > ninitial:
+                iFKS=1
+                iconfig = 0
+                s_and_t_channels = []
+                mapconfigs = []
+                base_diagrams = born_me.get('base_amplitude').get('diagrams')
+                model = born_me.get('base_amplitude').get('process').get('model')
+                minvert = min([max([len(vert.get('legs')) for vert in \
+                                        diag.get('vertices')]) for diag in base_diagrams])
+        
+                lines.append("# ")
+                lines.append("# nFKSprocess %d" % iFKS)
+                for idiag, diag in enumerate(base_diagrams):
+                    if any([len(vert.get('legs')) > minvert for vert in
+                            diag.get('vertices')]):
+                    # Only 3-vertices allowed in configs.inc
+                        continue
+                    iconfig = iconfig + 1
+                    helas_diag = born_me.get('diagrams')[idiag]
+                    mapconfigs.append(helas_diag.get('number'))
+                    lines.append("# Diagram %d for nFKSprocess %d" % \
+                                     (helas_diag.get('number'),iFKS))
+                    # Correspondance between the config and the amplitudes
+                    lines.append("C   %4d   %4d   %4d " % (iFKS,iconfig,
+                                                           helas_diag.get('number')))
+
+                    # Need to reorganize the topology so that we start with all
+                    # final state external particles and work our way inwards
+                    schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                        get_s_and_t_channels(ninitial, model, 990)
+        
+                    s_and_t_channels.append([schannels, tchannels])
+
+                    #the first thing to write is the splitting ij -> i,j
+                    lines.append("F   %4d   %4d   %4d   %4d" % \
+                                     (iFKS,-1,iconfig,2))
+                                     #(iFKS,last_leg.get('number'), iconfig, len(daughters)))
+                    lines.append("D   %4d" % nexternal)
+                    lines.append("D   %4d" % fks_j)
+                    lines.append("S   %4d   %4d   %4d   %10d" % \
+                                         (iFKS,-1, iconfig,fks_j_id)) 
+                    # now we continue with all the other vertices of the diagrams;
+                    # we need to shift the 'last_leg' by 1 and replace leg fks_j with -1
+
+                    # Write out propagators for s-channel and t-channel vertices
+                    allchannels = schannels
+                    if len(tchannels) > 1:
+                        # Write out tchannels only if there are any non-trivial ones
+                        allchannels = schannels + tchannels
+
+                    for vert in allchannels:
+                        daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+                        last_leg = vert.get('legs')[-1]
+                        lines.append("F   %4d   %4d   %4d   %4d" % \
+                                         (iFKS,last_leg.get('number')-1, iconfig, len(daughters)))
+
+                        # legs with negative number in daughters have to be shifted by -1
+                        for i_dau in range(len(daughters)):
+                            if daughters[i_dau] < 0:
+                                daughters[i_dau] += -1
+                        # finally relable fks with -1 if it appears in daughters
+                        if fks_j in daughters:
+                            daughters[daughters.index(fks_j)] = -1
+                        for d in daughters:
+                            lines.append("D   %4d" % d)
+                        if vert in schannels:
+                            lines.append("S   %4d   %4d   %4d   %10d" % \
+                                             (iFKS,last_leg.get('number')-1, iconfig,
+                                              last_leg.get('id')))
+                        elif vert in tchannels[:-1]:
+                            lines.append("T   %4d   %4d   %4d   %10d" % \
+                                             (iFKS,last_leg.get('number')-1, iconfig,
+                                              abs(last_leg.get('id'))))
+
+                        # update what the array sizes (mapconfig,iforest,etc) will be
+                        max_leg_number = min(max_leg_number,last_leg.get('number')-1)
+                    max_iconfig = max(max_iconfig,iconfig)
+        
+                # Write out number of configs
+                lines.append("# Number of configs for nFKSprocess %d" % iFKS)
+                lines.append("C   %4d   %4d   %4d" % (iFKS,0,iconfig))
+
+                # write the props.inc information
+                lines2.append("# ")
+                particle_dict = born_me.get('processes')[0].get('model').\
+                    get('particle_dict')
+        
+                for iconf, configs in enumerate(s_and_t_channels):
+                    lines2.append("M   %4d   %4d   %4d   %10d " % \
+                                    (iFKS,-1, iconf + 1, fks_j_id))
+                    pow_part = 1 + int(particle_dict[fks_j_id].is_boson())
+                    lines2.append("P   %4d   %4d   %4d   %4d " % \
+                                    (iFKS,-1, iconf + 1, pow_part))
+                    for vertex in configs[0] + configs[1][:-1]:
+                        leg = vertex.get('legs')[-1]
+                        if leg.get('id') not in particle_dict:
+                            # Fake propagator used in multiparticle vertices
+                            pow_part = 0
+                        else:
+                            particle = particle_dict[leg.get('id')]
+        
+                            pow_part = 1 + int(particle.is_boson())
+        
+                        lines2.append("M   %4d   %4d   %4d   %10d " % \
+                                         (iFKS,leg.get('number')-1, iconf + 1, leg.get('id')))
+                        lines2.append("P   %4d   %4d   %4d   %4d " % \
+                                         (iFKS,leg.get('number')-1, iconf + 1, pow_part))
     
         # Write the file
         open(filename,'w').write('\n'.join(lines+lines2))
 
-        return max_iconfig, max_leg_number, nconfs
+        return max_iconfig, max_leg_number
 
 
     def write_leshouche_info_declarations(self, writer, nfksconfs, 
@@ -1218,6 +1357,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             maxproc = max(maxproc, nprocs)
             maxflow = max(maxflow, nflows)
 
+        # this is for LOonly
+        if not matrix_element.get_fks_info_list():
+            (newlines, nprocs, nflows) = self.get_leshouche_lines_dummy(matrix_element.born_matrix_element, 1)
+            lines.extend(newlines)
+
         # Write the file
         open(filename,'w').write('\n'.join(lines))
 
@@ -1230,10 +1374,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         file = \
 """double precision function dlum()
 implicit none
-include 'timing_variables.inc'
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-call cpu_time(tbefore)
 """
         if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
@@ -1246,16 +1388,12 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
         else:
             file+= \
 """call dlum_0(dlum)
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
@@ -2227,8 +2365,8 @@ c     this subdir has no soft singularities
             charges = [0.] * len(colors) 
 
             fks_i = len(colors)
-            # use the first colored particle if it exists, or 
-            # just the first
+            # use the last colored particle if it exists, or 
+            # just the last
             fks_j=1
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
@@ -2717,6 +2855,109 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                                                                                    ninitial)
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        for i in [0, 1]:
+                            lines.append("C   %4d   %4d   %4d      %s" % \
+                                 (ime, i + 1, cf_i + 1,
+                                  " ".join(["%3d" % color_flow_dict[l.get('number')][i] \
+                                            for l in legs])))
+
+                    nflow = len(color_flow_list)
+
+        nproc = len(matrix_element.get('processes'))
+    
+        return lines, nproc, nflow
+
+
+    def get_leshouche_lines_dummy(self, matrix_element, ime):
+        #test written
+        """As get_leshouche_lines, but for 'fake' real emission processes (LOonly
+        In this case, write born color structure times ij -> i,j splitting)
+        """
+
+        bornproc = matrix_element.get('processes')[0]
+        colors = [l.get('color') for l in bornproc.get('legs')] 
+
+        fks_i = len(colors)
+        # use the last colored particle if it exists, or 
+        # just the last
+        fks_j=1
+        for cpos, col in enumerate(colors):
+            if col != 1:
+                fks_j = cpos+1
+    
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nexternal+=1 # remember, in this case matrix_element is born
+    
+        lines = []
+        for iproc, proc in enumerate(matrix_element.get('processes')):
+            # add the fake extra leg
+            legs = proc.get_legs_with_decays() + \
+                   [fks_common.FKSLeg({'id': -21,
+                                       'number': nexternal,
+                                       'state': True,
+                                       'fks': 'i',
+                                       'color': 8,
+                                       'charge': 0.,
+                                       'massless': True,
+                                       'spin': 3,
+                                       'is_part': True,
+                                       'self_antipart': True})]
+                                        
+            lines.append("I   %4d   %4d       %s" % \
+                         (ime, iproc + 1,
+                          " ".join([str(l.get('id')) for l in legs])))
+            for i in [1, 2]:
+                lines.append("M   %4d   %4d   %4d      %s" % \
+                         (ime, i, iproc + 1,
+                          " ".join([ "%3d" % 0 ] * ninitial + \
+                                   [ "%3d" % i ] * (nexternal - ninitial))))
+    
+            # Here goes the color connections corresponding to the JAMPs
+            # Only one output, for the first subproc!
+            if iproc == 0:
+                # If no color basis, just output trivial color flow
+                if not matrix_element.get('color_basis'):
+                    for i in [1, 2]:
+                        lines.append("C   %4d   %4d   1      %s" % \
+                                 (ime, i, 
+                                  " ".join([ "%3d" % 0 ] * nexternal)))
+                    color_flow_list = []
+                    nflow = 1
+    
+                else:
+                    # in this case the last particle (-21) has two color indices
+                    # and it has to be emitted by j_fks
+                    # First build a color representation dictionnary
+                    repr_dict = {}
+                    for l in legs[:-1]:
+                        repr_dict[l.get('number')] = \
+                            proc.get('model').get_particle(l.get('id')).get_color()\
+                            * (-1)**(1+l.get('state'))
+                    # Get the list of color flows
+                    color_flow_list = \
+                        matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                                   ninitial)
+                    # And output them properly
+                    for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        # we have to add the extra leg (-21), linked to the j_fks leg
+                        # first, find the maximum color label
+                        maxicol = max(sum(color_flow_dict.values(), []))
+                        #then, replace the color labels
+                        if color_flow_dict[fks_j][0] == 0:
+                            anti = True
+                            icol_j = color_flow_dict[fks_j][1]
+                        else:
+                            anti = False
+                            icol_j = color_flow_dict[fks_j][0]
+
+                        if anti:
+                            color_flow_dict[nexternal] = (maxicol + 1, color_flow_dict[fks_j][1])
+                            color_flow_dict[fks_j][1] = maxicol + 1
+                        else:
+                            color_flow_dict[nexternal] = (color_flow_dict[fks_j][0], maxicol + 1) 
+                            color_flow_dict[fks_j][0] = maxicol + 1
+
                         for i in [0, 1]:
                             lines.append("C   %4d   %4d   %4d      %s" % \
                                  (ime, i + 1, cf_i + 1,

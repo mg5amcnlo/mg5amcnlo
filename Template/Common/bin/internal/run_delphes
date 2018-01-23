@@ -31,7 +31,7 @@ echo pythia_events.hep > inputfiles.list
 
 sed -e "s:DELPHESDIR:$delphesdir:g" ../Cards/delphes_card.dat > ../Cards/tmp_card.dat
 
-
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
 $delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat
 $delphesdir/LHCO_Only delphes.root
 

@@ -16,60 +16,31 @@ c     Constants
 c
       double precision zero
       parameter       (ZERO = 0d0)
-      real*8 Pi
-      parameter( Pi = 3.14159265358979323846d0 )
-      integer    lun
-      parameter (lun=22)
 c
 c     LOCAL
 c
-      integer i,j
-      integer icollider,detail_level
-      logical  do_cuts(nexternal)
-      integer ncheck
-      logical done,fopened
+      integer i,j,k
 C     
 C     GLOBAL
 C
 c--masses and poles
       double precision pmass(nexternal)
       common/to_mass/  pmass
-c--cuts
-      double precision etmin(nincoming+1:nexternal)
-      double precision etamax(nincoming+1:nexternal)
-      double precision emin(nincoming+1:nexternal)
-      double precision r2min(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_min(nexternal,nexternal)
-      double precision etmax(nincoming+1:nexternal)
-      double precision etamin(nincoming+1:nexternal)
-      double precision emax(nincoming+1:nexternal)
-      double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_max(nexternal,nexternal)
-      common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max
-
-      double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
-      logical jetor
-      common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
-
 c
-c     les houches accord stuff to identify neutrinos
+c     les houches accord stuff to identify particles
 c
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
-c      include 'leshouche.inc'
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-c
-c
-c     reading parameters
-      integer maxpara
-      parameter (maxpara=100)
-      character*20 param(maxpara),value(maxpara)
-      integer npara
+c 
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
 c
 c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
@@ -121,6 +92,56 @@ c-charged-leptons
 c-photons
          if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
       enddo
+c
+c     check for pdg specific cut (pt/eta)
+c
+      do i=nincoming+1, nexternal-1 ! never include last particle
+         etmin(i) = 0d0
+         etmax(i) = -1d0
+         do j = i, nexternal-1
+            mxxmin(i,j) = 0d0
+         enddo
+      enddo
+
+      if (pdg_cut(1).ne.0)then
+         do j=1,pdg_cut(0)
+            do i=nincoming+1, nexternal-1 ! never include last particle
+               if (abs(idup(i,1)).ne.pdg_cut(j)) cycle
+c     fully ensure that only massive particles are allowed at NLO
+               if(pmass(i).eq.0d0) then
+                  write(*,*) 'Illegal use of pdg specific cut.'
+                  write(*,*) 'For NLO process, '/
+     $                 /'only massive particle can be included'
+                  stop 1
+               endif
+c     fully ensure that this is not a jet/lepton/photon
+               if(is_a_lp(i) .or. is_a_lm(i) .or. is_a_j(i) .or.
+     $              is_a_ph(i)) then
+                  write(*,*) 'Illegal use of pdg specific cut.'
+                  write(*,*) 'This can not be used for '/
+     $                 /'jet/lepton/photon/gluon'
+                  stop 1
+               endif
+               etmin(i) = ptmin4pdg(j)
+               etmax(i) = ptmax4pdg(j)
+!     add the invariant mass cut
+               if(mxxmin4pdg(j).ne.0d0)then
+                  do k=i+1, nexternal-1
+                     if (mxxpart_antipart(j))then
+                        if (idup(k, 1).eq.-1*idup(i,1))then
+                           mxxmin(i,k) = mxxmin4pdg(j)
+                        endif
+                     else
+                        if (abs(idup(k, 1)).eq.pdg_cut(j))then
+                           mxxmin(i,k) = mxxmin4pdg(j)
+                        endif
+                     endif
+                  enddo
+               endif
+            enddo
+         enddo
+      endif
+
 
       RETURN
       END
@@ -191,6 +212,14 @@ c Les Houches common block
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       real*8         emass(nexternal)
       common/to_mass/emass
+c     block for the (simple) cut bsed on the pdg
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,mxxmin
+      double precision smin_update , mxx
+      integer nb_iden_pdg
+c
       logical firsttime,firsttime_chans(maxchannels)
       data firsttime /.true./
       data firsttime_chans/maxchannels*.true./
@@ -235,13 +264,13 @@ c event could.
 c Add the minimal jet pTs to tau
                if(IS_A_J(i) .and. i.ne.nexternal)then
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
-                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+max(ptj,emass(i))
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
                   elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
                      taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+max(ptj,emass(i))
-                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+max(ptj,emass(i))
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
                   elseif (j_fks.eq.nexternal) then
                      write (*,*)
      &                    'ERROR, j_fks cannot be the final parton'
@@ -268,11 +297,13 @@ c Add the minimal photon pTs to tau
                   xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  if (j_fks.gt.nincoming)
-     &                 taumin(iFKS,ichan)=taumin(iFKS,ichan)+ptl
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)+ptl
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)+ptl
+                  if (j_fks.gt.nincoming) then
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  else
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
+                  endif
+                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(emass(i)**2+ptl**2)
+                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(emass(i)**2+ptl**2)
                   xm(i)=emass(i)+ptl
 c Add the lepton invariant mass to tau if there is at least another
 c lepton of opposite charge. (Only add half of it, i.e. 'the part
@@ -282,23 +313,23 @@ c lepton pT
                      if (is_a_lm(j) .and. idup(i,1).eq.-idup(j,1) .and.
      $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                              max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
                      elseif (is_a_lm(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan)= taumin(iFKS,ichan)-ptl-emass(i) +
-     &                                     max(mll/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan)= taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                                     max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0, dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
      $                       +emass(i))
                         exit
@@ -306,11 +337,13 @@ c lepton pT
                   enddo
                elseif (is_a_lm(i)) then
 c Add the negatively charged lepton pTs to tau
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  if (j_fks.gt.nincoming)
-     &                 taumin(iFKS,ichan)=taumin(iFKS,ichan)+ptl
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)+ptl
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)+ptl
+                  if (j_fks.gt.nincoming) then
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  else
+                     taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
+                  endif
+                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
+                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
                   xm(i)=emass(i)+ptl
 c Add the lepton invariant mass to tau if there is at least another
 c lepton of opposite charge. (Only add half of it, i.e. 'the part
@@ -320,33 +353,65 @@ c lepton pT
                      if (is_a_lp(j) .and. idup(i,1).eq.-idup(j,1) .and.
      $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                              max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,mll_sf/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
                      elseif (is_a_lp(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
-     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-ptl-emass(i) +
-     &                                      max(mll/2d0,ptl+emass(i))
-                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
-                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-ptl-emass(i)
-     $                       + max(mll/2d0,ptl+emass(i))
+     &                       taumin(iFKS,ichan) = taumin(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2) +
+     &                                      max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_s(iFKS,ichan) = taumin_s(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
+                        taumin_j(iFKS,ichan) = taumin_j(iFKS,ichan)-dsqrt(ptl**2+emass(i)**2)
+     $                       + max(mll/2d0,dsqrt(ptl**2+emass(i)**2))
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
      $                       +emass(i))
                         exit
                      endif
                   enddo
                else
-                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
-                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)
-                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)
-                  xm(i)=emass(i)
+                  if (i.eq.nexternal)then
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
+                        taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) +  emass(i)
+                        taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + emass(i)
+                        xm(i) = emass(i)
+                  else
+                     smin_update = 0
+                     nb_iden_pdg = 1
+                     mxx = 0d0
+c                    assume smin apply always on the same set of particle
+                     do j=nincoming+1,nexternal-1
+                        if (mxxmin(i,j).ne.0d0.or.mxxmin(j,i).ne.0d0) then
+                           nb_iden_pdg = nb_iden_pdg +1
+                           if (mxx.eq.0d0) mxx = max(mxxmin(i,j), mxxmin(j,i))
+                        endif
+                     enddo
+                     ! S >= (2*N-N^2)*M1^2 + (N^2-N)/2 * Mxx^2
+                     smin_update = nb_iden_pdg*((2-nb_iden_pdg)*emass(i)**2 + (nb_iden_pdg-1)/2.*mxx**2)
+                     ! compare with the update from pt cut
+                     if (smin_update.lt.nb_iden_pdg**2*(etmin(i)**2 + emass(i)**2))then
+                        ! the pt is more restrictive
+                        smin_update = dsqrt(etmin(i)**2 + emass(i)**2)
+                     else
+                        smin_update = dsqrt(smin_update)/nb_iden_pdg ! share over N particle, and change dimension
+                     endif
+                     smin_update = emass(i)
+                     ! update in sqrt(s) so take the 
+                     if  (j_fks.gt.nincoming) then
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + smin_update
+                     else
+                        taumin(iFKS,ichan)=taumin(iFKS,ichan) + emass(i)
+                     endif
+                     taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan) + smin_update
+                     taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan) + smin_update
+                     xm(i) = smin_update
+                  endif
                endif
                xw(i)=0d0
             enddo
@@ -565,10 +630,6 @@ c
       include 'nexternal.inc'
       include 'maxparticles.inc'
       include 'maxconfigs.inc'
-      include 'mint.inc'
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
       logical new_point

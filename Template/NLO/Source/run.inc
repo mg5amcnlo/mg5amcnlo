@@ -54,11 +54,6 @@ c
       double precision bwcutoff
       common/to_bwcutoff/ bwcutoff
 c
-c     Sudakov grid file name
-c
-      character*130 issgridfile
-      common/to_sgridfile/issgridfile
-c
 c     kT/pT scheme for xqcut, clustering according to channel
 c
       integer ktscheme
@@ -84,3 +79,12 @@ c    For FO run (with lhe type of analysis
 c
       double precision FO_LHE_weight_ratio
       common /FO_ANALYSIS_LHW/FO_LHE_weight_ratio
+c
+c
+c
+      integer pdg_cut(0:25)
+      double precision ptmin4pdg(0:25) 
+      double precision ptmax4pdg(0:25) 
+      double precision mxxmin4pdg(0:25) 
+      logical mxxpart_antipart(1:25) 
+      common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart

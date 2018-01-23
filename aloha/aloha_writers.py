@@ -1406,7 +1406,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         return out.getvalue() 
 
-    def get_declaration_txt(self):
+    def get_declaration_txt(self, add_i=True):
         """ Prototype for how to write the declaration of variable
             Include the symmetry line (entry FFV_2)
         """
@@ -1414,7 +1414,8 @@ class ALOHAWriterForCPP(WriteALOHA):
         out = StringIO()
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
-        out.write(self.ci_definition)
+        if add_i:
+            out.write(self.ci_definition)
                     
         for type, name in self.declaration:
             if type.startswith('list'):
@@ -1685,18 +1686,20 @@ class ALOHAWriterForCPP(WriteALOHA):
                     routine.write('}\n')
                     self.declaration.add(('int','i'))
         self.declaration.discard(('complex','COUP'))
+        self.declaration.discard(('complex', 'denom'))
+        if self.outgoing:
+            self.declaration.discard(('list_double', 'P%s' % self.outgoing))
+            self.declaration.discard(('double', 'OM%s' % self.outgoing))
         for name in aloha_lib.KERNEL.reduced_expr2:
             self.declaration.discard(('complex', name))
         
         #clean pointless declaration
         #self.declaration.discard
-        
-        text.write(self.get_declaration_txt())
+        text.write(self.get_declaration_txt(add_i=False))
         text.write(routine.getvalue())
         text.write(self.get_foot_txt())
 
         text = text.getvalue()
-
         return text
 
     

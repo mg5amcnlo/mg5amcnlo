@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,14 +11,13 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
 C
 C     LOCAL
 C
-      integer i,j,l,l1,l2,ndim
+      integer i,j,l,l1,l2
       character*130 buf
 c
 c     Global
@@ -26,7 +26,8 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-c Vegas stuff
+c     Vegas stuff
+      integer         ndim
       common/tosigint/ndim
 
       real*8 sigint
@@ -175,6 +176,8 @@ c     Fill the number of combined matrix elements for given initial state lumino
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
+            do_rwgt_scale=.false.
+            do_rwgt_pdf=.false.
             do kchan=1,nchans
                do i=1,ndimmax
                   do j=0,nintervals
@@ -210,10 +213,10 @@ c
          endif
 c
 c Setup for parton-level NLO reweighting
-         if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
      $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
+         call deallocate_weight_lines
          write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
          write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
          write(*,*)'chi**2 per D.o.F.:',chi2(1,0)
@@ -320,10 +323,6 @@ c to save grids:
 c timing statistics
       include "timing_variables.inc"
       data tOLP/0.0/
-      data tFastJet/0.0/
-      data tPDF/0.0/
-      data tDSigI/0.0/
-      data tDSigR/0.0/
       data tGenPS/0.0/
       data tBorn/0.0/
       data tIS/0.0/
@@ -345,12 +344,12 @@ c timing statistics
 
 
       double precision function sigint(xx,vegas_wgt,ifl,f)
+      use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
-      include 'reweight.inc'
       include 'run.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
@@ -785,11 +784,11 @@ c-----
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
             abrv='born'
-            if (ickkw.eq.3) then
-               write (*,*) 'FxFx merging not possible with'/
-     $              /' [LOonly=QCD] processes'
-               stop 1
-            endif
+c$$$            if (ickkw.eq.3) then
+c$$$               write (*,*) 'FxFx merging not possible with'/
+c$$$     $              /' [LOonly=QCD] processes'
+c$$$               stop 1
+c$$$            endif
          endif
       endif
 c

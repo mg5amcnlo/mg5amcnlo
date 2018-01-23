@@ -125,6 +125,8 @@ def async_generate_born(args):
                                 gen_color=False)
 
     processes = helasfull.born_matrix_element.get('processes')
+
+    max_configs = helasfull.born_matrix_element.get_num_configs()
     
     metag = helas_objects.IdentifyMETag.create_tag(helasfull.born_matrix_element.get('base_amplitude'))
     
@@ -134,7 +136,7 @@ def async_generate_born(args):
     cPickle.dump(outdata,output,protocol=2)
     output.close()
     
-    return [output.name,metag,has_loops,processes]
+    return [output.name,metag,has_loops,processes,max_configs]
 
 
 def async_finalize_matrix_elements(args):
@@ -322,6 +324,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 self['has_loops'] = self['has_loops'] or has_loops
                 processes = bornout[3]
                 self['processes'].extend(processes)
+                self['max_particles'] = max([self['max_configs']] + [len(p['legs']) + 1 for p in bornout[3]])
+                self['max_configs'] = max(self['max_configs'], bornout[4])
                 unique = True
                 for ime2,bornout2 in enumerate(unique_me_list):
                     mefile2 = bornout2[0]
@@ -394,12 +398,12 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                     break
             self['has_virtuals'] = has_virtuals
             
-            configs_list = []
+            configs_list = [self['max_configs']]
             for meout in realmapout:
                 configs_list.append(meout[1])
             self['max_configs'] = max(configs_list)
             
-            nparticles_list = []
+            nparticles_list = [self['max_particles']]
             for meout in realmapout:
                 nparticles_list.append(meout[2])
             self['max_particles'] = max(nparticles_list)        
@@ -453,14 +457,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
     def get_max_configs(self):
         """Return max_configs"""
-
+            
         if self['max_configs'] < 0:
             try:
                 self['max_configs'] = max([me.get_num_configs() \
                                   for me in self['real_matrix_elements']])
             except ValueError:
-                self['max_configs'] = max([me.born_matrix_element.get_num_configs() \
-                                  for me in self['matrix_elements']])
+                pass
+            self['max_configs'] = max(self['max_configs'],\
+                                      max([me.born_matrix_element.get_num_configs() \
+                                           for me in self['matrix_elements']]))
 
         return self['max_configs']
 

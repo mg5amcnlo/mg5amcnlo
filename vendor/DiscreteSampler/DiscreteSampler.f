@@ -2200,7 +2200,7 @@
           normalized_bin_bound = mBin%weight * 
      &                        ( convolution_factors(i) / sampling_norm )
           running_bound = running_bound + normalized_bin_bound
-          if (random_variable.le.running_bound) then
+          if (random_variable.lt.running_bound) then
             mBinID = mGrid%bins(i)%bid
             jacobian_weight = 1.0d0 / normalized_bin_bound
             deallocate(convolution_factors)

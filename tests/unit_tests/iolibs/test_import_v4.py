@@ -241,8 +241,7 @@ class IOImportV4Test(unittest.TestCase):
 
     def test_full_import(self):
         """Test importing the full SM"""
-        model_path = os.path.join(_file_path, os.pardir, os.pardir,
-                                  'models', 'sm_v4')
+        model_path = 'sm_v4'
         model = import_v4.import_model(model_path)[0]
         self.assertEqual(model.get('coupling_orders'),
                          set(['QCD', 'QED']))
@@ -250,7 +249,7 @@ class IOImportV4Test(unittest.TestCase):
                          {'QCD': 1, 'QED': 2})
         self.assertEqual(model.get('expansion_order'),
                          {'QCD': -1, 'QED': -1})
-        
+
         
 class ProcCardV4ReaderTest(unittest.TestCase):
     """Test class for the proc_card v4 module"""

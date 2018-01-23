@@ -261,7 +261,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if self.configured > time_mod and \
                            hasattr(self,'MWparam') and hasattr(self,'run_card'):
             return
-        self.configured = time.time()
+        self.configured = time_mod
         
         
                   

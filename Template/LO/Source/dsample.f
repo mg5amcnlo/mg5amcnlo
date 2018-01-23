@@ -570,6 +570,7 @@ c     Local
 c
       integer i, j
       integer get_maxsproc
+      logical fopened
 c
 c     Global
 c
@@ -713,7 +714,11 @@ c
 c     Try to read grid from file
 c
       flat_grid=.true.
-      open(unit=25,file='ftn25',status='unknown',err=102)
+      call open_file_local(25, 'ftn25', fopened)
+      if (.not.fopened)then
+         goto 102
+      endif
+!      open(unit=25,file='ftn25',status='unknown',err=102)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
       read(25,*) twgt, force_max_wgt
@@ -996,6 +1001,43 @@ c
       endif
 
       end subroutine write_discrete_grids
+
+      subroutine write_grid(name)
+c************************************************************************
+c     Write out the grid
+c************************************************************************
+      implicit none
+
+      character*(*) name
+
+      include 'genps.inc'
+
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
+      common /sample_common/
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
+
+      double precision twgt, maxwgt,swgt(maxevents)
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
+
+      double precision    grid(2, ng, 0:maxinvar)
+      common /data_grid/ grid
+
+      double precision force_max_wgt
+      common/unwgt_secondary_max/force_max_wgt
+
+      integer i,j
+
+      open(26, file='ftn26',status='unknown')
+      write(26,fmt='(4f21.17)') ((grid(2,i,j),i=1,ng),j=1,invar)
+      write(26,*) twgt, force_max_wgt
+c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
+      call write_discrete_grids(26,'ref')
+      close(26)
+      return
+      end
+
 
       subroutine read_discrete_grids(stream_id)
 c************************************************************************
@@ -1714,7 +1756,7 @@ c         if (kn .eq. events) then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
-         if (non_zero .eq. events .or. (kn .gt. 200*events .and.
+         if (non_zero .ge. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
 
 c          # special mode where we store information to combine them
@@ -1765,8 +1807,8 @@ c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
 c               vol = 1d0/(knt*itm)
-               sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
-     .              / dble(knt-1) / dble(knt)
+               sigma = DABS((sigma/vol/vol-non_zero*mean*mean*navg)  ! knt replaced by non_zero
+     .              / dble(knt-1) / dble(knt))                       ! DABS is to catch numerical error
             else
 
                sigma = (sigma/vol/vol - knt*mean*mean)
@@ -2179,13 +2221,7 @@ c 129              close(22)
      .              /23X,11HCross sec =,e12.4/
      .              13X,21HChi**2 per DoF.     =,f12.4/1X,79(1H-))
                if (use_cut .ne. 0) then
-               open(26, file='ftn26',status='unknown')
-               write(26,fmt='(4f21.17)')
-     $              ((grid(2,i,j),i=1,ng),j=1,invar)
-               write(26,*) twgt, force_max_wgt
-               call write_discrete_grids(26,'ref')
-c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
-               close(26)
+                   call write_grid('ftn26')
                endif
                call sample_writehtm()
 c               open(unit=22,file=result_file,status='old',

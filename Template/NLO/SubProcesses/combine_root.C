@@ -44,11 +44,13 @@ void combine_root(){
   //can be easily lifted
   int maxfiles=1000;
 
+  int numoffiles;
+  string filenames[maxfiles];
+  string currentdir;
+
   if(fileoffiles.is_open())
     {
-      string filenames[maxfiles];
 
-      int numoffiles;
       fileoffiles >> numoffiles;
 
       if(numoffiles>maxfiles){
@@ -56,7 +58,6 @@ void combine_root(){
 	return;
       }
 
-      string currentdir;
       fileoffiles >> currentdir;
 
       for(int i = 0; i < numoffiles; ++i)
@@ -122,8 +123,8 @@ void combine_root(){
       int llength = HistoContents.size();
       if(myverbose)cout << "Total number of histograms: " << llength << endl;
 
+      int llength0 = llength;
       if(i==0){
-	int llength0 = llength;
 	for(int j = 0; j <  llength; j++){
 	  TString histname = HistoContents[j]->GetName();
 	  if(myverbose){
@@ -186,7 +187,7 @@ void combine_root(){
   if(myverbose){
     cout << " " << endl;
     cout << "List of final histograms " << endl;
-    cout << FinalFile.GetListOfKeys()->Print() << endl;
+    FinalFile.GetListOfKeys()->Print();
   }
   FinalFile.Close();
   

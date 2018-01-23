@@ -86,7 +86,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                 process.get('NLO_mode') not in ['virt', 'loop','noborn']:
             sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
-        elif process.get('NLO_mode')=='noborn':
+        elif process.get('NLO_mode')=='noborn' or \
+            (process.get('NLO_mode')=='virt' and not process.get('has_born')):
             # For loop-induced processes, make sure to create the Tag based on
             # the contracted diagram
             sorted_tags = sorted([cls(d.get_contracted_loop_diagram(model,
@@ -976,7 +977,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 " not been computed yet for this wavefunction and an"+\
                 " alohaModel was not specified, so that the information"+\
                 " cannot be retrieved."
-        
         result = None
         
         if info=="interaction_rank" and len(self['mothers'])==0:

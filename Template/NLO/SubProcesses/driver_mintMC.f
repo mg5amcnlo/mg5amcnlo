@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,7 +11,6 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -55,7 +55,9 @@ c Vegas stuff
       double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
 
-      double precision weight
+      double precision weight,event_weight,inv_bias
+      character*7 event_norm
+      common /event_normalisation/event_norm
 c For MINT:
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
      $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
@@ -147,6 +149,8 @@ c Only do the reweighting when actually generating the events
          doreweight=do_rwgt_scale.or.do_rwgt_pdf
       else
          doreweight=.false.
+         do_rwgt_scale=.false.
+         do_rwgt_pdf=.false.
       endif
       if (abrv(1:4).eq.'virt') then
          only_virt=.true.
@@ -206,6 +210,7 @@ c
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
          write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
@@ -262,6 +267,7 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          
 c If integrating the virtuals alone, we include the virtuals in
 c ans(1). Therefore, no need to have them in ans(5) and we have to set
@@ -312,7 +318,11 @@ c Mass-shell stuff. This is MC-dependent
          if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
-         read (99,*) nevts
+         if (event_norm(1:4).ne.'bias') then
+            read (99,*) nevts
+         else
+            read (99,*) nevts,event_weight
+         endif
          close(99)
          write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
@@ -355,7 +365,11 @@ c fill the information for the write_header_init common block
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
 
-         weight=(ans(1,1)+ans(5,1))/ncall
+         if (event_norm(1:4).ne.'bias') then
+            weight=(ans(1,1)+ans(5,1))/ncall
+         else
+            weight=event_weight
+         endif
 
          if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
      $        abrv(1:4).ne.'virt') then
@@ -390,8 +404,13 @@ c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
+            if (event_norm(1:4).eq.'bias') then
+               call include_inverse_bias_wgt(inv_bias)
+               weight=event_weight*inv_bias
+            endif
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
+         call deallocate_weight_lines
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
          write (*,*) 'Generation efficiencies:',x(1),x(4)
@@ -487,10 +506,6 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 c timing statistics
       include "timing_variables.inc"
       data tOLP/0.0/
-      data tFastJet/0.0/
-      data tPDF/0.0/
-      data tDSigI/0.0/
-      data tDSigR/0.0/
       data tGenPS/0.0/
       data tBorn/0.0/
       data tIS/0.0/
@@ -701,11 +716,11 @@ c These should be ignored (but kept for 'historical reasons')
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
             abrv='born'
-            if (ickkw.eq.3) then
-               write (*,*) 'FxFx merging not possible with'/
-     $              /' [LOonly=QCD] processes'
-               stop 1
-            endif
+c$$$            if (ickkw.eq.3) then
+c$$$               write (*,*) 'FxFx merging not possible with'/
+c$$$     $              /' [LOonly=QCD] processes'
+c$$$               stop 1
+c$$$            endif
          endif
       endif
       if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
@@ -724,14 +739,7 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         write(*,*) 'Error BW setting: not supported at NLO'
-         stop 1
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end
@@ -744,12 +752,11 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
-c From dsample_fks
+      use weight_lines
       implicit none
       include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
@@ -957,9 +964,11 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-
+         
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
+c Include the weight from the bias_function
+         call include_bias_wgt
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
@@ -984,7 +993,6 @@ c summed explicitly and which by MC-ing.
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight_all.inc'
       include 'nFKSconfigs.inc'
       double precision lum,dlum
       external dlum
@@ -1008,19 +1016,12 @@ c summed explicitly and which by MC-ing.
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
      $        /' Born PS point (sum=0)'
       endif
-      maxproc_save=0
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
          xbk(1)=0.5d0
          xbk(2)=0.5d0
          lum=dlum()  ! updates IPROC
-         maxproc_save=max(maxproc_save,IPROC)
-         if (doreweight) then
-            call reweight_settozero()
-            call reweight_settozero_all(nFKSprocess*2,.true.)
-            call reweight_settozero_all(nFKSprocess*2-1,.true.)
-         endif
       enddo
       write (*,*) 'Total number of FKS directories is', fks_configs
 c For sum over identical FKS pairs, need to find the identical structures

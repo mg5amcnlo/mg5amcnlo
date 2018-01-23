@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import division
+from madgraph.interface import reweight_interface
 
 ################################################################################
 #
@@ -1634,11 +1635,15 @@ class width_estimate(object):
                 self.ask_edit_cards(['param_card'],[], plot=False)
         
         
+        commandline = 'import model %s' % model.get('modelpath+restriction') 
+        if not model.mg5_name:
+            commandline += ' --modelname'
+        cmd.exec_cmd(commandline)
+
         line = 'compute_widths %s %s' % \
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
 
         #pattern for checking complex mass scheme.
         has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''', re.M)
@@ -2038,7 +2043,7 @@ class decay_all_events(object):
         pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
         if not options["use_old_dir"] or not os.path.exists(pickle_info):
             self.generate_all_matrix_element()
-            save_load_object.save_to_file(pickle_info,
+            self.save_to_file(pickle_info,
                                           (self.all_ME,self.all_decay,self.width_estimator))
         else:
             try:
@@ -2046,7 +2051,7 @@ class decay_all_events(object):
             except Exception,error:
                 logger.debug(str(error))
                 self.generate_all_matrix_element()
-                save_load_object.save_to_file(pickle_info,
+                self.save_to_file(pickle_info,
                                           (self.all_ME,self.all_decay,self.width_estimator))                
         
         if not self.options["onlyhelicity"] and self.options['spinmode'] != 'onshell':
@@ -2055,7 +2060,10 @@ class decay_all_events(object):
             self.extract_resonances_mass_width(resonances) 
 
         self.compile()
-        
+    
+    def save_to_file(self, *args):
+        return save_load_object.save_to_file(*args)
+    
     def get_MC_masses(self):
         
         MC_masses={}
@@ -2682,56 +2690,11 @@ class decay_all_events(object):
         start = time.time()
         commandline=''
         for proc in processes:
-            # deal with @ syntax need to move it after the decay specification
-            if '@' in proc:
-                proc, proc_nb = proc.split('@')
-                try:
-                    proc_nb = int(proc_nb)
-                except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                proc_nb = '@ %i' % proc_nb 
+            if '[' in proc:
+                commandline += reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
             else:
-                proc_nb = ''
-                        
-            if ',' in proc:
-                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
-                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
-            
-            if '[' not in proc:
-                commandline+="add process %s %s  --no_warning=duplicate;" % (proc, proc_nb)
-            else:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s %s --no_warning=duplicate;" % (process, proc_nb)
-                if not order:
-                    continue
-                elif not order.startswith('virt='):
-                    if '=' in order:
-                        order = order.split('=',1)[1]
-                    # define the list of particles that are needed for the radiateion
-                    pert = fks_common.find_pert_particles_interactions(
-                         mgcmd._curr_model,pert_order = order)['soft_particles']
-                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
-                    
-                    # check if we have to increase by one the born order
-                    if '%s=' % order in process or '%s<=' % order in process:
-                        result=re.split(' ',process)
-                        process=''
-                        for r in result:
-                            if '%s=' % order in r:
-                                ior=re.split('=',r)
-                                r='%s<=%i' % (order,int(ior[1])+1)
-                            elif '%s<=' % order in r:
-                                ior=re.split('=',r)
-                                r='%s<=%i' % (order,int(ior[1])+1)
-                                                                
-                            process=process+r+' '
-                    #handle special tag $ | / @
-                    result = re.split('([/$@]|\w+<?=\w+)', process, 1)     
-                    if len(result) ==3:
-                        process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order ,split, rest, proc_nb)
-                    else:
-                        commandline +='add process %s pert_%s  %s --no_warning=duplicate;' % (process,order, proc_nb)                                       
+                commandline += 'add process %s; ' % proc
+                               
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         
@@ -2782,64 +2745,38 @@ class decay_all_events(object):
                         decay_text.append(decay)
             decay_text = ', '.join(decay_text)
             commandline = ''
-            
-            
             for proc in processes:
-                # deal with @ syntax need to move it after the decay specification
-                if '@' in proc:
-                    proc, proc_nb = proc.split('@')
-                    try:
-                        proc_nb = int(proc_nb)
-                    except ValueError:
-                        raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                    proc_nb = '@ %i' % proc_nb 
+                if '[' in proc:
+                    new_command = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
+                    new_procs = new_command.split('add process')[1:]
                 else:
-                    proc_nb = '' 
+                    new_procs = [proc]
+                    
+                for new_proc in new_procs:
+                    new_proc= new_proc.strip()
+                    if new_proc.endswith(';'):
+                        new_proc = new_proc[:-1]
                 
-                if '[' not in proc:
-                    nb_comma = proc.count(',')
+                    # deal with @ syntax need to move it after the decay specification
+                    if '@' in new_proc:
+                        baseproc, proc_nb = new_proc.split('@')
+                        try:
+                            proc_nb = int(proc_nb)
+                        except ValueError:
+                            raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                        proc_nb = '@ %i' % proc_nb 
+                    else:
+                        baseproc = new_proc
+                        proc_nb = ''      
+                    nb_comma = baseproc.count(',')
                     if nb_comma == 0:
-                        commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
+                        commandline+="add process %s, %s %s  --no_warning=duplicate;" % (baseproc, decay_text, proc_nb)
                     elif nb_comma == 1:
-                        before, after = proc.split(',')
+                        before, after = baseproc.split(',')
                         commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
                     else:
-                        raise Exception, 'too much decay at MG level. this can not be done for the moment)'
-                else:
-                    process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
-                    if not order:
-                        continue
-                    elif not order.startswith('virt='):
-                        if '=' in order:
-                            order = order.split('=',1)[1]
-                        # define the list of particles that are needed for the radiateion
-                        pert = fks_common.find_pert_particles_interactions(
-                             mgcmd._curr_model,pert_order = order)['soft_particles']
-                        commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
-                        
-                        # check if we have to increase by one the born order
-                        if '%s=' % order in process or '%s<=' % order in process:
-                            result=re.split(' ',process)
-                            process=''
-                            for r in result:
-                                if '%s=' % order in r:
-                                    ior=re.split('=',r)
-                                    r='%s=%i' % (order,int(ior[1])+1)
-                                elif '%s<=' % order in r:
-                                    ior=re.split('=',r)
-                                    r='%s<=%i' % (order,int(ior[1])+1)
-                                process=process+r+' '
-                                
-                        #handle special tag $ | / @
-                        result = re.split('([/$@]|\w+<?=\w+)', process, 1)                    
-                        if len(result) ==3:
-                            process, split, rest = result
-                            commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
-                                  (process, order, split, rest, decay_text, proc_nb)
-                        else:
-                            commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
-                                               (process, order, decay_text, proc_nb)
+                        raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
+
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -4071,56 +4008,15 @@ class decay_all_events_onshell(decay_all_events):
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
-        logger.info('generating the production square matrix element')
+        logger.info('generating the production square matrix element for onshell')
         start = time.time()
         commandline=''
         for proc in processes:
-            # deal with @ syntax need to move it after the decay specification
-            if '@' in proc:
-                proc, proc_nb = proc.split('@')
-                try:
-                    proc_nb = int(proc_nb)
-                except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                proc_nb = '@ %i' % proc_nb 
+            if '[' in proc:
+                commandline += reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
             else:
-                proc_nb = ''
-                        
-            if ',' in proc:
-                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
-                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
+                commandline += 'add process %s ;' % proc               
             
-            if '[' not in proc:
-                commandline+="add process %s %s  --no_warning=duplicate;" % (proc, proc_nb)
-            else:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s %s --no_warning=duplicate;" % (process, proc_nb)
-                if not order:
-                    continue
-                elif not order.startswith('virt='):
-                    if '=' in order:
-                        order = order.split('=',1)[1]
-                    # define the list of particles that are needed for the radiateion
-                    pert = fks_common.find_pert_particles_interactions(
-                         mgcmd._curr_model,pert_order = order)['soft_particles']
-                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
-                    
-                    # check if we have to increase by one the born order
-                    if '%s=' % order in process:
-                        result=re.split(' ',process)
-                        process=''
-                        for r in result:
-                            if '%s=' % order in r:
-                                ior=re.split('=',r)
-                                r='QCD=%i' % (int(ior[1])+1)
-                            process=process+r+' '
-                    #handle special tag $ | / @
-                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
-                    if len(result) ==3:
-                        process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order ,split, rest, proc_nb)
-                    else:
-                        commandline +='add process %s pert_%s  %s --no_warning=duplicate;' % (process,order, proc_nb)                                       
 #        commandline = commandline.replace('add process', 'generate',1)
 #        logger.info(commandline)
 #        
@@ -4150,59 +4046,40 @@ class decay_all_events_onshell(decay_all_events):
         decay_text = ', '.join(decay_text)
 #        commandline = ''
         
-        
         for proc in processes:
-            # deal with @ syntax need to move it after the decay specification
-            if '@' in proc:
-                proc, proc_nb = proc.split('@')
-                try:
-                    proc_nb = int(proc_nb)
-                except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                proc_nb = '@ %i' % proc_nb 
+            if '[' in proc:
+                new_command = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
+                new_procs = new_command.split('add process')[1:]
             else:
-                proc_nb = '' 
+                new_procs = [proc]
+                
+            for new_proc in new_procs:
+                new_proc= new_proc.strip()
+                if new_proc.endswith(';'):
+                    new_proc = new_proc[:-1]
             
-            if '[' not in proc:
-                nb_comma = proc.count(',')
+                
+                # deal with @ syntax need to move it after the decay specification
+                if '@' in new_proc:
+                    baseproc, proc_nb = new_proc.split('@')
+                    try:
+                        proc_nb = int(proc_nb)
+                    except ValueError:
+                        raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                    proc_nb = '@ %i' % proc_nb 
+                else:
+                    baseproc = new_proc
+                    proc_nb = '' 
+                    
+                nb_comma = baseproc.count(',')
                 if nb_comma == 0:
-                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
+                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (baseproc, decay_text, proc_nb)
                 elif nb_comma == 1:
-                    before, after = proc.split(',')
+                    before, after = baseproc.split(',')
                     commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
                 else:
-                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'
-            else:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
-                if not order:
-                    continue
-                elif not order.startswith('virt='):
-                    if '=' in order:
-                        order = order.split('=',1)[1]
-                    # define the list of particles that are needed for the radiateion
-                    pert = fks_common.find_pert_particles_interactions(
-                         mgcmd._curr_model,pert_order = order)['soft_particles']
-                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
-                    
-                    # check if we have to increase by one the born order
-                    if '%s=' % order in process:
-                        result=re.split(' ',process)
-                        process=''
-                        for r in result:
-                            if '%s=' % order in r:
-                                ior=re.split('=',r)
-                                r='QCD=%i' % (int(ior[1])+1)
-                            process=process+r+' '
-                    #handle special tag $ | / @
-                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
-                    if len(result) ==3:
-                        process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
-                              (process, order, split, rest, decay_text, proc_nb)
-                    else:
-                        commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
-                                           (process, order, decay_text, proc_nb)
+                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
+        
 #        commandline = commandline.replace('add process', 'generate',1)
 #        logger.info(commandline)
 #        mgcmd.exec_cmd(commandline, precmd=True)
@@ -4263,7 +4140,6 @@ class decay_all_events_onshell(decay_all_events):
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))  
         self.all_me = {}
-        
         # store information about matrix element
         for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
             me_string = matrix_element.get('processes')[0].shell_string()
@@ -4278,7 +4154,6 @@ class decay_all_events_onshell(decay_all_events):
                 tag = (tuple(initial), tuple(final))
                 self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order}
 
-
         return self.all_me
     
 
@@ -4290,6 +4165,10 @@ class decay_all_events_onshell(decay_all_events):
         misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
 
+    def save_to_file(self, *args):
+        import sys
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            return super(decay_all_events_onshell,self).save_to_file(*args) 
 
     
     

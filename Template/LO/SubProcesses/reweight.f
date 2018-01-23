@@ -465,13 +465,15 @@ c***************************************************
       return
       end
 
-      logical function setclscales(p)
+      logical function setclscales(p, keepq2bck)
 c**************************************************
 c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
+c     keepq2bck allow to not reset the parameter q2bck
 c**************************************************
       implicit none
 
+      logical keepq2bck
       include 'message.inc'
       include 'genps.inc'
       include 'maxconfigs.inc'
@@ -952,8 +954,10 @@ c     We have a qcd line going through the whole event, use single scale
       if(.not. fixed_fac_scale) then
          q2fact(1)=scalefact**2*q2fact(1)
          q2fact(2)=scalefact**2*q2fact(2)
-         q2bck(1)=q2fact(1)
-         q2bck(2)=q2fact(2)
+         if (.not.keepq2bck)then
+            q2bck(1)=q2fact(1)
+            q2bck(2)=q2fact(2)
+         endif
          if (btest(mlevel,3))
      $      write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
       endif
@@ -1259,7 +1263,7 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p)) then ! assign the correct id information.
+      if(.not.setclscales(p,.true.)) then ! assign the correct id information.(preserve q2bck)
          write(*,*) "Fail to cluster the events from the rewgt function"
          stop 1
 c        rewgt = 0d0

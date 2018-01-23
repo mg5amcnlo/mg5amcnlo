@@ -57,7 +57,7 @@ j=%(directory)s
      for((try=1;try<=16;try+=1)); 
      do
 	 if [ "$keeplog" = true ] ; then
-             ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+             %(Ppath)s/madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
 	     status_code=${PIPESTATUS[0]};
              if [ -s $k ]
              then
@@ -66,7 +66,7 @@ j=%(directory)s
 		 echo $try > fail.log 
              fi
 	 else
-	     ../madevent 2>&1 >> log.txt <input_sg.txt | tee -a log.txt;
+	     %(Ppath)s/madevent 2>&1 >> log.txt <input_sg.txt | tee -a log.txt;
 	     status_code=${PIPESTATUS[0]};
 	     if [ -s log.txt ]
              then
@@ -89,7 +89,7 @@ j=%(directory)s
      if [ "$keeplog" = true ] ; then
 	 echo "" >> $k; echo "ls status:" >> $k; ls >> $k	 
      else
-	 rm ftn26 > /dev/null
+	 rm ftn26 &> /dev/null
      fi
 
 

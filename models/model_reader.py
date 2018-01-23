@@ -62,6 +62,7 @@ class ModelReader(loop_base_objects.LoopModel):
         couplings, plus add new dictionary coupling_dict from
         parameter name to value."""
 
+        param_card_text = None
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
         # Read in param_card
@@ -75,14 +76,14 @@ class ModelReader(loop_base_objects.LoopModel):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-                
             if isinstance(param_card, basestring):
                 # Check that param_card exists
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error, "No such file %s" % param_card
+                param_card_text = param_card
                 param_card = card_reader.ParamCard(param_card)
-#            misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
-#            assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
+            #misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
+            #assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
             
             if complex_mass_scheme is None:
                 if aloha.complex_mass:
@@ -98,37 +99,64 @@ class ModelReader(loop_base_objects.LoopModel):
             
             if set(key) != set(parameter_dict.keys()):
                 # the two card are different. check if this critical
-
                 fail = True
-                missing_block = ','.join(set(parameter_dict.keys()).difference(set(key)))
-                unknow_block = ','.join(set(key).difference(set(parameter_dict.keys())))
+                missing_set = set(parameter_dict.keys()).difference(set(key))
+                unknow_set = set(key).difference(set(parameter_dict.keys()))
+                missing_block = ','.join(missing_set)
+                unknow_block = ','.join(unknow_set)
                 
-                
-                    
+    
                 msg = '''Invalid restriction card (not same block)
     %s != %s.
     Missing block: %s
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              missing_block, unknow_block)
+                apply_conversion = []
+                
                 if not missing_block:
                     logger.warning("Unknow type of information in the card: %s" % unknow_block)
                     fail = False
-                elif msg =="Invalid restriction card (not same block)\n    set(['yu', 'umix', 'ae', 'ad', 'decay', 'nmix', 'ye', 'sbotmix', 'msoft', 'yd', 'vmix', 'au', 'mass', 'alpha', 'modsel', 'sminputs', 'staumix', 'stopmix', 'hmix']) != set(['umix', 'msoft', 'msu2', 'fralpha', 'msd2', 'msl2', 'decay', 'tu', 'selmix', 'td', 'te', 'usqmix', 'dsqmix', 'ye', 'yd', 'sminputs', 'yu', 'mse2', 'nmix', 'vmix', 'msq2', 'mass', 'hmix']).\n    Missing block: te,msl2,dsqmix,tu,selmix,msu2,msq2,usqmix,td,fralpha,mse2,msd2\n    Unknown block : ae,ad,sbotmix,au,alpha,modsel,staumix,stopmix" \
-                  or self['name'].startswith('mssm-') or self['name'] == 'mssm':
-                    if not set(parameter_dict.keys()).difference(set(key)):
+                elif self['name'].startswith('mssm-') or self['name'] == 'mssm':
+                    if not missing_set:
                         fail = False
                     else:
-                        # FOR MSSM allow for automatic conversion to correct format 
-                        try:
+                        apply_conversion.append('to_slha2')
+                        overwrite = False
+                elif missing_set == set(['fralpha']) and 'alpha' in unknow_set:
+                    apply_conversion.append('alpha')
+                elif  self.need_slha2(missing_set, unknow_set):
+                    apply_conversion.append('to_slha2')
+                    overwrite = True
+                    
+                if apply_conversion:
+                    try:
+                        if 'to_slha2' in apply_conversion:
+                            if overwrite:
+                                logger.error('Convention for the param_card seems to be wrong. Trying to automatically convert your file to SLHA2 format. \n'+\
+                                 "Please check that the conversion occurs as expected (The converter is not fully general)")
+                                import time
+                                time.sleep(5)
+                            
                             param_card = param_card.input_path
                             param_card = card_reader.convert_to_mg5card(param_card,
-                                                                         writting=False)
+                                                                         writting=overwrite)
                             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                                     and not k.startswith('decay_table')]
                             if not set(parameter_dict.keys()).difference(set(key)):
                                 fail = False
-                        except Exception:
-                            raise MadGraph5Error, msg
+                        if 'alpha' in apply_conversion:
+                            logger.info("Missing block fralpha but found a block alpha, apply automatic conversion")
+                            param_card.rename_blocks({'alpha':'fralpha'})
+                            param_card['fralpha'].rename_keys({(): (1,)})
+                            param_card.write(param_card.input_path)
+                            key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
+                                                    and not k.startswith('decay_table')]
+                            if not set(parameter_dict.keys()).difference(set(key)):
+                                fail = False
+                    except Exception:
+                        raise
+                        raise MadGraph5Error, msg
+                        
                 
                 if fail:
                     raise MadGraph5Error, msg
@@ -136,20 +164,20 @@ class ModelReader(loop_base_objects.LoopModel):
             for block in key:
                 if block not in parameter_dict:
                     continue
-                for id in parameter_dict[block]:
+                for pid in parameter_dict[block]:
                     try:
-                        value = param_card[block].get(id).value
+                        value = param_card[block].get(pid).value
                     except:
-                        raise MadGraph5Error, '%s %s not define' % (block, id)
+                        raise MadGraph5Error, '%s %s not define' % (block, pid)
                     else:
                         if isinstance(value, str) and value.lower() == 'auto':
                             value = '0.0' 
-                        if scale and parameter_dict[block][id].name == 'aS':
+                        if scale and parameter_dict[block][pid].name == 'aS':
                             runner = Alphas_Runner(value, nloop=2)
                             value = runner(scale)
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
                                           value))
-                        parameter_dict[block][id].value = float(value)
+                        parameter_dict[block][pid].value = float(value)
            
         else:
             # No param_card, use default values
@@ -234,6 +262,10 @@ class ModelReader(loop_base_objects.LoopModel):
         else:
             return self.get('parameter_dict')[pdg_code.get('mass')].real
     
+    def need_slha2(self, missing_set, unknow_set):
+    
+        return all([b in missing_set for b in ['te','msl2','dsqmix','tu','selmix','msu2','msq2','usqmix','td', 'mse2','msd2']]) and\
+                     all(b in unknow_set for b in ['ae','ad','sbotmix','au','modsel','staumix','stopmix'])
     
 class Alphas_Runner(object):
     """Evaluation of strong coupling constant alpha_S"""
@@ -291,6 +323,8 @@ class Alphas_Runner(object):
     c2 = [0.453013579178645, 0.30879037953664, 0.14942733137107]
     # DEL=SQRT(4*C2-C1**2)
     d = [1.22140465909230, 0.99743079911360, 0.66077962451190]
+
+
     
     def newton1(self, t, alphas, nf):
         """calculate a_out using nloop beta-function evolution 

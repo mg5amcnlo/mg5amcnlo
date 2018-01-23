@@ -29,6 +29,7 @@ import time
 import shutil
 import traceback
 import gzip as ziplib
+from distutils.version import LooseVersion, StrictVersion
 
 try:
     # Use in MadGraph
@@ -148,6 +149,53 @@ def get_time_info():
                  'fill': ' ' * (26 - len(creation_time))}
 
     return time_info
+
+
+#===============================================================================
+# Test the compatibility of a given version of MA5 with this version of MG5
+#===============================================================================
+def is_MA5_compatible_with_this_MG5(ma5path):
+    """ Returns None if compatible or, it not compatible, a string explaining 
+    why it is so."""
+
+    ma5_version = None
+    try:
+        for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
+            if line.startswith('MA5 version :'):
+                ma5_version=LooseVersion(line[13:].strip())
+                break
+    except:
+        ma5_version = None
+
+    if ma5_version is None:
+        reason = "No MadAnalysis5 version number could be read from the path supplied '%s'."%ma5path
+        reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
+        return reason
+        
+    mg5_version = None
+    try:
+        info = get_pkg_info()        
+        mg5_version = LooseVersion(info['version'])
+    except:
+        mg5_version = None
+    
+    # If version not reckognized, then carry on as it's probably a development version
+    if not mg5_version:
+        return None
+    
+    if mg5_version < LooseVersion("2.6.1") and ma5_version >= LooseVersion("1.6.32"):
+        reason =  "This active MG5aMC version is too old (v%s) for your selected version of MadAnalysis5 (v%s)"%(mg5_version,ma5_version)
+        reason += "\nUpgrade MG5aMC or re-install MA5 from within MG5aMC to fix this compatibility issue."
+        reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
+        return reason
+
+    if mg5_version >= LooseVersion("2.6.1") and ma5_version < LooseVersion("1.6.32"):
+        reason = "Your selected version of MadAnalysis5 (v%s) is too old for this active version of MG5aMC (v%s)."%(ma5_version,mg5_version)
+        reason += "\nRe-install MA5 from within MG5aMC to fix this compatibility issue."
+        reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
+        return reason
+
+    return None
 
 #===============================================================================
 # Find the subdirectory which includes the files ending with a given extension 
@@ -1358,7 +1406,10 @@ def equal(a,b,sig_fig=6, zero_limit=True):
     if isinstance(sig_fig, int):
         if not a or not b:
             if zero_limit:
-                power = sig_fig + 1
+                if zero_limit is not True:
+                    power = zero_limit
+                else:
+                    power = sig_fig + 1
             else:
                 return a == b  
         else:
@@ -1755,8 +1806,12 @@ def is_plugin_supported(obj):
 It has been validated for the last time with version: %s""",
                                         name, '.'.join(str(i) for i in val_ver))
     else:
-        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
-        plugin_support[name] = False
+        if __debug__:
+            logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
+            plugin_support[name] = True            
+        else:
+            logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
+            plugin_support[name] = False
     return plugin_support[name]
     
 
@@ -1797,8 +1852,61 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
     
     
 
+def plugin_import(module, error_msg, fcts=[]):
+    """convenient way to import a plugin file/function"""
+    
+    try:
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+    except ImportError:
+        try:
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        except ImportError:
+            raise MadGraph5Error, error_msg
+    
+    if not fcts:
+        return _temp
+    elif len(fcts) == 1:
+        return getattr(_temp,fcts[0])
+    else:
+        return [getattr(_temp,name) for name in fcts]
 
-
+def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
+                       info=None):
+    """return the class associated with keyname for a given plugin class
+    if keyname is None, return all the name associated"""
+    
+    validname = []
+    for plugpath in plugin_path:
+        plugindirname = os.path.basename(plugpath)
+        for plug in os.listdir(plugpath):
+            if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
+                try:
+                    with stdchannel_redirected(sys.stdout, os.devnull):
+                        __import__('%s.%s' % (plugindirname,plug))
+                except Exception, error:
+                    if warning:
+                        logger.warning("error detected in plugin: %s.", plug)
+                        logger.warning("%s", error)
+                    continue
+                plugin = sys.modules['%s.%s' % (plugindirname,plug)] 
+                if hasattr(plugin, target_type):
+                    if not is_plugin_supported(plugin):
+                        continue
+                    if keyname is None:
+                        validname += getattr(plugin, target_type).keys()
+                    else:
+                        if keyname in getattr(plugin, target_type):
+                            if not info:
+                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:color:BLACK')
+                            else:
+                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:color:BLACK')
+                            return getattr(plugin, target_type)[keyname]
+                        
+    if not keyname:
+        return validname
+    
+    
+    
 
 python_lhapdf=None
 def import_python_lhapdf(lhapdfconfig):
@@ -1868,6 +1976,20 @@ def import_python_lhapdf(lhapdfconfig):
     else:
         python_lhapdf = None
     return python_lhapdf
+
+def newtonmethod(f, df, x0, error=1e-10,maxiter=10000):
+    """implement newton method for solving f(x)=0, df is the derivate"""
+    x = x0
+    iter=0
+    while abs(f(x)) > error:
+        iter+=1
+        x = x - f(x)/df(x)
+        if iter ==maxiter:
+            sprint('fail to solve equation')
+            raise Exception
+    return x
+
+
 
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
