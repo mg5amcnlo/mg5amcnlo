@@ -4538,6 +4538,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line[0:begidx])
         if args[-1] in ['Auto', 'default']:
             return
+
         if len(args) == 1:
             allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'','shortcut':''}
             if self.has_mw:
@@ -4575,12 +4576,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'delphes_card':'default'}
             else:
                 allowed = {'value':''}
+
         else:
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
                             'madanalysis5_parton_card','madanalysis5_hadron_card']:
                 start = 2
+
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
             elif args[start] in self.param_card.keys() or args[start] == 'width':
@@ -4624,6 +4627,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
+
 
             possibilities['Run Card'] = self.list_completion(text, opts)
 
@@ -4670,6 +4674,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
                 opts.append('Auto@NLO')
+            if args[-1] in self.run_set:
+                allowed_for_run = []
+                if args[-1].lower() in self.run_card.allowed_value:
+                    allowed_for_run = self.run_card.allowed_value[args[-1].lower()]
+                    if '*' in allowed_for_run: 
+                        allowed_for_run.remove('*')
+                elif isinstance(self.run_card[args[-1]], bool):
+                    allowed_for_run = ['True', 'False']
+                opts += [str(i) for i in  allowed_for_run]
+                
+
             possibilities['Special Value'] = self.list_completion(text, opts)
 
         if 'block' in allowed.keys():
@@ -4727,7 +4742,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
         return self.deal_multiple_categories(possibilities, formatting)
-
+         
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         

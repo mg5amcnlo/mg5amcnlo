@@ -941,6 +941,8 @@ class ConfigFile(dict):
         self.list_parameter = {} #key -> type of list (int/float/bool/str/...
         self.dict_parameter = {}
         self.comments = {} # comment associated to parameters. can be display via help message
+        # store the valid options for a given parameter.
+        self.allowed_value = {}
         
         self.default_setup()
         
@@ -1035,7 +1037,7 @@ class ConfigFile(dict):
                     new_value += current
  
                             
-                            
+                           
                 value = new_value                           
                 
             elif not hasattr(value, '__iter__'):
@@ -1045,6 +1047,40 @@ class ConfigFile(dict):
             #format each entry    
             values =[self.format_variable(v, targettype, name=name) 
                                                                  for v in value]
+            
+            # ensure that each entry are in the allowed list
+            if lower_name in self.allowed_value and '*' not in self.allowed_value[lower_name]:
+                new_values = []
+                dropped = []
+                for val in values:
+                    allowed = self.allowed_value[lname]
+            
+                    if val in allowed:
+                        new_values.append(val)
+                        continue
+                    elif isinstance(val, str):
+                        val = val.lower()
+                        allowed = allowed.lower()
+                        if value in allowed:
+                            i = allowed.find(value)
+                            new_values.append(self.allowed_value[i])
+                            continue
+                    # no continue -> bad input
+                    dropped.append(val)
+                    
+                if not new_values:
+                    logger.warning("value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'." \
+                               % (value, name, self[lower_name]))
+                    logger.warning("allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
+                    return
+                elif dropped:               
+                    logger.warning("some value for entry '%s' are not valid. Invalid item are: '%s'." \
+                               % (value, name, dropped))
+                    logger.warning("value will be set to %s" % new_values)
+                    logger.warning("allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
+                values = new_values
+
+            # make the assignment
             dict.__setitem__(self, lower_name, values) 
             if change_userdefine:
                 self.user_set.add(lower_name)
@@ -1115,11 +1151,38 @@ class ConfigFile(dict):
             return
     
         value = self.format_variable(value, targettype, name=name)
+        #check that the value is allowed:
+        if lower_name in self.allowed_value and '*' not in self.allowed_value[lower_name]:
+            valid = False
+            allowed = self.allowed_value[lower_name]
+            
+            # check if the current value is allowed or not (set valid to True)
+            if value in allowed:
+                valid=True     
+            elif isinstance(value, str):
+                value = value.lower()
+                allowed = allowed.lower()
+                if value in allowed:
+                    i = allowed.find(value)
+                    value = self.allowed_value[i]
+                    valid=True
+                    
+            if not valid:
+                # act if not valid:
+                logger.warning("value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'." \
+                               % (value, name, self[lower_name]))
+                logger.warning("allowed values are %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]]))
+                if lower_name in self.comments:
+                    logger.warning('type "help %s" for more information' % name)
+                return
+
         dict.__setitem__(self, lower_name, value)
         if change_userdefine:
             self.user_set.add(lower_name)
 
-    def add_param(self, name, value, system=False, comment=False, typelist=None):
+
+    def add_param(self, name, value, system=False, comment=False, typelist=None,
+                  allowed=[]):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1146,7 +1209,12 @@ class ConfigFile(dict):
             if '__type__' in value:
                 del value['__type__']
                 dict.__setitem__(self, lower_name, value)
-                
+        
+        if allowed and allowed != ['*']:
+            self.allowed_value[lower_name] = allowed
+            assert value in allowed or '*' in allowed
+        #elif isinstance(value, bool) and allowed != ['*']:
+        #    self.allowed_value[name] = [True, False]
                    
         if system:
             self.system_only.add(lower_name)
@@ -1167,7 +1235,14 @@ class ConfigFile(dict):
             out += "## This value is considered as been set by the user\n" 
         else:
             out += "## This value is considered as been set by the system\n"
+        if name.lower() in self.allowed_value:
+            if '*' not in self.allowed_value:
+                out += "Allowed value are: %s\n" % ','.join([str(p) for p in self.allowed_value[name.lower()]])
+            else:
+                out += "Suggested value are : %s\n " % ','.join([str(p) for p in self.allowed_value[name.lower()] if p!='*'])
+        
         logger.info(out)
+        return out
 
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
@@ -2123,6 +2198,12 @@ class RunCard(ConfigFile):
         legacy:Parameter which is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         sys_default: default used if the parameter is not in the card
+        
+        options of **opts:
+        - allowed: list of valid options. '*' means anything else should be allowed.
+                 empty list means anything possible as well. 
+        - comment: add comment for writing/help
+        - typelist: type of the list if default is empty
         """
 
         super(RunCard, self).add_param(name, value, system=system,**opts)
@@ -2143,7 +2224,7 @@ class RunCard(ConfigFile):
         if sys_default is not None:
             self.system_default[name] = sys_default
 
-
+        
 
     def read(self, finput, consistency=True):
         """Read the input file, this can be a path to a file, 
@@ -2268,12 +2349,6 @@ class RunCard(ConfigFile):
         else:
             return self[name]   
 
-    @staticmethod
-    def format(formatv, value):
-        """for retro compatibility"""
-        
-        logger.debug("please use f77_formatting instead of format")
-        return self.f77_formatting(value, formatv=formatv)
     
     @staticmethod
     def f77_formatting(value, formatv=None):
@@ -2473,12 +2548,16 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False, hidden=True)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
-        self.add_param("lpp1", 1, fortran_name="lpp(1)")
-        self.add_param("lpp2", 1, fortran_name="lpp(2)")
+        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
+                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
+        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],
+                       comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
-        self.add_param("polbeam1", 0.0, fortran_name="pb1")
-        self.add_param("polbeam2", 0.0, fortran_name="pb2")
+        self.add_param("polbeam1", 0.0, fortran_name="pb1",
+                                              comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
+        self.add_param("polbeam2", 0.0, fortran_name="pb2",
+                                              comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param("pdlabel", "nn23lo1")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
@@ -2486,7 +2565,8 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy")
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
+                                                allowed=[-1,0,1,2,3,4])
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -2494,7 +2574,7 @@ class RunCardLO(RunCard):
                 
         #matching
         self.add_param("scalefact", 1.0)
-        self.add_param("ickkw", 0,                                              comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")
+        self.add_param("ickkw", 0, allowed=[0,1],                               comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")
         self.add_param("highestmult", 1, fortran_name="nhmult", hidden=True)
         self.add_param("ktscheme", 1, hidden=True)
         self.add_param("alpsfact", 1.0)
@@ -2503,7 +2583,8 @@ class RunCardLO(RunCard):
         self.add_param("asrwgtflavor", 5,                                       comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
-        self.add_param("event_norm", "average", include=False, sys_default='sum')
+        self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
+                        include=False, sys_default='sum')
         #cut
         self.add_param("auto_ptj_mjj", False)
         self.add_param("bwcutoff", 15.0)
@@ -2643,7 +2724,7 @@ class RunCardLO(RunCard):
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
-        self.add_param('job_strategy', 0, hidden=True, include=False)
+        self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
