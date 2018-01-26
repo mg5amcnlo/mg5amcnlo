@@ -110,7 +110,7 @@ c Calculated a new value: replace the value computed longest ago
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       if(ih.eq.1) then
-         if (ibeam.eq.1)then
+         if (beamid.eq.1)then
             nb_proton = nb_proton1
             nb_neutron = nb_neutron1
          else
@@ -121,11 +121,11 @@ c     be saved
             if (ipart.eq.1)then
                call evolvepart(1,x,xmu,tmp1)
                call evolvepart(2,x,xmu,tmp2)
-               pdg2pdf = nb_protron * tmp1 + nb_neutron * tmp2
+               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
             else if (ipart.eq.-1)then
                call evolvepart(-1,x,xmu,tmp1)
                call evolvepart(-2,x,xmu,tmp2)
-               pdg2pdf = nb_protron * tmp1 + nb_neutron * tmp2
+               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
             else if (ipart.eq.2)then
                call evolvepart(1,x,xmu,tmp1)
                call evolvepart(2,x,xmu,tmp2)

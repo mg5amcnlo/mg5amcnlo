@@ -1,4 +1,4 @@
-      double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
+ 1    double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
 c***************************************************************************
@@ -125,7 +125,7 @@ c     be saved
 c
 c
 c
-      if (ibeam.eq.1)then
+      if (beamid.eq.1)then
          nb_proton = nb_proton1
          nb_neutron = nb_neutron1
       else
@@ -135,12 +135,12 @@ c
       if (nb_proton.gt.1.or.nb_neutron.ne.0)then
          tmp1 = pdflast(1, ireuse)
          tmp2 = pdflast(2, ireuse)
-         pdflast(1, ireuse) = nb_protron * tmp1 + nb_neutron * tmp2
-         pdflast(2, ireuse) = nb_protron * tmp2 + nb_neutron * tmp2
+         pdflast(1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
+         pdflast(2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
          tmp1 = pdflast(-1, ireuse)
          tmp2 = pdflast(-2, ireuse)
-         pdflast(-1, ireuse) = nb_protron * tmp1 + nb_neutron * tmp2
-         pdflast(-2, ireuse) = nb_protron * tmp2 + nb_neutron * tmp2
+         pdflast(-1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
+         pdflast(-2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
          do i=3,6
             pdflast(i, ireuse) = (nb_proton+nb_neutron)*pdflast(i, ireuse)
             pdflast(-i, ireuse) = (nb_proton+nb_neutron)*pdflast(-i, ireuse)
