@@ -65,6 +65,15 @@ C
       common/to_MC_grouped_subproc/MC_grouped_subproc
 
 C
+C     block for heavy ion beam
+C
+      integer nb_proton1, nb_proton2
+      integer nb_neutron1, nb_neutron2
+      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, nb_neutron2
+      double precision mass_ion1, mass_ion2
+      common/to_heavyion_mass/mass_ion1, mass_ion2
+
+C
 C Controls what are the PDGs included in the CKKWl merging procedure, i.e. what
 C are the PDGs subject to the ktdurham cut
 C

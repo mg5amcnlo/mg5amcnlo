@@ -1,4 +1,4 @@
-      double precision function pdg2pdf(ih,ipdg,x,xmu)
+      double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
 c***************************************************************************
@@ -8,10 +8,17 @@ c     Arguments
 c
       DOUBLE  PRECISION x,xmu
       INTEGER IH,ipdg
+      integer beamid ! 1 or 2 (for left or right beam)
 C
 C     Include
 C
       include 'pdf.inc'
+c
+      double precision tmp1, tmp2
+      integer nb_proton1, nb_proton2
+      integer nb_neutron1, nb_neutron2
+      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, 
+     &                        nb_neutron2
 C      
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
       integer mode,Irt,i,j
@@ -123,71 +130,7 @@ c     saved. 'pdflast' is filled below.
          return
       endif
       
-      if (pdlabel(1:5) .eq. 'cteq3') then
-C     
-         if (pdlabel .eq. 'cteq3_m') then
-            mode=1
-         elseif (pdlabel .eq. 'cteq3_l') then
-            mode=2
-         elseif (pdlabel .eq. 'cteq3_d') then
-            mode=3
-         endif
-
-         
-         if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
-     $      ipart=sign(3-iabs(ipart),ipart)
-
-         pdg2pdf=Ctq3df(mode,ipart,x,xmu,Irt)/x
-
-         if(ipdg.ge.1.and.ipdg.le.2)
-     $      pdg2pdf=pdg2pdf+Ctq3df(mode,-ipart,x,xmu,Irt)/x
-
-C     
-      elseif (pdlabel(1:5) .eq. 'cteq4') then
-C     
-         if (pdlabel .eq. 'cteq4_m') then
-            mode=1
-         elseif (pdlabel .eq. 'cteq4_d') then
-            mode=2
-         elseif (pdlabel .eq. 'cteq4_l') then
-            mode=3
-         elseif (pdlabel .eq. 'cteq4a1') then
-            mode=4
-         elseif (pdlabel .eq. 'cteq4a2') then
-            mode=5
-         elseif (pdlabel .eq. 'cteq4a3') then
-            mode=6
-         elseif (pdlabel .eq. 'cteq4a4') then
-            mode=7
-         elseif (pdlabel .eq. 'cteq4a5') then
-            mode=8
-         elseif (pdlabel .eq. 'cteq4hj') then
-            mode=9
-         elseif (pdlabel .eq. 'cteq4lq') then
-            mode=10
-         endif
-         
-         if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
-     $      ipart=sign(3-iabs(ipart),ipart)
-
-         pdg2pdf=Ctq4Fn(mode,ipart,x,xmu)
-C
-      elseif (pdlabel .eq. 'cteq5l1') then
-C
-         if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
-     $      ipart=sign(3-iabs(ipart),ipart)
-
-         pdg2pdf=Ctq5L(ipart,x,xmu)
-C         
-      elseif ((pdlabel(1:5) .eq. 'cteq5') .or. 
-     .        (pdlabel(1:4) .eq. 'ctq5')) then
-C         
-         if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
-     $      ipart=sign(3-iabs(ipart),ipart)
-
-         pdg2pdf=Ctq5Pdf(ipart,x,xmu)
-C                  
-      elseif (pdlabel(1:5) .eq. 'cteq6') then
+      if (pdlabel(1:5) .eq. 'cteq6') then
 C         
          if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
      $      ipart=sign(3-iabs(ipart),ipart)

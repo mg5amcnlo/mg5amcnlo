@@ -1,4 +1,4 @@
-      double precision function pdg2pdf(ih,ipdg,x,xmu)
+      double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
 c***************************************************************************
@@ -8,11 +8,19 @@ c     Arguments
 c
       DOUBLE  PRECISION x,xmu
       INTEGER IH,ipdg
+      integer beamid
 C
 C     Include
 C
       include 'pdf.inc'
-C      
+C
+      double precision tmp1, tmp2
+      integer nb_proton1, nb_proton2
+      integer nb_neutron1, nb_neutron2
+      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, 
+     &                        nb_neutron2
+      integer nb_proton, nb_neutron      
+c
       integer i,j,ihlast(2),ipart,iporg,ireuse,imemlast(2),iset,imem
       double precision xlast(2),xmulast(2),pdflast(-7:7,2)
       save ihlast,xlast,xmulast,pdflast,imemlast
@@ -114,6 +122,30 @@ c     xlast(i) are initialized as data statements to be equal to -99d9
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       call pftopdglha(ih,x,xmu,pdflast(-7,ireuse))
+c
+c
+c
+      if (ibeam.eq.1)then
+         nb_proton = nb_proton1
+         nb_neutron = nb_neutron1
+      else
+         nb_proton = nb_proton2
+         nb_neutron = nb_neutron2
+      endif
+      if (nb_proton.gt.1.or.nb_neutron.ne.0)then
+         tmp1 = pdflast(1, ireuse)
+         tmp2 = pdflast(2, ireuse)
+         pdflast(1, ireuse) = nb_protron * tmp1 + nb_neutron * tmp2
+         pdflast(2, ireuse) = nb_protron * tmp2 + nb_neutron * tmp2
+         tmp1 = pdflast(-1, ireuse)
+         tmp2 = pdflast(-2, ireuse)
+         pdflast(-1, ireuse) = nb_protron * tmp1 + nb_neutron * tmp2
+         pdflast(-2, ireuse) = nb_protron * tmp2 + nb_neutron * tmp2
+         do i=3,6
+            pdflast(i, ireuse) = (nb_proton+nb_neutron)*pdflast(i, ireuse)
+            pdflast(-i, ireuse) = (nb_proton+nb_neutron)*pdflast(-i, ireuse)
+         enddo
+      endif
       xlast(ireuse)=x
       xmulast(ireuse)=xmu
       ihlast(ireuse)=ih

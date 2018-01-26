@@ -1053,7 +1053,7 @@ class ConfigFile(dict):
                 new_values = []
                 dropped = []
                 for val in values:
-                    allowed = self.allowed_value[lname]
+                    allowed = self.allowed_value[lower_name]
             
                     if val in allowed:
                         new_values.append(val)
@@ -1071,13 +1071,13 @@ class ConfigFile(dict):
                 if not new_values:
                     logger.warning("value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'." \
                                % (value, name, self[lower_name]))
-                    logger.warning("allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
+                    logger.warning("allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]]))
                     return
                 elif dropped:               
                     logger.warning("some value for entry '%s' are not valid. Invalid item are: '%s'." \
                                % (value, name, dropped))
                     logger.warning("value will be set to %s" % new_values)
-                    logger.warning("allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
+                    logger.warning("allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]]))
                 values = new_values
 
             # make the assignment
@@ -1236,7 +1236,7 @@ class ConfigFile(dict):
         else:
             out += "## This value is considered as been set by the system\n"
         if name.lower() in self.allowed_value:
-            if '*' not in self.allowed_value:
+            if '*' not in self.allowed_value[name.lower()]:
                 out += "Allowed value are: %s\n" % ','.join([str(p) for p in self.allowed_value[name.lower()]])
             else:
                 out += "Suggested value are : %s\n " % ','.join([str(p) for p in self.allowed_value[name.lower()] if p!='*'])
@@ -2558,6 +2558,17 @@ class RunCardLO(RunCard):
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param("polbeam2", 0.0, fortran_name="pb2",
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
+        self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],
+                       comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],
+                       comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
+        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 125 , '*'],
+                       comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 125 , '*'],
+                       comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
+        self.add_param('mass_ion1', -1.0, hidden=True, comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
+        self.add_param('mass_ion2', -1.0, hidden=True, comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
+        
         self.add_param("pdlabel", "nn23lo1")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
@@ -2749,7 +2760,7 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
         self.add_param('mxxmin4pdg',[-1.], hidden=True, system=True)
         self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
-        # Not implemetented right now (double particle cut)
+        # Not implemetJob has already finishedented right now (double particle cut)
         #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
         # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
         #self.add_param('M_max_pdg',[0.], hidden=True, system=True)               
