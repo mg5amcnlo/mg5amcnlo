@@ -8,6 +8,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - add comment that can be displayed via "help NAME"
             - add autocompletion for some parameter
             - add direct rejection of parameter edition if not in some allowed list/range
+      RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
+
 
 2.6.1 (12/12/17)
 

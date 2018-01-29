@@ -2952,8 +2952,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         value = super(MadGraphCmd, self).do_quit(line)
         if madgraph.ReadWrite: #prevent to run on Read Only disk
             self.do_install('update --mode=mg5_end')
-        print
-
         misc.EasterEgg('quit')
         
         

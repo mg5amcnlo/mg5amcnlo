@@ -260,13 +260,13 @@ class CmdExtended(common_run.CommonRunCmd):
         """If a ME run is currently running add a link in the html output"""
 
         self.add_error_log_in_html()
-        cmd.Cmd.nice_user_error(self, error, line)            
+        return cmd.Cmd.nice_user_error(self, error, line)            
         
     def nice_config_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
         self.add_error_log_in_html()
-        cmd.Cmd.nice_config_error(self, error, line)
+        stop = cmd.Cmd.nice_config_error(self, error, line)
         
         
         try:
@@ -275,6 +275,7 @@ class CmdExtended(common_run.CommonRunCmd):
             debug_file.close()
         except:
             pass 
+        return stop
             
 
     def nice_error_handling(self, error, line):
@@ -309,13 +310,14 @@ class CmdExtended(common_run.CommonRunCmd):
                     pass
         else:
             self.add_error_log_in_html()            
-            cmd.Cmd.nice_error_handling(self, error, line)
+            stop = cmd.Cmd.nice_error_handling(self, error, line)
             try:
                 debug_file = open(self.debug_output, 'a')
                 debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
                 debug_file.close()
             except:
                 pass
+            return stop
         
         
 #===============================================================================
@@ -5838,8 +5840,8 @@ tar -czf split_$1.tar.gz split_$1
 
     def do_quit(self, *args, **opts):
         
-        common_run.CommonRunCmd.do_quit(self, *args, **opts)
-        return CmdExtended.do_quit(self, *args, **opts)
+        return common_run.CommonRunCmd.do_quit(self, *args, **opts)
+        #return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
     def treat_CKKW_matching(self):
