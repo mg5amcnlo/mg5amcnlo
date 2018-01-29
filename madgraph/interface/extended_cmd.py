@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __builtin__ import True
 """  A file containing different extension of the cmd basic python library"""
 
 
@@ -1020,6 +1021,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.child = obj_instance
         self.child.mother = self
         
+        
         #ensure that notification are sync:
         self.child.allow_notification_center = self.allow_notification_center
 
@@ -1323,9 +1325,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                 self.options['crash_on_error']:
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
+            
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            return True 
+        if self.use_rawinput == False or self.inputfile:
+            return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+                
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True 
+        
         return False
 
 
@@ -1348,9 +1359,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                 self.options['crash_on_error']:
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
+
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
+        if self.use_rawinput == False or self.inputfile:
             return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True                
+            
         # Remove failed command from history
         self.history.pop()
         return False
@@ -1384,9 +1403,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
         
-        #stop the execution if on a non interactive mode                                
-        if self.use_rawinput == False:
+        #stop the execution if on a non interactive mode
+        if self.use_rawinput == False or self.inputfile:
             return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True                             
+
         # Remove failed command from history                                            
         if self.history:
             self.history.pop()
@@ -1429,26 +1455,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             me_dir = os.path.basename(me_dir) + ' '
         
         misc.EasterEgg('error')
-            
+
         try:
             raise 
-        except self.InvalidCmd as error:            
+        except self.InvalidCmd as error:
             if __debug__:
-                self.nice_error_handling(error, line)
+                stop = self.nice_error_handling(error, line)
                 self.history.pop()
             else:
-                self.nice_user_error(error, line)
+                stop = self.nice_user_error(error, line)
+
             if self.allow_notification_center:
                 misc.apple_notify('Run %sfailed' % me_dir,
                               'Invalid Command: %s' % error.__class__.__name__)
 
         except self.ConfigurationError as error:
-            self.nice_config_error(error, line)
+            stop = self.nice_config_error(error, line)
             if self.allow_notification_center:
                 misc.apple_notify('Run %sfailed' % me_dir,
                               'Configuration error')
         except Exception as error:
-            self.nice_error_handling(error, line)
+            stop = self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
             if self.allow_notification_center:
@@ -1459,6 +1486,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if __debug__:
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
+        
+        if stop:
+            self.do_quit('all')
         
 
 
@@ -1707,12 +1737,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         elif self.mother:
             self.mother.child = None
             if line == 'all':
+                self.mother.do_quit('all')
                 pass
             elif line:
                 level = int(line) - 1
                 if level:
                     self.mother.lastcmd = 'quit %s' % level
-        logger.info(' ')
+        elif self.inputfile:
+            for line in self.inputfile:
+                logger.warning('command not executed: %s' % line)
+
         return True
 
     # Aliases

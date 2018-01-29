@@ -915,6 +915,7 @@ class ProcCard(list):
             else:
                 fsock.write(line+"\n")
  
+class InvalidCardEdition(InvalidCmd): pass 
  
 class ConfigFile(dict):
     """ a class for storing/dealing with input file.
@@ -984,11 +985,30 @@ class ConfigFile(dict):
     def items(self):
         return [(name,self[name]) for name in self]
         
+    @staticmethod
+    def warn(text, level, raiseerror=False):
+        """convenient proxy to raiseerror/print warning"""
+
+        if raiseerror is True:
+            raise InvalidCardEdition(text)
+        elif raiseerror:
+            raise raiseerror(text)
+
+        if isinstance(level,str):
+            log = getattr(logger, level.lower())
+        elif isinstance(level, int):
+            log = lambda t: logger.log(level, t)
+        elif level:
+            log = level
+        
+        return log(text)
+
     
-    def __setitem__(self, name, value, change_userdefine=False):
+    def __setitem__(self, name, value, change_userdefine=False,raiseerror=False):
         """set the attribute and set correctly the type if the value is a string.
            change_userdefine on True if we have to add the parameter in user_set
         """
+                        
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()
@@ -998,7 +1018,8 @@ class ConfigFile(dict):
         lower_name = name.lower() 
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
-            logger.critical('%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name]))
+            text='%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name])
+            self.warn(text, 'critical', raiseerror)
             return
         
         #1. check if the parameter is set to auto -> pass it to special
@@ -1043,7 +1064,9 @@ class ConfigFile(dict):
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
-                raise Exception, "not being able to handle dictionary in card entry"
+                text = "not being able to handle dictionary in card entry"
+                return self.warn(text, 'critical', raiseerror)
+
             #format each entry    
             values =[self.format_variable(v, targettype, name=name) 
                                                                  for v in value]
@@ -1053,7 +1076,7 @@ class ConfigFile(dict):
                 new_values = []
                 dropped = []
                 for val in values:
-                    allowed = self.allowed_value[lname]
+                    allowed = self.allowed_value[lower_name]
             
                     if val in allowed:
                         new_values.append(val)
@@ -1069,15 +1092,16 @@ class ConfigFile(dict):
                     dropped.append(val)
                     
                 if not new_values:
-                    logger.warning("value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'." \
-                               % (value, name, self[lower_name]))
-                    logger.warning("allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
-                    return
-                elif dropped:               
-                    logger.warning("some value for entry '%s' are not valid. Invalid item are: '%s'." \
-                               % (value, name, dropped))
-                    logger.warning("value will be set to %s" % new_values)
-                    logger.warning("allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lname]]))
+                    text= "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                               % (value, name, self[lower_name])
+                    text += "allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
+                    return self.warn(text, 'warning', raiseerror)
+                elif dropped:  
+                    text = "some value for entry '%s' are not valid. Invalid item are: '%s'.\n" \
+                               % (value, name, dropped)
+                    text += "value will be set to %s" % new_values
+                    text += "allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])        
+                    self.warn(text, 'warning')
                 values = new_values
 
             # make the assignment
@@ -1169,12 +1193,12 @@ class ConfigFile(dict):
                     
             if not valid:
                 # act if not valid:
-                logger.warning("value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'." \
-                               % (value, name, self[lower_name]))
-                logger.warning("allowed values are %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]]))
+                text = "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                               % (value, name, self[lower_name])
+                text += "allowed values are %s\n" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                 if lower_name in self.comments:
-                    logger.warning('type "help %s" for more information' % name)
-                return
+                    text += 'type "help %s" for more information' % name
+                return self.warn(text, 'warning', raiseerror)
 
         dict.__setitem__(self, lower_name, value)
         if change_userdefine:
@@ -1349,7 +1373,7 @@ class ConfigFile(dict):
         return dict.__getitem__(self, name.lower())
 
     
-    def set(self, name, value, changeifuserset=True, user=False):
+    def set(self, name, value, changeifuserset=True, user=False, raiseerror=False):
         """convenient way to change attribute.
         changeifuserset=False means that the value is NOT change is the value is not on default.
         user=True, means that the value will be marked as modified by the user 
@@ -1362,7 +1386,7 @@ class ConfigFile(dict):
                 #value modified by the user -> do nothing
                 return
             
-        self.__setitem__(name, value, change_userdefine=user) 
+        self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
  
 
 
