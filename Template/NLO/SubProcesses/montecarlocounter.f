@@ -2445,11 +2445,7 @@ c
          write(*,*)'Fatal error in emscafun'
          stop
       endif
-      if(r.ne.0.5d0)then
-         emscainv=(r-sqrt(r-r**2))/(2*r-1)
-      else
-         emscainv=0.5d0
-      endif
+      emscainv=sqrt(r)/(sqrt(r)+sqrt(1d0-r))
       return
       end
 

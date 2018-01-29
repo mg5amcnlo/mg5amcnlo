@@ -467,7 +467,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return out
+            return list(set(out))
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
@@ -1210,6 +1210,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         elif path:
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
+                return line
+            if line.startswith(('http', 'www')):
                 return line
         elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
             for entry in question_instance.allow_arg:
@@ -2365,6 +2367,7 @@ class ControlSwitch(SmartQuestion):
             allowed_args += opts['allow_arg']
             del opts['allow_arg']
 
+        allowed_args +=["0", "done"]
         SmartQuestion.__init__(self, question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
 

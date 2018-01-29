@@ -662,7 +662,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.configure_run_mode(self.options['run_mode'])
 
         # update the path to the PLUGIN directory of MG%
-        if MADEVENT and 'mg5_path' in self.options :
+        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
             mg5dir = self.options['mg5_path']
             if mg5dir not in sys.path:
                 sys.path.append(mg5dir)
@@ -2190,6 +2190,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
+        cmd.options.update(self.options)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
@@ -4142,6 +4143,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_ml = False   
         self.has_shower = False
         self.has_PY8 = False
+        self.has_delphes = False
         self.paths = {}
 
     
@@ -4226,7 +4228,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif '%s_card.dat' % name in cards:
                 return True
             else:
-                return False
+                cardnames = [os.path.basename(p) for p in cards]
+                if '%s_card.dat' % name in cardnames:
+                    return True
+                else:       
+                    return False
             
         elif isinstance(cards, dict) and name in cards:
             self.paths[name]= cards[name]
@@ -4247,6 +4253,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.pname2block = {}
         self.restricted_value = {}
         if not self.get_path('param', cards):
+            misc.sprint("no param", self.get_path('param', cards), cards)
             return []
         
         try:
@@ -4671,6 +4678,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line[0:begidx])
         if args[-1] in ['Auto', 'default']:
             return
+
         if len(args) == 1:
             allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'','shortcut':''}
             if self.has_mw:
@@ -4690,7 +4698,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'run_card':'default'}
             elif args[1] == 'param_card':
                 allowed = {'block':'all', 'param_card':'default'}
-            elif args[1] in self.param_card.keys():
+            elif self.param_card and args[1] in self.param_card.keys():
                 allowed = {'block':args[1]}
             elif args[1] == 'width':
                 allowed = {'block': 'decay'}
@@ -4708,12 +4716,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'delphes_card':'default'}
             else:
                 allowed = {'value':''}
+
         else:
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
                             'madanalysis5_parton_card','madanalysis5_hadron_card']:
                 start = 2
+
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
             elif args[start] in self.param_card.keys() or args[start] == 'width':
@@ -4757,6 +4767,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
+
 
             possibilities['Run Card'] = self.list_completion(text, opts)
 
@@ -4803,14 +4814,26 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
                 opts.append('Auto@NLO')
+            if args[-1] in self.run_set:
+                allowed_for_run = []
+                if args[-1].lower() in self.run_card.allowed_value:
+                    allowed_for_run = self.run_card.allowed_value[args[-1].lower()]
+                    if '*' in allowed_for_run: 
+                        allowed_for_run.remove('*')
+                elif isinstance(self.run_card[args[-1]], bool):
+                    allowed_for_run = ['True', 'False']
+                opts += [str(i) for i in  allowed_for_run]
+                
+
             possibilities['Special Value'] = self.list_completion(text, opts)
 
-        if 'block' in allowed.keys():
-            if allowed['block'] == 'all':
+        if 'block' in allowed.keys() and self.param_card:
+            if allowed['block'] == 'all' and self.param_card:
                 allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
                 allowed_block.append('width')
                 possibilities['Param Card Block' ] = \
                                        self.list_completion(text, allowed_block)
+                
             elif isinstance(allowed['block'], basestring):
                 block = self.param_card[allowed['block']].param_dict
                 ids = [str(i[0]) for i in block
@@ -4860,7 +4883,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
         return self.deal_multiple_categories(possibilities, formatting)
-
+         
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
@@ -5603,6 +5626,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        
         if not param_card:
             return False
 
@@ -5822,13 +5846,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock, path = tempfile.mkstemp()
             try:
                 text = urllib.urlopen(line.strip())
+                url = line.strip()
             except Exception:
                 logger.error('fail to load the file')
             else:
                 for line in text:
                     os.write(fsock, line)
                 os.close(fsock)
-                self.copy_file(path)
+                self.copy_file(path, pathname=url)
                 os.remove(path)
                 
                 
@@ -6162,8 +6187,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
 
 
-    def copy_file(self, path):
+    def copy_file(self, path, pathname=None):
         """detect the type of the file and overwritte the current file"""
+        
+        if not pathname:
+            pathname = path
         
         if path.endswith('.lhco'):
             #logger.info('copy %s as Events/input.lhco' % (path))
@@ -6181,9 +6209,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if card_name == 'unknown':
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
-            logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, self.paths[card_name.split('_',1)[0]])
-            self.reload_card(self.paths[card_name.split('_',1)[0]])
+            logger.info('copy %s as %s' % (pathname, card_name))
+            files.cp(path, self.paths[card_name.rsplit('_',1)[0]])
+            self.reload_card(self.paths[card_name.rsplit('_',1)[0]])
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')

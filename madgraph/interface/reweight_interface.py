@@ -217,6 +217,10 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # split the line definition with the part before and after the NLO tag
         process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        if process.strip().startswith(('generate', 'add process')):
+            process = process.replace('generate', '')
+            process = process.replace('add process','')
+        
         # add the part without any additional jet.
         commandline="add process %s %s --no_warning=duplicate;" % (process, final)
         if not order:
@@ -258,13 +262,16 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
         elif order.startswith(('noborn=')):
             # pass in sqrvirt=
-            return "add process %s ;" % proc.replace('noborn=', 'sqrvirt=')
+            return "add process %s [%s] %s;" % (process, order.replace('noborn=', 'sqrvirt='), final)
         elif order.startswith('LOonly'):
             #remove [LOonly] flag
             return "add process %s %s;" % (process, final)
         else:
             #just return the input. since this Madloop.
-            return "add process %s ;" % proc                                       
+            if order:
+                return "add process %s [%s] %s ;" % (process, order,final)
+            else:
+                return "add process %s %s ;" % (process, final)
         return commandline
 
 
@@ -384,7 +391,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 os.mkdir(self.rwgt_dir)
             self.rwgt_dir = os.path.abspath(self.rwgt_dir)
         elif args[0] == 'systematics':
-            if self.output_type == 'default':
+            if self.output_type == 'default' and args[1].lower() not in ['none', 'off']:
                 logger.warning('systematics can only be computed for non default output type. pass to output mode \'2.0\'')
                 self.output_type = '2.0'
             if len(args) == 2:
@@ -1768,7 +1775,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         for i in range(len(pdg)):
                             if pdg[i] == oldpdg[i]:
                                 continue
-                            if not self.model:
+                            if not self.model or not getattr(self.model, 'get_mass'):
                                 continue
                             if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
                                 continue

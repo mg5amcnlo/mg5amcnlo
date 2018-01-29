@@ -1,13 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-      OM: introduce "update to_full" command to display all the hidden parameter
 
-2.6.1 (XX/XX/17)
+2.6.2 ()
+      OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
+      OM: introduce "update to_full" command to display all the hidden parameter
+      OM: improve handling of (some) run_card parameter:
+            - add comment that can be displayed via "help NAME"
+            - add autocompletion for some parameter
+            - add direct rejection of parameter edition if not in some allowed list/range
+
+2.6.1 (12/12/17)
+
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
              to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
       OM: Re-factoring the code asking which program to use (both at LO and NLO)
           - design modular, designed for PLUGIN interactions
           - the length of the question auto adapts to the size of the shell
+      OM: Allowing to have the gridpack stored on a readonly filesystem
       OM: Fix a bug in matching/merging forbiding the pdf reweighting for some processes (since 2.4.0)
       OM: Creation of online database with the name of known UFO model. If a use try to import a model
           which does not exits locally, the code will automatically check that database and download the 
@@ -19,14 +28,14 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: A fail of importing a UFO model does not try anymore to import v4 model
       OM: Many model present in models directory have been removed, however they can still be imported
           since they are available via automatic-download
-      OM: Allowing to have the gridpack stored on a readonly filesystem
       OM: Refactoring of the gridpack functionality with an infinite loop to reach the requested number of events
       OM+RF: Adding new class of cut at LO/NLO defined via the pdg of the particle
       VH: Support for the latest version of MA5
-      MZ: Adding support for lhapdf v2
+      MZ: Adding support for lhapdf v6.2
       OM: Fixing various bug in the spinmode=onshell mode of MadSpin
       OM: Fix a bug for model with 4 fermion in presence of restrict_card
       OM: Fix aloha bug in presence of complex form-factor.
+      OM: improve auto-detection and handling of slha1/slha2 input file when expecting slha2. 
 
 2.6.0 (16/08/17)
       New Functionalities:

@@ -1301,7 +1301,24 @@ class AskRunNLO(cmd.ControlSwitch):
 #
 #   MadAnalysis5
 #    
-    get_allowed_madanalysis = get_allowed_madspin
+    def get_allowed_madanalysis(self):
+        
+        if hasattr(self, 'allowed_madanalysis'):
+            return self.allowed_madanalysis
+        
+        self.allowed_madanalysis = []
+        
+        
+        if 'MA5' not in self.available_module:
+            return self.allowed_madanalysis
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.available_module.remove('MA5')
+            self.allowed_madanalysis = ['OFF']
+            return self.allowed_madanalysis
+        else:
+            self.allowed_madanalysis = ['OFF', 'ON']
+            return  self.allowed_madanalysis
     
     def set_default_madanalysis(self):
         """initialise the switch for reweight"""
@@ -2602,7 +2619,13 @@ RESTART = %(mint_mode)s
             logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-            misc.call(['./combine_root.sh'] + folder_name, \
+            rootfiles = []
+            for job in jobs:
+                if job['dirname'].endswith('.root'):
+                    rootfiles.append(job['dirname'])
+                else:
+                    rootfiles.append(pjoin(job['dirname'],'MADatNLO.root'))
+            misc.call(['./combine_root.sh'] + folder_name + rootfiles, \
                       stdout=devnull, 
                       cwd=pjoin(self.me_dir, 'SubProcesses'))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),

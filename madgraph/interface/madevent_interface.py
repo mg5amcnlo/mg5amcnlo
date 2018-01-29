@@ -652,9 +652,11 @@ class AskRun(cmd.ControlSwitch):
         
         self.set_default_shower() #ensure that this one is called first!
         
-        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6':
+        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6'\
+                  and os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
             self.switch['detector'] = 'PGS'
-        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF':
+        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF'\
+              and os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
             self.switch['detector'] = 'Delphes'
         elif self.get_allowed_detector():
             self.switch['detector'] = 'OFF'

@@ -2783,7 +2783,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge',
                     'EWscheme',
-                    'max_npoint_for_channel']
+                    'max_npoint_for_channel',
+                    'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
@@ -2842,7 +2843,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None,
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
-                          'max_npoint_for_channel': 0 # 0 means automaticly adapted
+                          'max_npoint_for_channel': 0, # 0 means automaticly adapted
+                          'default_unset_couplings': 99 # 99 means infinity
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -4550,10 +4552,22 @@ This implies that with decay chains:
                     constrained_orders[name] = (value, type)
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
-                                          
+             
             line = order_re.group('before')
             order_re = order_pattern.match(line)          
-            
+        
+        # handle the case where default is not 99 and some coupling defined
+        if self.options['default_unset_couplings'] != 99 and \
+                                                     (orders or squared_orders): 
+                           
+                to_set = [name for name in self._curr_model.get('coupling_orders')
+                          if name not in orders and name not in squared_orders]
+                if to_set:
+                    logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
+                            (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:color:BLACK')
+                for name in to_set:
+                    orders[name] = self.options['default_unset_couplings']
+        
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
             raise self.InvalidCmd, \
@@ -5466,16 +5480,10 @@ This implies that with decay chains:
                                                   HepToolsInstaller_web_address)
             # Guess if it is a local or web address
             if '//' in HepToolsInstaller_web_address:
-                if sys.platform == "darwin":
-                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
-                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                misc.wget(HepToolsInstaller_web_address,
+                          pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'),
+                          stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
                                                                          cwd=MG5DIR)
-                else:
-                    misc.call(['wget', HepToolsInstaller_web_address, 
-                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
-                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             else:
                 # If it is a local tarball, then just copy it
                 shutil.copyfile(HepToolsInstaller_web_address,
@@ -5917,10 +5925,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
-        if sys.platform == "darwin":
-            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
-        else:
-            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+        misc.wget(path[args[0]], '%s.tgz' % name, cwd=MG5DIR)
 
         # Untar the file
         returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
@@ -6149,8 +6154,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
-                misc.call(['curl', target, '-otd.tgz'],
-                                                  cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'tg.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
@@ -6164,7 +6168,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'td', cwd=pjoin(MG5DIR,'td'))
             os.chmod(pjoin(MG5DIR,'td','td'), 0775)
             self.options['td_path'] = pjoin(MG5DIR,'td')
 
@@ -6225,6 +6229,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         def apply_patch(filetext):
             """function to apply the patch"""
             text = filetext.read()
+            
             pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #=== renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
@@ -6350,7 +6355,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             pattern=re.compile('''^=== link file \'(?P<new>[^\']*)\' \'(?P<old>[^\']*)\'''', re.M)
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
-                        files.ln(old, os.path.dirname(new), os.path.basename(new))
+                        files.ln(pjoin(MG5DIR,old), os.path.dirname(pjoin(MG5DIR,new)), os.path.basename(new))
 
             # Re-compile CutTools and IREGI
             if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
@@ -6500,7 +6505,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             for i in range(data['version_nb'], web_version):
                 try:
                     filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
-#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
                 except Exception:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
@@ -6509,10 +6513,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if need_binary:
                     path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
-                    if sys.platform == "darwin":
-                        misc.call(['curl', path, '-o%s.tgz' % name], cwd=MG5DIR)
-                    else:
-                        misc.call(['wget', path, '--output-document=%s.tgz'% name], cwd=MG5DIR)
+                    misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
                     returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
                                      stdout=open(os.devnull, 'w'))
@@ -7217,6 +7218,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'default_unset_couplings':
+            self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
         elif args[0] == 'f2py_compiler':
             if args[1] != 'None':
                 if log:
@@ -7514,7 +7517,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # That applies only if there is more than one subprocess of course.
             if self._curr_amps[0].get_ninitial() == 1 and \
                                                      len(self._curr_amps)>1:
-                processes = [amp.get('process') for amp in self._curr_amps]            
+                
+                processes = [amp.get('process') for amp in self._curr_amps if 'process' in  amp.keys()]
                 if len(set(proc.get('id') for proc in processes))!=len(processes):
                     # Special warning for loop-induced
                     if any(proc['perturbation_couplings'] != [] for proc in
@@ -8037,6 +8041,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         #
         # add info from decay module
         #
+        
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()
@@ -8067,6 +8072,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
+                me_cmd.options.update(self.options)
+                me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)
                 me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False

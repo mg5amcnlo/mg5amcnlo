@@ -362,8 +362,18 @@ class Systematics(object):
         self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
         if self.output.name != self.output_path:
-            import shutil
-            shutil.move(self.output.name, self.output_path)
+            #check problem for .gz missinf in output.name
+            if not os.path.exists(self.output.name) and os.path.exists('%s.gz' % self.output.name):
+                to_check = '%s.gz' % self.output.name
+            else:
+                to_check = self.output.name
+            
+            if to_check != self.output_path:
+                if '%s.gz' % to_check == self.output_path:
+                    misc.gzip(to_check) 
+                else:
+                    import shutil
+                    shutil.move(self.output.name, self.output_path)
         
         return all_cross
         

@@ -1989,7 +1989,13 @@ def newtonmethod(f, df, x0, error=1e-10,maxiter=10000):
             raise Exception
     return x
 
+def wget(http, path, *args, **opt):
+    """a wget function for both unix and mac"""
 
+    if sys.platform == "darwin":
+        return call(['curl', http, '-o%s' % path], *args, **opt)
+    else:
+        return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()

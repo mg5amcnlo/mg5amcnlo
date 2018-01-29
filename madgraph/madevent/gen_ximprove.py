@@ -1108,7 +1108,7 @@ class gen_ximprove_v4(gen_ximprove):
         
         if not jobs:
             return
-        
+
         if not write_dir:
             write_dir =  pjoin(self.me_dir, 'SubProcesses')
         
@@ -1233,6 +1233,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
