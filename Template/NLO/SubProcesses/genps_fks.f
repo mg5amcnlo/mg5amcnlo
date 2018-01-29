@@ -363,6 +363,12 @@ c possible resonance.
       common/fks_indices/i_fks,j_fks
       double precision pmass(nexternal)
       common /to_mass/pmass
+      character*4 abrv
+      common /to_abrv/ abrv
+      character*10 shower_mc
+      common /cMonteCarloType/shower_mc
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 c
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=0
@@ -375,6 +381,12 @@ c By default always try to do the mapping if need be. Change the logical
 c 'do_mapping_granny' to false to never do the phase-space mapping to
 c keep the invariant mass of the granny fixed.
       do_mapping_granny=.true.
+         
+c When doing only the Born, or when matching to Pythia8, never do the
+c granny phase-space mapping.
+      if ( abrv(1:4).eq.'born' .or.
+     &     (nlo_ps .and. shower_mc(1:7).eq.'PYTHIA8') )
+     &        do_mapping_granny=.false.
 
 c Set the minimal tau = x1*x2. This also checks if granny is a resonance
       call set_tau_min()
@@ -593,9 +605,7 @@ c better compute it again to set all the common blocks correctly.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
          endif
-         do i=-2,2
-            jac_cnt(i)=jac_cnt(i)*MC_sum_factor
-         enddo
+         jac=jac*MC_sum_factor
       else
          skip_event_phsp=.false.
          only_event_phsp =.false.
