@@ -1,4 +1,4 @@
- ################################################################################
+################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -1831,8 +1831,8 @@ RESTART = %(mint_mode)s
         files_MC_integer=[]
         location=None
         for job in job_group:
-            files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
-            files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+            files_mint_grids.append(pjoin(job['dirname'],'mint_grids'))
+            files_MC_integer.append(pjoin(job['dirname'],'grid.MC_integer'))
             if not location:
                 location=pjoin(job['dirname'].rsplit('_',1)[0])
             else:
@@ -1843,7 +1843,10 @@ RESTART = %(mint_mode)s
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
         for j,fs in enumerate([files_mint_grids,files_MC_integer]):
-            linesoffiles=[f.readlines() for f in fs]
+            linesoffiles=[]
+            for f in fs:
+                with open(f,'r+') as fi:
+                    linesoffiles.append(fi.readlines())
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 try:
@@ -1877,9 +1880,6 @@ RESTART = %(mint_mode)s
                     floatgrps = zip(*floatsbyfile)
                     averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
                     to_write.append(" ".join(str(a) for a in averages) + "\n")
-            # close the files
-            for f in fs:
-                f.close
             # write the data over the master location
             if j==0:
                 with open(pjoin(location,'mint_grids'),'w') as f:
