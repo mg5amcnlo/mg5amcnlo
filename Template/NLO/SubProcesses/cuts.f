@@ -467,7 +467,7 @@ c
             i_ph=i
         endif
       enddo
-      if (n_ph.eq.0) then
+      if (n_ph.eq.0 .or. (nl.eq.0 .and. nq.eq.0)) then
         ! do nothing
         do j=1,nexternal
           pdg_out(j)=pdg_in(j)
