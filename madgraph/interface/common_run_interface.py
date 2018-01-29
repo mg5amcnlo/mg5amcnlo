@@ -654,7 +654,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.configure_run_mode(self.options['run_mode'])
 
         # update the path to the PLUGIN directory of MG%
-        if MADEVENT and 'mg5_path' in self.options :
+        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
             mg5dir = self.options['mg5_path']
             if mg5dir not in sys.path:
                 sys.path.append(mg5dir)
