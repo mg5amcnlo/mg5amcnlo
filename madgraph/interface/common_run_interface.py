@@ -2168,6 +2168,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
+        cmd.options.update(self.options)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
