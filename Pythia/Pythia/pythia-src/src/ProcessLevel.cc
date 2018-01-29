@@ -1347,19 +1347,6 @@ bool ProcessLevel::checkColours( Event& process) {
   if (!physical) {
     infoPtr->errorMsg("Error in ProcessLevel::checkColours: "
       "incorrect colour assignment");
-
-cout << " in processlevel " << endl;
-cout << " in processlevel " << endl;
-cout << " in processlevel " << endl;
-cout << " in processlevel " << endl;
-cout << " in processlevel " << endl;
-process.list();
-cout << endl;
-cout << endl;
-cout << endl;
-cout << endl;
-
-
     return false;
   }
 

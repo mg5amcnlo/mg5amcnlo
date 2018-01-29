@@ -862,6 +862,256 @@ bool fsr_qed_L2AL::calc(const Event& state, int orderNow) {
 
 // Class inheriting from SplittingQED class.
 
+// SplittingQED function G->QQ (FSR)
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qed_A2QQ1::canRadiate ( const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*){
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRad"]].id() == 22 );
+}
+
+int fsr_qed_A2QQ1::kinMap()                 { return 1;}
+int fsr_qed_A2QQ1::motherID(int)            { return 1;} // Use 1 as dummy variable.
+int fsr_qed_A2QQ1::sisterID(int)            { return 1;} // Use 1 as dummy variable.
+double fsr_qed_A2QQ1::gaugeFactor ( int, int )        { return sumCharge2Tot;}
+double fsr_qed_A2QQ1::symmetryFactor ( int, int )     { return 1.;}
+
+int fsr_qed_A2QQ1::radBefID(int, int){ return 22;}
+pair<int,int> fsr_qed_A2QQ1::radBefCols( int, int, int, int)
+  { return make_pair(0,0); }
+
+// Pick z for new splitting.
+double fsr_qed_A2QQ1::zSplit(double zMinAbs, double zMaxAbs, double) {
+  return (zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs));
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qed_A2QQ1::overestimateInt(double zMinAbs,double zMaxAbs,
+  double, double, int) {
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt  = 2.*preFac * 0.5 * ( zMaxAbs - zMinAbs);
+
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qed_A2QQ1::overestimateDiff(double, double, int) {
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt  = 2.*preFac * 0.5;
+  return wt;
+}
+
+// Return kernel for new splitting.
+bool fsr_qed_A2QQ1::calc(const Event& state, int orderNow) {
+
+  // Dummy statement to avoid compiler warnings.
+  if (false) cout << state[0].e() << orderNow << endl;
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    //m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft);
+  int splitType(splitInfo.type);
+
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  double kappa2 = pT2/m2dip;
+  wt  = preFac 
+      * (pow(1.-z,2.) + pow(z,2.));
+
+  // Correction for massive splittings.
+  bool doMassive = (abs(splitType) == 2);
+
+  if (doMassive) {
+
+    double vijk = 1., pipj = 0.;
+
+    // splitType == 2 -> Massive FF
+    if (splitType == 2) {
+      // Calculate CS variables.
+      double yCS = kappa2 / (1.-z);
+      double nu2Rad = m2Rad/m2dip; 
+      double nu2Emt = m2Emt/m2dip; 
+      double nu2Rec = m2Rec/m2dip; 
+      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
+      vijk          = sqrt(vijk) / (1-yCS);
+      pipj          = m2dip * yCS /2.;
+
+    // splitType ==-2 -> Massive FI
+    } else if (splitType ==-2) {
+      // Calculate CS variables.
+      double xCS = 1 - kappa2/(1.-z);
+      vijk   = 1.; 
+      pipj   = m2dip/2. * (1-xCS)/xCS;
+    }
+
+    // Reset kernel for massive splittings.
+    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
+                                    + m2Emt / ( pipj + m2Emt) );  
+  }
+
+  // Multiply with z to project out part where emitted quark is soft,
+  // and antiquark is identified.
+  wt *= z;
+
+//  // Now divide out alphaS (used in the evolution) and replace with alphaEM.
+//  wt = aem0 / as2Pi(pT2); 
+
+  // Trivial map of values, since kernel does not depend on coupling.
+  map<string,double> wts;
+  wts.insert( make_pair("base", wt ));
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      wts.insert( make_pair("Variations:muRfsrDown", wt ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      wts.insert( make_pair("Variations:muRfsrUp", wt ));
+  }
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+    kernelVals.insert(make_pair( it->first, it->second ));
+
+  return true;
+
+}
+
+//==========================================================================
+
+// Class inheriting from SplittingQED class.
+
+// SplittingQED function G->QQ (FSR)
+
+// Return true if this kernel should partake in the evolution.
+bool fsr_qed_A2QQ2::canRadiate ( const Event& state, map<string,int> ints,
+  map<string,bool>, Settings*, PartonSystems*, BeamParticle*){
+  return ( state[ints["iRad"]].isFinal()
+        && state[ints["iRad"]].id() == 22 );
+}
+
+int fsr_qed_A2QQ2::kinMap()                 { return 1;}
+int fsr_qed_A2QQ2::motherID(int)            { return -1;} // Use -1 as dummy variable.
+int fsr_qed_A2QQ2::sisterID(int)            { return -1;} // Use -1 as dummy variable.
+double fsr_qed_A2QQ2::gaugeFactor ( int, int )        { return sumCharge2Tot;}
+double fsr_qed_A2QQ2::symmetryFactor ( int, int )     { return 1.;}
+
+int fsr_qed_A2QQ2::radBefID(int, int){ return 22;}
+pair<int,int> fsr_qed_A2QQ2::radBefCols( int, int, int, int)
+  { return make_pair(0,0); }
+
+// Pick z for new splitting.
+double fsr_qed_A2QQ2::zSplit(double zMinAbs, double zMaxAbs, double) {
+  return (zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs));
+}
+
+// New overestimates, z-integrated versions.
+double fsr_qed_A2QQ2::overestimateInt(double zMinAbs,double zMaxAbs,
+  double, double, int) {
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt  = 2.*preFac * 0.5 * ( zMaxAbs - zMinAbs);
+
+  return wt;
+}
+
+// Return overestimate for new splitting.
+double fsr_qed_A2QQ2::overestimateDiff(double, double, int) {
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  wt  = 2.*preFac * 0.5;
+  return wt;
+}
+
+// Return kernel for new splitting.
+bool fsr_qed_A2QQ2::calc(const Event& state, int orderNow) {
+
+  // Dummy statement to avoid compiler warnings.
+  if (false) cout << state[0].e() << orderNow << endl;
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    //m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft);
+  int splitType(splitInfo.type);
+
+  double wt = 0.;
+  double preFac = symmetryFactor() * gaugeFactor();
+  double kappa2 = pT2/m2dip;
+  wt  = preFac 
+      * (pow(1.-z,2.) + pow(z,2.));
+
+  // Correction for massive splittings.
+  bool doMassive = (abs(splitType) == 2);
+
+  if (doMassive) {
+
+    double vijk = 1., pipj = 0.;
+
+    // splitType == 2 -> Massive FF
+    if (splitType == 2) {
+      // Calculate CS variables.
+      double yCS = kappa2 / (1.-z);
+      double nu2Rad = m2Rad/m2dip; 
+      double nu2Emt = m2Emt/m2dip; 
+      double nu2Rec = m2Rec/m2dip; 
+      vijk          = pow2(1.-yCS) - 4.*(yCS+nu2Rad+nu2Emt)*nu2Rec;
+      vijk          = sqrt(vijk) / (1-yCS);
+      pipj          = m2dip * yCS /2.;
+
+    // splitType ==-2 -> Massive FI
+    } else if (splitType ==-2) {
+      // Calculate CS variables.
+      double xCS = 1 - kappa2/(1.-z);
+      vijk   = 1.; 
+      pipj   = m2dip/2. * (1-xCS)/xCS;
+    }
+
+    // Reset kernel for massive splittings.
+    wt = preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
+                                    + m2Emt / ( pipj + m2Emt) );  
+  }
+
+  // Multiply with z to project out part where emitted antiquark is soft,
+  // and quark is identified.
+  wt *= (1.-z);
+
+//  // Now divide out alphaS (used in the evolution) and replace with alphaEM.
+//  wt = aem0 / as2Pi(pT2); 
+
+  // Trivial map of values, since kernel does not depend on coupling.
+  map<string,double> wts;
+  wts.insert( make_pair("base", wt ));
+  if (doVariations) {
+    // Create muR-variations.
+    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
+      wts.insert( make_pair("Variations:muRfsrDown", wt ));
+    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
+      wts.insert( make_pair("Variations:muRfsrUp", wt ));
+  }
+
+  // Store kernel values.
+  clearKernels();
+  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
+    kernelVals.insert(make_pair( it->first, it->second ));
+
+  return true;
+
+}
+
+//==========================================================================
+
+// Class inheriting from SplittingQED class.
+
 // SplittingQED function Q->QG (ISR)
 
 // Return true if this kernel should partake in the evolution.

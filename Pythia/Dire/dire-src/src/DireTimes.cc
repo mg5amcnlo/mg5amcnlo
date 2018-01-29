@@ -816,10 +816,6 @@ void DireTimes::update( int iSys, Event& event, bool) {
   // Now update masses and allowed emissions.
   updateDipoles(event);
 
-//event.list();
-//list();
-//abort();
-
 }
 
 //--------------------------------------------------------------------------
@@ -1193,6 +1189,7 @@ void DireTimes::getGenDip( int iSys, int i, int iRadIn,
     // This line in case mother is a rescattered parton.
     while (isrType > 2 + beamOffset) isrType = event[isrType].mother1();
     if (isrType > 2) isrType -= beamOffset;
+
     if (appendDipole( event, iRad, iRecNow, pTmax, 0, 0, 0, 0, isrType,
       (iSys > -1) ? iSys : 0, -1, -1, 0, false)) {
       dipEnds.push_back( DireTimesEnd(dipEnd.back()));
@@ -1382,11 +1379,6 @@ void DireTimes::checkDipoles(const Event& state) {
       DireTimesEnd& dipj = dipEnd[jDip];
       // Check with identical radiator.
       if (dipi.iRadiator == dipj.iRadiator) {
-/*cout << endl << endl << endl << endl << endl << endl;
-cout << __func__ << " i " << state[dipi.iRadiator].id() << " " << state[dipi.iRecoiler].id() << endl;
-dipi.list();
-cout << __func__ << " j " << state[dipj.iRadiator].id() << " " << state[dipj.iRecoiler].id() << endl;
-dipj.list();*/
         // If both dipoles are allowed to radiate gluons, keep only dipoles
         // with colored recoiler.
         bool iEmtGlue = find(dipi.allowedEmissions.begin(),
@@ -1399,11 +1391,11 @@ dipj.list();*/
           bool connectJ = int(sharedColor(state[dipj.iRadiator],
             state[dipj.iRecoiler]).size()) > 0;
           if ( connectI && !connectJ
-            && find(iRemove.begin(), iRemove.end(), jDip) == iRemove.end()) {
-            /*cout << "remove j" << endl;*/ iRemove.push_back(jDip);}
+            && find(iRemove.begin(), iRemove.end(), jDip) == iRemove.end())
+            iRemove.push_back(jDip);
           if (!connectI &&  connectJ
-            && find(iRemove.begin(), iRemove.end(), iDip) == iRemove.end()) {
-            /*cout << "remove i" << endl;*/ iRemove.push_back(iDip);}
+            && find(iRemove.begin(), iRemove.end(), iDip) == iRemove.end())
+            iRemove.push_back(iDip);
         }
 
       }
@@ -1460,7 +1452,6 @@ bool DireTimes::appendAllowedEmissions( const Event& state, DireTimesEnd* dip) {
       if (!it->second->isPartial()) {
         dip->appendAllowedEmt(idEmtAft);
         isAllowed = true;
-//if (it->first.find("Partial")  != string::npos) { state.list(); cout << state[iRad].id() << " " << idEmtAft << endl;}
       } else {
         // Now check that emission also allowed when radiating from recoiler.
         bool isPartialFractioned = false;
@@ -1522,19 +1513,7 @@ double DireTimes::pTnext( Event& event, double pTbegAll, double pTendAll,
   doTrialNow    = doTrialIn;
 
 //cout << __PRETTY_FUNCTION__ << " " << pTbegAll << endl;
-
-int nquarks=0;
-for (int i=0; i < event.size(); ++i)
-if (event[i].isFinal() && event[i].isQuark()) nquarks++;
-
-/*if (nquarks>1){
-cout << "many quarks" << endl;
-event.list();
-list();
-}*/
-
-//cout << __PRETTY_FUNCTION__ << endl;
-//event.list(true);
+//event.list();
 //list();
 
   for (int iDip = 0; iDip < int(dipEnd.size()); ++iDip) {
@@ -1559,9 +1538,6 @@ list();
     dip.m2DipCorr    = dip.m2Dip;
 
     double pT2start = min( dip.m2Dip, pTbegAll*pTbegAll);
-
-//cout << "fsr ptmax " << dip.pTmax << " " << sqrt(pT2start) << endl;
-
     //double pT2stop  = max( pT2colCut, pTendAll*pTendAll);
     double pT2stop  = max( pT2cutMin(&dip), pTendAll*pTendAll);
     pT2stop         = max( pT2stop, pT2sel);
@@ -2091,7 +2067,7 @@ void DireTimes::getNewSplitting( const Event& state, DireTimesEnd* dip,
 
   dip->idRadAft = idDaughter;
   dip->idEmtAft = idSister;
-
+  
   // Return overestimate.
   over        = splits[name]->overestimateDiff(z, dip->m2Dip, order);
 
@@ -2142,6 +2118,8 @@ void DireTimes::getNewSplitting( const Event& state, DireTimesEnd* dip,
   // Acceptance weight.
   wt          = full["base"]/over;
 
+
+
   // Divide out artificial enhancements.
   double headRoom = overheadFactors(dip, state, name, dip->m2Dip, told, xOld);
   wt   /= headRoom;
@@ -2156,10 +2134,7 @@ void DireTimes::getNewSplitting( const Event& state, DireTimesEnd* dip,
 
 bool DireTimes::applyMEC ( const Event& state, SplitInfo* splitInfo) {
 
-return false;
-
-//cout << "apply mec" << endl;
-//state.list();
+//return false;
 
   double MECnum(1.0), MECden(1.0);
   bool hasME = weights->hasME(makeHardEvent(0,state,true));
@@ -2807,8 +2782,6 @@ bool DireTimes::pT2nextQCD_FF(double pT2begDip, double pT2sel,
       double enhanceFurther
         = enhanceOverestimateFurther(splittingNowName, idRadiator, teval);
 
-if (doTrialNow) enhanceFurther = 1.;
-
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
@@ -3107,8 +3080,6 @@ boostNow = enhanceFurther;
       = enhanceOverestimateFurther(splittingNowName, idRadiator, teval);
     double tnow = dip.pT2;
 
-if (doTrialNow) { weights->addTrialEnhancement(tnow, enhanceFurther); enhanceFurther = 1.;}
-
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
@@ -3198,8 +3169,6 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
     if ( fullWeightNow != 0. && overWeightNow != 0. ) {
       double enhanceFurther
         = enhanceOverestimateFurther(splittingNowName, idRadiator, teval);
-
-if (doTrialNow) enhanceFurther = 1.;
 
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
@@ -3637,15 +3606,13 @@ boostNow = enhanceFurther;
   if ( fullWeightNow != 0. && overWeightNow != 0. ) {
     double enhanceFurther
       = enhanceOverestimateFurther(splittingNowName, idRadiator, teval);
-    double tnow = dip.pT2;
-
-if (doTrialNow) { weights->addTrialEnhancement(tnow, enhanceFurther); enhanceFurther = 1.;}
 
 kernelNow = fullWeightsNow;
 auxNow = auxWeightNow;
 overNow = overWeightNow;
 boostNow = enhanceFurther;
 
+    double tnow = dip.pT2;
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it ) {
      acceptProbability[it->first].insert(make_pair(tnow,
@@ -4081,9 +4048,6 @@ bool DireTimes::branch_FF( Event& event, bool trial,
   }*/
 
 //cout << __LINE__ << " new splitting " << name << " " << sqrt(m2Dip) << endl;
-//cout << __func__ << " " << name << endl;
-//event.list();
-
 
     // Apply ME correction if necessary.
     doMECreject = applyMEC (event, split);
@@ -4590,8 +4554,6 @@ void DireTimes::updateAfterFF( int iSysSelNow, int iSysSelRec,
   dipSel = 0;
   updateDipoles(event);
 
-//if (event[iRad].idAbs() == 15 ) { cout << __LINE__ << endl; event.list(); list(); abort(); }
-
   // Done.
 }
 
@@ -5032,7 +4994,6 @@ bool DireTimes::branch_FI( Event& event, bool trial,
     }
 
 //cout << name << endl;
-//event.list();
 //cout << __LINE__ << " new splitting " << name << " " << sqrt(m2Dip) << endl;
 
     // Apply ME correction if necessary.
@@ -5598,8 +5559,6 @@ void DireTimes::updateAfterFI( int iSysSelNow, int iSysSelRec,
   // Now update all dipoles.
   dipSel = 0;
   updateDipoles(event);
-
-//if (event[iRad].idAbs() == 15 ) { cout << __LINE__ << endl; event.list(); list(); abort(); }
 
   // Done.
 }

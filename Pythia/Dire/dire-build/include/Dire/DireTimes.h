@@ -145,31 +145,6 @@ public:
     m2Dip  = pow2(mDip);
   }
 
-  void list() const {
-    // Header.
-    cout << "\n --------  Begin DireTimesEnd Listing  ----------------"
-         << "------------------------------------------------------- \n \n  "
-         << "  rad    rec       pTmax  col  chg  gam weak  isr"
-         << "  sys sysR type  MErec    pol    m2      allowedIds\n"
-         << fixed << setprecision(3);
-    cout << scientific << setprecision(4) 
-      << setw(7) << iRadiator
-      << setw(7) << iRecoiler   << setw(12)<< pTmax
-      << setw(5) << colType     << setw(5) << chgType
-      << setw(5) << gamType     << setw(5) << weakType
-      << setw(5) << isrType
-      << setw(5) << system      << setw(5) << systemRec
-      << setw(5) << MEtype      << setw(7) << iMEpartner
-      << setw(5) << weakPol
-      << setw(12) << m2Dip;
-    for (int j = 0; j < int(allowedEmissions.size()); ++j)
-      cout << setw(5) << allowedEmissions[j] << " ";
-      cout << endl;
-   // Done.
-    cout << "\n --------  End DireTimesEnd Listing  ------------"
-         << "-------------------------------------------------------" << endl;
-  }
-
 };
 
 //==========================================================================

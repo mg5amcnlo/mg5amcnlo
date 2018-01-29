@@ -1,17 +1,17 @@
 # PYTHIA configuration file.
-# Generated on Mon Jul 3 12:29:23 CDT 2017 with the user supplied options:
-# --prefix=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build
-# --with-hepmc2=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/HepMC-build
+# Generated on Wed Jan 24 09:16:55 CST 2018 with the user supplied options:
+# --prefix=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build
+# --with-hepmc2=/home/prestel/work/2018/HEPMC2
 # --enable-debug
-# --with-gzip=/home/prestel/Downloads/diretest/ZLIB
-# --with-boost=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/boost-build
+# --with-gzip=/home/prestel/work/2018/ZLIB
+# --with-boost=/home/prestep/work/2018/BOOST
 # --cxx-common=-ldl -fPIC -lstdc++ -DHEPMC2HACK
 
 # Install directory prefixes.
-PREFIX_BIN=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/bin
-PREFIX_INCLUDE=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/include
-PREFIX_LIB=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/lib
-PREFIX_SHARE=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/share/Pythia8
+PREFIX_BIN=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build/bin
+PREFIX_INCLUDE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build/include
+PREFIX_LIB=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build/lib
+PREFIX_SHARE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build/share/Pythia8
 
 # Compilation flags (see ./configure --help for further documentation).
 ENABLE_SHARED=false
@@ -35,9 +35,9 @@ FASTJET3_LIB=./
 
 # HEPMC2 configuration.
 HEPMC2_USE=true
-HEPMC2_BIN=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/HepMC-build/bin/
-HEPMC2_INCLUDE=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/HepMC-build/include
-HEPMC2_LIB=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/HepMC-build/lib
+HEPMC2_BIN=/home/prestel/work/2018/HEPMC2/bin/
+HEPMC2_INCLUDE=/home/prestel/work/2018/HEPMC2/include
+HEPMC2_LIB=/home/prestel/work/2018/HEPMC2/lib
 
 # HEPMC3 configuration.
 HEPMC3_USE=false
@@ -79,15 +79,15 @@ ROOT_LIB=./
 
 # GZIP configuration.
 GZIP_USE=true
-GZIP_BIN=/home/prestel/Downloads/diretest/ZLIB//
-GZIP_INCLUDE=/home/prestel/Downloads/diretest/ZLIB/include
-GZIP_LIB=/home/prestel/Downloads/diretest/ZLIB/lib
+GZIP_BIN=/home/prestel/work/2018/ZLIB//
+GZIP_INCLUDE=/home/prestel/work/2018/ZLIB/include
+GZIP_LIB=/home/prestel/work/2018/ZLIB/lib
 
 # BOOST configuration.
-BOOST_USE=true
-BOOST_BIN=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/boost-build/bin/
-BOOST_INCLUDE=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/boost-build/include
-BOOST_LIB=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Pythia/boost-build/lib
+BOOST_USE=false
+BOOST_BIN=
+BOOST_INCLUDE=./
+BOOST_LIB=./
 
 # PYTHON configuration.
 PYTHON_USE=false

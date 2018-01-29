@@ -502,50 +502,25 @@ c$$$                  ICOLUP_H(2,i,j)=ICOLUP_D(nFKSprocess,2,i,j)
 c$$$               enddo
 c$$$            enddo
 
-            do j=1,max_bcol
-               call fill_icolor_H(j,jpart)
-               do i=1,nexternal
-                  ICOLUP_H(1,i,j)=jpart(4,i)
-                  ICOLUP_H(2,i,j)=jpart(5,i)
-               enddo
-c$$$c     print
-c               write(*,*)'gggggggg'
-c               write(*,*)
-c               write(*,*)j,(ICOLUP_H(1,i,j),i=1,nexternal)
-c               write(*,*)j,(ICOLUP_H(2,i,j),i=1,nexternal)
-
-c               write (*,*) 'Color configuration j=', j
+c     Calculate Sudakov suppression for every color structure. Currently unused.
+c            do j=1,max_bcol
+c               call fill_icolor_H(j,jpart)
 c               do i=1,nexternal
-c                 write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
-c     &                      ' col_h=', icolup_h(1,i,j), ' acol_h=', icolup_h(2,i,j)
+c                  ICOLUP_H(1,i,j)=jpart(4,i)
+c                  ICOLUP_H(2,i,j)=jpart(5,i)
 c               enddo
-c               do i=1,nexternal
-c                 write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-c               enddo
-               nexternal_now=nexternal
-
-               call clear_HEPEUP_event()
-               call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
-     &                istup_local, mothup_h, icolup_h, spinup_local, emscav)
+c               nexternal_now=nexternal
+c
+c               call clear_HEPEUP_event()
+c               call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+c     &                istup_local, mothup_h, icolup_h, spinup_local, emscav)
 c               if (is_pythia_active.eq.0) then
-c                 call pythia_init_default()
+c                 call dire_init_default()
 c               endif
-c               call pythia_setevent()
-c               call pythia_next()
-c               call pythia_stat()
-
-               if (is_pythia_active.eq.0) then
-                 call dire_init_default()
-               endif
-               call dire_setevent()
-               call dire_next()
-
-               call dire_get_mergingweight(wgt_sudakov)
-               write(*,*) wgt_sudakov
-               write(*,*)
-
-c               call abort
-            enddo
+c               call dire_setevent()
+c               call dire_next()
+c               call dire_get_mergingweight(wgt_sudakov)
+c            enddo
             
          enddo
       enddo
@@ -561,7 +536,8 @@ cccccccccccccccccc
 cccccccccccccccccc
 
 
-      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,probne)
+c      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt_2(p,dummy,lzone,xmcxsec,xmcxsec2,probne)
 c -- end of call to MC counterterm functions
 
       MCcntcalled=.true.

@@ -25,6 +25,8 @@ C     STOP local variables for the example.
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
+c missing???
+      double precision unwgtfun
       double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
@@ -38,6 +40,7 @@ C     STOP local variables for the example.
       double precision shower_scale
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+
       call cpu_time(tBefore)
 
       do i=1,99
@@ -125,21 +128,26 @@ cC     ---------------------------------------------------------------
 cC     END of example.
 cC     ---------------------------------------------------------------
 
-      call unweight_function(p_born,unwgtfun)
-      if (unwgtfun.ne.0d0) then
-         evnt_wgt=evnt_wgt/unwgtfun
-      else
-         write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
-         stop
-      endif
+c missing function???
+c      call unweight_function(p_born,unwgtfun)
+c      if (unwgtfun.ne.0d0) then
+c         evnt_wgt=evnt_wgt/unwgtfun
+c      else
+c         write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
+c         stop
+c      endif
 
-      if (abrv.ne.'grid') then
+c      if (abrv.ne.'grid') then
 c  Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
      $     ,shower_scale,ickkw)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
+
+c error???
+c      endif
+
       return
       end
 

@@ -59,10 +59,11 @@ POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
 	BinothLHA.o born_hel.o add_write_info.o
 
 # Files for tests
-#TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o add_write_in#fo.o \
-#	pythia8_fortran_dummy.o fill_MC_mshell.o write_event.o handling_lhe_even#ts.o
+#TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o add_write_info.o \
+#	pythia8_fortran_dummy.o fill_MC_mshell.o write_event.o handling_lhe_events.o
 TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
-      pythia_unlops.o recluster.o
+	pythia_unlops.o recluster.o \
+	add_write_info.o fill_MC_mshell.o write_event.o handling_lhe_events.o pythia8_fortran_dummy.o
 
 # Files for gensym
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o add_write_info.o \
@@ -90,7 +91,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
 %.o: $(ANADIR)/%.c
 	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 pythia8_wrapper.o: pythia8_wrapper.cc
-	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) -I/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Dire/dire-src/include $^
+	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $^
 pythia8_fortran.o: pythia8_fortran.cc LHAFortran_aMCatNLO.h
 	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) $^
 pythia8_fortran_dummy.o: pythia8_fortran_dummy.cc

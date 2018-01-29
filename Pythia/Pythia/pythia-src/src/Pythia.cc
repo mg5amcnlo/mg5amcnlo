@@ -1786,9 +1786,6 @@ bool Pythia::next() {
 
     info.addCounter(11);
 
-//process.list(true);
-//abort();
-
     // Update tried and selected events immediately after next event was
     // generated. Note: This does not accumulate cross section.
     processLevel.accumulate(false);
@@ -2547,20 +2544,6 @@ bool Pythia::check() {
           "unmatched particle energy/momentum/mass");
         physical = false;
         iErrEpm.push_back(i);
-
-
-cout << " in pythia " << endl;
-cout << " in pythia " << endl;
-cout << " in pythia " << endl;
-cout << " in pythia " << endl;
-cout << " in pythia " << endl;
-process.list();
-cout << endl;
-cout << endl;
-cout << endl;
-cout << endl;
-
-
       } else if (checkMass && errMass > mTolWarn) {
         info.errorMsg("Warning in Pythia::check: "
           "not quite matched particle energy/momentum/mass");

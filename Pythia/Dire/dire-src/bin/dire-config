@@ -14,7 +14,7 @@
 #     CFG_FILE: The Makefile configuration file.
 #     USAGE:    Text printed when the --help option is passed.
 ################################################################################
-CFG_FILE=/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Dire/dire-src/../dire-build/share/Dire/examples/Makefile.inc
+CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-build/share/Dire/examples/Makefile.inc
 read -d "" USAGE << "BLOCKTEXT"
 Usage: ./dire-config [OPTIONS]
 
@@ -99,7 +99,8 @@ for VAR in "$@"; do
     elif [ "$VAR" = "LDFLAGS" ]; then 
 	OUT="$OUT -L$PREFIX_LIB"
 	if [ "$GZIP_USE" = "true" ]; then 
-	    OUT="$OUT -L$BOOST_LIB -lboost_iostreams -L$GZIP_LIB -lz"; fi
+	    #OUT="$OUT -L$BOOST_LIB -lboost_iostreams -L$GZIP_LIB -lz"; fi
+	    OUT="$OUT -L$GZIP_LIB -lz"; fi
     # Package arguments.
     elif [ "$VAR" = "PYTHIA8" ]; then
         #OUT="$OUT -I$PYTHIA8_INCLUDE $CXX_COMMON -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC"

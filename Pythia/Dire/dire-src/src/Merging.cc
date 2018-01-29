@@ -199,7 +199,7 @@ int MyMerging::mergeProcess(Event& process){
       nPartons -= 2;
 
     // Set number of requested partons.
-    //settingsPtr->mode("Merging:nRequested", nPartons);
+    settingsPtr->mode("Merging:nRequested", nPartons);
 
     mergingHooksPtr->hasJetMaxLocal  = false;
     mergingHooksPtr->nJetMaxLocal
@@ -1529,9 +1529,6 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   bool doUNLOPS2 = false;
   int depth = (!doUNLOPS2) ? -1 : ( (containsRealKin) ? nSteps-1 : nSteps);
 
-  if (settingsPtr->flag("Dire:doMcAtNloDelta"))
-    depth = (containsRealKin) ? 1 : 0;
-
   if (!useAll) {
 
   // Calculate weights.
@@ -1540,11 +1537,6 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
             mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
             mergingHooksPtr->AlphaEM_FSR(), mergingHooksPtr->AlphaEM_ISR(),
             RNpath);
-  else if ( settingsPtr->flag("Dire:doMcAtNloDelta") )
-    wgt = myHistory->weightMcAtNloDelta( trialPartonLevelPtr,
-            mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
-            mergingHooksPtr->AlphaEM_FSR(), mergingHooksPtr->AlphaEM_ISR(),
-            RNpath, depth);
   else if ( mergingHooksPtr->doCKKWLMerging() )
     wgt = myHistory->weightTREE( trialPartonLevelPtr,
             mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),

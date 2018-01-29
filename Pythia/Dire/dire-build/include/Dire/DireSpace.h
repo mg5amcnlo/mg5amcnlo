@@ -130,27 +130,7 @@ public:
     m2Dip  = pow2(mDip);
   }
 
-  void list() const {
-    // Header.
-    cout << "\n --------  DireSpaceEnd Listing  -------------- \n"
-         << "\n    syst  side   rad   rec       pTmax  col  chg   ME rec \n"
-         << fixed << setprecision(3);
-    cout << setw(6) << system
-         << setw(6) << side      << setw(6)  << iRadiator
-         << setw(6) << iRecoiler << setw(12) << pTmax
-         << setw(5) << colType   << setw(5)  << chgType
-         << setw(5) << MEtype    << setw(4)
-         << normalRecoil
-         << setw(12) << m2Dip;
-    for (int j = 0; j < int(allowedEmissions.size()); ++j)
-      cout << setw(5) << allowedEmissions[j] << " ";
-    cout << endl;
-   // Done.
-    cout << "\n --------  End DireSpaceEnd Listing  ------------"
-         << "-------------------------------------------------------" << endl;
-  }
-
-};
+} ;
  
 //==========================================================================
 

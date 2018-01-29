@@ -199,7 +199,8 @@ public:
   string card;
   PY8MEs_namespace::PY8MEs PY8MEs_accessor;
   //PY8MEs_sm::PY8MEs PY8MEs_accessor;
-  bool hasME(vector <int> in_pdgs, vector<int> out_pdgs);
+  bool hasME(vector <int> in_pdgs, vector<int> out_pdgs)
+    { return isAvailableME(PY8MEs_accessor, in_pdgs, out_pdgs); }
   bool hasME(const Event& event);
   double getME(const Event& event);
 

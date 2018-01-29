@@ -1879,11 +1879,7 @@ int MyMergingHooks::getNumberOfClusteringSteps(const Event& event,
 
   nsteps =  nFinalPartons     + nFinalLeptons     + nFinalBosons
          - (nHardOutPartons() + nHardOutLeptons() + nHardOutBosons());
-
-
-
-//  nRequestedSave = nsteps;
-
+  nRequestedSave = nsteps;
 
   // For inclusive handling, the number of reclustering steps
   // can be different within a single sample.

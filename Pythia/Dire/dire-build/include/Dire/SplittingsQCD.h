@@ -1154,9 +1154,6 @@ public:
   int nEmissions() { return 1; }
 
   int kinMap ();
-  bool canUseForBranching() { return true; }
-  bool isPartial()  { return false; }
-  vector<pair<int,int> > radAndEmtCols(int iRad, int, Event state);
 
   // Return id of mother after splitting.
   int motherID(int idDaughter);
@@ -1188,6 +1185,8 @@ public:
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
+
+  bool isPartial()  { return false; }
 
 };
 

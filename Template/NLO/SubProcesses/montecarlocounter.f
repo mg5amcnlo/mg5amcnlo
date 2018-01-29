@@ -1182,6 +1182,285 @@ c IN THIS ROUTINE, ABOVE
 
 
 
+
+
+
+      subroutine complete_xmcsubt_2(p,wgt,lzone,xmcxsec,xmcxsec2,probne)
+      implicit none
+      include "born_nhel.inc"
+      include 'nFKSconfigs.inc'
+      include 'nexternal.inc'
+      include 'madfks_mcatnlo.inc'
+
+      double precision emsca_bare,ptresc,rrnd,ref_scale,
+     & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
+      double precision emscwgt(nexternal),emscav(nexternal)
+      integer jpartner,mpartner,cflows,jflow
+      common/c_colour_flow/jflow
+      logical emscasharp
+
+      double precision emsca
+      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+
+      common/cqMC/qMC
+
+      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+      common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
+
+      integer fksfather
+      common/cfksfather/fksfather
+
+      double precision ran2,iseed
+      external ran2
+      logical extra
+
+c Stuff to be written (depending on AddInfoLHE) onto the LHE file
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                fksfather_lhe,ipartner_lhe
+      common/cto_LHE2/scale1_lhe,scale2_lhe
+
+      integer npartner
+      double precision emscav_tmp(nexternal)
+      common/cemscav_tmp/emscav_tmp
+
+      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
+      logical lzone(nexternal)
+
+      integer i, j
+      double precision tiny
+      parameter(tiny=1d-7)
+
+      double precision p(0:3,nexternal)
+      double precision xkern(2),xkernazi(2),factor
+      double precision bornbars(max_bcol),bornbarstilde(max_bcol)
+      double precision MCsec(nexternal-1,max_bcol)
+      include "genps.inc"
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
+      integer idup_s(nexternal-1)
+      integer mothup_s(2,nexternal-1)
+      integer icolup_s(2,nexternal-1)
+      integer idup_h(nexternal,maxproc)
+      integer mothup_h(2,nexternal,maxproc)
+      integer icolup_h(2,nexternal)
+      integer spinup_local(nexternal)
+      integer istup_local(nexternal)
+      double precision wgt_sudakov
+
+C     To access Pythia8 control variables
+      include 'pythia8_control.inc'
+      include "born_leshouche.inc"
+      integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
+      logical firsttime1
+      data firsttime1 /.true./
+      include 'leshouche_decl.inc'
+      save mothup_d, icolup_d, niprocs_d
+
+      logical         Hevents
+      common/SHevents/Hevents
+      integer nexternal_now
+
+      do i=1,2
+        istup_local(i) = -1
+      enddo
+      do i=3,nexternal
+        istup_local(i) = 1
+      enddo
+      do i=1,nexternal
+        spinup_local(i) = -9
+      enddo
+      pythia_cmd_file=''
+
+c     Input check
+      do npartner=1,ipartners(0)
+         if(xmcxsec(npartner).lt.0d0)then
+            write(*,*)'Fatal error 1 in complete_xmcsubt'
+            write(*,*)npartner,xmcxsec(npartner)
+            stop
+         endif
+      enddo
+      do cflows=1,max_bcol
+         if(xmcxsec2(cflows).lt.0d0)then
+            write(*,*)'Fatal error 2 in complete_xmcsubt'
+            write(*,*)cflows,xmcxsec2(cflows)
+            stop
+         endif
+      enddo
+
+c     Compute MC cross section
+      wgt=0d0
+      wgt2=0d0
+      do npartner=1,ipartners(0)
+         wgt=wgt+xmcxsec(npartner)
+      enddo
+      do cflows=1,max_bcol
+         wgt2=wgt2+xmcxsec2(cflows)
+      enddo
+c
+      if( (abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny) .or.
+     &    (abs(wgt).le.1.d-10 .and.abs(wgt-wgt2).gt.tiny) )then
+         write(*,*)'Fatal error 3 in complete_xmcsubt'
+         write(*,*)wgt,wgt2
+         stop
+      endif
+
+c     Assign emsca on statistical basis
+      if(dampMCsubt.and.wgt.gt.1d-30)then
+        rrnd=ran2()
+        wgt11=0d0
+        jpartner=0
+        do npartner=1,ipartners(0)
+           if(lzone(npartner).and.jpartner.eq.0)then
+              wgt11=wgt11+xmcxsec(npartner)
+              if(wgt11.ge.rrnd*wgt)then
+                 jpartner=ipartners(npartner)
+                 mpartner=npartner
+              endif
+           endif
+        enddo
+        if(jpartner.eq.0)then
+           write(*,*)'Error in xmcsubt: emsca unweighting failed'
+           stop
+        else
+           emsca=emscav_tmp(mpartner)
+        endif
+      endif
+      if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+
+c Additional information for LHE
+      if(AddInfoLHE)then
+         fksfather_lhe(nFKSprocess)=fksfather
+         if(jpartner.ne.0)then
+            ipartner_lhe(nFKSprocess)=jpartner
+         else
+c min() avoids troubles if ran2()=1
+            ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+            ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
+         endif
+         scale1_lhe(nFKSprocess)=qMC
+      endif
+
+      if(dampMCsubt)then
+         if(emsca.lt.scalemin)then
+            write(*,*)'Error in xmcsubt: emsca too small'
+            write(*,*)emsca,jpartner,lzone(jpartner)
+            stop
+         endif
+      endif
+
+c Assign flow on statistical basis
+      rrnd=ran2()
+      wgt11=0d0
+      jflow=0
+      cflows=0
+      do while(jflow.eq.0.and.cflows.lt.max_bcol)
+         cflows=cflows+1
+         wgt11=wgt11+xmcxsec2(cflows)
+         if(wgt11.ge.rrnd*wgt2)jflow=cflows
+      enddo
+      if(jflow.eq.0)then
+         write(*,*)'Error in xmcsubt: flow unweighting failed'
+         stop
+      endif
+
+c PAOLO: INSERT HERE PROBNE COMPUTATION
+c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE
+c COMPUTATION IN ROUTINE XMCSUBT AND ALSO EMSCAV UNWEIGHTING
+c IN THIS ROUTINE, ABOVE
+
+c     S-event information.
+c     ids, mothers read from born_leshouche.inc
+c     color configuration read from born_les_houche.inc and "jflows" 
+      do i=1,nexternal-1
+        IDUP_S(i)=IDUP(i,1)
+        MOTHUP_S(1,i)=MOTHUP(1,i,1)
+        MOTHUP_S(2,i)=MOTHUP(2,i,1)
+        ICOLUP_S(1,i)=ICOLUP(1,i,1)
+        ICOLUP_S(2,i)=ICOLUP(2,i,1)
+      enddo            
+c     S-event momenta read from
+
+c     H-event information.
+c     First write ids, mothers and all colors.
+      if (firsttime1)then
+        call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
+        firsttime1=.false.
+      endif
+      do j=1,niprocs_d(nFKSprocess)
+        do i=1,nexternal
+          IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
+          MOTHUP_H(1,i,j)=MOTHUP_D(nFKSprocess,1,i,j)
+          MOTHUP_H(2,i,j)=MOTHUP_D(nFKSprocess,2,i,j)
+        enddo
+      enddo
+c     Fill selected color configuration into jpart array. 
+      call fill_icolor_H(jflow,jpart)
+      do i=1,nexternal
+        ICOLUP_H(1,i)=jpart(4,i)
+        ICOLUP_H(2,i)=jpart(5,i)
+      enddo
+
+cc     Add some print-out for debugging.
+c      write (*,*) 'S-event configuration'
+c      do i=1,nexternal-1
+c        write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_s(i),
+c     &             ' col_h=', icolup_s(1,i), ' acol_h=', icolup_s(2,i)
+c      enddo
+ccc     Note: Momentum printing incorrect - these are the H-event momenta
+cc      do i=1,nexternal
+cc        write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+cc      enddo
+c      write (*,*) 'H-event configuration for flow=', jflow
+c      do i=1,nexternal
+c        write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
+c     &             ' col_h=', icolup_h(1,i), ' acol_h=', icolup_h(2,i)
+c      enddo
+c      do i=1,nexternal
+c        write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
+c      enddo
+
+c     Calculate suppression factor for H-events.
+      nexternal_now=nexternal
+      call clear_HEPEUP_event()
+      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+     &       istup_local, mothup_h, icolup_h, spinup_local, emscav)
+      if (is_pythia_active.eq.0) then
+        call dire_init_default()
+      endif
+      call dire_setevent()
+      call dire_next()
+      call dire_get_mergingweight(wgt_sudakov)
+
+c      write(*,*) wgt_sudakov
+c      write(*,*)
+
+      probne = wgt_sudakov
+
+c      call abort
+
+      do i=1,nexternal
+         if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne
+         if(i.gt.ipartners(0))xmcxsec(i)=0d0
+      enddo
+
+      return
+      end
+
+
+
+
+
+
+
+
       subroutine get_mbar(p,y_ij_fks,ileg,bornbars,bornbarstilde)
 c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).

@@ -4471,41 +4471,6 @@ int fsr_qcd_Q2QG_notPartial::radBefID(int idRA, int) {
   return 0;
 }
 
-vector<pair<int,int> > fsr_qcd_Q2QG_notPartial::radAndEmtCols(int iRad,
-  int, Event state) {
-  vector< pair<int,int> > ret;
-  if (!state[iRad].isQuark() || state[splitInfo.iRecBef].colType() != 0)
-    return ret;
-
-//state.list();
-//  cout << splitInfo.iRecBef << endl;
-  int colType = (state[iRad].id() > 0) ? 1 : -1;
-
-  int newCol1     = state.nextColTag();
-  int colRadAft   = (colType > 0) ? newCol1 : state[iRad].col();
-  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol1;
-  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
-  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
-
-  ret = createvector<pair<int,int> >
-    (make_pair(colRadAft, acolRadAft))
-    (make_pair(colEmtAft1, acolEmtAft1));
-
-//cout << colRadAft << " " << acolRadAft << "\t" << colEmtAft1 << " " << acolEmtAft1 << endl;
-//abort();
-
-
-  /*if (particleDataPtr->colType(idRadAfterSave) != 0) {
-    int sign      = (idRadAfterSave > 0) ? 1 : -1;
-    int newCol    = state.nextColTag();
-    ret[0].first  = (sign > 0) ? newCol : 0;
-    ret[0].second = (sign > 0) ? 0 : newCol;
-    ret[1].first  = (sign > 0) ? 0 : newCol;
-    ret[1].second = (sign > 0) ? newCol : 0;
-  }*/
-  return ret;
-}
-
 pair<int,int> fsr_qcd_Q2QG_notPartial::radBefCols(
   int colRadAfter, int, 
   int colEmtAfter, int acolEmtAfter) {

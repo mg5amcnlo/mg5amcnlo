@@ -213,8 +213,6 @@ int Merging::mergeProcessCKKWL( Event& process) {
   // Get random number to choose a path.
   double RN = rndmPtr->flat();
 
-cout << nRequested << " " << nSteps << endl;
-
   // Set dummy process scale.
   newProcess.scale(0.0);
   // Generate all histories.

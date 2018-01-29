@@ -562,7 +562,6 @@ int PY8MEs_R2_P4_sm_lq_lgq::getColorIDForConfig(vector<int> color_config, int
   {
     chosenPerm = invert_mapping(permutation); 
   }
-
   // Find which color configuration is asked for
   // -1 indicates one wants to sum over all color configurations
   int user_icol = -1; 
@@ -1113,8 +1112,6 @@ double PY8MEs_R2_P4_sm_lq_lgq::sigmaKin()
   // Find which color configuration is asked for
   // -1 indicates one wants to sum over all color configurations
   int user_icol = getColorIDForConfig(user_colors); 
-
-if (user_icol == -2) return -2.; 
 
   // Reset the list of results that will be recomputed here
   // Starts with -1 which are the summed results

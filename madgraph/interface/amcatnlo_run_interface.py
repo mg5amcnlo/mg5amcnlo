@@ -4907,7 +4907,7 @@ PYTHIA8LINKLIBS=""")
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
 """PYTHIA8INCLUDE=%(pythia8_prefix)s/include
 PYTHIA8TARGETS=pythia8_wrapper.o
-PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L/home/prestel/work/fermi2017/PY8meetsMG5aMC/Pythia/Dire/dire-src/lib -ldire -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
+PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L%(pythia8_prefix)s/../../Dire/dire-src/lib -ldire -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
             # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
             # For now, we don't use any pythia8.cmd card for initialization
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
