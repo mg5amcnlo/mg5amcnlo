@@ -4253,7 +4253,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.pname2block = {}
         self.restricted_value = {}
         if not self.get_path('param', cards):
-            misc.sprint("no param", self.get_path('param', cards), cards)
             return []
         
         try:
@@ -4463,7 +4462,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
              
 
 
-    def do_help(self, line, conflict_raise=False, banner=True):    
+    def do_help(self, line, conflict_raise=False, banner=True):  
+        # TODO nicer factorization !
+          
 #     try:                
         if banner:                      
             logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
@@ -4529,7 +4530,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print "\t".join(eval('self.%s' % args[0]).keys())
                 if banner:
                     logger.info('*** END HELP ***', '$MG:color:BLACK')  
-                return 
+                return card
                     
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
@@ -4573,7 +4574,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     key = tuple([int(i) for i in args[start+1:]])
                 except ValueError:
                     logger.warning('Failed to identify LHA information')
-                    return            
+                    return card           
             
             if key in self.param_card[args[start]].param_dict:
                 self.param_card.do_help(args[start], key, default=self.param_card_default)
@@ -4618,13 +4619,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             print 'MA5'
             
             
-        else:
+        elif banner:
             print "no help available" 
           
         if banner:                      
             logger.info('*** END HELP ***', '$MG:color:BLACK')    
         #raw_input('press enter to quit the help')
-        return        
+        return card       
 #     except Exception, error:
 #         if __debug__:
 #             import traceback

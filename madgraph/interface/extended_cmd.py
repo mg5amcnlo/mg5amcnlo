@@ -1455,7 +1455,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             me_dir = os.path.basename(me_dir) + ' '
         
         misc.EasterEgg('error')
-
+        
+        stop=False
         try:
             raise 
         except self.InvalidCmd as error:
@@ -1486,6 +1487,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if __debug__:
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
+
         
         if stop:
             self.do_quit('all')
