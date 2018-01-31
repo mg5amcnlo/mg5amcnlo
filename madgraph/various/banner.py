@@ -2295,6 +2295,7 @@ class RunCard(ConfigFile):
            (a path to a valid run_card)"""
 
         to_write = set(self.user_set) 
+        written = set()
         if not template:
             raise Exception
 
@@ -2327,22 +2328,30 @@ class RunCard(ConfigFile):
                             endline = '\n'
                         else:
                             endline = ''
-                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)                        
+                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)
+                        written.add(name)                        
 
                     if name.lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current %s (with default value)',
                                  (name, self.filename))
+                    written.add(name) 
                     text += line 
 
         if to_write or write_hidden:
             text+="""#********************************************************************* 
-#  Additional parameter
+#  Additional hidden parameters
 #*********************************************************************
-"""
+"""            
             if write_hidden:
+                #
+                # do not write hidden parameter not hidden for this template 
+                #
+                if python_template:
+                    written = written.union(set(re.findall('\%\((\w*)\)s', file(template,'r').read(), re.M)))
                 to_write = to_write.union(set(self.hidden_param))
+                to_write = to_write.difference(written)
 
             for key in to_write:
                 if key in self.system_only:
