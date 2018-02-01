@@ -654,7 +654,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.configure_run_mode(self.options['run_mode'])
 
         # update the path to the PLUGIN directory of MG%
-        if MADEVENT and 'mg5_path' in self.options :
+        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
             mg5dir = self.options['mg5_path']
             if mg5dir not in sys.path:
                 sys.path.append(mg5dir)
@@ -2168,6 +2168,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
+        cmd.options.update(self.options)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
@@ -5204,7 +5205,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
 
-        self.run_card.set(name, value, user=True)
+        if self.mother_interface.inputfile:
+            self.run_card.set(name, value, user=True, raiseerror=True)
+        else:
+            self.run_card.set(name, value, user=True)
         new_value = self.run_card.get(name)
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
 
