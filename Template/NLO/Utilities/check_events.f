@@ -183,7 +183,15 @@ c events, but its upper bound
         shower=.true.
       endif
       maxevt=abs(maxevt)
-c Fill quark/antiquark and lepton/antilepton masses if not already in header
+c Fill quark/antiquark and lepton/antilepton masses if not already in header.
+c Neutrinos may be missing from that list, and this implies their masses are
+c assumed to be zero. Set them to zero explicitly in that case
+      do i=12,16
+        if(mod(i,2).eq.0)then
+          if(remcmass(i).eq.-2.d0.and.remcmass(-i).eq.-2.d0)
+     #      remcmass(i)=0.d0
+        endif
+      enddo
       do i=-16,16
         if(abs(i).le.5.or.abs(i).ge.11)then
           if(remcmass(i).eq.-2.d0)remcmass(i)=remcmass(-i)
@@ -582,6 +590,8 @@ c Don't check momentum conservation in that case
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
       write (*,*) ' of which:',ipos,' w>0',ineg,' w<0'
+      write (*,500) '   ==> ',100*ipos/dfloat(i),'% w>0   ',
+     #               100*ineg/dfloat(i),'% w<0'
       write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
       write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
@@ -731,6 +741,7 @@ c Error if more that one sigma away
  301  format(a,6x,i2,i3,a,(1x,f16.6))
  400  format(a,3(1x,i2),a,2(1x,f16.6))
  401  format(a,6x,i2,i3,a,2(1x,f16.6))
+ 500  format(a,f10.4,a,f10.4,a)
 
       end
 
