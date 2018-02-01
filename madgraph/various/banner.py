@@ -2559,16 +2559,20 @@ class RunCardLO(RunCard):
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param("polbeam2", 0.0, fortran_name="pb2",
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
-        self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],
+        self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
                        comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
-        self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],
+        self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
                        comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
-        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 125 , '*'],
+        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 125 , '*'],fortran_name="nb_neutron(1)",
                        comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
-        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 125 , '*'],
+        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 125 , '*'],fortran_name="nb_neutron(2)",
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
-        self.add_param('mass_ion1', -1.0, hidden=True, comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
-        self.add_param('mass_ion2', -1.0, hidden=True, comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
+        self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
+                       allowed=[-1,0, 0.938, 207.02*0.938, '*'],
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
+        self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
+                       allowed=[-1,0, 0.938, 207.02*0.938, '*'],
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
         self.add_param("pdlabel", "nn23lo1")
         self.add_param("lhaid", 230000, hidden=True)

@@ -15,14 +15,11 @@ C
       include 'pdf.inc'
 c
       double precision tmp1, tmp2
-      integer nb_proton1, nb_proton2
-      integer nb_neutron1, nb_neutron2
-      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, 
-     &                        nb_neutron2
+      integer nb_proton(2), nb_neutron(2) 
+      common/to_heavyion_pdg/ nb_proton, nb_neutron
 C      
-      integer nb_proton, nb_neutron
 
-      double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
+      double precision Ctq6Pdf, get_ion_pdf
       integer mode,Irt,i,j
       double precision xlast(2),xmulast(2),pdflast(-7:7,2),q2max
       character*7 pdlabellast(2)
@@ -80,7 +77,8 @@ c     Check if result can be reused since any of last two calls
 c     Reuse previous result, if possible
       if (ireuse.gt.0.)then
          if (pdflast(iporg,ireuse).ne.-99d9) then
-            pdg2pdf=pdflast(iporg,ireuse)
+            pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
+     $                         nb_neutron(beamid))
             return 
          endif
       endif
@@ -134,65 +132,63 @@ c     saved. 'pdflast' is filled below.
       
       if (pdlabel(1:5) .eq. 'cteq6') then
 C        Be carefull u and d are flipped inside cteq6
-         if (beamid.eq.1)then
-            nb_proton = nb_proton1
-            nb_neutron = nb_neutron1
-         else
-            nb_proton = nb_proton2
-            nb_neutron = nb_neutron2
-         endif
-         if (nb_proton.gt.1.or.nb_neutron.ne.0)then
-            if (ipart.eq.1)then
-               tmp1=Ctq6Pdf(2,x,xmu) ! remember u/d flipping in cteq
-               tmp2=Ctq6Pdf(1,x,xmu)
-               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
-            else if (ipart.eq.-1)then
-               tmp1=Ctq6Pdf(-2,x,xmu) ! remember u/d flipping in cteq
-               tmp2=Ctq6Pdf(-1,x,xmu)
-               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
-            else if (ipart.eq.2)then
-               tmp1=Ctq6Pdf(2,x,xmu) ! remember u/d flipping in cteq
-               tmp2=Ctq6Pdf(1,x,xmu)
-               pdg2pdf =  nb_proton * tmp2 + nb_neutron * tmp1
-            else if (ipart.eq.2)then
-               tmp1=Ctq6Pdf(-2,x,xmu) ! remember u/d flipping in cteq
-               tmp2=Ctq6Pdf(-1,x,xmu)
-               pdg2pdf = nb_proton * tmp2 + nb_neutron * tmp1
+         if (nb_proton(beamid).gt.1.or.nb_neutron(beamid).ne.0)then
+            if (ipart.eq.1.or.ipart.eq.2)then
+               pdflast(1,ireuse)=Ctq6Pdf(2,x,xmu) ! remember u/d flipping in cteq
+               pdflast(2,ireuse)=Ctq6Pdf(1,x,xmu)
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
+            else if (ipart.eq.-1.or.ipart.eq.-2)then
+               pdflast(-1,ireuse)=Ctq6Pdf(-2,x,xmu) ! remember u/d flipping in cteq
+               pdflast(-2,ireuse)=Ctq6Pdf(-1,x,xmu)
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             else
-               pdg2pdf=Ctq6Pdf(ipart,x,xmu)*(nb_proton+nb_neutron)
+               pdflast(ipart,ireuse)=Ctq6Pdf(ipart,x,xmu)
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             endif 
          else
             if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
      $           ipart=sign(3-iabs(ipart),ipart)
             pdg2pdf=Ctq6Pdf(ipart,x,xmu)
+            pdflast(iporg,ireuse)=pdg2pdf
          endif
       else
          call pftopdg(ih,x,xmu,pdflast(-7,ireuse))
-         if (beamid.eq.1)then
-            nb_proton = nb_proton1
-            nb_neutron = nb_neutron1
-         else
-            nb_proton = nb_proton2
-            nb_neutron = nb_neutron2
-         endif
-         if (nb_proton.gt.1.or.nb_neutron.ne.0)then
-            tmp1 = pdflast(1, ireuse)
-            tmp2 = pdflast(2, ireuse)
-            pdflast(1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
-            pdflast(2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
-            tmp1 = pdflast(-1, ireuse)
-            tmp2 = pdflast(-2, ireuse)
-            pdflast(-1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
-            pdflast(-2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
-            do i=3,6
-               pdflast(i, ireuse) = (nb_proton+nb_neutron)*pdflast(i, ireuse)
-               pdflast(-i, ireuse) = (nb_proton+nb_neutron)*pdflast(-i, ireuse)
-            enddo
-         endif
-         pdg2pdf=pdflast(iporg,ireuse)
+         pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
+     $                         nb_neutron(beamid))
       endif      
 
-      pdflast(iporg,ireuse)=pdg2pdf
       return
       end
 
+      double precision function get_ion_pdf(pdf, pdg, nb_proton, nb_neutron)
+      
+      double precision pdf(-7:7)
+      double precision tmppdf(-2:2)
+      integer pdg
+      integer nb_proton
+      integer nb_neutron
+      double precision tmp1, tmp2
+ 
+      if (nb_proton.eq.1.and.nb_neutron.eq.0)then
+         get_ion_pdf = pdf(pdg)
+         return
+      endif
+      
+      if (pdg.eq.1.or.pdg.eq.2) then
+         tmp1 = pdf(1)
+         tmp2 = pdf(2)
+         tmppdf(1) = nb_proton * tmp1 + nb_neutron * tmp2
+         tmppdf(2) = nb_proton * tmp2 + nb_neutron * tmp2
+         get_ion_pdf = tmppdf(pdg)
+      else if (pdg.eq.-1.or.pdg.eq.-2) then
+         tmp1 = pdf(-1)
+         tmp2 = pdf(-2)
+         tmppdf(-1) = nb_proton * tmp1 + nb_neutron * tmp2
+         tmppdf(-2) = nb_proton * tmp2 + nb_neutron * tmp2
+         get_ion_pdf = tmppdf(pdg)
+      else 
+         get_ion_pdf = tmppdf(i)*(nb_proton+nb_neutron)
+      endif
+
+      return
+      end
