@@ -1,3 +1,4 @@
+
  1    double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
@@ -14,12 +15,10 @@ C     Include
 C
       include 'pdf.inc'
 C
-      double precision tmp1, tmp2
-      integer nb_proton1, nb_proton2
-      integer nb_neutron1, nb_neutron2
-      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, 
-     &                        nb_neutron2
-      integer nb_proton, nb_neutron      
+      integer nb_proton(2)
+      integer nb_neutron(2)
+      common/to_heavyion_pdg/ nb_proton, nb_neutron
+      double precision get_ion_pdf
 c
       integer i,j,ihlast(2),ipart,iporg,ireuse,imemlast(2),iset,imem
       double precision xlast(2),xmulast(2),pdflast(-7:7,2)
@@ -85,7 +84,7 @@ c     Check if result can be reused since any of last two calls
 c     Reuse previous result, if possible
       if (ireuse.gt.0) then
          if (pdflast(iporg,ireuse).ne.-99d9) then
-            pdg2pdf=pdflast(iporg,ireuse)
+            pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             return 
          endif
       endif
@@ -122,36 +121,16 @@ c     xlast(i) are initialized as data statements to be equal to -99d9
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       call pftopdglha(ih,x,xmu,pdflast(-7,ireuse))
+      pdg2pdf = get_ion_pdf(pdflast, ipart, nb_proton(beamid), nb_neutron(beamid))
 c
 c
 c
-      if (beamid.eq.1)then
-         nb_proton = nb_proton1
-         nb_neutron = nb_neutron1
-      else
-         nb_proton = nb_proton2
-         nb_neutron = nb_neutron2
-      endif
-      if (nb_proton.gt.1.or.nb_neutron.ne.0)then
-         tmp1 = pdflast(1, ireuse)
-         tmp2 = pdflast(2, ireuse)
-         pdflast(1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
-         pdflast(2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
-         tmp1 = pdflast(-1, ireuse)
-         tmp2 = pdflast(-2, ireuse)
-         pdflast(-1, ireuse) = nb_proton * tmp1 + nb_neutron * tmp2
-         pdflast(-2, ireuse) = nb_proton * tmp2 + nb_neutron * tmp2
-         do i=3,6
-            pdflast(i, ireuse) = (nb_proton+nb_neutron)*pdflast(i, ireuse)
-            pdflast(-i, ireuse) = (nb_proton+nb_neutron)*pdflast(-i, ireuse)
-         enddo
-      endif
+
       xlast(ireuse)=x
       xmulast(ireuse)=xmu
       ihlast(ireuse)=ih
       imemlast(ireuse)=imem
 c
-      pdg2pdf=pdflast(ipart,ireuse);
       return
       end
 

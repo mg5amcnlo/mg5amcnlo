@@ -14,23 +14,21 @@ C     Include
 C
       include 'pdf.inc'
 C
-      double precision tmp1, tmp2
-      integer nb_proton1, nb_proton2
-      integer nb_neutron1, nb_neutron2
-      common/to_heavyion_pdg/ nb_proton1, nb_proton2, nb_neutron1, 
-     &                        nb_neutron2
-      integer nb_proton, nb_neutron
+      integer nb_proton(2)
+      integer nb_neutron(2)
+      common/to_heavyion_pdg/ nb_proton, nb_neutron
 C      
+      double precision get_ion_pdf
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
      &     ,i_replace,ii,ipartlast(20)
-      double precision xlast(20),xmulast(20),pdflast(20)
+      double precision xlast(20),xmulast(20),pdflast(-7:7,20)
       double precision epa_proton
       save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
       data ipartlast/20*-99/
       data xlast/20*-99d9/
       data xmulast/20*-99d9/
-      data pdflast/20*-99d9/
+      data pdflast/300*-99d9/
       data imemlast/20*-99/
       data i_replace/20/
 
@@ -98,8 +96,8 @@ c     calls. Start checking with the last call and move back in time
 
 c     Reuse previous result, if possible
       if (ireuse.gt.0) then
-         if (pdflast(ireuse).ne.-99d9) then
-            pdg2pdf=pdflast(ireuse)
+         if (pdflast(ipart,ireuse).ne.-99d9) then
+            pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))/x
             return 
          endif
       endif
@@ -110,38 +108,21 @@ c Calculated a new value: replace the value computed longest ago
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       if(ih.eq.1) then
-         if (beamid.eq.1)then
-            nb_proton = nb_proton1
-            nb_neutron = nb_neutron1
+         if (nb_proton(beamid).eq.1.and.nb_neutron(beamid).eq.0) then
+            call evolvepart(ipart,x,xmu,pdg2pdf)
+            pdflast(ipart, i_replace)=pdg2pdf
          else
-            nb_proton = nb_proton2
-            nb_neutron = nb_neutron2
-         endif
-         if (nb_proton.gt.1.or.nb_neutron.ne.0)then
-            if (ipart.eq.1)then
-               call evolvepart(1,x,xmu,tmp1)
-               call evolvepart(2,x,xmu,tmp2)
-               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
-            else if (ipart.eq.-1)then
-               call evolvepart(-1,x,xmu,tmp1)
-               call evolvepart(-2,x,xmu,tmp2)
-               pdg2pdf = nb_proton * tmp1 + nb_neutron * tmp2
-            else if (ipart.eq.2)then
-               call evolvepart(1,x,xmu,tmp1)
-               call evolvepart(2,x,xmu,tmp2)
-               pdg2pdf =  nb_proton * tmp2 + nb_neutron * tmp1
-            else if (ipart.eq.2)then
-               call evolvepart(-1,x,xmu,tmp1)
-               call evolvepart(-2,x,xmu,tmp2)
-               pdg2pdf = nb_proton * tmp2 + nb_neutron * tmp1
+            if (ipart.eq.1.or.ipart.eq.2) then
+               call evolvepart(1,x,xmu,pdflast(1, i_replace))
+               call evolvepart(2,x,xmu,pdflast(2, i_replace))
+            else if (ipart.eq.-1.or.ipart.eq.-2)then
+               call evolvepart(-1,x,xmu,pdflast(-1, i_replace))
+               call evolvepart(-2,x,xmu,pdflast(-2, i_replace))
             else
-               call evolvepart(ipart,x,xmu,pdg2pdf)
-               pdg2pdf = pdf2pdf*(nb_proton+nb_neutron)
+               call evolvepart(ipart,x,xmu,pdflast(ipart, i_replace))
             endif 
-         else
-               call evolvepart(ipart,x,xmu,pdg2pdf)
+            pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
-      endif
          pdg2pdf=pdg2pdf/x
       else if(ih.eq.2) then ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu)
@@ -149,7 +130,6 @@ c     be saved
          write (*,*) 'beam type not supported in lhadpf'
          stop 1
       endif
-      pdflast(i_replace)=pdg2pdf
       xlast(i_replace)=x
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih

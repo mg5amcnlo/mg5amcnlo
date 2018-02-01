@@ -85,3 +85,38 @@ C     // x = omega/E = (E-E')/E
       phi_f= f
       end
   
+      double precision function get_ion_pdf(pdf, pdg, nb_proton, nb_neutron)
+C***********************************************************************
+C     computing (heavy) ion contribution from proton PDF
+C***********************************************************************      
+      double precision pdf(-7:7)
+      double precision tmppdf(-2:2)
+      integer pdg
+      integer nb_proton
+      integer nb_neutron
+      double precision tmp1, tmp2
+ 
+      if (nb_proton.eq.1.and.nb_neutron.eq.0)then
+         get_ion_pdf = pdf(pdg)
+         return
+      endif
+      
+      if (pdg.eq.1.or.pdg.eq.2) then
+         tmp1 = pdf(1)
+         tmp2 = pdf(2)
+         tmppdf(1) = nb_proton * tmp1 + nb_neutron * tmp2
+         tmppdf(2) = nb_proton * tmp2 + nb_neutron * tmp2
+         get_ion_pdf = tmppdf(pdg)
+      else if (pdg.eq.-1.or.pdg.eq.-2) then
+         tmp1 = pdf(-1)
+         tmp2 = pdf(-2)
+         tmppdf(-1) = nb_proton * tmp1 + nb_neutron * tmp2
+         tmppdf(-2) = nb_proton * tmp2 + nb_neutron * tmp2
+         get_ion_pdf = tmppdf(pdg)
+      else 
+         get_ion_pdf = tmppdf(i)*(nb_proton+nb_neutron)
+      endif
+
+      return
+      end
+
