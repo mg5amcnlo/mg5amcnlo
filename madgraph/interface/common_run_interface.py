@@ -4309,8 +4309,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 'fixed_scale': ([float],['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s']),
                 'no_parton_cut':([],['run_card nocut T']),
                 'cm_velocity':([float], [lambda self :self.set_CM_velocity]),
-                'pbp':([],['run_card lpp1 1', 'run_card lpp2 1','run_card nb_proton1 82', 'run_card nb_neutron1 125', 'run_card mass_ion1 194.18476','run_card nb_proton2 1', 'run_card nb_neutron2 0', 'run_card mass_ion1 -1']),
-                'pbpb':([],['run_card lpp1 1', 'run_card lpp2 1','run_card nb_proton1 82', 'run_card nb_neutron1 125', 'run_card mass_ion1 194.18476', 'run_card nb_proton2 82', 'run_card nb_neutron2 125', 'run_card mass_ion2 194.18476' ]),
+                'pbp':([],['run_card lpp1 1', 'run_card lpp2 1','run_card nb_proton1 82', 'run_card nb_neutron1 126', 'run_card mass_ion1 195.0820996698','run_card nb_proton2 1', 'run_card nb_neutron2 0', 'run_card mass_ion1 -1']),
+                'pbpb':([],['run_card lpp1 1', 'run_card lpp2 1','run_card nb_proton1 82', 'run_card nb_neutron1 126', 'run_card mass_ion1 195.0820996698', 'run_card nb_proton2 82', 'run_card nb_neutron2 126', 'run_card mass_ion2 195.0820996698' ]),
                 'pp': ([],['run_card lpp1 1', 'run_card lpp2 1','run_card nb_proton1 1', 'run_card nb_neutron1 0', 'run_card mass_ion1 -1', 'run_card nb_proton2 1', 'run_card nb_neutron2 0', 'run_card mass_ion2 -1']),
                 })
             

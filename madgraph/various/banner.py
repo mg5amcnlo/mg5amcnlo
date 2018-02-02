@@ -2618,15 +2618,15 @@ class RunCardLO(RunCard):
                        comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
         self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
                        comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
-        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 125 , '*'],fortran_name="nb_neutron(1)",
+        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(1)",
                        comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
-        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 125 , '*'],fortran_name="nb_neutron(2)",
+        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(2)",
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
-                       allowed=[-1,0, 0.938, 207.02*0.938, 0.000511, 0.105, '*'],
+                       allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
-                       allowed=[-1,0, 0.938, 207.02*0.938, 0.000511, 0.105, '*'],
+                       allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
         self.add_param("pdlabel", "nn23lo1")
