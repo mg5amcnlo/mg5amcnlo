@@ -1410,7 +1410,9 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
         self.add_param('colored_pdgs', [1,2,3,4,5])
-        self.add_param('complex_mass_scheme', False)        
+        self.add_param('complex_mass_scheme', False)
+        self.add_param('pdg_initial1', [0])
+        self.add_param('pdg_initial2', [0])        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1884,7 +1886,9 @@ class PY8Card(ConfigFile):
         started_subrun_reading = False
         while line!='':
             # Skip comments
-            if line.strip().startswith('!') or line.strip().startswith('\n'):
+            if line.strip().startswith('!') or \
+               line.strip().startswith('\n') or\
+               line.strip() == '':
                 output.write(line)
                 # Proceed to next line
                 last_pos = tmpl.tell()
@@ -2034,8 +2038,8 @@ class PY8Card(ConfigFile):
         # If 'LHEFInputs:nSubruns' is not user_set, then make sure it is
         # updated at least larger or equal to the maximum SubRunID
         if 'LHEFInputs:nSubruns'.lower() not in self.user_set and \
-             len(subruns_to_write)>0 and self['LHEFInputs:nSubruns']<\
-                                                   max(subruns_to_write.keys()):
+             len(subruns_to_write)>0 and 'LHEFInputs:nSubruns' in self\
+             and self['LHEFInputs:nSubruns']<max(subruns_to_write.keys()):
             logger.info("Updating PY8 parameter 'LHEFInputs:nSubruns' to "+
           "%d so as to cover all defined subruns."%max(subruns_to_write.keys()))
             self['LHEFInputs:nSubruns'] = max(subruns_to_write.keys())
@@ -2207,6 +2211,8 @@ class RunCard(ConfigFile):
         self.cuts_parameter = []
         # parameter added where legacy requires an older value.
         self.system_default = {}
+        
+        self.warned=False
 
 
         
@@ -2239,10 +2245,7 @@ class RunCard(ConfigFile):
         if legacy:
             self.legacy_parameter[name] = value
             include = False
-        if include is True:
-            self.includepath[True].append(name)
-        elif include:
-            self.includepath[include].append(name)
+        self.includepath[include].append(name)
         if hidden or system:
             self.hidden_param.append(name)
         if cut:
@@ -2288,11 +2291,13 @@ class RunCard(ConfigFile):
                         raise
                     
                 
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False,
+                    write_hidden=False):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
         to_write = set(self.user_set) 
+        written = set()
         if not template:
             raise Exception
 
@@ -2325,23 +2330,37 @@ class RunCard(ConfigFile):
                             endline = '\n'
                         else:
                             endline = ''
-                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)                        
+                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)
+                        written.add(name)                        
 
                     if name.lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current %s (with default value)',
                                  (name, self.filename))
+                    written.add(name) 
                     text += line 
 
-        if to_write:
+        if to_write or write_hidden:
             text+="""#********************************************************************* 
-#  Additional parameter
+#  Additional hidden parameters
 #*********************************************************************
-"""
-            
+"""            
+            if write_hidden:
+                #
+                # do not write hidden parameter not hidden for this template 
+                #
+                if python_template:
+                    written = written.union(set(re.findall('\%\((\w*)\)s', file(template,'r').read(), re.M)))
+                to_write = to_write.union(set(self.hidden_param))
+                to_write = to_write.difference(written)
+
             for key in to_write:
-                text += '  %s\t= %s # %s\n' % (self[key], key, 'hidden parameter')
+                if key in self.system_only:
+                    continue
+
+                comment = self.comments.get(key,'hidden_parameter').replace('\n','\n#')
+                text += '  %s\t= %s # %s\n' % (self[key], key, comment)
 
         if isinstance(output_file, str):
             fsock = open(output_file,'w')
@@ -2427,11 +2446,18 @@ class RunCard(ConfigFile):
                 return "'%s'" % value
         
 
-    def check_validity(self):
+    
+    def check_validity(self, log_level=30):
         """check that parameter missing in the card are set to the expected value"""
 
         for name, value in self.system_default.items():
                 self.set(name, value, changeifuserset=False)
+        
+
+        for name in self.includepath[False]:
+            to_bypass = self.hidden_param + self.legacy_parameter.keys()
+            if name not in to_bypass:
+                self.get_default(name, log_level=log_level) 
 
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
@@ -2450,6 +2476,7 @@ class RunCard(ConfigFile):
         The entry False will not be written anywhere"""
         
         # ensure that all parameter are coherent and fix those if needed
+        misc.sprint('pass to check')
         self.check_validity()
         
         #ensusre that system only parameter are correctly set
@@ -2458,6 +2485,8 @@ class RunCard(ConfigFile):
         for incname in self.includepath:
             if incname is True:
                 pathinc = self.default_include_file
+            elif incname is False:
+                continue
             else:
                 pathinc = incname
                 
@@ -2572,7 +2601,7 @@ class RunCardLO(RunCard):
         
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
-        self.add_param("time_of_flight", -1.0, include=False, hidden=True)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
@@ -2594,10 +2623,10 @@ class RunCardLO(RunCard):
         self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 125 , '*'],fortran_name="nb_neutron(2)",
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
-                       allowed=[-1,0, 0.938, 207.02*0.938, '*'],
+                       allowed=[-1,0, 0.938, 207.02*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
-                       allowed=[-1,0, 0.938, 207.02*0.938, '*'],
+                       allowed=[-1,0, 0.938, 207.02*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
         self.add_param("pdlabel", "nn23lo1")
@@ -2755,7 +2784,7 @@ class RunCardLO(RunCard):
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "auto", include=False)
         self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
-        self.add_param("sys_scalecorrelation", -1, include=False)
+        self.add_param("sys_scalecorrelation", -1, include=False, hidden=True)
 
         #parameter not in the run_card by default
         self.add_param('gridrun', False, hidden=True)
@@ -2780,24 +2809,17 @@ class RunCardLO(RunCard):
         self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
         self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
+        self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
-        self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
-        self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
-        self.add_param('Emin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('Emax4pdg',[-1.], hidden=True, system=True)  
-        self.add_param('etamin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('etamax4pdg',[-1.], hidden=True, system=True)   
-        self.add_param('mxxmin4pdg',[-1.], hidden=True, system=True)
-        self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
-        # Not implemetJob has already finishedented right now (double particle cut)
-        #self.add_param('pdg_cut_2',[0], hidden=True, system=True)
-        # self.add_param('M_min_pdg',[0.], hidden=True, system=True) # store pt min
-        #self.add_param('M_max_pdg',[0.], hidden=True, system=True)               
-        # self.add_param('DR_min_pdg',[0.], hidden=True, system=True) # store pt min
-        #self.add_param('DR_max_pdg',[0.], hidden=True, system=True)               
-            
+        self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
+        self.add_param('ptmin4pdg',[0.], system=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], system=True)
+        self.add_param('Emin4pdg',[0.], system=True) # store pt min
+        self.add_param('Emax4pdg',[-1.], system=True)  
+        self.add_param('etamin4pdg',[0.], system=True) # store pt min
+        self.add_param('etamax4pdg',[-1.], system=True)   
+        self.add_param('mxxmin4pdg',[-1.], system=True)
+        self.add_param('mxxpart_antipart', [False], system=True)
             
              
     def check_validity(self):
@@ -3048,7 +3070,8 @@ class RunCardLO(RunCard):
             self['use_syst'] = False
             self['systematics_program'] = 'none'
             
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False,
+              **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -3062,7 +3085,7 @@ class RunCardLO(RunCard):
                 python_template = False
        
         super(RunCardLO, self).write(output_file, template=template,
-                                    python_template=python_template)            
+                                    python_template=python_template, **opt)            
 
 
 class InvalidMadAnalysis5Card(InvalidCmd):
@@ -3790,7 +3813,7 @@ class RunCardNLO(RunCard):
             self['mxxmin4pdg'] = [0.]
             self['mxxpart_antipart'] = [False]
 
-    def write(self, output_file, template=None, python_template=False):
+    def write(self, output_file, template=None, python_template=False, **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -3804,7 +3827,7 @@ class RunCardNLO(RunCard):
                 python_template = False
        
         super(RunCardNLO, self).write(output_file, template=template,
-                                    python_template=python_template)
+                                    python_template=python_template, **opt)
 
 
     def create_default_for_process(self, proc_characteristic, history, proc_def):

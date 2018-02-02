@@ -468,7 +468,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return out
+            return list(set(out))
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
@@ -1455,7 +1455,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             me_dir = os.path.basename(me_dir) + ' '
         
         misc.EasterEgg('error')
-
+        
+        stop=False
         try:
             raise 
         except self.InvalidCmd as error:
@@ -1486,6 +1487,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if __debug__:
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
+
         
         if stop:
             self.do_quit('all')
@@ -2022,7 +2024,7 @@ class CmdShell(Cmd):
 
 
 
-
+class NotValidInput(Exception): pass
 #===============================================================================
 # Question with auto-completion
 #===============================================================================
@@ -2042,6 +2044,7 @@ class SmartQuestion(BasicCmd):
 
     def __init__(self, question, allow_arg=[], default=None, 
                                             mother_interface=None, *arg, **opt):
+
         self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
@@ -2399,9 +2402,9 @@ class ControlSwitch(SmartQuestion):
         if 'allow_arg' in opts:
             allowed_args += opts['allow_arg']
             del opts['allow_arg']
-            
+
         allowed_args +=["0", "done"]
-        super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
+        SmartQuestion.__init__(self, question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
 
     def special_check_answer_in_input_file(self, line, default):
@@ -2498,8 +2501,8 @@ class ControlSwitch(SmartQuestion):
             return getattr(self, 'get_allowed_%s' % key)()
         else:
             return ['ON', 'OFF']    
-        
-    def default(self, line):
+            
+    def default(self, line, raise_error=False):
         """Default action if line is not recognized"""
         
         line=line.strip().replace('@', '__at__')
@@ -2521,7 +2524,7 @@ class ControlSwitch(SmartQuestion):
             base, value = line.split(' ', 1)
         elif hasattr(self, 'ans_%s' % line.lower()):
             base, value = line.lower(), None
-        elif line.isdigit() and line in [`i` for i in range(1, len(self.switch)+1)]:
+        elif line.isdigit() and line in [`i` for i in range(1, len(self.to_control)+1)]:
             # go from one valid option to the next in the get_allowed for that option
             base = self.to_control[int(line)-1][0].lower()
             return self.default(base) # just recall this function with the associate name
@@ -2533,7 +2536,7 @@ class ControlSwitch(SmartQuestion):
             except:
                 if self.get_allowed(base):
                     value = self.get_allowed(base)[0]
-                else:                                            
+                else:                      
                     logger.warning('Can not switch "%s" to another value via number', base)
                     self.value='reask'
                     return
@@ -2548,6 +2551,8 @@ class ControlSwitch(SmartQuestion):
         elif line in 'auto':
             self.switch['dynamical'] = True
             return super(ControlSwitch, self).default(line)
+        elif raise_error:
+            raise NotValidInput('unknow command: %s' % line)
         else:
             logger.warning('unknow command: %s' % line)
             self.value = 'reask'
@@ -2560,7 +2565,9 @@ class ControlSwitch(SmartQuestion):
                 value = value.lower()
             getattr(self, 'ans_%s' % base)(value)
         elif base in self.switch:
-            self.set_switch(base, value)        
+            self.set_switch(base, value)
+        elif raise_error:
+            raise NotValidInput('Not valid command: %s' % line)                
         else:
             logger.warning('Not valid command: %s' % line)
    
@@ -3000,7 +3007,7 @@ class ControlSwitch(SmartQuestion):
         
         return upper, lower, f1, f2
                 
-    def create_question(self):
+    def create_question(self, help_text=True):
         """ create the question  with correct formatting"""
         
         # geth the number of line and column of the shell to adapt the printing
@@ -3090,30 +3097,29 @@ class ControlSwitch(SmartQuestion):
                 
         if not example:
             example = ('KEY', 'VALUE')
+        
+        if help_text:
+            text += \
+              ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
+               "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
+               "Type 'help' for the list of all valid option",
+               "Type '0', 'auto', 'done' or just press enter when you are done."]
             
-        text += \
-          ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
-           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
-           "Type 'help' for the list of all valid option",
-           "Type '0', 'auto', 'done' or just press enter when you are done."]
-        
-        # check on the number of row:
-        if len(text) > nb_rows:
-            # too many lines. Remove some
-            to_remove = [ -2, #Type 'help' for the list of all valid option
-                          -5,  # \====/
-                          -4, #Either type the switch number (1 to %s) to change its setting,
-                          -3, # Set any switch explicitly
-                          -1, # Type '0', 'auto', 'done' or just press enter when you are done.
-                         ] 
-            to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
-            text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
-        
+            # check on the number of row:
+            if len(text) > nb_rows:
+                # too many lines. Remove some
+                to_remove = [ -2, #Type 'help' for the list of all valid option
+                              -5,  # \====/
+                              -4, #Either type the switch number (1 to %s) to change its setting,
+                              -3, # Set any switch explicitly
+                              -1, # Type '0', 'auto', 'done' or just press enter when you are done.
+                             ] 
+                to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
+                text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
+            
         self.question =    "\n".join(text)                                                              
         return self.question
     
-
-
 
 #===============================================================================
 # 

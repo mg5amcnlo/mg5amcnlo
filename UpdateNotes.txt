@@ -1,10 +1,18 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
 2.6.2 ()
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
+      OM: introduce "update to_full" command to display all the hidden parameter
+      OM: improve handling of (some) run_card parameter:
+            - add comment that can be displayed via "help NAME"
+            - add autocompletion for some parameter
+            - add direct rejection of parameter edition if not in some allowed list/range
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
 
+
 2.6.1 (12/12/17)
+
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
              to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
       OM: Re-factoring the code asking which program to use (both at LO and NLO)

@@ -1499,7 +1499,6 @@ This will take effect only in a NEW terminal
     def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
-
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         elif args:
@@ -5761,6 +5760,36 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
+    install_plugin = ['maddm']
+    install_ad = {'pythia-pgs':['arXiv:0603175'],
+                          'Delphes':['arXiv:1307.6346'],
+                          'Delphes2':['arXiv:0903.2225'],
+                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'Golem95':['arXiv:0807.0605'],
+                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
+                          'QCDLoop':['arXiv:0712.1851'],
+                          'pythia8':['arXiv:1410.3012'],
+                          'lhapdf6':['arXiv:1412.7420'],
+                          'lhapdf5':['arXiv:0605240'],
+                          'hepmc':['CPC 134 (2001) 41-46'],
+                          'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
+                          'MadAnalysis5':['arXiv:1206.1599'],
+                          'MadAnalysis':['arXiv:1206.1599'],
+                          'collier':['arXiv:1604.06792'],
+                          'oneloop':['arXiv:1007.4716'],
+                          'maddm':['arXiv:1505.04190']}
+    install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                         'http://madgraph.physics.illinois.edu/package_info.dat']
+    install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
+                'MadAnalysis4':'MadAnalysis',
+                'SysCalc':'SysCalc', 'Golem95': 'golem95',
+                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
+                'maddm':'maddm'
+                }
+
     def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
@@ -5786,26 +5815,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
 
-        plugin = ['maddm']
+        plugin = self.install_plugin
         
-        advertisements = {'pythia-pgs':['arXiv:0603175'],
-                          'Delphes':['arXiv:1307.6346'],
-                          'Delphes2':['arXiv:0903.2225'],
-                          'SysCalc':['arXiv:XXXX.YYYYY'],
-                          'Golem95':['arXiv:0807.0605'],
-                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
-                          'QCDLoop':['arXiv:0712.1851'],
-                          'pythia8':['arXiv:1410.3012'],
-                          'lhapdf6':['arXiv:1412.7420'],
-                          'lhapdf5':['arXiv:0605240'],
-                          'hepmc':['CPC 134 (2001) 41-46'],
-                          'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
-                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
-                          'MadAnalysis5':['arXiv:1206.1599'],
-                          'MadAnalysis':['arXiv:1206.1599'],
-                          'collier':['arXiv:1604.06792'],
-                          'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190']}
+        advertisements = self.install_ad
 
 
         if args[0] in advertisements:
@@ -5823,8 +5835,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         else:
             path = {}
     
-            data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.physics.illinois.edu/package_info.dat']
+            data_path = self.install_server
 
 #           Force here to choose one particular server
             if any(a.startswith('--source=') for a in args):
@@ -5864,15 +5875,11 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
+        if args[0] == 'MadAnalysis4':
+            args[0] = 'MadAnalysis'
 
         try:
-            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
-                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
-                'MadAnalysis4':'MadAnalysis',
-                'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5'
-                }
+            name = self.install_name
             name = name[args[0]]
         except KeyError:
             name = args[0]
@@ -5900,19 +5907,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'        
-        if args[0] == 'MadAnalysis4':
-            args[0] = 'MadAnalysis'
-        try:
-            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
-                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop',
-                'maddm':'maddm'
-                }
-            name = name[args[0]]
-        except:
-            pass
+
 
         #check outdated install
         substitution={'Delphes2':'Delphes','pythia-pgs':'pythia8'}
@@ -5948,6 +5943,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 created_name = created_name[0]
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
+        if hasattr(self, 'post_install_%s' %name):
+            return getattr(self, 'post_install_%s' %name)()
 
         logger.info('compile %s. This might take a while.' % name)
 
@@ -7401,7 +7398,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
 
         noclean = '-noclean' in args
         force = '-f' in args

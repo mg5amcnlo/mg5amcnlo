@@ -3783,7 +3783,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
-
+        # indicate the PDG of all initial particle
+        try:
+            pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
+            pdgs2 = [p.get_initial_pdg(2) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(2)]
+        except AttributeError:
+            pdgs1 = [p.get_initial_pdg(1) for m in matrix_elements.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
+            pdgs2 = [p.get_initial_pdg(2) for m in matrix_elements.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(2)]
+        self.proc_characteristic['pdg_initial1'] = pdgs1
+        self.proc_characteristic['pdg_initial2'] = pdgs2
+        
+        
         modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
             param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
