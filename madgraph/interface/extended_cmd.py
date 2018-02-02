@@ -1745,7 +1745,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.mother.lastcmd = 'quit %s' % level
         elif self.inputfile:
             for line in self.inputfile:
-                logger.warning('command not executed: %s' % line)
+                logger.warning('command not executed: %s' % line.replace('\n','')) 
 
         return True
 

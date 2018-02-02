@@ -8074,8 +8074,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
-                me_cmd.options.update(self.options)
-                me_cmd.configure_run_mode(self.options['run_mode'])
+                for name, val in self.options.items():
+                    if name in me_cmd.options and me_cmd.options[name] != val:
+                        self.exec_cmd('set %s %s --no_save' % (name, val)) 
+                #me_cmd.options.update(self.options)
+                #me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)
                 me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False
