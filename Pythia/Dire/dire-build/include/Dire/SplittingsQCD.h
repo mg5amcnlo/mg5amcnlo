@@ -3,7 +3,7 @@
 #define Pythia8_SplittingsQCD_H
 
 #define ZETA3 1.202056903159594
-#define DIRE_SPLITTINGSQCD_VERSION "2.000"
+#define DIRE_SPLITTINGSQCD_VERSION "2.002"
 
 #include "Pythia8/Basics.h"
 #include "Pythia8/Pythia.h"
@@ -34,7 +34,7 @@ public:
   void init();
 
   // VARIABLES
-  double CA, TR, CF, pTmin;
+  double CA, TR, CF, pTmin, pT2minVariations;
   int NF_qcd_fsr;
   bool usePDFalphas, doVariations;
   double alphaS2pi;
@@ -70,7 +70,45 @@ public:
   virtual bool isPartial()  { return true; }
 
   virtual int couplingType (int, int) { return 1; }
-  virtual double coupling (double pT2) { return as2Pi(pT2); }
+  virtual double coupling (double z, double pT2, double m2dip,
+    pair<int,bool> radBef, pair<int,bool> recBef) {
+    double scale2 = couplingScale2 ( z, pT2, m2dip, radBef, recBef);
+    if (scale2 < 0.) scale2 = pT2;
+    return as2Pi(scale2);
+  }
+  virtual double couplingScale2 (double z, double pT2, double m2dip,
+    pair<int,bool> radBef, pair<int,bool> recBef) {
+    if        ( radBef.second &&  recBef.second) {
+      if (settingsPtr->mode("DireTimes:alphasScheme") == 0) return pT2;
+      return pT2;
+    } else if ( radBef.second && !recBef.second) {
+      if (settingsPtr->mode("DireTimes:alphasScheme") == 0) return pT2;
+      double zcs = z;
+      double xcs = m2dip * zcs * (1.-zcs) / (pT2 + m2dip * zcs * (1.-zcs));
+      double kt2 = m2dip * (1.-xcs) / xcs * zcs * (1.-zcs);
+      return kt2;
+    } else if (!radBef.second &&  recBef.second) {
+      if (settingsPtr->mode("DireTimes:alphasScheme") == 0) return pT2;
+      double xcs = z;
+      double ucs = pT2/m2dip / (1.-z);
+      double kt2 = m2dip * (1-xcs) / xcs * ucs * (1.-ucs);
+      return kt2;
+    } else if (!radBef.second && !recBef.second) {
+      if (settingsPtr->mode("DireTimes:alphasScheme") == 0) return pT2;
+      double xcs = ( z * (1.-z) - pT2/m2dip) / (1.-z);
+      double vcs = pT2/m2dip / (1.-z);
+      double kt2 = m2dip * vcs * (1.-xcs-vcs) / xcs;
+      return kt2;
+    }
+    return -1.;
+  }
+
+  // Functions that allow different ordering variables for emissions.
+  // Note: Only works after splitInfo has been properly filled.
+  virtual double getJacobian( const Event& = Event(),
+    PartonSystems* partonSystems = 0);
+  virtual map<string, double> getPhasespaceVars(const Event& = Event(),
+    PartonSystems* = 0);
 
 };
 
@@ -1154,6 +1192,9 @@ public:
   int nEmissions() { return 1; }
 
   int kinMap ();
+  bool canUseForBranching() { return true; }
+  bool isPartial()  { return false; }
+  vector<pair<int,int> > radAndEmtCols(int iRad, int, Event state);
 
   // Return id of mother after splitting.
   int motherID(int idDaughter);
@@ -1185,8 +1226,6 @@ public:
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
-
-  bool isPartial()  { return false; }
 
 };
 
@@ -1209,6 +1248,9 @@ public:
   int nEmissions() { return 1; }
 
   int kinMap ();
+  bool canUseForBranching() { return true; }
+  bool isPartial()  { return false; }
+  vector<pair<int,int> > radAndEmtCols(int iRad, int, Event state);
 
   // Return id of mother after splitting.
   int motherID(int idDaughter);
@@ -1240,8 +1282,6 @@ public:
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
-
-  bool isPartial()  { return false; }
 
 };
 
@@ -1263,6 +1303,9 @@ public:
   int nEmissions() { return 1; }
 
   int kinMap ();
+  bool canUseForBranching() { return true; }
+  bool isPartial()  { return false; }
+  vector<pair<int,int> > radAndEmtCols(int iRad, int, Event state);
 
   // Return id of mother after splitting.
   int motherID(int idDaughter);
@@ -1294,8 +1337,6 @@ public:
 
   // Functions to calculate the kernel from SplitInfo information.
   bool calc(const Event& state = Event(), int order = -1);
-
-  bool isPartial()  { return false; }
 
 };
 

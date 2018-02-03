@@ -1,11 +1,5 @@
-// MyMergingHooks.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
-// PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
-// Please respect the MCnet Guidelines, see GUIDELINES for details.
-
-// This file is written by Stefan Prestel.
-// Function definitions (not found in the header) for the MyHardProcess and
-// MyMergingHooks classes.
+// MergingHooks.cc is a part of the DIRE plugin to the PYTHIA event generator.
+// Copyright (C) 2018 Stefan Prestel.
 
 #include "Pythia8/PartonLevel.h"
 #include "Dire/MergingHooks.h"
@@ -1264,6 +1258,12 @@ bool MyHardProcess::exchangeCandidates( vector<int> candidates1,
 
 void MyMergingHooks::init(){
 
+  // Abuse init to store and restore state of MergingHooks.
+  if (isInit)   { store();   isInit = false; isStored = true;  return;}
+  if (isStored) { restore(); isInit = true;  isStored = false; return;}
+
+  isInit = isStored = false;
+
   // Save pointers
   showers               = 0;
 
@@ -1467,6 +1467,8 @@ void MyMergingHooks::init(){
                    || doNL3 || doUNLOPS || doUMEPS
                    || doPTLundMergingSave || doCutBasedMergingSave;
 
+  isInit = true;
+
   if (!writeBanner) return;
 
   // Write banner.
@@ -1577,6 +1579,99 @@ void MyMergingHooks::init(){
        << "   |";
   cout << "\n *-------------- END MEPS Merging Initialization  ---------------"
        << "---*\n\n";
+
+}
+
+//--------------------------------------------------------------------------
+
+
+void MyMergingHooks::store() {
+
+  hardProcessStore.hardIncoming1    = hardProcess->hardIncoming1;
+  hardProcessStore.hardIncoming2    = hardProcess->hardIncoming2;
+  hardProcessStore.hardOutgoing1    = hardProcess->hardOutgoing1;
+  hardProcessStore.hardOutgoing2    = hardProcess->hardOutgoing2;
+  hardProcessStore.hardIntermediate = hardProcess->hardIntermediate;
+  hardProcessStore.state            = hardProcess->state;
+  hardProcessStore.PosOutgoing1     = hardProcess->PosOutgoing1;
+  hardProcessStore.PosOutgoing2     = hardProcess->PosOutgoing2;
+  hardProcessStore.PosIntermediate  = hardProcess->PosIntermediate;
+  hardProcessStore.tms              = hardProcess->tms;
+
+  nReclusterStore                   = nReclusterSave;
+  nRequestedStore                   = nRequestedSave;
+  pT0ISRStore                       = pT0ISRSave;
+  pTcutStore                        = pTcutSave;
+  inputEventStore                   = inputEvent;
+  resonancesStore                   = resonances;
+  muMIStore                         = muMISave;
+  tmsValueStore                     = tmsValueSave;
+  tmsValueNowStore                  = tmsValueNow;
+  DparameterStore                   = DparameterSave;
+  nJetMaxStore                      = nJetMaxSave;
+  nJetMaxNLOStore                   = nJetMaxNLOSave;
+  doOrderHistoriesStore             = doOrderHistoriesSave;
+  muFStore                          = muFSave;
+  muRStore                          = muRSave;
+  muFinMEStore                      = muFinMESave;
+  muRinMEStore                      = muRinMESave;
+  doIgnoreEmissionsStore            = doIgnoreEmissionsSave;
+  doIgnoreStepStore                 = doIgnoreStepSave;
+  pTstore                           = pTsave;
+  nMinMPIStore                      = nMinMPISave;
+  nJetMaxLocalStore                 = nJetMaxLocal;
+  nJetMaxNLOLocalStore              = nJetMaxNLOLocal;
+  hasJetMaxLocalStore               = hasJetMaxLocal;
+  nHardNowStore                     = nHardNowSave;
+  nJetNowStore                      = nJetNowSave;
+  tmsHardNowStore                   = tmsHardNowSave;
+  tmsNowStore                       = tmsNowSave;
+
+}
+
+//--------------------------------------------------------------------------
+
+void MyMergingHooks::restore() {
+
+  hardProcess->hardIncoming1    = hardProcessStore.hardIncoming1;
+  hardProcess->hardIncoming2    = hardProcessStore.hardIncoming2;
+  hardProcess->hardOutgoing1    = hardProcessStore.hardOutgoing1;
+  hardProcess->hardOutgoing2    = hardProcessStore.hardOutgoing2;
+  hardProcess->hardIntermediate = hardProcessStore.hardIntermediate;
+  hardProcess->state            = hardProcessStore.state;
+  hardProcess->PosOutgoing1     = hardProcessStore.PosOutgoing1;
+  hardProcess->PosOutgoing2     = hardProcessStore.PosOutgoing2;
+  hardProcess->PosIntermediate  = hardProcessStore.PosIntermediate;
+  hardProcess->tms              = hardProcessStore.tms;
+
+  nReclusterSave                = nReclusterStore;
+  nRequestedSave                = nRequestedStore;
+  pT0ISRSave                    = pT0ISRStore;
+  pTcutSave                     = pTcutStore;
+  inputEvent                    = inputEventStore;
+  resonances                    = resonancesStore;
+  muMISave                      = muMIStore;
+  tmsValueSave                  = tmsValueStore;
+  tmsValueNow                   = tmsValueNowStore;
+  DparameterSave                = DparameterStore;
+  nJetMaxSave                   = nJetMaxStore;
+  nJetMaxNLOSave                = nJetMaxNLOStore;
+  doOrderHistoriesSave          = doOrderHistoriesStore;
+  muFSave                       = muFStore;
+  muRSave                       = muRStore;
+  muFinMESave                   = muFinMEStore;
+  muRinMESave                   = muRinMEStore;
+  doIgnoreEmissionsSave         = doIgnoreEmissionsStore;
+  doIgnoreStepSave              = doIgnoreStepStore;
+  pTsave                        = pTstore;
+  nMinMPISave                   = nMinMPIStore;
+  nJetMaxLocal                  = nJetMaxLocalStore;
+  nJetMaxNLOLocal               = nJetMaxNLOLocalStore;
+  hasJetMaxLocal                = hasJetMaxLocalStore;
+  nHardNowSave                  = nHardNowStore;
+  nJetNowSave                   = nJetNowStore;
+  tmsHardNowSave                = tmsHardNowStore;
+  tmsNowSave                    = tmsNowStore;
 
 }
 
@@ -1879,7 +1974,7 @@ int MyMergingHooks::getNumberOfClusteringSteps(const Event& event,
 
   nsteps =  nFinalPartons     + nFinalLeptons     + nFinalBosons
          - (nHardOutPartons() + nHardOutLeptons() + nHardOutBosons());
-  nRequestedSave = nsteps;
+  //nRequestedSave = nsteps;
 
   // For inclusive handling, the number of reclustering steps
   // can be different within a single sample.

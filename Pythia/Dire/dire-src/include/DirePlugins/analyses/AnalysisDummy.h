@@ -7,6 +7,8 @@ class MyAnalysis : public Analysis {
   void init();
   void fill(const Event&, double);
   void fill(const Event&, const Event&, double) { return; };
+  void fill(const Event&, vector<double> ) { return; }
+  void fill(const Event&, const Event&, vector<double>) { return; };
   void finalize();
   void print();
 

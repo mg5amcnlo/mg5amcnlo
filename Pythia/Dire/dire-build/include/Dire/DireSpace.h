@@ -1,5 +1,5 @@
 // DireSpace.h is a part of the DIRE plugin to the PYTHIA event generator.
-// Copyright (C) 2016 Stefan Prestel.
+// Copyright (C) 2018 Stefan Prestel.
 
 // Header file for the spacelike initial-state showers.
 // DireSpaceEnd: radiating dipole end in ISR.
@@ -8,7 +8,7 @@
 #ifndef Pythia8_DireSpace_H
 #define Pythia8_DireSpace_H
 
-#define DIRE_SPACE_VERSION "2.000"
+#define DIRE_SPACE_VERSION "2.002"
 
 #include "Pythia8/Basics.h"
 #include "Pythia8/Pythia.h"
@@ -43,7 +43,9 @@ public:
   DireSpaceEnd( int systemIn = 0, int sideIn = 0, int iRadiatorIn = 0,
     int iRecoilerIn = 0, double pTmaxIn = 0., int colTypeIn = 0,
     int chgTypeIn = 0, int weakTypeIn = 0,  int MEtypeIn = 0,
-    bool normalRecoilIn = true, int weakPolIn = 0,
+    bool normalRecoilIn = true, bool isSoftRadIn = false,
+    bool isSoftRecIn = false, int weakPolIn = 0,
+    vector<int> parentAftPosIn = vector<int>(),
     vector<int> iSpectatorIn = vector<int>(),
     vector<double> massIn = vector<double>(),
     vector<int> allowedIn = vector<int>() ) :
@@ -52,7 +54,8 @@ public:
     chgType(chgTypeIn), weakType(weakTypeIn), MEtype(MEtypeIn),
     normalRecoil(normalRecoilIn), weakPol(weakPolIn), nBranch(0),
     pT2Old(0.), zOld(0.5), mass(massIn), iSpectator(iSpectatorIn),
-    allowedEmissions(allowedIn) { 
+    allowedEmissions(allowedIn), isSoftRad(isSoftRadIn),
+    isSoftRec(isSoftRecIn), parentAftPos(parentAftPosIn){ 
     idDaughter = idMother = idSister = iFinPol = 0;
     x1  = x2 = m2Dip = pT2 = z = xMo = Q2 = mSister = m2Sister = pT2corr
         = pT2Old = zOld = asymPol = sa1 = xa = pT2start = pT2stop = 0.;
@@ -75,7 +78,8 @@ public:
       mRad(dip.mRad), m2Rad(dip.m2Rad), mRec(dip.mRec), m2Rec(dip.m2Rec),
       mDip(dip.mDip), sa1(dip.sa1), xa(dip.xa),
       phia1(dip.phia1), mass(dip.mass), iSpectator(dip.iSpectator),
-      allowedEmissions(dip.allowedEmissions) {}
+      allowedEmissions(dip.allowedEmissions), isSoftRad(dip.isSoftRad),
+      isSoftRec(dip.isSoftRec), parentAftPos(dip.parentAftPos) {}
 
   // Store values for trial emission.
   void store( int idDaughterIn, int idMotherIn, int idSisterIn,
@@ -111,6 +115,16 @@ public:
 
   // Extended list of recoilers.
   vector<int> iSpectator;
+
+  vector<int> allowedEmissions;
+
+  bool isSoftRad, isSoftRec;
+  void setSoftRad() { isSoftRad = true; }
+  void setHardRad() { isSoftRad = false; }
+  void setSoftRec() { isSoftRec = true; }
+  void setHardRec() { isSoftRec = false; }
+  vector<int> parentAftPos;
+
   // List of allowed emissions (to avoid double-counting, since one
   // particle can be part of many different dipoles.
   void appendAllowedEmt( int id) {
@@ -118,7 +132,6 @@ public:
         == allowedEmissions.end() ) { allowedEmissions.push_back(id);}
   }
   void clearAllowedEmt() { allowedEmissions.resize(0); }
-  vector<int> allowedEmissions;
   bool canEmit() { return int(allowedEmissions.size() > 0); }
 
   void init(const Event& state) {
@@ -130,7 +143,27 @@ public:
     m2Dip  = pow2(mDip);
   }
 
-} ;
+  void list() const {
+    // Header.
+    cout << "\n --------  DireSpaceEnd Listing  -------------- \n"
+         << "\n    syst  side   rad   rec       pTmax  col  chg   ME rec \n"
+         << fixed << setprecision(3);
+    cout << setw(6) << system
+         << setw(6) << side      << setw(6)  << iRadiator
+         << setw(6) << iRecoiler << setw(12) << pTmax
+         << setw(5) << colType   << setw(5)  << chgType
+         << setw(5) << MEtype    << setw(4)
+         << normalRecoil
+         << setw(12) << m2Dip;
+    for (int j = 0; j < int(allowedEmissions.size()); ++j)
+      cout << setw(5) << allowedEmissions[j] << " ";
+    cout << endl;
+   // Done.
+    cout << "\n --------  End DireSpaceEnd Listing  ------------"
+         << "-------------------------------------------------------" << endl;
+  }
+
+};
  
 //==========================================================================
 
@@ -141,9 +174,38 @@ class DireSpace : public Pythia8::SpaceShower {
 public:
 
   // Constructor.
-  DireSpace() {}
+  DireSpace() {
+    beamOffset       = 0;
+    pTdampFudge      = 0.;
+    infoPtr          = 0;
+    particleDataPtr  = 0;
+    partonSystemsPtr = 0;
+    rndmPtr          = 0;
+    settingsPtr      = 0;
+    userHooksPtr     = 0;
+    mergingHooksPtr  = 0;
+    splittingsPtr    = 0;
+    weights          = 0;
+    debugPtr         = 0;
+    beamAPtr = beamBPtr = 0;
+    printBanner  = true;
+    nWeightsSave = 0;
+    isInitSave   = false;
+    nMPI         = 0;
+    usePDFalphas = false;
+  }
 
-  DireSpace(Pythia8::Pythia* pythiaPtr) {
+  DireSpace(Pythia8::Pythia* pythiaPtr) :
+    pTdampFudge(0.), mc(0.), mb(0.), m2c(0.), m2b(0.), m2cPhys(0.),
+    m2bPhys(0.), renormMultFac(0.), factorMultFac(0.), fixedFacScale2(0.),
+    alphaSvalue(0.), alphaS2pi(0.), Lambda3flav(0.), Lambda4flav(0.),
+    Lambda5flav(0.), Lambda3flav2(0.), Lambda4flav2(0.), Lambda5flav2(0.),
+    pT0Ref(0.), ecmRef(0.), ecmPow(0.), pTmin(0.), sCM(0.), eCM(0.), pT0(0.),
+    pT20(0.), pT2min(0.), m2min(0.), mTolErr(0.), pTmaxFudgeMPI(0.),
+    strengthIntAsym(0.), pT2minVariations(0.), pT2minMECs(0.),
+    alphaS2piOverestimate(0.), usePDFalphas(false), usePDFmasses(false),
+    useSummedPDF(false), useGlobalMapIF(false), forceMassiveMap(false),
+    useMassiveBeams(false) {
     beamOffset        = 0;
     pTdampFudge       = 0.;
     infoPtr           = &pythiaPtr->info;
@@ -158,10 +220,11 @@ public:
     debugPtr          = 0;
     printBanner       = true;
     nWeightsSave      = 0;
-    //dipEnd.reserve(1000000);
-
-    // Other variables
+    isInitSave        = false;
     nMPI = 0;
+
+    beamAPtr = 0;
+    beamBPtr = 0;
 
   }
 
@@ -322,13 +385,13 @@ public:
   //virtual double getCoupling( const Event& state, double mu2Ren, int iRad,
   //  int iEmt, int iRec, string name) {
   virtual double getCoupling( const Event&, double mu2Ren, int, int, int,
-    string name) {
+    string name) { 
     if (splits.find(name) != splits.end()) 
       return splits[name]->coupling(mu2Ren);
     return 1.;
   }
 
-  // Return Jacobian for initial-initial phase space factorisation.
+  /*// Return Jacobian for initial-initial phase space factorisation.
   double jacobian_II(double z, double pT2, double m2dip, double = 0.,
     double = 0., double = 0., double = 0., double = 0.) {
     // Calculate CS variables.
@@ -345,7 +408,7 @@ public:
     double xCS = z;
     double uCS = (pT2/m2dip)/(1-z);
     return 1./xCS * ( 1. - uCS) / (1. - 2.*uCS);
-  }
+  }*/
 
   // Auxiliary function to return the position of a particle.
   // Should go int Event class eventually!
@@ -382,6 +445,8 @@ public:
   // renormalisation scale variations + threshold matching.
   double alphasNow( double pT2, double renormMultFacNow = 1., int iSys = 0 );
 
+  bool isInit() { return isInitSave; }
+
 private:
 
   // Number of times the same error message is repeated, unless overridden.
@@ -410,25 +475,27 @@ private:
          TINYPDF, TINYKERNELPDF, TINYPT2, HEAVYPT2EVOL, HEAVYXEVOL, 
          EXTRASPACEQ, LAMBDA3MARGIN, PT2MINWARN, LEPTONXMIN, LEPTONXMAX, 
          LEPTONPT2MIN, LEPTONFUDGE, HEADROOMQ2Q, HEADROOMQ2G, 
-         HEADROOMG2G, HEADROOMG2Q, TINYMASS, PT2_INCREASE_OVERESTIMATE;
+         HEADROOMG2G, HEADROOMG2Q, TINYMASS,
+         PT2_INCREASE_OVERESTIMATE;
   static const double G2QQPDFPOW1, G2QQPDFPOW2; 
 
   // Initialization data, normally only set once.
-  bool   doQCDshower, doQEDshowerByQ, doQEDshowerByL, useSamePTasMPI,
-         doMEcorrections, doMEafterFirst, doPhiPolAsym,
+  bool   isInitSave, doQCDshower, doQEDshowerByQ, doQEDshowerByL,
+         useSamePTasMPI, doMEcorrections, doMEafterFirst, doPhiPolAsym,
          doPhiIntAsym, doRapidityOrder, useFixedFacScale, doSecondHard,
          canVetoEmission, hasUserHooks, alphaSuseCMW, printBanner, doTrialNow;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax,
-         nQuarkIn, enhanceScreening, nFinalMax, kernelOrder, kernelOrderMPI,
-         nWeightsSave, nMPI;
+         nQuarkIn, enhanceScreening, nFinalMax, nFinalMaxMECs, kernelOrder,
+         kernelOrderMPI, nWeightsSave, nMPI;
   double pTdampFudge, mc, mb, m2c, m2b, m2cPhys, m2bPhys, renormMultFac,
          factorMultFac, fixedFacScale2, alphaSvalue, alphaS2pi, Lambda3flav,
          Lambda4flav, Lambda5flav, Lambda3flav2, Lambda4flav2, Lambda5flav2,
          pT0Ref, ecmRef, ecmPow, pTmin, sCM, eCM, pT0, pT20,
-         pT2min, m2min, mTolErr, pTmaxFudgeMPI, strengthIntAsym;
+         pT2min, m2min, mTolErr, pTmaxFudgeMPI, strengthIntAsym,
+         pT2minVariations, pT2minMECs;
   double alphaS2piOverestimate;
-  bool usePDFalphas, usePDFmasses, useSummedPDF;
-  bool useGlobalMapIF, forceMassiveMap;
+  bool  usePDFalphas, usePDFmasses, useSummedPDF, useGlobalMapIF,
+        forceMassiveMap, useMassiveBeams;
 
   map<int,double> pT2cutSave;
   double pT2cut(int id) {
@@ -487,11 +554,17 @@ private:
     const Event& event, vector<DireSpaceEnd>& dipEnds);
 
   // Function to set up and append a new dipole.
-  bool appendDipole( const Event& state, int sys = 0, int side = 0,
-    int iRad = 0, int iRecNow = 0, double pTmax = 0., int colType = 0,
-    int chgType = 0, int weakType = 0, int MEtype = 0, bool normalRecoil = true,
-    int weakPolIn = 0, vector<int> iSpectatorIn = vector<int>(),
-    vector<double> massIn = vector<double>() );
+  //bool appendDipole( const Event& state, int sys = 0, int side = 0,
+  //  int iRad = 0, int iRecNow = 0, double pTmax = 0., int colType = 0,
+  //  int chgType = 0, int weakType = 0, int MEtype = 0, bool normalRecoil = true,
+  //  int weakPolIn = 0, vector<int> iSpectatorIn = vector<int>(),
+  //  vector<double> massIn = vector<double>() );
+  bool appendDipole( const Event& state, int sys, int side,
+    int iRad, int iRecNow, double pTmax, int colType,
+    int chgType, int weakType, int MEtype, bool normalRecoil, bool isSoftRad,
+    bool isSoftRec,
+    int weakPolIn, vector<int> iSpectatorIn, vector<int> parentAftPos,
+    vector<double> massIn, vector<DireSpaceEnd>& dipEnds);
 
   vector<int> sharedColor(const Particle& rad, const Particle& rec);
 
@@ -535,11 +608,6 @@ private:
     return TINYPDF*log(1-x)/log(1-xref);
   }
 
-  // Evolve a QCD dipole end near heavy quark threshold region.
-  void pT2nearQCDthreshold( BeamParticle& beam, double m2Massive,
-    double m2Threshold, double xMaxAbs, double zMinAbs,
-    double zMaxMassive);
-
   SplittingLibrary* splittingsPtr;
 
   // Number of proposed splittings in hard scattering systems.
@@ -565,6 +633,8 @@ private:
     double, double, int, string, int&, int&, double&, double&, 
     map<string,double>&, double&);
 
+  pair<bool, pair<double,double> > getMEC ( const Event& state, 
+    SplitInfo* splitInfo);
   bool applyMEC ( const Event& state, SplitInfo* splitInfo);
 
   // Get particle masses.
@@ -576,11 +646,25 @@ private:
       && (toLower(settingsPtr->word("PDF:pSet")).find("lhapdf")
          != string::npos);
     double mRet = 0.;
-    if (strategy == 1) mRet = particleDataPtr->m0(id);
-    if (strategy == 2 &&  usePDFmass) mRet = beam.mQuarkPDF(id);
-    if (strategy == 2 && !usePDFmass) mRet = particleDataPtr->m0(id);
-    if (strategy == 3) mRet = mass;
-    if (mRet < TINYMASS) mRet = 0.;
+    //if (strategy == 1) mRet = particleDataPtr->m0(id);
+    //if (strategy == 2 &&  usePDFmass) mRet = beam.mQuarkPDF(id);
+    //if (strategy == 2 && !usePDFmass) mRet = particleDataPtr->m0(id);
+    //if (strategy == 3) mRet = mass;
+    //if (mRet < TINYMASS) mRet = 0.;
+    //return pow2(max(0.,mRet));
+    // Parton masses.
+    if ( particleDataPtr->colType(id) != 0) {
+      if (strategy == 1) mRet = particleDataPtr->m0(id);
+      if (strategy == 2 &&  usePDFmass) mRet = beam.mQuarkPDF(id);
+      if (strategy == 2 && !usePDFmass) mRet = particleDataPtr->m0(id);
+      if (strategy == 3) mRet = mass;
+      if (mRet < TINYMASS) mRet = 0.;
+    // Masses of other particles.
+    } else {
+      mRet = particleDataPtr->m0(id);
+      if (strategy == 3) mRet = mass;
+      if (mRet < TINYMASS) mRet = 0.;
+    }
     return pow2(max(0.,mRet));
   }
 
@@ -590,7 +674,7 @@ private:
     double m2r = 0.,  double m2s = 0., double m2e = 0.,
     vector<double> aux = vector<double>());
 
-  // Kallen function and derived quantities. Helpers for massive phase
+  /*// Kallen function and derived quantities. Helpers for massive phase
   // space mapping.
   double lABC(double a, double b, double c) { return pow2(a-b-c) - 4.*b*c;}
   double bABC(double a, double b, double c) { 
@@ -599,7 +683,7 @@ private:
     else if ((a-b-c) < 0.) ret =-sqrt(lABC(a,b,c));
     else                   ret = 0.;
     return ret; }
-  double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}
+  double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}*/
 
   // Function to attach the correct alphaS weights to the kernels.
   // Auxiliary function to get number of flavours.
@@ -634,11 +718,19 @@ private:
   // List of splitting kernels.
   map<string, Splitting* > splits;
   map<string, double > overhead;
-  void scaleOverheadFactor(string name, double scale)
-    { overhead[name] *= scale; return; }
-  void resetOverheadFactors()
-    { for ( map<string,double>::iterator it = overhead.begin();
-      it != overhead.end(); ++it ) it->second = 1.0; return; }
+  void scaleOverheadFactor(string name, double scale) {
+    overhead[name] *= scale;
+    return;
+  }
+  void resetOverheadFactors() {
+    for ( map<string,double>::iterator it = overhead.begin();
+      it != overhead.end(); ++it )
+      it->second = 1.0;
+    return;
+  }
+
+  // Map to store some settings, to be passes to splitting kernels.
+  map<string,bool> bool_settings;
 
 };
  

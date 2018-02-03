@@ -2,7 +2,7 @@
 #ifndef Pythia8_WeightContainer_H
 #define Pythia8_WeightContainer_H
 
-#define DIRE_WEIGHTCONTAINER_VERSION "2.000"
+#define DIRE_WEIGHTCONTAINER_VERSION "2.002"
 
 #include "Pythia8/PythiaStdlib.h"
 #include "Pythia8/Settings.h"
@@ -81,16 +81,20 @@ class WeightContainer {
 public:
 
   // Constructor.
-  WeightContainer() : card(""), PY8MEs_accessor(card), beamA(NULL), beamB(NULL),
-    debugPtr(NULL)
+  WeightContainer() : card(""), PY8MEs_accessorPtr(NULL), beamA(NULL), 
+    beamB(NULL), debugPtr(NULL)
     { init(); }
 
-  WeightContainer(Settings* settingsPtrIn) : card(""), PY8MEs_accessor(card),
+  WeightContainer(Settings* settingsPtrIn) : card(""), PY8MEs_accessorPtr(NULL),
     settingsPtr(settingsPtrIn), beamA(NULL), beamB(NULL), debugPtr(NULL)
     { init(); }
 
   // Destructor.
-  virtual ~WeightContainer() {}
+  virtual ~WeightContainer() {
+#ifdef MG5MES
+    if (PY8MEs_accessorPtr) delete PY8MEs_accessorPtr;
+#endif
+  }
 
   // Initialize weights.
   void init() { 
@@ -187,6 +191,11 @@ public:
   double sizeWeights() const { return showerWeight.size(); }
   string weightName (int i) const  { return weightNames[i]; }
 
+  double sizeWeightgroups() const { return weightCombineList.size(); }
+  string weightgroupName (int i) const  {
+    return weightCombineListNames[i];
+  }
+
   // Returns additional user-supplied enhancements factors.
   double enhanceOverestimate( string name );
   double getTrialEnhancement(double pT2key);
@@ -197,14 +206,19 @@ public:
 
   // PY8MEs accessor
   string card;
-  PY8MEs_namespace::PY8MEs PY8MEs_accessor;
-  //PY8MEs_sm::PY8MEs PY8MEs_accessor;
-  bool hasME(vector <int> in_pdgs, vector<int> out_pdgs)
-    { return isAvailableME(PY8MEs_accessor, in_pdgs, out_pdgs); }
+#ifdef MG5MES
+  PY8MEs_namespace::PY8MEs* PY8MEs_accessorPtr;
+#else
+  int* PY8MEs_accessorPtr;
+#endif
+  bool hasME(vector <int> in_pdgs = vector<int>(),
+    vector<int> out_pdgs = vector<int>() );
   bool hasME(const Event& event);
   double getME(const Event& event);
 
 private:
+
+  static const double LARGEWT;
 
   Settings* settingsPtr;
 
@@ -213,6 +227,7 @@ private:
   map<string, double> showerWeight;
   vector<string> weightNames;
   map<string, vector<string> > weightCombineList;
+  vector<string> weightCombineListNames;
 
   // Additonal enhancement factors to boost emission probabilities.
   map<string,double> enhanceFactors;

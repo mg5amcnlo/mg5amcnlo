@@ -170,6 +170,9 @@ int main( int argc, char* argv[] ){
       && nAcceptSH == 0)
       normhepmc = 1. / (1e9*nA);
 
+    if (pythia.settings.flag("PhaseSpace:bias2Selection"))
+      normhepmc = xs / (sumSH);
+
     if(pythia.event.size() > 3){
     // Set event weight
     hepmcevt->weights().push_back(evtweight*normhepmc);

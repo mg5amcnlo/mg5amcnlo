@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # configure is a part of the DIRE parton shower.
 # Copyright (C) 2017 Stefan Prestel.
 # Author: Stefan Prestel (heavily relying on the PYTHIA configure script
@@ -16,7 +16,8 @@
 #     USAGE:    Text printed when the --help option is passed.
 #     OPTIONS:  List of valid options that can be passed by the user.
 ################################################################################
-CFG_FILE="Makefile.inc"
+PYTHIA_CFG_FILE=""
+DIRE_CFG_FILE="Makefile.inc"
 read -d "" USAGE << "BLOCKTEXT"
 Usage: ./configure [OPTIONS]
 
@@ -49,6 +50,10 @@ Necessary external packages.
 --with-pythia8-share=DIR   : Set the path to the PYTHIA installation
                              - if differing from default.
 
+Optional external packages
+--with-mg5mes=DIR          : Path to MG5-produced matrix element code.
+--with-openmp-lib=DIR      : Path to OpenMP library to enable multi-threading.
+
 Installation directories.
 --prefix=DIR           : Directory to install DIRE [$PWD].
 --prefix-COMPONENT=DIR : Set the installation directory for each PYTHIA
@@ -74,6 +79,8 @@ OPTIONS="-h --h -help --help --enable-debug --enable-64bit"
 OPTIONS+=" --enable-shared --lcg"
 OPTIONS+=" --prefix --prefix-bin --prefix-lib --prefix-include --prefix-share"
 OPTIONS+=" --with-pythia8 --with-pythia8-bin --with-pythia8-lib --with-pythia8-include --with-pythia8-share"
+OPTIONS+=" --with-mg5mes --with-mg5mes-bin --with-mg5mes-lib --with-mg5mes-include --with-mg5mes-share"
+OPTIONS+=" --with-openmp-lib"
 OPTIONS+=" --arch --cxx --cxx-common --cxx-shared --cxx-soname --lib-suffix"
 
 ################################################################################
@@ -171,15 +178,17 @@ for VAR in "$@"; do
 	|| [ "$VAR" = "--help" ]; then echo "$USAGE"; exit; fi; done
 
 # Parse the user arguments and evaluate each as a global variable.
-echo "# PYTHIA configuration file." > $CFG_FILE
-echo "# Generated on" `date` "with the user supplied options:" >> $CFG_FILE
+echo "# DIRE configuration file." > $DIRE_CFG_FILE
+echo "# Generated on" `date` "with the user supplied options:" >> $DIRE_CFG_FILE
 for VAR in "$@"; do
-    if [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then echo "# $VAR" >> $CFG_FILE;
+    if [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then echo "# $VAR" >> $DIRE_CFG_FILE;
     else echo "WARNING: Ignoring invalid option \"${VAR%=*}\"."; continue; fi;
     VAR=${VAR#--with-}; VAR=${VAR#--};
     KEY=${VAR%%=*}; VAL=${VAR#$KEY}; VAL=${VAL#*=}; KEY=${KEY//"-"/"_"};
     KEY=$(echo $KEY | awk '{print toupper($0)}');  VAL=$(eval echo $VAL)
     eval $KEY=\"$VAL\"; eval ${KEY}_SET=true; done
+echo "# Configure string:" >> $DIRE_CFG_FILE
+echo "# ./configure" $(for VAR in "$@"; do if [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then echo " $VAR" ; fi; done) >> $DIRE_CFG_FILE
 
 # Set the compilation flags and options (order matters).
 if [ "$LCG_SET" != true ]; then LCG=x86_64-slc6-gcc48-opt; fi
@@ -223,6 +232,28 @@ configure_package "pythia8"\
     ""\
     ""
 
+# Configure the packages (order does not matter).
+configure_package "mg5mes"\
+    ""\
+    ""\
+    ""\
+    ""\
+    ""\
+    "Processes_sm/PY8ME.h"\
+    ""\
+    ""
+
+# Configure the packages (order does not matter).
+configure_package "openmp"\
+    ""\
+    ""\
+    ""\
+    ""\
+    ""\
+    ""\
+    "gomp"\
+    ""
+
 # Now set the paths to the PYTHIA share and examples directories.
 if [ "$PYTHIA8_SET" ] ; then
   PYTHIA8_PREFIX="${PYTHIA8}" ;
@@ -249,10 +280,24 @@ for IDX in ${!PKG_LIST[@]}; do PKG=${PKG_LIST[$IDX]}
 	    fi; done; IFS=" "; fi; done
 
 # Write the configuation to screen and file, update the dire-config script.
+touch bin/tmp
 touch bin/dire-config
-sed 's|^CFG_FILE=.*|CFG_FILE='"$PREFIX_SHARE"'/examples/Makefile.inc|;n' \
+#sed -i "s|^DIRE_CFG_FILE=.*|DIRE_CFG_FILE=$PREFIX_SHARE/main/Makefile.inc|;n" \
+#   bin/dire-config
+sed "s|^DIRE_CFG_FILE=.*|DIRE_CFG_FILE=$PREFIX_SHARE/main/Makefile.inc|;n" \
     bin/dire-config > bin/tmp
-chmod a+x bin/tmp; mv bin/tmp bin/dire-config
+mv bin/tmp bin/dire-config
+PYTHIA_CFG_FILE=$PYTHIA8_EXAMPLES/Makefile.inc
+if [ ! -f $PYTHIA_CFG_FILE ] ; then
+  PYTHIA_CFG_FILE=$PYTHIA8_PREFIX/Makefile.inc ; fi
+#sed -i "s|^PYTHIA_CFG_FILE=.*|PYTHIA_CFG_FILE=$PYTHIA_CFG_FILE|;n" \
+#    bin/dire-config
+#chmod a+x bin/dire-config
+sed "s|^PYTHIA_CFG_FILE=.*|PYTHIA_CFG_FILE=$PYTHIA_CFG_FILE|;n" \
+    bin/dire-config > bin/tmp
+mv bin/tmp bin/dire-config
+chmod a+x bin/dire-config
+
 echo "---------------------------------------------------------------------"
 echo "|                    DIRE Configuration Summary                     |"
 echo "---------------------------------------------------------------------"
@@ -261,7 +306,7 @@ if [ "$ENABLE_DEBUG_SET" = true ];  then echo "--enable-debug"; fi
 if [ "$ENABLE_64BIT_SET" = true ];  then echo "--enable-64bit"; fi
 if [ "$ENABLE_SHARED_SET" = true ]; then echo "--enable-shared"; fi
 if [ "$LCG_SET" = true ];           then echo "--lcg=$LCG"; fi
-cat >> $CFG_FILE << BLOCKTEXT
+cat >> $DIRE_CFG_FILE << BLOCKTEXT
 
 # Install directory prefixes.
 PREFIX_BIN=$PREFIX_BIN
@@ -289,7 +334,7 @@ for IDX in ${!PKG_LIST[@]}; do
 	eval PKG_LIB=\${${PKG}_CFG[3]};
 	if [ -n "$PKG_BIN" ]; then PKG_BIN+=/; fi
     else PKG_BIN=""; PKG_INC="./"; PKG_LIB="./"; fi
-    cat >> $CFG_FILE << BLOCKTEXT
+    cat >> $DIRE_CFG_FILE << BLOCKTEXT
 
 # $PKG configuration.
 ${PKG}_USE=$PKG_USE
@@ -297,15 +342,18 @@ ${PKG}_BIN=$PKG_BIN
 ${PKG}_INCLUDE=$PKG_INC
 ${PKG}_LIB=$PKG_LIB
 BLOCKTEXT
+
 if [ "$PKG" = "LHAPDF6" ]; then
-    echo "${PKG}_PLUGIN=$LHAPDF6_PLUGIN" >> $CFG_FILE; fi
-if [ "$PKG" = "LHAPDF5" ]; then echo "${PKG}_PLUGIN=LHAPDF5.h" >> $CFG_FILE; fi
-done
+    echo "${PKG}_PLUGIN=$LHAPDF6_PLUGIN" >> $DIRE_CFG_FILE; fi
+if [ "$PKG" = "LHAPDF5" ]; then echo "${PKG}_PLUGIN=LHAPDF5.h" >> $DIRE_CFG_FILE; fi
+
 
 if [ "$PKG" = "PYTHIA8" ]; then
-    echo "PYTHIA8_PREFIX=$PYTHIA8_PREFIX" >> $CFG_FILE;
-    echo "PYTHIA8_SHARE=$PYTHIA8_SHARE" >> $CFG_FILE;
-    echo "PYTHIA8_EXAMPLES=$PYTHIA8_EXAMPLES" >> $CFG_FILE;
+    echo "PYTHIA8_PREFIX=$PYTHIA8_PREFIX" >> $DIRE_CFG_FILE;
+    echo "PYTHIA8_SHARE=$PYTHIA8_SHARE" >> $DIRE_CFG_FILE;
+    echo "PYTHIA8_EXAMPLES=$PYTHIA8_EXAMPLES" >> $DIRE_CFG_FILE;
 fi
+
+done
 
 echo ""

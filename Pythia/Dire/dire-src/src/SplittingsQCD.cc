@@ -34,6 +34,7 @@ void SplittingQCD::init() {
   pTmin              = settingsPtr->parm("SpaceShower:pTmin");
   pTmin              = min(pTmin,settingsPtr->parm("TimeShower:pTmin"));
   usePDFalphas       = settingsPtr->flag("ShowerPDF:usePDFalphas");
+  pT2minVariations   = pow2(max(0.,settingsPtr->parm("Variations:pTmin")));
 
   BeamParticle* beam = NULL;
   if (beamAPtr != NULL || beamBPtr != NULL) {
@@ -373,6 +374,372 @@ int SplittingQCD::findCol(int col, vector<int> iExc, const Event& event,
   if ( type == 2 && index > 0) return abs(index);
   return 0;
 
+}
+//--------------------------------------------------------------------------
+
+// Function to convert ordering variables etc. to the phase space variables
+// pT2 (in Dire default definition), z (in Dire default definition), 
+// sai (in Dire default definition) and xa (in Dire default definition).
+
+map<string,double> SplittingQCD::getPhasespaceVars( const Event& state,
+  PartonSystems*) {
+
+  // Read all splitting variables.
+  map<string,double> ret(splitInfo.getKinInfo());
+
+  // Now construct Bjorken-x of initial-state after branching, as is necessary
+  // to attach PDF ratios.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
+    m2Emt2(splitInfo.kinematics()->m2EmtAft2),
+    sai(splitInfo.kinematics()->sai), xa(splitInfo.kinematics()->xa);
+  double xNew(-1.0);
+  // Final-initial
+  if (splitInfo.radBef()->isFinal  && !splitInfo.recBef()->isFinal ) {
+
+    double xRecBef = 2.* state[splitInfo.iRecBef].e()
+                       / (beamAPtr->e() + beamBPtr->e());
+
+    double q2    = (state[splitInfo.iRecBef].p()
+                   -state[splitInfo.iRadBef].p()).m2Calc();
+    // Recalculate the kinematicaly available dipole mass.
+    //double Q2    = m2dip - m2RadBef + m2Rad + m2Emt;
+    double Q2    = m2dip;
+
+    // Recalculate the kinematicaly available dipole mass.
+    // Calculate CS variables.
+    double kappa2 = pT2/Q2;
+    double xCS    = 1 - kappa2/(1.-z);
+    double xCDST  = xCS*( 1. + (m2RadBef-m2Rad-m2Emt)/Q2 );
+    xNew          = xRecBef / xCDST;
+
+    double m2a(m2Emt), m2i(m2Emt), m2j(m2Emt2), m2aij(m2RadBef), m2k(0.0);
+    if ( nEmissions() == 2 ) {
+      double m2ai  = sai + m2a + m2i;
+      xCS          = (q2 - m2ai - m2a - m2i)
+                   / (q2 - m2ai - m2a - m2i - pT2 * xa/z);
+      xCDST = xCS * ( 1. - (m2aij-m2ai-m2j)/ (q2-m2ai-m2j-m2k) );
+      xNew     = xRecBef / xCDST;
+    }
+
+  // Initial-final
+  } else if (!splitInfo.radBef()->isFinal && splitInfo.recBef()->isFinal ) {
+
+    double xRadBef = 2.* state[splitInfo.iRadBef].e()
+                       / (beamAPtr->e() + beamBPtr->e());
+    // Calculate CS variables.
+    double xCS = z;
+    xNew = xRadBef/xCS;
+
+  // Initial-initial
+  } else if (!splitInfo.radBef()->isFinal && !splitInfo.recBef()->isFinal ) {
+
+    double xRadBef = 2.* state[splitInfo.iRadBef].e()
+                       / (beamAPtr->e() + beamBPtr->e());
+    // Adjust the dipole kinematical mass to accomodate masses after branching.
+    //double m2DipCorr = m2Dip - m2Bef + m2r + m2e;
+    double m2DipCorr = m2dip;
+    // Calculate CS variables.
+    double kappa2    = pT2 / m2DipCorr;
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+
+    // 1->3 splittings, in CS variables.
+    double q2  = (state[splitInfo.iRadBef].p()
+                 +state[splitInfo.iRecBef].p()).m2Calc();
+
+    // Pick remaining variables for 1->3 splitting.
+    double m2a(m2Rad), m2i(m2Emt), m2j(m2Emt2), m2k(m2Rec);
+    if ( nEmissions() == 2 ) {
+      xCS          =  z * (q2 - m2a - m2i - m2j - m2k) / q2;
+    }
+    xNew = xRadBef/xCS;
+  }
+
+  // Done.
+  ret.insert(make_pair("xInAft", xNew));
+  return ret;
+}
+
+//--------------------------------------------------------------------------
+
+double SplittingQCD::getJacobian( const Event& state, PartonSystems*
+  partonSystems) {
+
+  // Read all splitting variables.
+  double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2dip(splitInfo.kinematics()->m2Dip),
+    m2RadBef(splitInfo.kinematics()->m2RadBef),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
+    m2Emt2(splitInfo.kinematics()->m2EmtAft2),
+    sai(splitInfo.kinematics()->sai), xa(splitInfo.kinematics()->xa),
+    phi(splitInfo.kinematics()->phi);
+
+//cout << scientific << setprecision(6) << __func__;
+//cout << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " m2RadBef" << m2RadBef << " m2Rad " << m2Rad << " m2Rec " << m2Rec << " m2Emt " << m2Emt << " m2Emt2 " << m2Emt2 << " sai " << sai << " xa " << xa << endl;
+
+  double jacobian = 0.0;
+  // Final-final jacobian.
+  if ( splitInfo.radBef()->isFinal && splitInfo.recBef()->isFinal ) {
+
+    // Recalculate the kinematicaly available dipole mass.
+    //double Q2 = m2dip + m2RadBef - m2Rad - m2Emt;
+    double Q2 = m2dip;
+    double q2 = (state[splitInfo.iRadBef].p()
+               + state[splitInfo.iRecBef].p()).m2Calc();
+
+    // Pick remaining variables for 1->3 splitting.
+    double m2aij(m2RadBef), m2a(m2Emt), m2i(m2Emt), m2j(m2Emt2), m2k(m2Rec);
+
+    // Calculate CS variables and scaled masses.
+    double yCS = pT2/Q2 / (1. - z);
+
+    double mu2RadBef = m2RadBef/ q2;
+    double mu2Rad    = m2Rad/ q2;
+    double mu2Rec    = m2Rec/ q2;
+    double mu2Emt    = m2Emt/ q2;
+    // Calculate Jacobian.
+    double jac1 = ( 1. - mu2Rad - mu2Rec - mu2Emt)
+                / sqrt(lABC(1.,mu2RadBef,mu2Rec));
+    double jac2 = 1. + ( mu2Rad + mu2Emt - mu2RadBef)
+                      /( yCS*(1. - mu2Rad - mu2Rec - mu2Emt));
+
+    // Jacobian for 1->3 splittings, in CS variables.
+    if (nEmissions() == 2) {
+      jac1 = jac2 = 1.;
+      double m2ai  = sai + m2a + m2i;
+
+      // Jacobian for competing steps, i.e. applied to over-all splitting rate.
+      jac1 = (q2 - m2aij - m2k) / sqrt( lABC(q2, m2aij, m2k) );
+
+      // Additional jacobian for non-competing steps.
+      double m2aik = (sai + m2a + m2i) + m2k
+                   +  z/xa * (q2 - m2RadBef - m2k);
+      jac1 *= (m2aik - m2ai - m2k) / sqrt( lABC(m2aik, m2ai, m2k) );
+
+      // Additional factor from massive propagator.
+      jac2 = 1 + (m2ai + m2j - m2aij) / (pT2*xa/z);
+
+    }
+
+    // Done.
+    jacobian = jac1/jac2;
+
+  // Final-initial jacobian
+  } else if (splitInfo.radBef()->isFinal  && !splitInfo.recBef()->isFinal ) {
+    double q2    = (state[splitInfo.iRecBef].p()
+                   -state[splitInfo.iRadBef].p()).m2Calc();
+    // Recalculate the kinematicaly available dipole mass.
+    //double Q2    = m2dip - m2RadBef + m2Rad + m2Emt;
+    double Q2    = m2dip;
+
+    double m2a(m2Emt), m2i(m2Emt), m2j(m2Emt2), m2aij(m2RadBef), m2k(0.0);
+
+    // Get momentum of other beam, since this might be needed to calculate
+    // the Jacobian.
+    int iOther = (state[splitInfo.iRecBef].mother1() == 1)
+               ? partonSystems->getInB(splitInfo.systemRec)
+               : partonSystems->getInA(splitInfo.systemRec);
+    Vec4 pOther(state[iOther].p());
+
+    // Recalculate the kinematicaly available dipole mass.
+    // Calculate CS variables.
+    double kappa2 = pT2/Q2;
+    double xCS    = 1 - kappa2/(1.-z);
+    double xCDST  = xCS*( 1. + (m2RadBef-m2Rad-m2Emt)/Q2 );
+
+    // Jacobian for 1->2 splittings, in CS variables.
+    if ( nEmissions() != 2 )
+      jacobian   = ( 1.- xCS) / ( 1. - xCDST); 
+
+    // Jacobian for 1->3 splittings, in CS variables.
+    if ( nEmissions() == 2 ) {
+
+      double m2ai  = sai + m2a + m2i;
+      xCS          = (q2 - m2ai - m2a - m2i)
+                   / (q2 - m2ai - m2a - m2i - pT2 * xa/z);
+
+      // Jacobian for competing steps, i.e. applied to over-all splitting rate.
+      double saij = (xCS - 1.)/xCS * (q2 - m2a) + (m2ai + m2j)/xCS;
+      double xbar = (q2 - m2aij - m2k) / (q2 - saij - m2k);
+
+      // Calculate the partonic eCM before the splitting.
+      double sHatBefore = (state[splitInfo.iRecBef].p() + pOther).m2Calc();
+      double m2OtherBeam = 0.;
+
+      // Now construct the new recoiler momentum.
+      Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+      Vec4 pRadBef(state[splitInfo.iRadBef].p());
+      Vec4 pRecBef(state[splitInfo.iRecBef].p());
+      Vec4 qpar(q.px()+pRadBef.px(), q.py()+pRadBef.py(), q.pz(), q.e());
+      double qpar2 = qpar.m2Calc();
+      double pT2ijt = pow2(pRadBef.px()) + pow2(pRadBef.py());
+      Vec4 pRec( (pRecBef - (qpar*pRecBef)/qpar2 * qpar)
+                * sqrt( (lABC(q2,saij,m2k)   - 4.*m2k*pT2ijt)
+                       /(lABC(q2,m2aij,m2k) - 4.*m2k*pT2ijt))
+                + qpar * (q2+m2k-saij)/(2.*qpar2) );
+      // Calculate the partonic eCM after the splitting.
+      double sHatAfter = (pOther + pRec).m2Calc();
+
+      // Calculate Jacobian.
+      double rho_bai = sqrt( lABC(sHatBefore, m2k, m2OtherBeam)
+                           / lABC(sHatAfter,  m2k, m2OtherBeam) );
+      jacobian = rho_bai/xbar
+               * (saij + m2k - q2) / sqrt( lABC(saij, m2k, q2) );
+
+      // Additional jacobian for non-competing steps.
+      double saib = m2ai + m2k
+        + z/xa * (q2 - m2k - m2ai - m2j - pT2*xa/z);
+      jacobian *= (m2ai + m2k - saib) / sqrt( lABC(m2ai, m2k, saib) );
+
+      xCDST = xCS * ( 1. - (m2aij-m2ai-m2j)/ (q2-m2ai-m2j-m2k) );
+      // Extra correction from massless to massive propagator.
+      jacobian   *= ( 1.- xCS) / ( 1. - xCDST); 
+    }
+  // Initial-final jacobian
+  } else if (!splitInfo.radBef()->isFinal &&  splitInfo.recBef()->isFinal ) {
+    // Pick remaining variables for 1->3 splitting.
+    double jac(1.), m2aij(m2RadBef), m2ai(0.), m2a(m2Rad), m2i(m2Emt),
+      m2j(m2Emt2), m2k(m2Rec);
+    m2ai  = -sai + m2a + m2i;
+    double q2 = (state[splitInfo.iRadBef].p()
+                -state[splitInfo.iRecBef].p()).m2Calc();
+    // Get momentum of other beam, since this might be needed to calculate
+    // the Jacobian.
+    int iOther = state[splitInfo.iRadBef].mother1() == 1
+               ? partonSystems->getInB(splitInfo.system)
+               : partonSystems->getInA(splitInfo.system);
+    Vec4 pOther(state[iOther].p());
+
+    // Jacobian for 1->3 splittings, in CS variables.
+    if ( nEmissions() == 2 ) {
+      jac = 1.;
+      double m2jk = pT2/xa + q2*( 1. - xa/z) - m2ai; 
+
+      // Construnct the new initial state momentum, as needed to
+      // calculate the Jacobian.
+      double uCS  = z*(m2ai-m2a-m2i)/q2;
+      double xCS  = uCS + xa - (pT2*z)/(q2*xa);
+      Vec4 q( state[splitInfo.iRadBef].p() - state[splitInfo.iRecBef].p() );
+      double sHatBef = (state[splitInfo.iRadBef].p() + pOther).m2Calc();
+      double sijk    = q2*(1.-1./z) - m2a;
+
+      // sHat after emission depends on the recoil scheme if the incoming
+      // particles have non-zero mass.
+      // Local scheme.
+      double sHatAft(0.);
+      if (!settingsPtr->flag("DireSpace:useGlobalMapIF")) {
+
+        // Get transverse and parallel vectors.
+        Vec4 pTk_tilde( state[splitInfo.iRecBef].p().px(),
+          state[splitInfo.iRecBef].p().py(), 0., 0.);
+        Vec4 qpar( q + pTk_tilde );
+        // Calculate derived variables.
+        double q2par  = qpar.m2Calc();
+        double pT2k   = -pTk_tilde.m2Calc();
+        double s_i_jk = (1. - 1./xCS)*(q2 - m2a) + (m2i + m2jk) / xCS;
+        // Construct radiator after branching.
+        Vec4 pa( ( state[splitInfo.iRadBef].p() - 0.5*(q2-m2aij-m2k)/q2par * qpar )
+                   * sqrt( (lABC(q2,s_i_jk,m2a) - 4.*m2a*pT2k)
+                         / (lABC(q2,m2k,m2aij) - 4.*m2aij*pT2k))
+                  + qpar * 0.5 * (q2 + m2a - s_i_jk) / q2par);
+        // Now get changed eCM.
+        sHatAft = (pa + pOther).m2Calc();
+
+      // Global scheme.
+      } else {
+
+        // Construct radiator after branching.
+        // Simple massless case.
+        Vec4 pa;
+
+        // Get dipole 4-momentum.
+        Vec4 pb_tilde(   state[splitInfo.iRecBef].p() );
+        Vec4 pa12_tilde( state[splitInfo.iRadBef].p() );
+        q.p(pb_tilde-pa12_tilde);
+
+        // Calculate derived variables.
+        double zbar = (q2-m2ai-m2jk) / bABC(q2,m2ai,m2jk)
+                    *( (xCS - 1)/(xCS-uCS)  - m2jk / gABC(q2,m2ai,m2jk)
+                           * (m2ai + m2i - m2a) / (q2 - m2ai - m2jk));
+        double kT2  = zbar*(1.-zbar)*m2ai - (1-zbar)*m2i - zbar*m2a;
+
+        // Now construct recoiler in lab frame.
+        Vec4 pjk( (pb_tilde - q*pb_tilde/q2*q)
+                   *sqrt(lABC(q2,m2ai,m2jk)/lABC(q2,m2aij,m2k))
+                 + 0.5*(q2+m2jk-m2ai)/q2*q );
+
+        // Construct left-over dipole momentum by momentum conservation.
+        Vec4 pai(-q+pjk);
+
+        // Set up kT vector by using two perpendicular four-vectors.
+        pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pai, pjk);
+        Vec4 kTmom( sqrt(kT2)*sin(phi)*pTvecs.first
+                  + sqrt(kT2)*cos(phi)*pTvecs.second);
+
+        // Construct new emission momentum.
+        Vec4 pi( - zbar *(gABC(q2,m2ai,m2jk)*pai + m2ai*pjk)
+                        / bABC(q2,m2ai,m2jk)
+                  + ( (1.-zbar)*m2ai + m2i - m2a) / bABC(q2,m2ai,m2jk)
+                  * (pjk + m2jk/gABC(q2,m2ai,m2jk)*pai)
+                  + kTmom);
+
+        // Contruct radiator momentum by momentum conservation.
+        pa.p(-q+pjk+pi);
+
+        // Now get changed eCM.
+        sHatAft = (pa + pOther).m2Calc();
+
+      }
+
+      // Now calculate Jacobian.
+      double m2Other = pOther.m2Calc();
+      double rho_aij = sqrt( lABC(sHatBef, m2a, m2Other)
+                            /lABC(sHatAft, m2a, m2Other));
+      jac = rho_aij / z * (sijk + m2a - q2) / sqrt(lABC(sijk, m2a, q2));
+
+      // Additional jacobian for non-competing steps.
+      jac *= -q2 * xa / z / sqrt(lABC(m2jk, m2ai, q2));
+
+      // Additional factor from massive propagator.
+      jac *= 1. / (1. - (m2ai + m2j - m2aij) / (pT2/xa)) ;
+
+    }
+
+    // Multiply with Jacobian.
+    jacobian = jac;
+
+  // Initial-initial jacobian
+  } else if (!splitInfo.radBef()->isFinal && !splitInfo.recBef()->isFinal ) {
+
+    double q2  = (state[splitInfo.iRadBef].p()
+                 +state[splitInfo.iRecBef].p()).m2Calc();
+
+    // Pick remaining variables for 1->3 splitting.
+    double m2a(m2Rad), m2i(m2Emt), m2j(m2Emt2), m2aij(m2RadBef), m2k(m2Rec);
+
+    // Jacobian for 1->3 splittings, in CS variables.
+    jacobian = 1.0;
+    if ( nEmissions() == 2 ) {
+      // Calculate Jacobian.
+      double sab = q2/z + m2a + m2k;
+      jacobian = (sab-m2a-m2k) / sqrt(lABC(sab, m2a, m2k) );
+      double m2ai  = -sai + m2a + m2i;
+      double sjq   = q2*xa/z + m2ai + m2k;
+      jacobian *= (sjq-m2ai-m2k) / sqrt(lABC(sjq, m2ai, m2k) );
+
+      // Additional factor from massive propagator.
+      jacobian *= 1. / (1. - (m2ai + m2j - m2aij) / (pT2/xa)) ;
+
+    }
+  }
+
+  return jacobian;
 }
 
 //==========================================================================
@@ -857,30 +1224,6 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
     m2Emt(splitInfo.kinematics()->m2EmtAft);
   int splitType(splitInfo.type);
 
-  /*// For testing only. 
-  map<string,double> w;
-  double ww = 10.*(z-0.5);
-  //if (z < 0.3) ww *= -1.;
-  //if (z > 0.9) ww *= -z;
-  //double ww = 10.*(z-0.5) / 1.2;
-  if (z < 0.3) ww *= -1.;
-  if (z > 0.9) ww *= -z;
-
-  w.insert( make_pair("base", ww) );
-  if (doVariations) {
-    // Create muR-variations.
-    if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-      w.insert( make_pair("Variations:muRfsrDown", ww ));
-    if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-      w.insert( make_pair("Variations:muRfsrUp", ww ));
-  }
-
-  // Store kernel values.
-  clearKernels();
-  for ( map<string,double>::iterator it = w.begin(); it != w.end(); ++it )
-    kernelVals.insert(make_pair( it->first, it->second ));
-  return true;*/
-
   // Calculate kernel.
   // Note: We are calculating the z <--> 1-z symmetrised kernel here,
   // and later multiply with z to project out Q->QQ,
@@ -892,46 +1235,39 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-  //wts.insert( make_pair("base",
-  //  preFac * softRescaleDiff( order, pT2, renormMultFac)
-  //         * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ) );
-  //
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) 
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) 
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ));
-  //}
 
-  wts.insert( make_pair("base", softRescaleDiff( order, pT2, renormMultFac)
-                                * wt_base_as1 ) );
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
+  wts.insert( make_pair("base", softRescaleDiff( order, scale2, renormMultFac)
+    * wt_base_as1 ) );
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
       wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1
-        * softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) ));
+        * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
       wts.insert( make_pair("Variations:muRfsrUp", wt_base_as1
-        * softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) ));
+        * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrUp") : renormMultFac ) ));
   }
 
   // Correction for massive splittings.
   bool doMassive = (abs(splitType) == 2);
 
   // Add collinear term for massless splittings.
-  if (!doMassive) {
+  if (!doMassive && order >= 0) {
     wt_base_as1 += -preFac * ( 1.+z );
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
       it->second +=  -preFac * ( 1.+z );
   }
 
   // Add collinear term for massive splittings.
-  if (doMassive) {
+  if (doMassive && order >= 0) {
 
     double pipj = 0., vijkt = 1., vijk = 1.;
 
@@ -983,8 +1319,11 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       double pqq1 = preFac / (18*(z-1)) * (
 ((-1 + z)*(4*TF*(-10 + z*(-37 + z*(29 + 28*z))) + z*(90*CF*(-1 + z) + CA*(53 - 187*z + 3*(1 + z)*pow2(M_PI)))) +
@@ -1171,20 +1510,8 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
-  //wts.insert( make_pair("base", preFac
-  //  *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ) );
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) ));
-  //}
 
   wts.insert( make_pair("base", wt_base_as1 ));
-
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
@@ -1193,6 +1520,11 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
       wts.insert( make_pair("Variations:muRfsrUp",  wt_base_as1 ));
   }
 
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   // Rescale with soft cusp term only if NLO corrections are absent.
   // This choice is purely heuristical to improve LEP description.
@@ -1200,27 +1532,31 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
                   //|| ( orderNow > 0        && orderNow <= 2 ) );
                   || ( orderNow > -1       && orderNow <= 2 ) );
   if (doRescale) {
-  wts["base"] *= softRescaleDiff( order, pT2, renormMultFac);
+  wts["base"] *= softRescaleDiff( order, scale2, renormMultFac);
   if (doVariations && settingsPtr->parm("Variations:muRfsrDown") != 1.)
-    wts["Variations:muRfsrDown"] *= softRescaleDiff( order, pT2,
-      settingsPtr->parm("Variations:muRfsrDown"));
+    wts["Variations:muRfsrDown"] *= softRescaleDiff( order, scale2,
+      (scale2 > pT2minVariations) ? settingsPtr->parm("Variations:muRfsrDown")
+      : renormMultFac);
   if (doVariations && settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-    wts["Variations:muRfsrUp"] *= softRescaleDiff( order, pT2,
-      settingsPtr->parm("Variations:muRfsrUp")); 
+    wts["Variations:muRfsrUp"] *= softRescaleDiff( order, scale2,
+      (scale2 > pT2minVariations) ? settingsPtr->parm("Variations:muRfsrUp")
+      : renormMultFac);
   }
 
   // Correction for massive splittings.
   bool doMassive = (abs(splitType) == 2);
 
   // Add collinear term for massless splittings.
-  if (!doMassive) {
+  //if (!doMassive) {
+  if (!doMassive && order >= 0) {
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
       it->second += -preFac * ( 1.+z );
      wt_base_as1 += -preFac * ( 1.+z );
   }
 
   // Add collinear term for massive splittings.
-  if (doMassive) {
+  //if (doMassive) {
+  if (doMassive && order >= 0) {
 
     double pipj = 0., vijkt = 1., vijk = 1.;
 
@@ -1270,10 +1606,13 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
       // Evaluate kernel copied from Mathematica with 1-z!
       double x = 1.-z;
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       double pqg1 = preFac * (
  (9*CF*x*(-1 + 9*x) + 144*(CA - CF)*(2 + (-2 + x)*x)*DiLog(x) + 36*CA*(2 + x*(2 + x))*DiLog(1/(1 + x)) -
@@ -1438,45 +1777,42 @@ bool fsr_qcd_G2GG1::calc(const Event& state, int orderNow) {
   // and later multiply with z to project out one part.
   map<string,double> wts;
   double wt_base_as1 = preFac * (1.-z) / ( pow2(1.-z) + kappa2);
-  //wts.insert( make_pair("base",
-  //  preFac * softRescaleDiff( order, pT2, renormMultFac)
-  //         * (1.-z) / ( pow2(1.-z) + kappa2) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) 
-  //      *(1.-z) / ( pow2(1.-z) + kappa2) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) 
-  //      *(1.-z) / ( pow2(1.-z) + kappa2) ));
-  //}
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1
-    * softRescaleDiff( order, pT2, renormMultFac) ));
+    * softRescaleDiff( order, scale2, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
       wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations) 
+      ? settingsPtr->parm("Variations:muRfsrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
       wts.insert( make_pair("Variations:muRfsrUp", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRfsrUp") : renormMultFac) ));
   }
 
   // Correction for massive splittings.
   bool doMassive = (abs(splitType) == 2);
 
   // Add collinear term for massless splittings.
-  if (!doMassive) {
+  //if (!doMassive) {
+  if (!doMassive && order >= 0) {
+
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
       it->second += preFac * ( -1. + 0.5 * z*(1.-z) );
     wt_base_as1 += preFac * ( -1. + 0.5 * z*(1.-z) );
   }
 
   // Add collinear term for massive splittings.
-  if (doMassive) {
+  //if (doMassive) {
+  if (doMassive && order >= 0) {
 
     double vijk = 1.;
 
@@ -1515,8 +1851,11 @@ bool fsr_qcd_G2GG1::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       // Anatomy of factors of two:
       // One factor of 0.5 since LO kernel is split into "z" and "1-z" parts, 
@@ -1690,44 +2029,41 @@ bool fsr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   // and later multiply with 1-z to project out one part.
   map<string,double> wts;
   double wt_base_as1 = preFac * (1.-z) / ( pow2(1.-z) + kappa2);
-  //wts.insert( make_pair("base",
-  //  preFac * softRescaleDiff( order, pT2, renormMultFac)
-  //         * (1.-z) / ( pow2(1.-z) + kappa2) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) 
-  //      *(1.-z) / ( pow2(1.-z) + kappa2) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) 
-  //      *(1.-z) / ( pow2(1.-z) + kappa2) ));
-  //}
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   wts.insert( make_pair("base", wt_base_as1
-    * softRescaleDiff( order, pT2, renormMultFac) ));
+    * softRescaleDiff( order, scale2, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
       wts.insert( make_pair("Variations:muRfsrDown", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrDown")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRfsrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
       wts.insert( make_pair("Variations:muRfsrUp", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRfsrUp")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRfsrUp") : renormMultFac) ));
   }
 
   // Correction for massive splittings.
   bool doMassive = (abs(splitType) == 2);
 
   // Add collinear term for massless splittings.
-  if (!doMassive) {
+  //if (!doMassive) {
+  if (!doMassive && order >= 0) {
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
       it->second += preFac * ( -1. + 0.5 *z*(1.-z) );    
     wt_base_as1 += preFac * ( -1. + 0.5 *z*(1.-z) );
   }
 
   // Add collinear term for massive splittings.
-  if (doMassive) {
+  //if (doMassive) {
+  if (doMassive && order >= 0) {
 
     double vijk = 1.;
 
@@ -1767,8 +2103,11 @@ bool fsr_qcd_G2GG2::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       // Evaluate everything at x = 1-z, because this is the kernel where
       // the radiating gluon becomes soft and the emission is identified.
@@ -1921,17 +2260,15 @@ bool fsr_qcd_G2QQ1::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( pow(1.-z,2.) + pow(z,2.) );
-  //wts.insert( make_pair("base", preFac
-  //  * (pow(1.-z,2.) + pow(z,2.)) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      * (pow(1.-z,2.) + pow(z,2.)) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      * (pow(1.-z,2.) + pow(z,2.)) ));
-  //}
+
+  // Switch off splitting when only considering double log contributions.
+  if (order == -1) wt_base_as1 = 0.0;
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1 ));
   if (doVariations) {
@@ -1968,13 +2305,16 @@ bool fsr_qcd_G2QQ1::calc(const Event& state, int orderNow) {
       pipj   = m2dip/2. * (1-xCS)/xCS;
     }
 
-    // Reset kernel for massive splittings.
-    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
-      it->second =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                         + m2Emt / ( pipj + m2Emt) );
-
     wt_base_as1 =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
                                         + m2Emt / ( pipj + m2Emt) );
+
+    // Switch off splitting when only considering double log contributions.
+    if (order == -1) wt_base_as1 = 0.0;
+
+    // Reset kernel for massive splittings.
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second =  wt_base_as1;
+
   }
 
   // Add NLO term.
@@ -1989,8 +2329,11 @@ bool fsr_qcd_G2QQ1::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       double pgq1 = preFac * (
 (TF*(-8./3. - (8*(1 + 2*(-1 + z)*z)*(2 + 3*log(1 - z) + 3*log(z)))/9.) +
@@ -2135,17 +2478,15 @@ bool fsr_qcd_G2QQ2::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( pow(1.-z,2.) + pow(z,2.) );
-  //wts.insert( make_pair("base", preFac
-  //  * (pow(1.-z,2.) + pow(z,2.)) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrDown", preFac
-  //      * (pow(1.-z,2.) + pow(z,2.)) ));
-  //  if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRfsrUp", preFac
-  //      * (pow(1.-z,2.) + pow(z,2.)) ));
-  //}
+
+  // Switch off splitting when only considering double log contributions.
+  if (order == -1) wt_base_as1 = 0.0;
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1  ));
   if (doVariations) {
@@ -2181,13 +2522,16 @@ bool fsr_qcd_G2QQ2::calc(const Event& state, int orderNow) {
       pipj   = m2dip/2. * (1-xCS)/xCS;
     }
 
-    // Reset kernel for massive splittings.
-    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
-      it->second =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
-                                         + m2Emt / ( pipj + m2Emt) );  
-
     wt_base_as1 =  preFac * 1. / vijk * ( pow2(1.-z) + pow2(z)
                                         + m2Emt / ( pipj + m2Emt) );
+
+    // Switch off splitting when only considering double log contributions.
+    if (order == -1) wt_base_as1 = 0.0;
+
+    // Reset kernel for massive splittings.
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second =  wt_base_as1;
+
   }
 
   // Add NLO term.
@@ -2202,8 +2546,11 @@ bool fsr_qcd_G2QQ2::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRfsrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       double x = 1-z;
       double pgq1 = preFac * (
@@ -2348,7 +2695,7 @@ bool fsr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z),
     pT2(splitInfo.kinematics()->pT2),
-    //m2dip(splitInfo.kinematics()->m2Dip),
+    m2dip(splitInfo.kinematics()->m2Dip),
     xa(splitInfo.kinematics()->xa),
     sai(splitInfo.kinematics()->sai),
     m2aij(splitInfo.kinematics()->m2RadBef),
@@ -2359,7 +2706,11 @@ bool fsr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
     m2j(splitInfo.kinematics()->m2EmtAft2),
     m2k(splitInfo.kinematics()->m2Rec);
 
-  //int splitType(splitInfo.type);
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   // Do nothing without other NLO kernels!
   map<string,double> wts;
@@ -2473,15 +2824,17 @@ bool fsr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
   if (isEndpoint) { splitInfo.set_sai(0.0); }
 
   // Insert value of kernel into kernel list.
-  wts.insert( make_pair("base", prob * as2Pi(pT2, order, renormMultFac) ));
+  wts.insert( make_pair("base", prob * as2Pi(scale2, order, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
       wts.insert( make_pair("Variations:muRfsrDown", prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRfsrDown")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
       wts.insert( make_pair("Variations:muRfsrUp",   prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRfsrUp")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrUp") : renormMultFac) ));
   }
 
   // Multiply with z to project out part where emitted antiquark is soft,
@@ -2599,7 +2952,7 @@ bool fsr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z),
     pT2(splitInfo.kinematics()->pT2),
-    //m2dip(splitInfo.kinematics()->m2Dip),
+    m2dip(splitInfo.kinematics()->m2Dip),
     xa(splitInfo.kinematics()->xa),
     sai(splitInfo.kinematics()->sai),
     m2aij(splitInfo.kinematics()->m2RadBef),
@@ -2610,11 +2963,16 @@ bool fsr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
     m2j(splitInfo.kinematics()->m2EmtAft2),
     m2k(splitInfo.kinematics()->m2Rec);
 
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   map<string,double> wts;
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   // Do nothing without other NLO kernels!
-  //if (order < 3) { 
   if (order < 3 || m2aij > 0. || m2a > 0. || m2i > 0. || m2j > 0. || m2k > 0.){
     wts.insert( make_pair("base", 0.) );
     if (doVariations && settingsPtr->parm("Variations:muRfsrDown") != 1.)
@@ -2751,16 +3109,18 @@ bool fsr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
   // Remember that this might be an endpoint with vanishing sai.
   if (isEndpoint) { splitInfo.set_sai(0.0); }
 
-  wts.insert( make_pair("base", prob*as2Pi(pT2, order, renormMultFac) ));
+  wts.insert( make_pair("base", prob*as2Pi(scale2, order, renormMultFac) ));
 
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRfsrDown") != 1.)
       wts.insert( make_pair("Variations:muRfsrDown", prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRfsrDown")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRfsrUp")   != 1.)
       wts.insert( make_pair("Variations:muRfsrUp",   prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRfsrUp")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRfsrUp") : renormMultFac) ));
   }
 
   // Multiply with z to project out part where emitted antiquark is soft,
@@ -2895,11 +3255,6 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip);
-    //m2RadBef(splitInfo.kinematics()->m2RadBef),
-    //m2Rad(splitInfo.kinematics()->m2RadAft),
-    //m2Rec(splitInfo.kinematics()->m2Rec),
-    //m2Emt(splitInfo.kinematics()->m2EmtAft);
-  //int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
@@ -2907,32 +3262,29 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   double kappa2 = pT2/m2dip;
 
   map<string,double> wts;
-  double wt_base_as1 = preFac * ( 2.*(1.-z)/(pow2(1.-z) + kappa2) - (1.+z) );
-  //wts.insert( make_pair("base",
-  //  preFac * softRescaleDiff( order, pT2, renormMultFac)
-  //         * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) - preFac * (1.+z ) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRisrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRisrDown", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrDown")) 
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) - preFac * (1.+z ) ));
-  //  if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRisrUp", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrUp")) 
-  //      *( 2.* (1.-z) / ( pow2(1.-z) + kappa2) ) - preFac * (1.+z ) ));
-  //}
+  //double wt_base_as1 = preFac * ( 2.*(1.-z)/(pow2(1.-z) + kappa2) - (1.+z) );
+  double wt_base_as1 = preFac * 2.*(1.-z)/(pow2(1.-z) + kappa2);
+
+  if (order >= 0) wt_base_as1 += -preFac*(1.+z);
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1
-    * softRescaleDiff( order, pT2, renormMultFac) ));
+    * softRescaleDiff( order, scale2, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRisrDown") != 1.)
       wts.insert( make_pair("Variations:muRisrDown", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrDown")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRisrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
       wts.insert( make_pair("Variations:muRisrUp", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrUp")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRisrUp") : renormMultFac) ));
   }
 
   // Add NLO term, subtracted by ~ 1/(1-z)*Gamma2,
@@ -2949,8 +3301,11 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRisrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       double pqq1   = preFac * 1 / ( 18*z*(z-1) ) * (
       (-1 + z)*(-8*TF*(-5 + (-1 + z)*z*(-5 + 14*z)) 
@@ -3101,10 +3456,7 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
-    //m2RadBef(splitInfo.kinematics()->m2RadBef),
-    //m2Rad(splitInfo.kinematics()->m2RadAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-    //m2Emt(splitInfo.kinematics()->m2EmtAft);
   int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
@@ -3114,41 +3466,39 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( (1.-z) / (pow2(1.-z)+kappa2) );
-  //wts.insert( make_pair("base", preFac * softRescaleDiff( order, pT2,
-  //  renormMultFac) * (1.-z) / (pow2(1.-z)+kappa2) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRisrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRisrDown", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrDown")) 
-  //      * (1.-z) / ( pow2(1.-z) + kappa2)  ));
-  //  if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRisrUp", preFac
-  //      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrUp")) 
-  //      * (1.-z) / ( pow2(1.-z) + kappa2)  ));
-  //}
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1
-    * softRescaleDiff( order, pT2, renormMultFac) ));
+    * softRescaleDiff( order, scale2, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRisrDown") != 1.)
       wts.insert( make_pair("Variations:muRisrDown", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrDown")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRisrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
       wts.insert( make_pair("Variations:muRisrUp", wt_base_as1
-      *softRescaleDiff( order, pT2, settingsPtr->parm("Variations:muRisrUp")) ));
+      * softRescaleDiff( order, scale2, (scale2 > pT2minVariations)
+      ? settingsPtr->parm("Variations:muRisrUp") : renormMultFac) ));
   }
 
-  for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it )
-    it->second += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
+  if (order >= 0) {
+    for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+      it->second += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
 
-  wt_base_as1 += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
+    wt_base_as1 += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
+  }
 
   // Correction for massive IF splittings.
   bool doMassive = ( m2Rec > 0. && splitType == 2);
 
-  if (doMassive) {
+  //if (doMassive) {
+  if (doMassive && order >= 0) {
     // Construct CS variables.
     double uCS = kappa2 / (1-z);
     double massCorr = - m2Rec / m2dip * uCS / (1.-uCS);
@@ -3174,8 +3524,11 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRisrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       // SplittingQCD function directly taken from Mathematica file.
       // Note: After removal of the cusp anomalous dimensions, the NLO kernel
@@ -3353,10 +3706,7 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
-    //m2RadBef(splitInfo.kinematics()->m2RadBef),
-    //m2Rad(splitInfo.kinematics()->m2RadAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-    //m2Emt(splitInfo.kinematics()->m2EmtAft);
   int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
@@ -3365,19 +3715,18 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   double kappa2 = pT2/m2dip;
 
   map<string,double> wts;
-  double wt_base_as1 = preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. )
-                     + preFac * z*(1.-z);
-  //wts.insert( make_pair("base",
-  //  preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) + preFac * z*(1.-z) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRisrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRisrDown", 
-  //      preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) + preFac * z*(1.-z) ));
-  //  if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRisrUp", 
-  //      preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) + preFac * z*(1.-z) ));
-  //}
+  //double wt_base_as1 = preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. )
+  //                   + preFac * z*(1.-z);
+  double wt_base_as1 = preFac * 0.5 * z / ( pow2(z) + kappa2);
+
+  if (order >= 0) wt_base_as1 += -preFac*0.5 + preFac*z*(1.-z); 
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   wts.insert( make_pair("base", wt_base_as1 ));
   if (doVariations) {
     // Create muR-variations.
@@ -3390,7 +3739,7 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   // Correction for massive IF splittings.
   bool doMassive = ( m2Rec > 0. && splitType == 2);
 
-  if (doMassive) {
+  if (doMassive && order >= 0) {
     // Construct CS variables.
     double uCS = kappa2 / (1-z);
     double massCorr = - m2Rec / m2dip * uCS / (1.-uCS);
@@ -3415,8 +3764,11 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRisrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       double TF          = TR*NF;
       // SplittingQCD function directly taken from Mathematica file.
       // Note: After removal of the cusp anomalous dimensions, the NLO kernel
@@ -3570,11 +3922,6 @@ bool isr_qcd_G2QQ::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip);
-    //m2RadBef(splitInfo.kinematics()->m2RadBef),
-    //m2Rad(splitInfo.kinematics()->m2RadAft),
-    //m2Rec(splitInfo.kinematics()->m2Rec),
-    //m2Emt(splitInfo.kinematics()->m2EmtAft);
-  //int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
@@ -3583,16 +3930,15 @@ bool isr_qcd_G2QQ::calc(const Event& state, int orderNow) {
 
   map<string,double> wts;
   double wt_base_as1 =  preFac * (pow(1.-z,2.) + pow(z,2.));
-  //wts.insert( make_pair("base", preFac * (pow(1.-z,2.) + pow(z,2.)) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRisrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRisrDown", 
-  //      preFac *  (pow(1.-z,2.) + pow(z,2.)) ));
-  //  if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRisrUp", 
-  //      preFac *  (pow(1.-z,2.) + pow(z,2.)) ));
-  //}
+
+  if (order == -1) wt_base_as1 = 0.0;
+ 
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   wts.insert( make_pair("base", wt_base_as1 ));
   if (doVariations) {
     // Create muR-variations.
@@ -3614,7 +3960,10 @@ bool isr_qcd_G2QQ::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRisrUp");
       else continue;
 
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       // SplittingQCD function directly taken from Mathematica file.
       double pgq1 = preFac * (
       (CF*(4 - 9*z + 4*log(1 - z) + (-1 + 4*z)*log(z)
@@ -3683,7 +4032,7 @@ vector <int> isr_qcd_Q2GQ::recPositions( const Event& state, int iRad, int iEmt)
 
   // For Q->GQ, swap radiator and emitted, since we now have to trace the
   // radiator's colour connections.
-  if ( state[iEmt].idAbs() < 20 && state[iRad].id() == 21) swap( iRad, iEmt);
+  //if ( state[iEmt].idAbs() < 20 && state[iRad].id() == 21) swap( iRad, iEmt);
 
   int colRad  = state[iRad].col();
   int acolRad = state[iRad].acol();
@@ -3702,6 +4051,7 @@ vector <int> isr_qcd_Q2GQ::recPositions( const Event& state, int iRad, int iEmt)
     if (acolF  > 0 && colI == 0) recs.push_back (acolF);
     if (acolF == 0 && colI >  0) recs.push_back (colI);
   }
+  iExc.insert(iExc.end(), recs.begin(), recs.end());
   // Find partons connected via emitted anticolour line.
   if ( acolEmt != 0 && acolEmt != colShared) {
     int  colF = findCol(acolEmt, iExc, state, 2);
@@ -3709,6 +4059,24 @@ vector <int> isr_qcd_Q2GQ::recPositions( const Event& state, int iRad, int iEmt)
     if ( colF  > 0 && acolI == 0) recs.push_back (colF);
     if ( colF == 0 && acolI >  0) recs.push_back (acolI);
   }
+  iExc.insert(iExc.end(), recs.begin(), recs.end());
+  // Find partons connected via radiator colour line.
+  if ( colRad != 0 && colRad != colShared) {
+    int acolF = findCol(colRad, iExc, state, 1);
+    int  colI = findCol(colRad, iExc, state, 2);
+    if (acolF  > 0 && colI == 0) recs.push_back (acolF);
+    if (acolF == 0 && colI >  0) recs.push_back (colI);
+  }
+  iExc.insert(iExc.end(), recs.begin(), recs.end());
+  // Find partons connected via radiator anticolour line.
+  if ( acolRad != 0 && acolRad != colShared) {
+    int  colF = findCol(acolRad, iExc, state, 2);
+    int acolI = findCol(acolRad, iExc, state, 1);
+    if ( colF  > 0 && acolI == 0) recs.push_back (colF);
+    if ( colF == 0 && acolI >  0) recs.push_back (acolI);
+  }
+  iExc.insert(iExc.end(), recs.begin(), recs.end());
+
   // Done.
   return recs;
 }
@@ -3749,10 +4117,7 @@ bool isr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
-    //m2RadBef(splitInfo.kinematics()->m2RadBef),
-    //m2Rad(splitInfo.kinematics()->m2RadAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-    //m2Emt(splitInfo.kinematics()->m2EmtAft);
   int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
@@ -3761,17 +4126,16 @@ bool isr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   double kappa2 = pT2 / m2dip;
 
   map<string,double> wts;
-  double wt_base_as1 = preFac*(z + 2.*z/(pow2(z)+kappa2) - 2.);
-  //wts.insert( make_pair("base", preFac*(z + 2.*z/(pow2(z)+kappa2) - 2.) ));
-  //if (doVariations) {
-  //  // Create muR-variations.
-  //  if (settingsPtr->parm("Variations:muRisrDown") != 1.)
-  //    wts.insert( make_pair("Variations:muRisrDown", 
-  //      preFac * (z + 2.*z/(pow2(z)+kappa2) - 2.) ));
-  //  if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
-  //    wts.insert( make_pair("Variations:muRisrUp", 
-  //      preFac * (z + 2.*z/(pow2(z)+kappa2) - 2.) ));
-  //}
+  //double wt_base_as1 = preFac*(z + 2.*z/(pow2(z)+kappa2) - 2.);
+  double wt_base_as1 = preFac * 2.*z/(pow2(z)+kappa2);
+
+  if (order >= 0) wt_base_as1 += preFac*(z-2.);
+
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
 
   wts.insert( make_pair("base", wt_base_as1 ));
   if (doVariations) {
@@ -3785,7 +4149,8 @@ bool isr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   // Correction for massive IF splittings.
   bool doMassive = ( m2Rec > 0. && splitType == 2);
 
-  if (doMassive) {
+  //if (doMassive) {
+  if (doMassive && order >= 0) {
     // Construct CS variables.
     double uCS = kappa2 / (1-z);
 
@@ -3810,8 +4175,11 @@ bool isr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
         mukf = settingsPtr->parm("Variations:muRisrUp");
       else continue;
 
-      double NF          = getNF(pT2 * mukf);
-      double alphasPT2pi = as2Pi(pT2, order, mukf);
+      // Do not perform variations below a small pT cut.
+      if (scale2 < pT2minVariations) mukf = renormMultFac;
+
+      double NF          = getNF(scale2 * mukf);
+      double alphasPT2pi = as2Pi(scale2, order, mukf);
       // SplittingQCD function directly taken from Mathematica file.
       double TF          = TR*NF;
       double pqg1 = preFac * (
@@ -3983,8 +4351,8 @@ bool isr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
 
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z),
+    m2dip(splitInfo.kinematics()->m2Dip),
     pT2(splitInfo.kinematics()->pT2),
-    //m2dip(splitInfo.kinematics()->m2Dip),
     xa(splitInfo.kinematics()->xa),
     sai(splitInfo.kinematics()->sai),
     m2aij(splitInfo.kinematics()->m2RadBef),
@@ -4108,16 +4476,24 @@ bool isr_qcd_Q2qQqbarDist::calc(const Event& state, int orderNow) {
   // Remember that this might be an endpoint with vanishing sai.
   if (isEndpoint) { splitInfo.set_sai(0.0); }
 
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   // Insert value of kernel into kernel list.
-  wts.insert( make_pair("base", prob * as2Pi(pT2, order, renormMultFac) ));
+  wts.insert( make_pair("base", prob * as2Pi(scale2, order, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRisrDown") != 1.)
       wts.insert( make_pair("Variations:muRisrDown", prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRisrDown")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations) 
+        ? settingsPtr->parm("Variations:muRisrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
       wts.insert( make_pair("Variations:muRisrUp",   prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRisrUp")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRisrUp") : renormMultFac) ));
   }
 
   // Multiply with z1 because of crossing.
@@ -4265,7 +4641,7 @@ bool isr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z),
     pT2(splitInfo.kinematics()->pT2),
-    //m2dip(splitInfo.kinematics()->m2Dip),
+    m2dip(splitInfo.kinematics()->m2Dip),
     xa(splitInfo.kinematics()->xa),
     sai(splitInfo.kinematics()->sai),
     m2aij(splitInfo.kinematics()->m2RadBef),
@@ -4422,16 +4798,24 @@ bool isr_qcd_Q2QbarQQId::calc(const Event& state, int orderNow) {
   // Remember that this might be an endpoint with vanishing sai.
   if (isEndpoint) { splitInfo.set_sai(0.0); }
 
+  // Calculate argument of alphaS.
+  double scale2 = couplingScale2 ( z, pT2, m2dip,
+    make_pair (splitInfo.radBef()->id, splitInfo.radBef()->isFinal),
+    make_pair (splitInfo.recBef()->id, splitInfo.recBef()->isFinal));
+  if (scale2 < 0.) scale2 = pT2;
+
   // Insert value of kernel into kernel list.
-  wts.insert( make_pair("base", prob * as2Pi(pT2, order, renormMultFac) ));
+  wts.insert( make_pair("base", prob * as2Pi(scale2, order, renormMultFac) ));
   if (doVariations) {
     // Create muR-variations.
     if (settingsPtr->parm("Variations:muRisrDown") != 1.)
       wts.insert( make_pair("Variations:muRisrDown", prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRisrDown")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRisrDown") : renormMultFac) ));
     if (settingsPtr->parm("Variations:muRisrUp")   != 1.)
       wts.insert( make_pair("Variations:muRisrUp",   prob
-        * as2Pi(pT2, order, settingsPtr->parm("Variations:muRisrUp")) ));
+        * as2Pi(scale2, order, (scale2 > pT2minVariations)
+        ? settingsPtr->parm("Variations:muRisrUp") : renormMultFac) ));
   }
 
   // Multiply with z1 because of crossing.
@@ -4469,6 +4853,26 @@ double fsr_qcd_Q2QG_notPartial::symmetryFactor ( int, int )     { return 1.;}
 int fsr_qcd_Q2QG_notPartial::radBefID(int idRA, int) {
   if (particleDataPtr->isQuark(idRA)) return idRA;
   return 0;
+}
+
+vector<pair<int,int> > fsr_qcd_Q2QG_notPartial::radAndEmtCols(int iRad,
+  int, Event state) {
+  vector< pair<int,int> > ret;
+  if (!state[iRad].isQuark() || state[splitInfo.iRecBef].colType() != 0)
+    return ret;
+
+  int colType = (state[iRad].id() > 0) ? 1 : -1;
+  int newCol1     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol1 : state[iRad].col();
+  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol1;
+  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
+
+  ret = createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1));
+
+  return ret;
 }
 
 pair<int,int> fsr_qcd_Q2QG_notPartial::radBefCols(
@@ -4627,7 +5031,30 @@ double fsr_qcd_G2GG_notPartial::gaugeFactor ( int, int )        { return 2.*CA;}
 //double fsr_qcd_G2GG_notPartial::symmetryFactor ( int, int )     { return 0.5;}
 double fsr_qcd_G2GG_notPartial::symmetryFactor ( int, int )     { return 1.0;}
 
-int fsr_qcd_G2GG_notPartial::radBefID(int, int){ return 21;}
+int fsr_qcd_G2GG_notPartial::radBefID(int idRA, int) {
+  if (idRA == 21) return idRA;
+  return 0;
+}
+
+vector<pair<int,int> > fsr_qcd_G2GG_notPartial::radAndEmtCols(int iRad,
+  int colType, Event state) {
+  vector< pair<int,int> > ret;
+  if (state[iRad].id() != 21 || state[splitInfo.iRecBef].colType() != 0)
+    return ret;
+
+  int newCol1     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol1 : state[iRad].col();
+  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol1;
+  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
+
+  ret = createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1));
+
+  return ret;
+}
+
 pair<int,int> fsr_qcd_G2GG_notPartial::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -4776,7 +5203,31 @@ int fsr_qcd_G2QQ_notPartial::sisterID(int)            { return 1;} // Use 1 as d
 double fsr_qcd_G2QQ_notPartial::gaugeFactor ( int, int )        { return NF_qcd_fsr*TR;}
 double fsr_qcd_G2QQ_notPartial::symmetryFactor ( int, int )     { return 1.0;}
 
-int fsr_qcd_G2QQ_notPartial::radBefID(int, int){ return 21;}
+int fsr_qcd_G2QQ_notPartial::radBefID(int idRA, int) {
+  if (particleDataPtr->isQuark(idRA)) return 21;
+  return 0;
+}
+
+vector<pair<int,int> > fsr_qcd_G2QQ_notPartial::radAndEmtCols(int iRad,
+  int colType, Event state) {
+  vector< pair<int,int> > ret;
+  if ( !particleDataPtr->isQuark(state[iRad].id())
+    || state[splitInfo.iRecBef].colType() != 0)
+    return ret;
+
+  int newCol1     = state.nextColTag();
+  int colRadAft   = (colType > 0) ? newCol1 : state[iRad].col();
+  int acolRadAft  = (colType > 0) ? state[iRad].acol() : newCol1;
+  int colEmtAft1  = (colType > 0) ? state[iRad].col() : newCol1;
+  int acolEmtAft1 = (colType > 0) ? newCol1 : state[iRad].acol();
+
+  ret = createvector<pair<int,int> >
+    (make_pair(colRadAft, acolRadAft))
+    (make_pair(colEmtAft1, acolEmtAft1));
+
+  return ret;
+}
+
 pair<int,int> fsr_qcd_G2QQ_notPartial::radBefCols(
   int colRadAfter, int acolRadAfter, 
   int colEmtAfter, int acolEmtAfter) {
@@ -4786,7 +5237,7 @@ pair<int,int> fsr_qcd_G2QQ_notPartial::radBefCols(
 }
 
 vector <int> fsr_qcd_G2QQ_notPartial::recPositions( const Event&, int, int) {
-  return vector<int>();
+  return vector <int>();
 }
 
 // Pick z for new splitting.

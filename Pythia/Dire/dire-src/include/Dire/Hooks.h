@@ -1,7 +1,5 @@
-// Hooks.h is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
-// PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
-// Please respect the MCnet Guidelines, see GUIDELINES for details.
+// Hooks.h is a part of the DIRE plugin to the PYTHIA event generator.
+// Copyright (C) 2018 Stefan Prestel.
 
 #ifndef Pythia8_Hooks_H
 #define Pythia8_Hooks_H

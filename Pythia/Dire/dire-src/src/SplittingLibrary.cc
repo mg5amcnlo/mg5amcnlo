@@ -40,6 +40,61 @@ void SplittingLibrary::init(Settings* settings, ParticleData* particleData,
   initISR();
   initFSR();
 
+  fsrQCD_1_to_1_and_21            = shash("fsr_qcd_1->1&21_CS");
+  fsrQCD_1_to_21_and_1            = shash("fsr_qcd_1->21&1_CS");
+  fsrQCD_21_to_21_and_21a         = shash("fsr_qcd_21->21&21a_CS");
+  fsrQCD_21_to_21_and_21b         = shash("fsr_qcd_21->21&21b_CS");
+  fsrQCD_21_to_1_and_1a           = shash("fsr_qcd_21->1&1a_CS");
+  fsrQCD_21_to_1_and_1b           = shash("fsr_qcd_21->1&1b_CS");
+  fsrQCD_1_to_2_and_1_and_2       = shash("fsr_qcd_1->2&1&2_CS");
+  fsrQCD_1_to_1_and_1_and_1       = shash("fsr_qcd_1->1&1&1_CS");
+  fsrQCD_1_to_1_and_21_notPartial = shash("fsr_qcd_1->1&21_notPartial");
+  fsrQCD_1_to_1_and_21_and_21     = shash("fsr_qcd_1->1&21&21_CS");
+  fsrQCD_21_to_21_and_21_and_21   = shash("fsr_qcd_21->21&21&21_CS");
+  fsrQCD_21_to_1_and_1_and_21     = shash("fsr_qcd_21->1&1&21_CS");
+  fsrQCD_21_to_2_and_2_and_21     = shash("fsr_qcd_21->2&2&21_CS");
+  fsrQED_1_to_1_and_22            = shash("fsr_qed_1->1&22_CS");
+  fsrQED_1_to_22_and_1            = shash("fsr_qed_1->22&1_CS");
+  fsrQED_11_to_11_and_22          = shash("fsr_qed_11->11&22_CS");
+  fsrQED_11_to_22_and_11          = shash("fsr_qed_11->22&11_CS");
+  fsrQED_22_to_1_and_1a           = shash("fsr_qed_22->1&1a_CS");
+  fsrQED_22_to_1_and_1b           = shash("fsr_qed_22->1&1b_CS");
+  fsrQED_22_to_2_and_2a           = shash("fsr_qed_22->2&2a_CS");
+  fsrQED_22_to_2_and_2b           = shash("fsr_qed_22->2&2b_CS");
+  fsrQED_22_to_3_and_3a           = shash("fsr_qed_22->3&3a_CS");
+  fsrQED_22_to_3_and_3b           = shash("fsr_qed_22->3&3b_CS");
+  fsrQED_22_to_4_and_4a           = shash("fsr_qed_22->4&4a_CS");
+  fsrQED_22_to_4_and_4b           = shash("fsr_qed_22->4&4b_CS");
+  fsrQED_22_to_5_and_5a           = shash("fsr_qed_22->5&5a_CS");
+  fsrQED_22_to_5_and_5b           = shash("fsr_qed_22->5&5b_CS");
+  fsrQED_22_to_11_and_11a         = shash("fsr_qed_22->11&11a_CS");
+  fsrQED_22_to_11_and_11b         = shash("fsr_qed_22->11&11b_CS");
+  fsrQED_22_to_13_and_13a         = shash("fsr_qed_22->13&13a_CS");
+  fsrQED_22_to_13_and_13b         = shash("fsr_qed_22->13&13b_CS");
+  fsrQED_22_to_15_and_15a         = shash("fsr_qed_22->15&15a_CS");
+  fsrQED_22_to_15_and_15b         = shash("fsr_qed_22->15&15b_CS");
+  fsrEWK_1_to_1_and_23            = shash("fsr_ew_1->1&23_CS");
+  fsrEWK_1_to_23_and_1            = shash("fsr_ew_1->23&1_CS");
+  fsrEWK_23_to_1_and_1a           = shash("fsr_ew_23->1&1a_CS");
+  fsrEWK_23_to_1_and_1b           = shash("fsr_ew_23->1&1b_CS");
+  fsrEWK_24_to_1_and_1a           = shash("fsr_ew_24->1&1a_CS");
+  fsrEWK_24_to_1_and_1b           = shash("fsr_ew_24->1&1b_CS");
+  fsrEWK_25_to_24_and_24          = shash("fsr_ew_25->24&24_CS");
+  isrQCD_1_to_1_and_21            = shash("isr_qcd_1->1&21_CS");
+  isrQCD_21_to_1_and_1            = shash("isr_qcd_21->1&1_CS");
+  isrQCD_21_to_21_and_21a         = shash("isr_qcd_21->21&21a_CS");
+  isrQCD_21_to_21_and_21b         = shash("isr_qcd_21->21&21b_CS");
+  isrQCD_1_to_21_and_1            = shash("isr_qcd_1->21&1_CS");
+  isrQCD_1_to_2_and_1_and_2       = shash("isr_qcd_1->2&1&2_CS");
+  isrQCD_1_to_1_and_1_and_1       = shash("isr_qcd_1->1&1&1_CS");
+  isrQED_1_to_1_and_22            = shash("isr_qed_1->1&22_CS");
+  isrQED_11_to_11_and_22          = shash("isr_qed_11->11&22_CS");
+  isrQED_1_to_22_and_1            = shash("isr_qed_1->22&1_CS");
+  isrQED_11_to_22_and_11          = shash("isr_qed_11->22&11_CS");
+  isrQED_22_to_1_and_1            = shash("isr_qed_22->1&1_CS");
+  isrQED_22_to_11_and_11          = shash("isr_qed_22->11&11_CS");
+  isrEWK_1_to_1_and_23            = shash("isr_ew_1->1&23_CS");
+
   // Done.
 }
 
@@ -143,16 +198,72 @@ void SplittingLibrary::initFSR() {
   splittings.insert( make_pair( name, new fsr_qed_L2AL( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  /*// A -> Q Q~ (regular DGLAP kernel)
+  // A -> Q Q~ (regular DGLAP kernel)
   name = "fsr_qed_22->1&1a_CS";
-  splittings.insert( make_pair( name, new fsr_qed_A2QQ1( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-
-  // A -> Q~ Q (regular DGLAP kernel)
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 1, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
   name = "fsr_qed_22->1&1b_CS";
-  splittings.insert( make_pair( name, new fsr_qed_A2QQ2( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
-  */
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-1, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->2&2a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 2, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->2&2b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-2, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->3&3a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 3, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->3&3b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-3, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->4&4a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 4, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->4&4b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-4, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->5&5a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 5, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->5&5b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-5, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  // A -> L L~ (regular DGLAP kernel)
+  name = "fsr_qed_22->11&11a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 11, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->11&11b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-11, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->13&13a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 13, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->13&13b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-13, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->15&15a_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF( 15, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
+  name = "fsr_qed_22->15&15b_CS";
+  splittings.insert( make_pair( name, new fsr_qed_A2FF(-15, name, order,
+    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr,
+    infoPtr)) );
 
   /*// EW splittings
 
@@ -315,173 +426,7 @@ const Splitting* SplittingLibrary::operator[](string id) const {
 // Generate identifier of radiator before the splitting
 
 vector<int> SplittingLibrary::getSplittingRadBefID(const Event& event,
-  int rad, int emt) {
-
-return getSplittingRadBefID_new(event, rad, emt);
-
-  // Get ID of radiator before branching.
-  int type = event[rad].isFinal() ? 1 :-1;
-  int emtID  = event[emt].id();
-  int radID  = event[rad].id();
-  int emtCOL = event[emt].col();
-  int radCOL = event[rad].col();
-  int emtACL = event[emt].acol();
-  int radACL = event[rad].acol();
-
-  int emtColType = event[emt].colType();
-  int radColType = event[rad].colType();
-
-  bool colConnected = ((type == 1) && ( (emtCOL !=0 && (emtCOL ==radACL))
-                                     || (emtACL !=0 && (emtACL ==radCOL)) ))
-                    ||((type ==-1) && ( (emtCOL !=0 && (emtCOL ==radCOL))
-                                     || (emtACL !=0 && (emtACL ==radACL)) ));
-
-  // SQCD bookkeeping
-  int radSign = (radID < 0) ? -1 : 1;
-  int offsetL = 1000000;
-  int offsetR = 2000000;
-  int emtSign = (emtID < 0) ? -1 : 1;
-  // Get PDG numbering offsets.
-  int emtOffset = 0;
-  if ( abs(emtID) > offsetL && abs(emtID) < offsetL+10 )
-    emtOffset = offsetL;
-  if ( abs(emtID) > offsetR && abs(emtID) < offsetR+10 )
-    emtOffset = offsetR;
-  int radOffset = 0;
-  if ( abs(radID) > offsetL && abs(radID) < offsetL+10 )
-    radOffset = offsetL;
-  if ( abs(radID) > offsetR && abs(radID) < offsetR+10 )
-    radOffset = offsetR;
-
-  // Vector of possible flavours of radiator before the emission. Can have more
-  // than one entry if multiple splittings yield the same final state
-  // (e.g. Z --> ff~ and gamma --> ff~)
-  vector<int>radBefIDs;
-
-  // QCD splittings
-  // Gluon radiation
-  if ( emtID == 21 ) {
-    radBefIDs.push_back(radID);
-  // Final state gluon emission from quark, (1-z) term
-  } else if ( type == 1 && abs(emtID) < 10 && radID == 21 ) {
-    radBefIDs.push_back(emtID);
-  // Final state gluon splitting
-  } else if ( type == 1 && emtID == -radID && !colConnected ) {
-    radBefIDs.push_back(21);
-  // Initial state s-channel gluon splitting
-  } else if ( type ==-1 && radID == 21 ) {
-    radBefIDs.push_back(-emtID);
-  // Initial state t-channel gluon splitting
-  } else if ( type ==-1 && !colConnected
-  && emtID != 21 && radID != 21 && abs(emtID) < 10 && abs(radID) < 10) {
-    radBefIDs.push_back(21);
-
-  // Gluino radiation
-  } else if ( emtID == 1000021 ) {
-    // Gluino radiation combined with quark yields squark.
-    if (abs(radID) < 10 ) {
-      int offset = offsetL;
-      // Check if righthanded squark present. If so, make the reclustered
-      // squark match. Works for squark pair production + gluino emission.
-      for (int i=0; i < int(event.size()); ++i)
-        if ( event[i].isFinal()
-          && event[i].idAbs() < offsetR+10 && event[i].idAbs() > offsetR)
-          offset = offsetR;
-      radBefIDs.push_back(radSign*(abs(radID)+offset));
-    // Gluino radiation combined with squark yields quark.
-    } else if (abs(radID) > offsetL && abs(radID) < offsetL+10 ) {
-      radBefIDs.push_back(radSign*(abs(radID)-offsetL));
-    } else if (abs(radID) > offsetR && abs(radID) < offsetR+10 ) {
-      radBefIDs.push_back(radSign*(abs(radID)-offsetR));
-    // Gluino radiation off gluon yields gluino.
-    } else if (radID == 21 ) {
-      radBefIDs.push_back(emtID);
-    }
-
-  // Final state gluino splitting
-  } else if ( type == 1 && !colConnected
-    && emtColType != 0 && radColType != 0) {
-    // Emitted squark, radiating quark.
-    if ( emtOffset > 0 && radOffset == 0
-      && emtSign*(abs(emtID) - emtOffset) == -radID ) {
-      radBefIDs.push_back(1000021);
-    // Emitted quark, radiating squark.
-    } else if ( emtOffset == 0 && radOffset > 0
-      && emtID == -radSign*(abs(radID) - radOffset) ) {
-      radBefIDs.push_back(1000021);
-    }
-  // Initial state s-channel gluino splitting
-  } else if ( type ==-1 && radID == 1000021 ) {
-    // Quark entering underlying hard process.
-    if ( emtOffset > 0 ) {
-      radBefIDs.push_back(-emtSign*(abs(emtID) - emtOffset));
-    // Squark entering underlying hard process.
-    } else {
-      radBefIDs.push_back(-emtSign*(abs(emtID) + emtOffset));
-    }
-  // Initial state t-channel gluino splitting.
-  } else if ( type ==-1
-    && ( (abs(emtID) > offsetL && abs(emtID) < offsetL+10)
-      || (abs(emtID) > offsetR && abs(emtID) < offsetR+10))
-    && ( (abs(radID) > offsetL && abs(radID) < offsetL+10)
-      || (abs(radID) > offsetR && abs(radID) < offsetR+10))
-    && emtSign*(abs(emtID)+emtOffset) == radSign*(abs(radID) - radOffset)
-    && !colConnected ) {
-    radBefIDs.push_back(1000021);
-  // Photon / Z / Higgs radiation
-  } else if ( emtID == 22 || emtID == 23 || emtID == 25) {
-    radBefIDs.push_back(radID);
-  // Final state Photon / Z / Higgs emission, (1-z) term
-  } else if ( type == 1 && abs(emtID) < 10
-    && (radID == 22 || radID == 23 || radID == 25) ) {
-    radBefIDs.push_back(emtID);
-  // Final state Photon / Z / Higgs splitting
-  } else if ( type == 1 && emtID == -radID && colConnected){
-    radBefIDs.push_back(22);
-    radBefIDs.push_back(23);
-    radBefIDs.push_back(25);
-  // Initial state s-channel photon / Z / Higgs splitting
-  } else if ( type ==-1 && (radID == 22 || radID == 23 || radID == 25) ){
-    radBefIDs.push_back(-emtID);
-  // Initial state t-channel photon / Z splitting to quarks.
-  } else if ( type ==-1 && particleDataPtr->isQuark(emtID) && radID == emtID
-    && colConnected){
-    radBefIDs.push_back(22);
-    radBefIDs.push_back(23);
-    radBefIDs.push_back(25);
-  // Initial state t-channel photon / Z splitting to charged leptons.
-  } else if ( type ==-1 && particleDataPtr->isLepton(emtID)
-    && particleDataPtr->chargeType(emtID) != 0 && radID == emtID){
-    radBefIDs.push_back(22);
-    radBefIDs.push_back(23);
-    radBefIDs.push_back(25);
-  // Initial state t-channel Z splitting to neutrinos.
-  } else if ( type ==-1 && particleDataPtr->isLepton(emtID)
-    && particleDataPtr->chargeType(emtID) == 0 && radID == emtID){
-    radBefIDs.push_back(23);
-  // W+ radiation
-  } else if ( emtID == 24 && radID < 0 ) {
-    radBefIDs.push_back(radID + 1);
-  } else if ( emtID == 24 && radID > 0 ) {
-    radBefIDs.push_back(radID + 1);
-  // W- radiation
-  } else if ( emtID ==-24 && radID < 0 ) {
-    radBefIDs.push_back(radID - 1);
-  } else if ( emtID ==-24 && radID > 0 ) {
-    radBefIDs.push_back(radID - 1);
-  // Final state W splitting
-  } else if ( type == 1 && colConnected
-    && (emtSign*(abs(emtID)+1) == -radID || emtID == -radSign*(abs(radID)+1)) ){
-    int chg = event[emt].charge() + event[rad].charge();
-    if (chg > 0) radBefIDs.push_back( 24);
-    else         radBefIDs.push_back(-24);
-  }
-
-
-  // Done.
-  return radBefIDs;
-
-}
+  int rad, int emt) { return getSplittingRadBefID_new(event, rad, emt); }
 
 //--------------------------------------------------------------------------
 
@@ -546,79 +491,7 @@ vector<string> SplittingLibrary::getSplittingName_new(const Event& event, int ra
 // Generate name for a splitting
 
 vector<string> SplittingLibrary::getSplittingName(const Event& event, int rad,
-  int emt) {
-
-  return getSplittingName_new(event, rad, emt);
-
-  // Get ID of radiator before branching.
-  int type               = event[rad].isFinal() ? 1 :-1;
-  vector<int> radBefIDs  = getSplittingRadBefID(event, rad, emt);
-
-  // Construct all possible names.
-  vector<string> names;
-
-  for (int i = 0; i < int(radBefIDs.size()); ++i) {
-    int radBefID = radBefIDs[i];
-
-    if (radBefID == 0) continue;
-
-    // Construct name.
-    string name = "";
-    if (type ==  1) name +="fsr_";
-    else name +="isr_";
-
-    if      (event[emt].id()    == 22 || radBefID      == 22) name +="qed_";
-    else if (event[emt].id()    == 23 || radBefID      == 23) name +="ew_";
-    else if (event[emt].idAbs() == 24 || abs(radBefID) == 24) name +="ew_";
-    else if (event[emt].id()    == 25 || radBefID      == 25) name +="ew_";
-    else name +="qcd_";
-
-    int radAftID = event[rad].id();
-    if (type == -1) swap(radBefID,radAftID);
-    int emtAftID = event[emt].id();
-
-    int rbID = (abs(radBefID) < 10) ? 1 : abs(radBefID); 
-    stringstream ss; ss << rbID;
-    name += ss.str(); name +="->";
-
-    int rID = (abs(radAftID) < 10) ? 1 : abs(radAftID); 
-    ss.str(""); ss << rID;
-    name += ss.str(); name +="&";
-
-    int eID = (abs(emtAftID) < 10) ? 1 : abs(emtAftID); 
-    ss.str(""); ss << eID;
-    name += ss.str();
-
-    // Distinguish FSR x->qq~ and x->q~q
-    if (name.find("fsr") !=string::npos && name.find("->1&1") !=string::npos){
-      if (event[emt].id() > 0) name += "a";
-      if (event[emt].id() < 0) name += "b";
-    }
-
-    // Two colour structures for g->gg.
-    if ( name.compare("isr_qcd_21->21&21") == 0
-      || name.compare("fsr_qcd_21->21&21") == 0) {
-      string nameA=name + "a_CS";
-      // Check if the name exists.
-      bool foundName = (splittings.find(nameA) != splittings.end());
-      if (foundName) names.push_back(nameA);
-      nameA=name + "b_CS";
-      // Check if the name exists.
-      foundName = (splittings.find(nameA) != splittings.end());
-      if (foundName) names.push_back(nameA);
-    } else {
-      name += "_CS";
-      // Check if the name exists.
-      bool foundName = (splittings.find(name) != splittings.end());
-      // Done for this name.
-      if (foundName) names.push_back(name);
-    }
-
-  }
-
-  // Done.
-  return names;
-}
+  int emt) { return getSplittingName_new(event, rad, emt); }
 
 //--------------------------------------------------------------------------
 

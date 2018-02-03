@@ -3,7 +3,8 @@
 
 using namespace Pythia8;
 
-void fill_ID_vec(const Pythia8::Event& event, vector<int>& in, vector<int>& out) {
+void fill_ID_vec(const Pythia8::Event& event, vector<int>& in,
+  vector<int>& out) {
   in.push_back(event[3].id());
   in.push_back(event[4].id());
   for (int i = 4; i < event.size(); ++i) {
@@ -20,7 +21,6 @@ void fill_4V_vec(const Pythia8::Event& event, vector<Pythia8::Vec4>& p) {
 }
 
 void fill_COL_vec(const Pythia8::Event& event, vector<int>& colors) {
-
   colors.push_back(event[3].col()); colors.push_back(event[3].acol());
   colors.push_back(event[4].col()); colors.push_back(event[4].acol());
   for (int i = 4; i < event.size(); ++i) {
@@ -29,36 +29,6 @@ void fill_COL_vec(const Pythia8::Event& event, vector<int>& colors) {
       colors.push_back(event[i].acol());
     }
   }
-}
-
-vector<pair<int,int> > fillColPairs(const Pythia8::Event& event) {
-  vector<pair<int,int> > ret;
-  ret.push_back( make_pair(event[3].col(), event[3].acol()));
-  ret.push_back( make_pair(event[4].col(), event[4].acol()));
-  for (int i = 4; i < event.size(); ++i)
-    if ( event[i].isFinal() )
-      ret.push_back( make_pair(event[i].col(), event[i].acol()));
-  return ret;
-}
-
-vector<int> fillColVec( vector< pair<int,int> > pairs) {
-  vector<int> ret;
-  for (unsigned int i = 0; i < pairs.size(); ++i) {
-    ret.push_back(pairs[i].first);
-    ret.push_back(pairs[i].second);
-  }
-  return ret;
-}
-
-pair<vector<Pythia8::Vec4>, vector<Pythia8::Vec4> > 
-  fillMomVec(const Pythia8::Event& event) {
-  vector<Pythia8::Vec4> pi, pf;
-  pi.push_back(event[3].p());
-  pi.push_back(event[4].p());
-  for (int i = 4; i < event.size(); ++i) {
-    if ( event[i].isFinal() ) pf.push_back(event[i].p());
-  }
-  return make_pair(pi,pf);
 }
 
 vector < vec_double > getMG5MomVec ( vector<Pythia8::Vec4> p ) {
@@ -74,111 +44,72 @@ vector < vec_double > getMG5MomVec ( vector<Pythia8::Vec4> p ) {
   return ret;
 }
 
-bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
-  vector <int> in_pdgs, vector<int> out_pdgs) {
-
-  set<int> req_s_channels; 
-  PY8MEs_namespace::PY8ME * query
-    = accessor.getProcess(in_pdgs, out_pdgs, req_s_channels);
-  return (query != 0);
-
+vector < vec_double > fill_MG5Mom_vec ( const Pythia8::Event event) {
+  vector<Pythia8::Vec4> p;
+  fill_4V_vec(event,p);
+  return  getMG5MomVec(p);
 }
 
+#ifdef MG5MES
+bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
+  vector <int> in, vector<int> out) {
+  set<int> req_s_channels; 
+  PY8MEs_namespace::PY8ME * query
+    = accessor.getProcess(in, out, req_s_channels);
+  return (query != 0);
+}
 
 bool isAvailableME(PY8MEs_namespace::PY8MEs& accessor,
   const Pythia8::Event& event) {
-
-  vector <int> in_pdgs, out_pdgs;
-  fill_ID_vec(event, in_pdgs, out_pdgs);
-  vector<pair<int,int> > pairs(fillColPairs(event));
-  vector<pair<int,int> > in_pairs(pairs.begin(), pairs.begin()+2);
-  vector<pair<int,int> > fi_pairs(pairs.begin()+2, pairs.end());
-  vector<int> cols = fillColVec(pairs);
+  vector <int> in, out;
+  fill_ID_vec(event, in, out);
   set<int> req_s_channels; 
-  PY8MEs_namespace::PY8ME * query = 0;
-
-  int iperm(0), colID(-2);
-  do {
-    do {
-      iperm++;
-
-      vector<pair<int,int> > new_pairs(in_pairs.begin(), in_pairs.end());
-      new_pairs.insert(new_pairs.end(), fi_pairs.begin(), fi_pairs.end());
-      cols = fillColVec(new_pairs);
-
-      query = accessor.getProcess(in_pdgs, out_pdgs, req_s_channels);
-
-      if (query != 0) {
-        query->setColors(cols);
-        colID = query->getColorIDForConfig(cols);
-        if ( colID != -2) break;
-      }
-      if ( colID != -2) break;
-
-      std::next_permutation(out_pdgs.begin(),out_pdgs.end());
-    } while(std::next_permutation(fi_pairs.begin(),fi_pairs.end()));
-    std::next_permutation(in_pdgs.begin(),in_pdgs.end());
-  } while(std::next_permutation(in_pairs.begin(),in_pairs.end()));
-
-  return (query != 0 && colID != -2);
-
+  PY8MEs_namespace::PY8ME * query
+    = accessor.getProcess(in, out, req_s_channels);
+  return (query != 0);
 }
 
 // Evaluate a given process with an accessor
-double calcME(PY8MEs_namespace::PY8MEs& accessor, const Pythia8::Event& event) {
-
-  vector <int> in_pdgs, out_pdgs;
-  fill_ID_vec(event, in_pdgs, out_pdgs);
+double calcME( PY8MEs_namespace::PY8MEs& accessor,
+  const Pythia8::Event& event) {
+  vector <int> in, out;
+  fill_ID_vec(event, in, out);
+  vector<int> cols; 
+  fill_COL_vec(event, cols);
+  vector< vec_double > pvec = fill_MG5Mom_vec( event);
   set<int> req_s_channels; 
-
-  pair<vector<Pythia8::Vec4>, vector<Pythia8::Vec4> > ps(fillMomVec(event));
-  vector < vec_double > pi_mg5( getMG5MomVec(ps.first));
-  vector < vec_double > pf_mg5( getMG5MomVec(ps.second));
-  vector< vec_double > pvec2;
-  pvec2.insert(pvec2.end(), pi_mg5.begin(), pi_mg5.end());
-  pvec2.insert(pvec2.end(), pf_mg5.begin(), pf_mg5.end());
-  
   vector<int> helicities; 
+
+  // Redirect output so that exceptions can be printed by Dire.
+  std::streambuf *old = cerr.rdbuf();
+  stringstream ss;
+  cerr.rdbuf (ss.rdbuf());
+  bool success = true;
   pair < double, bool > res;
-  vector<pair<int,int> > pairs(fillColPairs(event));
-  vector<pair<int,int> > in_pairs(pairs.begin(), pairs.begin()+2);
-  vector<pair<int,int> > fi_pairs(pairs.begin()+2, pairs.end());
-  vector<int> cols = fillColVec(pairs);
+  try {
+    res = accessor.calculateME(in, out, pvec, req_s_channels, cols, helicities);
+  } catch (const std::exception& e) {
+    success = false;
+    cout << "Caught exception in " << __PRETTY_FUNCTION__ << ": "
+         << ss << endl;
+  }
+  // Restore print-out.
+  cerr.rdbuf (old);
+  if (!success) return 0.0;
 
-  int iperm=0;
-  do {
-    bool found=false;
-    do {
-      iperm++;
-
-      vector<pair<int,int> > new_pairs(in_pairs.begin(), in_pairs.end());
-      new_pairs.insert(new_pairs.end(), fi_pairs.begin(), fi_pairs.end());
-      cols.clear();
-      cols = fillColVec(new_pairs);
-
-      pvec2.clear();
-      pvec2.insert(pvec2.end(), pi_mg5.begin(), pi_mg5.end());
-      pvec2.insert(pvec2.end(), pf_mg5.begin(), pf_mg5.end());
-
-      PY8MEs_namespace::PY8ME * query = accessor.getProcess(in_pdgs, out_pdgs, req_s_channels);
-      res = accessor.calculateME(in_pdgs, out_pdgs, pvec2, req_s_channels, cols, helicities);
-      query->setColors(cols);
-
-      if (res.second && res.first > 0.) { found=true; break;}
-
-      std::next_permutation(out_pdgs.begin(),out_pdgs.end());
-      std::next_permutation(pf_mg5.begin(),pf_mg5.end());
-    } while(std::next_permutation(fi_pairs.begin(),fi_pairs.end()));
-
-    if (found) break;
-
-    std::next_permutation(in_pdgs.begin(),in_pdgs.end());
-    std::next_permutation(pi_mg5.begin(),pi_mg5.end());
-  } while(std::next_permutation(in_pairs.begin(),in_pairs.end()));
-
-  if (res.second) return res.first;
-
+  if (res.second) {
+    double me = res.first;
+    PY8MEs_namespace::PY8ME * query
+      = accessor.getProcess(in, out, req_s_channels);
+    me *= 1./query->getHelicityAveragingFactor();
+    // no symmetry factors me *= query->getSymmetryFactor();
+    me *= 1./query->getColorAveragingFactor();
+    return me;
+  }
   // Done
   return 0.0;
-
 }
+#else
+bool isAvailableME() { return false; }
+double calcME() { return false; }
+#endif

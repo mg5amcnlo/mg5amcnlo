@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# dire-config is a part of the DIRE parton shower.
-# Copyright (C) 2017 Stefan Prestel
-# Author: Stefan Prestel (heavily relying on the PYTHIA pythia8-config script
-# by Philip Ilten)
-# Configuration tool for the PYTHIA event generator library. Eaxmple usage is:
-#     ./dire-config --cxxflags --ldflags --pythia8
+# pythia8-config is a part of the DIRE plugin to the PYTHIA event generator.
+# Copyright (C) 2017 Stefan Prestel.
+# PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+# Author: Stefan Prestel,
+# based very heavily on pythia8-config by Philip Ilten, October 2014.
+#
+# Configuration tool for the DIRE parton shower. Eaxmple usage is:
+#     ./dire-config --cxxflags --ldflags --hepmc2
+#     ./dire-config --all-libs
 # For help please use:
 #     ./dire-config --help
 # which will print a full list of options.
@@ -14,7 +18,41 @@
 #     CFG_FILE: The Makefile configuration file.
 #     USAGE:    Text printed when the --help option is passed.
 ################################################################################
-CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-build/share/Dire/examples/Makefile.inc
+DIRE_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-src/../dire-build/share/Dire/main/Makefile.inc
+
+PYTHIA_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-src/../../Pythia/pythia-src/Makefile.inc
+
+################################################################################
+# Helper function to check if libraries exist.
+################################################################################
+check_package () {
+  MODE=$1
+  PKG_USE=$2
+  PKG_LIB=$3
+  PKG_LIB_NAME=$4
+
+  if [ "${PKG_USE}" == "true" ] ; then 
+
+    if [ "$MODE" == "ldconfig" ] ; then 
+      if [ "$(ldconfig -N -v ${PKG_LIB} 2>/dev/null | grep $PKG_LIB_NAME | wc -l)" != "0" ] \
+        || [[ "$(which ldconfig 2>/dev/null | wc -l)" == "0" \
+        && "$(ls ${PKG_LIB}/lib${PKG_LIB_NAME}.* 2>/dev/null | wc -l)" != "0" ]] ; then
+        return 0;
+      fi;
+    elif [ "$MODE" == "ls" ] ; then 
+      if [[ "$(ls ${PKG_LIB}/lib${PKG_LIB_NAME}.* 2>/dev/null | wc -l)" != "0" ]] ; then
+        return 0;
+      fi;
+    fi
+
+  fi
+
+  return 1
+}
+
+################################################################################
+# Main code for configuration script.
+################################################################################
 read -d "" USAGE << "BLOCKTEXT"
 Usage: ./dire-config [OPTIONS]
 
@@ -25,7 +63,7 @@ PYTHIA configuration script are also valid for this script. See
 
 Available options.
 --help       : Print this help message (also -h, --h, and -help).
---config     : Print the argument(s) used to configure Dire.
+--config     : Print the argument(s) used to configure Pythia.
 --prefix     : Installation prefix (cf. autoconf). Note that if the installation
                is spread over multiple directories, the binary directory with
                the trailing "bin" removed is then returned.
@@ -38,7 +76,23 @@ Available options.
 --cflags     : Equivalent to --cxxflags.
 --ldflags    : Returns the PYTHIA -L/-l flag string needed for compilation.
 --libs       : Equivalent to --ldflags.
---pythia8    : PYTHIA installation.
+
+--all-libs   : Prints a string that allows to include and link all external
+               dependeces with which PYTHIA and DIRE have been configured
+
+--PACKAGE    : Provides the -I/-L/-l flags needed to link with an external
+               PACKAGE from the following list.
+  pythia8    : PYTHIA generator.
+  fastjet3   : Jet building of jets using the FastJet package, version 3.
+  hepmc      : Deprecated flag kept for compatibility (equivalent to --hepmc2).
+  hepmc2     : Export PYTHIA events to the HEPMC format, version 2.
+  hepmc3     : Export PYTHIA events to the HEPMC format, version 3.
+  lhapdf5    : Support the use of external PDF sets via LHAPDF, version 5.
+  lhapdf6    : Support the use of external PDF sets via LHAPDF, version 6.
+  root       : Use ROOT trees and histograms with PYTHIA.
+  boost      : Needed when either GZIP or LHAPDF6 is enabled.
+  gzip       : Enable reading of GZIPPED files using BOOST and the libz library.
+  openmp     : Enable multi-threading through OpenMP.
 BLOCKTEXT
 
 ################################################################################
@@ -52,23 +106,28 @@ for VAR in "$@"; do
 
 # Read the configuration (use local version first, then installed version).
 PREFIX=$(cd "$(dirname "${BASH_SOURCE[0]}")"; cd ../; pwd)
-if [ -f $PREFIX/Makefile.inc ]; then CFG_FILE="$PREFIX/Makefile.inc"
-elif [ ! -f $CFG_FILE ]; then
+if [ -f $PREFIX/Makefile.inc ]; then DIRE_CFG_FILE="$PREFIX/Makefile.inc"
+elif [ ! -f $DIRE_CFG_FILE ]; then
     echo "Error: cannot find valid configuration for Dire"; exit; fi
 
 while read LINE; do
     if [[ $LINE == \#\ --* ]]; then CONFIG+=${LINE#?}; fi
     if [[ $LINE != *=* ]]; then continue; fi
-    VAR=${LINE%=*}; VAL=${LINE#$KEY}; VAL=${VAL#*=};
-    eval $VAR=\"$VAL\";
-done < $CFG_FILE
+    VAR=${LINE%%=*}; VAL=${LINE#*=};
+    eval $VAR=\"$VAL\"; done < $PYTHIA_CFG_FILE
+
+while read LINE; do
+    if [[ $LINE == \#\ --* ]]; then CONFIG+=${LINE#?}; fi
+    if [[ $LINE != *=* ]]; then continue; fi
+    VAR=${LINE%%=*}; VAL=${LINE#*=};
+    eval $VAR=\"$VAL\"; done < $DIRE_CFG_FILE
 
 # Check if configuration is requested.
 for VAR in "$@"; do
     if [ "$VAR" = "--config" ]; then echo "./configure$CONFIG"; exit; fi; done
 
 # Change the prefixes if local version.
-if [ "$CFG_FILE" = "$PREFIX/Makefile.inc" ]; then
+if [ "$DIRE_CFG_FILE" = "$PREFIX/Makefile.inc" ]; then
     PREFIX_BIN="$PREFIX/bin"; PREFIX_INCLUDE="$PREFIX/include"
     PREFIX_LIB="$PREFIX/lib"; PREFIX_SHARE="$PREFIX/share/Dire"; fi
 
@@ -97,16 +156,108 @@ for VAR in "$@"; do
     # Flag arguments.
     elif [ "$VAR" = "CXXFLAGS" ]; then OUT="$OUT -I$PREFIX_INCLUDE"
     elif [ "$VAR" = "LDFLAGS" ]; then 
-	OUT="$OUT -L$PREFIX_LIB"
+	OUT="$OUT -L$PREFIX_LIB -ldire"
 	if [ "$GZIP_USE" = "true" ]; then 
-	    #OUT="$OUT -L$BOOST_LIB -lboost_iostreams -L$GZIP_LIB -lz"; fi
 	    OUT="$OUT -L$GZIP_LIB -lz"; fi
+        if [ "$OPENMP_USE" = "true" ]; then
+            OUT="$OUT -fopenmp"; fi
     # Package arguments.
     elif [ "$VAR" = "PYTHIA8" ]; then
-        #OUT="$OUT -I$PYTHIA8_INCLUDE $CXX_COMMON -O2 -ansi -pedantic -W -Wall -Wshadow -fPIC"
-        OUT="$OUT -I$PYTHIA8_INCLUDE"
+	OUT="$OUT -I$PYTHIA8_INCLUDE -L$PYTHIA8_LIB -lpythia8"
+    elif [ "$VAR" = "FASTJET3" ]; then
+	OUT="$OUT -I$FASTJET3_INCLUDE -L$FASTJET3_LIB -lfastjet"
+    elif [ "$VAR" = "HEPMC2" ]; then
+	OUT="$OUT -I$HEPMC2_INCLUDE -L$HEPMC2_LIB -lHepMC"
+    elif [ "$VAR" = "HEPMC3" ]; then
+	OUT="$OUT -I$HEPMC3_INCLUDE -L$HEPMC3_LIB -lHepMC"
+    elif [ "$VAR" = "LHAPDF5" ]; then
+	OUT="$OUT -I$LHAPDF5_INCLUDE -L$LHAPDF5_LIB -lLHAPDF -lgfortran"
+    elif [ "$VAR" = "LHAPDF6" ]; then
+	OUT="$OUT -I$LHAPDF6_INCLUDE -L$LHAPDF6_LIB -lLHAPDF"
+    elif [ "$VAR" = "ROOT" ] && [ "$ROOT_USE" = "true" ]; then
+	OUT="$OUT -I$ROOT_INCLUDE `${ROOT_BIN}root-config --glibs`"
+    elif [ "$VAR" = "BOOST" ]; then
+	OUT="$OUT -I$BOOST_INCLUDE -L$BOOST_LIB -lboost_iostreams"
+    elif [ "$VAR" = "GZIP" ]; then
+	OUT="$OUT -I$GZIP_INCLUDE -L$GZIP_LIB -lz"
+    elif [ "$VAR" = "OPENMP" ]; then
+        OUT="$OUT -fopenmp"
     # All remaining arguments.
     else eval OUT=\"$OUT \$$VAR\"; fi; done
 
+for VAR in "$@"; do
+    if [[ $VAR != --* ]]; then continue; fi
+    VAR=$(echo ${VAR#--} | awk '{print toupper($0)}'); VAR=${VAR//"-"/"_"}
+    if [[ "$VAR" = "ALL_LIBS" ]] ; then
+
+      # PYTHIA 8
+      if [ "$PYTHIA8_USE"  == "true" ] && [ "$(ls $PYTHIA8_LIB 2>/dev/null | grep pythia8 | wc -l)" != "0" ]; then
+	OUT="$OUT -I$PYTHIA8_INCLUDE -L$PYTHIA8_LIB -Wl,-rpath $PYTHIA8_LIB -lpythia8" ; fi
+
+      # FASTJET3
+      if check_package "ls" "$FASTJET3_USE" "$FASTJET3_LIB" "fastjet" ; then
+	OUT="$OUT -I$FASTJET3_INCLUDE -L$FASTJET3_LIB -Wl,-rpath $FASTJET3_LIB -lfastjet -DFASTJET3" ; fi
+
+      # HEPMC2
+      if check_package "ls" "$HEPMC2_USE" "$HEPMC2_LIB" "HepMC" ; then
+        OUT="$OUT -I$HEPMC2_INCLUDE -L$HEPMC2_LIB -Wl,-rpath $HEPMC2_LIB -lHepMC -DHEPMC2" ; fi
+
+      # HEPMC3
+      if check_package "ls" "$HEPMC3_USE" "$HEPMC3_LIB" "HepMC" ; then
+	OUT="$OUT -I$HEPMC3_INCLUDE -L$HEPMC3_LIB -Wl,-rpath $HEPMC3_LIB -lHepMC -DHEPMC3" ; fi
+
+      # LHAPDF5
+      if check_package "ls" "$LHAPDF5_USE" "$LHAPDF5_LIB" "LHAPDF" ; then
+	OUT="$OUT -I$LHAPDF5_INCLUDE -L$LHAPDF5_LIB -Wl,-rpath $LHAPDF5_LIB -lLHAPDF -lgfortran -DLHAPDF5" ; fi
+
+      # LHAPDF6
+      if check_package "ls" "$LHAPDF6_USE" "$LHAPDF6_LIB" "LHAPDF" ; then
+	OUT="$OUT -I$LHAPDF6_INCLUDE -L$LHAPDF6_LIB -Wl,-rpath $LHAPDF6_LIB -lLHAPDF -DLHAPDF6" ; fi
+
+      # ROOT
+      if [ "$ROOT_USE" = "true" ]; then
+      if check_package "ls" "$ROOT_USE" "$ROOT_LIB" `${ROOT_BIN}root-config --glibs` ; then
+	OUT="$OUT -I$ROOT_INCLUDE `${ROOT_BIN}root-config --glibs` -DROOT" ; fi ; fi
+
+      # BOOST
+      if check_package "ls" "$BOOST_USE" "$BOOST_LIB" "boost_iostreams" ; then
+	OUT="$OUT -I$BOOST_INCLUDE -L$BOOST_LIB -Wl,-rpath $BOOST_LIB -lboost_iostreams -DBOOST" ; fi
+
+      # ZLIB
+      if check_package "ls" "$GZIP_USE" "$GZIP_LIB" "z" ; then
+	OUT="$OUT -I$GZIP_INCLUDE -L$GZIP_LIB -Wl,-rpath $GZIP_LIB -lz -DGZIPSUPPORT" ; fi
+
+      # OPENMP
+      #if check_package "$OPENMP_USE" "$OPENMP_LIB" "gomp" ; then
+      if [ "$OPENMP_USE" = "true" ]; then
+	OUT="$OUT -fopenmp -DOPENMP" ; fi
+
+      # EVTGEN
+      if check_package "ls" "$EVTGEN_USE" "$EVTGEN_LIB" "evtgen" ; then
+	OUT="$OUT -I$EVTGEN_INCLUDE -L$EVTGEN_LIB -Wl,-rpath $EVTGEN_LIB -levtgen -DEVTGEN" ; fi
+
+      # PROMC
+      if check_package "ls" "$PROMC_USE" "$PROMC_LIB" "promc" ; then
+	OUT="$OUT -I$PROMC_INCLUDE -L$PROMC_LIB -Wl,-rpath $PROMC_LIB -lpromc -DPROMC" ; fi
+
+      # PYTHON
+      if check_package "ls" "$PYTHON_USE" "$PYTHON_LIB" "python" ; then
+	OUT="$OUT -I$PYTHON_INCLUDE -L$PYTHON_LIB -Wl,-rpath $PYTHON_LIB -lpython -DPYTHON" ; fi
+
+      # MG5 matrix elements
+      if [ "$MG5MES_USE"  == "true" ] \
+      && [ "$(find $MG5MES_INCLUDE/Processes_sm/PY8ME.h 2>/dev/null | wc -l)" != "0" ]; then
+	OUT="$OUT -I$MG5MES_INCLUDE -DMG5MES" ; fi
+
+      # DIRE
+      OUT+=" -I$PREFIX_INCLUDE"
+      OUT+=" -L$PREFIX_LIB -Wl,-rpath $PREFIX_LIB -ldire"
+      OUT+=" -ldl";
+      OUT+=" $CXX_COMMON";
+
+    fi
+done;
+
 # Print the output.
+if [ "$VAR" = "LDFLAGS" ]; then OUT+=" -ldl"; fi
 echo $OUT

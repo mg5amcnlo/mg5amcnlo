@@ -9,6 +9,8 @@ class MyAnalysis : public Analysis {
   void init();
   void fill(const Event&, double);
   void fill(const Event&, const Event&, double) { return; };
+  void fill(const Event&, vector<double> ) { return; }
+  void fill(const Event&, const Event&, vector<double>) { return; };
   void finalize();
   void print();
 
@@ -37,22 +39,23 @@ void MyAnalysis::fill(const Event & e, double w) {
   // outgoing electron.
   int iBeamA(0), iBeamB(0);
   for ( int i=0; i < e.size(); ++i ) {
-    if ( e[i].statusAbs() == 12 && e[i].pz() > 0) iBeamA = i;
-    if ( e[i].statusAbs() == 12 && e[i].pz() < 0) iBeamB = i;
+    if      ( e[i].statusAbs() == 12 && e[i].pz() > 0) iBeamA = i;
+    else if ( e[i].statusAbs() == 12 ) iBeamB = i;
+    //if ( e[i].statusAbs() == 12 && e[i].pz() < 0) iBeamB = i;
   }
   int iProton = e[iBeamA].isHadron() ? iBeamA : iBeamB;
   int iOther  = iProton == iBeamA ? iBeamB : iBeamA;
   int iInElectron(0), iScatElHard(0);
   for ( int i=0; i < e.size(); ++i ) {
     if ( !e[i].isFinal() && e[i].isAncestor(iOther) ) iInElectron = i;
-    if ( e[i].statusAbs() == 23 && e[i].idAbs() == 11) iScatElHard = i;
+    //if ( e[i].statusAbs() == 23 && e[i].idAbs() == 11) iScatElHard = i;
+    if ( e[i].statusAbs() == 23 && e[i].idAbs() == 13) iScatElHard = i;
   }
-
-//iInElectron=1;
 
   int iScatElectron(0);
   for ( int i=e.size()-1; i > 0; --i )
-    if ( e[i].isFinal() && e[i].idAbs() == 11
+    //if ( e[i].isFinal() && e[i].idAbs() == 11
+    if ( e[i].isFinal() && e[i].idAbs() == 13
       && e[i].isAncestor(iScatElHard) ) { iScatElectron = i; break;}
   iScatElectron = max(iScatElHard, iScatElectron);
 
@@ -66,8 +69,7 @@ void MyAnalysis::fill(const Event & e, double w) {
   double y   = (pProton*q) / (pProton*pInEl);
   double xbj = Q2 / (2.*pProton*q);
 
-
-  if ( Q2 < 1.0 ) return;
+  if ( Q2 < 0.5 ) return;
   if ( W2 < 4.0 ) return;
 
   // Accumulate sum of weights.
@@ -88,20 +90,10 @@ void MyAnalysis::fill(const Event & e, double w) {
 }
 
 void MyAnalysis::finalize() {
-
-//cout << "Normalize histograms by " << nTried << " / " << nAccepted << endl;
-//  // Normalize histograms.
-//  for ( map<string,Hist>::const_iterator it_h  = histograms.begin();
-//    it_h != histograms.end(); ++it_h )
-//    histograms[it_h->first] *= double(nTried)/double(nAccepted);
-
   // Normalize histograms.
   for ( map<string,Hist>::const_iterator it_h  = histograms.begin();
     it_h != histograms.end(); ++it_h )
     histograms[it_h->first] /= sumOfWeights;
-
-
-
 }
 
 void MyAnalysis::print() {

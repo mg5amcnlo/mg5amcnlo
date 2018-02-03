@@ -2,7 +2,7 @@
 #ifndef Pythia8_Dire_H
 #define Pythia8_Dire_H
 
-#define DIRE_VERSION "2.000"
+#define DIRE_VERSION "2.002"
 
 // DIRE includes.
 #include "Dire/SplittingLibrary.h"
@@ -11,6 +11,7 @@
 #include "Dire/DireSpace.h"
 #include "Dire/WeightContainer.h"
 #include "Dire/Hooks.h"
+#include "Dire/DireProcesses.h"
 
 // Pythia includes.
 #include "Pythia8/Pythia.h"
@@ -60,6 +61,9 @@ class Dire {
 
   bool hasOwnWeights, hasOwnTimes, hasOwnTimesDec, hasOwnSpace,
        hasOwnSplittings, hasOwnHooks, hasUserHooks, initNewSettings;
+
+  // Dire-internal hard processes, to overwrite Pythia's hard processes.
+  vector<SigmaProcess*> sigmaPtr;
 
 };
 

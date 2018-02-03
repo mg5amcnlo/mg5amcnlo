@@ -2,7 +2,7 @@
 #ifndef Pythia8_Splittings_H
 #define Pythia8_Splittings_H
 
-#define DIRE_SPLITTINGS_VERSION "2.000"
+#define DIRE_SPLITTINGS_VERSION "2.002"
 
 #include "Pythia8/Basics.h"
 #include "Pythia8/Pythia.h"
@@ -27,13 +27,20 @@ class Splitting {
 public:  
 
   // Constructor and destructor.
+  Splitting() :
+      id("void"), correctionOrder(0), settingsPtr(0),
+      particleDataPtr(0), rndmPtr(0), beamAPtr(0),
+      beamBPtr(0),  coupSMPtr(0), infoPtr(0),
+      is_qcd(false), is_qed(false), is_ewk(false), is_fsr(false),
+      is_isr(false), is_dire(false) {}
   Splitting(string idIn, int softRS, Settings* settings,
     ParticleData* particleData, Rndm* rndm, BeamParticle* beamA,
     BeamParticle* beamB, CoupSM* coupSMPtrIn, Info* infoPtrIn) :
       id(idIn), correctionOrder(softRS), settingsPtr(settings),
       particleDataPtr(particleData), rndmPtr(rndm), beamAPtr(beamA),
-      beamBPtr(beamB),  coupSMPtr(coupSMPtrIn), infoPtr(infoPtrIn)
-    { init(); splitInfo.storeName(name()); }
+      beamBPtr(beamB),  coupSMPtr(coupSMPtrIn), infoPtr(infoPtrIn),
+      is_qcd(false), is_qed(false), is_ewk(false), is_fsr(false),
+      is_isr(false), is_dire(false) { init(); splitInfo.storeName(name()); }
   virtual ~Splitting() {}
 
   void init();
@@ -51,6 +58,14 @@ public:
   BeamParticle* beamBPtr;
   CoupSM* coupSMPtr;
   Info* infoPtr;
+
+  // Some short-cuts and string hashes to help avoid string comparisons.
+  bool is_qcd, is_qed, is_ewk, is_fsr, is_isr, is_dire; 
+  ulong nameHash;
+  bool is( ulong pattern ) {
+    if (pattern == nameHash) return true;
+    return false;
+  }
 
   map<string,double> kernelVals;
 
@@ -118,7 +133,14 @@ public:
   // Note that the last input allows easy access to the PS evolution variable.
   // return values -1         --> Coupling value not defined.
   //               double > 0 --> Value to be used for this branching. 
-  virtual double coupling (double) { return -1.; }
+  virtual double coupling (double = 0., double = 0., double = 0.,
+    pair<int,bool> = pair<int,bool>(), pair<int,bool> = pair<int,bool>()) {
+    return -1.;
+  }
+  virtual double couplingScale2 (double = 0., double = 0., double = 0.,
+    pair<int,bool> = pair<int,bool>(), pair<int,bool> = pair<int,bool>()) {
+    return -1.;
+  }
 
   // Pick z for new splitting.
   virtual double zSplit(double, double, double) {return 0.5;}
@@ -146,6 +168,14 @@ public:
   DireTimes* fsr;
   void setTimesPtr(DireTimes* fsrIn) { fsr=fsrIn;}
   void setSpacePtr(DireSpace* isrIn) { isr=isrIn;}
+
+  // Functions that allow different ordering variables for emissions.
+  // Note: Only works after splitInfo has been properly filled.
+  virtual double getJacobian( const Event& = Event(),
+    PartonSystems* = 0) { return 0.;}
+  // Map filled identical to shower state variables map.
+  virtual map<string, double> getPhasespaceVars(const Event& = Event(),
+    PartonSystems* = 0) { return map<string,double>(); }
 
 };
 

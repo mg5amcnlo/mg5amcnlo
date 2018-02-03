@@ -1,5 +1,5 @@
 // DireTimes.h is a part of the DIRE plugin to the PYTHIA event generator.
-// Copyright (C) 2016 Stefan Prestel.
+// Copyright (C) 2018 Stefan Prestel.
 
 // Header file for the timelike final-state showers.
 // DireTimesEnd: data on a radiating dipole end.
@@ -8,7 +8,7 @@
 #ifndef Pythia8_DireTimes_H
 #define Pythia8_DireTimes_H
 
-#define DIRE_TIMES_VERSION "2.000"
+#define DIRE_TIMES_VERSION "2.002"
 
 #include "Pythia8/Basics.h"
 #include "Pythia8/TimeShower.h"
@@ -44,7 +44,7 @@ public:
     MEtype(0), iMEpartner(-1), weakPol(0), isOctetOnium(false),
     isHiddenValley(false), colvType(0), MEmix(0.), MEorder(true),
     MEsplit(true), MEgluinoRec(false), isFlexible(false), idRadAft(0),
-    idEmtAft(0) {
+    idEmtAft(0), isSoftRad(false), isSoftRec(false) {
     mRad = m2Rad = mRec = m2Rec = mDip = m2Dip = m2DipCorr = pT2 = m2 = z
          = mFlavour = asymPol = flexFactor = phi = 0.;
     sa1  = xa = phia1 = pT2start = pT2stop = pT2Old = 0.;
@@ -53,8 +53,9 @@ public:
   DireTimesEnd(int iRadiatorIn, int iRecoilerIn, double pTmaxIn = 0.,
     int colIn = 0, int chgIn = 0, int gamIn = 0, int weakTypeIn = 0,
     int isrIn = 0, int systemIn = 0, int MEtypeIn = 0, int iMEpartnerIn = -1,
-    int weakPolIn = 0, bool isOctetOniumIn = false,
-    bool isHiddenValleyIn = false, int colvTypeIn = 0, double MEmixIn = 0.,
+    int weakPolIn = 0, bool isOctetOniumIn = false, bool isSoftRadIn = false,
+    bool isSoftRecIn = false, bool isHiddenValleyIn = false,
+    int colvTypeIn = 0, double MEmixIn = 0.,
     bool MEorderIn = true, bool MEsplitIn = true, bool MEgluinoRecIn = false,
     bool isFlexibleIn = false, int idRadAftIn = 0, int idEmtAftIn = 0,
     vector<int> iSpectatorIn = vector<int>(),
@@ -68,7 +69,8 @@ public:
     MEorder (MEorderIn), MEsplit(MEsplitIn), MEgluinoRec(MEgluinoRecIn),
     isFlexible(isFlexibleIn), mass(massIn), idRadAft(idRadAftIn),
     idEmtAft(idEmtAftIn), iSpectator(iSpectatorIn),
-    allowedEmissions(allowedIn) { 
+    allowedEmissions(allowedIn), isSoftRad(isSoftRadIn),
+    isSoftRec(isSoftRecIn){ 
     mRad = m2Rad = mRec = m2Rec = mDip = m2Dip = m2DipCorr = pT2 = m2 = z
          = mFlavour = asymPol = flexFactor = phi = 0.;
     sa1  = xa = phia1 = 0.;
@@ -92,7 +94,8 @@ public:
     pT2stop(dip.pT2stop), pT2Old(dip.pT2Old), sa1(dip.sa1), xa(dip.xa),
     phia1(dip.phia1), mass(dip.mass), idRadAft(dip.idRadAft),
     idEmtAft(dip.idEmtAft), iSpectator(dip.iSpectator),
-    allowedEmissions(dip.allowedEmissions) {}
+    allowedEmissions(dip.allowedEmissions), isSoftRad(dip.isSoftRad),
+    isSoftRec(dip.isSoftRec) {}
 
   // Basic properties related to dipole and matrix element corrections.
   int    iRadiator, iRecoiler;
@@ -145,6 +148,37 @@ public:
     m2Dip  = pow2(mDip);
   }
 
+  void list() const {
+    // Header.
+    cout << "\n --------  Begin DireTimesEnd Listing  ----------------"
+         << "------------------------------------------------------- \n \n  "
+         << "  rad    rec       pTmax  col  chg  gam weak  isr"
+         << "  sys sysR type  MErec    pol    m2      allowedIds\n"
+         << fixed << setprecision(3);
+    cout << scientific << setprecision(4) 
+      << setw(7) << iRadiator
+      << setw(7) << iRecoiler   << setw(12)<< pTmax
+      << setw(5) << colType     << setw(5) << chgType
+      << setw(5) << gamType     << setw(5) << weakType
+      << setw(5) << isrType
+      << setw(5) << system      << setw(5) << systemRec
+      << setw(5) << MEtype      << setw(7) << iMEpartner
+      << setw(5) << weakPol
+      << setw(12) << m2Dip;
+    for (int j = 0; j < int(allowedEmissions.size()); ++j)
+      cout << setw(5) << allowedEmissions[j] << " ";
+    cout << endl;
+   // Done.
+    cout << "\n --------  End DireTimesEnd Listing  ------------"
+         << "-------------------------------------------------------" << endl;
+  }
+
+  bool isSoftRad, isSoftRec;
+  void setSoftRad() { isSoftRad = true; }
+  void setHardRad() { isSoftRad = false; }
+  void setSoftRec() { isSoftRec = true; }
+  void setHardRec() { isSoftRec = false; }
+
 };
 
 //==========================================================================
@@ -171,6 +205,7 @@ public:
     weights           = 0;
     debugPtr          = 0;
     printBanner       = true;
+    isInitSave        = false;
     //dipEnd.reserve(1000000);
   }
 
@@ -340,7 +375,8 @@ public:
 
   virtual bool allowedSplitting( const Event& state, int iRad, int iEmt);
 
-  virtual vector<int> getRecoilers( const Event& state, int iRad, int iEmt, string name);
+  virtual vector<int> getRecoilers( const Event& state, int iRad, int iEmt,
+    string name);
 
   //virtual double getCoupling( const Event& state, double mu2Ren, int iRad,
   //  int iEmt, int iRec, string name) {
@@ -351,7 +387,7 @@ public:
     return 1.;
   }
 
-  // Return Jacobian for final-final phase space factorisation.
+  /*// Return Jacobian for final-final phase space factorisation.
   double jacobian_FF(double z, double pT2, double m2dip, double q2,
     double m2RadBef = 0., double m2r = 0., double m2s = 0.,
     double m2e = 0.) {
@@ -377,7 +413,7 @@ public:
 
   // Return Jacobian for final-initial phase space factorisation.
   double jacobian_FI(double = 0., double = 0., double = 0., double = 0.,
-    double = 0., double = 0., double = 0., double = 0.) { return 1.;}
+    double = 0., double = 0., double = 0., double = 0.) { return 1.;}*/
 
   // Auxiliary function to return the position of a particle.
   // Should go int Event class eventually!
@@ -403,12 +439,18 @@ public:
   int FindCol(int col, vector<int> iExclude, const Event& event, int type,
     int iSys = -1);
 
+  // Pointers to the two incoming beams.
+  BeamParticle*  getBeamA () { return beamAPtr; }
+  BeamParticle*  getBeamB () { return beamBPtr; }
+
   // Function to calculate the correct alphaS/2*Pi value, including
   // renormalisation scale variations + threshold matching.
   double alphasNow( double pT2, double renormMultFacNow = 1., int iSys = 0 );
 
   // Function to calculate the correct alphaEM/2*Pi value.
   double alphaemNow( double pT2, double renormMultFacNow = 1., int iSys = 0 );
+
+  bool isInit() { return isInitSave; }
 
 private:
 
@@ -438,25 +480,26 @@ private:
   static const int MAXLOOPTINYPDF;
   static const double MCMIN, MBMIN, SIMPLIFYROOT, XMARGIN, XMARGINCOMB,
          TINYPDF, LARGEM2, THRESHM2, LAMBDA3MARGIN, TINYMASS, TINYOVERESTIMATE,
-         TRECOMBINE, PT2_INCREASE_OVERESTIMATE;
+         PT2_INCREASE_OVERESTIMATE;
 
   // Initialization data, normally only set once.
-  bool   doQCDshower, doQEDshowerByQ, doQEDshowerByL, doMEcorrections,
-         doMEafterFirst, doPhiPolAsym,
+  bool   isInitSave, doQCDshower, doQEDshowerByQ, doQEDshowerByL,
+         doMEcorrections, doMEafterFirst, doPhiPolAsym,
          doInterleave, allowBeamRecoil, dampenBeamRecoil, recoilToColoured,
          useFixedFacScale, allowRescatter, canVetoEmission, hasUserHooks,
          doSecondHard, alphaSuseCMW, printBanner, doTrialNow;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, alphaEMorder,
-         nGluonToQuark, nGammaToQuark, nGammaToLepton, nFinalMax, kernelOrder,
-         kernelOrderMPI, nMPI;
+         nGluonToQuark, nGammaToQuark, nGammaToLepton, nFinalMax,
+         nFinalMaxMECs,kernelOrder, kernelOrderMPI, nMPI;
   double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,
          fixedFacScale2, alphaSvalue, alphaS2pi, Lambda3flav, Lambda4flav,
          Lambda5flav, Lambda3flav2, Lambda4flav2, Lambda5flav2,
          pTcolCutMin, pTcolCut,
          pT2colCut, m2colCut, mTolErr, mZ, gammaZ, thetaW, mW, gammaW,
-         pTmaxFudgeMPI, sumCharge2L, sumCharge2Q, sumCharge2Tot;
+         pTmaxFudgeMPI, sumCharge2L, sumCharge2Q, sumCharge2Tot,
+         pT2minVariations, pT2minMECs, pT2recombine;
   double alphaS2piOverestimate;
-  bool usePDFalphas, usePDFmasses, useSummedPDF;
+  bool usePDFalphas, usePDFmasses, useSummedPDF, useMassiveBeams;
 
   map<int,double> pT2cutSave;
   double pT2cut(int id) {
@@ -518,7 +561,8 @@ private:
   // Function to set up and append a new dipole.
   bool appendDipole( const Event& state, int iRad, int iRec, double pTmax,
     int colType, int chgType, int gamType, int weakType, int isrType, int iSys,
-    int MEtype, int iMEpartner, int weakPol, bool isOctetOnium);
+    int MEtype, int iMEpartner, int weakPol, bool isOctetOnium, bool isSoftRad,
+    bool isSoftRec, vector<DireTimesEnd>& dipEnds);
 
   vector<int> sharedColor(const Particle& rad, const Particle& rec);
 
@@ -566,28 +610,38 @@ private:
     double, double, int, string, int&, int&, double&, double&, 
     map<string,double>&, double&);
 
+  pair<bool, pair<double,double> > getMEC ( const Event& state, 
+    SplitInfo* splitInfo);
   bool applyMEC ( const Event& state, SplitInfo* splitInfo);
 
   // Get particle masses.
   double getMass(int id, int strategy, double mass = 0.) {
     BeamParticle* beam = NULL;
     if (beamAPtr != NULL || beamBPtr != NULL) {
-      //beam = (beamAPtr != NULL && abs(beamAPtr->id()) == 2212) ? beamAPtr
-      //   : (beamBPtr != NULL && abs(beamBPtr->id()) == 2212) ? beamBPtr : NULL;
-      beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
-           : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id())) ? beamBPtr : NULL;
+      beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id()))
+           ? beamAPtr
+           : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id()))
+              ? beamBPtr : NULL;
     }
     bool usePDFmass = usePDFmasses
       && (toLower(settingsPtr->word("PDF:pSet")).find("lhapdf")
          != string::npos);
     double mRet = 0.;
-    if (strategy == 1) mRet = particleDataPtr->m0(id);
-    if (strategy == 2 &&  usePDFmass && beam != NULL)
-      mRet = beam->mQuarkPDF(id);
-    if (strategy == 2 && (!usePDFmass || beam == NULL))
+    // Parton masses.
+    if ( particleDataPtr->colType(id) != 0) {
+      if (strategy == 1) mRet = particleDataPtr->m0(id);
+      if (strategy == 2 &&  usePDFmass && beam != NULL)
+        mRet = beam->mQuarkPDF(id);
+      if (strategy == 2 && (!usePDFmass || beam == NULL))
+        mRet = particleDataPtr->m0(id);
+      if (strategy == 3) mRet = mass;
+      if (mRet < TINYMASS) mRet = 0.;
+    // Masses of other particles.
+    } else {
       mRet = particleDataPtr->m0(id);
-    if (strategy == 3) mRet = mass;
-    if (mRet < TINYMASS) mRet = 0.;
+      if (strategy == 3) mRet = mass;
+      if (mRet < TINYMASS) mRet = 0.;
+    }
     return pow2(max(0.,mRet));
   }
 
@@ -597,7 +651,7 @@ private:
     double m2r = 0., double m2s = 0., double m2e = 0.,
     vector<double> aux = vector<double>());
 
-  // Kallen function and derived quantities. Helpers for massive phase
+  /*// Kallen function and derived quantities. Helpers for massive phase
   // space mapping.
   double lABC(double a, double b, double c) { return pow2(a-b-c) - 4.*b*c;}
   double bABC(double a, double b, double c) { 
@@ -606,7 +660,7 @@ private:
     else if ((a-b-c) < 0.) ret =-sqrt(lABC(a,b,c));
     else                   ret = 0.;
     return ret; }
-  double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}
+  double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}*/
 
   // Auxiliary function to get number of flavours.
   double getNF(double pT2);
@@ -628,10 +682,21 @@ private:
   map<string, map<double,double> > acceptProbability;
   map<string, multimap<double,double> > rejectProbability;
 
+  vector<int> softPosSave;
+
 public:
 
   WeightContainer* weights;
   DebugInfo* debugPtr;
+
+  void addSoftPos( int iPos ) { softPosSave.push_back(iPos); }
+  void removeSoftPos( int iPos) { 
+    vector<int>::iterator it = find( softPosSave.begin(),
+      softPosSave.end(), iPos);
+    if ( it != softPosSave.end() ) softPosSave.erase(it);
+  }
+  vector<int> softPos () { return softPosSave; }
+  void clearSoftPos () { softPosSave.clear(); }
 
 private:
 
@@ -640,14 +705,22 @@ private:
   // List of splitting kernels.
   map<string, Splitting* > splits;
   map<string, double > overhead;
-  void scaleOverheadFactor(string name, double scale)
-    { overhead[name] *= scale; return; }
-  void resetOverheadFactors()
-    { for ( map<string,double>::iterator it = overhead.begin();
-      it != overhead.end(); ++it ) it->second = 1.0; return; }
+  void scaleOverheadFactor(string name, double scale) {
+    overhead[name] *= scale;
+    return;
+  }
+  void resetOverheadFactors() {
+    for ( map<string,double>::iterator it = overhead.begin();
+      it != overhead.end(); ++it )
+      it->second = 1.0;
+    return;
+  }
 
   double octetOniumColFac;
   bool useLocalRecoilNow;
+
+  // Map to store some settings, to be passes to splitting kernels.
+  map<string,bool> bool_settings;
 
 };
 

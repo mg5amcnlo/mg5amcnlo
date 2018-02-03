@@ -5,6 +5,17 @@ namespace Pythia8 {
 
 //--------------------------------------------------------------------------
 
+// Function to hash string into long integer.
+
+ulong shash(const std::string& str) {
+    ulong hash = 5381;
+    for (size_t i = 0; i < str.size(); ++i)
+        hash = 33 * hash + (unsigned char)str[i];
+    return hash;
+}
+
+//--------------------------------------------------------------------------
+
 // Helper function to calculate dilogarithm.
 
 double polev(double x,double* coef,int N ) {
@@ -95,6 +106,15 @@ double dilog(double x) {
   return y;
 
 }
+
+double lABC(double a, double b, double c) { return pow2(a-b-c) - 4.*b*c;}
+double bABC(double a, double b, double c) { 
+  double ret = 0.;
+  if      ((a-b-c) > 0.) ret = sqrt(lABC(a,b,c));
+  else if ((a-b-c) < 0.) ret =-sqrt(lABC(a,b,c));
+  else                   ret = 0.;
+  return ret; }
+double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}
 
 int puppybort( string input, int iPuppy) {
   srand (time(NULL));

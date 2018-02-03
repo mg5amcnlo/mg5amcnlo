@@ -15,14 +15,18 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("DireSpace:forceMassiveMap",true);
   pythia.settings.addMode("DireTimes:nFinalMax",-10,true,false,-1,10000000);
   pythia.settings.addMode("DireSpace:nFinalMax",-10,true,false,-1,10000000);
-  pythia.settings.addMode("DireTimes:kernelOrder",1,true,false,0,10);
-  pythia.settings.addMode("DireSpace:kernelOrder",1,true,false,0,10);
-  pythia.settings.addMode("DireTimes:kernelOrderMPI",1,true,false,0,10);
-  pythia.settings.addMode("DireSpace:kernelOrderMPI",1,true,false,0,10);
+  pythia.settings.addMode("DireTimes:kernelOrder",1,true,false,-1,10);
+  pythia.settings.addMode("DireSpace:kernelOrder",1,true,false,-1,10);
+  pythia.settings.addMode("DireTimes:kernelOrderMPI",1,true,false,-1,10);
+  pythia.settings.addMode("DireSpace:kernelOrderMPI",1,true,false,-1,10);
+  pythia.settings.addParm("DireTimes:pTrecombine",1.414,false,false,0.0,1e10);
+  pythia.settings.addMode("DireTimes:alphasScheme",0,true,false,0,10);
+  pythia.settings.addMode("DireSpace:alphasScheme",0,true,false,0,10);
 
   pythia.settings.forceParm("SpaceShower:pT0Ref",0.0);
 
   // Teach Pythia some enhance factors.
+  // QCD FSR
   pythia.settings.addParm("Enhance:fsr_qcd_1->1&21_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qcd_1->21&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qcd_21->21&21a_CS",1.0,false,false,-1e5,1e5);
@@ -31,6 +35,8 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addParm("Enhance:fsr_qcd_21->1&1b_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qcd_1->2&1&2_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qcd_1->1&1&1_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qcd_1->1&21_notPartial",1.0,false,false,-1e5,1e5);
+  // QCD ISR
   pythia.settings.addParm("Enhance:isr_qcd_1->1&21_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qcd_21->1&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qcd_21->21&21a_CS",1.0,false,false,-1e5,1e5);
@@ -38,21 +44,35 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addParm("Enhance:isr_qcd_1->21&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qcd_1->2&1&2_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qcd_1->1&1&1_CS",1.0,false,false,-1e5,1e5);
-  // Teach Pythia some enhance factors.
+  // QED FSR
   pythia.settings.addParm("Enhance:fsr_qed_1->1&22_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qed_1->22&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qed_11->11&22_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qed_11->22&11_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qed_22->1&1a_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_qed_22->1&1b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->2&2a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->2&2b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->3&3a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->3&3b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->4&4a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->4&4b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->5&5a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->5&5b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->11&11a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->11&11b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->13&13a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->13&13b_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->15&15a_CS",1.0,false,false,-1e5,1e5);
+  pythia.settings.addParm("Enhance:fsr_qed_22->15&15b_CS",1.0,false,false,-1e5,1e5);
+  // QED ISR
   pythia.settings.addParm("Enhance:isr_qed_1->1&22_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qed_1->22&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qed_22->1&1_CS",1.0,false,false,-1e5,1e5);
-  pythia.settings.addParm("Enhance:isr_qed_1->22&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qed_11->11&22_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qed_11->22&11_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:isr_qed_22->11&11_CS",1.0,false,false,-1e5,1e5);
-  // Teach Pythia some enhance factors.
+  // EW FSR
   pythia.settings.addParm("Enhance:fsr_ew_1->1&23_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_ew_1->23&1_CS",1.0,false,false,-1e5,1e5);
   pythia.settings.addParm("Enhance:fsr_ew_23->1&1a_CS",1.0,false,false,-1e5,1e5);
@@ -68,6 +88,9 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addParm("Variations:muRfsrUp",1.0,false,false,1.0,1e2);
   pythia.settings.addMode("Variations:PDFmemberMin",-1,true,false,-1,100000000);
   pythia.settings.addMode("Variations:PDFmemberMax",-1,true,false,-1,100000000);
+  pythia.settings.addFlag("Variations:PDFup",false);
+  pythia.settings.addFlag("Variations:PDFdown",false);
+  pythia.settings.addParm("Variations:pTmin",-1.0,false,false,-1.0,1e10);
 
   // Teach Pythia merging.
   pythia.settings.addFlag("Dire:doMerging",false);
@@ -75,7 +98,10 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doGenerateMergingWeights",false);
   pythia.settings.addFlag("Dire:doMECs",false);
   pythia.settings.addFlag("Dire:doMOPS",false);
+  pythia.settings.addFlag("Dire:doMcAtNloDelta",false);
   pythia.settings.addFlag("Dire:doExitAfterMerging",false);
+  pythia.settings.addParm("Dire:pTminMECs",1.0,false,false,0.0,1e10);
+  pythia.settings.addMode("Dire:nFinalMaxMECs",-1,true,false,-1,100000000);
 
   // Teach Pythia MG5 inputs for external MEs
   pythia.settings.addWord("Dire:MG5card", "");
@@ -174,6 +200,12 @@ void Dire::setup( Pythia& pythia) {
     hasOwnSplittings = true;
     splittings       = new SplittingLibrary();
   }
+
+  // If Pythia has, for ominous reasons, not initialized the spacelike shower,
+  // retry to initialize from timelike shower beams.
+  if ( !spacePtr->isInit() && timesPtr->isInit()
+    && timesPtr->getBeamA() != 0 && timesPtr->getBeamB() != 0)
+    spacePtr->init( timesPtr->getBeamA(), timesPtr->getBeamB() );
 
   // Reinitialise showers to ensure that pointers are
   // correctly set.
@@ -277,6 +309,31 @@ void Dire::init(Pythia& pythia, char const* settingsFile, int subrun,
   // (needed so that we have a well-defined beam particle
   // pointer that can be fed to the splitting functions).
   if (string(settingsFile) != "") pythia.readFile(settingsFile, subrun);
+
+  // Replace dijet process with own code (uses changed scale setting).
+  if (pythia.settings.flag("HardQCD:all") ) {
+    pythia.settings.flag("HardQCD:all", false);
+    sigmaPtr.push_back( new SigmaDire2gg2gg);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2gg2qqbar);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qg2qg);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qq2qq);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qqbar2gg);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qqbar2qqbarNew);
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2gg2QQbar(4, 121));
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qqbar2QQbar(4, 122));
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2gg2QQbar(5, 123));
+    pythia.setSigmaPtr(sigmaPtr.back());
+    sigmaPtr.push_back( new SigmaDire2qqbar2QQbar(5, 124));
+    pythia.setSigmaPtr(sigmaPtr.back());
+  }
 
   // Setup weight container (after user-defined enhance factors have been read)
   weightsPtr->setup();

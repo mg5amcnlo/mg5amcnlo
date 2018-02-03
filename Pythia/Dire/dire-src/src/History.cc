@@ -1,11 +1,5 @@
-// MyHistory.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
-// PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
-// Please respect the MCnet Guidelines, see GUIDELINES for details.
-
-// This file is written by Stefan Prestel.
-// Function definitions (not found in the header) for the
-// Clustering and MyHistory classes.
+// History.cc is a part of the DIRE plugin to the PYTHIA event generator.
+// Copyright (C) 2018 Stefan Prestel.
 
 #include "Dire/History.h"
 
@@ -150,6 +144,17 @@ MyHistory::MyHistory( int depth,
       psweights(psweightsIn)
     {
 
+  // Initialize.
+  goodBranches.clear();
+  badBranches.clear();
+  paths.clear();
+
+  fsr->debugPtr->eatCout(); 
+  cout << "Next reclustered state" << endl;
+  listFlavs(state); cout << endl;
+  clusterIn.list();
+  fsr->debugPtr->freeCout();
+
   // Remember how many steps in total were supposed to be taken.
   if (!mother) nStepsMax = depth;
   else         nStepsMax = mother->nStepsMax;
@@ -198,12 +203,35 @@ MyHistory::MyHistory( int depth,
   if ( clusterings.empty() ) {
     hasMEweight = psweights->hasME(state);
     if (hasMEweight) MECnum = psweights->getME(state);
-    else MECnum    = hardProcessME(state); 
+    else MECnum    = hardProcessME(state);
   } else {
     // Check if fixed-order ME calculation for this state exists.
     hasMEweight = psweights->hasME(state);
     // Calculate ME
     if (hasMEweight) MECnum = psweights->getME(state);
+  }
+
+  if (mother && mother->MECnum > MECnum && clusterings.empty() ) { 
+    fsr->debugPtr->eatCout(); 
+    cout << scientific << setprecision(8);
+    mother->state.list();
+    state.list();
+    cout << "Large difference in ME values!" << endl;
+    cout << "  real emission state ME=" << mother->MECnum
+         << " for "; listFlavs(mother->state); cout << endl;
+    cout << "  born state          ME=" << MECnum
+         << " for "; listFlavs(state);
+    cout << " pT2=" << pow2(clusterIn.pT()) << endl;
+    fsr->debugPtr->freeCout();
+  } else if ( mother) {
+    ;
+  } else {
+    fsr->debugPtr->eatCout(); 
+    cout << "Sensible ME values for highest multiplicity ";
+    listFlavs(state);
+    cout << " ME=" << MECnum
+         << " at pT2=" << pow2(clusterIn.pT()) << endl;
+    fsr->debugPtr->freeCout();
   }
 
   // If no clusterings were found, the recursion is done and we
@@ -586,12 +614,9 @@ double MyHistory::weightTREE(PartonLevel* trial, AlphaStrong * asFSR,
 
 //selected->state.list();
 //state.list();
-//  cout << scientific << setprecision(6)
-//       << "  No-emission prob. = " << sudakov
-//       << "  AlphaS-ratio      = " << asWeight
-//       << "  PDF-ratio         = " << pdfWeight << endl;
-  if (sudakov > 1. || sudakov < 0.)
-    cout << " Warning: Unusual no-emission probability=" << sudakov << endl;
+//cout << scientific << setprecision(6) << sudakov << " " << asWeight << " " << pdfWeight << endl;
+//if (sudakov > 1. || sudakov < 0.) cout << "warning " << endl;
+//if (sudakov < 0.) cout << "negative!!! " << endl;
 
   // Done
   return (sudakov*asWeight*aemWeight*pdfWeight*mpiwt);
@@ -789,11 +814,11 @@ double MyHistory::weight_UNLOPS_TREE(PartonLevel* trial, AlphaStrong * asFSR,
   else {
     wt   = selected->weightTreeEmissions( trial, 1, 0, depth, maxScale );
     if (wt != 0.) asWeight  = selected->weightTreeALPHAS( asME, asFSR, asISR,
-                             depth);
+                             0, depth);
     if (wt != 0.) aemWeight = selected->weightTreeALPHAEM( aemME, aemFSR,
-                             aemISR, depth);
+                             aemISR, 0, depth);
     if (wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
-                             selected->clusterIn.pT(), depth);
+                             selected->clusterIn.pT(), 0, depth);
   }
 
   // MPI no-emission probability.
@@ -882,11 +907,11 @@ double MyHistory::weight_UNLOPS_SUBT(PartonLevel* trial, AlphaStrong * asFSR,
   else {
     sudakov   = selected->weightTreeEmissions( trial, 1, 0, depth, maxScale );
     if (sudakov > 0.) asWeight  = selected->weightTreeALPHAS( asME, asFSR,
-                                  asISR, depth);
+                                  asISR, 0, depth);
     if (sudakov > 0.) aemWeight  = selected->weightTreeALPHAEM( aemME, aemFSR,
-                                  aemISR, depth);
+                                  aemISR, 0, depth);
     if (sudakov > 0.) pdfWeight = selected->weightTreePDFs( maxScale,
-                                  selected->clusterIn.pT(), depth);
+                                  selected->clusterIn.pT(), 0, depth);
   }
 
   // MPI no-emission probability.
@@ -1003,6 +1028,83 @@ double MyHistory::weight_UNLOPS_CORRECTION( int order, PartonLevel* trial,
 
   // So far, no calculation of  O(\alpha_s^2)-term
   return 0.;
+
+}
+
+//--------------------------------------------------------------------------
+
+double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
+  AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN,
+  int depth) {
+
+  // Read alpha_S in ME calculation and maximal scale (eCM)
+  double asME     = infoPtr->alphaS();
+  double aemME    = infoPtr->alphaEM();
+  double maxScale = (foundCompletePath) ? infoPtr->eCM()
+                  : mergingHooksPtr->muFinME();
+  // Select a path of clusterings
+  MyHistory *  selected = select(RN);
+  // Set scales in the states to the scales pythia would have set
+  selected->setScalesInMyHistory();
+
+  // Get weight.
+  double asWeight  = 1.;
+  double aemWeight = 1.;
+  double pdfWeight = 1.;
+
+  double nSteps = mergingHooksPtr->getNumberOfClusteringSteps(state);
+
+  // Do trial shower, calculation of alpha_S ratios, PDF ratios
+  double wt = 1.;
+  if (depth > 0) {
+    wt   = selected->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale );
+// no alphas or pdf ratios
+//    if (wt != 0.) asWeight  = selected->weightTreeALPHAS( asME, asFSR, asISR,
+//                             nSteps-1, nSteps);
+//    if (wt != 0.) aemWeight = selected->weightTreeALPHAEM( aemME, aemFSR,
+//                             aemISR, nSteps-1, nSteps);
+//    if (wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
+//                             selected->clusterIn.pT(), nSteps-1, nSteps);
+  }
+
+  return wt;
+
+
+//  // no mpi no-emission probability
+//  // MPI no-emission probability.
+//  int njetsMaxMPI = mergingHooksPtr->nMinMPI();
+//  double mpiwt = 1.;
+//  if (mergingHooksPtr->settingsPtr->flag("PartonLevel:MPI")) 
+//    mpiwt = selected->weightTreeEmissions( trial, -1, 0, njetsMaxMPI,
+//              maxScale );
+//
+//  // Set hard process renormalisation scale to default Pythia value.
+//  bool resetScales = mergingHooksPtr->resetHardQRen();
+//  // For pure QCD dijet events, evaluate the coupling of the hard process at
+//  // a more reasonable pT, rather than evaluation \alpha_s at a fixed
+//  // arbitrary scale.
+//  if ( resetScales
+//    && mergingHooksPtr->getProcessString().compare("pp>jj") == 0) {
+//    // Reset to a running coupling. Here we choose FSR for simplicity.
+//    double newQ2Ren = pow2( selected->hardRenScale(selected->state) );
+//    double runningCoupling = (*asFSR).alphaS(newQ2Ren) / asME;
+//    asWeight *= pow(runningCoupling,2);
+//  }
+//
+//  // For prompt photon events, evaluate the coupling of the hard process at
+//  // a more reasonable pT, rather than evaluation \alpha_s at a fixed
+//  // arbitrary scale.
+//  if ( resetScales
+//    && mergingHooksPtr->getProcessString().compare("pp>aj") == 0) {
+//    // Reset to a running coupling. In prompt photon always ISR.
+//    double newQ2Ren = pow2( selected->hardRenScale(selected->state) );
+//    double runningCoupling =
+//      (*asISR).alphaS( newQ2Ren + pow(mergingHooksPtr->pT0ISR(),2) ) / asME;
+//    asWeight *= runningCoupling;
+//  }
+//
+//  // Done
+//  return (wt*asWeight*aemWeight*pdfWeight*mpiwt);
 
 }
 
@@ -2138,12 +2240,12 @@ double MyHistory::weightTree(PartonLevel* trial, double as0, double aem0,
 // Function to return the \alpha_s-ratio part of the CKKWL weight of a path.
 
 double MyHistory::weightTreeALPHAS( double as0, AlphaStrong * asFSR,
-  AlphaStrong * asISR, int njetMax ) {
+  AlphaStrong * asISR, int njetMin, int njetMax ) {
 
   // For ME state, do nothing.
   if ( !mother ) return 1.;
   // Recurse
-  double w = mother->weightTreeALPHAS( as0, asFSR, asISR, njetMax );
+  double w = mother->weightTreeALPHAS( as0, asFSR, asISR, njetMin, njetMax );
   // Do nothing for empty state
   if (state.size() < 3) return w;
 
@@ -2158,6 +2260,8 @@ double MyHistory::weightTreeALPHAS( double as0, AlphaStrong * asFSR,
   // Do not correct alphaS if it is an EW emission.
   if (abs(emtID) == 22 || abs(emtID) == 23 || abs(emtID) == 24) return w;
 
+  if (njetNow < njetMin ) w *= 1.0;
+  else {
   // Calculate alpha_s ratio for current state
   if ( asFSR && asISR ) {
     double asScale = pow2( scale );
@@ -2178,6 +2282,7 @@ double MyHistory::weightTreeALPHAS( double as0, AlphaStrong * asFSR,
                               : (*asISR).alphaS(asScale);
     w *= alphaSinPS / as0;
   }
+  }
 
   // Done
   return w;
@@ -2188,12 +2293,12 @@ double MyHistory::weightTreeALPHAS( double as0, AlphaStrong * asFSR,
 // Function to return the \alpha_em-ratio part of the CKKWL weight of a path.
 
 double MyHistory::weightTreeALPHAEM( double aem0, AlphaEM * aemFSR,
-  AlphaEM * aemISR, int njetMax ) {
+  AlphaEM * aemISR, int njetMin, int njetMax ) {
 
   // For ME state, do nothing.
   if ( !mother ) return 1.;
   // Recurse
-  double w = mother->weightTreeALPHAEM( aem0, aemFSR, aemISR, njetMax );
+  double w = mother->weightTreeALPHAEM( aem0, aemFSR, aemISR, njetMin, njetMax);
   // Do nothing for empty state
   if (state.size() < 3) return w;
 
@@ -2208,6 +2313,8 @@ double MyHistory::weightTreeALPHAEM( double aem0, AlphaEM * aemFSR,
   // Do not correct alpha EM if it not an EW emission.
   if (!(abs(emtID) == 22 || abs(emtID) == 23 || abs(emtID) == 24)) return w;
 
+  if (njetNow < njetMin ) w *= 1.0;
+  else {
   // Calculate alpha_s ratio for current state
   if ( aemFSR && aemISR ) {
     double aemScale = pow2( scale );
@@ -2228,6 +2335,7 @@ double MyHistory::weightTreeALPHAEM( double aem0, AlphaEM * aemFSR,
                                : (*aemISR).alphaEM(aemScale);
     w *= alphaEMinPS / aem0;
   }
+  }
 
   // Done
   return w;
@@ -2238,17 +2346,17 @@ double MyHistory::weightTreeALPHAEM( double aem0, AlphaEM * aemFSR,
 // Function to return the PDF-ratio part of the CKKWL weight of a path.
 
 double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
-  int njetMax ) {
+  int njetMin, int njetMax ) {
 
   // Use correct scale
   double newScale = scale;
+  int njetNow = mergingHooksPtr->getNumberOfClusteringSteps( state);
 
   // For ME state, just multiply by PDF ratios
   if ( !mother ) {
 
     // If this node has too many jets, no not calculate PDF ratio.
-    int njet = mergingHooksPtr->getNumberOfClusteringSteps( state);
-    if (njet > njetMax) return 1.0;
+    if (njetNow > njetMax) return 1.0;
 
     double wt = 1.;
     int sideRad = (state[3].pz() > 0) ? 1 :-1;
@@ -2263,6 +2371,7 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
       double scaleNum = (children.empty()) ? hardFacScale(state) : maxscale;
       double scaleDen = mergingHooksPtr->muFinME();
       // For initial parton, multiply by PDF ratio
+      if (njetNow >= njetMin )
       wt *= getPDFratio(sideRad, false, false, flav, x, scaleNum, flav, x,
               scaleDen);
     }
@@ -2276,6 +2385,7 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
       double scaleNum = (children.empty()) ? hardFacScale(state) : maxscale;
       double scaleDen = mergingHooksPtr->muFinME();
       // For initial parton, multiply with PDF ratio
+      if (njetNow >= njetMin )
       wt *= getPDFratio(sideRec, false, false, flav, x, scaleNum, flav, x,
               scaleDen);
     }
@@ -2291,13 +2401,10 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
     newPDFscale = clusterIn.pT();
 
   // Recurse
-  double w = mother->weightTreePDFs( newScale, newPDFscale, njetMax );
+  double w = mother->weightTreePDFs( newScale, newPDFscale, njetMin, njetMax);
 
   // Do nothing for empty state
   if (state.size() < 3) return w;
-
-  // If this node has too many jets, no not calculate PDF ratio.
-  int njetNow = mergingHooksPtr->getNumberOfClusteringSteps( state) ;
 
   // Calculate pdf ratios: Get both sides of event
   int inP = 3;
@@ -2324,6 +2431,7 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
     double sDen = (njetNow == njetMax) ? mergingHooksPtr->muFinME() : scaleDen;
     double ratio = getPDFratio(sideP, false, false, flav, x, scaleNum,
                      flavDen, xDen, sDen);
+    if (njetNow >= njetMin )
     w *= ratio;
 
   }
@@ -2347,6 +2455,7 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
     double sDen = (njetNow == njetMax) ? mergingHooksPtr->muFinME() : scaleDen;
     double ratio = getPDFratio(sideM, false, false, flav, x, scaleNum,
                      flavDen, xDen, sDen);
+    if (njetNow >= njetMin )
     w *= ratio;
   }
 
@@ -2882,8 +2991,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
   if ( mergingHooksPtr->getNumberOfClusteringSteps(process) == 0 )
     startingScale = hardStartScale(process);
 
-//cout << "enter trial shower" << endl;
-
   // Set output.
   //bool doVeto          = false;
   double wt            = 1.;
@@ -2962,8 +3069,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
     psweights->reset();
     psweights->clearTrialEnhancements();
-
-//cout << minScale << " " << typeTrial << " " << pTtrial << " " << wt << " " << enhancement<< endl;
 
     // Get veto (merging) scale value
     double vetoScale  = (mother) ? 0. : mergingHooksPtr->tms();
@@ -3420,6 +3525,9 @@ vector<MyClustering> MyHistory::getAllClusterings( const Event& event) {
     }
   }
 
+//  for (int i=0; i < ret.size(); ++i) { fsr->debugPtr->eatCout(); ret[i].list();
+//    fsr->debugPtr->freeCout(); }
+
   return ret;
 }
 
@@ -3507,12 +3615,12 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
       for ( int i = 0; i < int(recsNow.size()); ++i ) {
         if ( allowedClustering( rad, emt, recsNow[i], recsNow[i], names[iName], event) ) {
           double pT = pTLund(event, rad, emt, recsNow[i], names[iName]);
-          if (names[iName].compare("fsr_qcd_1->21&1_CS") == 0)
-            pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
-          if (names[iName].compare("fsr_qcd_1->22&1_CS") == 0)
-            pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
-          if (names[iName].compare("fsr_qcd_11->22&11_CS") == 0)
-            pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
+          //if (names[iName].compare("fsr_qcd_1->21&1_CS") == 0)
+          //  pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
+          //if (names[iName].compare("fsr_qed_1->22&1_CS") == 0)
+          //  pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
+          //if (names[iName].compare("fsr_qed_11->22&11_CS") == 0)
+          //  pT = pTLund(event, emt, rad, recsNow[i], names[iName]);
           attachClusterings (clus, emt, rad, recsNow[i], recsNow[i], pT, names[iName], event);
         }
       }
@@ -6883,18 +6991,14 @@ void MyHistory::setProbabilities() {
           contrib += dd;
       }
 
-//childNow->clusterIn.list();
-//cout << scientific << setprecision(8) << "current denominator " << denominator_unconstrained << " " << dd << " " << denominator << "\t\t prob=" << childNow->clusterProb* childNow->clusterIn.pT()* childNow->clusterIn.pT() << " num=" << childNow->MECnum << endl;
-//if (hardStartScale(childNow->state) < childNow->clusterIn.pT() ) cout << "do not include since " << hardStartScale(childNow->state) << " < " << childNow->clusterIn.pT() << endl;
-
     }
 
-    if (denominator != 0.0) { /*cout << __LINE__ << " set den=" << denominator << endl;*/ goodSisters[i]->MECden = denominator;}
+    if (denominator != 0.0) goodSisters[i]->MECden = denominator;
     goodSisters[i]->MECcontrib = contrib;
 
     if (denominator == 0. && contrib == 0.) {
-      if (denominator_unconstrained != 0.0) { /*cout << __LINE__ << " set den=" << denominator_unconstrained << endl;*/ 
-        goodSisters[i]->MECden = denominator_unconstrained;}
+      if (denominator_unconstrained != 0.0) 
+        goodSisters[i]->MECden = denominator_unconstrained;
       goodSisters[i]->MECcontrib = contrib_unconstrained;
     }
 
@@ -6903,8 +7007,6 @@ void MyHistory::setProbabilities() {
   }
 
   if (mother) mother->setProbabilities();
-
-//cout << MECnum << " " << MECden << endl; 
 
   return;
 

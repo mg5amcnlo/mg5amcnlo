@@ -1,6 +1,6 @@
 
 # Number of events to generate.
-Main:numberOfEvents       = 10000
+Main:numberOfEvents       = 1000
 
 # Set PDFs for hard process and showering.
 #PDF:useHard               = on

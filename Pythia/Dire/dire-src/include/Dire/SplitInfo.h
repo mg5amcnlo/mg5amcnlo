@@ -1,5 +1,5 @@
 // SplitInfo.h is a part of the DIRE plugin to the PYTHIA event generator.
-// Copyright (C) 2016 Stefan Prestel.
+// Copyright (C) 2018 Stefan Prestel.
 
 // Header file for splitting information storage containers.
 // SplitParticle:   Quantum numbers and other information of one of the
@@ -11,7 +11,7 @@
 #ifndef Pythia8_SplitInfo_H
 #define Pythia8_SplitInfo_H
 
-#define DIRE_SPLITINFO_VERSION "2.000"
+#define DIRE_SPLITINFO_VERSION "2.002"
 
 #include "Pythia8/Event.h"
 #include "Dire/Basics.h"
@@ -25,22 +25,25 @@ class SplitParticle {
 public:
 
   SplitParticle() : id(0), col(-1), acol(-1), charge(0), spin(-9), m2(-1.),
-    isFinal(false) {}
+    isFinal(false), isSoft(false) {}
   SplitParticle( int idIn, int colIn, int acolIn, int chargeIn, int spinIn,
-    double m2In, bool isFinalIn) : id(idIn), col(colIn), acol(acolIn),
-    charge(chargeIn), spin(spinIn), m2(m2In), isFinal(isFinalIn) {} 
-  SplitParticle ( const Particle& in) : id(in.id()), col(in.col()),
-    acol(in.acol()), charge(in.charge()), spin(in.pol()), m2(pow2(in.m())),
-    isFinal(in.isFinal()) {}
+    double m2In, bool isFinalIn, bool isSoftIn) : id(idIn), col(colIn),
+    acol(acolIn), charge(chargeIn), spin(spinIn), m2(m2In), isFinal(isFinalIn),
+    isSoft(isSoftIn) {} 
+  SplitParticle ( const Particle& in, bool isSoftIn) : id(in.id()),
+    col(in.col()), acol(in.acol()), charge(in.charge()), spin(in.pol()),
+    m2(pow2(in.m())), isFinal(in.isFinal()), isSoft(isSoftIn) {}
 
   void store( int idIn, int colIn, int acolIn, int chargeIn, int spinIn,
-    double m2In, bool isFinalIn) { id = idIn; col = colIn; acol = acolIn;
-    charge = chargeIn; spin = spinIn; m2 = m2In; isFinal = isFinalIn; }
-  void store( const Particle in) { id = in.id(); col = in.col();
+    double m2In, bool isFinalIn, bool isSoftIn) { id = idIn; col = colIn;
+    acol = acolIn; charge = chargeIn; spin = spinIn; m2 = m2In;
+    isFinal = isFinalIn; isSoft = isSoftIn; }
+  void store( const Particle in, bool isSoftIn) { id = in.id(); col = in.col();
     acol = in.acol(); charge = in.charge(); spin = in.pol();
-    m2 = pow2(in.m()); isFinal = in.isFinal(); }
+    m2 = pow2(in.m()); isFinal = in.isFinal(); isSoft = isSoftIn;}
 
-  void clear() { col = acol = -1; id = charge = 0; spin = -9; m2 = -1.; }
+  void clear() { col = acol = -1; id = charge = 0; spin = -9; m2 = -1.;
+    isFinal = isSoft = false; }
 
   // Quantum numbers.
   int id, col, acol, charge, spin;
@@ -50,6 +53,9 @@ public:
 
   // Incoming/final
   bool isFinal;
+
+  // Soft particle, i.e. soft unidentified emission in previous splitting.
+  bool isSoft;
 
 };
 
@@ -134,6 +140,13 @@ public:
          << " m2EmtAft2t = " << m2EmtAft2 << "\n";
   }
 
+  map<string,double> getKinInfo() {
+    return createmap<string,double> ("m2Dip",m2Dip)("pT2",pT2)("pT2Old",pT2Old)
+      ("z",z)("phi",phi)("sai",sai)("xa",xa)("phi2",phi2)("m2RadBef",m2RadBef)
+      ("m2Rec",m2Rec)("m2RadAft",m2RadAft)("m2EmtAft",m2EmtAft)
+      ("m2EmtAft2",m2EmtAft2);
+  }
+
   // Kinematic variable to enable branching.
   double m2Dip, pT2, pT2Old, z, phi, sai, xa, phi2,
          m2RadBef, m2Rec, m2RadAft, m2EmtAft, m2EmtAft2;
@@ -147,49 +160,50 @@ class SplitInfo {
 public:
 
   SplitInfo() : iRadBef(0), iRecBef(0), iRadAft(0), iRecAft(0), iEmtAft(0),
-    iEmtAft2(0), side(0), type(0), system(0), splittingSelName(""),
-    useForBranching(false) { init(); }
+    iEmtAft2(0), side(0), type(0), system(0), systemRec(0), 
+    splittingSelName(""), useForBranching(false) { init(); }
   SplitInfo ( const Event& state, int iRadBefIn, int iRecBefIn, 
     int iRadAftIn, int iRecAftIn, int iEmtAftIn,
     double m2DipIn = -1., double pT2In = -1., double zIn = -1.,
     double phiIn = -9., double saiIn = 0., double xaIn = -1.,
     double phi2In = -9., double m2RadBefIn = -1., double m2RecIn = -1.,
     double m2RadAftIn = -1., double m2EmtAftIn = -1., double m2EmtAft2In = -1.,
-    int sideIn = 0, int typeIn = 0, int systemIn = 0,
+    int sideIn = 0, int typeIn = 0, int systemIn = 0, int systemRecIn = 0,
     string splittingSelNameIn = "", bool useForBranchingIn = false) :
       iRadBef(iRadBefIn), iRecBef(iRecBefIn), 
       iRadAft(iRadAftIn), iRecAft(iRecAftIn), iEmtAft(iEmtAftIn),
       kinSave(m2DipIn, pT2In, zIn, phiIn, saiIn, xaIn, phi2In, m2RadBefIn,
         m2RecIn, m2RadAftIn, m2EmtAftIn, m2EmtAft2In),
-      side(sideIn), type(typeIn), system(systemIn),
+      side(sideIn), type(typeIn), system(systemIn), systemRec(systemRecIn),
       splittingSelName(splittingSelNameIn), useForBranching(useForBranchingIn)
       { init(state); }
 
   SplitInfo ( const Event& state, int iRadBefIn, int iRecBefIn,
     string splittingSelNameIn) : iRadBef(iRadBefIn), iRecBef(iRecBefIn),
     splittingSelName(splittingSelNameIn) {
-    iRadAft = iRecAft = iEmtAft = side = type = system = 0; 
+    iRadAft = iRecAft = iEmtAft = side = type = system = systemRec = 0; 
     useForBranching = false; init(state); }
 
   SplitInfo ( const Event& state, int iRadAftIn, int iRecAftIn, int iEmtAftIn,
     string splittingSelNameIn) : iRadAft(iRadAftIn), iRecAft(iRecAftIn),
     iEmtAft(iEmtAftIn), splittingSelName(splittingSelNameIn) {
-    splittingSelName = ""; iRadBef = iRecBef = side = type = system = 0;
+    splittingSelName = ""; iRadBef = iRecBef = side = type = system
+      = systemRec = 0;
     useForBranching = false; init(state); }
 
   void init(const Event& state = Event() ) {
-    if (iRadBef > 0) particleSave.push_back(SplitParticle(state[iRadBef]));
-    else             particleSave.push_back(SplitParticle()); 
-    if (iRecBef)     particleSave.push_back(SplitParticle(state[iRecBef]));
-    else             particleSave.push_back(SplitParticle()); 
-    if (iRadAft > 0) particleSave.push_back(SplitParticle(state[iRadAft]));
-    else             particleSave.push_back(SplitParticle()); 
-    if (iRecAft > 0) particleSave.push_back(SplitParticle(state[iRecAft]));
-    else             particleSave.push_back(SplitParticle()); 
-    if (iEmtAft > 0) particleSave.push_back(SplitParticle(state[iEmtAft]));
-    else             particleSave.push_back(SplitParticle()); 
-    if (iEmtAft2 > 0) particleSave.push_back(SplitParticle(state[iEmtAft2]));
-    else             particleSave.push_back(SplitParticle()); 
+    if (iRadBef>0) particleSave.push_back(SplitParticle(state[iRadBef],false));
+    else           particleSave.push_back(SplitParticle()); 
+    if (iRecBef>0) particleSave.push_back(SplitParticle(state[iRecBef],false));
+    else           particleSave.push_back(SplitParticle()); 
+    if (iRadAft>0) particleSave.push_back(SplitParticle(state[iRadAft],false));
+    else           particleSave.push_back(SplitParticle()); 
+    if (iRecAft>0) particleSave.push_back(SplitParticle(state[iRecAft],false));
+    else           particleSave.push_back(SplitParticle()); 
+    if (iEmtAft>0) particleSave.push_back(SplitParticle(state[iEmtAft],false));
+    else           particleSave.push_back(SplitParticle()); 
+    if (iEmtAft2>0)particleSave.push_back(SplitParticle(state[iEmtAft2],false));
+    else           particleSave.push_back(SplitParticle()); 
   }
 
   void store (const SplitInfo& s) {
@@ -209,11 +223,48 @@ public:
     side = s.side;
     type = s.type;
     system = s.system;
+    systemRec = s.systemRec;
     splittingSelName = s.splittingSelName;
     for ( map<string,double>::const_iterator it = s.extras.begin();
       it != s.extras.end(); ++it )
       extras.insert(make_pair(it->first,it->second));
     useForBranching = s.useForBranching;
+  }
+
+  void save () {
+    kinSaveStore = kinSave;
+    particleSaveStore = particleSave;
+    extrasStore = extras;
+    iRadBefStore = iRadBef;
+    iRecBefStore = iRecBef;
+    iRadAftStore = iRadAft;
+    iRecAftStore = iRecAft;
+    iEmtAftStore = iEmtAft;
+    iEmtAft2Store = iEmtAft2;
+    sideStore = side;
+    typeStore = type;
+    systemStore = system;
+    systemRecStore = systemRec;
+    splittingSelNameStore = splittingSelName;
+    useForBranchingStore = useForBranching;
+  }
+
+  void restore () {
+    kinSave = kinSaveStore;
+    particleSave = particleSaveStore;
+    extras = extrasStore;
+    iRadBef = iRadBefStore;
+    iRecBef = iRecBefStore;
+    iRadAft = iRadAftStore;
+    iRecAft = iRecAftStore;
+    iEmtAft = iEmtAftStore;
+    iEmtAft2 = iEmtAft2Store;
+    side = sideStore;
+    type = typeStore;
+    system = systemStore;
+    systemRec = systemRecStore;
+    splittingSelName = splittingSelNameStore;
+    useForBranching = useForBranchingStore;
   }
 
   const SplitParticle* radBef() const { return &particleSave[0]; }
@@ -251,52 +302,66 @@ public:
   void set_m2EmtAft  ( double in) {kinSave.set_m2EmtAft(in);}
   void set_m2EmtAft2 ( double in) {kinSave.set_m2EmtAft2(in);}
 
-  void storeRadBef(const Particle& in) { particleSave[0].store(in); }
-  void storeRecBef(const Particle& in) { particleSave[1].store(in); }
-  void storeRadAft(const Particle& in) { particleSave[2].store(in); }
-  void storeRecAft(const Particle& in) { particleSave[3].store(in); }
-  void storeEmtAft(const Particle& in) { particleSave[4].store(in); }
-  void storeEmtAft2(const Particle& in) { particleSave[5].store(in); }
+  void storeRadBef(const Particle& in, bool isSoft)
+    { particleSave[0].store(in, isSoft); }
+  void storeRecBef(const Particle& in, bool isSoft)
+    { particleSave[1].store(in, isSoft); }
+  void storeRadAft(const Particle& in, bool isSoft)
+    { particleSave[2].store(in, isSoft); }
+  void storeRecAft(const Particle& in, bool isSoft)
+    { particleSave[3].store(in, isSoft); }
+  void storeEmtAft(const Particle& in, bool isSoft)
+    { particleSave[4].store(in, isSoft); }
+  void storeEmtAft2(const Particle& in, bool isSoft)
+    { particleSave[5].store(in, isSoft); }
 
   void setRadBef( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(0, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, 
+    bool isFinalIn = false, bool isSoft = false) { setParticle(0, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
   void setRecBef( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(1, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { setParticle(1, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
   void setRadAft( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(2, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { setParticle(2, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
   void setRecAft( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(3, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { setParticle(3, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
   void setEmtAft( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(4, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { setParticle(4, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
   void setEmtAft2( int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    setParticle(5, idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn); }
-  void clearRadBef()  { setParticle(0, 0, -1, -1, 0, -9, -1.0, false); }
-  void clearRecBef()  { setParticle(1, 0, -1, -1, 0, -9, -1.0, false); }
-  void clearRadAft()  { setParticle(2, 0, -1, -1, 0, -9, -1.0, false); }
-  void clearRecAft()  { setParticle(3, 0, -1, -1, 0, -9, -1.0, false); }
-  void clearEmtAft()  { setParticle(4, 0, -1, -1, 0, -9, -1.0, false); }
-  void clearEmtAft2() { setParticle(5, 0, -1, -1, 0, -9, -1.0, false); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { setParticle(5, idIn, colIn,
+    acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
+  void clearRadBef()  { setParticle(0, 0, -1, -1, 0, -9, -1.0, false, false); }
+  void clearRecBef()  { setParticle(1, 0, -1, -1, 0, -9, -1.0, false, false); }
+  void clearRadAft()  { setParticle(2, 0, -1, -1, 0, -9, -1.0, false, false); }
+  void clearRecAft()  { setParticle(3, 0, -1, -1, 0, -9, -1.0, false, false); }
+  void clearEmtAft()  { setParticle(4, 0, -1, -1, 0, -9, -1.0, false, false); }
+  void clearEmtAft2() { setParticle(5, 0, -1, -1, 0, -9, -1.0, false, false); }
   void setParticle( int iPos, int idIn = 0, int colIn = -1, int acolIn = -1,
-    int chargeIn = 0, int spinIn = -9, double m2In = -1.0, bool isFinalIn = false) {
-    particleSave[iPos].store( idIn, colIn, acolIn, chargeIn, spinIn, m2In,
-      isFinalIn); }
+    int chargeIn = 0, int spinIn = -9, double m2In = -1.0,
+    bool isFinalIn = false, bool isSoft = false) { particleSave[iPos].store( 
+    idIn, colIn, acolIn, chargeIn, spinIn, m2In, isFinalIn, isSoft); }
 
   void storeName (string name) { splittingSelName = name; }
   void storeType ( int in) { type = in; }
   void storeSystem ( int in) { system = in; }
+  void storeSystemRec ( int in) { systemRec = in; }
   void storeSide ( int in) { side = in; }
   void storeExtras ( map<string,double> in) { extras = in; }
   void storeRadRecBefPos (int rad, int rec) { iRadBef = rad; iRecBef = rec; }
   void canUseForBranching (bool in) { useForBranching = in;}
 
-  void storeInfo(string name, int typeIn, int systemIn, int sideIn,
-    int iPosRadBef, int iPosRecBef, const Event& state, int idEmtAft,
+  void storeInfo(string name, int typeIn, int systemIn, int systemRecIn, 
+    int sideIn, int iPosRadBef, bool softRadBef, int iPosRecBef, 
+    bool softRecBef, const Event& state, int idEmtAft,
     int idRadAft, int nEmissions, double m2Dip, double pT2, double z,
     double phi, double m2Bef, double m2s, double m2r, double m2i, double sa1,
     double xa, double phia1, double m2j) {
@@ -304,10 +369,11 @@ public:
     storeName(name);
     storeType(typeIn);
     storeSystem(systemIn);
+    storeSystemRec(systemRecIn);
     storeSide(sideIn);
     storeRadRecBefPos(iPosRadBef, iPosRecBef);
-    storeRadBef(state[iPosRadBef]);
-    storeRecBef(state[iPosRecBef]);
+    storeRadBef(state[iPosRadBef], softRadBef);
+    storeRecBef(state[iPosRecBef], softRecBef);
     setEmtAft(idEmtAft);
     setRadAft(idRadAft);
     if (nEmissions == 2) set2to4kin( m2Dip, pT2, z, phi, sa1, xa, phia1,
@@ -317,6 +383,8 @@ public:
      map<string,double>(createmap<string,double>("iRadBef",iPosRadBef)
        ("iRecBef",iPosRecBef)("idRadAft",idRadAft)) );
   }
+
+  map<string,double> getKinInfo() { return kinSave.getKinInfo();}
 
   void storePosAfter( int iRadAftIn, int iRecAftIn, int iEmtAftIn,
     int iEmtAft2In) {
@@ -328,7 +396,7 @@ public:
 
   void clear() {
     iRadBef = iRecBef = iRadAft = iRecAft = iEmtAft = iEmtAft2 = side
-      = type = system = 0;
+      = type = system = systemRec = 0;
     splittingSelName = "";
     useForBranching = false;
     for (int i= 0; i < int(particleSave.size()); ++i) particleSave[i].clear();
@@ -360,11 +428,21 @@ public:
   SplitKinematics kinSave;
 
   // Auxiliary information.
-  int side, type, system;
+  int side, type, system, systemRec;
   string splittingSelName;
   map<string,double> extras;
 
   bool useForBranching;
+
+  // Information to enable branching.
+  int iRadBefStore, iRecBefStore, iRadAftStore, iRecAftStore, iEmtAftStore,
+      iEmtAft2Store, sideStore, typeStore, systemStore, systemRecStore;
+  vector<SplitParticle> particleSaveStore;
+  SplitKinematics kinSaveStore;
+  string splittingSelNameStore;
+  map<string,double> extrasStore;
+  bool useForBranchingStore;
+
 
 };
 

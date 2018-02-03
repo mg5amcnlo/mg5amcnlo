@@ -2,7 +2,7 @@
 #ifndef Pythia8_SplittingsEW_H
 #define Pythia8_SplittingsEW_H
 
-#define DIRE_SPLITTINGSEW_VERSION "2.000"
+#define DIRE_SPLITTINGSEW_VERSION "2.002"
 
 #include "Pythia8/Basics.h"
 #include "Pythia8/Pythia.h"

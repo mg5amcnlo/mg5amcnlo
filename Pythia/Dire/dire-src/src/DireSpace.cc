@@ -1,10 +1,10 @@
 // DireSpace.cc is a part of the DIRE plugin to the PYTHIA event generator.
-// Copyright (C) 2016 Stefan Prestel.
+// Copyright (C) 2018 Stefan Prestel.
 
-// Function definitions (not found in the header) for the
-// DireSpace class.
+// Function definitions (not found in the header) for the DireSpace class.
 
 #include "Dire/DireSpace.h"
+#include "Dire/DireTimes.h"
 #include "Dire/History.h"
 
 namespace Pythia8 {
@@ -101,6 +101,7 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
   BeamParticle* beamBPtrIn) {
 
   // Header.
+  printBanner = printBanner && !settingsPtr->flag("Print:quiet");
   if (printBanner) {
   cout << "\n"
        << " *-----------------  Welcome to DIRE version " << DIRE_SPACE_VERSION
@@ -127,10 +128,8 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
 
   // Main flags to switch on and off branchings.
   doQCDshower     = settingsPtr->flag("SpaceShower:QCDshower");
-  //doQEDshowerByQ  = settingsPtr->flag("SpaceShower:QEDshowerByQ");
-  //doQEDshowerByL  = settingsPtr->flag("SpaceShower:QEDshowerByL");
-  doQEDshowerByQ  = false;
-  doQEDshowerByL  = false;
+  doQEDshowerByQ  = settingsPtr->flag("SpaceShower:QEDshowerByQ");
+  doQEDshowerByL  = settingsPtr->flag("SpaceShower:QEDshowerByL");
   doDecaysAsShower   = settingsPtr->flag("DireSpace:DecaysAsShower");
 
   // Matching in pT of hard interaction to shower evolution.
@@ -139,6 +138,9 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
   pTmaxFudge      = settingsPtr->parm("SpaceShower:pTmaxFudge");
   pTmaxFudgeMPI   = settingsPtr->parm("SpaceShower:pTmaxFudgeMPI");
   pTdampFudge     = settingsPtr->parm("SpaceShower:pTdampFudge");
+  pT2minVariations= pow2(max(0.,settingsPtr->parm("Variations:pTmin")));
+  pT2minMECs      = pow2(max(0.,settingsPtr->parm("Dire:pTminMECs")));
+  nFinalMaxMECs   = settingsPtr->mode("Dire:nFinalMaxMECs");
 
   // Optionally force emissions to be ordered in rapidity/angle.
   doRapidityOrder = settingsPtr->flag("SpaceShower:rapidityOrder");
@@ -239,6 +241,9 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
   pT2minQED = max(pT2minQED, pow2(settingsPtr->parm("SpaceShower:pTminChgL")));
   pT2cutSave.insert(make_pair(22,pT2minQED));
 
+  bool_settings = createmap<string,bool>("doQEDshowerByL",doQEDshowerByL)
+    ("doQEDshowerByQ",doQEDshowerByQ);
+
   usePDFalphas       = settingsPtr->flag("ShowerPDF:usePDFalphas");
   useSummedPDF       = settingsPtr->flag("ShowerPDF:useSummedPDF");
   BeamParticle& beam = (particleDataPtr->isHadron(beamAPtr->id())) ? *beamAPtr : *beamBPtr;
@@ -252,6 +257,9 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
                      ? pow2(max(0.,bb->mQuarkPDF(4))) : alphaS.muThres2(4);
   m2bPhys            = (usePDFalphas && bb != NULL)
                      ? pow2(max(0.,bb->mQuarkPDF(5))) : alphaS.muThres2(5);
+
+  // Allow massive incoming particles. Currently not supported by Pythia.
+  useMassiveBeams    = settingsPtr->flag("Beams:massiveLeptonBeams");
 
   // Create maps of accept/reject weights
   string key = "base";
@@ -277,7 +285,7 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
   kernelOrderMPI     = settingsPtr->mode("DireSpace:kernelOrderMPI");
 
   // Various other parameters.
-  doMEcorrections    = settingsPtr->flag("SpaceShower:MEcorrections");
+  doMEcorrections    = settingsPtr->flag("Dire:doMECs");
   doMEafterFirst     = settingsPtr->flag("SpaceShower:MEafterFirst");
   doPhiPolAsym       = settingsPtr->flag("SpaceShower:phiPolAsym");
   doPhiIntAsym       = settingsPtr->flag("SpaceShower:phiIntAsym");
@@ -296,6 +304,9 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
   hasUserHooks       = (userHooksPtr != 0);
   canVetoEmission    = (userHooksPtr != 0)
                      ? userHooksPtr->canVetoISREmission() : false;
+
+  // Done.
+  isInitSave = true;
 
 }
 
@@ -609,8 +620,10 @@ void DireSpace::setupQCDdip( int iSys, int side, int colTag, int colSign,
     else if (sizeIn > 0) pTmax *= pTmaxFudgeMPI;
   } else pTmax = 0.5 * m( event[iRad], event[iPartner]);
   int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
+  //dipEnd.push_back( DireSpaceEnd( iSys, side, iRad, iPartner, pTmax, colType,
+  //                                0, 0, MEtype, true) );
   dipEnd.push_back( DireSpaceEnd( iSys, side, iRad, iPartner, pTmax, colType,
-                                  0, 0, MEtype, true) );
+                                  0, 0, MEtype, true, false, false, 0, vector<int>()));
   dipEnd.back().init(event);
 
 }
@@ -660,10 +673,10 @@ void DireSpace::getGenDip( int iSys, int side, const Event& event,
       else if (sizeIn > 0) pTmax *= pTmaxFudgeMPI;
     } else pTmax = m( event[iRad], event[iRecNow]);
 
-    if (appendDipole( event, iSys, side, iRad, iRecNow, pTmax)) {
-      dipEnds.push_back( DireSpaceEnd(dipEnd.back()));
-      dipEnd.pop_back();
-    }
+//    appendDipole( event, iSys, side, iRad, iRecNow, pTmax, 0, 0, 0, 0, true, 0,
+//      vector<int>(), vector<double>(), dipEnds);
+    appendDipole( event, iSys, side, iRad, iRecNow, pTmax, 0, 0, 0, 0, true, false, false, 0,
+      vector<int>(), vector<int>(), vector<double>(), dipEnds);
   }
 
   // Done.
@@ -709,8 +722,10 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
   int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
 
   if (iPartner > 0) {
+    //dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
+    //  pTmax, colType, 0, 0, 0, true));
     dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
-      pTmax, colType, 0, 0, 0, true));
+      pTmax, colType, 0, 0, 0, true, false, false, 0, vector<int>()));
     dipEnds.back().init(event);
   }
 }
@@ -721,8 +736,9 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
 
 bool DireSpace::appendDipole( const Event& state, int sys, int side, 
   int iRad, int iRecNow, double pTmax, int colType, int chgType, int weakType,
-  int MEtype, bool normalRecoil, int weakPol, vector<int> iSpectator,
-  vector<double> mass) {
+  int MEtype, bool normalRecoil, bool isSoftRad, bool isSoftRec, int weakPol, vector<int> iSpectator,
+  vector<int> parentAftPos, vector<double> mass,
+  vector<DireSpaceEnd>& dipEnds) {
 
   // Check and reset color type.
   if (colType == 0 && state[iRad].colType() != 0) {
@@ -731,20 +747,30 @@ bool DireSpace::appendDipole( const Event& state, int sys, int side,
     // and colType already exists. If not, reset colType.
     int colTypeNow(0);
     for ( int i=0; i < int(shared.size()); ++i) {
-      if ( state[iRad].isGluon() && state[iRad].col() == shared[i])
+      //if ( state[iRad].isGluon() && state[iRad].col() == shared[i])
+      //  colTypeNow = 2;
+      //if ( state[iRad].isGluon() && state[iRad].acol() == shared[i])
+      //  colTypeNow =-2;
+      //if ( state[iRad].isQuark() && state[iRad].id() > 0
+      //  && state[iRad].col() == shared[i])
+      //  colTypeNow = 1;
+      //if ( state[iRad].isQuark() && state[iRad].id() < 0
+      //  && state[iRad].acol() == shared[i])
+      //  colTypeNow =-1;
+      if ( state[iRad].colType() == 2 && state[iRad].col() == shared[i])
         colTypeNow = 2;
-      if ( state[iRad].isGluon() && state[iRad].acol() == shared[i])
+      if ( state[iRad].colType() == 2 && state[iRad].acol() == shared[i])
         colTypeNow =-2;
-      if ( state[iRad].isQuark() && state[iRad].id() > 0
+      if ( state[iRad].colType() == 1 && state[iRad].id() > 0
         && state[iRad].col() == shared[i])
         colTypeNow = 1;
-      if ( state[iRad].isQuark() && state[iRad].id() < 0
+      if ( state[iRad].colType() ==-1 && state[iRad].id() < 0
         && state[iRad].acol() == shared[i])
         colTypeNow =-1;
       bool found = false;
-      for ( int j=0; j < int(dipEnd.size()); ++j) {
-        if ( dipEnd[j].iRadiator == iRad && dipEnd[j].iRecoiler == iRecNow
-          && dipEnd[j].colType == colTypeNow) { found = true; break; }
+      for ( int j=0; j < int(dipEnds.size()); ++j) {
+        if ( dipEnds[j].iRadiator == iRad && dipEnds[j].iRecoiler == iRecNow
+          && dipEnds[j].colType == colTypeNow) { found = true; break; }
       }
       // Reset if color tag has not been found.
       if (!found) break;
@@ -753,13 +779,16 @@ bool DireSpace::appendDipole( const Event& state, int sys, int side,
   }
 
   // Construct dipole.
+  //DireSpaceEnd dipNow = DireSpaceEnd( sys, side, iRad, iRecNow, pTmax, colType,
+  //  chgType, weakType, MEtype, normalRecoil, weakPol, iSpectator, mass);
   DireSpaceEnd dipNow = DireSpaceEnd( sys, side, iRad, iRecNow, pTmax, colType,
-    chgType, weakType, MEtype, normalRecoil, weakPol, iSpectator, mass);
+    chgType, weakType, MEtype, normalRecoil, isSoftRad, isSoftRec, weakPol, parentAftPos,
+    iSpectator, mass);
 
   dipNow.clearAllowedEmt();
   dipNow.init(state);
   if (updateAllowedEmissions(state, &dipNow)) {
-    dipEnd.push_back(dipNow);
+    dipEnds.push_back(dipNow);
     return true;
   }
   // Done.
@@ -806,6 +835,66 @@ void DireSpace::updateDipoles(const Event& state) {
     dipEnd.pop_back();
   }
 
+  // Now go through dipole list and perform rudimentary checks.
+  for (int iDip = 0; iDip < int(dipEnd.size()); ++iDip) {
+    DireSpaceEnd* dip = &dipEnd[iDip];
+    int iRad    = dip->iRadiator;
+    int iRecNow = dip->iRecoiler;
+    // Check and reset color type.
+    if (dip->colType == 0 && state[iRad].colType() != 0) {
+      vector<int> shared = sharedColor(state[iRad], state[iRecNow]);
+      // Loop through dipoles to check if a dipole with the current rad, rec
+      // and colType already exists. If not, reset colType.
+      int colTypeNow(0);
+      for ( int i=0; i < int(shared.size()); ++i) {
+        //if ( state[iRad].isGluon() && state[iRad].col() == shared[i])
+        //  colTypeNow = 2;
+        //if ( state[iRad].isGluon() && state[iRad].acol() == shared[i])
+        //  colTypeNow =-2;
+        //if ( state[iRad].isQuark() && state[iRad].id() > 0
+        //  && state[iRad].col() == shared[i])
+        //  colTypeNow = 1;
+        //if ( state[iRad].isQuark() && state[iRad].id() < 0
+        //  && state[iRad].acol() == shared[i])
+        //  colTypeNow =-1;
+        if ( state[iRad].colType() == 2 && state[iRad].col() == shared[i])
+          colTypeNow = 2;
+        if ( state[iRad].colType() == 2 && state[iRad].acol() == shared[i])
+          colTypeNow =-2;
+        if ( state[iRad].colType() == 1 && state[iRad].id() > 0
+          && state[iRad].col() == shared[i])
+          colTypeNow = 1;
+        if ( state[iRad].colType() ==-1 && state[iRad].id() < 0
+          && state[iRad].acol() == shared[i])
+          colTypeNow =-1;
+      }
+      dip->colType = colTypeNow;
+    }
+  }
+
+  //// Now go through dipole list and remember if any radiator is "soft".
+  //for (int iDip = 0; iDip < int(dipEnd.size()); ++iDip) {
+  //  if (find(softPos.begin(), softPos.end(), dipEnd[iDip].idRadiator)
+  //    != softPos.end() ) dipEnd[i].setSoft();
+  //}
+
+  // Now go through dipole list and remember if any radiator is "soft".
+  map<string,Splitting*> tmpSplits = splittingsPtr->getSplittings();
+  for ( map<string,Splitting*>::iterator it = tmpSplits.begin();
+    it != tmpSplits.end(); ++it ) {
+    if (it->second->fsr) {
+      vector<int> softPos( it->second->fsr->softPos() );
+      for (int iDip = 0; iDip < int(dipEnd.size()); ++iDip) {
+        //if (find(softPos.begin(), softPos.end(), dipEnd[iDip].iRadiator)
+        // != softPos.end() ) dipEnd[iDip].setSoftRad();
+        if (find(softPos.begin(), softPos.end(), dipEnd[iDip].iRecoiler)
+          != softPos.end() ) dipEnd[iDip].setSoftRec();
+        else                 dipEnd[iDip].setHardRec();
+      }
+      break;
+    }
+  }
+
 }
 
 //--------------------------------------------------------------------------
@@ -827,13 +916,18 @@ bool DireSpace::appendAllowedEmissions( const Event& state, DireSpaceEnd* dip) {
   // allowed from the current radiator-recoiler combination.
   bool isAllowed = false;
   int iRad(dip->iRadiator), iRecNow(dip->iRecoiler);
+  map <string,int> iRadRec(createmap<string,int>("iRad", iRad)("iRec", iRecNow));
+  map <string,int> iRecRad(createmap<string,int>("iRad", iRecNow)("iRec", iRad));
 
   for ( map<string,Splitting*>::iterator it = splits.begin();
     it != splits.end(); ++it ) {
 
     // Check if splitting is allowed.
-    bool allowed = it->second->canRadiate( state,
-      createmap<string,int>("iRad", iRad)("iRec", iRecNow));
+//    bool allowed = it->second->canRadiate( state,
+//      createmap<string,int>("iRad", iRad)("iRec", iRecNow),
+//      createmap<string,bool>("doQEDshowerByL",doQEDshowerByL)
+//      ("doQEDshowerByQ",doQEDshowerByQ) );
+    bool allowed = it->second->canRadiate( state, iRadRec, bool_settings);
 
     if (!allowed) continue;
 
@@ -842,7 +936,8 @@ bool DireSpace::appendAllowedEmissions( const Event& state, DireSpaceEnd* dip) {
 
     for (int iEmtAft=1; iEmtAft < int(re.size()); ++iEmtAft) {
       int idEmtAft = re[iEmtAft];
-      if (it->first.find("_qcd_") != string::npos) {
+      //if (it->first.find("_qcd_") != string::npos) {
+      if (it->second->is_qcd) {
         idEmtAft = abs(idEmtAft);
         if (idEmtAft<10) idEmtAft = 1;
       }
@@ -858,8 +953,12 @@ bool DireSpace::appendAllowedEmissions( const Event& state, DireSpaceEnd* dip) {
           itRec != splits.end(); ++itRec ) {
 
           if ( isPartialFractioned ) break;
-          bool allowedRec = itRec->second->canRadiate( state,
-            createmap<string,int>("iRad", iRecNow)("iRec", iRad));
+//          bool allowedRec = itRec->second->canRadiate( state,
+//            createmap<string,int>("iRad", iRecNow)("iRec", iRad),
+//            createmap<string,bool>("doQEDshowerByL",doQEDshowerByL)
+//            ("doQEDshowerByQ",doQEDshowerByQ) );
+          bool allowedRec
+            = itRec->second->canRadiate( state, iRecRad, bool_settings );
           if (!allowedRec) continue;
           // Get emission id.
           int colTypeRec
@@ -869,7 +968,8 @@ bool DireSpace::appendAllowedEmissions( const Event& state, DireSpaceEnd* dip) {
 
           for (int iEmtAftRec=1; iEmtAftRec<int(reRec.size()); ++iEmtAftRec) {
             int idEmtAftRec = reRec[iEmtAftRec];
-            if (itRec->first.find("_qcd_") != string::npos) {
+//            if (itRec->first.find("_qcd_") != string::npos) {
+            if (itRec->second->is_qcd) {
               idEmtAftRec = abs(idEmtAftRec);
               if (idEmtAftRec<10) idEmtAftRec = 1;
             }
@@ -941,6 +1041,8 @@ void DireSpace::update( int iSys, Event& event, bool) {
 
 double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
+
+  debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
 
   // Current cm energy, in case it varies between events.
   sCM           = m2( beamAPtr->p(), beamBPtr->p());
@@ -1035,9 +1137,6 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
           dipEndSel = dipEndNow;
           splittingSelName = splittingNowName;
           splitSel.store(splits[splittingSelName]->splitInfo);
-
-//cout << "select pT " << splittingSelName << " " << sqrt(pT2sel) << endl;
-
           kernelSel = kernelNow;
           auxSel    = auxNow;
           overSel   = overNow;
@@ -1155,6 +1254,8 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
   // Get beam for correction factors.
   BeamParticle& beam = (sideA) ? *beamAPtr : *beamBPtr;
   bool   isValence   = beam[iSysNow].isValence();
+  map <string,int> iRadRec(createmap<string,int>("iRad", dip->iRadiator)
+    ("iRec", dip->iRecoiler));
 
   double sum=0.;
 
@@ -1165,20 +1266,22 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     string name = it->first; 
 
     // Check if splitting should partake in evolution.
-    bool allowed = it->second->canRadiate( state,
-      map<string,int>(createmap<string,int>("iRad",dip->iRadiator)
-      ("iRec",dip->iRecoiler)),
-      map<string,bool>(createmap<string,bool>
-      ("doQEDshowerByL",doQEDshowerByL)
-      ("doQEDshowerByQ",doQEDshowerByQ)) );
+//    bool allowed = it->second->canRadiate( state,
+//      map<string,int>(createmap<string,int>("iRad",dip->iRadiator)
+//      ("iRec",dip->iRecoiler)),
+//      map<string,bool>(createmap<string,bool>
+//      ("doQEDshowerByL",doQEDshowerByL)
+//      ("doQEDshowerByQ",doQEDshowerByQ)) );
+    bool allowed = it->second->canRadiate( state, iRadRec, bool_settings );
     // Check if dipole end can really radiate this particle.
-    vector<int> re = splits[name]->radAndEmt(state[dip->iRadiator].id(),
+    vector<int> re = it->second->radAndEmt(state[dip->iRadiator].id(),
       dip->colType);
     if (int(re.size()) < 2) continue;
 
     for (int iEmtAft=1; iEmtAft < int(re.size()); ++iEmtAft) {
       int idEmtAft = re[iEmtAft];
-      if (name.find("_qcd_") != string::npos) {
+//      if (name.find("_qcd_") != string::npos) {
+      if (it->second->is_qcd) {
         idEmtAft = abs(idEmtAft);
         if (idEmtAft<10) idEmtAft = 1;
       }
@@ -1192,9 +1295,9 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
 
     // No 1->3 conversion of heavy quarks below 2*m_q.
     if ( tOld < 4.*m2bPhys && abs(idDau) == 5
-      && splits[name]->nEmissions() == 2) continue;
+      && it->second->nEmissions() == 2) continue;
     else if ( tOld < 4.*m2cPhys && abs(idDau) == 4
-      && splits[name]->nEmissions() == 2) continue;
+      && it->second->nEmissions() == 2) continue;
 
     // Get kernel order.
     int order = kernelOrder;
@@ -1203,9 +1306,9 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     bool hasInB = (partonSystemsPtr->getInB(dip->system) != 0);
     if (dip->system != 0 && hasInA && hasInB) order = kernelOrderMPI;
 
-    splits[name]->splitInfo.set_pT2Old  ( tOld );
-    splits[name]->splitInfo.storeRadBef ( state[dip->iRadiator] );
-    splits[name]->splitInfo.storeRecBef ( state[dip->iRecoiler] );
+    it->second->splitInfo.set_pT2Old  ( tOld );
+    it->second->splitInfo.storeRadBef(state[dip->iRadiator], dip->isSoftRad);
+    it->second->splitInfo.storeRecBef(state[dip->iRecoiler], dip->isSoftRec);
 
     // Get overestimate (of splitting kernel only)
     double wt = it->second->overestimateInt(zMinAbs, zMaxAbs, tOld,
@@ -1232,7 +1335,9 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     // Calculate numerator of PDF ratio, and construct ratio.
     // PDF factors for Q -> GQ.
     double pdfRatio = 1.;
-    if (name.find("isr_qcd_1->21&1") != string::npos) {
+    //if (name.find("isr_qcd_1->21&1") != string::npos) {
+    if (it->second->is(splittingsPtr->isrQCD_1_to_21_and_1)) {
+
       // Sum over all potential quark mothers to a g.
       double xPDFmother = 0.;
       for (int iQuark = -nQuarkIn; iQuark <= nQuarkIn; ++iQuark) {
@@ -1243,7 +1348,8 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       pdfRatio = xPDFmother / xPDFdaughter;
 
     // PDF factors for G -> QQ
-    } else if (name.find("isr_qcd_21->1&1") != string::npos) {
+    //} else if (name.find("isr_qcd_21->1&1") != string::npos) {
+    } else if (it->second->is(splittingsPtr->isrQCD_21_to_1_and_1)) {
       double xPDFmother = (useSummedPDF)
                         ? beam.xf(21, xDau, scale2)
                         : beam.xfISR(iSysNow,21, xDau, scale2);
@@ -1256,7 +1362,8 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       pdfRatio = xPDFmother / xPDFdaughter;
 
     // PDF factors for q --> q' splitting.
-    } else if (name.compare("isr_qcd_1->2&1&2_CS") == 0) {
+    //} else if (name.compare("isr_qcd_1->2&1&2_CS") == 0) {
+    } else if (it->second->is(splittingsPtr->isrQCD_1_to_2_and_1_and_2)) {
       // Sum over all potential mothers q'.
       double xPDFmother = 0.;
       for (int iQuark =-nQuarkIn; iQuark <= nQuarkIn; ++iQuark)
@@ -1284,7 +1391,8 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       pdfRatio = xPDFmother / xPDFdaughter;
 
     // PDF factors for q --> qbar splitting.
-    } else if (name.compare("isr_qcd_1->1&1&1_CS") == 0) {
+    //} else if (name.compare("isr_qcd_1->1&1&1_CS") == 0) {
+    } else if (it->second->is(splittingsPtr->isrQCD_1_to_1_and_1_and_1)) {
       double xPDFmother = (useSummedPDF)
                         ? beam.xf(-idDau, xDau, scale2)
                         : beam.xfISR(iSysNow, -idDau, xDau, scale2);
@@ -1296,8 +1404,12 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       }
       pdfRatio = xPDFmother / xPDFdaughter;
 
-    } else if (name.find("isr_qcd_21->21&21") != string::npos
-      && tOld < PT2_INCREASE_OVERESTIMATE) {
+    //} else if (name.find("isr_qcd_21->21&21") != string::npos
+    //  && tOld < PT2_INCREASE_OVERESTIMATE) {
+    } else if ( tOld < PT2_INCREASE_OVERESTIMATE
+      && ( it->second->is(splittingsPtr->isrQCD_21_to_21_and_21a)
+        || it->second->is(splittingsPtr->isrQCD_21_to_21_and_21b))) {
+
       double xPDFmother = xPDFdaughter;
       int NTSTEPS(3), NXSTEPS(5);
       for (int i=1; i <= NTSTEPS; ++i) {
@@ -1349,16 +1461,18 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
 
   BeamParticle& beam = (sideA) ? *beamAPtr : *beamBPtr;
   bool   isValence   = beam[iSysNow].isValence();
+  // Pointer to splitting for easy/fast access. 
+  Splitting* splitNow = splits[name];
 
-  splits[name]->splitInfo.storeRadBef ( state[dip->iRadiator] );
-  splits[name]->splitInfo.storeRecBef ( state[dip->iRecoiler] );
+  splitNow->splitInfo.storeRadBef(state[dip->iRadiator], dip->isSoftRad);
+  splitNow->splitInfo.storeRecBef(state[dip->iRecoiler], dip->isSoftRec);
 
   //// Return auxiliary variable, overestimate, mother and sister ids.
-  //if(z< 0.) z = splits[name]->zSplit(zMinAbs, zMaxAbs, dip->m2Dip);
-  //over        = splits[name]->overestimateDiff(z, dip->m2Dip);
-  //idMother    = splits[name]->motherID(idDau);
-  //idSister    = splits[name]->sisterID(idDau);
-  vector<int> re = splits[name]->radAndEmt(idDau, dip->colType);
+  //if(z< 0.) z = splitNow->zSplit(zMinAbs, zMaxAbs, dip->m2Dip);
+  //over        = splitNow->overestimateDiff(z, dip->m2Dip);
+  //idMother    = splitNow->motherID(idDau);
+  //idSister    = splitNow->sisterID(idDau);
+  vector<int> re = splitNow->radAndEmt(idDau, dip->colType);
   idMother = re[0];
   idSister = re[1];
 
@@ -1366,8 +1480,8 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   if ( pT2cut(idSister) > t) { wt = over = 0.; full.clear(); return; }
 
   // Return auxiliary variable, overestimate, mother and sister ids.
-  if(z< 0.) z = splits[name]->zSplit(zMinAbs, zMaxAbs, dip->m2Dip);
-  over        = splits[name]->overestimateDiff(z, dip->m2Dip);
+  if(z< 0.) z = splitNow->zSplit(zMinAbs, zMaxAbs, dip->m2Dip);
+  over        = splitNow->overestimateDiff(z, dip->m2Dip);
 
   // Get old PDF for PDF weights.
   double scale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * tOld;
@@ -1390,7 +1504,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   // Calculate numerator of PDF ratio, and construct ratio.
   // PDF factors for Q -> GQ.
   double pdfRatio = 1.;
-  if (name.find("isr_qcd_1->21&1") != string::npos) {
+  if (splitNow->is(splittingsPtr->isrQCD_1_to_21_and_1)) {
 
     // Get sum of PDFs for all potential quark mothers to a g.
     double xPDFmotherSum = 0.;
@@ -1415,7 +1529,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
     pdfRatio = xPDFmother[idMother + 10]/xPDFdaughter;
 
   // PDF factors for G -> QQ
-  } else if (name.find("isr_qcd_21->1&1") != string::npos){
+  } else if (splitNow->is(splittingsPtr->isrQCD_21_to_1_and_1)){
     double xPDFmother = (useSummedPDF)
                       ? beam.xf(21, xDau, scale2)
                       : beam.xfISR(iSysNow,21, xDau, scale2);
@@ -1428,7 +1542,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
     pdfRatio = xPDFmother / xPDFdaughter;
 
   // PDF factors for q --> q' splitting.
-  } else if (name.compare("isr_qcd_1->2&1&2_CS") == 0) {
+  } else if (splitNow->is(splittingsPtr->isrQCD_1_to_2_and_1_and_2)) {
 
     // Sum over all potential mothers q'.
     multimap<double, pair<int,double> > xPDFmother;
@@ -1470,7 +1584,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
     idSister = idMother;
 
   // PDF factors for q --> qbar splitting.
-  } else if (name.compare("isr_qcd_1->1&1&1_CS") == 0) {
+  } else if (splitNow->is(splittingsPtr->isrQCD_1_to_1_and_1_and_1)) {
 
     double xPDFmother = (useSummedPDF)
                       ? beam.xf( -idDau, xDau, scale2)
@@ -1483,8 +1597,11 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
     }
     pdfRatio = xPDFmother / xPDFdaughter;
 
-  } else if (name.find("isr_qcd_21->21&21") != string::npos
-    && tOld < PT2_INCREASE_OVERESTIMATE) {
+  //} else if (name.find("isr_qcd_21->21&21") != string::npos
+  //  && tOld < PT2_INCREASE_OVERESTIMATE) {
+  } else if ( tOld < PT2_INCREASE_OVERESTIMATE
+    && ( splitNow->is(splittingsPtr->isrQCD_21_to_21_and_21a)
+      || splitNow->is(splittingsPtr->isrQCD_21_to_21_and_21b))) {
     double xPDFmother = xPDFdaughter;
     int NTSTEPS(3), NXSTEPS(5);
     for (int i=1; i <= NTSTEPS; ++i) {
@@ -1534,7 +1651,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   // Set kinematics mapping, as needed to check limits. 
   // 1 --> Dire
   // 2 --> Catani-Seymour
-  int kinType = splits[name]->kinMap();
+  int kinType = splitNow->kinMap();
 
   dip->z = z;
   dip->pT2 = t;
@@ -1548,7 +1665,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   double m2j = getMass(idSister,2); 
   bool physical = true;
   // Generate additional variables for 1->3 splitting.
-  if ( splits[name]->nEmissions() == 2 ) {
+  if ( splitNow->nEmissions() == 2 ) {
     dip->mass.push_back(m2r);
     dip->mass.push_back(m2i);
     dip->mass.push_back(m2j);
@@ -1565,7 +1682,7 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   vector <double> aux;
   //double m2i = getMass(idMother,2); 
   //double m2j = getMass(idSister,2); 
-  if ( splits[name]->nEmissions() == 2 ) {
+  if ( splitNow->nEmissions() == 2 ) {
     type       = (state[dip->iRecoiler].isFinal()) ? 2 : -2;
     //double m2i = getMass(idMother,2); 
     //double m2j = getMass(idSister,2); 
@@ -1598,24 +1715,25 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   if (dip->system != 0 && hasInA && hasInB) order = kernelOrderMPI;
 
   // Setup splitting information.
-  int nEmissions = splits[name]->nEmissions();
-  splits[name]->splitInfo.storeInfo(name, type, dip->system, dip->side,
-    dip->iRadiator, dip->iRecoiler, state, idSister, idMother, nEmissions,
+  int nEmissions = splitNow->nEmissions();
+  splitNow->splitInfo.storeInfo(name, type, dip->system, dip->system, dip->side,
+    dip->iRadiator, dip->isSoftRad, dip->iRecoiler, dip->isSoftRec, state, idSister, idMother, nEmissions,
     m2dipCorr, dip->pT2, dip->z, dip->phi, m2Bef, m2s, m2r,
     (nEmissions == 1 ? m2e : m2i), dip->sa1, dip->xa, dip->phia1, m2j);
 
   // Return overestimate.
-  over        = splits[name]->overestimateDiff(z, dip->m2Dip, order);
+  over        = splitNow->overestimateDiff(z, dip->m2Dip, order);
 
   // Get complete kernel.
-  if (splits[name]->calc( state, order) ) full = splits[name]->getKernelVals();
-
-//  cout << __FILE__ << " " << __func__
-//    << " " << __LINE__ << " " << name << " " << full["base"] << " at pT=" << sqrt(dip->pT2)  << " z=" << dip->z << " " << state[dip->iRadiator].isFinal() << " " << state[dip->iRecoiler].isFinal() << endl;
+  if (splitNow->calc( state, order) ) full = splitNow->getKernelVals();
 
   // Reweight with coupling factor if necessary.
-  full["base"] *= splits[name]->coupling(dip->pT2)
-                / alphasNow(dip->pT2, renormMultFac); 
+  //full["base"] *= splitNow->coupling(dip->pT2)
+  //              / alphasNow(dip->pT2, renormMultFac); 
+  double coupl = splitNow->coupling(dip->z, dip->pT2, m2dipCorr,
+      make_pair(state[dip->iRadiator].id(), state[dip->iRadiator].isFinal()),
+      make_pair(state[dip->iRecoiler].id(), state[dip->iRecoiler].isFinal()));
+  if (coupl > 0.) full["base"] *= coupl / alphasNow(dip->pT2, renormMultFac);
 
   // Calculate accept probability.
   wt          = full["base"]/over;
@@ -1637,14 +1755,17 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
 
 //--------------------------------------------------------------------------
 
-bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
-
-  return false;
+pair<bool, pair<double, double> > DireSpace::getMEC ( const Event& state, 
+  SplitInfo* splitInfo) {
 
   double MECnum(1.0), MECden(1.0);
 
-  bool hasME = weights->hasME(makeHardEvent(0, state,true));
+  //bool hasME = weights->hasME(makeHardEvent(0, state,true));
+  bool hasME = weights->hasME(makeHardEvent(0, state, false));
   if (hasME) {
+
+    // Store previous mergingHooks setup.
+    mergingHooksPtr->init();
 
     // For now, prefer construction of ordered histories.
     mergingHooksPtr->orderHistories(false);
@@ -1656,8 +1777,10 @@ bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
     // Prepare process record for merging. If Pythia has already decayed
     // resonances used to define the hard process, remove resonance decay
     // products.
+    //Event newProcess( mergingHooksPtr->bareEvent( 
+    //  makeHardEvent(0, state, true), false) );
     Event newProcess( mergingHooksPtr->bareEvent( 
-      makeHardEvent(0, state, true), false) );
+      makeHardEvent(0, state, false), false) );
     // Store candidates for the splitting V -> qqbar'
     mergingHooksPtr->storeHardProcessCandidates( newProcess );
 
@@ -1677,7 +1800,33 @@ bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
     MECnum = myHistory.MECnum;
     MECden = myHistory.MECden;
 
+    // Restore to previous mergingHooks setup.
+    mergingHooksPtr->init();
+
   }
+
+  if (abs(MECden) < 1e-15) debugPtr->message(1) << __FILE__ << " " << __func__
+    << " " << __LINE__ << " : Small MEC denominator="
+    << MECden << " for numerator=" << MECnum << endl;
+  if (abs(MECnum/MECden) > 1e2) {debugPtr->message(1) << __FILE__ << " " << __func__
+    << " " << __LINE__ << " : Large MEC. Denominator="
+    << MECden << " Numerator=" << MECnum << " at pT="
+    << sqrt(splitInfo->kinematics()->pT2) << endl;
+  }
+
+  return make_pair(hasME, make_pair(MECnum,MECden));
+
+}
+
+//--------------------------------------------------------------------------
+
+bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
+
+  // Get value of ME correction.
+  pair<bool, pair<double, double> > mec = getMEC ( state, splitInfo);
+  bool hasME    = mec.first;
+  double MECnum = mec.second.first;
+  double MECden = mec.second.second;
 
   double baseOld = kernelSel["base"];
   bool reject    = false;
@@ -1688,21 +1837,8 @@ bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
     oas2 = kernelSel["base_order_as2"];
     kernelSel.erase(kernelSel.find("base_order_as2"));
   }
-  //double baseNew = (baseOld - oas2) * MECnum/MECden + oas2;
-  double baseNew = baseOld * MECnum/MECden;
-
-  if (abs(MECden) < 1e-15) debugPtr->message(1) << __FILE__ << " " << __func__
-    << " " << __LINE__ << " : Small MEC denominator="
-    << MECden << " for numerator=" << MECnum << endl;
-
-  //if (abs(MECnum/MECden) > 100.) debugPtr->message(1) << __FILE__ << " " << __func__
-  //  << " " << __LINE__ << " : Large MEC. Denominator="
-  //  << MECden << " Numerator=" << MECnum << endl;
-
-  if (abs(MECnum/MECden) > 100.) debugPtr->message(1) << __FILE__ << " " << __func__
-    << " " << __LINE__ << " : Large MEC. Denominator="
-    << MECden << " Numerator=" << MECnum << " at pT=" << sqrt(dipEndSel->pT2)
-    << " " << baseOld << endl;
+  double baseNew = (baseOld - oas2) * MECnum/MECden + oas2;
+  //double baseNew = baseOld * MECnum/MECden;
 
   if (hasME) {
 
@@ -1727,11 +1863,22 @@ bool DireSpace::applyMEC ( const Event& state, SplitInfo* splitInfo) {
     // New acceptance weight.
     double waNow = auxNew/overNew;
 
-    if (abs(auxNew-baseNew) < 1e-15)
+    if (abs(wvNow) > 1e0) {
     debugPtr->message(1) << __FILE__ << " " << __func__
     << " " << __LINE__ << " : Large reject weight=" << wvNow
-    << " for kernel=" << baseNew << " overestimate=" << overNew
-    << "aux. overestimate=" << auxNew << endl;
+    << "\t for kernel=" << baseNew << " overestimate=" << overNew
+    << "\t aux. overestimate=" << auxNew << " at pT2="
+    << splitInfo->kinematics()->pT2
+    <<  " for " << splittingSelName << endl;
+    }
+    if (abs(waNow) > 1e0) {
+    debugPtr->message(1) << __FILE__ << " " << __func__
+    << " " << __LINE__ << " : Large accept weight=" << waNow
+    << "\t for kernel=" << baseNew << " overestimate=" << overNew
+    << "\t aux. overestimate=" << auxNew << " at pT2="
+    << splitInfo->kinematics()->pT2
+    <<  " for " << splittingSelName << endl;
+    }
 
     if (wt < rndmPtr->flat()) {
       // Loop through and reset weights.
@@ -2120,16 +2267,13 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
 
     // Update event weight after one step.  
     if ( fullWeightNow != 0. && overWeightNow != 0. ) {
-      double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
-
-
-if (doTrialNow) enhanceFurther = 1.;
-
-kernelNow = fullWeightsNow;
-auxNow = auxWeightNow;
-overNow = overWeightNow;
-boostNow = enhanceFurther;
-
+      double enhanceFurther
+         = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
+      if (doTrialNow) enhanceFurther = 1.;
+      kernelNow = fullWeightsNow;
+      auxNow = auxWeightNow;
+      overNow = overWeightNow;
+      boostNow = enhanceFurther;
 
       for ( map<string,double>::iterator it = fullWeightsNow.begin();
         it != fullWeightsNow.end(); ++it ) {
@@ -2353,25 +2497,32 @@ boostNow = enhanceFurther;
 
     // Jacobian for 1->3 splittings, in CS variables.
     double jacobian(1.);
-    if ( splits[splittingNowName]->nEmissions() == 2 ) {
-      double za    = dip.z;
-      double xa    = dip.xa;
-      xCS          =  za * (q2 - m2a - m2i - m2j - m2k) / q2;
 
-      // Calculate Jacobian.
-      double sab = q2/za + m2a + m2k;
-      jacobian = (sab-m2a-m2k) / sqrt(lABC(sab, m2a, m2k) );
-      double sai   = dip.sa1;
-      double m2ai  = -sai + m2a + m2i;
-      double sjq   = q2*xa/za + m2ai + m2k;
-      jacobian *= (sjq-m2ai-m2k) / sqrt(lABC(sjq, m2ai, m2k) );
+    bool canUseSplitInfo = splits[splittingNowName]->canUseForBranching();
+    if (canUseSplitInfo) {
+      jacobian
+        = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
+      map<string,double> psvars
+        = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
+      xMother = psvars["xInAft"];
+    } else {
+      if ( splits[splittingNowName]->nEmissions() == 2 ) {
+        double za    = dip.z;
+        double xa    = dip.xa;
+        xCS          =  za * (q2 - m2a - m2i - m2j - m2k) / q2;
 
-      // Additional factor from massive propagator.
-      jacobian *= 1. / (1. - (m2ai + m2j - m2aij) / (dip.pT2/dip.xa)) ;
-
+        // Calculate Jacobian.
+        double sab = q2/za + m2a + m2k;
+        jacobian = (sab-m2a-m2k) / sqrt(lABC(sab, m2a, m2k) );
+        double sai   = dip.sa1;
+        double m2ai  = -sai + m2a + m2i;
+        double sjq   = q2*xa/za + m2ai + m2k;
+        jacobian *= (sjq-m2ai-m2k) / sqrt(lABC(sjq, m2ai, m2k) );
+        // Additional factor from massive propagator.
+        jacobian *= 1. / (1. - (m2ai + m2j - m2aij) / (dip.pT2/dip.xa)) ;
+      }
+      xMother = xDaughter/xCS;
     }
-
-    xMother = xDaughter/xCS;
 
     // Evaluation of new daughter and mother PDF's.
     pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * tnow;
@@ -2423,6 +2574,11 @@ boostNow = enhanceFurther;
       it != fullWeightsNow.end(); ++it )
       it->second   *= pdfRatio*jacobian;
 
+    //double jacobianNew = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
+    //if (abs(jacobianNew-jacobian) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << jacobian << " " << jacobianNew << endl; abort();}
+    //map<string,double> psvars = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
+    //if ( abs((xMother-psvars["xInAft"])/xMother) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << xMother << " " << psvars["xInAft"] << endl; abort();}
+
     // Before generating kinematics: Reset sai if the kernel fell on an
     // endpoint contribution.
     if ( splits[splittingNowName]->nEmissions() == 2 )
@@ -2435,9 +2591,19 @@ boostNow = enhanceFurther;
       continue;
     }
 
+    // Retrieve argument of alphaS.
+    double scale2 =  splits[splittingNowName]->couplingScale2 ( dip.z, tnow, m2DipCorr,
+      make_pair (event[dip.iRadiator].id(), event[dip.iRadiator].isFinal()),
+      make_pair (event[dip.iRecoiler].id(), event[dip.iRecoiler].isFinal()));
+    if (scale2 < 0.) scale2 = tnow;
+    double talpha = max(scale2, pT2min);
+
     // Reweight to match PDF alpha_s, including corrective terms for
     // renormalisation scale variation.
-    double talpha = max(tnow, pT2min);
+    //double talpha = max(tnow, pT2min);
+
+    // Reweight to match PDF alpha_s, including corrective terms for
+    // renormalisation scale variation.
     alphasReweight(tnow, talpha, dip.system, wt, fullWeightNow,overWeightNow,
       renormMultFac);
 
@@ -2448,37 +2614,46 @@ boostNow = enhanceFurther;
     if (fullWeightsNow.find("base_order_as2") != fullWeightsNow.end())
       fullWeightsNow["base_order_as2"] *= asw;
     if (doVariations) {
-      // alphaS variations.
-      if (settingsPtr->parm("Variations:muRisrDown") != 1.) {
-        asw = 1.;
+      if ( splittingNowName.find("qcd") != string::npos
+        && settingsPtr->parm("Variations:muRisrDown") != 1.) {
+        asw = 1.; 
         alphasReweight(tnow, talpha, dip.system, daux, asw, daux,
-          settingsPtr->parm("Variations:muRisrDown"));
+          (tnow > pT2minVariations) ? settingsPtr->parm("Variations:muRisrDown")
+          : renormMultFac);
         fullWeightsNow["Variations:muRisrDown"] *= asw;
       }
-      if (settingsPtr->parm("Variations:muRisrUp")   != 1.) {
+      if ( splittingNowName.find("qcd") != string::npos
+        && settingsPtr->parm("Variations:muRisrUp")   != 1.) {
         asw = 1.;
         alphasReweight(tnow, talpha, dip.system, daux, asw, daux,
-          settingsPtr->parm("Variations:muRisrUp"));
+          (tnow > pT2minVariations) ? settingsPtr->parm("Variations:muRisrUp")
+          : renormMultFac);
         fullWeightsNow["Variations:muRisrUp"] *= asw;
       }
-//      // PDF variations.
-//      for ( map<string, map<double,double> >::iterator
-//        it = acceptProbability.begin(); it != acceptProbability.end(); ++it ) {
-//        if ( it->first.find("PDFmember") == string::npos) continue;
-//        // Find first blank and use this to isolate PDF member.
-//        int iSet = atoi(it->first.substr(it->first.find(" ", 0)+1).c_str());
-//        if ( fullWeightsNow.find(it->first) == fullWeightsNow.end() )
-//          fullWeightsNow.insert(make_pair(it->first, fullWeightNow));
-//        double xPDFvar = beam.xfHardAux(iSet, idMother, xMother, pdfScale2); 
-//        fullWeightsNow[it->first] *= xPDFvar / xPDFmotherNew;
-//      }
+
+      // PDF variations.
+      /*if (settingsPtr->flag("Variations:PDFup") ) {
+        int valSea = (beam[iSysNow].isValence()) ? 1 : 0;
+        if( beam[iSysNow].isUnmatched() ) valSea = 2;
+        beam.calcPDFEnvelope( make_pair(idMother, idDaughter),
+          make_pair(xMother, xDaughter), pdfScale2, valSea);
+        PDF::PDFEnvelope ratioPDFEnv = beam.getPDFEnvelope();
+        double deltaPDFplus
+          = min(ratioPDFEnv.errplusPDF  / ratioPDFEnv.centralPDF, 10.);
+        double deltaPDFminus
+          = min(ratioPDFEnv.errminusPDF / ratioPDFEnv.centralPDF, 10.);
+        fullWeightsNow["Variations:PDFup"]   = fullWeightsNow["base"]
+          * ((tnow > pT2minVariations) ? (1.0 + deltaPDFplus) : 1.0);
+        fullWeightsNow["Variations:PDFdown"] = fullWeightsNow["base"]
+          * ((tnow > pT2minVariations) ? (1.0 - deltaPDFminus) : 1.0);
+      }*/
     }
 
     // Set auxiliary weight and ensure that accept probability is positive.
     auxWeightNow = overWeightNow;
 
     if (fullWeightNow < 0.) {
-      debugPtr->message(1) << __FILE__ << " " << __func__
+      debugPtr->message(0) << __FILE__ << " " << __func__
         << " " << __LINE__ << " : Negative splitting weight="
         << fullWeightNow/auxWeightNow << " for splitting "
         << splittingNowName << " at pT2=" << tnow << " and z="
@@ -2511,31 +2686,21 @@ boostNow = enhanceFurther;
   // Update accepted event weight. No weighted shower for first 
   // "pseudo-emission" step in 1->3 splitting.
   if ( fullWeightNow != 0. && overWeightNow != 0. ) {
-    double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
-
-
-
-if (doTrialNow) { weights->addTrialEnhancement(tnow, enhanceFurther); enhanceFurther = 1.;}
-
-
-
-kernelNow = fullWeightsNow;
-auxNow = auxWeightNow;
-overNow = overWeightNow;
-boostNow = enhanceFurther;
-
+    double enhanceFurther
+       = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
+    if (doTrialNow) {
+      weights->addTrialEnhancement(tnow, enhanceFurther);
+      enhanceFurther = 1.;
+    }
+    kernelNow = fullWeightsNow;
+    auxNow = auxWeightNow;
+    overNow = overWeightNow;
+    boostNow = enhanceFurther;
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it ) {
-
-//cout << " found emission " << splittingNowName << " at " << sqrt(tnow); 
-
       acceptProbability[it->first].insert(make_pair(tnow,
         auxWeightNow/overWeightNow * 1./enhanceFurther
         * it->second/fullWeightNow ) );
-
-//cout << " " << auxWeightNow/overWeightNow * 1./enhanceFurther
-//        * it->second/fullWeightNow;
-
       if (auxWeightNow == fullWeightNow && overWeightNow == fullWeightNow)
         rejectProbability[it->first].insert( make_pair(tnow, 1.0));
       else {
@@ -2543,18 +2708,8 @@ boostNow = enhanceFurther;
                   * (overWeightNow- it->second/enhanceFurther)
                   / (auxWeightNow - fullWeightNow);
         rejectProbability[it->first].insert( make_pair(tnow, wv));
-
-//cout << " " << wv << endl;
-
       }
-
-
-
-
     }
-
-
-
   }
 
   double zStore   = dip.z;
@@ -2581,7 +2736,6 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
   DireSpaceEnd& dip, Event& event) {
 
   // Lower cut for evolution. Return if no evolution range.
-  //double pT2endDip = max( pT2sel, pT2min);
   double pT2endDip = max( pT2sel, pT2cutMin(&dip));
   if (pT2begDip < pT2endDip) return false;
 
@@ -2646,13 +2800,13 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
 
     // Update event weight after one step.  
     if ( fullWeightNow != 0. && overWeightNow != 0. ) {
-      double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
-
-kernelNow = fullWeightsNow;
-auxNow = auxWeightNow;
-overNow = overWeightNow;
-boostNow = enhanceFurther;
-
+      double enhanceFurther
+        = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
+      if (doTrialNow) enhanceFurther = 1.;
+      kernelNow = fullWeightsNow;
+      auxNow = auxWeightNow;
+      overNow = overWeightNow;
+      boostNow = enhanceFurther;
       for ( map<string,double>::iterator it = fullWeightsNow.begin();
         it != fullWeightsNow.end(); ++it ) {
         double wv = auxWeightNow/overWeightNow
@@ -2838,11 +2992,9 @@ boostNow = enhanceFurther;
     // Get particle masses.
     double m2Bef = 0.0;
     double m2r   = 0.0;
-    //// Force emission massless for now.
-    //double m2e   = 0.0;
-    //double m2e = (abs(idSister)<6) ? getMass(idSister,2) : getMass(idSister,1);
-    //// Force emission massless by default.
-    //if (!forceMassiveMap) m2e = 0.0;
+    // Emission mass (here only used to calculate argument of alphas)
+    double m2e = (abs(idSister)<6) ? getMass(idSister,2) : getMass(idSister,1);
+    if (!forceMassiveMap) m2e = 0.0;
     double m2s = particleDataPtr->isResonance(event[dip.iRecoiler].id())
           ? getMass(event[dip.iRecoiler].id(),3,
                     event[dip.iRecoiler].mCalc())
@@ -2864,115 +3016,130 @@ boostNow = enhanceFurther;
     }
 
     // Pick remaining variables for 1->3 splitting.
-    double jac(1.), m2aij(m2Bef), m2ai(0.), m2a(m2r), m2i(getMass(idMother,2)),
+    double jacobian(1.), m2aij(m2Bef), m2ai(0.), m2a(m2r), m2i(getMass(idMother,2)),
     m2j(getMass(-event[iRadi].id(),2)), m2k(m2s);
     m2ai  = -dip.sa1 + m2a + m2i;
     double q2 = (event[iRadi].p()-event[iReco].p()).m2Calc();
 
-    // Jacobian for 1->3 splittings, in CS variables.
-    if ( splits[splittingNowName]->nEmissions() == 2 ) {
-      jac = 1.;
-      double m2jk = dip.pT2/dip.xa + q2*( 1. - dip.xa/dip.z) - m2ai; 
+    bool canUseSplitInfo = splits[splittingNowName]->canUseForBranching();
+    if (canUseSplitInfo) {
+      jacobian
+        = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
+      map<string,double> psvars
+        = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
+      xMother = psvars["xInAft"];
+    } else {
 
-      // Construnct the new initial state momentum, as needed to
-      // calculate the Jacobian.
-      double uCS  = dip.z*(m2ai-m2a-m2i)/q2;
-      double xCS  = uCS + dip.xa - (dip.pT2*dip.z)/(q2*dip.xa);
-      Vec4 q( event[iRadi].p() - event[iReco].p() );
-      double sHatBef = (event[iRadi].p() + pOther).m2Calc();
-      double sijk    = q2*(1.-1./dip.z) - m2a;
+      // Jacobian for 1->3 splittings, in CS variables.
+      if ( splits[splittingNowName]->nEmissions() == 2 ) {
+        jacobian = 1.;
+        double m2jk = dip.pT2/dip.xa + q2*( 1. - dip.xa/dip.z) - m2ai; 
 
-      // sHat after emission depends on the recoil scheme if the incoming
-      // particles have non-zero mass.
-      // Local scheme.
-      double sHatAft(0.);
-      if (!useGlobalMapIF) {
+        // Construnct the new initial state momentum, as needed to
+        // calculate the Jacobian.
+        double uCS  = dip.z*(m2ai-m2a-m2i)/q2;
+        double xCS  = uCS + dip.xa - (dip.pT2*dip.z)/(q2*dip.xa);
+        Vec4 q( event[iRadi].p() - event[iReco].p() );
+        double sHatBef = (event[iRadi].p() + pOther).m2Calc();
+        double sijk    = q2*(1.-1./dip.z) - m2a;
 
-        // Get transverse and parallel vectors.
-        Vec4 pTk_tilde( event[iReco].p().px(), event[iReco].p().py(), 0., 0.);
-        Vec4 qpar( q + pTk_tilde );
-        // Calculate derived variables.
-        double q2par  = qpar.m2Calc();
-        double pT2k   = -pTk_tilde.m2Calc();
-        double s_i_jk = (1. - 1./xCS)*(q2 - m2a) + (m2i + m2jk) / xCS;
-        // Construct radiator after branching.
-        Vec4 pa( ( event[iRadi].p() - 0.5*(q2-m2aij-m2k)/q2par * qpar )
-                   * sqrt( (lABC(q2,s_i_jk,m2a) - 4.*m2a*pT2k)
-                         / (lABC(q2,m2k,m2aij) - 4.*m2aij*pT2k))
-                  + qpar * 0.5 * (q2 + m2a - s_i_jk) / q2par);
-        // Now get changed eCM.
-        sHatAft = (pa + pOther).m2Calc();
+        // sHat after emission depends on the recoil scheme if the incoming
+        // particles have non-zero mass.
+        // Local scheme.
+        double sHatAft(0.);
+        if (!useGlobalMapIF) {
 
-      // Global scheme.
-      } else {
+          // Get transverse and parallel vectors.
+          Vec4 pTk_tilde( event[iReco].p().px(), event[iReco].p().py(), 0., 0.);
+          Vec4 qpar( q + pTk_tilde );
+          // Calculate derived variables.
+          double q2par  = qpar.m2Calc();
+          double pT2k   = -pTk_tilde.m2Calc();
+          double s_i_jk = (1. - 1./xCS)*(q2 - m2a) + (m2i + m2jk) / xCS;
+          // Construct radiator after branching.
+          Vec4 pa( ( event[iRadi].p() - 0.5*(q2-m2aij-m2k)/q2par * qpar )
+                     * sqrt( (lABC(q2,s_i_jk,m2a) - 4.*m2a*pT2k)
+                           / (lABC(q2,m2k,m2aij) - 4.*m2aij*pT2k))
+                    + qpar * 0.5 * (q2 + m2a - s_i_jk) / q2par);
+          // Now get changed eCM.
+          sHatAft = (pa + pOther).m2Calc();
 
-        // Construct radiator after branching.
-        // Simple massless case.
-        Vec4 pa;
+        // Global scheme.
+        } else {
 
-        // Get dipole 4-momentum.
-        Vec4 pb_tilde(   event[iReco].p() );
-        Vec4 pa12_tilde( event[iRadi].p() );
-        q.p(pb_tilde-pa12_tilde);
+          // Construct radiator after branching.
+          // Simple massless case.
+          Vec4 pa;
 
-        // Calculate derived variables.
-        double zbar = (q2-m2ai-m2jk) / bABC(q2,m2ai,m2jk)
-                    *( (xCS - 1)/(xCS-uCS)  - m2jk / gABC(q2,m2ai,m2jk)
-                           * (m2ai + m2i - m2a) / (q2 - m2ai - m2jk));
-        double kT2  = zbar*(1.-zbar)*m2ai - (1-zbar)*m2i - zbar*m2a;
+          // Get dipole 4-momentum.
+          Vec4 pb_tilde(   event[iReco].p() );
+          Vec4 pa12_tilde( event[iRadi].p() );
+          q.p(pb_tilde-pa12_tilde);
 
-        // Now construct recoiler in lab frame.
-        Vec4 pjk( (pb_tilde - q*pb_tilde/q2*q)
-                   *sqrt(lABC(q2,m2ai,m2jk)/lABC(q2,m2aij,m2k))
-                 + 0.5*(q2+m2jk-m2ai)/q2*q );
+          // Calculate derived variables.
+          double zbar = (q2-m2ai-m2jk) / bABC(q2,m2ai,m2jk)
+                      *( (xCS - 1)/(xCS-uCS)  - m2jk / gABC(q2,m2ai,m2jk)
+                             * (m2ai + m2i - m2a) / (q2 - m2ai - m2jk));
+          double kT2  = zbar*(1.-zbar)*m2ai - (1-zbar)*m2i - zbar*m2a;
 
-        // Construct left-over dipole momentum by momentum conservation.
-        Vec4 pai(-q+pjk);
+          // Now construct recoiler in lab frame.
+          Vec4 pjk( (pb_tilde - q*pb_tilde/q2*q)
+                     *sqrt(lABC(q2,m2ai,m2jk)/lABC(q2,m2aij,m2k))
+                   + 0.5*(q2+m2jk-m2ai)/q2*q );
 
-        // Set up kT vector by using two perpendicular four-vectors.
-        pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pai, pjk);
-        Vec4 kTmom( sqrt(kT2)*sin(dip.phi)*pTvecs.first
-                  + sqrt(kT2)*cos(dip.phi)*pTvecs.second);
+          // Construct left-over dipole momentum by momentum conservation.
+          Vec4 pai(-q+pjk);
 
-        // Construct new emission momentum.
-        Vec4 pi( - zbar *(gABC(q2,m2ai,m2jk)*pai + m2ai*pjk)
-                        / bABC(q2,m2ai,m2jk)
-                  + ( (1.-zbar)*m2ai + m2i - m2a) / bABC(q2,m2ai,m2jk)
-                  * (pjk + m2jk/gABC(q2,m2ai,m2jk)*pai)
-                  + kTmom);
+          // Set up kT vector by using two perpendicular four-vectors.
+          pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pai, pjk);
+          Vec4 kTmom( sqrt(kT2)*sin(dip.phi)*pTvecs.first
+                    + sqrt(kT2)*cos(dip.phi)*pTvecs.second);
 
-        // Contruct radiator momentum by momentum conservation.
-        pa.p(-q+pjk+pi);
+          // Construct new emission momentum.
+          Vec4 pi( - zbar *(gABC(q2,m2ai,m2jk)*pai + m2ai*pjk)
+                          / bABC(q2,m2ai,m2jk)
+                    + ( (1.-zbar)*m2ai + m2i - m2a) / bABC(q2,m2ai,m2jk)
+                    * (pjk + m2jk/gABC(q2,m2ai,m2jk)*pai)
+                    + kTmom);
 
-        // Now get changed eCM.
-        sHatAft = (pa + pOther).m2Calc();
+          // Contruct radiator momentum by momentum conservation.
+          pa.p(-q+pjk+pi);
 
+          // Now get changed eCM.
+          sHatAft = (pa + pOther).m2Calc();
+        }
+
+        // Now calculate Jacobian.
+        double m2Other = pOther.m2Calc();
+        double rho_aij = sqrt( lABC(sHatBef, m2a, m2Other)
+                              /lABC(sHatAft, m2a, m2Other));
+        jacobian = rho_aij / dip.z * (sijk + m2a - q2) / sqrt(lABC(sijk, m2a, q2));
+        // Additional jacobian for non-competing steps.
+        jacobian *= -q2 * dip.xa / dip.z / sqrt(lABC(m2jk, m2ai, q2));
+        // Additional factor from massive propagator.
+        jacobian *= 1. / (1. - (m2ai + m2j - m2aij) / (dip.pT2/dip.xa)) ;
       }
 
-      // Now calculate Jacobian.
-      double m2Other = pOther.m2Calc();
-      double rho_aij = sqrt( lABC(sHatBef, m2a, m2Other)
-                            /lABC(sHatAft, m2a, m2Other));
-      jac = rho_aij / dip.z * (sijk + m2a - q2) / sqrt(lABC(sijk, m2a, q2));
-
-      // Additional jacobian for non-competing steps.
-      jac *= -q2 * dip.xa / dip.z / sqrt(lABC(m2jk, m2ai, q2));
-
-      // Additional factor from massive propagator.
-      jac *= 1. / (1. - (m2ai + m2j - m2aij) / (dip.pT2/dip.xa)) ;
-
+      // Calculate CS variables.
+      double xCS = znow;
+      xMother = xDaughter/xCS;
     }
 
     // Multiply with Jacobian.
-    wt             *= jac;
-    fullWeightNow  *= jac;
+    wt             *= jacobian;
+    fullWeightNow  *= jacobian;
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it )
-      it->second   *= jac;
+      it->second   *= jacobian;
 
-    // Calculate CS variables.
-    double xCS = znow;
-    xMother = xDaughter/xCS;
+    //// Calculate CS variables.
+    //double xCS = znow;
+    //xMother = xDaughter/xCS;
+
+    //double jacobianNew = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
+    //if (abs(jacobianNew-jac) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << jac << " " << jacobianNew << endl; abort();}
+    //map<string,double> psvars = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
+    //if ( abs((xMother-psvars["xInAft"])/xMother) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << xMother << " " << psvars["xInAft"] << endl; abort();}
 
     // Evaluation of new daughter and mother PDF's.
     double pdfRatio = 1.;
@@ -3037,9 +3204,20 @@ boostNow = enhanceFurther;
       continue;
     }
 
+    // Retrieve argument of alphaS.
+    double m2DipCorr  = dip.m2Dip - m2Bef + m2r + m2e;
+    double scale2 =  splits[splittingNowName]->couplingScale2 ( dip.z, tnow, m2DipCorr,
+      make_pair (event[dip.iRadiator].id(), event[dip.iRadiator].isFinal()),
+      make_pair (event[dip.iRecoiler].id(), event[dip.iRecoiler].isFinal()));
+    if (scale2 < 0.) scale2 = tnow;
+    double talpha = max(scale2, pT2min);
+
     // Reweight to match PDF alpha_s, including corrective terms for
     // renormalisation scale variation.
-    double talpha = max(tnow, pT2min);
+    //double talpha = max(tnow, pT2min);
+
+    // Reweight to match PDF alpha_s, including corrective terms for
+    // renormalisation scale variation.
     alphasReweight(tnow, talpha, dip.system, wt, fullWeightNow, overWeightNow,
       renormMultFac);
 
@@ -3050,24 +3228,45 @@ boostNow = enhanceFurther;
     if (fullWeightsNow.find("base_order_as2") != fullWeightsNow.end())
       fullWeightsNow["base_order_as2"] *= asw;
     if (doVariations) {
-      if (settingsPtr->parm("Variations:muRisrDown") != 1.) {
+      if ( splittingNowName.find("qcd") != string::npos
+        && settingsPtr->parm("Variations:muRisrDown") != 1.) {
         asw = 1.;
         alphasReweight(tnow, talpha, dip.system, daux, asw, daux,
-          settingsPtr->parm("Variations:muRisrDown"));
+          (tnow > pT2minVariations) ? settingsPtr->parm("Variations:muRisrDown")
+          : renormMultFac);
         fullWeightsNow["Variations:muRisrDown"] *= asw;
       }
-      if (settingsPtr->parm("Variations:muRisrUp")   != 1.) {
+      if ( splittingNowName.find("qcd") != string::npos
+        && settingsPtr->parm("Variations:muRisrUp")   != 1.) {
         asw = 1.;
         alphasReweight(tnow, talpha, dip.system, daux, asw, daux,
-          settingsPtr->parm("Variations:muRisrUp"));
+          (tnow > pT2minVariations) ? settingsPtr->parm("Variations:muRisrUp")
+          : renormMultFac);
         fullWeightsNow["Variations:muRisrUp"] *= asw;
       }
+
+      // PDF variations.
+      /*if (settingsPtr->flag("Variations:PDFup") ) {
+        int valSea = (beam[iSysNow].isValence()) ? 1 : 0;
+        if( beam[iSysNow].isUnmatched() ) valSea = 2;
+        beam.calcPDFEnvelope( make_pair(idMother, idDaughter),
+          make_pair(xMother, xDaughter), pdfScale2, valSea);
+        PDF::PDFEnvelope ratioPDFEnv = beam.getPDFEnvelope();
+        double deltaPDFplus
+          = min(ratioPDFEnv.errplusPDF  / ratioPDFEnv.centralPDF, 10.);
+        double deltaPDFminus
+          = min(ratioPDFEnv.errminusPDF / ratioPDFEnv.centralPDF, 10.);
+        fullWeightsNow["Variations:PDFup"]   = fullWeightsNow["base"]
+          * ((tnow > pT2minVariations) ? (1.0 + deltaPDFplus) : 1.0);
+        fullWeightsNow["Variations:PDFdown"] = fullWeightsNow["base"]
+          * ((tnow > pT2minVariations) ? (1.0 - deltaPDFminus) : 1.0);
+      }*/
     }
 
     // Set auxiliary weight and ensure that accept probability is positive.
     auxWeightNow = overWeightNow;
     if (fullWeightNow < 0.) {
-      debugPtr->message(1) << __FILE__ << " " << __func__
+      debugPtr->message(0) << __FILE__ << " " << __func__
         << " " << __LINE__ << " : Negative splitting weight="
         << fullWeightNow/auxWeightNow << " for splitting "
         << splittingNowName << " at pT2=" << tnow << " and z="
@@ -3091,24 +3290,6 @@ boostNow = enhanceFurther;
                         "acceptance weight for " + splittingNowName);
     }
 
-    /*double cR = 5.;
-    double cA = 15.; 
-    double enh = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
-    double wrej = abs(( auxWeightNow*(overWeightNow-fullWeightNow/enh))
-                     / (overWeightNow*(auxWeightNow -fullWeightNow)));
-    double wacc = abs(auxWeightNow/overWeightNow * 1./enh);
-    if ( wrej > cR || wacc > cA ) {
-      double c1min = abs(fullWeightNow/auxWeightNow)
-                   * cR / (cR - abs(overWeightNow-fullWeightNow/enh)
-                              / abs(overWeightNow));
-      double c1max = cA * abs(overWeightNow/(auxWeightNow/enh));
-      if (c1min > 1. && c1min < c1max) {
-        double rescale = c1min + 0.1*(c1max-c1min);
-        auxWeightNow *= rescale;
-        wt /= rescale;
-      }
-    }*/
-
   // Iterate until acceptable pT (or have fallen below pTmin).
   } while (wt < rndmPtr->flat()) ;
 
@@ -3118,13 +3299,16 @@ boostNow = enhanceFurther;
   // Update accepted event weight. No weighted shower for first 
   // "pseudo-emission" step in 1->3 splitting.
   if ( fullWeightNow != 0. && overWeightNow != 0. ) {
-    double enhanceFurther = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
-
-kernelNow = fullWeightsNow;
-auxNow = auxWeightNow;
-overNow = overWeightNow;
-boostNow = enhanceFurther;
-
+    double enhanceFurther
+      = enhanceOverestimateFurther(splittingNowName, idDaughter, teval);
+    if (doTrialNow) {
+      weights->addTrialEnhancement(tnow, enhanceFurther);
+      enhanceFurther = 1.;
+    }
+    kernelNow = fullWeightsNow;
+    auxNow = auxWeightNow;
+    overNow = overWeightNow;
+    boostNow = enhanceFurther;
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it ) {
       acceptProbability[it->first].insert(make_pair(tnow,
@@ -3154,85 +3338,6 @@ boostNow = enhanceFurther;
 
   // Done
   return true;
-
-}
-
-//--------------------------------------------------------------------------
-
-// Evolve a QCD dipole end near threshold, with g -> Q + Qbar enforced.
-// Note: No explicit Sudakov factor formalism here. Instead use that
-// df_Q(x, pT2) = (alpha_s/2pi) * (dT2/pT2) * ((gluon) * (splitting)).
-// This implies that effects of Q -> Q + g are neglected in this range.
-
-void DireSpace::pT2nearQCDthreshold( BeamParticle& beam,
-  double m2Massive, double m2Threshold, double xMaxAbs,
-  double zMinAbs, double zMaxMassive) {
-
-  // Initial values, to be used in kinematics and weighting.
-  double Lambda2       = (abs(idDaughter) == 4) ? Lambda4flav2 : Lambda5flav2;
-  Lambda2             /= renormMultFac;
-  double logM2Lambda2  = (alphaSorder > 0) ? log( m2Massive / Lambda2 ) : 1.;
-  pdfScale2 = (useFixedFacScale) ? fixedFacScale2
-    : factorMultFac * m2Threshold;
-  double xPDFmotherOld = beam.xfISR(iSysNow, 21, xDaughter, pdfScale2);
-
-  // Variables used inside evolution loop. (Mainly dummy start values.)
-  int    loop    = 0;
-  double wt      = 0.;
-  double pT2     = 0.;
-  double z       = 0.;
-  double Q2      = 0.;
-  double pT2corr = 0.;
-  double xMother = 0.;
-
-  // Begin loop over tries to find acceptable g -> Q + Qbar branching.
-  do {
-    wt = 0.;
-
-    // Check that not caught in infinite loop with impossible kinematics.
-    if (++loop > 100) {
-      infoPtr->errorMsg("Error in DireSpace::pT2nearQCDthreshold: "
-        "stuck in loop");
-      return;
-    }
-
-    // Pick dpT2/pT2 in range [m2Massive,thresholdRatio * m2Massive].
-    pT2 = m2Massive * pow( m2Threshold / m2Massive, rndmPtr->flat() );
-
-    // Pick z flat in allowed range.
-    z = zMinAbs + rndmPtr->flat() * (zMaxMassive - zMinAbs);
-
-    // Check that kinematically possible choice.
-    Q2 = pT2 / (1.-z) - m2Massive;
-    pT2corr = Q2 - z * (m2Dip + Q2) * (Q2 + m2Massive) / m2Dip;
-    if (pT2corr < TINYPT2) continue;
-
-    // Correction factor for running alpha_s. (Only first order for now.)
-    wt = (alphaSorder > 0) ? logM2Lambda2 / log( pT2 / Lambda2 ) : 1.;
-
-    // Correction factor for splitting kernel.
-    wt *= pow2(z) + pow2(1.-z) + 2. * z * (1.-z) * m2Massive / pT2;
-
-    // x, including correction for massive recoiler from rescattering.
-    xMother = xDaughter / z;
-    if (!dipEndNow->normalRecoil) {
-      if (sideA) xMother += (m2Rec / (x2Now * sCM)) * (1. / z - 1.);
-      else       xMother += (m2Rec / (x1Now * sCM)) * (1. / z - 1.);
-    }
-    if (xMother > xMaxAbs) { wt = 0.; continue; }
-
-    // Correction factor for gluon density.
-    pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
-    double xPDFmotherNew = beam.xfISR(iSysNow, 21, xMother, pdfScale2);
-    wt *= xPDFmotherNew / xPDFmotherOld;
-
-  // Iterate until acceptable pT and z.
-  } while (wt < rndmPtr->flat()) ;
-
-  // Save values for (so far) acceptable branching.
-  double mSister = (abs(idDaughter) == 4) ? mc : mb;
-  dipEndNow->store( idDaughter, 21, -idDaughter, x1Now, x2Now, m2Dip,
-    pT2, z, pT2, z, xMother, Q2, mSister, pow2(mSister), pT2corr);
 
 }
 
@@ -3275,11 +3380,15 @@ bool DireSpace::virtNextQCD( DireSpaceEnd* dip, double, double,
 
 bool DireSpace::branch( Event& event) {
 
+  // This function is a wrapper for setting up the branching
+  // kinematics.
+  bool hasBranched = false;
   if ( event[dipEndSel->iRecoiler].isFinal() )
-       return branch_IF(event, false, &splitSel);
-  else return branch_II(event, false, &splitSel);
+       hasBranched = branch_IF(event, false, &splitSel);
+  else hasBranched = branch_II(event, false, &splitSel);
 
-  return false;
+  // Done.
+  return hasBranched;
 
 }
 
@@ -3309,13 +3418,18 @@ bool DireSpace::branch_II( Event& event, bool trial,
 
   // Name of the splitting.
   string name = (!trial) ? splittingSelName : split->splittingSelName;
+  int nEmissions = splits[name]->nEmissions();
 
-  if ( splits[name]->nEmissions() == 2 )
-    idSister = -event[iDaughter].id();
+  if ( nEmissions == 2 ) idSister = -event[iDaughter].id();
 
   // Read in kinematical variables.
   double pT2        = (!trial) ? dipEndSel->pT2 : split->kinematics()->pT2;
   double z          = (!trial) ? dipEndSel->z   : split->kinematics()->z;
+  splits[name]->splitInfo.store(*split);
+  map<string,double> psp(splits[name]->getPhasespaceVars(event, partonSystemsPtr));
+  // Allow splitting kernel to overwrite phase space variables. 
+  if (split->useForBranching) { pT2 = psp["pT2"]; z = psp["z"]; }
+
   // Get particle masses.
   double m2Bef = 0.0, m2r = 0.0, m2s = 0.0;
   // Emission.
@@ -3324,6 +3438,19 @@ bool DireSpace::branch_II( Event& event, bool trial,
   double m2e  = (!trial) ? m2ex
     : ( (split->kinematics()->m2EmtAft > 0.) ? split->kinematics()->m2EmtAft
                                             : m2ex);
+
+  // Radiator mass.
+  if ( useMassiveBeams && (abs(idDaughter) == 11 || abs(idDaughter) == 13))
+    m2Bef = getMass(idDaughter,1);
+  if ( useMassiveBeams && (abs(idMother) == 11 || abs(idMother) == 13))
+    m2r   = getMass(idMother,1);
+  // Recoiler mass
+  if ( useMassiveBeams && (event[iRecoiler].idAbs() == 11
+                        || event[iRecoiler].idAbs() == 13))
+    m2s   = getMass(event[iRecoiler].id(),1);
+  // Emission mass
+  if ( useMassiveBeams && (abs(idSister) == 11 || abs(idSister) == 13))
+    m2e   = getMass(idSister,1);
 
   // Force emission massless by default.
   if (!forceMassiveMap) m2e = 0.0;
@@ -3335,6 +3462,8 @@ bool DireSpace::branch_II( Event& event, bool trial,
   double vCS       = kappa2/(1-z); 
   double sai       = (!trial) ? dipEndSel->sa1 : split->kinematics()->sai;
   double xa        = (!trial) ? dipEndSel->xa  : split->kinematics()->xa;
+  // Allow splitting kernel to overwrite phase space variables. 
+  if (split->useForBranching) { sai = psp["sai"]; xa = psp["xa"]; }
   double m2Rad     = m2r;
   double m2Emt     = m2e;
   //double xMother   = dipEndSel->xMo;
@@ -3388,7 +3517,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
 
   // For 1->3 splitting, intermediate mother is a gluon. 
   int idMotherNow = idMother;
-  if ( splits[name]->nEmissions() == 2 ) idMotherNow = 21;
+  if ( nEmissions == 2 ) idMotherNow = 21;
 
   // Define colour flow in branching.
   // Default corresponds to f -> f + gamma.
@@ -3444,7 +3573,8 @@ bool DireSpace::branch_II( Event& event, bool trial,
 
   // Swap colours if radiated gluon carries momentum fraction z
   int colSave = colSister, acolSave = acolSister;
-  if ( name.compare("isr_qcd_21->21&21b_CS") == 0) {
+  //if ( name.compare("isr_qcd_21->21&21b_CS") == 0) {
+  if ( splits[name]->is(splittingsPtr->isrQCD_21_to_21_and_21b)) {
     colSister  = acolMother;
     acolSister = colMother;
     colMother  = acolSave;
@@ -3454,7 +3584,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
   int colMother1, acolMother1;
   int colSister1, acolSister1;
   colMother1 = acolMother1 = colSister1 = acolSister1 = 0;
-  if ( splits[name]->nEmissions() == 2 ) {
+  if ( nEmissions == 2 ) {
     // Daughter color transferred to quark mother "1", sister anti-color 
     // transferred to sister "1" color.
     if (idMother*idDaughterNow > 0 && idMother > 0) {
@@ -3498,7 +3628,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
   // Indices of partons involved. Add new sister. For 1->3 splitting, replace
   // mother by dummy and attach "real" mother later.
   int iMother1  = 0; 
-  if ( splits[name]->nEmissions() == 2 )
+  if ( nEmissions == 2 )
     iMother1 = event.append( 0, 0, 0, 0, 0, 0, 0, 0, Vec4(0.,0.,0.,0.), 0.0,
                  sqrt(pT2) );
 
@@ -3507,7 +3637,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
 
   // Second sister particle for 1->3 splitting.
   int iSister1      = 0; 
-  if ( splits[name]->nEmissions() == 2 )
+  if ( nEmissions == 2 )
     iSister1 = event.append( 0, 0, 0, 0, 0, 0, 0, 0, Vec4(0.,0.,0.,0.), 0.0,
                  sqrt(pT2) );
 
@@ -3531,6 +3661,8 @@ bool DireSpace::branch_II( Event& event, bool trial,
   // Update mother and daughter pointers; also for beams.
   daughter.mothers( iMother, 0);
   mother.daughters( iSister, iDaughter);
+  int iBeam1Dau1 = event[beamOff1].daughter1();
+  int iBeam2Dau1 = event[beamOff2].daughter1();
   if (iSysSelNow == 0) {
     event[beamOff1].daughter1( (side == 1) ? iMother : iNewRecoiler );
     event[beamOff2].daughter1( (side == 2) ? iMother : iNewRecoiler );
@@ -3541,7 +3673,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
   bool doMECreject = false;
 
   // Regular massive kinematics for 1+1 -> 2+1 splitting
-  if ( splits[name]->nEmissions() != 2 ) {
+  if ( nEmissions != 2 ) {
 
     // Calculate derived variables.
     double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2s) * (1-1/xCS);
@@ -3603,9 +3735,6 @@ bool DireSpace::branch_II( Event& event, bool trial,
         if (printWarnings)
           infoPtr->errorMsg("Warning in DireSpace::branch_II: Could not set up "
                             "state after branching, thus reject.");
-event.list();
-NewEvent.list();
-abort();
         physical = false; break;
       }
 
@@ -3613,6 +3742,9 @@ abort();
       double phi_kt = (!trial) ? 2.*M_PI*rndmPtr->flat()
                 : (trial && split->kinematics()->phi < 0.)  ? 2.*M_PI*rndmPtr->flat()
                 : split->kinematics()->phi;
+
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phi_kt = psp["phi"]; }
 
       // Set up transverse momentum vector by using two perpendicular four-vectors.
       pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pRad, pb_tilde);
@@ -3721,36 +3853,47 @@ abort();
       (*beamBPtr)[iSysSelNow].x(xOld);
     }
 
-  /*bool hasMPI(false), hasHad(false);
-  for (int i=0; i < state.size(); ++i) {
-    if (state[i].statusAbs() > 60) hasHad = true;
-    if (state[i].statusAbs() > 30 && state[i].statusAbs() < 40) hasMPI = true;
-  }
-
-  if ( nEmissions == 1 && !hasHad && !hasMPI
-    && ( settingsPtr->flag("Dire:doMECs") || (settingsPtr->flag("Dire:doMOPS")
-      && settingsPtr->mode("Merging:nRequested") < settingsPtr->mode("Merging:nJetMax")) )) {
-
-    // Get the maximal quark flavour counted as "additional" parton.
-    int nPartons(0), nQuarksMerge(settingsPtr->mode("Merging:nQuarksMerge"));
-    // Loop through event and count.
-    for(int i=0; i < int(state.size()); ++i)
-      if ( state[i].isFinal()
-        && state[i].colType()!= 0
-        && ( state[i].id() == 21 || state[i].idAbs() <= nQuarksMerge))
-        nPartons++;
-    if (settingsPtr->word("Merging:process").compare("pp>aj") == 0)
-      nPartons -= 1;
-    if (settingsPtr->word("Merging:process").compare("pp>jj") == 0)
-      nPartons -= 2;
-
-
-    if (nPartons >= settingsPtr->mode("Merging:nRequested") )*/
-
-//cout << __LINE__ << " new splitting " << name << " " << sqrt(m2Dip) << endl;
-
     // Apply ME correction if necessary.
-    doMECreject = applyMEC (event, split);
+    bool isHardSystem = partonSystemsPtr->getSystemOf(iDaughter,true) == 0
+                     && partonSystemsPtr->getSystemOf(iRecoiler,true) == 0;
+    if (isHardSystem && physical && doMEcorrections && pT2 > pT2minMECs) {
+
+#ifdef MG5MES
+
+      int iA      = partonSystemsPtr->getInA(iSysSelNow);
+      int iB      = partonSystemsPtr->getInB(iSysSelNow);
+      vector<int> iOut(createvector<int>(0)(0));
+      for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+        iOut.push_back(partonSystemsPtr->getOut(iSysSelNow, iCopy - 2));
+      bool motherHasPlusPz = (event[iMother].pz() > 0.);
+      if (motherHasPlusPz) {
+        partonSystemsPtr->setInA(iSysSelNow, iMother);
+        partonSystemsPtr->setInB(iSysSelNow, iNewRecoiler);
+      } else {
+        partonSystemsPtr->setInA(iSysSelNow, iNewRecoiler);
+        partonSystemsPtr->setInB(iSysSelNow, iMother);
+      }
+      for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+        partonSystemsPtr->setOut(iSysSelNow, iCopy - 2, eventSizeOld + iCopy);
+      partonSystemsPtr->addOut(iSysSelNow, iSister);
+
+      if ( nFinalMaxMECs < 0
+        || nFinalMaxMECs > partonSystemsPtr->sizeOut(iSysSelNow))
+        doMECreject = applyMEC (event, split);
+
+      partonSystemsPtr->setInA(iSysSelNow, iA);
+      partonSystemsPtr->setInB(iSysSelNow, iB);
+      for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+        partonSystemsPtr->setOut(iSysSelNow, iCopy - 2, iOut[iCopy]);
+      partonSystemsPtr->popBackOut(iSysSelNow);
+
+#else
+
+      doMECreject = false;
+
+#endif
+
+    }
 
     // Update dipoles and beams. Note: dipEndSel no longer valid after this.
     if (physical && !doVeto && !trial && !doMECreject) updateAfterII( iSysSelNow, side,
@@ -3803,6 +3946,9 @@ abort();
       : ((split->kinematics()->phi > 0.)
         ? split->kinematics()->phi : 2.*M_PI*rndmPtr->flat());
 
+    // Allow splitting kernel to overwrite phase space variables. 
+    if (split->useForBranching) { phi_kt = psp["phi"]; }
+
     // Set up transverse momentum vector by using two perpendicular
     // four-vectors
     Vec4 pijb(q-pa);
@@ -3833,6 +3979,9 @@ abort();
         ? dipEndSel->phia1         : 2.*M_PI*rndmPtr->flat())
       : ((split->kinematics()->phi2 > 0.)
         ? split->kinematics()->phi2 : 2.*M_PI*rndmPtr->flat());
+
+    // Allow splitting kernel to overwrite phase space variables. 
+    if (split->useForBranching) { phiFF = psp["phi2"]; }
 
     // Calculate CS variables.
     double m2rec      = m2ai;
@@ -4019,7 +4168,7 @@ abort();
     mother.mothers( iMother1, 0);
 
     // Exempt dummy mother from Pythia momentum checks.
-    if ( splits[name]->nEmissions() == 2 ) mother.status(-49);
+    if ( nEmissions == 2 ) mother.status(-49);
 
     sister1.id(idMother);
     sister1.status(43);
@@ -4070,19 +4219,33 @@ abort();
     physical = false;
   }
 
+  // Temporarily set the daughters in the beams to zero, to
+  // allow mother-daughter relation checks.
+  if (iSysSelNow > 0) {
+    if (side == 1) event[beamOff1].daughter1(0);
+    if (side == 2) event[beamOff2].daughter1(0);
+  }
+
   // Check if mother-daughter relations are correctly set. Check only
   // possible if no MPI are present.
-  bool hasMPI = false;
-  for (int i = 0; i < event.size(); ++i)
-    if ( event[i].statusAbs() == 31
-      || event[i].statusAbs() == 32
-      || event[i].statusAbs() == 33) hasMPI = true;
-  if ( physical && !trial && !doMECreject && !hasMPI 
+  //bool hasMPI = false;
+  //for (int i = 0; i < event.size(); ++i)
+  //  if ( event[i].statusAbs() == 31
+  //    || event[i].statusAbs() == 32
+  //    || event[i].statusAbs() == 33) hasMPI = true;
+  //if ( physical && !trial && !doMECreject && !hasMPI 
+  if ( physical && !trial && !doMECreject 
     && !validMotherDaughter(event)) {
     if (printWarnings)
       infoPtr->errorMsg("Error in DireSpace::branch_II: Mother-daughter "
                         "relations after branching not valid.");
     physical = false;
+  }
+
+  // Restore correct daughters in the beams.
+  if (iSysSelNow > 0) {
+    if (side == 1) event[beamOff1].daughter1(iBeam1Dau1);
+    if (side == 2) event[beamOff2].daughter1(iBeam2Dau1);
   }
 
   // Allow veto of branching. If so restore event record to before emission.
@@ -4116,14 +4279,31 @@ abort();
 
   // Store positions of new particles.
   if (trial) split->storePosAfter(
-    (splits[name]->nEmissions() < 2) ? iMother : iMother1, iNewRecoiler,
-    iSister, (splits[name]->nEmissions() < 2) ? 0 : iSister1);
+    (nEmissions < 2) ? iMother : iMother1, iNewRecoiler,
+    iSister, (nEmissions < 2) ? 0 : iSister1);
 
   // Set shower weight.
   if (!trial) {
+
     if (!doTrialNow) {
       weights->calcWeight(pT2);
       weights->reset();
+      // Store positions of new soft particles for (FSR) evolution.
+      map<string,Splitting*> tmpSplits = splittingsPtr->getSplittings();
+      for ( map<string,Splitting*>::iterator it = tmpSplits.begin();
+        it != tmpSplits.end(); ++it ) {
+        if (it->second->fsr) {
+          vector<int> softPos(it->second->fsr->softPos());
+          bool hasSoftRec = (find(softPos.begin(), softPos.end(), iRecoiler)
+                             != softPos.end() );
+          it->second->fsr->removeSoftPos( iDaughter );
+          it->second->fsr->addSoftPos( iSister );
+          if (hasSoftRec) it->second->fsr->removeSoftPos( iRecoiler );
+          if (hasSoftRec) it->second->fsr->addSoftPos( iNewRecoiler );
+          if (nEmissions > 1) it->second->fsr->addSoftPos( iSister1 );
+          break;
+        }
+      }
     }
 
     // Clear accept/reject weights.
@@ -4248,6 +4428,11 @@ bool DireSpace::branch_IF( Event& event, bool trial,
   // Read in kinematical variables.
   double pT2        = (!trial) ? dipEndSel->pT2 : split->kinematics()->pT2;
   double z          = (!trial) ? dipEndSel->z   : split->kinematics()->z;
+  splits[name]->splitInfo.store(*split);
+  map<string,double> psp(splits[name]->getPhasespaceVars(event, partonSystemsPtr));
+  // Allow splitting kernel to overwrite phase space variables. 
+  if (split->useForBranching) { pT2 = psp["pT2"]; z = psp["z"]; }
+
   // Get particle masses.
   double m2Bef = 0.0;
   double m2r   = 0.0;
@@ -4268,6 +4453,15 @@ bool DireSpace::branch_IF( Event& event, bool trial,
     : ( (split->kinematics()->m2EmtAft > 0.) ? split->kinematics()->m2EmtAft
                                             : m2ex);
 
+  // Radiator mass.
+  if ( useMassiveBeams && (abs(idDaughter) == 11 || abs(idDaughter) == 13))
+    m2Bef = getMass(idDaughter,1);
+  if ( useMassiveBeams && (abs(idMother) == 11 || abs(idMother) == 13))
+    m2r   = getMass(idMother,1);
+  // Emission mass
+  if ( useMassiveBeams && (abs(idSister) == 11 || abs(idSister) == 13))
+    m2e   = getMass(idSister,1);
+
   // Force emission massless by default.
   if (!forceMassiveMap) m2e = 0.0;
   // Adjust the dipole kinematical mass to accomodate masses after branching.
@@ -4278,6 +4472,8 @@ bool DireSpace::branch_IF( Event& event, bool trial,
   double uCS = (pT2/m2dipCorr)/(1-z);
   double sai = (!trial) ? dipEndSel->sa1 : split->kinematics()->sai;
   double xa  = (!trial) ? dipEndSel->xa  : split->kinematics()->xa;
+  // Allow splitting kernel to overwrite phase space variables. 
+  if (split->useForBranching) { sai = psp["sai"]; xa = psp["xa"]; }
 
   // Current event and subsystem size.
   int eventSizeOld  = event.size();
@@ -4395,7 +4591,8 @@ bool DireSpace::branch_IF( Event& event, bool trial,
 
   // Swap colours if radiated gluon carries momentum fraction z
   int colSave = colSister, acolSave = acolSister;
-  if ( name.compare("isr_qcd_21->21&21b_CS") == 0) {
+  //if ( name.compare("isr_qcd_21->21&21b_CS") == 0) {
+  if ( splits[name]->is(splittingsPtr->isrQCD_21_to_21_and_21b)) {
     colSister  = acolMother;
     acolSister = colMother;
     colMother  = acolSave;
@@ -4495,6 +4692,8 @@ bool DireSpace::branch_IF( Event& event, bool trial,
   mother.daughters( iSister, iDaughter);
   mother.cols( colMother, acolMother);
   mother.id( idMotherNow );
+  int iBeam1Dau1 = event[beamOff1].daughter1();
+  int iBeam2Dau1 = event[beamOff2].daughter1();
   if (iSysSelNow == 0) {
     event[beamOff1].daughter1( (side == 1) ? iMother : iNewOther );
     event[beamOff2].daughter1( (side == 2) ? iMother : iNewOther );
@@ -4567,6 +4766,9 @@ bool DireSpace::branch_IF( Event& event, bool trial,
         double phi_kt = (!trial) ? 2.*M_PI*rndmPtr->flat()
                 : (trial && split->kinematics()->phi < 0.)  ? 2.*M_PI*rndmPtr->flat()
                 : split->kinematics()->phi;
+
+        // Allow splitting kernel to overwrite phase space variables. 
+        if (split->useForBranching) { phi_kt = psp["phi"]; }
  
         // Construct left-over dipole momentum by momentum conservation.
         Vec4 pjk(-q+pRad);
@@ -4653,6 +4855,10 @@ bool DireSpace::branch_IF( Event& event, bool trial,
       double phi_kt = (!trial) ? 2.*M_PI*rndmPtr->flat()
                 : (trial && split->kinematics()->phi < 0.)  ? 2.*M_PI*rndmPtr->flat()
                 : split->kinematics()->phi;
+
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phi_kt = psp["phi"]; }
+
       // Set up transverse momentum vector by using two perpendicular four-vectors.
       pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(paj, pRec);
       Vec4 kTmom( sqrt(kT2)*sin(phi_kt)*pTvecs.first
@@ -4729,13 +4935,6 @@ bool DireSpace::branch_IF( Event& event, bool trial,
 
     double xm = 2.*mother.e() / (beamAPtr->e() + beamBPtr->e());
 
-//    // Check that beam momentum not used up.
-//    if (beamAPtr->xMax(-1) < 0.0 || beamBPtr->xMax(-1) < 0.0) {
-//      if (printWarnings) infoPtr->errorMsg("Warning in DireSpace::branch_IF: "
-//        "used up beam momentum; discard splitting.");
-//      physical = false;
-//    }
-
     // Test that enough beam momentum remains.
     int iOther  = partonSystemsPtr->getInB(iSysSelNow);
     if (side == 2) iOther = partonSystemsPtr->getInA(iSysSelNow);
@@ -4776,17 +4975,68 @@ bool DireSpace::branch_IF( Event& event, bool trial,
       (*beamBPtr)[iSysSelNow].x(xOld);
     }
 
-//cout << "\n\n\n\n" << name << endl;
-//hardEvent.list();
-//event.list();
-//list();
-
-//cout << __LINE__ << " new splitting " << name << " " << sqrt(m2Dip) << endl;
-
     // Apply ME correction if necessary.
-    doMECreject = applyMEC (event, split);
+    bool isHardSystem = partonSystemsPtr->getSystemOf(iDaughter,true) == 0
+                     && partonSystemsPtr->getSystemOf(iRecoiler,true) == 0;
+    if (isHardSystem && physical && doMEcorrections && pT2 > pT2minMECs) {
 
-//abort();
+#ifdef MG5MES
+
+      int iA      = partonSystemsPtr->getInA(iSysSelNow);
+      int iB      = partonSystemsPtr->getInB(iSysSelNow);
+      // Update and add newly produced particles.
+      vector<int> iOut(createvector<int>(0)(0));
+      if (useGlobalMapIF) {
+        // Add newly produced particle.
+        for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+          iOut.push_back(partonSystemsPtr->getOut(iSysSel, iCopy - 2));
+      }
+
+      bool motherHasPlusPz = (event[iMother].pz() > 0.);
+      if (motherHasPlusPz) {
+        partonSystemsPtr->setInA(iSysSelNow, iMother);
+        partonSystemsPtr->setInB(iSysSelNow, iNewOther);
+      } else {
+        partonSystemsPtr->setInB(iSysSelNow, iMother);
+        partonSystemsPtr->setInA(iSysSelNow, iNewOther);
+      }
+
+      // Update and add newly produced particles.
+      if (useGlobalMapIF) {
+        // Add newly produced particle.
+        for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+          partonSystemsPtr->setOut(iSysSel, iCopy - 2, eventSizeOld + iCopy);
+        partonSystemsPtr->addOut(iSysSelNow, iSister);
+        partonSystemsPtr->replace(iSysSelNow, iRecoiler, iNewRecoiler);
+      } else {
+        // Add newly produced particle.
+        partonSystemsPtr->addOut(iSysSelNow, iSister);
+        partonSystemsPtr->replace(iSysSelNow, iRecoiler, iNewRecoiler);
+      }
+
+      if ( nFinalMaxMECs < 0
+        || nFinalMaxMECs > partonSystemsPtr->sizeOut(iSysSelNow))
+        doMECreject = applyMEC (event, split);
+
+      partonSystemsPtr->setInA(iSysSelNow, iA);
+      partonSystemsPtr->setInB(iSysSelNow, iB);
+      if (useGlobalMapIF) {
+        for (int iCopy = 2; iCopy < systemSizeOld; ++iCopy)
+          partonSystemsPtr->setOut(iSysSelNow, iCopy - 2, iOut[iCopy]);
+        partonSystemsPtr->replace(iSysSelNow, iNewRecoiler, iRecoiler);
+        partonSystemsPtr->popBackOut(iSysSelNow);
+      } else {
+        partonSystemsPtr->replace(iSysSelNow, iNewRecoiler, iRecoiler);
+        partonSystemsPtr->popBackOut(iSysSelNow);
+      }
+
+#else
+
+      doMECreject = false;
+
+#endif
+
+    }
 
     // Update dipoles and beams. Note: dipEndSel no longer valid after this.
     if (physical && !doVeto && !trial && !doMECreject) updateAfterIF( iSysSelNow, side,
@@ -4863,6 +5113,9 @@ bool DireSpace::branch_IF( Event& event, bool trial,
         : ((split->kinematics()->phi > 0.)
           ? split->kinematics()->phi : 2.*M_PI*rndmPtr->flat());
 
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phi_kt = psp["phi"]; }
+
       // Set up transverse momentum vector by using two perpendicular four-vectors.
       pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pa, pijk);
       Vec4 kTmom( sqrt(kT2)*sin(phi_kt)*pTvecs.first
@@ -4902,6 +5155,9 @@ bool DireSpace::branch_IF( Event& event, bool trial,
           ? dipEndSel->phia1         : 2.*M_PI*rndmPtr->flat())
         : ((split->kinematics()->phi2 > 0.)
           ? split->kinematics()->phi2 : 2.*M_PI*rndmPtr->flat());
+
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phiFF = psp["phi2"]; }
 
       double q2tot = q2;
       // Construct FF dipole momentum.
@@ -5143,6 +5399,9 @@ bool DireSpace::branch_IF( Event& event, bool trial,
         : ((split->kinematics()->phi > 0.)
           ? split->kinematics()->phi : 2.*M_PI*rndmPtr->flat());
 
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phi_kt = psp["phi"]; }
+
       // Set up transverse momentum vector by using two perpendicular four-vectors.
       pair<Vec4, Vec4> pTvecs = getTwoPerpendicular(pai, pjk);
       Vec4 kTmom( sqrt(kT2)*sin(phi_kt)*pTvecs.first
@@ -5218,6 +5477,9 @@ bool DireSpace::branch_IF( Event& event, bool trial,
           ? dipEndSel->phia1         : 2.*M_PI*rndmPtr->flat())
         : ((split->kinematics()->phi2 > 0.)
           ? split->kinematics()->phi2 : 2.*M_PI*rndmPtr->flat());
+
+      // Allow splitting kernel to overwrite phase space variables. 
+      if (split->useForBranching) { phiFF = psp["phi2"]; }
 
       double q2tot = q2;
       // Construct FF dipole momentum.
@@ -5370,18 +5632,32 @@ bool DireSpace::branch_IF( Event& event, bool trial,
     physical = false;
   }
 
+  // Temporarily set the daughters in the beams to zero, to
+  // allow mother-daughter relation checks.
+  if (iSysSelNow > 0) {
+    if (side == 1) event[beamOff1].daughter1(0);
+    if (side == 2) event[beamOff2].daughter1(0);
+  }
+
   // Check if mother-daughter relations are correctly set. Check only
   // possible if no MPI are present.
-  bool hasMPI = false;
-  for (int i = 0; i < event.size(); ++i)
-    if ( event[i].statusAbs() == 31
-      || event[i].statusAbs() == 32
-      || event[i].statusAbs() == 33) hasMPI = true;
-  if ( physical && !trial && !doMECreject && !hasMPI && !validMotherDaughter(event)) {
+  //bool hasMPI = false;
+  //for (int i = 0; i < event.size(); ++i)
+  //  if ( event[i].statusAbs() == 31
+  //    || event[i].statusAbs() == 32
+  //    || event[i].statusAbs() == 33) hasMPI = true;
+  //if ( physical && !trial && !doMECreject && !hasMPI && !validMotherDaughter(event)) {
+  if ( physical && !trial && !doMECreject && !validMotherDaughter(event)) {
     if (printWarnings)
       infoPtr->errorMsg("Error in DireSpace::branch_IF: Mother-daughter "
                         "relations after branching not valid.");
     physical = false;
+  }
+
+  // Restore correct daughters in the beams.
+  if (iSysSelNow > 0) {
+    if (side == 1) event[beamOff1].daughter1(iBeam1Dau1);
+    if (side == 2) event[beamOff2].daughter1(iBeam2Dau1);
   }
 
   // Allow veto of branching. If so restore event record to before emission.
@@ -5435,6 +5711,22 @@ bool DireSpace::branch_IF( Event& event, bool trial,
     if (!doTrialNow) {
       weights->calcWeight(pT2);
       weights->reset();
+      // Store positions of new soft particles for (FSR) evolution.
+      map<string,Splitting*> tmpSplits = splittingsPtr->getSplittings();
+      for ( map<string,Splitting*>::iterator it = tmpSplits.begin();
+        it != tmpSplits.end(); ++it ) {
+        if (it->second->fsr) {
+          vector<int> softPos(it->second->fsr->softPos());
+          bool hasSoftRec = (find(softPos.begin(), softPos.end(), iRecoiler)
+                             != softPos.end() );
+          it->second->fsr->removeSoftPos( iDaughter );
+          it->second->fsr->addSoftPos( iSister );
+          if (hasSoftRec) it->second->fsr->removeSoftPos( iRecoiler );
+          if (hasSoftRec) it->second->fsr->addSoftPos( iNewRecoiler );
+          if (nEmissions > 1) it->second->fsr->addSoftPos( iSister1 );
+          break;
+        }
+      }
     }
 
     // Clear accept/reject weights.
@@ -5882,6 +6174,12 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
     //event[2].p(event[iDof2].p());
   }
 
+  // Now check event.
+  for ( int i = 0; i < outState.size(); ++i) {
+    if ( outState[i].status() == 23
+      && particleDataPtr->isResonance(outState[i].id())) outState[i].status(22);
+  }
+
   // Check if the state is valid. If not, return empty state.
   if (!validEvent( outState, true )) { outState.clear(); }
 
@@ -6315,7 +6613,7 @@ double DireSpace::getSplittingProb( const Event& state, int iRad,
 
   // Check phase space contraints.
   if ( !inAllowedPhasespace( 1, z, pT2, m2dipCorr, xDau, type, m2Bef, m2r, m2s,
-    m2e) ) return 0.0;
+    m2e) ) { return 0.0;}
 
   // Calculate splitting probability.
   double p = 0.;
@@ -6335,8 +6633,8 @@ double DireSpace::getSplittingProb( const Event& state, int iRad,
   int nEmissions = splits[name]->nEmissions();
   double m2dipBef = abs(2.*born.first[born.second.first].p()*born.first[born.second.second].p());
   splits[name]->splitInfo.clear();
-  splits[name]->splitInfo.storeInfo(name, type, 0, 0,
-    born.second.first, born.second.second, born.first, state[iEmt].id(), state[iRad].id(),
+  splits[name]->splitInfo.storeInfo(name, type, 0, 0, 0,
+    born.second.first, false, born.second.second, false, born.first, state[iEmt].id(), state[iRad].id(),
     nEmissions, m2dipBef, pT2, z, phi1, m2Bef, m2s,
     (nEmissions == 1 ? m2r : 0.0),(nEmissions == 1 ? m2e : 0.0),
     0.0, 0.0, 0.0, 0.0);
@@ -6437,92 +6735,8 @@ bool DireSpace::allowedSplitting( const Event& state, int iRad, int iEmt) {
 
 vector<int> DireSpace::getRecoilers( const Event& state, int iRad, int iEmt,
   string name) {
-
   // List of recoilers.
-  vector<int> recs;
-
   return splits[name]->recPositions(state, iRad, iEmt);
-
-  // Get recoilers from QCD-type splittings.
-  if (name.find("qcd") != string::npos) {
-
-    // For Q->GQ, swap radiator and emitted, since we now have to trace the
-    // radiator's colour connections.
-    if ( state[iEmt].idAbs() < 20 && state[iRad].id() == 21) swap( iRad, iEmt);
-
-    int colRad  = state[iRad].col();
-    int acolRad = state[iRad].acol();
-    int colEmt  = state[iEmt].col();
-    int acolEmt = state[iEmt].acol();
-
-    int colShared = (colRad  > 0 && colRad == colEmt) ? colEmt
-                  : (acolRad > 0 && acolEmt == acolRad) ? acolEmt : 0;
-
-    bool findByEmt = (state[iEmt].id() == 21);
-    if (state[iEmt].id() == 21 && name.compare("isr_qcd_21->21&21b_CS") == 0)
-      findByEmt = false;
-
-    // Particles to exclude from colour tracing.
-    vector<int> iExc(1,iRad); iExc.push_back(iEmt);
-
-    // Find partons connected via radiator colour line.
-    if ( colRad != 0 && colRad != colShared && !findByEmt) {
-      int acolF = FindCol(colRad, iExc, state, 1);
-      int  colI = FindCol(colRad, iExc, state, 2);
-      if (acolF  > 0 && colI == 0) recs.push_back (acolF);
-      if (acolF == 0 && colI >  0) recs.push_back (colI);
-    }
-
-    // Find partons connected via radiator anticolour line.
-    if ( acolRad != 0 && acolRad != colShared && !findByEmt) {
-      int  colF = FindCol(acolRad, iExc, state, 2);
-      int acolI = FindCol(acolRad, iExc, state, 1);
-      if ( colF  > 0 && acolI == 0) recs.push_back (colF);
-      if ( colF == 0 && acolI >  0) recs.push_back (acolI);
-    }
-
-    // For quark -> gluon quark, also allow to trace emitted quark color
-    // to find recoiler.
-    if (name.compare("isr_qcd_1->21&1_CS") == 0)
-      findByEmt = true;
-
-    // Find partons connected via emitted colour line.
-    if ( colEmt != 0 && colEmt != colShared && findByEmt) {
-      int acolF = FindCol(colEmt, iExc, state, 1);
-      int  colI = FindCol(colEmt, iExc, state, 2);
-      if (acolF  > 0 && colI == 0) recs.push_back (acolF);
-      if (acolF == 0 && colI >  0) recs.push_back (colI);
-    }
-
-    // Find partons connected via emitted anticolour line.
-    if ( acolEmt != 0 && acolEmt != colShared && findByEmt) {
-      int  colF = FindCol(acolEmt, iExc, state, 2);
-      int acolI = FindCol(acolEmt, iExc, state, 1);
-      if ( colF  > 0 && acolI == 0) recs.push_back (colF);
-      if ( colF == 0 && acolI >  0) recs.push_back (acolI);
-    }
-
-  // Get recoilers from QED-type or EW-type splittings.
-  } else if (name.find("qed") != string::npos
-          || name.find("ew") != string::npos) {
-
-    // EW radiation from quarks.
-    if (state[iRad].isQuark() ){
-      vector<DireSpaceEnd> dipEnds;
-      // Find dipole end formed by colour index.
-      int colTag = state[iRad].col();
-      if (colTag > 0) getQCDdip( iRad,  colTag,  1, state, dipEnds);
-      // Find dipole end formed by anticolour index.
-      int acolTag = state[iRad].acol();
-      if (acolTag > 0) getQCDdip( iRad, acolTag, -1, state, dipEnds);
-      // Store recoilers.
-      for (unsigned int i=0; i < dipEnds.size(); ++i)
-        recs.push_back(dipEnds[i].iRecoiler);
-    }
-  }
-
-  return recs;
-
 }
 
 //-------------------------------------------------------------------------
@@ -6654,6 +6868,10 @@ bool DireSpace::validMomentum( const Vec4& p, int id, int status) {
   // Check if particles is on mass shell
   double mNow = (status < 0) ? 0.
               : ((abs(id) < 6) ? getMass(id,2) : getMass(id,1));
+
+  if (status < 0 && useMassiveBeams && (abs(id) == 11 || abs(id) == 13))
+    mNow = getMass(id,1);
+
   mNow = sqrt(mNow);
 
   // Do not check on-shell condition for massive intermediate (!)
@@ -6930,7 +7148,8 @@ void DireSpace::list() const {
 
   // Header.
   cout << "\n --------  PYTHIA DireSpace Dipole Listing  -------------- \n"
-       << "\n    i  syst  side   rad   rec       pTmax  col  chg   ME rec \n"
+       <<"\n    i  syst  side   rad   rec       pTmax  col  chg   ME rec   soft"
+       << "    m2Dip      allowed       parentAftPos\n"
        << fixed << setprecision(3);
 
   // Loop over dipole list and print it.
@@ -6938,19 +7157,24 @@ void DireSpace::list() const {
   cout << setw(5) << i << setw(6) << dipEnd[i].system
      << setw(6) << dipEnd[i].side << setw(6) << dipEnd[i].iRadiator
      << setw(6) << dipEnd[i].iRecoiler << setw(12) << dipEnd[i].pTmax
-     << setw(5) << dipEnd[i].colType << setw(5) << dipEnd[i].chgType
-     << setw(5) << dipEnd[i].MEtype << setw(4)
-     << dipEnd[i].normalRecoil
+     << setw(5) << dipEnd[i].colType
+     << setw(5) << dipEnd[i].chgType
+     << setw(5) << dipEnd[i].MEtype
+     << setw(4) << dipEnd[i].normalRecoil
+     << setw(4) << dipEnd[i].isSoftRad
+     << setw(4) << dipEnd[i].isSoftRec
      << setw(12) << dipEnd[i].m2Dip;
     for (int j = 0; j < int(dipEnd[i].allowedEmissions.size()); ++j)
-     cout << setw(5) << dipEnd[i].allowedEmissions[j] << " ";
-     cout << endl;
+      cout << setw(5) << dipEnd[i].allowedEmissions[j] << " ";
+    cout << "\t";
+    for (int j = 0; j < int(dipEnd[i].parentAftPos.size()); ++j)
+      cout << setw(5) << dipEnd[i].parentAftPos[j] << " ";
+    cout << endl;
   }
 
   // Done.
   cout << "\n --------  End PYTHIA DireSpace Dipole Listing  ----------"
        << endl;
-
 
 }
 

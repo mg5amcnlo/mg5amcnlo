@@ -1,14 +1,5 @@
-// MyMergingHooks.h is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
-// PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
-// Please respect the MCnet Guidelines, see GUIDELINES for details.
-
-// This file is written by Stefan Prestel.
-// Header file to allow user access to program at different stages.
-// MyHardProcess: Container class for the hard process to be merged. Holds the
-//              bookkeeping of particles not be be reclustered
-// MyMergingHooks: Steering class for matrix element merging. Some functions can
-//               be redefined in a derived class to have access to the merging
+// MergingHooks.h is a part of the DIRE plugin to the PYTHIA event generator.
+// Copyright (C) 2018 Stefan Prestel.
 
 #ifndef Pythia8_MyMergingHooks_H
 #define Pythia8_MyMergingHooks_H
@@ -206,6 +197,26 @@ protected:
 
     return false;
   }
+
+  bool isInit, isStored;
+  void store();
+  void restore();
+
+  //----------------------------------------------------------------------//
+  // Member variables to store and restore to.
+  //----------------------------------------------------------------------//
+
+  int    nReclusterStore, nRequestedStore, nJetMaxStore, nJetMaxNLOStore, 
+         nMinMPIStore, nJetMaxLocalStore, nJetMaxNLOLocalStore, nHardNowStore,
+         nJetNowStore;
+  double pT0ISRStore, pTcutStore, muMIStore, tmsValueStore, tmsValueNowStore,
+         DparameterStore, muFStore, muRStore, muFinMEStore, muRinMEStore,
+         pTstore, tmsHardNowStore, tmsNowStore;
+  bool   doOrderHistoriesStore, doIgnoreEmissionsStore, doIgnoreStepStore,
+         hasJetMaxLocalStore;
+  Event inputEventStore;
+  vector< pair<int,int> > resonancesStore;
+  HardProcess hardProcessStore;
 
 };
 

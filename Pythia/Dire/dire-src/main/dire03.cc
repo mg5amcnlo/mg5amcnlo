@@ -30,7 +30,8 @@ int main( int argc, char* argv[] ){
   Dire dire;
   dire.init(pythia, argv[1]);
 
-  int nEventEst = pythia.settings.mode("Main:numberOfEvents");
+  int nExtraEst = 100;
+  int nEventEst = nExtraEst*pythia.settings.mode("Main:numberOfEvents");
 
   // Switch off all showering and MPI when estimating the cross section,
   // and re-initialise (unfortunately).
@@ -72,7 +73,7 @@ int main( int argc, char* argv[] ){
   }
   pythia.stat();
   double xs = pythia.info.sigmaGen();
-  int nA    = pythia.info.nAccepted();
+  int nA    = pythia.info.nAccepted() / nExtraEst;
 
   // Histogram the weight.
   Hist histWT("weight",100000,-5000.,5000.);
@@ -165,7 +166,8 @@ int main( int argc, char* argv[] ){
         evtweight = 0.;
       }
       // Print diagnostic output.
-      //dire.debugInfo.print(1);
+      dire.debugInfo.print(1);
+      evtweight = 0.;
     }
     // Do not print zero-weight events.
     if ( evtweight == 0. ) continue;
@@ -206,9 +208,9 @@ int main( int argc, char* argv[] ){
           dvar *= dire.weightsPtr->getShowerWeight("Variations:muRfsrDown");
         }
       }
-      if (hasupvar)   pswts.push_back(dvar);
+      if (hasupvar && abs(uvar) < 1e3)   pswts.push_back(uvar);
       else            pswts.push_back(0.0);
-      if (hasdownvar) pswts.push_back(uvar);
+      if (hasdownvar && abs(dvar) < 1e3) pswts.push_back(dvar);
       else            pswts.push_back(0.0);
     }
 
@@ -235,7 +237,8 @@ int main( int argc, char* argv[] ){
       && nAcceptSH == 0)
       normhepmc = 1. / (1e9*nA);
 
-    if (pythia.settings.flag("PhaseSpace:bias2Selection")) { normhepmc = 1. / (1e9*nA);}
+    if (pythia.settings.flag("PhaseSpace:bias2Selection"))
+      normhepmc = xs / (sumSH);
 
     if (pythia.event.size() > 3) {
 
@@ -293,11 +296,11 @@ int main( int argc, char* argv[] ){
   cout << "Inclusive cross section    : " << sigmaInc << endl;
   cout << "Cross section after shower : " << sigmaTotal << endl;
 
-  ofstream writewt;
-  // Write histograms to file
-  writewt.open("wt.dat");
-  histWT.table(writewt);
-  writewt.close();
+  //ofstream writewt;
+  //// Write histograms to file
+  //writewt.open("wt.dat");
+  //histWT.table(writewt);
+  //writewt.close();
 
   if ( pythia.settings.flag("Variations:doVariations") ) { 
     //for (int iwt=0; iwt < dire.weightsPtr->sizeWeights(); ++iwt) {

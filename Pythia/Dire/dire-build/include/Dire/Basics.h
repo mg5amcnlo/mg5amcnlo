@@ -2,7 +2,7 @@
 #ifndef Pythia8_DireBasics_H
 #define Pythia8_DireBasics_H
 
-#define DIRE_BASICS_VERSION "2.000"
+#define DIRE_BASICS_VERSION "2.002"
 
 #define STRING( x ) static_cast < std::ostringstream& > ((std::ostringstream() << std::dec << x)).str()
 
@@ -11,6 +11,14 @@
 #include <limits>
 
 namespace Pythia8 {
+
+typedef unsigned long ulong;
+
+//==========================================================================
+
+// Function to hash string into long integer.
+
+ulong shash(const string& str);
 
 //==========================================================================
 
@@ -63,6 +71,14 @@ public:
 double polev(double x,double* coef,int N );
 // Function to calculate dilogarithm.
 double dilog(double x);
+
+//==========================================================================
+
+// Kallen function and derived quantities. 
+
+double lABC(double a, double b, double c);
+double bABC(double a, double b, double c);
+double gABC(double a, double b, double c);
 
 //==========================================================================
 
@@ -219,6 +235,13 @@ class DebugInfo {
     return messageStream0;
   }
 
+  void eatCout() {
+    old = cout.rdbuf();
+    cout.rdbuf (messageStream1.rdbuf());
+  }
+  void freeCout() { cout.flush(); cout.rdbuf (old); }
+
+  std::streambuf *old;
   // Debug message streams.
   ostringstream messageStream0, messageStream1, messageStream2;
 

@@ -1,10 +1,5 @@
-// MergingHooks.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
-// PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
-// Please respect the MCnet Guidelines, see GUIDELINES for details.
-
-// This file is written by Stefan Prestel.
-// Function definitions (not found in the header) for the Merging class.
+// Merging.cc is a part of the DIRE plugin to the PYTHIA event generator.
+// Copyright (C) 2018 Stefan Prestel.
 
 #include "Dire/Merging.h"
 
@@ -1380,6 +1375,9 @@ bool MyMerging::calculateSubtractions() {
     // For II dipoles, scale with 1/xCS.
     prob *= 1./xCS;
 
+    // Multiply with ME correction.
+    prob *= myHistory->MECnum/myHistory->MECden;
+
     // Attach point to list of shower subtractions.
     appendSubtraction( prob, psppoint);
 
@@ -1423,7 +1421,7 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   // Check if event passes the merging scale cut.
   double tmsval  = mergingHooksPtr->tms();
 
-  //bool allowReject = settingsPtr->flag("Merging:applyVeto");
+  bool allowReject = settingsPtr->flag("Merging:applyVeto");
 
   if ( settingsPtr->flag("Dire:doMOPS")) tmsval = 0.;
 
@@ -1442,9 +1440,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     string message="Warning in MyMerging::calculateWeights: Les Houches Event";
     message+=" after removing decay products does not contain enough partons.";
     infoPtr->errorMsg(message);
-
-    //if (allowReject) return -1;
-    return -1;
+    if (allowReject) return -1;
+    //return -1;
   }
 
   // Reset the minimal tms value, if necessary.
@@ -1462,8 +1459,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     string message="Warning in MyMerging::calculateWeights: Les Houches";
     message+=" Event fails merging scale cut. Reject event.";
     infoPtr->errorMsg(message);
-    //if (allowReject) return -1;
-    return -1;
+    if (allowReject) return -1;
+    //return -1;
   }
 
   // Potentially recluster real emission jets for powheg input containing
@@ -1478,8 +1475,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     settingsPtr->flag("Merging:allowIncompleteHistoriesInReal");
   if ( doUNLOPSLoop && containsRealKin && !allowIncompleteReal
     && myHistory->select(RNpath)->nClusterings() == 0 ) {
-    //if (allowReject) return -1;
-    return -1;
+    if (allowReject) return -1;
+    //return -1;
   }
 
   // Discard if the state could not be reclustered to any state above TMS.
@@ -1488,8 +1485,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     && ( doUNLOPSSubt || doUNLOPSSubtNLO || containsRealKin )
     && !myHistory->getFirstClusteredEventAboveTMS( RNpath, nRecluster,
           myHistory->state, nPerformed, false ) ) {
-    //if (allowReject) return -1;
-    return -1;
+    if (allowReject) return -1;
+    //return -1;
   }
 
   // Check reclustering steps to correctly apply MPI.
@@ -1512,8 +1509,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
       string message="Warning in MyMerging::calculateWeights: Les Houches";
       message+=" Event fails merging scale cut. Reject event.";
       infoPtr->errorMsg(message);
-      //if (allowReject) return -1;
-      return -1;
+      if (allowReject) return -1;
+      //return -1;
     }
   }
 
@@ -1529,6 +1526,9 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   bool doUNLOPS2 = false;
   int depth = (!doUNLOPS2) ? -1 : ( (containsRealKin) ? nSteps-1 : nSteps);
 
+  if (settingsPtr->flag("Dire:doMcAtNloDelta"))
+    depth = (containsRealKin) ? 1 : 0;
+
   if (!useAll) {
 
   // Calculate weights.
@@ -1537,6 +1537,11 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
             mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
             mergingHooksPtr->AlphaEM_FSR(), mergingHooksPtr->AlphaEM_ISR(),
             RNpath);
+  else if ( settingsPtr->flag("Dire:doMcAtNloDelta") )
+    wgt = myHistory->weightMcAtNloDelta( trialPartonLevelPtr,
+            mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
+            mergingHooksPtr->AlphaEM_FSR(), mergingHooksPtr->AlphaEM_ISR(),
+            RNpath, depth);
   else if ( mergingHooksPtr->doCKKWLMerging() )
     wgt = myHistory->weightTREE( trialPartonLevelPtr,
             mergingHooksPtr->AlphaS_FSR(), mergingHooksPtr->AlphaS_ISR(),
@@ -1664,8 +1669,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   }
 
   // If no-emission probability is zero.
-  //if ( allowReject && wgt == 0. ) return 0;
-  if ( wgt == 0. ) return 0;
+  if ( allowReject && wgt == 0. ) return 0;
+  //if ( wgt == 0. ) return 0;
 
   // Done
   return 1;
