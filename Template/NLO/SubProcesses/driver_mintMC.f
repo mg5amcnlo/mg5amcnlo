@@ -132,6 +132,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
+      call fill_configurations_common
       call initcluster
 c     
 c     Get user input
@@ -570,11 +571,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c MC counterterm stuff
 c
@@ -666,8 +670,8 @@ c These should be ignored (but kept for 'historical reasons')
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
-      do i=1,mapconfig(0)
-         if (iconfig.eq.mapconfig(i)) then
+      do i=1,mapconfig(0,0)
+         if (iconfig.eq.mapconfig(i,0)) then
             iconfig=i
             exit
          endif
@@ -1217,7 +1221,6 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 

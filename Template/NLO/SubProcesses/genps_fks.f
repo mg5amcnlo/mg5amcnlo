@@ -2,18 +2,17 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-c      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
-      include 'born_conf.inc'
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
       integer i,j
       double precision zero
@@ -27,20 +26,20 @@ c      integer mapconfig(0:lmaxconfigs)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer iconfig0
       common/ciconfig0/iconfig0
-      include 'coupl.inc'
-      include 'born_props.inc'
+      integer            this_config
+      common/to_mconfigs/this_config
 c     
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
       do i=-max_branch,-1
          do j=1,2
-            itree(j,i)=iforest(j,i,iconfig)
+            itree(j,i)=iforest(j,i,iconfig,0)
          enddo
       enddo
       do i=-nexternal,0
-         qmass(i)=pmass(i,iconfig)
-         qwidth(i)=pwidth(i,iconfig)
+         qmass(i)=pmass(i,iconfig,0)
+         qwidth(i)=pwidth(i,iconfig,0)
       enddo
 c
       call generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)

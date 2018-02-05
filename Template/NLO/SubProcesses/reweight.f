@@ -573,8 +573,8 @@ c     Variables for keeping track of jets
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
       integer njetstore(fks_configs,lmaxconfigs),iqjetstore(nexternal-2
      $     ,fks_configs,lmaxconfigs),jlast(2)
       integer tot_conf
@@ -1222,8 +1222,8 @@ c Local
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
       integer njetstore(fks_configs,lmaxconfigs),iqjetstore(nexternal-2
      $     ,fks_configs,lmaxconfigs),jlast(2)
       real*8 q2bck(2)

@@ -144,6 +144,7 @@ c Include
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'maxparticles.inc'
+      include 'maxconfigs.inc'
       include 'cluster.inc'
       include 'message.inc'
       double precision ZERO
@@ -155,15 +156,14 @@ c Local
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
-      common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      double precision prmass(-max_branch:nexternal,n_max_cg)
-      double precision prwidth(-max_branch:-1,n_max_cg)
-      integer prow(-max_branch:-1,n_max_cg)
-      common/c_props_inc/prmass,prwidth,prow
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c External
       integer combid
       logical isjet
@@ -180,10 +180,10 @@ C     Follow diagram tree down to last clustering
      $           ,',',ipids(i,2,ipnum),'), (', ipids(j,1,ipnum),','
      $           ,ipids(j,2,ipnum),'), ',i,j
             do k=-nexternal+1,-1
-               if ((iforest(1,k,ignum).eq.ipids(i,2,ipnum).and.
-     &              iforest(2,k,ignum).eq.ipids(j,2,ipnum)).or.
-     &             (iforest(2,k,ignum).eq.ipids(i,2,ipnum).and.
-     &              iforest(1,k,ignum).eq.ipids(j,2,ipnum))) then
+               if ((iforest(1,k,ignum,nFKSprocess).eq.ipids(i,2,ipnum).and.
+     &              iforest(2,k,ignum,nFKSprocess).eq.ipids(j,2,ipnum)).or.
+     &             (iforest(2,k,ignum,nFKSprocess).eq.ipids(i,2,ipnum).and.
+     &              iforest(1,k,ignum,nFKSprocess).eq.ipids(j,2,ipnum))) then
 c     Add the combined propagator
                   icmp(1)=combid(ipids(i,1,ipnum),ipids(j,1,ipnum))
 c     Add also the same propagator but from the other direction
@@ -191,11 +191,11 @@ c     Add also the same propagator but from the other direction
 c     Set pdg code for propagator
                   do l=1,2
 c     If s-channel (this only works with compile flag 'fno-automatic')
-                     if(sprop(k,ignum).ne.0)then
-                        ipdgcl(icmp(l),ignum,nFKSprocess)=sprop(k,ignum)
+                     if(sprop(k,ignum,nFKSprocess).ne.0)then
+                        ipdgcl(icmp(l),ignum,nFKSprocess)=sprop(k,ignum,nFKSprocess)
 c     If t-channel (this only works with compile flag 'fno-automatic')
-                     else if(tprid(k,ignum).ne.0)then
-                        ipdgcl(icmp(l),ignum,nFKSprocess)=tprid(k,ignum)
+                     else if(tprid(k,ignum,nFKSprocess).ne.0)then
+                        ipdgcl(icmp(l),ignum,nFKSprocess)=tprid(k,ignum,nFKSprocess)
 c     Final 2->1 process
                      else if(ipnum.eq.3)then
                         ipdgcl(icmp(l),ignum,nFKSprocess)=ipdgcl(2,ignum
@@ -210,7 +210,7 @@ c     Final 2->1 process
      $                    ,nFKSprocess)
                      call filprp(nFKSprocess,ignum,icmp(l))
 c               Insert graph in list of propagators
-                     if(prwidth(k,ignum).gt.ZERO) then
+                     if(pwidth(k,ignum,nFKSprocess).gt.ZERO) then
                      if(btest(mlevel,4))
      $                       write(*,*)'Adding resonance ',ignum,icmp(l)
                         resmap(icmp(l),ignum,nFKSprocess)=.true.
@@ -273,11 +273,14 @@ c Local
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
-      common/c_configs_inc/iforest,sprop,tprid,mapconfig
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -287,7 +290,7 @@ c External
 
 c Set up which configuration should be included
       start_config=1
-      end_config=mapconfig(0)
+      end_config=mapconfig(0,nFKSprocess)
 c Initialize all the clustering ID's to zero
       do i=1,n_max_cl
          id_cl(nFKSprocess,i,0)=0
@@ -320,28 +323,28 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'ngraphs.inc'
       include 'run.inc'
+      include 'nFKSconfigs.inc'
       include 'real_from_born_configs.inc'
       double precision p(0:3,nexternal)
       integer nbw,ibwlist(2,nexternal),i,j,ida(2),idenpart
       logical isbw(*)
       logical OnBW(-nexternal:0),onshell
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig_dummy(0:n_max_cg)
-      common/c_configs_inc/iforest,sprop,tprid,mapconfig_dummy
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       integer icl(-(nexternal-3):nexternal)
       integer ibw,iconf
       double precision xp(0:3,-nexternal:nexternal),xmass
-      double precision prmass(-max_branch:nexternal,n_max_cg)
-      double precision prwidth(-max_branch:-1,n_max_cg)
-      integer prow(-max_branch:-1,n_max_cg)
-      common/c_props_inc/prmass,prwidth,prow
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
+      integer            this_config
+      common/to_mconfigs/this_config
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision dot
@@ -359,38 +362,41 @@ c Check that momenta lead to an on-shell BW
       enddo
       do i=-1,-(nexternal-3),-1 !Loop over propagators
 c Skip the t-channels
-         if (iforest(1,i,iconf).eq.1 .or. iforest(2,i,iconf).eq.1 .or.
-     &       iforest(1,i,iconf).eq.2 .or. iforest(2,i,iconf).eq.2 ) exit
+         if (iforest(1,i,iconf,nFKSprocess).eq.1 .or. iforest(2,i,iconf
+     $        ,nFKSprocess).eq.1 .or.iforest(1,i,iconf,nFKSprocess).eq.2
+     $        .or. iforest(2,i,iconf,nFKSprocess).eq.2 ) exit
          do j=0,3
-            xp(j,i) = xp(j,iforest(1,i,iconf))+xp(j,iforest(2,i,iconf))
+            xp(j,i) = xp(j,iforest(1,i,iconf,nFKSprocess))+xp(j
+     $           ,iforest(2,i,iconf,nFKSprocess))
          enddo
-         if (prwidth(i,iconf) .gt. 0d0) then !This is B.W.
+         if (pwidth(i,iconf,nFKSprocess) .gt. 0d0) then !This is B.W.
 c
 c     If the invariant mass is close to pole mass, set OnBW to true
 c
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
-            onshell = ( abs(xmass-prmass(i,iconf)) .lt.
-     &           bwcutoff*prwidth(i,iconf) )
+            onshell = ( abs(xmass-pmass(i,iconf,nFKSprocess)) .lt.
+     &           bwcutoff*pwidth(i,iconf,nFKSprocess) )
             if(onshell)then
                OnBW(i) = .true.
 c     If mother and daughter have the same ID, remove one of them
                idenpart=0
                do j=1,2
-                  ida(j)=iforest(j,i,iconf)
-                  if(    (ida(j).lt.0.and.
-     &                        sprop(i,iconf).eq.sprop(ida(j),iconf))
-     &               .or.(ida(j).gt.0.and.
-     &                        sprop(i,iconf).eq.IDUP(ida(j),1)))
-     &                 idenpart=ida(j)    ! mother and daugher have same ID
+                  ida(j)=iforest(j,i,iconf,nFKSprocess)
+                  if(    (ida(j).lt.0.and. sprop(i,iconf
+     $                 ,nFKSprocess).eq.sprop(ida(j),iconf,nFKSprocess))
+     $                 .or.(ida(j).gt.0.and. sprop(i,iconf
+     $                 ,nFKSprocess).eq.IDUP(ida(j),1))) idenpart=ida(j)
+     $                 
                enddo
 c     Always remove if daughter final-state (and identical)
                if(idenpart.gt.0) then
                   OnBW(i)=.false.
 c     Else remove either this resonance or daughter,
 c                  whichever is closer to mass shell
-               elseif(idenpart.lt.0.and.abs(xmass-prmass(i,iconf)).gt.
-     $                 abs(sqrt(dot(xp(0,idenpart),xp(0,idenpart)))-
-     $                 prmass(i,iconf))) then
+               elseif(idenpart.lt.0.and.abs(xmass-pmass(i,iconf
+     $                 ,nFKSprocess)).gt.abs(sqrt(dot(xp(0,idenpart)
+     $                 ,xp(0,idenpart)))-pmass(i,iconf,nFKSprocess)))
+     $                 then
                   OnBW(i)=.false.         ! mother off-shell
                elseif(idenpart.lt.0) then
                   OnBW(idenpart)=.false.  ! daughter off-shell
@@ -404,8 +410,8 @@ c                  whichever is closer to mass shell
         icl(i)=ishft(1,i-1)
       enddo
       do i=-1,-(nexternal-3),-1
-        icl(i)=icl(iforest(1,i,iconf))+
-     $     icl(iforest(2,i,iconf))
+        icl(i)=icl(iforest(1,i,iconf,nFKSprocess))+
+     $         icl(iforest(2,i,iconf,nFKSprocess))
         isbw(icl(i))=.false.
         if(OnBW(i))then
           nbw=nbw+1
@@ -436,8 +442,8 @@ c**************************************************************************
       integer idij,icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 c
@@ -532,8 +538,8 @@ c Local
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
 c External
       integer combid
       logical findmt

@@ -610,6 +610,7 @@ c bpower.
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
+      include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision pi,vegas_wgt,enhance,xnoborn_cnt,xtot
      $     ,bpower,cpower,tiny
@@ -639,8 +640,16 @@ c bpower.
       integer                  ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      integer            this_config
+      common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
@@ -707,18 +716,18 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       else
          xtot=0d0
-         if (mapconfig(0).eq.0) then
+         if (mapconfig(0,0).eq.0) then
             write (*,*) 'Fatal error in compute_prefactor_nbody:'/
      &           /' no Born diagrams ',mapconfig,
      &           '. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
+         do i=1, mapconfig(0,0)
+            xtot=xtot+amp2(mapconfig(i,0))
          enddo
          if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=amp2(mapconfig(this_config,0))/xtot
             enhance=enhance*diagramsymmetryfactor
          else
             enhance=0d0
@@ -743,6 +752,7 @@ c terms.
       include 'genps.inc'
       include 'fks_powers.inc'
       include 'coupl.inc'
+      include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision vegas_wgt,enhance,xnoborn_cnt,xtot
      &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
@@ -786,8 +796,16 @@ c terms.
       integer                  ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
+      double precision prmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/prmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      integer            this_config
+      common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
@@ -819,18 +837,18 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       else
          xtot=0d0
-         if (mapconfig(0).eq.0) then
+         if (mapconfig(0,0).eq.0) then
             write (*,*) 'Fatal error in compute_prefactor_n1body,'/
      &           /' no Born diagrams ',mapconfig
      &           ,'. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
+         do i=1, mapconfig(0,0)
+            xtot=xtot+amp2(mapconfig(i,0))
          enddo
          if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=amp2(mapconfig(this_config,0))/xtot
             enhance=enhance*diagramsymmetryfactor
          else
             enhance=0d0
@@ -5125,11 +5143,14 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-      integer mapconfig(0:lmaxconfigs), this_config
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 
       logical firsttime,firsttime_nFKSprocess(fks_configs)
       data firsttime,firsttime_nFKSprocess/.true.,fks_configs*.true./
@@ -5421,14 +5442,14 @@ c Check to see if this channel needs to be included in the multi-channeling
          enddo
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
-            do i=1,mapconfig(0)
+            do i=1,mapconfig(0,0)
                read (19,*,err=23) fac1,fac2
                do kchan=1,nchans
                   if (i.eq.iconfigs(kchan)) then
-                     if (mapconfig(iconfigs(kchan)).ne.fac1) then
+                     if (mapconfig(iconfigs(kchan),0).ne.fac1) then
                         write (*,*) 'inconsistency in symfact.dat',i
      $                       ,kchan,iconfigs(kchan)
-     $                       ,mapconfig(iconfigs(kchan)),fac1
+     $                       ,mapconfig(iconfigs(kchan),0),fac1
                         stop
                      endif
                      diagramsymmetryfactor_save(kchan)=dble(fac2)
@@ -5492,3 +5513,121 @@ c     reset the default dynamical_scale_choice
       endif
       return
       end
+
+
+      subroutine fill_configurations_common
+      implicit none
+      include 'nexternal.inc'
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nFKSconfigs.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      call fill_configurations_born(iforest(1,-max_branch,1,0),sprop(
+     $     -max_branch,1,0),tprid(-max_branch,1,0),mapconfig(0,0),pmass(
+     $     -nexternal,1,0),pwidth(-nexternal,1,0))
+      do nFKSprocess=1,fks_configs
+         call configs_and_props_inc_chooser()
+         call fill_configurations_real(iforest(1,-max_branch,1
+     $        ,nFKSprocess),sprop(-max_branch,1,nFKSprocess),tprid(
+     $        -max_branch,1,nFKSprocess),mapconfig(0,nFKSprocess),pmass(
+     $        -nexternal,1,nFKSprocess),pwidth(-nexternal,1
+     $        ,nFKSprocess))
+      enddo
+      return
+      end
+
+      subroutine fill_configurations_born(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include "coupl.inc"
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      include "born_props.inc"
+      do i=1,lmaxconfigs
+         do j=-max_branch,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-nexternal,-1
+            pmass_in(j,i)=pmass(j,i)
+            pwidth_in(j,i)=pwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end
+
+      subroutine fill_configurations_real(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include "genps.inc"
+      include 'nexternal.inc'
+      include "coupl.inc"
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      include 'ngraphs.inc'
+      integer iforest(2,-max_branch:-1,n_max_cg)
+      integer sprop(-max_branch:-1,n_max_cg)
+      integer tprid(-max_branch:-1,n_max_cg)
+      integer mapconfig(0:n_max_cg)
+      common/c_configs_inc/iforest,sprop,tprid,mapconfig
+      double precision prmass(-max_branch:nexternal,n_max_cg)
+      double precision prwidth(-max_branch:-1,n_max_cg)
+      integer prow(-max_branch:-1,n_max_cg)
+      common/c_props_inc/prmass,prwidth,prow
+      do i=1,lmaxconfigs
+         do j=-max_branch,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-nexternal,-1
+            pmass_in(j,i)=prmass(j,i)
+            pwidth_in(j,i)=prwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end
+      

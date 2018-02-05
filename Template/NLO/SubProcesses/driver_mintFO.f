@@ -131,7 +131,8 @@ c
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
-      call run_printout          !Prints out a summary of the run settings
+      call run_printout         !Prints out a summary of the run settings
+      call fill_configurations_common
       call initcluster
 c     
 c     Get user input
@@ -342,7 +343,7 @@ c timing statistics
       data t_write/0.0/
       end
 
-
+      
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use weight_lines
       use extra_weights
@@ -513,7 +514,6 @@ c Finalize PS point
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.false.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
       
@@ -642,11 +642,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c Vegas stuff
 c
@@ -733,8 +736,8 @@ c-----
             read(buffer(10:),*) (dconfig(kchan),kchan=1,nchans)
             do kchan=1,nchans
                iconfigs(kchan) = int(dconfig(kchan))
-               do i=1,mapconfig(0)
-                  if (iconfigs(kchan).eq.mapconfig(i)) then
+               do i=1,mapconfig(0,0)
+                  if (iconfigs(kchan).eq.mapconfig(i,0)) then
                      iconfigs(kchan)=i
                      exit
                   endif

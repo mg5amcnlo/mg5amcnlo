@@ -3,6 +3,7 @@
       include "genps.inc"
       include 'nexternal.inc'
       include "born_nhel.inc"
+      include 'nFKSconfigs.inc'
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
@@ -26,11 +27,14 @@ c
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       include 'coloramps.inc'
 c
       ipartners(0)=0
@@ -77,7 +81,7 @@ c consider only leading colour flows
       num_leading_cflows=0
       do i=1,max_bcol
          is_leading_cflow(i)=.false.
-         do j=1,mapconfig(0)
+         do j=1,mapconfig(0,0)
             if(icolamp(i,j,1))then
                is_leading_cflow(i)=.true.
                num_leading_cflows=num_leading_cflows+1
