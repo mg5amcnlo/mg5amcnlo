@@ -5,8 +5,9 @@ INCLUDE=-I../SubProcesses/$(P01)
 EXTRAW=-I../Source
 FF=gfortran -g -fno-automatic -ffixed-line-length-132 $(INCLUDE) $(EXTRAW) 
 FILES=handling_lhe_events.o fill_MC_mshell.o extra_weights.o
-FILES2=madfks_plot.o dbook.o setcuts.o analysis_td_template.o \
-       open_output_files.o open_output_files_dummy.o appl_interface_dummy.o
+FILES2=madfks_plot.o setcuts.o open_output_files.o appl_interface_dummy.o
+TDFILES=dbook.o open_output_files_dummy_td.o 
+HWUFILES=HwU.o open_output_files_dummy_HwU.o 
 
 %.o : %.f
 	$(FF) -c $<
@@ -26,7 +27,10 @@ compare_events : $(FILES) compare_events.o
 merge_events : $(FILES) merge_events.o
 	$(FF) $^ -o $@
 
-plot_events : $(FILES) $(FILES2) plot_events.o
+plot_events_td : $(FILES) $(FILES2) $(TDFILES) plot_events.o analysis_td_pp_lvl2.o 
+	$(FF) $^ -o $@
+
+plot_events_HwU : $(FILES) $(FILES2) $(HWUFILES) plot_events.o analysis_HwU_pp_lvl2.o 
 	$(FF) $^ -o $@
 
 plot_events_lhef : $(FILES) $(FILES2) plot_events_lhef.o

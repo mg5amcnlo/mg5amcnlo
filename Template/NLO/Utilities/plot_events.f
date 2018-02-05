@@ -1,8 +1,7 @@
-c Compile with
-c   gfortran -g -ffixed-line-length-132 -fno-automatic -I./any-P-directory
-c      -o plot_events plot_events.f madfks_plot.f dbook.f setcuts.f
-c         handling_lhe_events.f 
-c         any-dependencies-in-madfksplot
+c Plots the contents of a .lhe file according to a fixed-order analysis.
+c Discards all weights which are not central (see do_rwgt_scale_loc and
+c do_rwgt_pdf_loc).
+c Works with td and HwU for the moment
       program plot_events
       implicit none
       integer maxevt,ifile,i,npart,itype
@@ -14,26 +13,32 @@ c         any-dependencies-in-madfksplot
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      double precision sum_wgt
+      double precision sum_wgt,www(1000)
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer jwgtinfo,mexternal,iwgtnumpartn
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       double precision zero
       parameter (zero=0.d0)
+      integer ione
+      parameter (ione=1)
       character*80 event_file
       character*140 buff
       character*9 ch1
-      logical AddInfoLHE
+      logical AddInfoLHE,do_rwgt_scale_loc,do_rwgt_pdf_loc
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
       integer itmax,ncall
       common/citmax/itmax,ncall
+      character*3 event_norm
+      common/cevtnorm/event_norm
 
+      include "run.inc"
       include "genps.inc"
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      integer ipdg(nexternal)
       character*10 MonteCarlo
       integer numscales,numPDFpairs,isc,ipdf
       common/cwgxsec1/numscales,numPDFpairs
@@ -60,12 +65,27 @@ c         any-dependencies-in-madfksplot
 
       itype=12      
       sum_wgt=0d0
+      do_rwgt_scale_loc=do_rwgt_scale
+      do_rwgt_pdf_loc=do_rwgt_pdf
+      do_rwgt_scale=.false.
+      do_rwgt_pdf=.false.
+      call set_error_estimation(0)
       call initplot
+      do_rwgt_scale=do_rwgt_scale_loc
+      do_rwgt_pdf=do_rwgt_pdf_loc
       do i=1,maxevt
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-         sum_wgt=sum_wgt+XWGTUP
+c topout() in madfks_plot.f knows nothing about the overall event
+c normalisation. Compensate here according to the setting of
+c event_norm (read from the event file)
+         if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+           www(1)=XWGTUP/maxevt
+         else
+           www(1)=XWGTUP
+         endif
+         sum_wgt=sum_wgt+www(1)
 
          if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
          if(AddInfoLHE)then
@@ -84,21 +104,40 @@ c         any-dependencies-in-madfksplot
          do k=1,nup
            if(abs(ISTUP(k)).eq.1)then
              npart=npart+1
+             ipdg(npart)=IDUP(k)
              xmass(npart)=pup(5,k)
              do j=1,4
                xmom(mod(j,4),npart)=pup(j,k)
              enddo
            endif
          enddo
+         if(npart.gt.nexternal)then
+           write(*,*)'Fatal error: number of particles is larger'
+           write(*,*)'  than expected:',nup,npart,nexternal
+           stop
+         endif
          call phspncheck_nocms2(i,npart,xmass,xmom)
-         call outfun(xmom,zero,XWGTUP,itype)
+         do_rwgt_scale=.false.
+         do_rwgt_pdf=.false.
+         call outfun(xmom,zero,www,ipdg,itype)
+c HwU specific -- dummy with td
+         call HwU_add_points
+         do_rwgt_scale=do_rwgt_scale_loc
+         do_rwgt_pdf=do_rwgt_pdf_loc
 
       enddo
 
+      do_rwgt_scale=.false.
+      do_rwgt_pdf=.false.
+c td specific -- dummy with HwU
       call mclear
-      open(unit=99,file='events.top',status='unknown')
+c HwU specific -- dummy with td. At variance with td, the plots
+c are normalised by the inverse of the argument of finalize_histograms,
+c hence the choice below
+      call finalize_histograms(ione)
       call topout
-      close(99)
+      do_rwgt_scale=do_rwgt_scale_loc
+      do_rwgt_pdf=do_rwgt_pdf_loc
 
       write (*,*) 'The sum of the weights is:',sum_wgt
 
@@ -112,7 +151,7 @@ c works in any frame
       integer nev,npart,maxmom
       include "genps.inc"
       include "nexternal.inc"
-      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
+      real*8 xmass(nexternal),xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
@@ -227,4 +266,45 @@ c
 
 c Dummy subroutine (normally used with vegas when resuming plots)
       subroutine resume()
+      end
+
+
+c Dummy routines of LHAPDF origin. Taken from ./Source/PDF/pdfwrap.f
+      subroutine numberPDFm(idummy)
+      implicit none
+      integer idummy
+      write (*,*) 'ERROR: YOU ARE IN THE numberPDFm SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end
+
+      subroutine initPDFm(idummy1,idummy2)
+      implicit none
+      integer idummy1,idummy2
+      write (*,*) 'ERROR: YOU ARE IN THE initPDFm SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end
+
+      subroutine initPDFsetbynamem(idummy,cdummy)
+      implicit none
+      integer idummy
+      character*(*) cdummy
+      write (*,*) 'ERROR: YOU ARE IN THE initPDFsetbynamem SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end
+
+
+c Dummy rnd number generator: called by schan_order in setcuts.f,
+c and thus must not be used here.
+      function ran2()
+      implicit none
+      double precision ran2
+      write (*,*) 'ERROR: ran2() called'
+      stop
+      return
       end
