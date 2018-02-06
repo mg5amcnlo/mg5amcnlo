@@ -650,10 +650,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fill_MC_mshell.f',
                      'maxparticles.inc',
                      'message.inc',
-                     'initcluster.f',
                      'cluster.inc',
                      'cluster.f',
-                     'reweight.f',
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
@@ -3279,7 +3277,37 @@ c           This is dummy particle used in multiparticle vertices
             """ % model.get_first_non_pdg()
         lines += """else
         write(*,*)'Error: No color given for pdg ',ipdg
-        get_color=0        
+        stop 1
+        return
+        endif
+        end
+        """
+        
+        lines+= """
+        function get_spin(ipdg)
+        implicit none
+        integer get_spin, ipdg
+
+        if(ipdg.eq.%d)then
+        get_spin=%d
+        return
+        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get('spin'))
+
+        for part_id in particle_ids[1:]:
+            lines += """else if(ipdg.eq.%d)then
+            get_spin=%d
+            return
+            """ % (part_id, model.get_particle(part_id).get('spin'))
+        # Dummy particle for multiparticle vertices with pdg given by
+        # first code not in the model
+        lines += """else if(ipdg.eq.%d)then
+c           This is dummy particle used in multiparticle vertices
+            get_spin=-2
+            return
+            """ % model.get_first_non_pdg()
+        lines += """else
+        write(*,*)'Error: No spin given for pdg ',ipdg
+        stop 1
         return
         endif
         end

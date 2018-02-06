@@ -133,7 +133,6 @@ c
       call printout              !Prints out a summary of paramaters
       call run_printout         !Prints out a summary of the run settings
       call fill_configurations_common
-      call initcluster
 c     
 c     Get user input
 c

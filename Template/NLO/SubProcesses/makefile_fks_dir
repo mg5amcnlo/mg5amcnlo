@@ -32,8 +32,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o			\
 	 $(fastjetfortran_madfks) fks_singular.o veto_xsec.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
-	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
+	 configs_and_props_inc_chooser.o cluster.o 			\
+	 get_color.o FKSParamReader.o iproc_map.o			\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(applgrid_interface) genps_fks.o weight_lines.o
 

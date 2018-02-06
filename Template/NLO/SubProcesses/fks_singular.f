@@ -498,11 +498,17 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             endif
          endif
          if (.not.already_set) then
-            if (.not. setclscales(p1_cnt(0,1,0))) then
-               write (*,*) 'ERROR in setclscales izero'
-               stop 1
-            endif
-            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
+            call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
+     $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1))
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+c$$$            if (.not. setclscales(p1_cnt(0,1,0))) then
+c$$$               write (*,*) 'ERROR in setclscales izero'
+c$$$               stop 1
+c$$$            endif
+c$$$            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
+c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
+            rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
          endif
          rewgt_izero_calculated=.true.
@@ -545,11 +551,16 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             endif
          endif
          if (.not. already_set) then
-            if (.not. setclscales(p)) then
-               write (*,*) 'ERROR in setclscales mohdr'
-               stop 1
-            endif
-            rewgt_mohdr=min(rewgt(p,rewgt_exp_mohdr),1d0)
+c$$$            if (.not. setclscales(p)) then
+c$$$               write (*,*) 'ERROR in setclscales mohdr'
+c$$$               stop 1
+c$$$            endif
+c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
+            call cluster_and_reweight(0,rewgt_mohdr,rewgt_exp_mohdr
+     $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1))
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+            rewgt_mohdr=min(rewgt_mohdr,1d0)
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
