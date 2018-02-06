@@ -1745,7 +1745,7 @@ c initial state gluon splitting (gluon is j_fks):  g -> XX
                pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
             else
                write (*,*)
-     &              'ERROR in PDG assigment for underlying Born'
+     &              'ERROR in PDG assigment for underlying Born',iFKS
                stop 1
             endif
          elseif(k.lt.fks_i_d(iFKS)) then
@@ -5540,11 +5540,12 @@ c     reset the default dynamical_scale_choice
       integer mapconfig(0:lmaxconfigs,0:fks_configs)
       common /c_configurations/pmass,pwidth,iforest,sprop,tprid
      $     ,mapconfig
-      INTEGER NFKSPROCESS
+      INTEGER NFKSPROCESS,nFKSprocess_save
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       call fill_configurations_born(iforest(1,-max_branch,1,0),sprop(
      $     -max_branch,1,0),tprid(-max_branch,1,0),mapconfig(0,0),pmass(
      $     -nexternal,1,0),pwidth(-nexternal,1,0))
+      nFKSprocess_save=nFKSprocess
       do nFKSprocess=1,fks_configs
          call configs_and_props_inc_chooser()
          call fill_configurations_real(iforest(1,-max_branch,1
@@ -5553,6 +5554,7 @@ c     reset the default dynamical_scale_choice
      $        -nexternal,1,nFKSprocess),pwidth(-nexternal,1
      $        ,nFKSprocess))
       enddo
+      nFKSprocess=nFKSprocess_save
       return
       end
 

@@ -63,6 +63,7 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       call setcuts               !Sets up cuts 
       call printout
       call run_printout
+      call fill_configurations_common
       iconfig=1
       ichan=1
       iconfigs(1)=iconfig
