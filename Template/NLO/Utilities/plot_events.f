@@ -69,6 +69,7 @@ c Works with td and HwU for the moment
       do_rwgt_pdf_loc=do_rwgt_pdf
       do_rwgt_scale=.false.
       do_rwgt_pdf=.false.
+      call set_error_estimation(0)
       call initplot
       do_rwgt_scale=do_rwgt_scale_loc
       do_rwgt_pdf=do_rwgt_pdf_loc
