@@ -1700,16 +1700,18 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.store_result()
         #check if the param_card defines a scan.
         if self.param_card_iterator:
+            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
             param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                            error=self.results.current['error'])
+                                            error=self.results.current['error'],
+                                            param_card_path=cpath)
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
                 for i,card in enumerate(param_card_iterator):
-                    card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                    self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'), dependent=True)
+                    card.write(cpath)
+                    self.check_param_card(cpath, dependent=True)
                     if not options['force']:
                         options['force'] = True
                     if options['run_name']:
@@ -1721,7 +1723,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
                     param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                                    error=self.results.current['error'])
+                                                    error=self.results.current['error'],
+                                                    param_card_path=cpath)
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)

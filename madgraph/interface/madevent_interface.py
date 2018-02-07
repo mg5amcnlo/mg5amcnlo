@@ -2570,23 +2570,23 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if self.param_card_iterator:
                 param_card_iterator = self.param_card_iterator
                 self.param_card_iterator = []
+                path = pjoin(self.me_dir,'Cards','param_card.dat')
                 with misc.TMP_variable(self, 'allow_notification_center', False):
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
                     #check if the param_card defines a scan.
                     orig_name = self.run_name
                     for card in param_card_iterator:
-                        path = pjoin(self.me_dir,'Cards','param_card.dat')
-                        card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        card.write(path)
                         self.check_param_card(path, dependent=True)
                         next_name = param_card_iterator.get_next_name(self.run_name)
                         try:
                             self.exec_cmd("generate_events -f %s" % next_name,
                                       precmd=True, postcmd=True,errorhandling=False)
                         except ZeroResult:
-                            param_card_iterator.store_entry(self.run_name, 0)
+                            param_card_iterator.store_entry(self.run_name, 0, param_card_path=path)
                         else:
-                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
-                    param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
+                    param_card_iterator.write(path)
                     name = misc.get_scan_name(orig_name, self.run_name)
                     path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
                     logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
@@ -2973,15 +2973,16 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        cpath = pjoin(self.me_dir,'Cards','param_card.dat')
         if param_card_iterator:
 
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],param_card_path=cpath)
             #check if the param_card defines a scan.
             orig_name=self.run_name
             for card in param_card_iterator:
-                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                card.write(cpath)
                 self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
-                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=cpath)
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             scan_name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
