@@ -474,6 +474,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $                     FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
      &     ,p_last_mohdr,iterm_last_izero,iterm_last_mohdr
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
@@ -556,8 +558,8 @@ c$$$               write (*,*) 'ERROR in setclscales mohdr'
 c$$$               stop 1
 c$$$            endif
 c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
-            call cluster_and_reweight(0,rewgt_mohdr,rewgt_exp_mohdr
-     $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
+            call cluster_and_reweight(nFKSprocess,rewgt_mohdr
+     $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
      $           ,fxfx_fac_scale(1))
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)

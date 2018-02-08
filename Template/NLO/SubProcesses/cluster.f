@@ -29,10 +29,11 @@ C given by the to_mconfigs common block.
       common/to_mconfigs/this_config
       integer nfks1,iproc
       parameter (nfks1=fks_configs+1)
-      integer i,j,next,nbr,ipdg(nexternal,0:fks_configs),cluster_list(2
-     $     *max_branch,lmaxconfigs,0:fks_configs),cluster_pdg(0:2,0:2
-     $     *max_branch,lmaxconfigs,0:fks_configs),cluster_conf
-     $     ,cluster_ij(max_branch),iord(0:max_branch),nqcdrenscale
+      integer i,j,il_list,il_pdg,next,nbr,ipdg(nexternal,0:fks_configs)
+     $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
+     $     ,cluster_pdg(3*3*max_branch*lmaxconfigs*(fks_configs+1))
+     $     ,cluster_conf,iconf,cluster_ij(max_branch),iord(0:max_branch)
+     $     ,nqcdrenscale
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
@@ -68,36 +69,86 @@ C given by the to_mconfigs common block.
          endif
 c Links the configurations (given in iforest) to the allowed clusterings
 c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
-         call iforest_to_list(next,nincoming,mapconfig(0,iproc),nbr
-     $        ,iforest(1,-nbr,1,iproc),sprop(-nbr,1,iproc),tprid(-nbr,1
-     $        ,iproc),pwidth(-nbr,1,iproc),ipdg(1,iproc),cluster_list(1
-     $        ,1,iproc),cluster_pdg(0,0,1,iproc))
+         il_list=1
+         il_pdg=1
+         do i=0,iproc-1
+            if (i.eq.0) then
+               il_list=il_list+2*(nexternal-4)*mapconfig(0,i)
+               il_pdg=il_pdg+3*(1+2*(nexternal-4))*mapconfig(0,i)
+            else
+               il_list=il_list+2*(nexternal-3)*mapconfig(0,i)
+               il_pdg=il_pdg+3*(1+2*(nexternal-3))*mapconfig(0,i)
+            endif
+         enddo
+         do iconf=1,mapconfig(0,iproc)
+            call iforest_to_list(next,nincoming,nbr,iforest(1,-nbr
+     $           ,iconf,iproc),sprop(-nbr,iconf,iproc),tprid(-nbr,iconf
+     $           ,iproc),pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
+     $           ,cluster_list(il_list),cluster_pdg(il_pdg))
+            if (iproc.eq.0) then
+               il_list=il_list+2*(nexternal-4)
+               il_pdg=il_pdg+3*(1+2*(nexternal-4))
+            else
+               il_list=il_list+2*(nexternal-3)
+               il_pdg=il_pdg+3*(1+2*(nexternal-3))
+            endif
+         enddo
          firsttime(iproc)=.false.
       endif
 c Cluster the event. This gives the most-likely clustering (in
 c cluster_ij) with scales (in cluster_scales)
-      call cluster(next,pcl,mapconfig(0,iproc),nbr,cluster_list(1,1,iproc)
-     $     ,cluster_pdg(0,0,1,iproc),iforest(1,-nbr,this_config,iproc)
-     $     ,ipdg(1,iproc),pmass(-nbr,1,iproc),pwidth(-nbr,1,iproc)
-     $     ,cluster_conf,cluster_scales,cluster_ij,iord)
+      il_list=1
+      il_pdg=1
+      do i=0,iproc-1
+         if (i.eq.0) then
+            il_list=il_list+2*(nexternal-4)*mapconfig(0,i)
+            il_pdg=il_pdg+3*(1+2*(nexternal-4))*mapconfig(0,i)
+         else
+            il_list=il_list+2*(nexternal-3)*mapconfig(0,i)
+            il_pdg=il_pdg+3*(1+2*(nexternal-3))*mapconfig(0,i)
+         endif
+      enddo
+      call cluster(next,pcl,mapconfig(0,iproc),nbr
+     $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-nbr
+     $     ,this_config,iproc),ipdg(1,iproc),pmass(-nbr,this_config
+     $     ,iproc),pwidth(-nbr,this_config,iproc),cluster_conf
+     $     ,cluster_scales,cluster_ij,iord)
+c Given the most-likely clustering, it returns the corresponding Sudakov
+c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
          skip_first=.false.
       else
          skip_first=.true.
       endif
-c Given the most-likely clustering, it returns the corresponding Sudakov
-c form factor and renormalisation and factorisation scales.
+      il_list=1
+      il_pdg=1
+      do i=0,iproc-1
+         if (i.eq.0) then
+            il_list=il_list+2*(nexternal-4)*mapconfig(0,i)
+            il_pdg=il_pdg+3*(1+2*(nexternal-4))*mapconfig(0,i)
+         else
+            il_list=il_list+2*(nexternal-3)*mapconfig(0,i)
+            il_pdg=il_pdg+3*(1+2*(nexternal-3))*mapconfig(0,i)
+         endif
+      enddo
+      if (iproc.eq.0) then
+         il_list=il_list+2*(nexternal-4)*(cluster_conf-1)
+         il_pdg=il_pdg+3*(1+2*(nexternal-4))*(cluster_conf-1)
+      else
+         il_list=il_list+2*(nexternal-3)*(cluster_conf-1)
+         il_pdg=il_pdg+3*(1+2*(nexternal-3))*(cluster_conf-1)
+      endif
       call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
-     $     ,cluster_list(1,cluster_conf,iproc),cluster_pdg(0,0
-     $     ,cluster_conf,iproc),cluster_scales,iord,sudakov
-     $     ,expanded_sudakov,nqcdrenscale ,qcd_ren_scale,qcd_fac_scale)
+     $     ,cluster_list(il_list),cluster_pdg(il_pdg),cluster_scales
+     $     ,iord,sudakov,expanded_sudakov,nqcdrenscale,qcd_ren_scale
+     $     ,qcd_fac_scale)
       return
       end
       
       
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
 
-      subroutine iforest_to_list(next,nincoming,nconf,nbr,iforest,sprop
+      subroutine iforest_to_list(next,nincoming,nbr,iforest,sprop
      $     ,tprid,prwidth,ipdg,cluster_list,cluster_pdg)
 c Given iforest it returns cluster_list. This is a binary list where the
 c intermediate particle numbers are the sums of the external ones (which
@@ -107,18 +158,18 @@ c bottom-up, intermediate particles have two different labels depending
 c on two possible clustering orders). It also fills cluster_pdg, the PDG
 c codes for particles in the cluster_list as well as their daughters.
       implicit none
-      integer iconf,ibr,i,j,next,nconf,nbr,iforest(2,-nbr:-1,nconf)
-     $     ,cluster_list(2*nbr,nconf),cluster_pdg(0:2,0:2*nbr,nconf)
-     $     ,cluster_tmp(-nbr:next),ipdg(next),nincoming,sprop(-nbr:-1
-     $     ,nconf),tprid(-nbr:-1,nconf),n_tchan
-      double precision prwidth(-nbr:-1,nconf)
+      integer ibr,i,j,next,nbr,iforest(2,-nbr:-1)
+     $     ,cluster_list(2*nbr),cluster_pdg(0:2,0:2*nbr),cluster_tmp(
+     $     -nbr:next),ipdg(next),nincoming,sprop(-nbr:-1),tprid(-nbr:-1)
+     $     ,n_tchan
+      double precision prwidth(-nbr:-1)
       logical s_chan
       if (nincoming.ne.2) then
          write (*,*) 'clustering only works for 2->X process;'/
      $        /' not for decays',nincoming
       endif
       if (nbr.ne.next-3) then
-         ! 'nbr' is the number of clusterings to endup with a trivial
+         ! 'nbr' is the number of clusterings to end up with a trivial
          ! 2->1 process.
          write (*,*) 'Wrong number of clusterings',nbr,next
          stop 1
@@ -126,82 +177,77 @@ c codes for particles in the cluster_list as well as their daughters.
       do j=1,next
          cluster_tmp(j)=ishft(1,j-1) ! 1, 2, 4, 8, 16, 32, ...
       enddo
-      do iconf=1,nconf
-         n_tchan=0
-         s_chan=.true.
-         do j=-1,-nbr,-1
-            cluster_tmp(j)=cluster_tmp(iforest(1,j,iconf))
-     $                    +cluster_tmp(iforest(2,j,iconf))
-            if ( btest(cluster_tmp(j),0) .or. 
-     $           btest(cluster_tmp(j),1) ) s_chan=.false.
-            if (s_chan) then
-               cluster_pdg(0,-j,iconf)=sprop(j,iconf)
-            else
-               cluster_pdg(0,-j,iconf)=tprid(j,iconf)
-               n_tchan=n_tchan+1
-            endif
-            do i=1,2 ! daughters
-               if (iforest(i,j,iconf).gt.0) then ! daughters are final state
-                  cluster_pdg(i,-j,iconf)=ipdg(iforest(i,j,iconf))
-               else ! daughters are also internal particles
-                  cluster_pdg(i,-j,iconf)=cluster_pdg(0,-iforest(i,j
-     $                 ,iconf),iconf)
-               endif
-            enddo
-            if (s_chan .and. (btest(cluster_tmp(j),0) .or.
-     $                        btest(cluster_tmp(j),1))) then
-               ! for s-channels should never have combined with initial
-               ! state particles
-               write (*,*) 's-channel/t-channel not consistent',s_chan
-     $              ,cluster_tmp(j)
-               stop 1
+      n_tchan=0
+      s_chan=.true.
+      do j=-1,-nbr,-1
+         cluster_tmp(j)=cluster_tmp(iforest(1,j))
+     $                 +cluster_tmp(iforest(2,j))
+         if ( btest(cluster_tmp(j),0) .or. 
+     $        btest(cluster_tmp(j),1) ) s_chan=.false.
+         if (s_chan) then
+            cluster_pdg(0,-j)=sprop(j)
+         else
+            cluster_pdg(0,-j)=tprid(j)
+            n_tchan=n_tchan+1
+         endif
+         do i=1,2               ! daughters
+            if (iforest(i,j).gt.0) then ! daughters are final state
+               cluster_pdg(i,-j)=ipdg(iforest(i,j))
+            else                ! daughters are also internal particles
+               cluster_pdg(i,-j)=cluster_pdg(0,-iforest(i,j))
             endif
          enddo
+         if (s_chan .and. (btest(cluster_tmp(j),0) .or.
+     $                     btest(cluster_tmp(j),1))) then
+            ! for s-channels should never have combined with initial
+            ! state particles
+            write (*,*) 's-channel/t-channel not consistent',s_chan
+     $           ,cluster_tmp(j)
+            stop 1
+         endif
+      enddo
 c Can also go the reverse way through the t-channels. Hence, we need to
 c add that information. Simply duplicate everything (also the
 c s-channels); just need to be careful to update the PDG codes for the
 c daughters correctly.
-         do ibr=1,nbr
-            cluster_list(ibr,iconf)=cluster_tmp(-ibr)
-            cluster_list(ibr+nbr,iconf)=maskr(next)-cluster_tmp(-ibr)
-            cluster_pdg(0,ibr+nbr,iconf)=cluster_pdg(0,ibr,iconf)
-            if (nbr-n_tchan.gt.0) then ! s-channel
-               ! This is not relevant, since the reverse ordering is
-               ! never a valid clustering. Fill it anyway.
-               do i=1,2 
-                  cluster_pdg(i,ibr+nbr,iconf)=cluster_pdg(i,ibr,iconf)
-               enddo
+      do ibr=1,nbr
+         cluster_list(ibr)=cluster_tmp(-ibr)
+         cluster_list(ibr+nbr)=maskr(next)-cluster_tmp(-ibr)
+         cluster_pdg(0,ibr+nbr)=cluster_pdg(0,ibr)
+         if (ibr.le.nbr-n_tchan) then ! s-channel
+            ! This is not relevant, since the reverse ordering is
+            ! never a valid clustering. Fill it anyway.
+            do i=1,2 
+               cluster_pdg(i,ibr+nbr)=cluster_pdg(i,ibr)
+            enddo
+         else
+            ! Here we need to be careful and rearrange the daughters
+            ! correctly.  The t-channels in iforest are such that the
+            ! 2nd daughter is an s-channel particle (or a final state
+            ! particle). Hence, we can use the one of the next
+            ! t-channel (in the normal ordering) as daughter for the
+            ! current one (the reverse ordering).
+            if (iforest(2,-(ibr+1)).gt.2) then ! final state particle
+               cluster_pdg(2,ibr+nbr)=ipdg(iforest(2,-(ibr+1)))
+            elseif (iforest(2,-(ibr+1)).lt.0 .and.
+     $              iforest(2,-(ibr+1)).ge.-(nbr-n_tchan)) then ! s-channel
+              cluster_pdg(2,ibr+nbr)=cluster_pdg(0,-iforest(2,-(ibr+1)))
             else
-               ! Here we need to be careful and rearrange the daughters
-               ! correctly.  The t-channels in iforest are such that the
-               ! 2nd daughter is an s-channel particle (or a final state
-               ! particle). Hence, we can use the one of the next
-               ! t-channel (in the normal ordering) as daughter for the
-               ! current one (in the reverse ordering).
-               if (iforest(2,-(ibr+1),iconf).gt.2) then ! final state particle
-                  cluster_pdg(2,ibr+nbr,iconf)=
-     $                 ipdg(iforest(2,-(ibr+1),iconf))
-               elseif (iforest(2,-(ibr+1),iconf).lt.0 .and.
-     $                 iforest(2,-(ibr+1),iconf).gt.-(nbr-n_tchan)) then ! s-channel
-                  cluster_pdg(2,ibr+nbr,iconf)=
-     $                 cluster_pdg(2,-iforest(2,-(ibr+1),iconf),iconf)
-               else
-                  write (*,*) 'In iforest, 2nd daughter should be '/
-     $                 /'final state particle, or s-channel',
-     $                 iforest(2,-(ibr+1),iconf),ibr,iconf
-                  stop 1
-               endif
-               ! First daughter is the next t-channel (or 2nd incoming
-               ! particle)
-               if (ibr.eq.nbr) then
-                  ! this is the final t-channel; hence, it's attached to
-                  ! the 2nd incoming particle.
-                  cluster_pdg(1,ibr+nbr,iconf)=ipdg(2)
-               else
-                 cluster_pdg(1,ibr+nbr,iconf)=cluster_pdg(1,ibr+1,iconf)
-               endif
+               write (*,*) 'In iforest, 2nd daughter should be '/
+     $              /'final state particle, or s-channel',
+     $              iforest(2,-(ibr+1)),ibr,n_tchan,nbr
+               stop 1
             endif
-         enddo
+            ! First daughter is the next t-channel (or 2nd incoming
+            ! particle)
+            if (ibr.eq.nbr) then
+               ! this is the final t-channel; hence, it's attached to
+               ! the 2nd incoming particle.
+               cluster_pdg(1,ibr+nbr)=ipdg(2)
+            else
+               cluster_pdg(1,ibr+nbr)=cluster_pdg(0,ibr+1)
+            endif
+         endif
       enddo
       return
       end
@@ -239,7 +285,8 @@ c Set all diagrams (according to which we cluster) as valid
       call reset_valid_confs(nconf,nvalid,valid_conf)
 c Remove diagrams (according to which we cluster) that are not
 c compatible with the resonance structure of the current phase-space
-c point
+c point. First check which s-channel particles are a Breit-Wigner
+c (according to the integration channel)
       call IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg,iBWlist)
       call remove_confs_BW(nconf,nbr,nvalid,valid_conf,iBWlist
      $     ,cluster_list,cluster_pdg)
@@ -264,12 +311,17 @@ c corresponding imap label with the combined particle label.
 c Save the cluster scales and cluster IDs.
          cluster_scales(iclus)=scale
          cluster_ij(iclus)=win_id
-         nleft=nleft-1 ! 'nleft' particles are left after the cluster
+         nleft=nleft-1          ! 'nleft' particles are left after the cluster
       enddo
       if (nvalid.gt.1) then
          write (*,*) ''
          write (*,*) 'More than one valid diagram, pick one at random?'
-         write (*,*) '--This still needs to be implemented'
+         write (*,*) '--This still needs to be implemented',nvalid
+     $        ,valid_conf
+         write (*,*) cluster_ij
+         do iconf=1,nconf
+            write (*,*) iconf,cluster_list(:,iconf)
+         enddo
          stop 1
       endif
 c At this point there should only be one possible valid
@@ -281,13 +333,13 @@ c diagram. Hence, find that diagram and set cluster_conf equal to it.
          endif
       enddo
 c Set the final scale to the m_T^2 of the final 2->1 process
-      cluster_scales(0)=djb_clus(pcl(0,3))
+      cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
 c Link the cluster_ij values to the ordering used in cluster_pdg (which
 c is similar to the one in iforest)
       call link_clustering_to_iforest(nbr,cluster_ij,cluster_list(1
      $     ,cluster_conf),iord)
-c Fill the cluster_pdg(1:2,0) with the information of the PDG codes for
-c the final, completely clustered 2->1 system
+c Fill the cluster_pdg(0:2,0) with the information of the PDG codes for
+c     the final, completely clustered 2->1 system
       call set_cluster_pdg_2_1_process(next,nbr,ipdg,cluster_pdg(0,0
      $     ,cluster_conf),cluster_ij,iord)
 c Now that we have the diagram configuration corresponding to the
@@ -339,16 +391,16 @@ c     the renormalisation scale.
      $     ,cluster_list,cluster_pdg,cluster_scales,iord,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale)
       implicit none
-      integer next,i,nbr,cluster_ij(nbr),cluster_list(2*nbr),iord(0:nbr)
-     $     ,cluster_pdg(0:2,0:2*nbr),type(0:next),nqcdrenscale
-     $     ,nqcdrenscalecentral,numberQCDcharged,ipdg(next)
+      integer next,i,j,nbr,cluster_ij(nbr),cluster_list(2*nbr)
+     $     ,iord(0:nbr),cluster_pdg(0:2,0:2*nbr),type(0:next)
+     $     ,nqcdrenscale,nqcdrenscalecentral,ipdg(next),first
       double precision prev_qcd_scale,hard_qcd_scale,sudakov
      $     ,expanded_sudakov,mass(next),exponent_sukodav,QCDsukakov_exp
      $     ,cluster_scales(0:nbr),qcd_ren_scale(0:nbr),lowest_qcd_scale
      $     ,p(0:3,next),qcd_fac_scale,expanded_exponent_sudakov
      $     ,exponent_sudakov
-      logical QCDvertex,QCDchangeline,skip_first,first,startQCDvertex
-      external QCDvertex,QCDchangeline,numberQCDcharged,startQCDvertex
+      logical QCDvertex,QCDchangeline,skip_first,startQCDvertex
+      external QCDvertex,QCDchangeline,startQCDvertex
       nqcdrenscale=0       ! number of alpha-s needing reweighting
       nqcdrenscalecentral=0
       hard_qcd_scale=0d0   ! hardest scale in all clusterings so far.
@@ -358,13 +410,13 @@ c     the renormalisation scale.
       qcd_fac_scale=0d0    ! factorisation scale
       qcd_ren_scale(0)=1d0 ! renormalisation scale for 'central process'
       if (skip_first) then ! if .true., skip the first
-         first=.true.      ! 'startQCDvertex'. Useful for FxFx/MINLO
+         first=0      ! 'startQCDvertex'. Useful for FxFx/MINLO
       else                 ! real emission.
-         first=.false.
+         first=-1
       endif
       call fill_type(next,ipdg,type,mass)
       do i=1,nbr                ! cluster all the way to 2->1 process
-         if (QCDvertex(cluster_ij(i),nbr,cluster_pdg,iord))then
+         if (QCDvertex(i,nbr,cluster_pdg,iord))then
 c The vertex is such that it is a QCD clustering
             if (cluster_scales(i).gt.hard_qcd_scale) then
                hard_qcd_scale=cluster_scales(i)
@@ -372,11 +424,11 @@ c The vertex is such that it is a QCD clustering
                nqcdrenscalecentral=-1
                qcd_ren_scale(0)=hard_qcd_scale
             endif
-            if (nqcdrenscale.eq.0 .and. .not.first) then
+            if (nqcdrenscale.eq.0 .and. first.ne.0) then
 c This is the first QCD cluster. Hence, it determines the lowest QCD
 c scale that enters all Sudakovs. No Sudakov reweighting required so
 c far. Just make sure that we have a valid QCD starting vertex.
-               if (startQCDvertex(cluster_ij(i),nbr,cluster_pdg,iord))
+               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg,iord))
      $              then
                   lowest_qcd_scale=cluster_scales(i)
                   nqcdrenscale=nqcdrenscale+1
@@ -384,8 +436,12 @@ c far. Just make sure that we have a valid QCD starting vertex.
                   prev_qcd_scale=cluster_scales(i)
                   qcd_fac_scale=cluster_scales(i)
                endif
-            elseif (nqcdrenscale.eq.0 .and. first) then
-               first=.false.
+            elseif (nqcdrenscale.eq.0 .and. first.eq.0) then
+c Special case for real-emission FxFx: need to skip the first clustering.
+               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg,iord))
+     $              then
+                  first=cluster_ij(i)
+               endif
             else
 c New QCD vertex found. All lines require Sudakov veto from this scale
 c down to the scale of the previous QCD vertex.
@@ -398,7 +454,7 @@ c down to the scale of the previous QCD vertex.
                   prev_qcd_scale=hard_qcd_scale
                endif
             endif
-         elseif(QCDchangeline(cluster_ij(i),nbr,cluster_pdg,iord)) then
+         elseif(QCDchangeline(i,nbr,cluster_pdg,iord)) then
 c The vertex is not a QCD clustering, but it changes a QCD line. E.g.,
 c q->Zq, t->Wb, or H->gg. Hence, in case there was already a qcd-cluster
 c with a scale below the current scale, apply Sudakov to all QCD
@@ -424,7 +480,7 @@ c prev_qcd_scale, since all Sudakovs up to that scale have been applied.
             endif
          endif
 c Remove the daughters and add the mother to the list of QCD lines.
-         call update_type(next,cluster_ij(i),nbr,cluster_pdg,iord,type
+         call update_type(next,i,nbr,cluster_pdg,iord,type
      $        ,mass)
       enddo
 c Now we have included all up to the final 2->1 process. In case this is
@@ -433,7 +489,7 @@ c given by cluster_scales(0)]. It will never need alpha_s-reweighting,
 c since its scale is equal to the hardest scale by construction.
       if (QCDvertex(0,nbr,cluster_pdg,iord)) then
          if (cluster_scales(0).gt.hard_qcd_scale) then
-            hard_qcd_scale=cluster_scales(i)
+            hard_qcd_scale=cluster_scales(0)
             ! update the renormalisation scale for the 'central process'
             qcd_ren_scale(0)=hard_qcd_scale
             nqcdrenscalecentral=1
@@ -445,9 +501,9 @@ c since its scale is equal to the hardest scale by construction.
      $              ,expanded_exponent_sudakov)
             endif
          endif
-      elseif(QCDchangeline(cluster_ij(i),nbr,cluster_pdg,iord)) then
-         if (cluster_scales(i).gt.hard_qcd_scale) then
-            hard_qcd_scale=cluster_scales(i)
+      elseif(QCDchangeline(0,nbr,cluster_pdg,iord)) then
+         if (cluster_scales(0).gt.hard_qcd_scale) then
+            hard_qcd_scale=cluster_scales(0)
             ! update the renormalisation scale for the 'central process'
             if (nqcdrenscalecentral.ge.0) then
                qcd_ren_scale(0)=qcd_ren_scale(0)*hard_qcd_scale
@@ -537,7 +593,7 @@ c Possible resonance
             onshell = abs(mass(i)-prmass(i)).lt.bwcutoff*prwidth(i)
 c Close to the on-shell mass.
             if(onshell)then
-               OnBW(i) = .true.
+               OnBW(-i) = .true.
 c If mother and daughter have the same ID, remove one of them
                idenpart=0
                do j=1,2
@@ -554,14 +610,14 @@ c If mother and daughter have the same ID, remove one of them
                enddo
 c     Always remove if daughter is final-state (and identical)
                if(idenpart.gt.0) then
-                  OnBW(i)=.false.
+                  OnBW(-i)=.false.
 c     Else remove either this resonance or daughter,
 c                  whichever is closer to mass shell
                elseif(idenpart.lt.0 .and. abs(mass(i)-prmass(i)).gt.
      $                 abs(mass(idenpart)-prmass(i))) then
-                  OnBW(i)=.false.         ! mother off-shell
+                  OnBW(-i)=.false.         ! mother off-shell
                elseif(idenpart.lt.0) then
-                  OnBW(idenpart)=.false.  ! daughter off-shell
+                  OnBW(-idenpart)=.false.  ! daughter off-shell
                endif
             endif
          endif
@@ -574,13 +630,13 @@ c information.
       enddo
       do i=-1,-nbr,-1
          icl(i)=icl(itree(1,i))+icl(itree(2,i))
-         if(OnBW(i))then
+         if(OnBW(-i))then
             nbw=nbw+1
-            ibwlist(1,0)=nbw        ! number of on-shell BWs
             ibwlist(1,nbw)=icl(i)   ! binary coding
             ibwlist(2,nbw)=sprop(i) ! pdg-code
          endif
       enddo
+      ibwlist(1,0)=nbw          ! number of on-shell BWs
       return
       end
 
@@ -722,7 +778,7 @@ c Updates the 'pcl' momenta list by combining particles iwin and jwin.
       if (jwin.le.2) then
 c initial state clustering
          do i=0,3
-            pcl(i,jwin)=pcl(i,iwin)-pcl(i,jwin)
+            pcl(i,jwin)=pcl(i,jwin)-pcl(i,iwin)
             pcmsp(i)=-pcl(i,jwin)-pcl(i,3-jwin)
          enddo
          pcmsp(0)=-pcmsp(0)
@@ -812,18 +868,17 @@ c involve exaclty 2 QCD partons. This will be the correct hard scale in
 c the Sudakov Form Factors (for both massless and massive quarks and
 c gluons).
       implicit none
-      integer i,j,k,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
-     $     ,iord(0:nbr),next,get_color,cij,cluster_list(2*nbr),iqcd(0:2)
+      integer i,j,k,cij,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
+     $     ,iord(0:nbr),next,get_color,cluster_list(2*nbr),iqcd(0:2)
       double precision cluster_scales(0:nbr),dot,p(0:3,0:2,nbr),djb_clus
       logical QCDchangeline,QCDvertex
       external dot,get_color,djb_clus,QCDchangeline,QCDvertex
       if (nbr.eq.0) return      ! 2->1 process, nothing to do
       do i=1,nbr
-         cij=cluster_ij(i)
-         if (QCDchangeline(cij,nbr,cluster_pdg,iord)) then
+         if (QCDchangeline(i,nbr,cluster_pdg,iord)) then
             iqcd(0)=0
             do j=0,2
-               if (abs(get_color(cluster_pdg(j,iord(cij)))).gt.0) then
+               if (abs(get_color(cluster_pdg(j,iord(i)))).gt.1) then
                   iqcd(0)=iqcd(0)+1
                   iqcd(iqcd(0))=j
                endif
@@ -837,7 +892,7 @@ c s-channel QCD process. In that case set the last and next-to-last
 c clustering scale to the average transverse masses of the (combined)
 c particles.
       cij=cluster_ij(nbr)
-      if (QCDvertex(cij,nbr,cluster_pdg,iord) .and.
+      if (QCDvertex(nbr,nbr,cluster_pdg,iord) .and.
      $     (.not.(btest(cij,0) .or. btest(cij,1)))) then
          ! Clustered 2->2 process is s-channel with 2 final state QCD
          ! particles. Check if the two initial state particles are also
@@ -870,28 +925,29 @@ c particles, and the mother [cluster_pdg(0,0)] is the outgoing one.
       do i=1,nbr
          cij=cluster_ij(i)
          if (btest(cij,0)) then ! initial state clustering with incoming line 1
-            cluster_pdg(1,0)=cluster_pdg(1,iord(cij))
+            cluster_pdg(1,0)=cluster_pdg(1,iord(i))
          endif
          if (btest(cij,1)) then ! initial state clustering with incoming line 2
-            cluster_pdg(2,0)=cluster_pdg(1,iord(cij))
+            cluster_pdg(2,0)=cluster_pdg(1,iord(i))
          endif
       enddo
       cij=cluster_ij(nbr)
       if (btest(cij,0) .or. btest(cij,1)) then
          ! last clustering is initial state cluster. Hence, mother is
          ! given by 2nd daughter in reversed t-channel
-         if (iord(cij).gt.nbr) then
-            cluster_pdg(0,0)=cluster_pdg(2,iord(cij)-nbr)
+         if (iord(nbr).gt.nbr) then
+            cluster_pdg(0,0)=cluster_pdg(2,iord(nbr)-nbr)
          else
-            cluster_pdg(0,0)=cluster_pdg(2,nbr+iord(cij))
+            cluster_pdg(0,0)=cluster_pdg(2,nbr+iord(nbr))
          endif
       else
          ! last clustering is final state clustering. Hence mother is
          ! identical to mother in last clustering
-         cluster_pdg(0,0)=cluster_pdg(0,iord(cluster_ij(nbr)))
+         cluster_pdg(0,0)=cluster_pdg(0,iord(nbr))
       endif
       if (cluster_pdg(0,0).eq.0) then
-         write (*,*) 'PDG code for mother in final 2->1 process is set'
+         write (*,*) 'PDG code for mother in final 2->1 process is'/
+     $        /' not set',cluster_pdg(:,0)
          stop 1
       endif
       end
@@ -992,7 +1048,7 @@ c singularities).
       icol=abs(get_color(ipdg))
       ispin=abs(get_spin(ipdg))
       imass=abs(get_mass_from_id(ipdg))
-      if (icol.eq.0) then
+      if (icol.eq.1) then
          itype=0
       elseif (ispin.eq.2 .and. icol.eq.3 .and. imass.eq.0d0) then
          itype=1
@@ -1013,18 +1069,18 @@ c singularities).
       end
 
 
-      subroutine update_type(next,cij,nbr,cluster_pdg,iord,type,mass)
+      subroutine update_type(next,iclus,nbr,cluster_pdg,iord,type,mass)
 c Updates 'type' (which lists all current QCD-charged particles in
 c process in no particular order). It removes the two entries which are
 c consistent with the two daughters of the clustering and adds the
 c mother.
       implicit none
-      integer i,j,k,next,nbr,cij,ipdg(0:2),itype,iord(0:nbr)
+      integer i,j,k,next,nbr,iclus,ipdg(0:2),itype,iord(0:nbr)
      $     ,cluster_pdg(0:2,0:2*nbr),type(0:next)
       double precision mass(next),imass
       logical found
       do i=0,2 ! mother and two daughters
-         ipdg(i)=cluster_pdg(i,iord(cij))
+         ipdg(i)=cluster_pdg(i,iord(iclus))
       enddo
       ! first remove the two daughters
       do i=1,2
@@ -1044,8 +1100,8 @@ c mother.
             endif
          enddo
          if (.not.found) then
-            write (*,*) 'Daughter type not found in list',type(0)
-     $           ,ipdg(i),itype,imass
+            write (*,*) 'Daughter type not found in type list',ipdg(i)
+     $           ,itype,imass,i
             write (*,*) (type(j),j=1,type(0))
             write (*,*) (mass(j),j=1,type(0))
             stop 1
@@ -1060,31 +1116,32 @@ c mother.
       endif
       end
 
-      integer function numberQCDcharged(cij,nbr,cluster_pdg,iord)
+      integer function numberQCDcharged(iclus,nbr,cluster_pdg,iord)
 c Returns the number of QCD charged particles in the clustering vertex
 c 'cij'.
       implicit none
-      integer i,ipart,cij,get_color,nbr,cluster_pdg(0:2,0:2*nbr)
-     $     ,iord(0:nbr),n_charged
+      integer i,ipart,iclus,get_color,nbr,cluster_pdg(0:2,0:2*nbr)
+     $     ,iord(0:nbr)
       external get_color
+      numberQCDcharged=0
       do i=0,2
-         ipart=cluster_pdg(i,iord(cij))
-         if (abs(get_color(ipart)).gt.0) then
-            n_charged=n_charged+1
+         ipart=cluster_pdg(i,iord(iclus))
+         if (abs(get_color(ipart)).gt.1) then
+            numberQCDcharged=numberQCDcharged+1
          endif
       enddo
       return
       end
 
       
-      logical function QCDchangeline(cij,nbr,cluster_pdg,iord)
+      logical function QCDchangeline(iclus,nbr,cluster_pdg,iord)
 c Checks if a vertex changes a QCD line. This means that 2 out of the
 c three particles are QCD charged.
       implicit none
-      integer numberQCDcharged,cij,nbr,cluster_pdg(0:2,0:2*nbr)
+      integer numberQCDcharged,iclus,nbr,cluster_pdg(0:2,0:2*nbr)
      $     ,iord(0:nbr)
       external numberQCDcharged
-      if (numberQCDcharged(cij,nbr,cluster_pdg,iord).eq.2)
+      if (numberQCDcharged(iclus,nbr,cluster_pdg,iord).eq.2)
      $     then
          QCDchangeline=.true.
       else
@@ -1093,13 +1150,13 @@ c three particles are QCD charged.
       end
 
       
-      logical function QCDvertex(cij,nbr,cluster_pdg,iord)
+      logical function QCDvertex(iclus,nbr,cluster_pdg,iord)
 c Checks if all three particles involved are QCD particles.
       implicit none
-      integer numberQCDcharged,cij,nbr,cluster_pdg(0:2,0:2*nbr)
+      integer numberQCDcharged,iclus,nbr,cluster_pdg(0:2,0:2*nbr)
      $     ,iord(0:nbr)
       external numberQCDcharged
-      if (numberQCDcharged(cij,nbr,cluster_pdg,iord).eq.3)
+      if (numberQCDcharged(iclus,nbr,cluster_pdg,iord).eq.3)
      $     then
          QCDvertex=.true.
       else
@@ -1108,12 +1165,13 @@ c Checks if all three particles involved are QCD particles.
       end
 
       
-      logical function startQCDvertex(cij,nbr,cluster_pdg,iord)
+      logical function startQCDvertex(iclus,first,cij,nbr,cluster_pdg
+     $     ,iord)
 c Checks if cluster is associated with a valid starting vertex. For
 c this, the cluster must be associated with an IR divergence (if there
 c would be no cuts on the clustered partons). Hence, this cluster must
 c have 2 external particles with
-c     1. A final state gluon, and/or,
+c     1. At least one final state gluon, and/or,
 c     2. A final state massless quark with an initial state gluon or
 c        quark (with same flavour), and/or,
 c     3. A final state q-qbar pair of massless quarks of the same
@@ -1124,51 +1182,80 @@ c***  emission of a quark line might not render the latter too hard to
 c***  be considered as a parton coming from the starting vertex. We do
 c***  not consider this currently
       implicit none
-      include 'cuts.inc'        ! includes maxjetflavor
-      integer cij,imo,da1,da2,nbr,cluster_pdg(0:2,0:2*nbr),iord(0:nbr)
-      double precision get_mass_from_id
-      external get_mass_from_id
+      integer iclus,cij,imo,da1,da2,nbr,cluster_pdg(0:2,0:2*nbr)
+     $     ,iord(0:nbr),first,pc
+      logical final_state,IR_cluster
+      external IR_cluster
       startQCDvertex=.false.
-      if (popcnt(cij).gt.2) then
+      pc=popcnt(cij)
+      if (pc.gt.3) then
 c The number of non-zero bits in cij corresponds to the total number of
 c external particles clustered into the cij cluster. We need to have
 c exactly 2 since we need to have the two daughters to be external
 c particles for a valid starting QCD vertex.
          return
-      elseif (popcnt(cij).lt.2) then
+      elseif (pc.eq.3) then
+c Special case for real-emission FxFx, where we skipped the first
+c clustering that was a startQCDvertex. Hence, we can have 3 particles
+c clustered. Explicitly check that the first cluster is contained in the
+c current cluster
+         if (iand(cij,first).ne.first) return
+      elseif (pc.lt.2) then
          write (*,*) 'ERROR less than two external particles'/
      $        /' involved in the cluster',cij,popcnt(cij)
          stop 1
       endif
-      imo=cluster_pdg(0,iord(cij))
-      da1=cluster_pdg(1,iord(cij))
-      da2=cluster_pdg(2,iord(cij))
-      if (.not.(btest(cij,0) .or. btest(cij,1))) then ! final state clustering
+      imo=cluster_pdg(0,iord(iclus))
+      da1=cluster_pdg(1,iord(iclus))
+      da2=cluster_pdg(2,iord(iclus))
+      if (.not.(btest(cij,0) .or. btest(cij,1))) then
+         final_state=.true.
+      else
+         final_state=.false.
+      endif
+      startQCDvertex=IR_cluster(imo,da1,da2,final_state)
+      return
+      end
+
+      logical function IR_cluster(imo,da1,da2,final_state)
+c Checks if the branching imo->da1+da2 might contain an IR singularity:
+c     1. At least one final state gluon, and/or,
+c     2. A final state massless quark with an initial state gluon or
+c        quark (with same flavour), and/or,
+c     3. A final state q-qbar pair of massless quarks of the same
+c        flavour
+      implicit none
+      include 'cuts.inc'        ! includes maxjetflavor
+      integer imo,da1,da2
+      logical final_state
+      double precision get_mass_from_id
+      external get_mass_from_id
+      IR_cluster=.false.
+      if (final_state) then ! final state clustering
          if ( (da1.eq.21 .and. da2.eq.imo) .or.
      &        (da2.eq.21 .and. da1.eq.imo)) then ! X->X+g
-            startQCDvertex=.true.
+            IR_cluster=.true.
             return
          elseif (abs(da1).le.maxjetflavor .and. da1+da2.eq.0 .and.
      &           get_mass_from_id(imo).eq.0d0) then ! X->qqbar (with X massless)
-            startQCDvertex=.true.
+            IR_cluster=.true.
             return
          endif
       else ! initial state clustering. 'da1' is always the initial
            ! state; 'da2' is the final state:  da1 -> imo + da2
          if (da2.eq.21 .and. abs(da1).eq.abs(imo)) then ! X->X+g
-            startQCDvertex=.true.
+            IR_cluster=.true.
             return
          elseif(abs(da2).le.maxjetflavor .and.
      &       ((da1.eq.21  .and. abs(imo).eq.abs(da2)) .or. ! g->q+qbar
      &        (da1.eq.da2 .and. get_mass_from_id(imo).eq.0d0))) then ! q->X+q (with X massless)
-            startQCDvertex=.true.
+            IR_cluster=.true.
             return
          endif
       endif
-      return
       end
-
-
+      
+      
 CCCCCCCCCCCCCCC -- SUDAKOV FUNCTIONS -- CCCCCCCCCCCCCCCC
 
       subroutine QCDsudakov(q0,q2,q1,next,type,mass,QCDsudakov_exp
