@@ -69,7 +69,7 @@ c plot_wgts
 c update maximum
          max_wgt=n_wgt
       endif
-c --- increase size of max_iproc ---
+c --- increase size of max_contr ---
       if (n_contr.gt.max_contr) then
 c H_event
          allocate(ltemp1(n_contr))

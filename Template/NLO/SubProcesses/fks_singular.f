@@ -1612,7 +1612,7 @@ c or to fill histograms.
       include 'mint.inc'
       include 'FKSParams.inc'
       integer orders(nsplitorders)
-      integer i,j,k,iamp,i_add
+      integer i,j,k,iamp
       logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
      $     ,wgt_wo_pdf,conv
@@ -1650,10 +1650,7 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
 c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and parton_pdg_uborn
          call set_pdg_codes(iproc,pd,nFKSprocess,i)
          if (separate_flavour_configs .and. ipr(i).eq.0) then
-            call separate_flavour_config(i,i_add)
-            icontr=icontr+i_add
-            call weight_lines_allocated(nexternal,icontr,max_wgt
-     $           ,max_iproc)
+            call separate_flavour_config(i) ! this increases icontr
          endif
          if (separate_flavour_configs .and. ipr(i).ne.0) then
             if (nincoming.eq.2) then
@@ -1807,7 +1804,7 @@ c update the event weight to be written in the file
       end
       
 
-      subroutine separate_flavour_config(ict,i_add)
+      subroutine separate_flavour_config(ict)
       use weight_lines
       implicit none
       include 'nexternal.inc'
@@ -1815,10 +1812,11 @@ c update the event weight to be written in the file
       common /c_fnlo_nlops/fixed_order,nlo_ps
       integer ict,i_add,i,j,k,ict_new,n
       if ((.not.fixed_order).or.nlo_ps .or. niproc(ict).eq.1) then
-         i_add=0
          return
       endif
       i_add=niproc(ict)-1
+      call weight_lines_allocated(nexternal,icontr+i_add,max_wgt
+     $     ,max_iproc)
       do i=1,niproc(ict)
          if (i.eq.1) then
             niproc(ict)=1
@@ -1858,6 +1856,7 @@ c update the event weight to be written in the file
          niproc(ict_new)=1
          parton_iproc(1,ict_new)=parton_iproc(i,ict)
       enddo
+      icontr=icontr+i_add
       return
       end
 
