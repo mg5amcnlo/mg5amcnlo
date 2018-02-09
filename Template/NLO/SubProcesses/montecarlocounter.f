@@ -1254,6 +1254,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer spinup_local(nexternal)
       integer istup_local(nexternal)
       double precision wgt_sudakov
+      double precision scales(0:999)
 
 C     To access Pythia8 control variables
       include 'pythia8_control.inc'
@@ -1438,13 +1439,19 @@ c     Calculate suppression factor for H-events.
       call dire_setevent()
       call dire_next()
       call dire_get_mergingweight(wgt_sudakov)
+      call dire_get_sudakov_stopping_scales(scales)
 
+      do i=0,999
+        write(*,*) scales(i)
+      enddo
+
+c
 c      write(*,*) wgt_sudakov
 c      write(*,*)
-
+c
       probne = wgt_sudakov
 
-c      call abort
+C      call abort
 
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne

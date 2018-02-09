@@ -474,6 +474,8 @@ extern "C" {
     pythia4dire.readString("merging:applyveto               = off");
     pythia4dire.readString("Merging:useShowerPlugin         = on");
     pythia4dire.readString("PartonLevel:MPI                 = off");
+    pythia4dire.readString("Print:quiet = on");
+    pythia4dire.readString("Merging:nRequested = 0");
 
     pythia4dire.setLHAupPtr(&lhareader4dire);
     dire.initSettings(pythia4dire);
@@ -549,6 +551,14 @@ extern "C" {
   // a function to close everything
   void dire_stat_() {
     pythia4dire.stat();
+  }
+
+  void dire_get_sudakov_stopping_scales_( double scales [1000] ) {
+    vector<double> sca(mergingHooks->stoppingScales());
+    for (int i=0; i < sca.size(); ++i)
+      scales[i] = sca[i];
+    for (int i=sca.size(); i < 1000; ++i)
+      scales[i] = -1.0;
   }
 
 }

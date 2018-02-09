@@ -1264,6 +1264,11 @@ void MyMergingHooks::init(){
 
   isInit = isStored = false;
 
+stoppingScalesSave.push_back(-1.0);
+stoppingScalesSave.push_back(1.0);
+stoppingScalesSave.push_back(2.0);
+stoppingScalesSave.push_back(3.0);
+
   // Save pointers
   showers               = 0;
 
@@ -1974,7 +1979,8 @@ int MyMergingHooks::getNumberOfClusteringSteps(const Event& event,
 
   nsteps =  nFinalPartons     + nFinalLeptons     + nFinalBosons
          - (nHardOutPartons() + nHardOutLeptons() + nHardOutBosons());
-  //nRequestedSave = nsteps;
+
+  //if ( settingsPtr->flag("Dire:doMcAtNloDelta") ) nRequestedSave = nsteps;
 
   // For inclusive handling, the number of reclustering steps
   // can be different within a single sample.

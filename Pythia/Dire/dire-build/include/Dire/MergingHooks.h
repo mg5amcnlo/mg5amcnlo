@@ -125,6 +125,14 @@ public:
   bool doMOPSSave;
   bool doMOPS() { return doMOPSSave; }
 
+//  void stoppingScales(int length, double* scales) {
+//    for (int i=0; i < length; ++i)
+//      scales[i] = stoppingScalesSave[i];
+//  }
+
+  vector<double> stoppingScales() { return stoppingScalesSave; }
+
+
 protected:
 
   //----------------------------------------------------------------------//
@@ -217,6 +225,10 @@ protected:
   Event inputEventStore;
   vector< pair<int,int> > resonancesStore;
   HardProcess hardProcessStore;
+
+//  double stoppingScalesSave [1000];
+  vector<double> stoppingScalesSave;
+
 
 };
 

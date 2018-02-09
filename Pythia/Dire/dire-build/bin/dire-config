@@ -18,9 +18,9 @@
 #     CFG_FILE: The Makefile configuration file.
 #     USAGE:    Text printed when the --help option is passed.
 ################################################################################
-DIRE_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-src/../dire-build/share/Dire/main/Makefile.inc
+DIRE_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build/share/Dire/main/Makefile.inc
 
-PYTHIA_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Dire/dire-src/../../Pythia/pythia-src/Makefile.inc
+PYTHIA_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/Makefile.inc
 
 ################################################################################
 # Helper function to check if libraries exist.

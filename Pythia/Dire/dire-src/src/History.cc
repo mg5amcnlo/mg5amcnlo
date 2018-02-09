@@ -1037,6 +1037,8 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
   AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN,
   int depth) {
 
+//cout << __PRETTY_FUNCTION__ << endl;
+
   // Read alpha_S in ME calculation and maximal scale (eCM)
   double asME     = infoPtr->alphaS();
   double aemME    = infoPtr->alphaEM();
@@ -1054,6 +1056,8 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
 
   double nSteps = mergingHooksPtr->getNumberOfClusteringSteps(state);
 
+//state.list();
+
   // Do trial shower, calculation of alpha_S ratios, PDF ratios
   double wt = 1.;
   if (depth > 0) {
@@ -1066,6 +1070,25 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
 //    if (wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
 //                             selected->clusterIn.pT(), nSteps-1, nSteps);
   }
+
+
+  cout << "No-emission probability="
+  << scientific << setprecision(5) << setw(14) << wt
+  << " at pT="
+  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
+  << endl;
+
+  if (wt > 1. || wt < 0.)
+  cout << "Warning: Unusual no-emission probability="
+  << scientific << setprecision(5) << setw(14) << wt
+  << " at pT="
+  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
+  << endl;
+
+//cout << __PRETTY_FUNCTION__ << wt << endl;
+//cout << depth << " " << nSteps-1 << " " << nSteps << " " << maxScale << endl;
+
+//abort();
 
   return wt;
 
@@ -2470,6 +2493,8 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
 double MyHistory::weightTreeEmissions( PartonLevel* trial, int type,
   int njetMin, int njetMax, double maxscale ) {
 
+//cout << __PRETTY_FUNCTION__ << maxscale << endl;
+
   // Use correct scale
   double newScale = scale;
   // For ME state, just multiply by PDF ratios
@@ -2483,6 +2508,9 @@ double MyHistory::weightTreeEmissions( PartonLevel* trial, int type,
   if ( w < 1e-12 ) return 0.0;
   // If this node has too many jets, no not calculate no-emission probability.
   int njetNow = mergingHooksPtr->getNumberOfClusteringSteps( state) ;
+
+//cout << __PRETTY_FUNCTION__ << njetNow << " " << njetMax << endl;
+
   if (njetNow >= njetMax) return 1.0;
   if (njetNow < njetMin ) w *= 1.0;
   // Do trial shower on current state, return zero if not successful
@@ -3000,6 +3028,9 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
   while ( true ) {
 
+//cout << "enter trial shower"  << endl;
+//process.list();
+
     // Reset trialShower object
     trial->resetTrial();
     // Construct event to be showered
@@ -3066,6 +3097,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     double enhancement = 1.; 
     if ( pTtrial > minScale) enhancement
       = psweights->getTrialEnhancement( pow2(pTtrial));
+
+//cout << "start at pt=" << startingScale << "\t\t finish at pt=" << minScale << "\t\t emission at pt=" << pTtrial << " with weights=" << wtShower.first << " " << wtShower.second << " boost=" << enhancement << endl;
 
     psweights->reset();
     psweights->clearTrialEnhancements();

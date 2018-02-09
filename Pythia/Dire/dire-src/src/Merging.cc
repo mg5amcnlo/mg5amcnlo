@@ -194,6 +194,7 @@ int MyMerging::mergeProcess(Event& process){
       nPartons -= 2;
 
     // Set number of requested partons.
+  if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
     settingsPtr->mode("Merging:nRequested", nPartons);
 
     mergingHooksPtr->hasJetMaxLocal  = false;
@@ -1462,6 +1463,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     if (allowReject) return -1;
     //return -1;
   }
+
+//cout << nRequested << " " << nSteps << endl;
 
   // Potentially recluster real emission jets for powheg input containing
   // "too many" jets, i.e. real-emission kinematics.

@@ -16,7 +16,7 @@
 #     CFG_FILE: The Makefile configuration file.
 #     USAGE:    Text printed when the --help option is passed.
 ################################################################################
-CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC.bak2/Pythia/Pythia/pythia-build/share/Pythia8/examples/Makefile.inc
+CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/share/Pythia8/examples/Makefile.inc
 read -d "" USAGE << "BLOCKTEXT"
 Usage: ./pythia8-config [OPTIONS]
 
@@ -109,7 +109,7 @@ for VAR in "$@"; do
     elif [ "$VAR" = "LDFLAGS" ]; then 
 	OUT="$OUT -L$PREFIX_LIB -lpythia8"
 	if [ "$GZIP_USE" = "true" ]; then 
-	    OUT="$OUT -L$BOOST_LIB -lboost_iostreams -L$GZIP_LIB -lz"; fi
+	    OUT="$OUT -L$GZIP_LIB -lz"; fi
     # Package arguments.
     elif [ "$VAR" = "FASTJET3" ]; then
 	OUT="$OUT -I$FASTJET3_INCLUDE -L$FASTJET3_LIB -lfastjet"
