@@ -4918,7 +4918,7 @@ R2_GTT2Cps = Coupling(name = 'R2_GTT2Cps',
                      value = '1./16.*((1+lhv)/(2*sw**2)*SCKM32+1.0/(4.0*MW**2*sw**2)*SCKM32*MS**2)*(complex(0,1)*R2GQQ2)',
                      order = {'QED':2,'QCD':1})
 
-R2_GTT2Cms = Coupling(name = 'R2_GCC2Cms',
+R2_GTT2Cms = Coupling(name = 'R2_GTT2Cms',
                      value = '1./16.*(MT**2/(4*sw**2*MW**2)*SCKM32)*(complex(0,1)*R2GQQ2)',
                      order = {'QED':2,'QCD':1})
 

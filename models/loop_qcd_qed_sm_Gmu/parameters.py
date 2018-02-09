@@ -360,7 +360,7 @@ GfRedefinitionChoice = Parameter(name = 'GfRedefinitionChoice',
                                  # A value equal to 1.0 means using an absolute value to make \alpha real.
                                  # A value equal to -1.0 means using re(m_x^2) (m_x being complex) in the gauge relation defining \alpha.
                                  # A value in between [-1.0,1.0] interpolates between the two behavior in a linear way
-                                 value = '1.0',
+                                 value = 1.0,
                                  texname = '\text{Gf\_redefinition\_choice}',
                                  lhablock = 'TECHNICAL',
                                  lhacode = [ 4 ])
