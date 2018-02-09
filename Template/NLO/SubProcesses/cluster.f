@@ -1248,7 +1248,7 @@ c        flavour
             return
          elseif(abs(da2).le.maxjetflavor .and.
      &       ((da1.eq.21  .and. abs(imo).eq.abs(da2)) .or. ! g->q+qbar
-     &        (da1.eq.da2 .and. get_mass_from_id(imo).eq.0d0))) then ! q->X+q (with X massless)
+     &        (abs(da1).eq.abs(da2) .and. get_mass_from_id(imo).eq.0d0))) then ! q->X+q (with X massless)
             IR_cluster=.true.
             return
          endif
