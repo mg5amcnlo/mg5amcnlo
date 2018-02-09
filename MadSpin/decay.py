@@ -2746,6 +2746,8 @@ class decay_all_events(object):
             decay_text = ', '.join(decay_text)
             commandline = ''
             for proc in processes:
+                if not proc.strip().startswith(('add','generate')):
+                    proc = 'add process %s' % proc
                 commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
                 
             commandline = commandline.replace('add process', 'generate',1)
@@ -2847,7 +2849,10 @@ class decay_all_events(object):
             #catch line like "define" where no decay need to be added
             if not new_proc.strip():
                 continue
-            if not new_proc.startswith(('add', 'generate')):
+            if new_proc.startswith('p '):
+                new_proc = 'add process %s' % new_proc
+                logger.critical("wrongly formatted input for MadSpin. Please report this!")
+            elif not new_proc.startswith(('add', 'generate')):
                 commands.append(new_proc)
                 continue
             

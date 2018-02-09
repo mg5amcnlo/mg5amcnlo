@@ -2,6 +2,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.6.2 ()
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
+      OM: add the value of all the widths in Auto-width in the scan summary file
+      OM: fix crash in 1>N reweighting
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
       RF: For the HwU histograms, if no gnuplot installation is found, write the gnuplot scripts in v5
           format (instead of the very old v4 format).

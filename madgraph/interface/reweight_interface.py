@@ -1741,11 +1741,12 @@ class ReweightInterface(extended_cmd.Cmd):
 
             for i,pdg in enumerate(all_pdgs):
                 if self.is_decay:
-                    incoming = pdg[0]
+                    incoming = [pdg[0]]
                     outgoing = pdg[1:]
                 else:
                     incoming = pdg[0:2]
                     outgoing = pdg[2:]
+                misc.sprint(incoming, outgoing)
                 order = (list(incoming), list(outgoing))
                 incoming.sort()
                 outgoing.sort()
