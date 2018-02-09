@@ -53,6 +53,10 @@ grreglog = Function(name = 'grreglog',
                 arguments = ('logswitch','z1','z2'),
                 expression = '(cmath.log(z1) if (z1.real>=0.0 or z2.real>=0.0 or z1.imag*z2.imag>=0.0) else ( cmath.log(z1) - logswitch*2*cmath.pi*1j if (z1.imag > 0.0) else cmath.log(z1) + logswitch*2*cmath.pi*1j ) )')
 
+regsqrt = Function(name = 'regsqrt',
+                   arguments = ('z',),
+                   expression = 'cmath.sqrt(z)')
+
 arg = Function(name = 'arg',
                 arguments = ('z',),
                 expression = '(0.0 if abs(z)==0.0 else (cmath.log(z/abs(z))/1j).real)')

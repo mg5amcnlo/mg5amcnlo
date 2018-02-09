@@ -67,7 +67,7 @@ class UFOExpressionParser(object):
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN', 'ATAN',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','GRREGLOG','RECMS',
-        'CRECMS','ARG'
+        'CRECMS','ARG','REGSQRT'
         )
     literals = "=+-*/(),"
 
@@ -93,6 +93,9 @@ class UFOExpressionParser(object):
         return t
     def t_REGLOG(self, t):
         r'(?<!\w)reglog(?=\()'
+        return t
+    def t_REGSQRT(self, t):
+        r'(?<!\w)regsqrt(?=\()'
         return t
     def t_REGLOGP(self, t):
         r'(?<!\w)reglogp(?=\()'
@@ -200,6 +203,7 @@ class UFOExpressionParser(object):
         ('right','REGLOGM'),
         ('right','RECMS'),
         ('right','CRECMS'),
+        ('right','REGSQRT'),
         ('right','ARG'),
         ('right','CSC'),
         ('right','SEC'),
@@ -383,6 +387,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | REGLOG group
                       | REGLOGP group
                       | REGLOGM group
+                      | REGSQRT group
                       | TAN group
                       | ATAN group'''
 
@@ -400,8 +405,9 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
         elif p[1] == 'reglogp': p[0] = 'reglogp(DCMPLX' + p[2] + ')'
         elif p[1] == 'reglogm': p[0] = 'reglogm(DCMPLX' + p[2] + ')'
+        elif p[1] == 'regsqrt': p[0] = 'regsqrt(DCMPLX' + p[2] + ')'
 
-        if p[1] in ['reglog', 'reglogp', 'reglogm']:
+        if p[1] in ['reglog', 'reglogp', 'reglogm','regsqrt']:
             self.to_define.add(p[1])
 
     def p_expression_real(self, p):
@@ -508,6 +514,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | REGLOG group
                       | REGLOGP group
                       | REGLOGM group
+                      | REGSQRT group
                       | TAN group
                       | ATAN group'''
         
@@ -525,8 +532,9 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
         elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglogm': p[0] = 'mp_reglogm(CMPLX(' + p[2] + ',KIND=16))'
+        elif p[1] == 'regsqrt': p[0] = 'mp_regsqrt(CMPLX(' + p[2] + ',KIND=16))'
 
-        if p[1] in ['reglog', 'reglogp', 'reglogm']:
+        if p[1] in ['reglog', 'reglogp', 'reglogm', 'regsqrt']:
             self.to_define.add(p[1])
             
     def p_expression_real(self, p):
@@ -646,7 +654,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group 
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | REGSQRT group'''
         if p[1] == 'csc': p[0] = '1./cos' + p[2]
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -661,6 +670,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
+        elif p[1] == 'regsqrt': p[0] = 'regsqrt' + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
@@ -810,7 +820,8 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | REGSQRT group'''
         if p[1] == 'csc': p[0] = 'csc' + p[2]
         elif p[1] == 'sec': p[0] = 'sec' + p[2]
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
@@ -825,6 +836,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
+        elif p[1] == 'regsqrt': p[0] = 'regsqrt' + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''

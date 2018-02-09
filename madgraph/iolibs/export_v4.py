@@ -6188,7 +6188,7 @@ class UFO_model_to_mg4(object):
                 if fct.name not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "grreglog",
-                                    "recms", "crecms","arg", "cot"]:
+                                    "recms", "crecms","arg", "cot","regsqrt"]:
                     additional_fct.append(fct.name)
 
         
@@ -6198,6 +6198,7 @@ class UFO_model_to_mg4(object):
           double complex reglog
           double complex reglogp
           double complex reglogm
+          double complex regsqrt
           double complex grreglog
           double complex recms
           double complex crecms
@@ -6212,6 +6213,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_reglog
           %(complex_mp_format)s mp_reglogp
           %(complex_mp_format)s mp_reglogm
+          %(complex_mp_format)s mp_regsqrt
           %(complex_mp_format)s mp_grreglog
           %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_crecms
@@ -6272,11 +6274,19 @@ class UFO_model_to_mg4(object):
           endif
           end
           
-          double complex function reglog(arg)
+          double complex function reglog(arg_in)
           implicit none
           double complex TWOPII
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex arg_in
           double complex arg
+          arg=arg_in
+          if(dabs(dimag(arg)).eq.0.0d0)then
+             arg=dcmplx(dble(arg),0.0d0)
+          endif
+          if(dabs(dble(arg)).eq.0.0d0)then
+             arg=dcmplx(0.0d0,dimag(arg))
+          endif
           if(arg.eq.(0.0d0,0.0d0)) then
              reglog=(0.0d0,0.0d0)
           else
@@ -6284,11 +6294,19 @@ class UFO_model_to_mg4(object):
           endif
           end
 
-          double complex function reglogp(arg)
+          double complex function reglogp(arg_in)
           implicit none
           double complex TWOPII
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex arg_in
           double complex arg
+          arg=arg_in
+          if(dabs(dimag(arg)).eq.0.0d0)then
+             arg=dcmplx(dble(arg),0.0d0)
+          endif
+          if(dabs(dble(arg)).eq.0.0d0)then
+             arg=dcmplx(0.0d0,dimag(arg))
+          endif
           if(arg.eq.(0.0d0,0.0d0))then
              reglogp=(0.0d0,0.0d0)
           else
@@ -6300,11 +6318,19 @@ class UFO_model_to_mg4(object):
           endif
           end
 
-          double complex function reglogm(arg)
+          double complex function reglogm(arg_in)
           implicit none
           double complex TWOPII
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex arg_in
           double complex arg
+          arg=arg_in
+          if(dabs(dimag(arg)).eq.0.0d0)then
+             arg=dcmplx(dble(arg),0.0d0)
+          endif
+          if(dabs(dble(arg)).eq.0.0d0)then
+             arg=dcmplx(0.0d0,dimag(arg))
+          endif
           if(arg.eq.(0.0d0,0.0d0))then
              reglogm=(0.0d0,0.0d0)
           else
@@ -6316,14 +6342,43 @@ class UFO_model_to_mg4(object):
           endif
           end
 
-          double complex function grreglog(logsw,expr1,expr2)
+          double complex function regsqrt(arg_in)
+          implicit none
+          double complex arg_in
+          double complex arg
+          arg=arg_in
+          if(dabs(dimag(arg)).eq.0.0d0)then
+             arg=dcmplx(dble(arg),0.0d0)
+          endif
+          if(dabs(dble(arg)).eq.0.0d0)then
+             arg=dcmplx(0.0d0,dimag(arg))
+          endif
+          regsqrt=sqrt(arg)
+          end
+
+          double complex function grreglog(logsw,expr1_in,expr2_in)
           implicit none
           double complex TWOPII
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex expr1_in,expr2_in
           double complex expr1,expr2
           double precision logsw
           double precision imagexpr
           logical firstsheet
+          expr1=expr1_in
+          expr2=expr2_in
+          if(dabs(dimag(expr1)).eq.0.0d0)then
+             expr1=dcmplx(dble(expr1),0.0d0)
+          endif
+          if(dabs(dble(expr1)).eq.0.0d0)then
+             expr1=dcmplx(0.0d0,dimag(expr1))
+          endif
+          if(dabs(dimag(expr2)).eq.0.0d0)then
+             expr2=dcmplx(dble(expr2),0.0d0)
+          endif
+          if(dabs(dble(expr2)).eq.0.0d0)then
+             expr2=dcmplx(0.0d0,dimag(expr2))
+          endif
           if(expr1.eq.(0.0d0,0.0d0))then
              grreglog=(0.0d0,0.0d0)
           else
@@ -6400,11 +6455,19 @@ class UFO_model_to_mg4(object):
               endif
               end
               
-              %(complex_mp_format)s function mp_reglog(arg)
+              %(complex_mp_format)s function mp_reglog(arg_in)
               implicit none
               %(complex_mp_format)s TWOPII
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s arg_in
               %(complex_mp_format)s arg
+              arg=arg_in
+              if(abs(imagpart(arg)).eq.0.0e0_16)then
+                 arg=cmplx(real(arg,kind=16),0.0e0_16)
+              endif
+              if(abs(real(arg,kind=16)).eq.0.0e0_16)then
+                 arg=cmplx(0.0e0_16,imagpart(arg))
+              endif
               if(arg.eq.(0.0e0_16,0.0e0_16)) then
                  mp_reglog=(0.0e0_16,0.0e0_16)
               else
@@ -6412,11 +6475,19 @@ class UFO_model_to_mg4(object):
               endif
               end
 
-              %(complex_mp_format)s function mp_reglogp(arg)
+              %(complex_mp_format)s function mp_reglogp(arg_in)
               implicit none
               %(complex_mp_format)s TWOPII
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s arg_in
               %(complex_mp_format)s arg
+              arg=arg_in
+              if(abs(imagpart(arg)).eq.0.0e0_16)then
+                 arg=cmplx(real(arg,kind=16),0.0e0_16)
+              endif
+              if(abs(real(arg,kind=16)).eq.0.0e0_16)then
+                 arg=cmplx(0.0e0_16,imagpart(arg))
+              endif
               if(arg.eq.(0.0e0_16,0.0e0_16))then
                  mp_reglogp=(0.0e0_16,0.0e0_16)
               else
@@ -6428,11 +6499,19 @@ class UFO_model_to_mg4(object):
               endif
               end
               
-              %(complex_mp_format)s function mp_reglogm(arg)
+              %(complex_mp_format)s function mp_reglogm(arg_in)
               implicit none
               %(complex_mp_format)s TWOPII
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s arg_in
               %(complex_mp_format)s arg
+              arg=arg_in
+              if(abs(imagpart(arg)).eq.0.0e0_16)then
+                 arg=cmplx(real(arg,kind=16),0.0e0_16)
+              endif
+              if(abs(real(arg,kind=16)).eq.0.0e0_16)then
+                 arg=cmplx(0.0e0_16,imagpart(arg))
+              endif
               if(arg.eq.(0.0e0_16,0.0e0_16))then
                  mp_reglogm=(0.0e0_16,0.0e0_16)
               else
@@ -6444,14 +6523,43 @@ class UFO_model_to_mg4(object):
               endif
               end
 
-              %(complex_mp_format)s function mp_grreglog(logsw,expr1,expr2)
+              %(complex_mp_format)s function mp_regsqrt(arg_in)
+              implicit none
+              %(complex_mp_format)s arg_in
+              %(complex_mp_format)s arg
+              arg=arg_in
+              if(abs(imagpart(arg)).eq.0.0e0_16)then
+                 arg=cmplx(real(arg,kind=16),0.0e0_16)
+              endif
+              if(abs(real(arg,kind=16)).eq.0.0e0_16)then
+                 arg=cmplx(0.0e0_16,imagpart(arg))
+              endif
+              mp_regsqrt=sqrt(arg)
+              end
+
+              %(complex_mp_format)s function mp_grreglog(logsw,expr1_in,expr2_in)
               implicit none
               %(complex_mp_format)s TWOPII
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s expr1_in,expr2_in
               %(complex_mp_format)s expr1,expr2
               %(real_mp_format)s logsw
               %(real_mp_format)s imagexpr
               logical firstsheet
+              expr1=expr1_in
+              expr2=expr2_in
+              if(abs(imagpart(expr1)).eq.0.0e0_16)then
+                 expr1=cmplx(real(expr1,kind=16),0.0e0_16)
+              endif
+              if(abs(real(expr1,kind=16)).eq.0.0e0_16)then
+                 expr1=cmplx(0.0e0_16,imagpart(expr1))
+              endif
+              if(abs(imagpart(expr2)).eq.0.0e0_16)then
+                 expr2=cmplx(real(expr2,kind=16),0.0e0_16)
+              endif
+              if(abs(real(expr2,kind=16)).eq.0.0e0_16)then
+                 expr2=cmplx(0.0e0_16,imagpart(expr2))
+              endif
               if(expr1.eq.(0.0e0_16,0.0e0_16))then
                  mp_grreglog=(0.0e0_16,0.0e0_16)
               else
@@ -6499,7 +6607,7 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
-                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "grreglog","recms","crecms","arg"]:
+                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "grreglog","recms","crecms","arg","regsqrt"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -6535,7 +6643,7 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
-                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "grreglog","recms","crecms","arg"]:
+                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "grreglog","recms","crecms","arg","regsqrt"]:
                         ufo_fct_template = """
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none

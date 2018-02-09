@@ -4,7 +4,7 @@
 
 from object_library import all_couplings, Coupling
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog, reglogp, reglogm, recms
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog, reglogp, reglogm, recms, crecms, regsqrt
 
 ################
 # R2 couplings #
