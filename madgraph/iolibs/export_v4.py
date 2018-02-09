@@ -6672,8 +6672,6 @@ class UFO_model_to_mg4(object):
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
             parameter"""
-            print parameter.name
-            print parameter.value
             template = \
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
                 % {'name': parameter.name,
