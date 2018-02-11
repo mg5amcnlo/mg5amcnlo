@@ -105,6 +105,21 @@ public:
     return;
   }
 
+  void clearInfos() {
+    stoppingScalesSave.clear();
+    startingScalesSave.clear();
+  }
+  void storeInfos();
+
+  vector<double> getStoppingScales() { 
+    return stoppingScalesSave;
+  }
+  vector<double> getStartingScales() { 
+    return startingScalesSave;
+  }
+  vector<double> stoppingScalesSave;
+  vector<double> startingScalesSave;
+
 protected:
 
   //----------------------------------------------------------------------//

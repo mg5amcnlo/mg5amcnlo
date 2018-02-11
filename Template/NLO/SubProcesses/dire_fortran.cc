@@ -440,10 +440,16 @@ extern "C" {
       pythia4dire.readString("Beams:frameType=5");
       pythia4dire.readString("Check:epTolErr=1.0000000000e-02");
       cmdFilePath = "blub.cmnd";
-      system(("touch "+cmdFilePath).c_str());
-      system((" echo ShowerPDF:usePDFalphas    = off >> "+cmdFilePath).c_str());
-      system((" echo ShowerPDF:usePDFmasses    = off >> "+cmdFilePath).c_str());
-      system((" echo DireSpace:ForceMassiveMap = on >> "+cmdFilePath).c_str());
+      int syscall = system(("touch "+cmdFilePath).c_str());
+      if (syscall == -1) cout << "Warning: Could not use system call in file"
+        << __FILE__ << " at line " << __LINE__ << endl;
+      syscall = system((" echo ShowerPDF:usePDFalphas    = off >> "+cmdFilePath).c_str());
+      if (syscall == -1) cout << "Warning: Could not use system call in file"
+        << __FILE__ << " at line " << __LINE__ << endl;
+      syscall = system((" echo ShowerPDF:usePDFmasses    = off >> "+cmdFilePath).c_str());
+      syscall = system((" echo DireSpace:ForceMassiveMap = on >> "+cmdFilePath).c_str());
+      if (syscall == -1) cout << "Warning: Could not use system call in file"
+        << __FILE__ << " at line " << __LINE__ << endl;
     }
     pythia4dire.setLHAupPtr(& lhareader4dire);
     dire.init(pythia4dire, cmdFilePath.c_str());
@@ -495,21 +501,42 @@ extern "C" {
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
 
-    pythia4dire.readString("Enhance:fsr_qcd_1->1&21_CS = 5.0");
-    pythia4dire.readString("Enhance:fsr_qcd_1->21&1_CS = 5.0");
-    pythia4dire.readString("Enhance:fsr_qcd_21->21&21a_CS = 5.0");
-    pythia4dire.readString("Enhance:fsr_qcd_21->21&21b_CS = 5.0");
-    pythia4dire.readString("Enhance:fsr_qcd_21->1&1a_CS = 5.0");
-    pythia4dire.readString("Enhance:fsr_qcd_21->1&1b_CS = 5.0");
+//    double boost = 10000.;
+    double boost = 1.5;
+    pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_1->21&1_CS",    boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_21->21&21a_CS", boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_21->21&21b_CS", boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_21->1&1a_CS",   boost);
+    pythia4dire.settings.parm("Enhance:fsr_qcd_21->1&1b_CS",   boost);
+    pythia4dire.settings.parm("Enhance:isr_qcd_1->1&21_CS",    boost);
+    pythia4dire.settings.parm("Enhance:isr_qcd_21->1&1_CS",    boost);
+    pythia4dire.settings.parm("Enhance:isr_qcd_21->21&21a_CS", boost);
+    pythia4dire.settings.parm("Enhance:isr_qcd_21->21&21b_CS", boost);
+    pythia4dire.settings.parm("Enhance:isr_qcd_1->21&1_CS",    boost);
+
     pythia4dire.readString("Enhance:fsr_qcd_1->2&1&2_CS = 1.0");
     pythia4dire.readString("Enhance:fsr_qcd_1->1&1&1_CS = 1.0");
-    pythia4dire.readString("Enhance:isr_qcd_1->1&21_CS = 5.0");
-    pythia4dire.readString("Enhance:isr_qcd_21->1&1_CS = 5.0");
-    pythia4dire.readString("Enhance:isr_qcd_21->21&21a_CS = 5.0");
-    pythia4dire.readString("Enhance:isr_qcd_21->21&21b_CS = 5.0");
-    pythia4dire.readString("Enhance:isr_qcd_1->21&1_CS = 5.0");
     pythia4dire.readString("Enhance:isr_qcd_1->2&1&2_CS = 1.0");
     pythia4dire.readString("Enhance:isr_qcd_1->1&1&1_CS = 1.0");
+
+
+    /*pythia4dire.readString("Enhance:fsr_qcd_1->1&21_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->21&1_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->21&21a_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->21&21b_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->1&1a_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_21->1&1b_CS = 10.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->2&1&2_CS = 1.0");
+    pythia4dire.readString("Enhance:fsr_qcd_1->1&1&1_CS = 1.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->1&21_CS = 10.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->1&1_CS = 10.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->21&21a_CS = 10.0");
+    pythia4dire.readString("Enhance:isr_qcd_21->21&21b_CS = 10.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->21&1_CS = 10.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->2&1&2_CS = 1.0");
+    pythia4dire.readString("Enhance:isr_qcd_1->1&1&1_CS = 1.0");*/
 
     dire.init(pythia4dire,"", -999, &printFirstEmission4dire);
 
@@ -554,11 +581,13 @@ extern "C" {
   }
 
   void dire_get_sudakov_stopping_scales_( double scales [1000] ) {
-    vector<double> sca(mergingHooks->stoppingScales());
+//    vector<double> sca(mergingHooks->stoppingScales());
+    vector<double> sca(merging->getStoppingScales());
     for (int i=0; i < sca.size(); ++i)
       scales[i] = sca[i];
     for (int i=sca.size(); i < 1000; ++i)
       scales[i] = -1.0;
+
   }
 
 }

@@ -102,9 +102,49 @@ void MyMerging::statistics() {
 
 //--------------------------------------------------------------------------
 
+void MyMerging::storeInfos() {
+
+  // Clear previous information.
+  clearInfos();
+
+  // Store information on every possible last clustering.
+  for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
+
+    //// Get all clustering variables.
+    //map<string,double> stateVars;
+    //int rad = myHistory->children[i]->clusterIn.radPos();
+    //int emt = myHistory->children[i]->clusterIn.emtPos();
+    //int rec = myHistory->children[i]->clusterIn.recPos();
+    //bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rad, emt, rec, "");
+    //if (isFSR)
+    //  stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rad,emt,rec,"");
+    //else
+    //  stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rad,emt,rec,"");
+    //double z = stateVars["z"];
+    //double t = stateVars["t"];
+
+cout << "Emission of " <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id() << " at pT " << myHistory->children[i]->clusterIn.pT() << endl;
+
+    // Just store pT for now.
+    stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
+  }
+
+}
+
+//--------------------------------------------------------------------------
+
 // Function to steer different merging prescriptions.
 
 int MyMerging::mergeProcess(Event& process){
+
+    // Clear all previous event-by-event information.
+    clearInfos();
+//stoppingScalesSave.clear();
+//stoppingScalesSave.push_back(-1.0);
+//stoppingScalesSave.push_back(1.0);
+//stoppingScalesSave.push_back(2.0);
+//stoppingScalesSave.push_back(3.0);
+
 
   int vetoCode = 1;
 
@@ -194,8 +234,8 @@ int MyMerging::mergeProcess(Event& process){
       nPartons -= 2;
 
     // Set number of requested partons.
-  if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
-    settingsPtr->mode("Merging:nRequested", nPartons);
+    if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
+      settingsPtr->mode("Merging:nRequested", nPartons);
 
     mergingHooksPtr->hasJetMaxLocal  = false;
     mergingHooksPtr->nJetMaxLocal
@@ -239,6 +279,9 @@ int MyMerging::mergeProcess(Event& process){
     if (returnCode == 0) mergingHooksPtr->setWeightCKKWL(0.);
 
     if (!allowReject && returnCode < 1) returnCode=1;
+
+    // Store information before leaving.
+    if (foundHistories) storeInfos();
 
     if ( settingsPtr->flag("Dire:doMOPS") ) { 
       if (returnCode < 1) mergingHooksPtr->setWeightCKKWL(0.);

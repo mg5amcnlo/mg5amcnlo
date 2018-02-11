@@ -234,9 +234,8 @@ public:
     AlphaStrong* asFSR, AlphaStrong * asISR, AlphaEM * aemFSR,
     AlphaEM * aemISR, double RN, Rndm* rndmPtr );
 
-  double weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
-    AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN,
-    int depth = -1);
+  double weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
+    AlphaStrong *, AlphaEM *, AlphaEM *, double RN, int depth = -1);
 
   // Function to check if any allowed histories were found
   bool foundAllowedHistories() {

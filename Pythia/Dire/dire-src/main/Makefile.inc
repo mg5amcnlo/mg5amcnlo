@@ -1,5 +1,5 @@
 # DIRE configuration file.
-# Generated on Thu Feb 8 20:27:42 CST 2018 with the user supplied options:
+# Generated on Fri Feb 9 18:14:14 CST 2018 with the user supplied options:
 # --prefix=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build
 # --with-pythia8=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
 # Configure string:

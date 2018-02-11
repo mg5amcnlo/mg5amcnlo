@@ -1033,15 +1033,14 @@ double MyHistory::weight_UNLOPS_CORRECTION( int order, PartonLevel* trial,
 
 //--------------------------------------------------------------------------
 
-double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
-  AlphaStrong * asISR, AlphaEM * aemFSR, AlphaEM * aemISR, double RN,
-  int depth) {
+double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
+  AlphaStrong *, AlphaEM *, AlphaEM *, double RN, int depth) {
 
 //cout << __PRETTY_FUNCTION__ << endl;
 
   // Read alpha_S in ME calculation and maximal scale (eCM)
-  double asME     = infoPtr->alphaS();
-  double aemME    = infoPtr->alphaEM();
+  //double asME     = infoPtr->alphaS();
+  //double aemME    = infoPtr->alphaEM();
   double maxScale = (foundCompletePath) ? infoPtr->eCM()
                   : mergingHooksPtr->muFinME();
   // Select a path of clusterings
@@ -1050,9 +1049,9 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong * asFSR,
   selected->setScalesInMyHistory();
 
   // Get weight.
-  double asWeight  = 1.;
-  double aemWeight = 1.;
-  double pdfWeight = 1.;
+  //double asWeight  = 1.;
+  //double aemWeight = 1.;
+  //double pdfWeight = 1.;
 
   double nSteps = mergingHooksPtr->getNumberOfClusteringSteps(state);
 
@@ -3045,6 +3044,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Get pT before reclustering
     double minScale = (minscaleIn > 0.) ? minscaleIn : scale;
 
+    //cout << "enter trial shower with ptmax=" << startingScale << " and ptmin=" << minScale << endl;
+
     mergingHooksPtr->setShowerStoppingScale(minScale);
 
     // Give up generating no-MPI probability if ISR completely dominates.
@@ -3082,6 +3083,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
     // Clear parton systems.
     trial->resetTrial();
+
+    //cout << "found trial response code=" << typeTrial << " at pt=" << pTtrial << endl;
 
     // Get enhanced trial emission weight.
     /*double pTEnhanced = (canEnhanceTrial)

@@ -1043,6 +1043,7 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
 
   debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
+  //cout << "Next ISR starting from " << pTbegAll << endl;
 
   // Current cm energy, in case it varies between events.
   sCM           = m2( beamAPtr->p(), beamBPtr->p());
@@ -2651,6 +2652,13 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
 
     // Set auxiliary weight and ensure that accept probability is positive.
     auxWeightNow = overWeightNow;
+
+    /*cout << __FILE__ << " " << __func__
+        << " " << __LINE__ << " : Splitting weight="
+        << fullWeightNow/auxWeightNow << " for splitting "
+        << enhanceOverestimateFurther(splittingNowName, idDaughter, teval) << " " 
+        << splittingNowName << " at pT2=" << tnow << " and z="
+        << znow << endl;*/
 
     if (fullWeightNow < 0.) {
       debugPtr->message(0) << __FILE__ << " " << __func__

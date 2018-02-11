@@ -1441,17 +1441,16 @@ c     Calculate suppression factor for H-events.
       call dire_get_mergingweight(wgt_sudakov)
       call dire_get_sudakov_stopping_scales(scales)
 
-      do i=0,999
+      do i=0,9
         write(*,*) scales(i)
       enddo
 
-c
-c      write(*,*) wgt_sudakov
-c      write(*,*)
-c
+      write(*,*) 'No-emission probability =', wgt_sudakov
+
       probne = wgt_sudakov
 
-C      call abort
+      if (probne .gt. 0.999999 .and. probne .lt. 1.000001) write(*,*) 'Sudakov close to one'
+      write(*,*)
 
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne

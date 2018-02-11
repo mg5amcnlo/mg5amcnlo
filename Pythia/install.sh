@@ -31,7 +31,7 @@ workd=$(pwd)
 #mv pythia8 Pythia/pythia-src
 cd Pythia/pythia-src
 
-make distclean
+#make distclean
 
 configStr="./configure"
 configStr+=" --prefix=$workd/Pythia/pythia-build"
