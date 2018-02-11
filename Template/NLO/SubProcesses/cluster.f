@@ -69,45 +69,18 @@ C given by the to_mconfigs common block.
          endif
 c Links the configurations (given in iforest) to the allowed clusterings
 c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
-         il_list=1
-         il_pdg=1
-         do i=0,iproc-1
-            if (i.eq.0) then
-               il_list=il_list+2*(nexternal-4)*mapconfig(0,i)
-               il_pdg=il_pdg+3*(1+2*(nexternal-4))*mapconfig(0,i)
-            else
-               il_list=il_list+2*(nexternal-3)*mapconfig(0,i)
-               il_pdg=il_pdg+3*(1+2*(nexternal-3))*mapconfig(0,i)
-            endif
-         enddo
          do iconf=1,mapconfig(0,iproc)
+            call set_array_indices(iproc,iconf,il_list,il_pdg)
             call iforest_to_list(next,nincoming,nbr,iforest(1,-nbr
      $           ,iconf,iproc),sprop(-nbr,iconf,iproc),tprid(-nbr,iconf
      $           ,iproc),pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
      $           ,cluster_list(il_list),cluster_pdg(il_pdg))
-            if (iproc.eq.0) then
-               il_list=il_list+2*(nexternal-4)
-               il_pdg=il_pdg+3*(1+2*(nexternal-4))
-            else
-               il_list=il_list+2*(nexternal-3)
-               il_pdg=il_pdg+3*(1+2*(nexternal-3))
-            endif
          enddo
          firsttime(iproc)=.false.
       endif
 c Cluster the event. This gives the most-likely clustering (in
 c cluster_ij) with scales (in cluster_scales)
-      il_list=1
-      il_pdg=1
-      do i=0,iproc-1
-         if (i.eq.0) then
-            il_list=il_list+2*(nexternal-4)*mapconfig(0,i)
-            il_pdg=il_pdg+3*(1+2*(nexternal-4))*mapconfig(0,i)
-         else
-            il_list=il_list+2*(nexternal-3)*mapconfig(0,i)
-            il_pdg=il_pdg+3*(1+2*(nexternal-3))*mapconfig(0,i)
-         endif
-      enddo
+      call set_array_indices(iproc,1,il_list,il_pdg)
       call cluster(next,pcl,mapconfig(0,iproc),nbr
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-nbr
      $     ,this_config,iproc),ipdg(1,iproc),pmass(-nbr,this_config
@@ -120,6 +93,33 @@ c form factor and renormalisation and factorisation scales.
       else
          skip_first=.true.
       endif
+      call set_array_indices(iproc,cluster_conf,il_list,il_pdg)
+      call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
+     $     ,cluster_list(il_list),cluster_pdg(il_pdg),cluster_scales
+     $     ,iord,sudakov,expanded_sudakov,nqcdrenscale,qcd_ren_scale
+     $     ,qcd_fac_scale)
+      return
+      end
+      
+
+      subroutine set_array_indices(iproc,iconf,il_list,il_pdg)
+c Given 'iproc' and 'iconf', returns the corresponding location in the
+c cluster_list and cluster_pdg arrays ('il_list' and 'il_pdg',
+c respectively)
+      implicit none
+      include 'nexternal.inc'
+      include 'maxconfigs.inc'
+      include 'maxparticles.inc'
+      include 'nFKSconfigs.inc'
+      integer i,iproc,iconf,il_list,il_pdg
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       il_list=1
       il_pdg=1
       do i=0,iproc-1
@@ -132,19 +132,17 @@ c form factor and renormalisation and factorisation scales.
          endif
       enddo
       if (iproc.eq.0) then
-         il_list=il_list+2*(nexternal-4)*(cluster_conf-1)
-         il_pdg=il_pdg+3*(1+2*(nexternal-4))*(cluster_conf-1)
+         il_list=il_list+2*(nexternal-4)*(iconf-1)
+         il_pdg=il_pdg+3*(1+2*(nexternal-4))*(iconf-1)
       else
-         il_list=il_list+2*(nexternal-3)*(cluster_conf-1)
-         il_pdg=il_pdg+3*(1+2*(nexternal-3))*(cluster_conf-1)
+         il_list=il_list+2*(nexternal-3)*(iconf-1)
+         il_pdg=il_pdg+3*(1+2*(nexternal-3))*(iconf-1)
       endif
-      call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
-     $     ,cluster_list(il_list),cluster_pdg(il_pdg),cluster_scales
-     $     ,iord,sudakov,expanded_sudakov,nqcdrenscale,qcd_ren_scale
-     $     ,qcd_fac_scale)
       return
       end
       
+
+
       
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
 
