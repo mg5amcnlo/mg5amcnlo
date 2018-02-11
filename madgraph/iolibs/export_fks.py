@@ -318,38 +318,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 files.cp(model.restrict_card, out_path)
 
 
-
-    #===========================================================================
-    # write_maxparticles_file
-    #===========================================================================
-    def write_maxparticles_file(self, writer, maxparticles):
-        """Write the maxparticles.inc file for MadEvent"""
-
-        lines = "integer max_particles, max_branch\n"
-        lines += "parameter (max_particles=%d) \n" % maxparticles
-        lines += "parameter (max_branch=max_particles-1)"
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
-
-    #===========================================================================
-    # write_maxconfigs_file
-    #===========================================================================
-    def write_maxconfigs_file(self, writer, maxconfigs):
-        """Write the maxconfigs.inc file for MadEvent"""
-
-        lines = "integer lmaxconfigs\n"
-        lines += "parameter (lmaxconfigs=%d)" % maxconfigs
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
-
     #===============================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===============================================================================
@@ -542,10 +510,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               matrix_element,
                               fortran_model)
 
-        filename = 'ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
+        filename = 'maxconfigs.inc'
+        self.write_maxconfigs_file(writers.FortranWriter(filename),
+                max(nconfigs,matrix_element.born_matrix_element.get_number_of_amplitudes()))
 
+        
 #write the wrappers
         filename = 'real_me_chooser.f'
         self.write_real_me_wrapper(writers.FortranWriter(filename), 
@@ -567,7 +536,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                              nexternal, ninitial)
         self.proc_characteristic['ninitial'] = ninitial
         self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
-    
+        
+        filename = 'maxparticles.inc'
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     nexternal)
+        
         filename = 'pmass.inc'
         try:
             self.write_pmass_file(writers.FortranWriter(filename),
@@ -648,13 +621,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'handling_lhe_events.f',
                      'write_event.f',
                      'fill_MC_mshell.f',
-                     'maxparticles.inc',
-                     'message.inc',
-                     'cluster.inc',
                      'cluster.f',
                      'randinit',
-                     'sudakov.inc',
-                     'maxconfigs.inc',
                      'timing_variables.inc']
 
         for file in linkfiles:
@@ -759,18 +727,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = os.path.join(self.dir_path,'Source','MODEL','get_mass_width_fcts.f')
         makeinc = os.path.join(self.dir_path,'Source','MODEL','makeinc.inc')
         self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
-
-#        # Write maxconfigs.inc based on max of ME's/subprocess groups
-
-        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
-        self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements.get_max_configs())
         
-#        # Write maxparticles.inc based on max of ME's/subprocess groups
-        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
-        self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements.get_max_particles())
-
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
         
@@ -1314,6 +1271,21 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(lines)
 
 
+    def write_maxparticles_file(self, writer, maxparticles):
+        """Write the maxparticles.inc file for MadEvent"""
+        lines = "integer max_particles, max_branch\n"
+        lines += "parameter (max_particles=%d) \n" % maxparticles
+        lines += "parameter (max_branch=max_particles-1)"
+        writer.writelines(lines)
+
+
+    def write_maxconfigs_file(self, writer, maxconfigs):
+        """Write the maxconfigs.inc file for MadEvent"""
+        lines = "integer lmaxconfigs\n"
+        lines += "parameter (lmaxconfigs=%d)" % maxconfigs
+        writer.writelines(lines)
+
+
     def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
         """writes the genps.inc file
         """
@@ -1513,10 +1485,6 @@ end
                          matrix_element.born_matrix_element,
                          fortran_model,
                             s_and_t_channels)
-    
-        filename = 'born_decayBW.inc'
-        self.write_decayBW_file(writers.FortranWriter(filename),
-                            s_and_t_channels)
 
         filename = 'born_leshouche.inc'
         nflows = self.write_leshouche_file(writers.FortranWriter(filename),
@@ -1529,15 +1497,6 @@ end
                            fortran_model,
                            ncolor_born)
     
-        filename = 'born_ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                    matrix_element.born_matrix_element.get_number_of_amplitudes())
-
-        filename = 'ncombs.inc'
-        self.write_ncombs_file(writers.FortranWriter(filename),
-                               matrix_element.born_matrix_element,
-                               fortran_model)
-
         filename = 'born_maxamps.inc'
         maxamps = len(matrix_element.get('diagrams'))
         maxflows = ncolor_born
@@ -1546,10 +1505,6 @@ end
                            maxflows,
                            max([len(matrix_element.get('processes')) for me in \
                                 matrix_element.born_matrix_element]),1)
-
-        filename = 'config_subproc_map.inc'
-        self.write_config_subproc_map_file(writers.FortranWriter(filename),
-                                           s_and_t_channels)
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -2715,33 +2670,6 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         return iconfig, mapconfigs, s_and_t_channels
 
     
-    #===============================================================================
-    # write_decayBW_file
-    #===============================================================================
-    #test written
-    def write_decayBW_file(self, writer, s_and_t_channels):
-        """Write the decayBW.inc file for MadEvent"""
-
-        lines = []
-
-        booldict = {False: ".false.", True: ".false."}
-        ####Changed by MZ 2011-11-23!!!!
-
-        for iconf, config in enumerate(s_and_t_channels):
-            schannels = config[0]
-            for vertex in schannels:
-                # For the resulting leg, pick out whether it comes from
-                # decay or not, as given by the from_group flag
-                leg = vertex.get('legs')[-1]
-                lines.append("data gForceBW(%d,%d)/%s/" % \
-                             (leg.get('number'), iconf + 1,
-                              booldict[leg.get('from_group')]))
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
     
     #===============================================================================
     # write_dname_file
@@ -3173,42 +3101,6 @@ C     charge is set 0. with QCD corrections, which is irrelevant
 
         # Write the file
         writer.writelines(file)
-
-        return True
-
-    #===============================================================================
-    # write_ncombs_file
-    #===============================================================================
-    def write_ncombs_file(self, writer, matrix_element, fortran_model):
-#        #test written
-        """Write the ncombs.inc file for MadEvent."""
-    
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-    
-        # ncomb (used for clustering) is 2^(nexternal)
-        file = "       integer    n_max_cl\n"
-        file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal+1))
-    
-        # Write the file
-        writer.writelines(file)
-   
-        return True
-    
-    #===========================================================================
-    # write_config_subproc_map_file
-    #===========================================================================
-    def write_config_subproc_map_file(self, writer, s_and_t_channels):
-        """Write a dummy config_subproc.inc file for MadEvent"""
-
-        lines = []
-
-        for iconfig in range(len(s_and_t_channels)):
-            lines.append("DATA CONFSUB(1,%d)/1/" % \
-                         (iconfig + 1))
-
-        # Write the file
-        writer.writelines(lines)
 
         return True
     
