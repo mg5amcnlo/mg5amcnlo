@@ -1713,54 +1713,6 @@ c     soft-collinear counter
       return
       end
       
-
-      subroutine set_pdg(ict,iFKS)
-c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
-c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
-c codes of i_fks and j_fks are combined to give the PDG code of the
-c mother and the extra (n+1) parton is given the PDG code of the gluon.
-      use weight_lines
-      implicit none
-      include 'nexternal.inc'
-      include 'fks_info.inc'
-      include 'genps.inc'
-      integer k,ict,iFKS
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     $     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
-      do k=1,nexternal
-         pdg(k,ict)=idup(k,1)
-      enddo
-      do k=1,nexternal
-         if (k.lt.fks_j_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.fks_j_d(iFKS)) then
-            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict)) ) then
-c gluon splitting:  g -> XX
-               pdg_uborn(k,ict)=21
-            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21) then
-c final state gluon radiation:  X -> Xg
-               pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
-            elseif (pdg(fks_j_d(iFKS),ict).eq.21) then
-c initial state gluon splitting (gluon is j_fks):  g -> XX
-               pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
-            else
-               write (*,*)
-     &              'ERROR in PDG assigment for underlying Born',iFKS
-               stop 1
-            endif
-         elseif(k.lt.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.nexternal) then
-            pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
-         elseif(k.ge.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k+1,ict)
-         endif
-      enddo
-      return
-      end
-      
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
 c section
