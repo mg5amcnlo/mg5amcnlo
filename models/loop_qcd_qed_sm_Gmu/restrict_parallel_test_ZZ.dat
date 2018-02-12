@@ -13,10 +13,10 @@ Block LOOP
 ## INFORMATION FOR TECHNICAL
 ###################################
 Block TECHNICAL
-    1 1.0000000e+00 # epsUV
-    2 1.0000000e+00 # epsIR
-    3 1.0000000e+00 # LogSwitch
-    4 1.0000000e+00 # GfRedefinitionChoice 
+    1 1.00000001e+00 # epsUV
+    2 1.00000002e+00 # epsIR
+    3 1.00000003e+00 # LogSwitch
+    4 1.00000004e+00 # GfRedefinitionChoice
 
 ###################################
 ## INFORMATION FOR SMINPUTS
