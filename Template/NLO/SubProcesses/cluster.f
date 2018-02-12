@@ -34,7 +34,7 @@ C given by the to_mconfigs common block.
      $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_pdg(3*3*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_conf,iconf,cluster_ij(max_branch),iord(0:max_branch)
-     $     ,nqcdrenscale
+     $     ,nqcdrenscale,iconfig
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
@@ -962,7 +962,8 @@ c configurations.
      $     ,cluster_conf)
 c Given the final valid_conf list, returns the "best" cluster_conf
       implicit none
-      integer nconf,nvalid,iconfg,cluster_conf,ic,ifind,iconf_counter
+      integer nconf,nvalid,iconfig,cluster_conf,ic,ifind,iconf_counter
+     $     ,iconf
       logical valid_conf(nconf)
       data iconf_counter/149/ ! some random value.
       save iconf_counter
