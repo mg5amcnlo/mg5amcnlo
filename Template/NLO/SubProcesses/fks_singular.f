@@ -5618,15 +5618,14 @@ c     reset the default dynamical_scale_choice
       integer mapconfig_in(0:lmaxconfigs)
       double precision pmass_in(-nexternal:0,lmaxconfigs)
       double precision pwidth_in(-nexternal:0,lmaxconfigs)
-      include 'ngraphs.inc'
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      double precision prmass(-max_branch:nexternal,n_max_cg)
-      double precision prwidth(-max_branch:-1,n_max_cg)
-      integer prow(-max_branch:-1,n_max_cg)
+      double precision prmass(-max_branch:nexternal,lmaxconfigs)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)
+      integer prow(-max_branch:-1,lmaxconfigs)
       common/c_props_inc/prmass,prwidth,prow
       do i=1,lmaxconfigs
          do j=-max_branch,-1

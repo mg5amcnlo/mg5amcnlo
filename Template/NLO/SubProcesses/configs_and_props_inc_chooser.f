@@ -8,18 +8,18 @@ c MAPCONFIG())
       double precision ZERO
       parameter (ZERO=0d0)
       include 'maxparticles.inc'
-      include 'ngraphs.inc'
+      include 'maxconfigs.inc'
       integer i,j,k
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      double precision prmass(-max_branch:nexternal,n_max_cg)
-      double precision prwidth(-max_branch:-1,n_max_cg)
-      integer prow(-max_branch:-1,n_max_cg)
+      double precision prmass(-max_branch:nexternal,lmaxconfigs)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)
+      integer prow(-max_branch:-1,lmaxconfigs)
       common/c_props_inc/prmass,prwidth,prow
       double precision pmass(nexternal)
       include 'configs_and_props_decl.inc'
@@ -30,9 +30,9 @@ c
      $        /' increase max_branch',max_branch,max_branch_used
          stop
       endif
-      if (lmaxconfigs_used.gt.n_max_cg) then
+      if (lmaxconfigs_used.gt.lmaxconfigs) then
          write (*,*) 'ERROR in configs_and_propsinc_chooser:'/
-     $        /' increase n_max_cg' ,n_max_cg,lmaxconfigs_used
+     $        /' increase lmaxconfigs' ,lmaxconfigs,lmaxconfigs_used
          stop
       endif
 

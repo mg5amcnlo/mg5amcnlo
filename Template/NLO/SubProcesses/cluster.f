@@ -13,6 +13,7 @@ C given by the to_mconfigs common block.
       include 'maxconfigs.inc'
       include 'maxparticles.inc'
       include 'nFKSconfigs.inc'
+      include 'real_from_born_configs.inc'
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
       double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
       integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
@@ -81,10 +82,15 @@ c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
 c Cluster the event. This gives the most-likely clustering (in
 c cluster_ij) with scales (in cluster_scales)
       call set_array_indices(iproc,1,il_list,il_pdg)
+      if (iproc.eq.0) then
+         iconfig=this_config
+      else
+         iconfig=real_from_born_conf(this_config,iproc)
+      endif
       call cluster(next,pcl,mapconfig(0,iproc),nbr
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-nbr
-     $     ,this_config,iproc),ipdg(1,iproc),pmass(-nbr,this_config
-     $     ,iproc),pwidth(-nbr,this_config,iproc),cluster_conf
+     $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig
+     $     ,iproc),pwidth(-nbr,iconfig,iproc),iconfig,cluster_conf
      $     ,cluster_scales,cluster_ij,iord)
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
@@ -101,7 +107,6 @@ c form factor and renormalisation and factorisation scales.
       return
       end
       
-
       subroutine set_array_indices(iproc,iconf,il_list,il_pdg)
 c Given 'iproc' and 'iconf', returns the corresponding location in the
 c cluster_list and cluster_pdg arrays ('il_list' and 'il_pdg',
@@ -140,8 +145,6 @@ c respectively)
       endif
       return
       end
-      
-
 
       
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
@@ -253,8 +256,8 @@ c daughters correctly.
 CCCCCCCCCCCCCCC-- MAIN CLUSTER ROUTINE -- CCCCCCCCCCCCCCCC
 
       subroutine cluster(next,p,nconf,nbr,cluster_list,cluster_pdg,itree
-     $     ,ipdg,prmass,prwidth,cluster_conf,cluster_scales,cluster_ij
-     $     ,iord)
+     $     ,ipdg,prmass,prwidth,iconfig,cluster_conf,cluster_scales
+     $     ,cluster_ij,iord)
 c Takes a set of momenta and clusters them according to possible diagram
 c configurations (given by cluster_list).  The idea is to perform the
 c clusterings until we have a 2->1 process. Clusterings are only done if
@@ -266,7 +269,7 @@ c clustering scales (cluster_scales).
       integer next,i,j,nleft,imap(next),iwin,jwin,win_id,nconf,nvalid
      $     ,nbr,cluster_list(2*nbr,nconf),cluster_conf,iclus,ipdg(next)
      $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
-     $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf
+     $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig
       double precision p(0:3,next),pcl(0:3,next),cluster_scales(0:nbr)
      $     ,scale,p_inter(0:3,0:2,nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
      $     ,djb_clus
@@ -311,25 +314,10 @@ c Save the cluster scales and cluster IDs.
          cluster_ij(iclus)=win_id
          nleft=nleft-1          ! 'nleft' particles are left after the cluster
       enddo
-      if (nvalid.gt.1) then
-         write (*,*) ''
-         write (*,*) 'More than one valid diagram, pick one at random?'
-         write (*,*) '--This still needs to be implemented',nvalid
-     $        ,valid_conf
-         write (*,*) cluster_ij
-         do iconf=1,nconf
-            write (*,*) iconf,cluster_list(:,iconf)
-         enddo
-         stop 1
-      endif
-c At this point there should only be one possible valid
-c diagram. Hence, find that diagram and set cluster_conf equal to it.
-      do iconf=1,nconf
-         if (valid_conf(iconf)) then
-            cluster_conf=iconf
-            exit
-         endif
-      enddo
+c Set the cluster_conf to (one of) the diagram(s) compatible with the
+c clustering found just above
+      call set_cluster_conf(nconf,nvalid,valid_conf,iconfig
+     $     ,cluster_conf)
 c Set the final scale to the m_T^2 of the final 2->1 process
       cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
 c Link the cluster_ij values to the ordering used in cluster_pdg (which
@@ -970,6 +958,49 @@ c configurations.
       return
       end
 
+      subroutine set_cluster_conf(nconf,nvalid,valid_conf,iconfig
+     $     ,cluster_conf)
+c Given the final valid_conf list, returns the "best" cluster_conf
+      implicit none
+      integer nconf,nvalid,iconfg,cluster_conf,ic,ifind,iconf_counter
+      logical valid_conf(nconf)
+      data iconf_counter/149/ ! some random value.
+      save iconf_counter
+      if (nvalid.eq.1) then
+c     There is only one possible valid diagram. Hence, find that diagram
+c     and set cluster_conf equal to it.
+         do iconf=1,nconf
+            if (valid_conf(iconf)) then
+               cluster_conf=iconf
+               return
+            endif
+         enddo
+      elseif (nvalid.le.0) then
+         write (*,*)"no valid diagrams",nvalid
+         stop 1
+      else    ! more than one valid configuration
+         if (valid_conf(iconfig)) then
+c     integration channel among valid configurations. Choose that one
+            cluster_conf=iconfig
+            return
+         else
+c     pick one at "random"
+            iconf_counter=iconf_counter+1
+            ifind=mod(iconf_counter,nvalid)+1
+            ic=0
+            do iconf=1,nconf
+               if (valid_conf(iconf)) then
+                  ic=ic+1
+                  if (ic.eq.ifind) then
+                     cluster_conf=iconf
+                     return
+                  endif
+               endif
+            enddo
+         endif
+      endif
+      end
+      
       
       double precision function cluster_scale(iBWlist,nbr,j,id_ij,pi,pj)
 c Determines the cluster scale for the clustering of momenta pi and pj
