@@ -89,9 +89,9 @@ c cluster_ij) with scales (in cluster_scales)
       endif
       call cluster(next,pcl,mapconfig(0,iproc),nbr
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-nbr
-     $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig
-     $     ,iproc),pwidth(-nbr,iconfig,iproc),iconfig,cluster_conf
-     $     ,cluster_scales,cluster_ij,iord)
+     $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig ,iproc)
+     $     ,pwidth(-nbr,iconfig,iproc),iconfig,sprop(-nbr,iconfig,iproc)
+     $     ,cluster_conf ,cluster_scales,cluster_ij,iord)
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
@@ -256,8 +256,8 @@ c daughters correctly.
 CCCCCCCCCCCCCCC-- MAIN CLUSTER ROUTINE -- CCCCCCCCCCCCCCCC
 
       subroutine cluster(next,p,nconf,nbr,cluster_list,cluster_pdg,itree
-     $     ,ipdg,prmass,prwidth,iconfig,cluster_conf,cluster_scales
-     $     ,cluster_ij,iord)
+     $     ,ipdg,prmass,prwidth,iconfig,sprop,cluster_conf
+     $     ,cluster_scales ,cluster_ij,iord)
 c Takes a set of momenta and clusters them according to possible diagram
 c configurations (given by cluster_list).  The idea is to perform the
 c clusterings until we have a 2->1 process. Clusterings are only done if
@@ -269,7 +269,8 @@ c clustering scales (cluster_scales).
       integer next,i,j,nleft,imap(next),iwin,jwin,win_id,nconf,nvalid
      $     ,nbr,cluster_list(2*nbr,nconf),cluster_conf,iclus,ipdg(next)
      $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
-     $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig
+     $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig,sprop(-nbr:
+     $     -1)
       double precision p(0:3,next),pcl(0:3,next),cluster_scales(0:nbr)
      $     ,scale,p_inter(0:3,0:2,nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
      $     ,djb_clus
@@ -288,7 +289,8 @@ c Remove diagrams (according to which we cluster) that are not
 c compatible with the resonance structure of the current phase-space
 c point. First check which s-channel particles are a Breit-Wigner
 c (according to the integration channel)
-      call IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg,iBWlist)
+      call IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg,sprop
+     $     ,iBWlist)
       call remove_confs_BW(nconf,nbr,nvalid,valid_conf,iBWlist
      $     ,cluster_list,cluster_pdg)
       nleft=next
@@ -542,7 +544,7 @@ c Sets all configurations as valid configurations.
       end
 
       subroutine IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg
-     $     ,iBWlist)
+     $     ,sprop,iBWlist)
 c Loop over all the s-channel propagators of the current configuration
 c (typically associated with the integration channel) and checks with
 c resonances are close to their mass shell. If there are, must only
