@@ -501,7 +501,6 @@ extern "C" {
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
 
-//    double boost = 10000.;
     double boost = 1.5;
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
@@ -564,14 +563,21 @@ extern "C" {
       lhareader4dire.setInit();
       pythia4dire.init();
     }
-//    pythia4dire.settings.listAll();
     pythia4dire.next();
 	
     ++iEvent4dire;
   }
 
   void dire_get_mergingweight_( double& w ) {
-    w = pythia4dire.info.mergingWeightNLO();
+    // Retrieve the target scales reconstructed by the shower.
+    vector<double> sca(merging->getStoppingScales());
+    double pTmin = pythia4dire.settings.parm("SpaceShower:pTmin");
+    pTmin = min(pTmin, pythia4dire.settings.parm("TimeShower:pTmin"));
+    bool pTemissionBelowPScut = false;
+    for (int i=0; i < sca.size(); ++i)
+      if ( sca[i] < pTmin) pTemissionBelowPScut = true;
+    if (pTemissionBelowPScut) w = 0.0;
+    else w = pythia4dire.info.mergingWeightNLO();
   }
 
   // This should set the LHA event using fortran common blocks
@@ -581,7 +587,6 @@ extern "C" {
   }
 
   void dire_get_sudakov_stopping_scales_( double scales [1000] ) {
-//    vector<double> sca(mergingHooks->stoppingScales());
     vector<double> sca(merging->getStoppingScales());
     for (int i=0; i < sca.size(); ++i)
       scales[i] = sca[i];
