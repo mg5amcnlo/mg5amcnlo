@@ -272,7 +272,7 @@ c clustering scales (cluster_scales).
      $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig,sprop(-nbr:
      $     -1)
       double precision p(0:3,next),pcl(0:4,next),cluster_scales(0:nbr)
-     $     ,scale,p_inter(0:4,0:2,nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
+     $     ,scale,p_inter(0:4,0:2,0:nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
      $     ,djb_clus,get_mass_from_id
       logical valid_conf(nconf),is_bw,cluster_according_to_iconfig
       parameter (cluster_according_to_iconfig=.false.)
@@ -326,6 +326,9 @@ c clustering found just above
      $     ,cluster_conf)
 c Set the final scale to the m_T^2 of the final 2->1 process
       cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
+c Set the daughter momenta of the 2->1 process (do not need the mother)
+      p_inter(:,1,0)=pcl(:,1)
+      p_inter(:,2,0)=pcl(:,2)
 c Link the cluster_ij values to the ordering used in cluster_pdg (which
 c is similar to the one in iforest)
       call link_clustering_to_iforest(nbr,cluster_ij,cluster_list(1
@@ -899,7 +902,7 @@ c gluons).
       implicit none
       integer i,j,k,cij,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
      $     ,iord(0:nbr),next,get_color,cluster_list(2*nbr),iqcd(0:2)
-      double precision cluster_scales(0:nbr),dot,p(0:4,0:2,nbr),djb_clus
+      double precision cluster_scales(0:nbr),dot,p(0:4,0:2,0:nbr),djb_clus
       logical QCDchangeline,QCDvertex
       external dot,get_color,djb_clus,QCDchangeline,QCDvertex
       do i=0,nbr
@@ -912,8 +915,8 @@ c gluons).
                endif
             enddo
             ! some trickery with 'mod()' to get the correct value with i=0
-            cluster_scales(i)=sqrt(2d0*abs(dot(p(0,iqcd(1),mod(i-1+nbr
-     $           ,nbr)+1),p(0,iqcd(2),mod(i-1+nbr,nbr)+1))))
+            cluster_scales(i)=sqrt(2d0*abs(dot(p(0,iqcd(1),i),p(0
+     $           ,iqcd(2),i))))
          endif
       enddo
 c Treat here the special case where the final 2->2 process is a pure
