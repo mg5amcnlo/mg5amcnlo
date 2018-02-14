@@ -550,7 +550,7 @@ c Sets all configurations as invalid, except the one corresponding to
 c iconfig
       implicit none
       integer nconf,iconf,iconfig,nvalid
-      logical valud_conf(nconf)
+      logical valid_conf(nconf)
       nvalid=0
       do iconf=1,nconf
          if (iconf.eq.iconfig) then
