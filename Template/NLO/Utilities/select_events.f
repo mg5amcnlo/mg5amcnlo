@@ -35,9 +35,11 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
-      write(*,*)'Type 1 to keep S events'
-      write(*,*)'     2 to keep H events'
-      write(*,*)'     3 to keep a subset of events'
+      write(*,*)'Enter 1 to keep S events'
+      write(*,*)'      2 to keep H events'
+      write(*,*)'      3 to keep events with w>0'
+      write(*,*)'      4 to keep events with w<0'
+      write(*,*)'      5 to keep a subset of events'
       read(*,*)itype
       if(itype.lt.3)then
          write(*,*)'Enter the Born multiplicity, counting only initial-'
@@ -53,6 +55,10 @@ c
       elseif(itype.eq.2)then
          fname2=event_file(1:loc-1)//'.H'
       elseif(itype.eq.3)then
+         fname2=event_file(1:loc-1)//'.pos'
+      elseif(itype.eq.4)then
+         fname2=event_file(1:loc-1)//'.neg'
+      elseif(itype.eq.5)then
          write(*,*)'Enter first and last event to keep'
          read(*,*)nevmin0,nevmax0
          if(nevmin0.lt.0.or.nevmax0.lt.0)then
@@ -92,7 +98,7 @@ c
       call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
       numscales=int(sqrt(dble(isc)))
       numPDFpairs=ipdf/2
-      if(itype.eq.3.and.nevmin.gt.maxevt)then
+      if(itype.eq.5.and.nevmin.gt.maxevt)then
          write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
          stop
       endif
@@ -102,7 +108,7 @@ c
       i=1
       ievts_ok=0
       extra=.false.
-      if(itype.le.2)then
+      if(itype.le.4)then
          do while(i.le.maxevt)
             call read_lhef_event(ifile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -114,24 +120,32 @@ c
      &           scale1_lhe,scale2_lhe,
      &           jwgtinfo,mexternal,iwgtnumpartn,
      &           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-               if(itype.eq.iSorH_lhe)ievts_ok=ievts_ok+1
+               if( (itype.le.2.and.itype.eq.iSorH_lhe) .or.
+     &             (itype.eq.3.and.XWGTUP.ge.0.d0) .or.
+     &             (itype.eq.4.and.XWGTUP.lt.0.d0) )ievts_ok=ievts_ok+1
             else
                npart=0
                do k=1,nup
                   if(abs(ISTUP(k)).eq.1)npart=npart+1
                enddo
-               if(npart-nBorn.ne.0.and.npart-nBorn.ne.1)then
-                  write(*,*)'The Born multiplicity seems incorrect:'
-                  write(*,*)'cannot extract S/H events from this file.'
-                  write(*,*)'  Event #',i,pup(4,1),pup(4,2)
-                  write(*,*)npart,nup,nborn
-                  stop
+               if(itype.le.2)then
+                 if(npart-nBorn.ne.0.and.npart-nBorn.ne.1)then
+                   write(*,*)'The Born multiplicity seems incorrect:'
+                   write(*,*)'cannot extract S/H events from this file.'
+                   write(*,*)'  Event #',i,pup(4,1),pup(4,2)
+                   write(*,*)npart,nup,nborn
+                   stop
+                 endif
+                 if(itype.eq.(1+npart-nBorn))ievts_ok=ievts_ok+1
+               else
+                 if( (itype.eq.3.and.XWGTUP.ge.0.d0) .or.
+     &               (itype.eq.4.and.XWGTUP.lt.0.d0) )
+     &             ievts_ok=ievts_ok+1
                endif
-               if(itype.eq.(1+npart-nBorn))ievts_ok=ievts_ok+1
             endif
             i=i+1
          enddo
-      elseif(itype.eq.3)then
+      elseif(itype.eq.5)then
          ievts_ok=min(maxevt,nevmax)-nevmin+1
       endif
       close(34)
@@ -159,8 +173,8 @@ c
       i=1
       ievts_ok=0
       sum_wgt=0d0
-      if(itype.le.2)numev=maxevt
-      if(itype.eq.3)numev=min(maxevt,nevmax)
+      if(itype.le.4)numev=maxevt
+      if(itype.eq.5)numev=min(maxevt,nevmax)
       do while(i.le.numev)
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -187,16 +201,20 @@ c
          if( (itype.le.2.and.extra.and.itype.eq.iSorH_lhe).or.
      &       (itype.eq.1.and..not.extra.and.npart.eq.nBorn).or.
      &       (itype.eq.2.and..not.extra.and.npart.eq.nBorn+1).or.
-     &       (itype.eq.3.and.i.ge.nevmin) )then
+     &       (itype.eq.3.and.XWGTUP.ge.0.d0).or.
+     &       (itype.eq.4.and.XWGTUP.lt.0.d0).or.
+     &       (itype.eq.5.and.i.ge.nevmin) )then
             ievts_ok=ievts_ok+1
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         else
+            if(itype.eq.3.or.itype.eq.4)sum_wgt=sum_wgt-XWGTUP
          endif
-         if(itype.le.2)then
+         if(itype.le.4)then
             ioffset=0
             number=maxevt
-         elseif(itype.eq.3)then
+         elseif(itype.eq.5)then
             ioffset=nevmin
             number=abs(min(nevmax,maxevt)-ioffset)
          endif
@@ -209,7 +227,7 @@ c
          i=i+1
       enddo
       write(ofile,*)'</LesHouchesEvents>'
-      if(itype.eq.3)write(*,*)'The sum of the weights is:',sum_wgt
+      if(itype.ge.3)write(*,*)'The sum of the weights is:',sum_wgt
 
       write(*,*)'  '
       write(*,*)'Number of events kept:',ievts_ok
