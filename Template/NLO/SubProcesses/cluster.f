@@ -257,7 +257,7 @@ CCCCCCCCCCCCCCC-- MAIN CLUSTER ROUTINE -- CCCCCCCCCCCCCCCC
 
       subroutine cluster(next,p,nconf,nbr,cluster_list,cluster_pdg,itree
      $     ,ipdg,prmass,prwidth,iconfig,sprop,cluster_conf
-     $     ,cluster_scales ,cluster_ij,iord)
+     $     ,cluster_scales,cluster_ij,iord)
 c Takes a set of momenta and clusters them according to possible diagram
 c configurations (given by cluster_list).  The idea is to perform the
 c clusterings until we have a 2->1 process. Clusterings are only done if
@@ -271,20 +271,24 @@ c clustering scales (cluster_scales).
      $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
      $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig,sprop(-nbr:
      $     -1)
-      double precision p(0:3,next),pcl(0:3,next),cluster_scales(0:nbr)
-     $     ,scale,p_inter(0:3,0:2,nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
-     $     ,djb_clus
-      logical valid_conf(nconf)
-      external djb_clus
+      double precision p(0:3,next),pcl(0:4,next),cluster_scales(0:nbr)
+     $     ,scale,p_inter(0:4,0:2,nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
+     $     ,djb_clus,get_mass_from_id
+      logical valid_conf(nconf),is_bw,cluster_according_to_iconfig
+      parameter (cluster_according_to_iconfig=.false.)
+      external djb_clus,get_mass_from_id
       do i=1,next
          do j=0,3
             pcl(j,i)=p(j,i)
          enddo
+         pcl(4,i)=abs(get_mass_from_id(ipdg(i)))
 c imap links the current particle labels with the binary coding.
          imap(i)=ishft(1,i-1)
       enddo
 c Set all diagrams (according to which we cluster) as valid
       call reset_valid_confs(nconf,nvalid,valid_conf)
+      if (cluster_according_to_iconfig) 
+     $     call limit_cluster_iconfig(nconf,iconfig,nvalid,valid_conf)
 c Remove diagrams (according to which we cluster) that are not
 c compatible with the resonance structure of the current phase-space
 c point. First check which s-channel particles are a Breit-Wigner
@@ -300,13 +304,13 @@ c should be 'nbr' (number of branchings) clusterings.
 c Do one clustering (returning iwin, jwin and win_id and the scale)
          call cluster_one_step(nleft,pcl(0,1),imap(1),nbr,nconf
      $        ,valid_conf,cluster_list,iBWlist,iwin,jwin,win_id
-     $        ,scale)
+     $        ,scale,is_bw)
 c Remove diagrams that do not have the win_id among its clusterings
          call update_valid_confs(win_id,nconf,nbr,nvalid,valid_conf
      $        ,cluster_list)
 c Combine the momenta
          call update_momenta(nleft,pcl(0,1),iwin,jwin,
-     $        p_inter(0,0,iclus))
+     $        p_inter(0,0,iclus),is_bw)
 c Update imap (the map that links current particle labels with the
 c binary labeling). Since we combine particles, we need to update the
 c corresponding imap label with the combined particle label.
@@ -517,10 +521,8 @@ c factorisation scale if need be)
       if (nqcdrenscalecentral.gt.1) then
          qcd_ren_scale(0)=qcd_ren_scale(0)**
      &        (1d0/dble(nqcdrenscalecentral))
-      elseif(nqcdrenscalecentral.eq.0) then
-         qcd_ren_scale(0)=hard_qcd_scale
-      else ! no QCD at all in this process!
-         qcd_ren_scale(0)=cluster_scales(0)
+      elseif(nqcdrenscalecentral.eq.0) then ! no (relevant) QCD clusterings
+         qcd_ren_scale(0)=max(hard_qcd_scale,cluster_scales(0))
       endif
       if (qcd_fac_scale.eq.0) then
          qcd_fac_scale=qcd_ren_scale(0)
@@ -543,6 +545,31 @@ c Sets all configurations as valid configurations.
       return
       end
 
+      subroutine limit_cluster_iconfig(nconf,iconfig,nvalid,valid_conf)
+c Sets all configurations as invalid, except the one corresponding to
+c iconfig
+      implicit none
+      integer nconf,iconf,iconfig,nvalid
+      logical valud_conf(nconf)
+      nvalid=0
+      do iconf=1,nconf
+         if (iconf.eq.iconfig) then
+            if (.not. valid_conf(iconf)) then
+               write (*,*) 'iconfig is not a valid configuration',iconf
+     $              ,nvalid
+               stop 1
+            endif
+            nvalid=1
+         else
+            valid_conf(iconf)=.false.
+         endif
+      enddo
+      if (nvalid.ne.1) then
+         write (*,*) 'iconfig not found in list',nvalid,iconfig,nconf
+         stop 1
+      endif
+      end
+      
       subroutine IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg
      $     ,sprop,iBWlist)
 c Loop over all the s-channel propagators of the current configuration
@@ -676,7 +703,7 @@ c s-channel is not in iconf. Set it as a invalid configuration
       end
       
       subroutine cluster_one_step(next,p,imap,nbr,nconf,valid_conf
-     $     ,cluster_list,iBWlist,iwin,jwin,win_id,min_scale)
+     $     ,cluster_list,iBWlist,iwin,jwin,win_id,min_scale,is_bw)
 c Finds the pair of particles with the smallest clustering scale and
 c returns that pair (and the scale) in 'iwin', 'jwin', 'win_id' and
 c 'min_scale'. Any clustering that is possible among the diagram
@@ -685,8 +712,8 @@ c anything else) cluster).
       implicit none
       integer next,imap(next),iwin,jwin,id_ij,win_id,nbr,nconf
      $     ,cluster_list(2*nbr,nconf),i,j,iBWlist(2,0:nbr)
-      double precision p(0:3,next),cluster_scale,min_scale,scale
-      logical in_list,valid_conf(nconf)
+      double precision p(0:4,next),cluster_scale,min_scale,scale
+      logical in_list,valid_conf(nconf),is_bw
       external in_list,cluster_scale
       iwin=-1 ! set iwin to -1, so that we can track if a single valid
               ! clustering is found
@@ -699,7 +726,7 @@ c anything else) cluster).
             ! clustering
             if (.not.in_list(id_ij,nbr,nconf,valid_conf,cluster_list))
      $           cycle
-            scale=cluster_scale(iBWlist,nbr,j,id_ij,p(0,i),p(0,j))
+            scale=cluster_scale(iBWlist,nbr,j,id_ij,p(0,i),p(0,j),is_bw)
             if (scale.lt.min_scale) then
                min_scale=scale
                iwin=i
@@ -751,15 +778,16 @@ c a valid cluster configuration/topology.
       return
       end
 
-      subroutine update_momenta(nleft,pcl,iwin,jwin,p_inter)
+      subroutine update_momenta(nleft,pcl,iwin,jwin,p_inter,is_bw)
 c Updates the 'pcl' momenta list by combining particles iwin and jwin.
       implicit none
       integer nleft,iwin,jwin,i,j,k
-      double precision pcl(0:3,nleft),p1(0:3),nr(0:3),nn2,ct,st
-     $     ,pcmsp(0:3),p_inter(0:3,0:2),pi(0:3)
-      double precision pz(0:3)
+      double precision pcl(0:4,nleft),p1(0:3),nr(0:3),nn2,ct,st
+     $     ,pcmsp(0:3),p_inter(0:4,0:2),pi(0:3),dot,pz(0:3)
+      logical is_bw
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
-      do i=0,3
+      external dot
+      do i=0,4
          p_inter(i,1)=pcl(i,iwin)
          p_inter(i,2)=pcl(i,jwin)
       enddo
@@ -770,6 +798,12 @@ c initial state clustering
             pcmsp(i)=-pcl(i,jwin)-pcl(i,3-jwin)
          enddo
          pcmsp(0)=-pcmsp(0)
+         if( (pcl(4,jwin).gt.0.or.pcl(4,iwin).gt.0) .and. 
+     $       .not.(pcl(4,jwin).gt.0.and.pcl(4,iwin).gt.0)) then
+            pcl(4,jwin)=max(pcl(4,jwin),pcl(4,iwin))
+         else
+            pcl(4,jwin)=0
+         endif
          if (pcmsp(0)**2-pcmsp(1)**2-pcmsp(2)**2-pcmsp(3)**2.gt.100d0)
      $        then ! prevent too extreme boost
             call boostx(pcl(0,jwin),pcmsp,p1)
@@ -786,12 +820,13 @@ c initial state clustering
                   do k=0,3
                      pcl(k,j-1)=pi(k)
                   enddo
+                  pcl(4,j-1)=pcl(4,j)
                endif
             enddo
          else
             do i=1,nleft-1
                if (i.ge.iwin) then
-                  do j=0,3
+                  do j=0,4
                      pcl(j,i)=pcl(j,i+1)
                   enddo
                endif
@@ -804,14 +839,20 @@ c final state clustering
                do j=0,3
                   pcl(j,i)=pcl(j,iwin)+pcl(j,jwin)
                enddo
+               if (is_bw) then
+                  ! mass is invariant mass for resonance decay
+                  pcl(4,jwin)=sqrt(dot(pcl(0,jwin),pcl(0,jwin)))
+               else
+                  pcl(4,jwin)=max(pcl(4,jwin),pcl(4,iwin))
+               endif
             elseif (i.ge.iwin) then
-               do j=0,3
+               do j=0,4
                   pcl(j,i)=pcl(j,i+1)
                enddo
             endif
          enddo
       endif
-      do i=0,3
+      do i=0,4
          p_inter(i,0)=pcl(i,jwin)
       enddo
       end
@@ -858,11 +899,10 @@ c gluons).
       implicit none
       integer i,j,k,cij,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
      $     ,iord(0:nbr),next,get_color,cluster_list(2*nbr),iqcd(0:2)
-      double precision cluster_scales(0:nbr),dot,p(0:3,0:2,nbr),djb_clus
+      double precision cluster_scales(0:nbr),dot,p(0:4,0:2,nbr),djb_clus
       logical QCDchangeline,QCDvertex
       external dot,get_color,djb_clus,QCDchangeline,QCDvertex
-      if (nbr.eq.0) return      ! 2->1 process, nothing to do
-      do i=1,nbr
+      do i=0,nbr
          if (QCDchangeline(i,nbr,cluster_pdg,iord)) then
             iqcd(0)=0
             do j=0,2
@@ -871,8 +911,9 @@ c gluons).
                   iqcd(iqcd(0))=j
                endif
             enddo
-            cluster_scales(i)=sqrt(2d0*abs(dot(p(0,iqcd(1),i),p(0
-     $           ,iqcd(2),i))))
+            ! some trickery with 'mod()' to get the correct value with i=0
+            cluster_scales(i)=sqrt(2d0*abs(dot(p(0,iqcd(1),mod(i-1+nbr
+     $           ,nbr)+1),p(0,iqcd(2),mod(i-1+nbr,nbr)+1))))
          endif
       enddo
 c Treat here the special case where the final 2->2 process is a pure
@@ -1005,11 +1046,12 @@ c     pick one at "random"
       end
       
       
-      double precision function cluster_scale(iBWlist,nbr,j,id_ij,pi,pj)
+      double precision function cluster_scale(iBWlist,nbr,j,id_ij,pi,pj
+     $     ,is_bw)
 c Determines the cluster scale for the clustering of momenta pi and pj
       implicit none
       integer nbr,i,j,id_ij,iBWlist(2,0:nbr)
-      double precision pi(0:3),pj(0:3),sumdot,dj_clus,tiny,djb_clus
+      double precision pi(0:4),pj(0:4),sumdot,dj_clus,tiny,djb_clus
       parameter (tiny=1d-6)
       logical is_bw
       external sumdot,dj_clus,djb_clus
@@ -1698,11 +1740,11 @@ c***************************************************************************
       double precision D
       common/to_dj/D            ! for FxFx: D=1 (set in setrun)
       double precision pt1,pt2,ptm1,ptm2,eta1,eta2,phi1,phi2,p1a,p2a
-     $     ,costh,sumdot,dot,p1(0:3),p2(0:3),m1,m2,djb_clus
+     $     ,costh,sumdot,dot,p1(0:4),p2(0:4),m1,m2,djb_clus
       integer j
       external djb_clus
-      m1=abs(dot(p1,p1)) ! abs() to prevent numerical inaccuracies
-      m2=abs(dot(p2,p2)) 
+      m1=p1(4)
+      m2=p2(4)
       if ((lpp(1).eq.0).and.(lpp(2).eq.0)) then
          p1a = dsqrt(p1(1)**2+p1(2)**2+p1(3)**2)
          p2a = dsqrt(p2(1)**2+p2(2)**2+p2(3)**2)
