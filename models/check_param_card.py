@@ -247,7 +247,7 @@ class Block(list):
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
-            data, self.commant = text, ""
+            data, self.comment = text, ""
 
         data = data.lower()
         data = data.split()

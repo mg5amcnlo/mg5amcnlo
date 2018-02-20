@@ -2720,6 +2720,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                               self.dir_path+'/bin/internal/save_load_object.py') 
         cp(_file_path+'/madevent/gen_crossxhtml.py', 
                               self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/madevent/sum_html.py', 
+                              self.dir_path+'/bin/internal/sum_html.py')
         cp(_file_path+'/various/FO_analyse_card.py', 
                               self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 
