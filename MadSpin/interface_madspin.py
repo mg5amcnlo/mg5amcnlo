@@ -641,7 +641,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for decay in generate_all.all_ME.values():
                 decay['path'] = decay['path'].replace(generate_all.path_me, self.options['ms_dir'])
                 for decay2 in decay['decays']:
-                    decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
+                    if decay2['path']: 
+                        decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
             generate_all.path_me = self.options['ms_dir'] # directory can have been move
             generate_all.ms_dir = generate_all.path_me
         
