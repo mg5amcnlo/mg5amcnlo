@@ -2420,7 +2420,7 @@ class ControlSwitch(SmartQuestion):
                 return str(default) 
             return None
         key, value = line.split('=',1)
-        if key in self.switch:
+        if key.lower() in self.switch:
             return line
         if key in [str(i+1) for i in range(len(self.to_control))]:
             self.value='reask'

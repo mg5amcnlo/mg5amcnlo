@@ -58,9 +58,18 @@ class ExtLauncher(object):
     def run(self):
         """ execute the main code """
 
-        self.prepare_run()        
-        for card in self.cards:
-            self.treat_input_file(card, default = 'n')
+        self.prepare_run()   
+        
+        import madgraph.interface.common_run_interface as common_run_interface
+        
+        self.cmd_int.me_dir = self.running_dir
+        if self.cards:
+            common_run_interface.CommonRunCmd.ask_edit_card_static(self.cards,
+                             mode='fixed', plot=False,
+                             timeout=0, ask=self.cmd_int.ask)
+             
+        #for card in self.cards:
+        #    self.treat_input_file(card, default = 'n')
 
         self.launch_program()
 
