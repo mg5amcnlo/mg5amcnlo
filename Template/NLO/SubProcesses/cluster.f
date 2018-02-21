@@ -72,7 +72,7 @@ c Links the configurations (given in iforest) to the allowed clusterings
 c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
          do iconf=1,mapconfig(0,iproc)
             call set_array_indices(iproc,iconf,il_list,il_pdg)
-            call iforest_to_list(next,nincoming,nbr,iforest(1,-nbr
+            call iforest_to_list(next,nincoming,nbr,iforest(1,-(nbr+1)
      $           ,iconf,iproc),sprop(-nbr,iconf,iproc),tprid(-nbr,iconf
      $           ,iproc),pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
      $           ,cluster_list(il_list),cluster_pdg(il_pdg))
@@ -88,10 +88,10 @@ c cluster_ij) with scales (in cluster_scales)
          iconfig=real_from_born_conf(this_config,iproc)
       endif
       call cluster(next,pcl,mapconfig(0,iproc),nbr
-     $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-nbr
-     $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig ,iproc)
+     $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-(nbr+1)
+     $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig,iproc)
      $     ,pwidth(-nbr,iconfig,iproc),iconfig,sprop(-nbr,iconfig,iproc)
-     $     ,cluster_conf ,cluster_scales,cluster_ij,iord)
+     $     ,cluster_conf,cluster_scales,cluster_ij,iord)
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
@@ -159,10 +159,9 @@ c bottom-up, intermediate particles have two different labels depending
 c on two possible clustering orders). It also fills cluster_pdg, the PDG
 c codes for particles in the cluster_list as well as their daughters.
       implicit none
-      integer ibr,i,j,next,nbr,iforest(2,-nbr:-1)
-     $     ,cluster_list(2*nbr),cluster_pdg(0:2,0:2*nbr),cluster_tmp(
-     $     -nbr:next),ipdg(next),nincoming,sprop(-nbr:-1),tprid(-nbr:-1)
-     $     ,n_tchan
+      integer ibr,i,j,next,nbr,iforest(2,-(nbr+1):-1),cluster_list(2
+     $     *nbr),cluster_pdg(0:2,0:2*nbr),cluster_tmp(-nbr:next)
+     $     ,ipdg(next),nincoming,sprop(-nbr:-1),tprid(-nbr:-1) ,n_tchan
       double precision prwidth(-nbr:-1)
       logical s_chan
       if (nincoming.ne.2) then
@@ -269,8 +268,8 @@ c clustering scales (cluster_scales).
       integer next,i,j,nleft,imap(next),iwin,jwin,win_id,nconf,nvalid
      $     ,nbr,cluster_list(2*nbr,nconf),cluster_conf,iclus,ipdg(next)
      $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
-     $     ,iBWlist(2,0:nbr),itree(2,-nbr:-1),iconf,iconfig,sprop(-nbr:
-     $     -1)
+     $     ,iBWlist(2,0:nbr),itree(2,-(nbr+1):-1),iconf,iconfig,sprop(
+     $     -nbr:-1)
       double precision p(0:3,next),pcl(0:4,next),cluster_scales(0:nbr)
      $     ,scale,p_inter(0:4,0:2,0:nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
      $     ,djb_clus,get_mass_from_id
@@ -581,9 +580,9 @@ c resonances are close to their mass shell. If there are, must only
 c cluster according to diagrams/topologies that have that s-channel
 c particle as well.
       implicit none
-      include 'run.inc' ! contains 'bwcutoff'
-      integer i,j,next,nbr,itree(2,-nbr:-1),idenpart,iBWlist(2,0:nbr)
-     $     ,ipdg(next),sprop(-nbr:-1),icl(-nbr:next),nbw,ida(2)
+      include 'run.inc'         ! contains 'bwcutoff'
+      integer i,j,next,nbr,itree(2,-(nbr+1):-1),idenpart,iBWlist(2
+     $     ,0:nbr),ipdg(next),sprop(-nbr:-1),icl(-nbr:next),nbw,ida(2)
       double precision p(0:3,next),prwidth(-nbr:-1),prmass(-nbr:-1)
      $     ,xp(0:3,-nbr:next),mass(-nbr:-1),dot
       logical onBW(nbr),onshell

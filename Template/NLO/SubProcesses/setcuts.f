@@ -176,7 +176,7 @@ c
       double precision taumin(fks_configs,maxchannels)
      $     ,taumin_s(fks_configs,maxchannels),taumin_j(fks_configs
      $     ,maxchannels),stot,xk(nexternal)
-      save  taumin,taumin_s,taumin_j
+      save  taumin,taumin_s,taumin_j,stot
       integer i,j,k,d1,d2,iFKS,nt
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
