@@ -2456,6 +2456,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         """Main Commands: launch the full chain """
         
         self.banner = None
+        self.Gdirs = None
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2764,6 +2765,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         accuracy = self.check_calculate_decay_widths(args)
         self.ask_run_configuration('parton')
         self.banner = None
+        self.Gdirs = None
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -5601,6 +5603,8 @@ tar -czf split_$1.tar.gz split_$1
 
         # add the make_opts_var to make_opts
         self.update_make_opts()
+        # reset list of Gdirectory
+        self.Gdirs = None
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -5675,7 +5679,7 @@ tar -czf split_$1.tar.gz split_$1
     def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
-        if hasattr(self, "Gdirs"):
+        if hasattr(self, "Gdirs") and self.Gdirs:
             if self.me_dir in self.Gdirs[0]:
                 if Pdir is None:
                     if not symfact:
