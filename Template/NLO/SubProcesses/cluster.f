@@ -1777,7 +1777,7 @@ c***************************************************************************
            dj_clus = DJB_clus(p2)*(1d0+1d-6)
         else
            ! two massless or two massive particles
-           dj_clus = max(m1,m2)+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
+           dj_clus = max(m1,m2)**2+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
      &          (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2
         endif
       endif
