@@ -7,6 +7,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
       RF: For the HwU histograms, if no gnuplot installation is found, write the gnuplot scripts in v5
           format (instead of the very old v4 format).
+      RF+MZ: Fixed a problem with (f)NLO(+PS) runs in case the Born has identical QCD-charged
+      	     particles. Cross sections were typically correct, but some distributions might
+	     have shown an asymmetry. 
 
 2.6.1 (12/12/17)
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
