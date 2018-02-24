@@ -2757,6 +2757,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'modellist']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
+    _edit_model_opts = ['eftwdith']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
@@ -2957,6 +2958,138 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         
         return value
+
+
+    def do_editmodel(self, line):
+        """ Method allowing to create a new UFO_MODEL. 
+            For special cases
+        """
+
+        args = self.split_arg(line)
+
+        if args[0] not in ['eftwidth']:
+            raise Exception, 'invalid mode: %s not in valid options: %s' % (args[0],','.join(self._editmodel_opts))
+        
+        new_model_path = args[1]
+        to_duplicate = args[2:]
+              
+        #Need to do the work!!!        
+        import models.usermod as usermod
+        new_model = usermod.UFOModel(self._curr_model.get('modelpath'))
+        #model = self._curr_model
+        
+        #Define custom propagators:
+        propa_spin0 = copy.deepcopy(new_model.propagators[0])
+        propa_spin0.name = 'SEFT'
+        propa_spin0.numerator = 'Mass(id)'
+        propa_spin0.denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))**2"
+        propa_spin12 = copy.deepcopy(new_model.propagators[0])
+        propa_spin12.name = 'FEFT'
+        propa_spin12.numerator = "Mass(id)*(Gamma('mu', 1, 2) * P('mu', id) + Mass(id) * Identity(1, 2))"
+        propa_spin12.denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))**2"
+        propa_spin1 = copy.deepcopy(new_model.propagators[0])
+        propa_spin1.name = 'VEFT'
+        propa_spin1.numerator = "(-1 * Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)"
+        propa_spin1.denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))**2"
+                
+        # adding them
+        new_model.propagators.append(propa_spin0)
+        new_model.propagators.append(propa_spin12)
+        new_model.propagators.append(propa_spin1)
+        
+        #make a local copy of all vertices to avoid to add double modify interactions
+        all_interactions = copy.copy(new_model.vertices)
+        
+        decay = new_model.model.decays.all_decays
+        
+        
+        for name in to_duplicate:
+            misc.sprint(name)
+            ufoparticle = new_model.get_particle(name)
+            
+            new_particle = copy.copy(ufoparticle)
+            new_particle.name += '__fake__'
+            new_particle.antiname += '__fake__'
+            if new_particle.pdg_code >0:
+                new_particle.pdg_code += 111000
+            else:
+                new_particle.pdg_code -= 111000
+
+            # add new parameter for the width (as external)  -> set it as new width
+            #new_width  = copy.copy(new_particle.width)
+            #new_width.lhacode[0] += 111000
+            #new_model.add_parameter(new_width)
+            #new_particle.width = new_width 
+            # set the propagator
+            if new_particle.spin == 1:
+                new_particle.propagator = propa_spin0
+            elif new_particle.spin == 2:
+                new_particle.propagator = propa_spin12
+            elif new_particle.spin == 3:
+                new_particle.propagator = propa_spin1
+            else:
+                raise Exception, "spin not yet supported"
+            #new_particle.propagating = False
+         
+            new_param = copy.deepcopy(new_model.parameters[0])
+            new_param.name = 'C%s' % abs(ufoparticle.pdg_code)
+            new_param.nature = 'internal'
+            this_decay = None
+            for dec in decay:
+                misc.sprint(ufoparticle.pdg_code, dec.particle.pdg_code)
+                if abs(dec.particle.pdg_code) == abs(ufoparticle.pdg_code):
+                    this_decay=dec
+                    break
+            assert this_decay
+            import aloha.aloha_parsers as aloha_parsers
+            expr = []
+        
+            for k,v in this_decay.partial_widths.items():
+                if 'a3phidQL' in v:
+                    expr.append('(%s)-(%s)' % (v.replace('a3phidQL**2','0'),v.replace('a3phidQL**2','0').replace('a3phidQL','0')))
+                  
+            if expr:
+                new_param.value = 'cmath.sqrt(%s)' % ' + '.join(expr) 
+            else:
+                new_param.value = '0.'
+            misc.sprint(new_param.value)
+            new_param.type = 'real'
+            if new_particle.pdg_code >0:
+                new_model.add_parameter(new_param)
+         
+            # add the particle to the model
+            new_model.add_particle(new_particle)
+        
+            for vert in all_interactions:
+                if not ufoparticle in vert.particles:
+                    continue
+                new_vert = copy.copy(vert)
+                new_vert.particles = list(vert.particles)
+                new_vert.couplings = dict(new_vert.couplings)
+                index = new_vert.particles.index(ufoparticle)
+                new_vert.particles[index] = new_particle
+                new_vert.name += '_%s' % str(new_particle.pdg_code).replace('-','_')
+                
+                for key, coup in new_vert.couplings.items():
+                    if 'NP' in coup.order:
+                        del new_vert.couplings[key]
+                        continue
+                    new_coup = copy.deepcopy(coup)
+                    new_coup.order['NP'] = 1
+                    new_coup.value = '%s * (%s)' % (new_param.name, new_coup.value)
+                    new_coup.name += '_%s' % str(new_particle.pdg_code).replace('-','_')
+                    new_model.couplings.append(new_coup)
+                    #new_model.add_coupling(new_coup)
+                    new_vert.couplings[key] = new_coup
+                    
+                if new_vert.couplings:
+                    new_model.vertices.append(new_vert)
+                    misc.sprint(new_vert, new_vert.couplings)
+        
+        new_model.write(new_model_path)
+                
+                
+        
 
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude

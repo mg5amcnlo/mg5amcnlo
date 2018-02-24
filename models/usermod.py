@@ -53,6 +53,7 @@ class UFOModel(object):
         as empty."""
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
+        self.model = model
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -239,6 +240,8 @@ class UFOModel(object):
             return 'L.%s' % repr(param)
         elif param.__class__.__name__ == 'Particle':
             return 'P.%s' % repr(param)
+        elif param.__class__.__name__ == 'Propagator':
+            return 'Propa.%s' % repr(param)        
         elif param is None:
             return 'None'
         else:
@@ -331,6 +334,9 @@ from object_library import all_particles, Particle
 import parameters as Param
 
 """
+        if self.propagators:
+            text += "import propagators as Propa\n"
+            
         text += self.create_file_content(self.particles)
         ff = open(os.path.join(outputdir, 'particles.py'), 'w')
         ff.writelines(text)
@@ -713,6 +719,7 @@ from object_library import all_propagators, Propagator
         old_coupling = next((p for p in self.couplings if p.value==coupling.value), None)
         
         if old_coupling:
+            misc.sprint('duplicate name', coupling)
             coupling.replace = old_coupling #tag for replacement
         else:
             self.couplings.append(coupling)

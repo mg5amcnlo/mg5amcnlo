@@ -451,6 +451,9 @@ class Switcher(object):
     def do_display(self, *args, **opts):
         return self.cmd.do_display(self, *args, **opts)
         
+    def do_editmodel(self, *args, **opts):
+        return self.cmd.do_editmodel(self, *args, **opts)    
+    
     def do_exit(self, *args, **opts):
         return self.cmd.do_exit(self, *args, **opts)
         
