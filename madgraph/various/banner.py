@@ -2474,7 +2474,6 @@ class RunCard(ConfigFile):
         The entry False will not be written anywhere"""
         
         # ensure that all parameter are coherent and fix those if needed
-        misc.sprint('pass to check')
         self.check_validity()
         
         #ensusre that system only parameter are correctly set

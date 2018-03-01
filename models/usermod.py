@@ -216,7 +216,7 @@ class UFOModel(object):
         UFO file"""
 
         if isinstance(param, basestring): 
-            return "'%s'" % param.replace('\'', '\\\'').replace('\"', '\\\"')
+            return "'%s'" % param.replace("\\", "\\\\")
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
             return "%s" % param
@@ -588,6 +588,9 @@ from object_library import all_propagators, Propagator
             elif  p_plugin.mass.name.lower() == 'zero':
                 pass
             else:
+                misc.sprint(p_base.mass.value, p_plugin.mass.value, dir(p_base.mass))
+                misc.sprint(p_base.mass.nature, p_plugin.mass.nature)
+                misc.sprint(self.old_new)
                 raise USRMODERROR, 'Some inconsistency in the mass assignment in the model\n' + \
              '     Mass: %s and %s\n' %(p_base.mass.name, p_plugin.mass.name) + \
              '     conflict name %s\n' % self.old_new + \
@@ -657,6 +660,29 @@ from object_library import all_propagators, Propagator
                 self.old_new[parameter.name] = old_param.name
             #            self.add_internal_parameter(iden_param)
         
+        elif parameter.lhablock.lower() in ['mass', 'decay'] and int(parameter.lhacode[0]) in identify_pid:
+            # this means that the parameter is an internal parameter in the original model...
+            #find it via the particle name
+            orig_particle = self.particle_dict[lhacode[0]]
+            if parameter.lhablock.lower() == 'mass':
+                old_param = orig_particle.mass
+            else:
+                old_param = orig_particle.width
+            if old_param.name.lower() == 'zero':
+                #Just add the new parameter to the current list
+                self.parameters.append(parameter) 
+                self.new_external.append(parameter)                
+            else:
+                logger.info('The two model defines the parameter for  block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\'\n'\
+                      %  (parameter.lhablock.lower(), lhacode[0], parameter.name, old_param.name) + \
+                '     We will merge those two parameters in a single one')
+                if parameter.name in self.old_new.values():
+                    key = [k for k in self.old_new if self.old_new[k] == parameter.name][0]
+                    self.old_new[key] = old_param.name
+                    self.old_new[parameter.name] = old_param.name
+                else:
+                    self.old_new[parameter.name] = old_param.name
+                    #            self.add_internal_parameter(iden_param)                            
         else:
             #Just add the new parameter to the current list
             self.parameters.append(parameter) 

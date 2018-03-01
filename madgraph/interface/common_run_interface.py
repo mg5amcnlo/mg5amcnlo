@@ -3236,7 +3236,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #Force class default
             self.debug_output = CommonRunCmd.debug_output
         if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
-            os.remove('ME5_debug')
+            try:
+                os.remove('ME5_debug')
+            except Exception:
+                pass
         if not 'ME5_debug' in self.debug_output:
             os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
