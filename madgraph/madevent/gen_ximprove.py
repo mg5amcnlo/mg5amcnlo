@@ -1604,7 +1604,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 
     def __new__(cls, *args, **opts):
         
-        return super(gen_ximprove_v4, cls).__new__(cls, *args, **opts)
+        return super(gen_ximprove, cls).__new__(cls, *args, **opts)
 
     def __init__(self, *args, **opts):
         
