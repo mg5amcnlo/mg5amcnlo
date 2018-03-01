@@ -1602,6 +1602,10 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     min_event_in_iter = 1000
     combining_job = sys.maxint
 
+    def __new__(cls, *args, **opts):
+        
+        return super(gen_ximprove_v4, cls).__new__(cls, *args, **opts)
+
     def __init__(self, *args, **opts):
         
         self.ngran = -1
