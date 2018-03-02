@@ -10,6 +10,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF+MZ: Fixed a problem with (f)NLO(+PS) runs in case the Born has identical QCD-charged
       	     particles. Cross sections were typically correct, but some distributions might
 	     have shown an asymmetry. 
+      OM: Change the default LO output directory structure. Now by default the lepton and neutrino are split 
+          in two different directory. This avoids to face problem with the assymetric cut on lepton/neutrino
+      OM: Change in LO maching for HEFT (or any model with hgg vertex) in the way to flag jet that should
+          not take part in the matching/merging procedure.
+      OM: Fixed a bug for loop induced in gridpack mode
 
 2.6.1 (12/12/17)
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
