@@ -19,6 +19,7 @@ C
       integer nb_neutron(2)
       common/to_heavyion_pdg/ nb_proton, nb_neutron
       double precision get_ion_pdf
+      integer nb_hadron
 c
       integer i,j,ihlast(2),ipart,iporg,ireuse,imemlast(2),iset,imem
       double precision xlast(2),xmulast(2),pdflast(-7:7,2)
@@ -34,16 +35,17 @@ c
          return
       endif
 
+      nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.
       if (x.eq.0d0) then
          pdg2pdf=0d0
          return
-      elseif (x.lt.0d0 .or. x.gt.1d0) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
+      elseif (x.lt.0d0 .or. x*nb_hadron.gt.1d0) then
+         write (*,*) 'PDF not supported for Bjorken x ', x*nb_hadron
          open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+         write(26,*) 'Error: PDF not supported for Bjorken x ',x*nb_hadron
          stop 1
       endif
 
@@ -63,9 +65,9 @@ c     This will be called for any PDG code, but we only support up to 7
 c     Determine the iset used in lhapdf
       call getnset(iset)
       if (iset.ne.1) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
+         write (*,*) 'PDF with iset diff of 1 not supported'
          open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+         write(26,*) 'Error: PDF with iset diff of 1 not supported'
          stop 1
       endif
 
@@ -75,7 +77,7 @@ c     Determine the member of the set (function of lhapdf)
       ireuse = 0
       do i=1,2
 c     Check if result can be reused since any of last two calls
-         if (x.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
+         if (x*nb_hadron.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
      $        imem.eq.imemlast(i) .and. ih.eq.ihlast(i)) then
             ireuse = i
          endif
@@ -120,13 +122,13 @@ c     xlast(i) are initialized as data statements to be equal to -99d9
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      call pftopdglha(ih,x,xmu,pdflast(-7,ireuse))
+      call pftopdglha(ih,x*nb_hadron,xmu,pdflast(-7,ireuse))
       pdg2pdf = get_ion_pdf(pdflast, ipart, nb_proton(beamid), nb_neutron(beamid))
 c
 c
 c
 
-      xlast(ireuse)=x
+      xlast(ireuse)=x*nb_hadron
       xmulast(ireuse)=xmu
       ihlast(ireuse)=ih
       imemlast(ireuse)=imem

@@ -17,6 +17,7 @@ c
       double precision tmp1, tmp2
       integer nb_proton(2), nb_neutron(2) 
       common/to_heavyion_pdg/ nb_proton, nb_neutron
+      integer nb_hadron
 C      
 
       double precision Ctq6Pdf, get_ion_pdf
@@ -37,16 +38,17 @@ C
          return
       endif
 
+      nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.
       if (x.eq.0d0) then
          pdg2pdf=0d0
          return
-      elseif (x.lt.0d0 .or. x.gt.1d0) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
+      elseif (x.lt.0d0 .or. (x*nb_hadron).gt.1d0) then
+         write (*,*) 'PDF not supported for Bjorken x ', x*nb_hadron
          open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+         write(26,*) 'Error: PDF not supported for Bjorken x ',x*nb_hadron
          stop 1
       endif
 
@@ -114,7 +116,7 @@ c     xlast(i) are initialized as data statements to be equal to -99d9
 
 c     Give the current values to the arrays that should be
 c     saved. 'pdflast' is filled below.
-      xlast(ireuse)=x
+      xlast(ireuse)=x*nb_hadron
       xmulast(ireuse)=xmu
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
@@ -134,15 +136,15 @@ c     saved. 'pdflast' is filled below.
 C        Be carefull u and d are flipped inside cteq6
          if (nb_proton(beamid).gt.1.or.nb_neutron(beamid).ne.0)then
             if (ipart.eq.1.or.ipart.eq.2)then
-               pdflast(1,ireuse)=Ctq6Pdf(2,x,xmu) ! remember u/d flipping in cteq
-               pdflast(2,ireuse)=Ctq6Pdf(1,x,xmu)
+               pdflast(1,ireuse)=Ctq6Pdf(2,x*nb_hadron,xmu) ! remember u/d flipping in cteq
+               pdflast(2,ireuse)=Ctq6Pdf(1,x*nb_hadron,xmu)
                pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             else if (ipart.eq.-1.or.ipart.eq.-2)then
-               pdflast(-1,ireuse)=Ctq6Pdf(-2,x,xmu) ! remember u/d flipping in cteq
-               pdflast(-2,ireuse)=Ctq6Pdf(-1,x,xmu)
+               pdflast(-1,ireuse)=Ctq6Pdf(-2,x*nb_hadron,xmu) ! remember u/d flipping in cteq
+               pdflast(-2,ireuse)=Ctq6Pdf(-1,x*nb_hadron,xmu)
                pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             else
-               pdflast(ipart,ireuse)=Ctq6Pdf(ipart,x,xmu)
+               pdflast(ipart,ireuse)=Ctq6Pdf(ipart,x*nb_hadron,xmu)
                pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
             endif 
          else
@@ -152,7 +154,7 @@ C        Be carefull u and d are flipped inside cteq6
             pdflast(iporg,ireuse)=pdg2pdf
          endif
       else
-         call pftopdg(ih,x,xmu,pdflast(-7,ireuse))
+         call pftopdg(ih,x*nb_hadron,xmu,pdflast(-7,ireuse))
          pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
      $                         nb_neutron(beamid))
       endif      

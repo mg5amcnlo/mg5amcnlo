@@ -17,6 +17,8 @@ C
       integer nb_proton(2)
       integer nb_neutron(2)
       common/to_heavyion_pdg/ nb_proton, nb_neutron
+      integer nb_hadron
+
 C      
       double precision get_ion_pdf
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
@@ -32,17 +34,17 @@ C
       data imemlast/20*-99/
       data i_replace/20/
 
-
+      nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.
       if (x.eq.0d0) then
          pdg2pdf=0d0
          return
-      elseif (x.lt.0d0 .or. x.gt.1d0) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
+      elseif (x.lt.0d0 .or. (x*nb_hadron).gt.1d0) then
+         write (*,*) 'PDF not supported for Bjorken x ', x*nb_hadron
          open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+         write(26,*) 'Error: PDF not supported for Bjorken x ',x*nb_hadron
          stop 1
       endif
 
@@ -80,7 +82,7 @@ c     Check if result can be reused since any of last twenty
 c     calls. Start checking with the last call and move back in time
          if (ih.eq.ihlast(ii)) then
             if (ipart.eq.ipartlast(ii)) then
-               if (x.eq.xlast(ii)) then
+               if (x*nb_hadron.eq.xlast(ii)) then
                   if (xmu.eq.xmulast(ii)) then
                      if (imem.eq.imemlast(ii)) then
                         ireuse = ii
@@ -113,13 +115,18 @@ c     be saved
             pdflast(ipart, i_replace)=pdg2pdf
          else
             if (ipart.eq.1.or.ipart.eq.2) then
-               call evolvepart(1,x,xmu,pdflast(1, i_replace))
-               call evolvepart(2,x,xmu,pdflast(2, i_replace))
+               call evolvepart(1,x*nb_hadron
+     &                         ,xmu,pdflast(1, i_replace))
+               call evolvepart(2,x*nb_hadron
+     &                         ,xmu,pdflast(2, i_replace))
             else if (ipart.eq.-1.or.ipart.eq.-2)then
-               call evolvepart(-1,x,xmu,pdflast(-1, i_replace))
-               call evolvepart(-2,x,xmu,pdflast(-2, i_replace))
+               call evolvepart(-1,x*nb_hadron
+     &                         ,xmu,pdflast(-1, i_replace))
+               call evolvepart(-2,x*nb_hadron
+     &                         ,xmu,pdflast(-2, i_replace))
             else
-               call evolvepart(ipart,x,xmu,pdflast(ipart, i_replace))
+               call evolvepart(ipart,x*nb_hadron
+     &                         ,xmu,pdflast(ipart, i_replace))
             endif 
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
@@ -130,7 +137,7 @@ c     be saved
          write (*,*) 'beam type not supported in lhadpf'
          stop 1
       endif
-      xlast(i_replace)=x
+      xlast(i_replace)=x*nb_hadron
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih
       imemlast(i_replace)=imem
