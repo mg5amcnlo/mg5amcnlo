@@ -43,10 +43,15 @@ c     instead of stopping the code, as this might accidentally happen.
          pdg2pdf=0d0
          return
       elseif (x.lt.0d0 .or. x*nb_hadron.gt.1d0) then
-         write (*,*) 'PDF not supported for Bjorken x ', x*nb_hadron
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x*nb_hadron
-         stop 1
+         if (nb_hadron.eq.1.or.x.lt.0d0) then
+            write (*,*) 'PDF not supported for Bjorken x ', x*nb_hadron
+            open(unit=26,file='../../../error',status='unknown')
+            write(26,*) 'Error: PDF not supported for Bjorken x ',x*nb_hadron
+            stop 1
+         else
+            pdg2pdf=0d0
+            return
+         endif
       endif
 
       ipart=ipdg
