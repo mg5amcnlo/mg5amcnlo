@@ -216,7 +216,7 @@ class UFOModel(object):
         UFO file"""
 
         if isinstance(param, basestring): 
-            return "'%s'" % param.replace("\\", "\\\\")
+            return "'%s'" % param.replace("\\", "\\\\").replace('\'', '\\\'').replace('\"', '\\\"')
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
             return "%s" % param
