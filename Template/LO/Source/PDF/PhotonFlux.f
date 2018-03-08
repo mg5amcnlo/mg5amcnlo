@@ -114,7 +114,7 @@ C***********************************************************************
          tmppdf(-2) = nb_proton * tmp2 + nb_neutron * tmp2
          get_ion_pdf = tmppdf(pdg)
       else 
-         get_ion_pdf = tmppdf(i)*(nb_proton+nb_neutron)
+         get_ion_pdf = pdf(pdg)*(nb_proton+nb_neutron)
       endif
 
       return
