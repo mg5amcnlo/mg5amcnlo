@@ -9,7 +9,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - add autocompletion for some parameter
             - add direct rejection of parameter edition if not in some allowed list/range
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
-
+      OM: For 1>N, if the user set fixed_run_scale to True, then the scale is choose accordingly
+          and not following the mass of the inital state anymore
 
 2.6.1 (12/12/17)
 
