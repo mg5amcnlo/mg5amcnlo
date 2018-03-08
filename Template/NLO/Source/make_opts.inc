@@ -118,9 +118,9 @@ endif
 
 # Madloop
 ifdef madloop
-  ifeq (,$(wildcard parton_lum_0.f)) # this is to skip ML for LOonly
-   libmadloop=libMadLoop.a
-   libcuttools=-lcts %(link_tir_libs)s
+  ifneq ("$(wildcard */loop_matrix.f)","") # this is to skip ML for LOonly
+    libmadloop=libMadLoop.a
+    libcuttools=-lcts %(link_tir_libs)s
   endif 
 else
   libmadloop=
