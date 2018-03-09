@@ -256,19 +256,23 @@ class MECmdShell(IOTests.IOTestManager):
 
     def test_madspin_ON_and_onshell_atNLO(self):
 
+        nevents =2
         text = """
         set crash_on_error True
         generate p p > t t~ [QCD]
         output %s
         launch
         madspin=ON
-        set nevents 10
+        shower=OFF
+        set nevents %s
+        set mt 174
+        set wt = 1.5
         decay t > w+ b
         decay t~ > w- b~
         launch -i
         decay_events run_01
         add madspin --replace_line="set spinmode.*" --after_line="banner" set spinmode=onshell 
-        """ % self.path
+        """ % (self.path,nevents)
         
         interface = MGCmd.MasterCmd()
         interface.no_notification()
@@ -278,12 +282,42 @@ class MECmdShell(IOTests.IOTestManager):
         interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
         
         # perform some basic check
+        orig_lhe = pjoin(self.path,'Events','run_01','events.lhe.gz')
         lhe_on = pjoin(self.path,'Events','run_01_decayed_1','events.lhe.gz')
         lhe_onshell= pjoin(self.path,'Events','run_01_decayed_2','events.lhe.gz')
         
         self.assertTrue(lhe_on)
         mt =174
         wt = 1.5
+        
+        # check that original event has top onshell
+        nb_event = 0
+        for event in lhe_parser.EventFile(orig_lhe):
+            misc.sprint(str(event))
+            nb_event +=1
+            nb_final = 0
+            m_inv_t = 0
+            m_inv_tbar = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                    if p.pdg == 6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two top decaying')
+                        m_inv_t = p.mass
+                        self.assertTrue( mt - 0.1*wt < m_inv_t < mt + 0.1*wt)
+                    elif p.pdg == -6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two antitop decaying')
+                        m_inv_tbar = p.mass
+                        self.assertTrue( mt - 0.1*wt < m_inv_tbar < mt + 0.1*wt)
+                    #else:
+                    #    self.assertTrue(False, 'not top-antitop decaying')
+            self.assertTrue(nb_final in [2,3])
+        self.assertEqual(nb_event, nevents)        
+        
         
         # check that each events has the decay ON mode
         nb_event = 0
@@ -311,11 +345,12 @@ class MECmdShell(IOTests.IOTestManager):
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
             self.assertTrue(nb_final in [4,5])
-        self.assertEqual(nb_event, 10)
+        self.assertEqual(nb_event, nevents)
 
         # check that each events has the decay ON mode
         nb_event = 0
         for event in lhe_parser.EventFile(lhe_onshell):
+            misc.sprint(event)
             nb_event +=1
             nb_final = 0
             m_inv_t = 0
@@ -330,17 +365,18 @@ class MECmdShell(IOTests.IOTestManager):
                         #if m_inv_t != 0:
                         #    self.assertTrue(False, 'two top decaying')
                         m_inv_t = p.mass
+                        misc.sprint(m_inv_t, mt)
                         self.assertTrue( mt - 1 < m_inv_t < mt + 1)
                     elif p.pdg == -6:
                         #if m_inv_t != 0:
                         #    self.assertTrue(False, 'two antitop decaying')
                         m_inv_tbar = p.mass
+                        misc.sprint(m_inv_tbar, mt)
                         self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            misc.sprint(nb_final)
             self.assertTrue(nb_final in [4,5])
-        self.assertEqual(nb_event, 10)        
+        self.assertEqual(nb_event, nevents)        
 
         
     def test_madspin_LOonly(self):
