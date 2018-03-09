@@ -1728,6 +1728,11 @@ class Event(list):
         """Return the unique tag identifying the SubProcesses for the generation.
         Usefull for program like MadSpin and Reweight module."""
         
+        # 
+        out = EventTag(self)
+        misc.sprint(out.pdgs)
+        misc.sprint(out.order)
+        
         initial, final, order = [], [], [[], []]
         for particle in self:
             if particle.status == -1:
@@ -2243,6 +2248,150 @@ class Event(list):
         out = [format_line % one for one in out]
         out = ''.join(out).replace('e','d')
         return out    
+
+class EventTag(object):
+    """a tag to identify to which process a given event is associated.
+    This is use for re-weighting method.
+    a tag is of the form (id_init, id_prod_final, decay, flag) 
+    decay is a tuple of EventTag for 1>N,
+    flag is currently always empty but kept for future usage"""
+    
+    def __init__(self, *args, **opts):
+        """ We have two init routine one from events, one from attribute"""
+        self.from_event = False
+        import madgraph.core.base_objects as base_objects
+        
+        self.pdgs = None
+        self.order = None
+        self.decay = [] # EventTag for the decay
+        
+        if (args and isinstance(args[0], Event)) or 'event' in opts:
+            self.from_event = True
+            return self.init_from_event(*args, **opts)
+        elif (args and isinstance(args[0], base_objects.Process)) or 'process' in opts:
+            return self.init_from_process(*args, **opts)        
+        else:
+            return self.init_from_attr()
+    
+    def init_from_process(self, process, flag=""):
+        
+        # first round use only the id for the tag 
+        # additionally build a dictionary event_id -> pdg_code 
+        # then convert the tag to pdg information and sort it accordingly
+        
+        initial, final = [], []
+        decaying = {}
+        eid2pdg = {}
+        initial = process.get_initial_ids()
+        final = process.get_final_ids()
+
+        self.decays = [EventTag(dec) for dec in process.get('decay_chains')]
+
+        # get information from the decays
+        dec_pdgs = [dectag.pdgs for dectag in self.decays]
+        dec_order = [dectag.order for dectag in self.decays]
+
+        self.pdgs = tuple([initial, final, dec_pdgs, flag])
+
+        self.assign_order_for_proc()
+
+        return
+    
+
+    def assign_order_for_proc(self, initial=1, final=-1):
+        """ """
+        
+        init_current = initial
+        init_order = []
+        for _ in self.pdgs[0]:
+            init_order.append(init_current)
+            init_current += 1
+        
+        
+        #make a dictinary pdg -> dec
+        tmp_dec = collections.defaultdict(list)
+        for dec in self.decay: 
+            dec_pdg = dec.pdgs[0][0] 
+            tmp_dec[dec_pdg].append(dec)
+        
+        if final > 0:
+            current = final
+        else:
+            current = init_current
+        
+        order = []
+        for pdg in self.pdgs[1]:
+            if pdg in tmp_dec:
+                dec = tmp_dec.pop(0)
+                current = dec.assign_order_for_proc(initial=-1 ,final=current)
+                order.append(-1)
+            else:
+                order.append(current)
+            current += 1
+        
+        dec_order = [dec.order for dec in self.decays]
+        
+        self.order = (tuple(init_current), tuple(order), dec_order)    
+        
+        return current
+        
+    
+    def init_from_event(self, event, flag="" ):
+        """take an event an create the tag"""
+        
+        # first round use only the event_id for the tag 
+        # additionally build a dictionary event_id -> pdg_code 
+        # then convert the tag to pdg information and sort it accordingly
+        
+        
+        initial, final = [], []
+        decaying = {}
+        eid2pdg = {}
+        for particle in event:
+            eid = particle.event_id
+            eid2pdg[eid] = particle.pdg
+            
+            if particle.status == -1:
+                initial.append(eid)
+            # production particle (propagator and /or final state particles)
+            elif particle.mother1.status == -1:
+                final.append(eid)
+            elif particle.mother1.event_id in decaying:
+                decaying[particle.mother1.event_id].append(eid)
+            else:
+                decaying[particle.mother1.event_id] = [eid]
+           
+        #
+        decay_order, decay_pdg = self.get_decay_information(final, decaying, eid2pdg)     
+
+        
+        self.order = (tuple(initial), tuple(final), decay_order)
+        initial = [eid2pdg[p] for p in initial]
+        final = [eid2pdg[p] for p in final]
+        initial.sort()
+        final.sort()
+        misc.sprint(initial, final)
+        self.pdgs = tuple([initial, final, decay_pdg, flag])
+        
+
+    @staticmethod
+    def get_decay_information(propagators, decaying_info, eid2pdg):
+        """auto-recursive method to get the decay (and subdecay) tag)"""
+        
+        out_order, out_pdg = [],[]
+        for p in propagators:
+            if p in decaying_info:
+                sub_order, sub_pdg = EventTag.get_decay_information(decaying_info[p], decaying_info, eid2pdg)
+                one_line = (p, tuple(decaying_info[p]), sub_order)
+                out_order.append(one_line)
+                pdgs = [eid2pdg[k] for k in decaying_info[p] ]
+                pdgs.sort()
+                one_line = (eid2pdg[p], pdgs , sub_pdg)
+                out_pdg.append(one_line)
+                    
+        return tuple(out_order), tuple(out_pdg)
+        
+        
 
 class WeightFile(EventFile):
     """A class to allow to read both gzip and not gzip file.
@@ -2765,14 +2914,14 @@ class NLO_PARTIALWEIGHT(object):
             
         def get_tag_and_order(self):
             """ return the tag and order for this basic event""" 
-            (initial, _), _ = self.event.get_tag_and_order()
+            (initial, _, _, _), _ = self.event.get_tag_and_order()
             order = self.get_pdg_code()
             
             
             initial, out = order[:len(initial)], order[len(initial):]
             initial.sort()
             out.sort()
-            return (tuple(initial), tuple(out)), order
+            return (tuple(initial), tuple(out), (), ''), order
         
         def get_momenta(self, get_order, allow_reversed=True):
             """return the momenta vector in the order asked for"""

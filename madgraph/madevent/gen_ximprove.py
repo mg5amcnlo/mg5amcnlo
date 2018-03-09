@@ -361,6 +361,8 @@ class gensym(object):
         #    return self.submit_to_cluster_no_splitting(job_list)
 
         for Pdir, jobs in job_list.items():
+            if not jobs:
+                continue
             if self.splitted_for_dir(Pdir, jobs[0]) <= 1:
                 return self.submit_to_cluster_no_splitting({Pdir:jobs})
 
