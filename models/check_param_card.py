@@ -982,6 +982,65 @@ class ParamCardIterator(ParamCard):
             else:
                 self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
 
+    def form_s(self,stringa):
+        formatted = '{:15}'.format(stringa)
+        return  formatted
+
+    def form_n(self,num):
+        formatted = '{:2.5e}'.format(num)
+        return formatted
+
+    def write_summary_new(self, out_path = '', keys = '', point = False , header = False, last_results=''):
+
+        # writing the parameters
+        if out_path and header:
+           nice_keys = ['run number']
+           nice_keys = nice_keys + self.param_order # parameters iterated 
+
+           for k in keys:
+               k = k.replace('taacsID#','')
+               k = k.replace('taacsID','tot_Xsec')
+               nice_keys.append(k)
+
+           summary = open(out_path, 'w')                                                                                                                                         
+           for k in nice_keys:
+                ind = nice_keys.index(k) + 1                     
+                if ind <=9: ind = '0'+str(ind)                                                                                                      
+                summary.write( '# [' + str(ind) + ']' + ' : ' + k + '\n' )                                                                                    
+
+           '''
+           #for param,value in zip (self.param_order, self.itertag
+           summary = open(out_path, 'w')
+           summary.write(self.form_s('# [01] : run number\n') )
+           for k,k_n in zip(keys,nice_keys):                                                                                                                             
+                ind = keys.index(k) + 2
+                if ind <= 9: ind = '0'+str(ind)                                                                                                                                 
+                summary.write( '# [' + str(ind) + ']' + ' : ' + k_n + '\n' )                                                                                 
+           '''
+
+           summary.write('\n\n\n')
+           summary.close()   
+
+        elif (out_path and not header):
+            s = '\t'
+            summary = open(out_path, 'a+')
+            summary.write('{:9d}'.format(int(point)) + s)
+
+            for num in self.itertag: # these are the iterated parameters
+                num = self.form_n(num)
+                summary.write(num + s)
+            for k in keys:
+                num = self.form_n( last_results[k] )
+                summary.write(num + s)
+            summary.write('\n')
+            summary.close()
+ 
+        #param_list = self.param_order 
+        #print 'FF num_col' , num_col , self.param_order , nice_keys
+        #print 'FF self.cross ' , self.cross 
+        #print 'FF names and values of the iterated', self.param_order , self.itertag 
+     
+
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
         
@@ -1004,11 +1063,21 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
-        
+      
+
         if not lastline:
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
+        '''
+        #print 'FF self.crss' , self.cross 
+        #print 'FF to_print' , to_print 
+        # FF 
+        to_print is a list of the dictionary== self.last_results that is filled while looping in the iteration of the scan parameters.
+        This means that each 'info' is a dictionary with the usual entries as in self.last_results !!!
+        This is why you call info[k] e.g. info['sigmav(xf)']
+        '''
+
         for info in to_print:
             name = info['run_name']
             bench = info['bench']

@@ -588,6 +588,9 @@ from object_library import all_propagators, Propagator
             elif  p_plugin.mass.name.lower() == 'zero':
                 pass
             else:
+                misc.sprint(p_base.mass.value, p_plugin.mass.value, dir(p_base.mass))
+                misc.sprint(p_base.mass.nature, p_plugin.mass.nature)
+                misc.sprint(self.old_new)
                 raise USRMODERROR, 'Some inconsistency in the mass assignment in the model\n' + \
              '     Mass: %s and %s\n' %(p_base.mass.name, p_plugin.mass.name) + \
              '     conflict name %s\n' % self.old_new + \
