@@ -150,7 +150,7 @@ def import_model_from_db(model_name, local_dir=False):
 
     #untar the file.
     # .tgz
-    if link.endswith(('.tgz','.tar.gz')):
+    if link.endswith(('.tgz','.tar.gz','.tar')):
         try:
             proc = misc.call('tar -xzpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
             if proc: raise Exception

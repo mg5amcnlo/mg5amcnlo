@@ -256,7 +256,7 @@ class MECmdShell(IOTests.IOTestManager):
 
     def test_madspin_ON_and_onshell_atNLO(self):
 
-        nevents =2
+        nevents =20
         text = """
         set crash_on_error True
         generate p p > t t~ [QCD]
@@ -271,7 +271,7 @@ class MECmdShell(IOTests.IOTestManager):
         decay t~ > w- b~
         launch -i
         decay_events run_01
-        add madspin --replace_line="set spinmode.*" --after_line="banner" set spinmode=onshell 
+        add madspin --replace_line="set spinmode.*" --after_line=banner set spinmode=onshell 
         """ % (self.path,nevents)
         
         interface = MGCmd.MasterCmd()
