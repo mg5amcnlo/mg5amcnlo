@@ -163,6 +163,7 @@ class TestCmdShell1(unittest.TestCase):
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
+                    'default_unset_couplings': 99,
                     'cluster_type': 'condor', 
                     'cluster_status_update': (600, 30),
                     'madanalysis_path': './MadAnalysis', 

@@ -450,7 +450,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if (criteria=="madevent"):
               proc_class = [ [(p.is_fermion(), ) \
                             for p in is_parts], # p.get('is_part')
-                           [(p.get('mass'), p.get('spin'),
+                           [(p.get('mass'), p.get('spin'), 
+                             p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
                              abs(p.get('color')),l.get('onshell')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),

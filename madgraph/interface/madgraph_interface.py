@@ -3647,9 +3647,9 @@ This implies that with decay chains:
 
 
 
-    def draw(self, line,selection='all',type=''):
+    def draw(self, line,selection='all',Dtype=''):
         """ draw the Feynman diagram for the given process.
-        Type refers to born, real or loop"""
+        Dtype refers to born, real or loop"""
 
         args = self.split_arg(line)
         # Check the validity of the arguments
@@ -3676,11 +3676,11 @@ This implies that with decay chains:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
 
-            if selection=='all' and type != 'loop':
+            if selection=='all' and Dtype != 'loop':
                 diags=amp.get('diagrams')
             elif selection=='born':
                 diags=amp.get('born_diagrams')
-            elif selection=='loop' or type == 'loop':
+            elif selection=='loop' or Dtype == 'loop':
                 diags=base_objects.DiagramList([d for d in
                         amp.get('loop_diagrams') if d.get('type')>0])
                 if len(diags) > 5000:
@@ -3692,7 +3692,7 @@ This implies that with decay chains:
                                           model=self._curr_model,
                                           amplitude=amp,
                                           legend=amp.get('process').input_string(),
-                                          diagram_type=type)
+                                          diagram_type=Dtype)
 
 
             logger.info("Drawing " + \
@@ -4503,7 +4503,7 @@ This implies that with decay chains:
         ## Now check for orders/squared orders/constrained orders
         order_pattern = re.compile(\
            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
-                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*")
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*?(?P<after>.*)")
         order_re = order_pattern.match(line)
         squared_orders = {}
         orders = {}
@@ -4551,7 +4551,7 @@ This implies that with decay chains:
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
              
-            line = order_re.group('before')
+            line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
             order_re = order_pattern.match(line)          
         
         # handle the case where default is not 99 and some coupling defined
@@ -8070,8 +8070,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
-                me_cmd.options.update(self.options)
-                me_cmd.configure_run_mode(self.options['run_mode'])
+                for name, val in self.options.items():
+                    if name in me_cmd.options and me_cmd.options[name] != val:
+                        self.exec_cmd('set %s %s --no_save' % (name, val)) 
+                #me_cmd.options.update(self.options)
+                #me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)
                 me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False

@@ -1687,7 +1687,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
             return
         
-        if self.options['run_mode'] ==2:
+        if self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
             nb_submit = min(self.options['nb_core'], nb_event//2500)
         elif self.options['run_mode'] ==1:
             nb_submit = min(self.options['cluster_size'], nb_event//25000)
@@ -3236,7 +3236,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #Force class default
             self.debug_output = CommonRunCmd.debug_output
         if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
-            os.remove('ME5_debug')
+            try:
+                os.remove('ME5_debug')
+            except Exception:
+                pass
         if not 'ME5_debug' in self.debug_output:
             os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
@@ -4192,6 +4195,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         self.load_default()        
         self.define_paths(**opt)
+        self.last_editline_pos = 0
 
         if 'allow_arg' not in opt or not opt['allow_arg']:
             # add some mininal content for this:
@@ -4286,8 +4290,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             run_card_def = banner_mod.RunCard(self.paths['run_default'])
         except IOError:
             run_card_def = {}
-        
-        
+
         if run_card_def:
             if self.run_card:
                 self.run_set = run_card_def.keys() + self.run_card.hidden_param
@@ -5971,20 +5974,30 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( "   add a definition of name in the pythia8_card with the given value")
         logger.info( "   Do not work for the param_card"        )
         logger.info('')
-        logger.info( '-- syntax: add filename [OPTION] line')
-        logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        return self.help_edit(prefix=False)
+        
+    def help_edit(self, prefix=True):
+        """help for edit command"""      
+        
+        if prefix: logger.info('********************* HELP ADD|EDIT ***************************')
+        logger.info( '-- syntax: add filename [OPTION] LINE')
+        logger.info( '-- syntax: edit filename [OPTION] LINE')
+        logger.info( '   add the given LINE to the end of the associate file (all file supported).')
         logger.info( '')
         logger.info( '   OPTION parameter allows to change the position where to write in the file')
         logger.info( '     --after_line=banner : write the line at the end of the banner')
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
+        logger.info( '     --line_position=afterlast : insert the line after the latest inserted/modified line.')        
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
         logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
         logger.info( '     --clean remove all previously existing line in  the file')
         logger.info('')
-        logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
         logger.info('    Note: all regular-expression will be prefixed by ^\s*')
-        logger.info('********************* HELP ADD ***************************') 
+        logger.info('')
+        logger.info( '   example: edit reweight --after_line="change mode\b" change model heft')
+        logger.info( '            edit madspin  --after_line="banner" change model XXXX')
+        logger.info('********************* HELP ADD|EDIT ***************************') 
 
 
     def complete_add(self, text, line, begidx, endidx, formatting=True):
@@ -6005,7 +6018,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           self.list_completion(text, cards)
         elif len(split) == 2:
             possibilities = {} 
-            options = ['--line_position=','--after_line=banner', '--after_line="','--before_line="']   
+            options = ['--line_position=','--line_position=afterlast','--after_line=banner', '--after_line="','--before_line="']   
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, options, line)
         else:
@@ -6044,6 +6057,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
+            elif args[1].startswith('--line_position=afterlast'):
+                #position in file determined by user
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                if self.last_editline_pos > 0:
+                    pos = self.last_editline_pos +1
+                newline = line.split(None,2)[2]
+                split.insert(pos, newline)
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -6054,6 +6079,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                self.last_editline_pos = pos
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -6066,6 +6092,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                self.last_editline_pos = posline
                 
             elif args[1].startswith('--replace_line='):
                 # catch the line/regular expression and replace the associate line
@@ -6094,7 +6121,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
-                         (old_line, posline, card, new_line ),'$MG:color:BLACK')                
+                         (old_line, posline, card, new_line ),'$MG:color:BLACK') 
+                self.last_editline_pos = posline               
                                             
             
             elif args[1].startswith('--before_line='):
@@ -6112,6 +6140,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
+                self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
@@ -6127,16 +6156,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
+
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                                 
+                self.last_editline_pos = posline
+                                                 
             else:
                 ff = open(pjoin(self.me_dir,'Cards',card),'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
                 logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                self.last_editline_pos = -1
 
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
     do_edit = do_add
+    complete_edit = complete_add
 
     def help_asperge(self):
         """Help associated to the asperge command"""

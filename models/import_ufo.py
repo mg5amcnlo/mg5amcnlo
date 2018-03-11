@@ -117,7 +117,7 @@ def get_model_db():
         Please check your internet connection or retry later'''
     return data
 
-def import_model_from_db(model_name):
+def import_model_from_db(model_name, local_dir=False):
     """ import the model with a given name """
 
     data =get_model_db()
@@ -135,7 +135,7 @@ def import_model_from_db(model_name):
     # 1. PYTHONPATH containing UFO
     # 2. models directory
     target = None 
-    if 'PYTHONPATH' in os.environ:
+    if 'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
             if 'UFO' in os.path.basename(directory) and os.path.exists(directory):
                 target= directory 
@@ -150,7 +150,7 @@ def import_model_from_db(model_name):
 
     #untar the file.
     # .tgz
-    if link.endswith(('.tgz','.tar.gz')):
+    if link.endswith(('.tgz','.tar.gz','.tar')):
         try:
             proc = misc.call('tar -xzpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
             if proc: raise Exception

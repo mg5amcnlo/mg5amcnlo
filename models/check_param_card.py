@@ -247,7 +247,7 @@ class Block(list):
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
-            data, self.commant = text, ""
+            data, self.comment = text, ""
 
         data = data.lower()
         data = data.split()
@@ -922,8 +922,8 @@ class ParamCardIterator(ParamCard):
     def iterate(self):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
-        auto = 'Auto'
         pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        self.autowidth = []
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
@@ -941,14 +941,15 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key].append( (param, eval(def_list)))
                     except SyntaxError, error:
                         raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
-                    
+                elif isinstance(param.value, str) and param.value.strip().lower().startswith('auto'):
+                    self.autowidth.append(param)
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-
+            
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):
@@ -970,7 +971,7 @@ class ParamCardIterator(ParamCard):
             yield param_card
         
     
-    def store_entry(self, run_name, cross, error=None):
+    def store_entry(self, run_name, cross, error=None, param_card_path=None):
         """store the value of the cross-section"""
         if isinstance(cross, dict):
             info = dict(cross)
@@ -980,7 +981,13 @@ class ParamCardIterator(ParamCard):
             if error is None:
                 self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
             else:
-                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+        if self.autowidth and param_card_path:
+            paramcard = ParamCard(param_card_path)
+        for param in self.autowidth:
+            self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
+            
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
@@ -996,6 +1003,12 @@ class ParamCardIterator(ParamCard):
             keys.remove('bench')
             keys.remove('run_name')
             keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
 
         formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
                                              ('%%-%is ' % (nbcol))* len(keys))
@@ -1004,11 +1017,21 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
-        
+      
+
         if not lastline:
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
+        '''
+        #print 'FF self.crss' , self.cross 
+        #print 'FF to_print' , to_print 
+        # FF 
+        to_print is a list of the dictionary== self.last_results that is filled while looping in the iteration of the scan parameters.
+        This means that each 'info' is a dictionary with the usual entries as in self.last_results !!!
+        This is why you call info[k] e.g. info['sigmav(xf)']
+        '''
+
         for info in to_print:
             name = info['run_name']
             bench = info['bench']

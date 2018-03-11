@@ -1016,6 +1016,7 @@ class ConfigFile(dict):
         
         name = name.strip()
         lower_name = name.lower() 
+
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
             text='%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name])
@@ -2476,7 +2477,6 @@ class RunCard(ConfigFile):
         The entry False will not be written anywhere"""
         
         # ensure that all parameter are coherent and fix those if needed
-        misc.sprint('pass to check')
         self.check_validity()
         
         #ensusre that system only parameter are correctly set

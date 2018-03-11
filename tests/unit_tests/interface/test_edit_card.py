@@ -41,7 +41,7 @@ class FakeInterface(object):
     
     def __init__(self, me_dir):
         self.me_dir = me_dir
-        
+        self.inputfile = None
     
 
 class TestEditCardCmd(unittest.TestCase):
