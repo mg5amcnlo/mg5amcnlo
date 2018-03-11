@@ -116,7 +116,9 @@ C***********************************************************************
       else 
          get_ion_pdf = pdf(pdg)*(nb_proton+nb_neutron)
       endif
-
+      
+C     set correct PDF normalisation
+      get_ion_pdf = get_ion_pdf * (nb_proton+nb_neutron)
       return
       end
 
