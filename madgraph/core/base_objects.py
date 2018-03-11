@@ -3126,6 +3126,11 @@ class Process(PhysicsObject):
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
 
+        # Add squared orders
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2=' + repr(self['squared_orders'][key]) \
+                       for key in self['squared_orders']]) + ' '
+
         # Add perturbation orders
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
@@ -3139,10 +3144,6 @@ class Process(PhysicsObject):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
-        # Add squared orders
-        if self['perturbation_couplings'] and self['squared_orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['squared_orders'][key]) \
-                       for key in self['squared_orders']]) + ' '
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:

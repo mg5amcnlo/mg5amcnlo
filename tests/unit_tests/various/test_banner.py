@@ -151,7 +151,7 @@ class TestConfigFileCase(unittest.TestCase):
         self.config['list'] = set((1,'2',3,'4'))
         self.assertEqual(set(self.config['list']),set([1,2,3,4])) 
         
-        self.assertRaises(Exception, self.config.__setitem__, 'list', {1:2,3:4})
+        self.assertRaises(Exception, self.config.__setitem__, 'list', {1:2,3:4},raiseerror=True)
         
 
         # add a parameter which can be a list of string

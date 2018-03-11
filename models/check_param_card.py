@@ -247,7 +247,7 @@ class Block(list):
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
-            data, self.commant = text, ""
+            data, self.comment = text, ""
 
         data = data.lower()
         data = data.split()
@@ -922,8 +922,8 @@ class ParamCardIterator(ParamCard):
     def iterate(self):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
-        auto = 'Auto'
         pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        self.autowidth = []
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
@@ -941,14 +941,15 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key].append( (param, eval(def_list)))
                     except SyntaxError, error:
                         raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
-                    
+                elif isinstance(param.value, str) and param.value.strip().lower().startswith('auto'):
+                    self.autowidth.append(param)
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-
+            
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):
@@ -970,7 +971,7 @@ class ParamCardIterator(ParamCard):
             yield param_card
         
     
-    def store_entry(self, run_name, cross, error=None):
+    def store_entry(self, run_name, cross, error=None, param_card_path=None):
         """store the value of the cross-section"""
         if isinstance(cross, dict):
             info = dict(cross)
@@ -980,66 +981,13 @@ class ParamCardIterator(ParamCard):
             if error is None:
                 self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
             else:
-                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
-
-    def form_s(self,stringa):
-        formatted = '{:15}'.format(stringa)
-        return  formatted
-
-    def form_n(self,num):
-        formatted = '{:2.5e}'.format(num)
-        return formatted
-
-    def write_summary_new(self, out_path = '', keys = '', point = False , header = False, last_results=''):
-
-        # writing the parameters
-        if out_path and header:
-           nice_keys = ['run number']
-           nice_keys = nice_keys + self.param_order # parameters iterated 
-
-           for k in keys:
-               k = k.replace('taacsID#','')
-               k = k.replace('taacsID','tot_Xsec')
-               nice_keys.append(k)
-
-           summary = open(out_path, 'w')                                                                                                                                         
-           for k in nice_keys:
-                ind = nice_keys.index(k) + 1                     
-                if ind <=9: ind = '0'+str(ind)                                                                                                      
-                summary.write( '# [' + str(ind) + ']' + ' : ' + k + '\n' )                                                                                    
-
-           '''
-           #for param,value in zip (self.param_order, self.itertag
-           summary = open(out_path, 'w')
-           summary.write(self.form_s('# [01] : run number\n') )
-           for k,k_n in zip(keys,nice_keys):                                                                                                                             
-                ind = keys.index(k) + 2
-                if ind <= 9: ind = '0'+str(ind)                                                                                                                                 
-                summary.write( '# [' + str(ind) + ']' + ' : ' + k_n + '\n' )                                                                                 
-           '''
-
-           summary.write('\n\n\n')
-           summary.close()   
-
-        elif (out_path and not header):
-            s = '\t'
-            summary = open(out_path, 'a+')
-            summary.write('{:9d}'.format(int(point)) + s)
-
-            for num in self.itertag: # these are the iterated parameters
-                num = self.form_n(num)
-                summary.write(num + s)
-            for k in keys:
-                num = self.form_n( last_results[k] )
-                summary.write(num + s)
-            summary.write('\n')
-            summary.close()
- 
-        #param_list = self.param_order 
-        #print 'FF num_col' , num_col , self.param_order , nice_keys
-        #print 'FF self.cross ' , self.cross 
-        #print 'FF names and values of the iterated', self.param_order , self.itertag 
-     
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+        if self.autowidth and param_card_path:
+            paramcard = ParamCard(param_card_path)
+        for param in self.autowidth:
+            self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
+            
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
@@ -1055,6 +1003,12 @@ class ParamCardIterator(ParamCard):
             keys.remove('bench')
             keys.remove('run_name')
             keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
 
         formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
                                              ('%%-%is ' % (nbcol))* len(keys))

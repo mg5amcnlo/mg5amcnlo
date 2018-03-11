@@ -1455,7 +1455,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             me_dir = os.path.basename(me_dir) + ' '
         
         misc.EasterEgg('error')
-        
         stop=False
         try:
             raise 
@@ -1747,7 +1746,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.mother.lastcmd = 'quit %s' % level
         elif self.inputfile:
             for line in self.inputfile:
-                logger.warning('command not executed: %s' % line)
+                logger.warning('command not executed: %s' % line.replace('\n','')) 
 
         return True
 
@@ -2139,8 +2138,8 @@ class SmartQuestion(BasicCmd):
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
-            print self.question
-            
+            print self.question.encode('utf8')
+
         if self.mother_interface:
             answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
                                                                 path=self.allowpath)
@@ -2423,7 +2422,7 @@ class ControlSwitch(SmartQuestion):
                 return str(default) 
             return None
         key, value = line.split('=',1)
-        if key in self.switch:
+        if key.lower() in self.switch:
             return line
         if key in [str(i+1) for i in range(len(self.to_control))]:
             self.value='reask'

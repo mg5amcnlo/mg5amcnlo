@@ -1016,6 +1016,7 @@ class ConfigFile(dict):
         
         name = name.strip()
         lower_name = name.lower() 
+
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
             text='%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name])

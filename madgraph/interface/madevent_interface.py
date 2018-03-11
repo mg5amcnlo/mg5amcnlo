@@ -2456,6 +2456,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         """Main Commands: launch the full chain """
         
         self.banner = None
+        self.Gdirs = None
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2570,23 +2571,23 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if self.param_card_iterator:
                 param_card_iterator = self.param_card_iterator
                 self.param_card_iterator = []
+                path = pjoin(self.me_dir,'Cards','param_card.dat')
                 with misc.TMP_variable(self, 'allow_notification_center', False):
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
                     #check if the param_card defines a scan.
                     orig_name = self.run_name
                     for card in param_card_iterator:
-                        path = pjoin(self.me_dir,'Cards','param_card.dat')
-                        card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        card.write(path)
                         self.check_param_card(path, dependent=True)
                         next_name = param_card_iterator.get_next_name(self.run_name)
                         try:
                             self.exec_cmd("generate_events -f %s" % next_name,
                                       precmd=True, postcmd=True,errorhandling=False)
                         except ZeroResult:
-                            param_card_iterator.store_entry(self.run_name, 0)
+                            param_card_iterator.store_entry(self.run_name, 0, param_card_path=path)
                         else:
-                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
-                    param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
+                    param_card_iterator.write(path)
                     name = misc.get_scan_name(orig_name, self.run_name)
                     path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
                     logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
@@ -2764,6 +2765,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         accuracy = self.check_calculate_decay_widths(args)
         self.ask_run_configuration('parton')
         self.banner = None
+        self.Gdirs = None
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2973,15 +2975,16 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        cpath = pjoin(self.me_dir,'Cards','param_card.dat')
         if param_card_iterator:
 
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],param_card_path=cpath)
             #check if the param_card defines a scan.
             orig_name=self.run_name
             for card in param_card_iterator:
-                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                card.write(cpath)
                 self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
-                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=cpath)
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             scan_name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
@@ -5600,6 +5603,8 @@ tar -czf split_$1.tar.gz split_$1
 
         # add the make_opts_var to make_opts
         self.update_make_opts()
+        # reset list of Gdirectory
+        self.Gdirs = None
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -5674,7 +5679,7 @@ tar -czf split_$1.tar.gz split_$1
     def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
-        if hasattr(self, "Gdirs"):
+        if hasattr(self, "Gdirs") and self.Gdirs:
             if self.me_dir in self.Gdirs[0]:
                 if Pdir is None:
                     if not symfact:

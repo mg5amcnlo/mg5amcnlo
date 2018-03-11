@@ -8,9 +8,21 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - add comment that can be displayed via "help NAME"
             - add autocompletion for some parameter
             - add direct rejection of parameter edition if not in some allowed list/range
+      OM: add the value of all the widths in Auto-width in the scan summary file
+      OM: fix crash in 1>N reweighting
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
       OM: For 1>N, if the user set fixed_run_scale to True, then the scale is choose accordingly
           and not following the mass of the inital state anymore
+      RF: For the HwU histograms, if no gnuplot installation is found, write the gnuplot scripts in v5
+          format (instead of the very old v4 format).
+      RF+MZ: Fixed a problem with (f)NLO(+PS) runs in case the Born has identical QCD-charged
+      	     particles. Cross sections were typically correct, but some distributions might
+	     have shown an asymmetry. 
+      OM: Change the default LO output directory structure. Now by default the lepton and neutrino are split 
+          in two different directory. This avoids to face problem with the assymetric cut on lepton/neutrino
+      OM: Change in LO maching for HEFT (or any model with hgg vertex) in the way to flag jet that should
+          not take part in the matching/merging procedure.
+      OM: Fixed a bug for loop induced in gridpack mode
 
 2.6.1 (12/12/17)
 

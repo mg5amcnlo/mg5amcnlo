@@ -180,14 +180,25 @@ c**************************************************************************
       include 'genps.inc'
       include 'nexternal.inc'
       integer ic(nexternal-1),i
+      integer get_color
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       check_swap=.true.
       do i=1,nexternal-1
+         if (i.eq.ic(i)) cycle ! no permutation. Check next particle
          if (idup(i,1) .ne. idup(ic(i),1)) then
+            ! permuted particles are not identical
             check_swap=.false.
-            exit
+            return
+         endif
+         if (abs(get_color(idup(i,1))).gt.1) then
+            ! permuted particles are identical, but not colour neutral
+            ! (Since we use symmetry when setting up the FKS
+            ! configurations, we cannot use symmetry here as well to
+            ! reduce the number of integration channels).
+            check_swap=.false.
+            return
          endif
       enddo
       end
