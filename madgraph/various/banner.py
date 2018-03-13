@@ -2386,6 +2386,7 @@ class RunCard(ConfigFile):
                     log_level = 20
             if not default:
                 default = dict.__getitem__(self, name.lower())
+ 
             logger.log(log_level, '%s missed argument %s. Takes default: %s'
                                    % (self.filename, name, default))
             self[name] = default
@@ -2766,7 +2767,7 @@ class RunCardLO(RunCard):
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "auto", include=False)
         self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
-        self.add_param("sys_scalecorrelation", -1, include=False)
+        self.add_param("sys_scalecorrelation", -1, include=False, hidden=True)
 
         #parameter not in the run_card by default
         self.add_param('gridrun', False, hidden=True)
