@@ -2340,6 +2340,7 @@ class ControlSwitch(SmartQuestion):
        
        Behavior for each switch can be customize via:
        set_default_XXXX() -> set default value
+           This is super-seeded by self.default_switch if that attribute is defined (and has a key for XXXX)
        get_allowed_XXXX() -> return list of possible value
        check_value_XXXX(value) -> return True/False if the user can set such value
        switch_off_XXXXX()      -> set it off (called for special mode)
@@ -2441,11 +2442,14 @@ class ControlSwitch(SmartQuestion):
         
         for key,_ in self.to_control:
             key = key.lower()
+            if hasattr(self, 'default_switch') and key in self.default_switch:
+                self.switch[key] = self.default_switch[key]
+                continue
             if hasattr(self, 'set_default_%s' % key):
                 getattr(self, 'set_default_%s' % key)()
             else:
                 self.default_switch_for(key)
-    
+        
     def default_switch_for(self, key):
         """use this if they are no dedicated function for such key"""
         
