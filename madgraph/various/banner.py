@@ -1186,7 +1186,7 @@ class ConfigFile(dict):
                 valid=True     
             elif isinstance(value, str):
                 value = value.lower()
-                allowed = allowed.lower()
+                allowed = [v.lower() for v in allowed]
                 if value in allowed:
                     i = allowed.find(value)
                     value = self.allowed_value[i]
