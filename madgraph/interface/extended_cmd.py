@@ -2517,6 +2517,8 @@ class ControlSwitch(SmartQuestion):
         
         if '=' in line:
             base, value = line.split('=',1)
+            base = base.strip()
+            value = value.strip()
             # allow 1=OFF
             if base.isdigit() :
                 try:
@@ -2618,8 +2620,6 @@ class ControlSwitch(SmartQuestion):
         """change a switch to a given value"""
 
         assert key in self.switch
-
-        
         
         if hasattr(self, 'ans_%s' % key):
             if not self.is_case_sensitive(key):
