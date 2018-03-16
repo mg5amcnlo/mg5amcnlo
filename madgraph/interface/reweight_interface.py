@@ -1761,7 +1761,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     incoming = pdg[0:2]
                     outgoing = pdg[2:]
-                misc.sprint(incoming, outgoing)
                 order = (list(incoming), list(outgoing))
                 incoming.sort()
                 outgoing.sort()

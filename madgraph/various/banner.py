@@ -1188,7 +1188,7 @@ class ConfigFile(dict):
                 valid=True     
             elif isinstance(value, str):
                 value = value.lower()
-                allowed = allowed.lower()
+                allowed = [v.lower() for v in allowed]
                 if value in allowed:
                     i = allowed.find(value)
                     value = self.allowed_value[i]
@@ -2388,6 +2388,7 @@ class RunCard(ConfigFile):
                     log_level = 20
             if not default:
                 default = dict.__getitem__(self, name.lower())
+ 
             logger.log(log_level, '%s missed argument %s. Takes default: %s'
                                    % (self.filename, name, default))
             self[name] = default
