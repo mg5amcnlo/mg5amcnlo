@@ -102,6 +102,8 @@ c     Set stot
          if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
          if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
          if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+         if(ebeam(1).lt.m1) ebeam(1) = m1
+         if(ebeam(2).lt.m2) ebeam(2) = m2
          pi1(0)=ebeam(1)
          pi1(3)=sqrt(max(ebeam(1)**2-m1**2,0d0))
          pi2(0)=ebeam(2)
