@@ -16,6 +16,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           not take part in the matching/merging procedure.
       OM: Fixed a bug for loop induced in gridpack mode
       RF: Fixed a bug for ApplGrid: in rare cases the ApplGrid tables were filled twice for the same event
+      OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0. 
 
 2.6.1 (12/12/17)
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
