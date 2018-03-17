@@ -619,6 +619,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """common"""
 
         self.force_run = False # this flag force the run even if RunWeb is present
+        self.stop_for_runweb = False # this flag indicates if we stop this run because of RunWeb. 
         if 'force_run' in opts and opts['force_run']:
             self.force_run = True
             del opts['force_run']
@@ -649,6 +650,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (for this exact same directory) Please wait that this is instance is 
                 closed. If no instance is running, you can delete the file
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
+                self.stop_for_runweb = True
                 raise AlreadyRunning, message
             else:
                 self.write_RunWeb(me_dir)
@@ -685,12 +687,61 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     def write_RunWeb(self, me_dir):
+        self.writeRunWeb(me_dir)
+        self.gen_card_html()
+
+    @staticmethod
+    def writeRunWeb(me_dir):
         pid = os.getpid()
         fsock = open(pjoin(me_dir,'RunWeb'),'w')
         fsock.write(`pid`)
-        fsock.close()
-        self.gen_card_html()
-
+        fsock.close()        
+        
+    class RunWebHandling(object):
+        
+        def __init__(self, me_dir, crashifpresent=True, warnifpresent=True):
+            """raise error if RunWeb already exists
+            me_dir is the directory where the write RunWeb"""
+            
+            self.remove_run_web = True
+            self.me_dir = me_dir
+            
+            if crashifpresent or warnifpresent:
+                if os.path.exists(pjoin(me_dir, 'RunWeb')):
+                    pid = open(pjoin(me_dir, 'RunWeb'))
+                    if misc.pid_exists(pid):
+                        # bad situation 
+                        if crashifpresent:
+                            if isinstance(crashifpresent, Exception):
+                                raise crashifpresent
+                            else:
+                                raise AlreadyRunning
+                        elif warnifpresent:
+                            if isinstance( warnifpresent, bool):
+                                logger.warning("%s/RunWeb is present. Please check that only one run is running in that directory.")
+                            else:
+                                logger.log(warnifpresent, "%s/RunWeb is present. Please check that only one run is running in that directory.")
+                            self.remove_run_web = False
+                    return
+            
+            # write RunWeb
+            CommonRunCmd.writeRunWeb(me_dir)
+            
+        def __enter__(self):
+            return
+        
+        def __exit__(self,exc_type, exc_value, traceback):
+            
+            if self.remove_run_web:
+                try:
+                    os.remove(pjoin(self.me_dir,'RunWeb'))
+                except Exception:
+                    if os.path.exists(pjoin(self.me_dir,'RunWeb')):
+                        logger.warning('fail to remove: %s' % pjoin(self.me_dir,'RunWeb'))
+                    
+            return
+            
+            
     ############################################################################
     def split_arg(self, line, error=False):
         """split argument and remove run_options"""
@@ -3270,6 +3321,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     do_EOF = do_quit
     do_exit = do_quit
 
+    def __del__(self):
+        """try to remove RunWeb?"""
+        
+        if not self.stop_for_runweb and not self.force_run:
+            try:
+                os.remove(pjoin(self.me_dir,'RunWeb'))
+            except Exception:
+                pass
+            
 
     def update_status(self, status, level, makehtml=True, force=True,
                       error=False, starttime = None, update_results=True,
