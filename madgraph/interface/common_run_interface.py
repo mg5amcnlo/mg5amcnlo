@@ -708,23 +708,35 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
             if crashifpresent or warnifpresent:
                 if os.path.exists(pjoin(me_dir, 'RunWeb')):
-                    pid = open(pjoin(me_dir, 'RunWeb'))
-                    if misc.pid_exists(pid):
+                    pid = open(pjoin(me_dir, 'RunWeb')).read()
+                    try:
+                        pid = int(pid)
+                    except Exception:
+                        pid = "unknown"
+                    
+                    if pid == 'unknown' or misc.pid_exists(pid):
                         # bad situation 
                         if crashifpresent:
                             if isinstance(crashifpresent, Exception):
                                 raise crashifpresent
                             else:
-                                raise AlreadyRunning
+                                message = '''Another instance of the program is currently running (pid = %s).
+                (for this exact same directory). Please wait that this is instance is 
+                closed. If no instance is running, you can delete the file
+                %s and try again.''' % (pid, pjoin(me_dir, 'RunWeb'))
+                                raise AlreadyRunning, message
                         elif warnifpresent:
                             if isinstance( warnifpresent, bool):
                                 logger.warning("%s/RunWeb is present. Please check that only one run is running in that directory.")
                             else:
                                 logger.log(warnifpresent, "%s/RunWeb is present. Please check that only one run is running in that directory.")
                             self.remove_run_web = False
+                    else:
+                        logger.debug('RunWeb exists but no associated process. Will Ignore it!')
                     return
             
             # write RunWeb
+            
             CommonRunCmd.writeRunWeb(me_dir)
             
         def __enter__(self):
@@ -738,8 +750,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 except Exception:
                     if os.path.exists(pjoin(self.me_dir,'RunWeb')):
                         logger.warning('fail to remove: %s' % pjoin(self.me_dir,'RunWeb'))
-                    
             return
+
+        def __call__(self, f):
+            """allow to use this as decorator as well"""
+            def wrapper(*args, **kw):
+                with self:
+                    return f(*args, **kw)
+            return wrapper        
+
+        
+            
             
             
     ############################################################################

@@ -33,7 +33,6 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and (not os.path.exists(pjoin(root_path,'../..', 'bin','create_release.py'))):
-    print 'launch in debug mode'
     subprocess.call([sys.executable] + ['-O'] + sys.argv)
     sys.exit()
 
@@ -146,18 +145,22 @@ if '__main__' == __name__:
     # Check that python version is valid
 
     set_configuration()
-    argument = sys.argv
+    argument = sys.argv    
     try:
         if '-h' in argument or '--help' in argument:
-            launch = ME.MadEventCmdShell(me_dir=root_path)
+            launch = ME.MadEventCmdShell(me_dir=root_path, force_run=True)
             launch.exec_cmd('help generate_events')
             sys.exit()
         elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
             argument = treat_old_argument(argument)
         
-        launch = ME.MadEventCmdShell(me_dir=root_path)
-        launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
-        launch.run_cmd('quit')
+        with ME.MadEventCmdShell.RunWebHandling(root_path, ):
+            launch = ME.MadEventCmdShell(me_dir=root_path, force_run=True)
+            launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
+            launch.run_cmd('quit')
+    except ME.MadEventAlreadyRunning, message:
+        logging.getLogger('madgraph').log(40, str(message))
+        sys.exit(1)
     except KeyboardInterrupt:
         try:
             launch.run_cmd('quit')
@@ -166,9 +169,6 @@ if '__main__' == __name__:
     except Exception, error:
         logging.error(str(error))
         sys.exit()
-                          
-    if os.path.exists(pjoin(root_path, 'RunWeb')):  
-        os.remove(pjoin(root_path, 'RunWeb'))      
             
     # reconfigure path for the web 
     #if len(argument) == 5:
