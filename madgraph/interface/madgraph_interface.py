@@ -8105,6 +8105,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             param = param_card['decay'].get((pid,))
             param.value = width
             param.format = 'float'
+            if pid == 25:
+                refs=['hep-ph/9704448','arXiv:1801.09506 [hep-ph]']
+                logger.info(" You are using program 'HDECAY', please cite refs: \033[92m%s\033[0m. " % ', '.join(refs), '$MG:color:BLACK')
             if pid not in param_card['decay'].decay_table:
                 continue
             del param_card['decay'].decay_table[pid] # reset the BR
