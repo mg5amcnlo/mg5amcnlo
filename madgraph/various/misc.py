@@ -905,6 +905,19 @@ def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
     return subprocess.Popen(arg, *args, **opt)
 
+@check_system_error()
+def call_stdout(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    try:
+        out = subprocess.Popen(arg, *args, stdout=subprocess.PIPE, **opt)
+    except OSError:
+        arg[0] = './%s' % arg[0]
+        out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
+        
+    str_out = out.stdout.read().strip()
+    return str_out
+    
+
 @multiple_try()
 def mult_try_open(filepath, *args, **opt):
     """try to open a file with multiple try to ensure that filesystem is sync"""  
