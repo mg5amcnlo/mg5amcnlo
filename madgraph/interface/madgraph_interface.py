@@ -1168,7 +1168,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
-'''In order to install ExRootAnalysis, you need to install Root6 on your computer first.
+'''In order to install ExRootAnalysis, you need to install Root on your computer first.
 please follow information on http://root.cern.ch/drupal/content/downloading-root''')
             if 'ROOTSYS' not in os.environ:
                 raise self.InvalidCmd(
@@ -1181,17 +1181,7 @@ export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$ROOTSYS/lib
 This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
-            if args[0] in ["ExRootAnalysis", "Delphes"]:
-                root_version = misc.call_stdout('root -e "cout << gROOT->GetVersion() << endl;" -q -b -n -l', shell=True)
-                try:
-                    root_version = int(root_version[0])
-                except Exception:
-                    pass
-                else:
-                    if root_version < 6:
-                        raise self.InvalidCmd(
-                    '''In order to install ExRootAnalysis, you need to install Root6 on your computer first.
-please follow information on http://root.cern.ch/drupal/content/downloading-root''')                        
+
         return install_options
 
     def check_launch(self, args, options):
