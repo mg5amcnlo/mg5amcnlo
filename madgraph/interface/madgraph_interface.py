@@ -4790,7 +4790,15 @@ This implies that with decay chains:
         else:
             optimize = False
 
-    
+        # Extract potential loop_filter  
+        loop_filter=None        
+        for arg in args:
+            if arg.startswith('--loop_filter='):
+                loop_filter = arg[14:]
+            #if not isinstance(self, extended_cmd.CmdShell):
+            #    raise self.InvalidCmd, "loop_filter is not allowed in web mode"
+        args = [a for a in args if not a.startswith('--loop_filter=')]
+        
         if not myprocdef:
             myprocdef = self.extract_process(' '.join(args))
         
@@ -4839,7 +4847,8 @@ This implies that with decay chains:
         myproc = loop_diagram_generation.LoopInducedMultiProcess(myprocdef,
                                  collect_mirror_procs = collect_mirror_procs,
                                  ignore_six_quark_processes = ignore_six_quark_processes,
-                                 optimize=optimize)
+                                 optimize=optimize,
+                                 loop_filter=loop_filter)
 
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:
