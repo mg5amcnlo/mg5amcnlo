@@ -4282,6 +4282,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             # add some mininal content for this:
             opt['allow_arg'] = range(self.integer_bias, self.integer_bias+len(cards))
 
+        self.param_consistency = True
+        if 'param_consistency' in opt:
+            self.param_consistency = opt['param_consistency']
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
         self.conflict = set()
@@ -4312,6 +4316,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return True
             elif '%s_card.dat' % name in cards:
                 return True
+            elif name in self.paths and self.paths[name] in cards:
+                return True
             else:
                 cardnames = [os.path.basename(p) for p in cards]
                 if '%s_card.dat' % name in cardnames:
@@ -4337,7 +4343,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         self.pname2block = {}
         self.restricted_value = {}
+        self.param_card = {}
         if not self.get_path('param', cards):
+            self.param_consistency = False
             return []
         
         try:
@@ -4351,7 +4359,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.   
-        default_param = check_param_card.ParamCard(self.paths['param_default'])
+        if os.path.exists(self.paths['param_default']):
+            default_param = check_param_card.ParamCard(self.paths['param_default'])
+        else:
+            default_param =  check_param_card.ParamCard(self.param_card)
         self.pname2block, self.restricted_value = default_param.analyze_param_card()
         self.param_card_default = default_param
         return self.pname2block.keys()
@@ -4359,7 +4370,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def init_run(self, cards):
         
         self.run_set = []
-        
         if not self.get_path('run', cards):
             return []
         
@@ -4974,6 +4984,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         
         args = self.split_arg(line)
+        
+        
         if len(args) == 0:
             logger.warning("No argument. For help type 'help set'.")
         # fix some formatting problem
@@ -5627,19 +5639,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if ending_question:
             self.check_card_consistency()
-            try:
-                self.do_update('dependent', timer=20)
-            except MadGraph5Error, error:
-                if 'Missing block:' in str(error):
-                    self.fail_due_to_format +=1
-                    if self.fail_due_to_format == 10:
-                        missing, unknow = str(error).split('\n')[-2:]
-                        logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
-                        logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
-                        self.value = False # to avoid that entering a command stop the question
-                        return self.reask(True)
-                    else:
-                        raise
+            if self.param_consistency:
+                try:
+                    self.do_update('dependent', timer=20)
+                except MadGraph5Error, error:
+                    if 'Missing block:' in str(error):
+                        self.fail_due_to_format +=1
+                        if self.fail_due_to_format == 10:
+                            missing, unknow = str(error).split('\n')[-2:]
+                            logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
+                            logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
+                            self.value = False # to avoid that entering a command stop the question
+                            return self.reask(True)
+                        else:
+                            raise
             
             return ending_question
     
