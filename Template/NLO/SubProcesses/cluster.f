@@ -272,7 +272,7 @@ c clustering scales (cluster_scales).
      $     -nbr:-1)
       double precision p(0:3,next),pcl(0:4,next),cluster_scales(0:nbr)
      $     ,scale,p_inter(0:4,0:2,0:nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
-     $     ,djb_clus,get_mass_from_id
+     $     ,djb_clus,get_mass_from_id,mt_2to2
       logical valid_conf(nconf),is_bw,cluster_according_to_iconfig
       parameter (cluster_according_to_iconfig=.false.)
       external djb_clus,get_mass_from_id
@@ -307,6 +307,11 @@ c Do one clustering (returning iwin, jwin and win_id and the scale)
 c Remove diagrams that do not have the win_id among its clusterings
          call update_valid_confs(win_id,nconf,nbr,nvalid,valid_conf
      $        ,cluster_list)
+         if (nleft.eq.4 .and. (btest(win_id,0).or.btest(win_id,1))) then
+            ! save the value of mT^2 of the particle not clustered,
+            ! since it will set the final cluster_scale below
+            mT_2to2=sqrt(djb_clus(pcl(0,7-iwin)))
+         endif
 c Combine the momenta
          call update_momenta(nleft,pcl(0,1),iwin,jwin,
      $        p_inter(0,0,iclus),is_bw)
@@ -317,14 +322,24 @@ c corresponding imap label with the combined particle label.
 c Save the cluster scales and cluster IDs.
          cluster_scales(iclus)=scale
          cluster_ij(iclus)=win_id
-         nleft=nleft-1          ! 'nleft' particles are left after the cluster
+         nleft=nleft-1    ! 'nleft' particles are left after the cluster
       enddo
 c Set the cluster_conf to (one of) the diagram(s) compatible with the
 c clustering found just above
       call set_cluster_conf(nconf,nvalid,valid_conf,iconfig
      $     ,cluster_conf)
-c Set the final scale to the m_T^2 of the final 2->1 process
-      cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
+c Set the cluster_scale of the final 2->1 process.      
+      if (.not.(btest(win_id,0).or. btest(win_id,1))) then
+         ! s-channel 2->2 process. Use m_T^2 of final state particle in
+         ! 2->1 process (which is equal to its invariant mass, since
+         ! pT=0)
+         cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
+      else
+         ! Set the final scale to the m_T^2 of the final state particle
+         ! that was not clustered when clustering from the 2->2 to the
+         ! 2->1 process, using the momenta from the 2->2 process.
+         cluster_scales(0)=mT_2to2
+      endif
 c Set the daughter momenta of the 2->1 process (do not need the mother)
       p_inter(:,1,0)=pcl(:,1)
       p_inter(:,2,0)=pcl(:,2)
@@ -333,7 +348,7 @@ c is similar to the one in iforest)
       call link_clustering_to_iforest(nbr,cluster_ij,cluster_list(1
      $     ,cluster_conf),iord)
 c Fill the cluster_pdg(0:2,0) with the information of the PDG codes for
-c     the final, completely clustered 2->1 system
+c the final, completely clustered 2->1 system
       call set_cluster_pdg_2_1_process(next,nbr,ipdg,cluster_pdg(0,0
      $     ,cluster_conf),cluster_ij,iord)
 c Now that we have the diagram configuration corresponding to the
@@ -411,7 +426,7 @@ c     the renormalisation scale.
       call fill_type(next,ipdg,type,mass)
       do i=1,nbr                ! cluster all the way to 2->1 process
          if (QCDvertex(i,nbr,cluster_pdg,iord))then
-c The vertex is such that it is a QCD clustering
+c The vertex is such that it is a QCD clustering, which means a clustering with 3 QCD partons
             if (cluster_scales(i).gt.hard_qcd_scale) then
                hard_qcd_scale=cluster_scales(i)
                ! reset the renormalisation scale for the 'central process'
@@ -422,8 +437,8 @@ c The vertex is such that it is a QCD clustering
 c This is the first QCD cluster. Hence, it determines the lowest QCD
 c scale that enters all Sudakovs. No Sudakov reweighting required so
 c far. Just make sure that we have a valid QCD starting vertex.
-               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg,iord))
-     $              then
+               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg
+     $              ,iord)) then
                   lowest_qcd_scale=cluster_scales(i)
                   nqcdrenscale=nqcdrenscale+1
                   qcd_ren_scale(nqcdrenscale)=cluster_scales(i)
@@ -432,8 +447,8 @@ c far. Just make sure that we have a valid QCD starting vertex.
                endif
             elseif (nqcdrenscale.eq.0 .and. first.eq.0) then
 c Special case for real-emission FxFx: need to skip the first clustering.
-               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg,iord))
-     $              then
+               if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg
+     $              ,iord)) then
                   first=cluster_ij(i)
                endif
             else
@@ -575,7 +590,7 @@ c iconfig
       subroutine IsBreitWigner(next,nbr,p,itree,prwidth,prmass,ipdg
      $     ,sprop,iBWlist)
 c Loop over all the s-channel propagators of the current configuration
-c (typically associated with the integration channel) and checks with
+c (typically associated with the integration channel) and checks which
 c resonances are close to their mass shell. If there are, must only
 c cluster according to diagrams/topologies that have that s-channel
 c particle as well.
@@ -595,7 +610,7 @@ c particle as well.
       do i=-1,-nbr,-1
          onbw(-i)=.false.
       enddo
-c Loop over all propagators      
+c Loop over all propagators in configuration
       do i=-1,-nbr,-1
 c Skip the t-channels
          if (itree(1,i).eq.1 .or. itree(2,i).eq.1 .or.
@@ -628,8 +643,8 @@ c If mother and daughter have the same ID, remove one of them
 c     Always remove if daughter is final-state (and identical)
                if(idenpart.gt.0) then
                   OnBW(-i)=.false.
-c     Else remove either this resonance or daughter,
-c                  whichever is closer to mass shell
+c     Else remove either this resonance or daughter, whichever is closer
+c     to mass shell
                elseif(idenpart.lt.0 .and. abs(mass(i)-prmass(i)).gt.
      $                 abs(mass(idenpart)-prmass(i))) then
                   OnBW(-i)=.false.         ! mother off-shell
@@ -784,7 +799,7 @@ c a valid cluster configuration/topology.
 c Updates the 'pcl' momenta list by combining particles iwin and jwin.
       implicit none
       integer nleft,iwin,jwin,i,j,k
-      double precision pcl(0:4,nleft),p1(0:3),nr(0:3),nn2,ct,st
+      double precision pcl(0:4,nleft),p(0:3),nr(0:3),nn2,ct,st
      $     ,pcmsp(0:3),p_inter(0:4,0:2),pi(0:3),dot,pz(0:3)
       logical is_bw
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
@@ -808,12 +823,12 @@ c initial state clustering
          endif
          if (pcmsp(0)**2-pcmsp(1)**2-pcmsp(2)**2-pcmsp(3)**2.gt.100d0)
      $        then ! prevent too extreme boost
-            call boostx(pcl(0,jwin),pcmsp,p1)
-            call constr(p1,pz,nr,nn2,ct,st)
+            call boostx(pcl(0,jwin),pcmsp,p)
+            call constr(p,pz,nr,nn2,ct,st)
             do j=1,nleft
                if (j.eq.iwin) cycle
-               call boostx(pcl(0,j),pcmsp,p1)
-               call rotate(p1,pi,nr,nn2,ct,st,1)
+               call boostx(pcl(0,j),pcmsp,p)
+               call rotate(p,pi,nr,nn2,ct,st,1)
                if (j.lt.iwin) then
                   do k=0,3
                      pcl(k,j)=pi(k)
@@ -839,12 +854,13 @@ c final state clustering
          do i=1,nleft-1
             if (i.eq.jwin) then
                do j=0,3
-                  pcl(j,i)=pcl(j,iwin)+pcl(j,jwin)
+                  pcl(j,jwin)=pcl(j,iwin)+pcl(j,jwin)
                enddo
                if (is_bw) then
                   ! mass is invariant mass for resonance decay
                   pcl(4,jwin)=sqrt(dot(pcl(0,jwin),pcl(0,jwin)))
                else
+                  ! the heaviest of the two daughter masses
                   pcl(4,jwin)=max(pcl(4,jwin),pcl(4,iwin))
                endif
             elseif (i.ge.iwin) then
@@ -854,6 +870,7 @@ c final state clustering
             endif
          enddo
       endif
+      ! mother momenta
       do i=0,4
          p_inter(i,0)=pcl(i,jwin)
       enddo
@@ -892,7 +909,7 @@ c cluster_pdg). This allows for easy access to PDG numbers etc.
       iord(0)=0
       end
 
-      subroutine update_cluster_scales(nbr,p,cluster_scales
+      subroutine update_cluster_scales(nbr,p_inter,cluster_scales
      $     ,cluster_pdg,cluster_ij,cluster_list,iord)
 c Updates the clustering scale to be abs(2*p1.p2) for clusterings that
 c involve exaclty 2 QCD partons. This will be the correct hard scale in
@@ -901,7 +918,8 @@ c gluons).
       implicit none
       integer i,j,k,cij,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
      $     ,iord(0:nbr),next,get_color,cluster_list(2*nbr),iqcd(0:2)
-      double precision cluster_scales(0:nbr),dot,p(0:4,0:2,0:nbr),djb_clus
+      double precision cluster_scales(0:nbr),dot,p_inter(0:4,0:2,0:nbr)
+     $     ,djb_clus
       logical QCDchangeline,QCDvertex
       external dot,get_color,djb_clus,QCDchangeline,QCDvertex
       do i=0,nbr
@@ -913,9 +931,8 @@ c gluons).
                   iqcd(iqcd(0))=j
                endif
             enddo
-            ! some trickery with 'mod()' to get the correct value with i=0
-            cluster_scales(i)=sqrt(2d0*abs(dot(p(0,iqcd(1),i),p(0
-     $           ,iqcd(2),i))))
+            cluster_scales(i)=sqrt(2d0*abs(dot(p_inter(0,iqcd(1),i)
+     $                                        ,p_inter(0,iqcd(2),i))))
          endif
       enddo
 c Treat here the special case where the final 2->2 process is a pure
@@ -930,8 +947,8 @@ c particles.
          ! QCD. If so, update the cluster_scales to be the average m_T^2
          ! of the two QCD final state particles
          if (QCDvertex(0,nbr,cluster_pdg,iord)) then
-            cluster_scales(nbr)=(djb_clus(p(0,1,nbr))*
-     &                           djb_clus(p(0,2,nbr)))**0.25d0
+            cluster_scales(nbr)=(djb_clus(p_inter(0,1,nbr))*
+     &                           djb_clus(p_inter(0,2,nbr)))**0.25d0
             cluster_scales(0)=cluster_scales(nbr)
          endif
       endif
@@ -956,10 +973,10 @@ c particles, and the mother [cluster_pdg(0,0)] is the outgoing one.
       do i=1,nbr
          cij=cluster_ij(i)
          if (btest(cij,0)) then ! initial state clustering with incoming line 1
-            cluster_pdg(1,0)=cluster_pdg(1,iord(i))
+            cluster_pdg(1,0)=cluster_pdg(0,iord(i))
          endif
          if (btest(cij,1)) then ! initial state clustering with incoming line 2
-            cluster_pdg(2,0)=cluster_pdg(1,iord(i))
+            cluster_pdg(2,0)=cluster_pdg(0,iord(i))
          endif
       enddo
       cij=cluster_ij(nbr)
@@ -1323,8 +1340,8 @@ c        flavour
             IR_cluster=.true.
             return
          elseif(abs(da2).le.maxjetflavor .and.
-     &       ((da1.eq.21  .and. abs(imo).eq.abs(da2)) .or. ! g->q+qbar
-     &        (abs(da1).eq.abs(da2) .and. get_mass_from_id(imo).eq.0d0))) then ! q->X+q (with X massless)
+     &      ((da1.eq.21  .and. abs(imo).eq.abs(da2)) .or. ! g->q+qbar
+     &       (abs(da1).eq.abs(da2) .and. get_mass_from_id(imo).eq.0d0))) then ! q->X+q (with X massless)
             IR_cluster=.true.
             return
          endif
@@ -1393,7 +1410,7 @@ c Arguments
       double precision q0,Q11,imass
 c Gauss
       double precision DGAUSS,eps
-      parameter (eps=1d-5)
+      parameter (eps=1d-7)
       external DGAUSS
 c Function to integrate
       double precision Gamma
@@ -1465,7 +1482,7 @@ c Arguments
       double precision q0,Q11,imass
 c Gauss
       double precision DGAUSS,eps
-      parameter (eps=1d-5)
+      parameter (eps=1d-7)
       external DGAUSS
 c Function to integrate
       double precision Gamma
@@ -1586,21 +1603,18 @@ c GeV
 c Quark Sudakov
 c     q->q+g
          Gamma=CF*alphasq0*(log(Q1/q0)-3d0/4d0)/pi ! A1+B1
-         if (mode.eq.2) then
-            Gamma=Gamma+CF*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2) ! A2
-         endif
          if (type.eq.2) then ! include mass effects
             qom=q0/mass
             Gamma=Gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
          endif
+         if (mode.eq.2) then
+            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+         endif
       elseif (type.eq.3) then !  massless vector, colour octet
 c Gluon sudakov         
 c     g->g+g contribution
          Gamma=CA*alphasq0*(log(Q1/q0)-11d0/12d0)/pi ! A1+B1
-         if (mode.eq.2) then
-             Gamma=Gamma+CA*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2)   ! A2
-          endif
 c     g->q+qbar contribution
          do i=1,6 ! assume 6 quark flavours
             if (i.le.maxjetflavor) then   ! massless splitting
@@ -1611,9 +1625,12 @@ c     g->q+qbar contribution
      &              (1d0 - 1d0/(3d0*(1+moq2)))  ! B1
             endif
          enddo
+         if (mode.eq.2) then
+            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+         endif
       elseif (type.eq.4 .or. type.eq.5) then
 c Sudakov for massive particle (in the large-mass limit, hence no spin
-c information enters the expressions)
+c information enters the expressions, nor is there a g->XX contribution)
 c     X->X+g
          if (type.eq.4) then
             colfac=CF ! X is colour triplet
@@ -1621,6 +1638,9 @@ c     X->X+g
             colfac=CA ! X is colour octet
          endif
          Gamma=colfac*alphasq0*(log(Q1/mass)-1d0/2d0)/pi
+         if (mode.eq.2) then
+            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+         endif
       else
          write (*,*) 'ERROR in reweight.f: do not know'/
      $        /' which Sudakov to compute',type
@@ -1742,7 +1762,7 @@ c***************************************************************************
       double precision D
       common/to_dj/D            ! for FxFx: D=1 (set in setrun)
       double precision pt1,pt2,ptm1,ptm2,eta1,eta2,phi1,phi2,p1a,p2a
-     $     ,costh,sumdot,dot,p1(0:4),p2(0:4),m1,m2,djb_clus
+     $     ,costh,p1(0:4),p2(0:4),m1,m2,djb_clus
       integer j
       external djb_clus
       m1=p1(4)
