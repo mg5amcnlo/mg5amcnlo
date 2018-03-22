@@ -863,7 +863,7 @@ c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
 
-         tmax = max(tmax,0d0) !This line if want really t freedom
+c         tmax = max(tmax,0d0) !This line if want really t freedom
 
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
@@ -871,7 +871,7 @@ c         write(*,*) 'tmin, tmax',tmin,tmax
 c
 c     now reset tmax if messed it up for t freedom 3 lines above
 c
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax) 
+c         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax) 
 
 c         write(*,*) tmin,t,tmax
 c         if (t .eq. 0d0) then
