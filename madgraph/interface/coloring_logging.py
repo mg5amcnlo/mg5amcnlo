@@ -1,6 +1,7 @@
 import logging
 # method to add color to a logging.info add a second argument:
-# '$MG:color:BLACK'
+# '$MG:BOLD'
+# '$MG:color:RED'
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -44,6 +45,7 @@ class ColorFormatter(logging.Formatter):
         # A not-so-nice but working way of passing arguments to this formatter
         # from MadGraph.
         color_specified = False
+        bold_specified = False
         for arg in record.args:
             if isinstance(arg,str) and arg.startswith('$MG'):
                 elems=arg.split(':')
@@ -53,10 +55,17 @@ class ColorFormatter(logging.Formatter):
                         color_choice = COLORS[elems[2]]
                     if color_choice == 0:
                         color_choice = 30
+                if len(elems)==2 and elems[1].lower()=='bold':
+                    bold_specified = True
             else:
                 new_args.append(arg)
         record.args = tuple(new_args)
-        color     = COLOR_SEQ % (30 + color_choice)
+        if bold_specified:
+            color = BOLD_SEQ
+            color_specified = True
+            print "BOLD specified"
+        else:
+            color     = COLOR_SEQ % (30 + color_choice)
         message   = logging.Formatter.format(self, record)
         if not message.endswith('$RESET'):
             message +=  '$RESET'

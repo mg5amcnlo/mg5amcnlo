@@ -768,13 +768,13 @@ class HelpCmd(object):
 
     def help_quit(self):
         logger.info("-- terminates the application",'$MG:color:BLUE')
-        logger.info("syntax: quit",'$MG:color:BLACK')
+        logger.info("syntax: quit",'$MG:BOLD')
     
     help_EOF = help_quit
 
     def help_history(self):
         logger.info("-- interact with the command history.",'$MG:color:BLUE')
-        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:BOLD')
         logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
         logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
@@ -782,17 +782,17 @@ class HelpCmd(object):
         
     def help_help(self):
         logger.info("-- access to the in-line help",'$MG:color:BLUE')
-        logger.info("syntax: help",'$MG:color:BLACK')
+        logger.info("syntax: help",'$MG:BOLD')
 
     def help_save(self):
         """help text for save"""
         logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
-        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:BOLD') 
         
     def help_display(self):
         """help for display command"""
         logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
-        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:BOLD')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -1187,8 +1187,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
-                logger.info('Use %s value' % default, '$MG:color:BLACK')
+                logger.info('The answer to the previous question is not set in your input file', '$MG:BOLD')
+                logger.info('Use %s value' % default, '$MG:BOLD')
                 return str(default)
             
         line = line.replace('\n','').strip()
@@ -2019,7 +2019,7 @@ class CmdShell(Cmd):
     def help_shell(self):
         """help for the shell"""
         logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
-        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:BOLD')
 
 
 
@@ -2159,21 +2159,21 @@ class SmartQuestion(BasicCmd):
         
         if not text:
             if out['Options']:
-                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "Here is the list of command available:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
         else:
             if out['Options']:
-                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
             elif not  out['Options']:
-                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
-        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:BOLD')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:BOLD')
     def complete_help(self, text, line, begidx, endidx):
         """ """
         return self.completenames(text, line)

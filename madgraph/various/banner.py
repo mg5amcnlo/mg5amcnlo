@@ -3628,28 +3628,28 @@ class RunCardNLO(RunCard):
             for scale in scales:
                 if self[scale]:
                     logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
-                                % scale,'$MG:color:BLACK')
+                                % scale,'$MG:BOLD')
                     self[scale]= False
             #and left to default dynamical scale
             if len(self["dynamical_scale_choice"]) > 1 or self["dynamical_scale_choice"][0] != -1:
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
-                                ,'$MG:color:BLACK')
+                                ,'$MG:BOLD')
                 
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
             jetparams=['jetradius','jetalgo']
             for jetparam in jetparams:
                 if float(self[jetparam]) != 1.0:
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
-                                % jetparam ,'$MG:color:BLACK')
+                                % jetparam ,'$MG:BOLD')
                     self[jetparam] = 1.0
         elif self['ickkw'] == -1 and (self["dynamical_scale_choice"][0] != -1 or
                                       len(self["dynamical_scale_choice"]) > 1):
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
-                                ,'$MG:color:BLACK')            
+                                ,'$MG:BOLD')            
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':

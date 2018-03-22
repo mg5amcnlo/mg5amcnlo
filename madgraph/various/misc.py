@@ -1941,9 +1941,9 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
                     else:
                         if keyname in getattr(plugin, target_type):
                             if not info:
-                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:color:BLACK')
+                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:BOLD')
                             else:
-                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:color:BLACK')
+                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:BOLD')
                             return getattr(plugin, target_type)[keyname]
                         
     if not keyname:

@@ -1563,12 +1563,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def help_systematics(self):
         """help for systematics command"""
-        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:color:BLACK')
+        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:BOLD')
         logger.info("-- Run the systematics run on the RUN_NAME run.")
         logger.info("   RUN_NAME can be a path to a lhef file.")
         logger.info("   OUTPUT can be the path to the output lhe file, otherwise the input file will be overwritten") 
         logger.info("")
-        logger.info("options: (values written are the default)", '$MG:color:BLACK')
+        logger.info("options: (values written are the default)", '$MG:BOLD')
         logger.info("")
         logger.info("   --mur=0.5,1,2     # specify the values for renormalisation scale variation")
         logger.info("   --muf=0.5,1,2     # specify the values for factorisation scale variation")
@@ -1584,7 +1584,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --keep_weights=   # force to keep the weight even if in the list of remove_weights")
         logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
         logger.info("")
-        logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
+        logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
         logger.info("       errorset : runs over the all the members of the PDF set used to generate the events")
         logger.info("       244800   : runs over the associated set and all its members")
@@ -1595,7 +1595,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       CT10@X   : runs over the Xth member of the associated PDF set")
         logger.info("       XX,YY,ZZ : runs over the sets for XX,YY,ZZ (those three follows above syntax)")
         logger.info("")
-        logger.info("   Allowed value for the keep/remove_wgts options:", '$MG:color:BLACK')
+        logger.info("   Allowed value for the keep/remove_wgts options:", '$MG:BOLD')
         logger.info("       all      : keep/remove all weights")
         logger.info("       name     : keep/remove that particular weight")
         logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
@@ -4561,7 +4561,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
           
 #     try:                
         if banner:                      
-            logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
+            logger.info('*** HELP MESSAGE ***', '$MG:BOLD')
          
         args = self.split_arg(line)
         # handle comand related help
@@ -4578,7 +4578,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 print '\t'.join(self.special_shortcut)
                 print
             if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                logger.info('*** END HELP ***', '$MG:BOLD')  
             return out      
         # check for special shortcut.
         # special shortcut:
@@ -4586,7 +4586,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[0] in self.special_shortcut_help:
                 print self.special_shortcut_help[args[0]]
             if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                logger.info('*** END HELP ***', '$MG:BOLD')  
             return       
         
         start = 0
@@ -4623,7 +4623,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info("List of parameter associated", '$MG:color:BLUE')
                     print "\t".join(eval('self.%s' % args[0]).keys())
                 if banner:
-                    logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                    logger.info('*** END HELP ***', '$MG:BOLD')  
                 return card
                     
         #### RUN CARD
@@ -4633,9 +4633,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:BOLD')
 
             self.run_card.do_help(args[start])
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
