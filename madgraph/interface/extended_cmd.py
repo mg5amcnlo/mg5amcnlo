@@ -2837,6 +2837,52 @@ class ControlSwitch(SmartQuestion):
         if info == '':
             info = 'Please install module'
         return info
+    
+    def do_help(self, line, list_command=True):
+        """dedicated help for the control switch"""
+        
+        if line:
+            return self.print_help_for_switch(line)
+        
+        # here for simple "help"
+        logger.info(" ")
+        logger.info("  In order to change a switch you can:")
+        logger.info("   - type 'NAME = VALUE'  to set the switch NAME to a given value.")
+        logger.info("   - type 'ID = VALUE'  to set the switch correspond to the line ID to a given value.")
+        logger.info("   - type 'ID' where ID is the value of the line to pass from one value to the next.")
+        logger.info("   - type 'NAME' to set the switch NAME to the next value.")
+        logger.info("")
+        logger.info("   You can type 'help NAME' for more help on a given switch")
+        logger.info("")
+        logger.info("  Special keyword:", '$MG:BOLD')
+        logger.info("    %s" % '\t'.join([p[4:] for p in dir(self) if p.startswith('ans_')]) )
+        logger.info("    type 'help  XXX' for more information")
+        if list_command:
+            super(ControlSwitch, self).do_help(line)
+
+        
+    def print_help_for_switch(self, line):
+        """ """
+        
+        arg = line.split()[0]
+        
+        if hasattr(self, 'help_%s' % arg):
+            return getattr(self, 'help_%s' % arg)('')
+        
+        if hasattr(self, 'ans_%s' % arg):
+            return getattr(self, 'help_%s' % arg).__doc__
+        
+        if arg in self.switch:
+            logger.info("   information for switch %s: ", arg, '$MG:BOLD')
+            logger.info("   allowed value:")
+            logger.info("      %s", '\t'.join(self.get_allowed(arg)))
+            if hasattr(self, 'help_text_%s' % arg):
+                logger.info("")
+                for line in getattr(self, 'help_text_%s' % arg):
+                    logger.info(line)
+                      
+        
+    
 
     def question_formatting(self, nb_col = 80,
                                   ldescription=0,
