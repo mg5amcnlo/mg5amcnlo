@@ -63,7 +63,6 @@ class ColorFormatter(logging.Formatter):
         if bold_specified:
             color = BOLD_SEQ
             color_specified = True
-            print "BOLD specified"
         else:
             color     = COLOR_SEQ % (30 + color_choice)
         message   = logging.Formatter.format(self, record)
