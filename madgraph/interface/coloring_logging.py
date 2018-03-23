@@ -32,7 +32,7 @@ BOLD_SEQ  = "\033[1m"
 class ColorFormatter(logging.Formatter):
 
     def __init__(self, *args, **kwargs):
-        # can't do super(...) here because Formatter is an old school class
+        # can't do super(...) here because Formatter is an old school class)
         logging.Formatter.__init__(self, *args, **kwargs)
 
     def format(self, record):

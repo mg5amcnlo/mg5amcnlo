@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __builtin__ import True
 """  A file containing different extension of the cmd basic python library"""
 
 
@@ -35,6 +34,8 @@ except:
 
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
+logger_tuto = logging.getLogger('tutorial') # for stdout
+logger_plugin = logging.getLogger('tutorial_plugin') # for stdout
 
 try:
     import madgraph.various.misc as misc
@@ -2068,6 +2069,8 @@ class SmartQuestion(BasicCmd):
             setattr(self, key, value)
         if reprint_opt:
             print question
+            logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
+            logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
         return self.cmdloop()
         
 
