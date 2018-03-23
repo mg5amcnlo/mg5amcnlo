@@ -59,6 +59,8 @@ class ColorFormatter(logging.Formatter):
                     bold_specified = True
             else:
                 new_args.append(arg)
+        
+
         record.args = tuple(new_args)
         if bold_specified:
             color = BOLD_SEQ
@@ -66,7 +68,13 @@ class ColorFormatter(logging.Formatter):
         else:
             color     = COLOR_SEQ % (30 + color_choice)
         message   = logging.Formatter.format(self, record)
-        if not message.endswith('$RESET'):
+        if not message:
+            return message
+        # if some need to be applied no matter what:
+        message = message.replace('$_BOLD', BOLD_SEQ).replace('$_RESET', RESET_SEQ).replace('$BR','\n')
+        
+        # for the conditional one
+        if '$RESET' not in message:
             message +=  '$RESET'
         for k,v in COLORS.items():
             color_flag = COLOR_SEQ % (v+30)
