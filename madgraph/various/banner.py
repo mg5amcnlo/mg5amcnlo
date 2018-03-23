@@ -1086,7 +1086,7 @@ class ConfigFile(dict):
                         val = val.lower()
                         allowed = allowed.lower()
                         if value in allowed:
-                            i = allowed.find(value)
+                            i = allowed.index(value)
                             new_values.append(self.allowed_value[i])
                             continue
                     # no continue -> bad input
@@ -1188,8 +1188,8 @@ class ConfigFile(dict):
                 value = value.lower()
                 allowed = [v.lower() for v in allowed]
                 if value in allowed:
-                    i = allowed.find(value)
-                    value = self.allowed_value[i]
+                    i = allowed.index(value)
+                    value = self.allowed_value[lower_name][i]
                     valid=True
                     
             if not valid:
