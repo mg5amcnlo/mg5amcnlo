@@ -2841,7 +2841,7 @@ class ControlSwitch(SmartQuestion):
             info = 'Please install module'
         return info
     
-    def do_help(self, line, list_command=True):
+    def do_help(self, line, list_command=False):
         """dedicated help for the control switch"""
         
         if line:
