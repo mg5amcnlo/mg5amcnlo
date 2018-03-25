@@ -1511,6 +1511,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --remove_weights= # remove previously written weights matching the descriptions")
         logger.info("   --keep_weights=   # force to keep the weight even if in the list of remove_weights")
         logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
+        logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
+        logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
         logger.info("       central  : Do not perform any pdf variation"    )
