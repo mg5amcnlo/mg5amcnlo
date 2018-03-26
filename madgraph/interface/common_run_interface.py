@@ -4150,6 +4150,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         self.has_delphes = False
         self.paths = {}
+        self.update_block = []
 
     
     def define_paths(self, **opt):
@@ -4337,6 +4338,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     'pbp': 'setup heavy ion configuration for lead-proton collision',
     'pp': 'remove setup of heavy ion configuration to set proton-proton collision',
     })
+            
+        self.update_block += [b.name for b in self.run_card.blocks]
         
         return self.run_set
     
@@ -4668,10 +4671,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-        
+
+        valid = ['dependent', 'missing', 'to_slha1', 'to_slha2', 'to_full']
+        valid += self.update_block
+
         arg = line[:begidx].split()
         if len(arg) <=1:
-            return self.list_completion(text, ['dependent', 'missing', 'to_slha1', 'to_slha2', 'to_full'], line)
+            return self.list_completion(text, valid, line)
         elif arg[0] == 'to_full':
             return self.list_completion(text, self.cards , line)
 
@@ -5582,6 +5588,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     update to_slha1: pass SLHA2 card to SLHA1 convention. (beta)
                     update to_slha2: pass SLHA1 card to SLHA2 convention. (beta)
                     update to_full [run_card]
+                    update XXX [where XXX correspond to a hidden block of the run_card]
         """
         args = self.split_arg(line)
         if len(args)==0:
@@ -5629,6 +5636,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.param_card = check_param_card.ParamCard(self.paths['param'])            
         elif args[0] == 'to_full':
             return self.update_to_full(args[1:])
+        elif args[0] in self.update_block:
+            self.run_card.display_block.append(args[0].lower())
+            self.run_card.write(self.paths['run'], self.paths['run_default'])
+            logger.info('add optional block %s to the run_card', args[0])
+        else:
+            self.help_update()
+            logger.warning('unvalid options for update command. Please retry')
 
 
     def update_to_full(self, line):

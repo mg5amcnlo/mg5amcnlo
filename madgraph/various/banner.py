@@ -2173,10 +2173,14 @@ class PY8SubRun(PY8Card):
         self.add_param("Main:subrun", -1)
         self.add_param("Beams:LHEF", "events.lhe.gz")
 
+
+
+runblock = collections.namedtuple('block', ('name', 'fields', 'template_on', 'template_off'))
 class RunCard(ConfigFile):
 
     filename = 'run_card'
-
+    blocks = [] 
+                                   
     def __new__(cls, finput=None, **opt):
         if cls is RunCard:
             if not finput:
@@ -2213,11 +2217,10 @@ class RunCard(ConfigFile):
         # parameter added where legacy requires an older value.
         self.system_default = {}
         
+        self.display_block = [] # set some block to be displayed
         self.warned=False
 
 
-        
-        
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
@@ -2302,22 +2305,61 @@ class RunCard(ConfigFile):
         if not template:
             raise Exception
 
+        # check which optional block to write:
+        write_block= []
+        for b in self.blocks:
+            name = b.name
+            # check if the block has to be written
+            if name not in self.display_block and \
+               not any(f in self.user_set for f in b.fields):
+                continue
+            write_block.append(b.name)
+        
         if python_template and not to_write:
+            import string
+            text = file(template,'r').read() 
+            if self.blocks:
+                text = string.Template(text)
+                mapping = {}
+                for b in self.blocks:
+                    if b.name in write_block:
+                        mapping[b.name] = b.template_on
+                    else:
+                        mapping[b.name] = b.template_off
+                text = text.substitute(mapping)
+
             if not self.list_parameter:
-                text = file(template,'r').read() % self
+                text = text % self
             else:
                 data = dict(self)
                 for name in self.list_parameter:
                     data[name] = ', '.join(str(v) for v in data[name])
-                text = file(template,'r').read() % data
-        else:
+                text = text % data
+        else:                        
             text = ""
             for line in file(template,'r'):                  
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
                 nline = nline.split('=')
-                if len(nline) != 2:
+                if python_template and nline[0].startswith('$'):
+                    block_name = nline[0][1:]
+                    this_group = [b for b in self.blocks if b.name == block_name]
+                    if not this_group:
+                        logger.debug("block %s not defined", block_name)
+                        continue
+                    else:
+                        this_group = this_group[0]
+                    if block_name in write_block:
+                        text += this_group.on_template % self
+                        for name in this_group.fields:
+                            written.add(f)
+                            if name in to_write:
+                                to_write.remove(name)
+                    else:
+                        text += this_group.off_template % self
+                    
+                elif len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
                     name = nline[1].strip().lower()
@@ -2326,6 +2368,7 @@ class RunCard(ConfigFile):
                         value = ', '.join([str(v) for v in value])
                     if python_template:
                         text += line % {nline[1].strip():value, name:value}
+                        written.add(name)
                     else:
                         if not comment or comment[-1]!='\n':
                             endline = '\n'
@@ -2334,13 +2377,48 @@ class RunCard(ConfigFile):
                         text += '  %s\t= %s %s%s' % (value, name, comment, endline)
                         written.add(name)                        
 
-                    if name.lower() in to_write:
-                        to_write.remove(nline[1].strip().lower())
+                    if name in to_write:
+                        to_write.remove(name)
                 else:
                     logger.info('Adding missing parameter %s to current %s (with default value)',
                                  (name, self.filename))
                     written.add(name) 
                     text += line 
+
+            for b in self.blocks:
+                if b.name not in write_block:
+                    continue
+                # check if all attribute of the block have been written already
+                if all(f in written for f in b.fields):
+                    continue
+
+                to_add = []
+                for line in b.template_on.split('\n'):                  
+                    nline = line.split('#')[0]
+                    nline = nline.split('!')[0]
+                    nline = nline.split('=')
+                    if len(nline) != 2:
+                        to_add.append(line)
+                    elif nline[1].strip() in self:
+                        name = nline[1].strip().lower()
+                        value = self[name]
+                        if name in self.list_parameter:
+                            value = ', '.join([str(v) for v in value])
+                        if name in written:
+                            continue #already include before
+                        else:
+                            to_add.append(line % {nline[1].strip():value, name:value})
+                            written.add(name)                        
+    
+                        if name in to_write:
+                            to_write.remove(name)
+                    else:
+                        raise Exception
+                
+                if b.template_off in text:
+                    text = text.replace(b.template_off, '\n'.join(to_add))
+                else:
+                    text += '\n'.join(to_add)
 
         if to_write or write_hidden:
             text+="""#********************************************************************* 
@@ -2596,6 +2674,37 @@ class RunCard(ConfigFile):
 
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
+    
+    blocks = [
+#    HEAVY ION OPTIONAL BLOCK            
+        runblock(name='ion_pdf', fields=('nb_neutron1', 'nb_neutron2','nb_proton1','nb_proton2','mass_ion1', 'mass_ion2'),
+            template_on=\
+"""#*********************************************************************
+# Heavy ion PDF / rescaling of PDF                                   *
+#*********************************************************************
+  %(nb_proton1)s    = nb_proton1 # number of proton for the first beam
+  %(nb_neutron1)s    = nb_neutron1 # number of neutron for the first beam
+  %(mass_ion1)s = mass_ion1 # mass of the heavy ion (first beam)
+# Note that seting differently the two beams only work if you use 
+# group_subprocess=False when generating your matrix-element
+  %(nb_proton2)s    = nb_proton2 # number of proton for the second beam
+  %(nb_neutron2)s    = nb_neutron2 # number of neutron for the second beam
+  %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  
+""",
+            template_off='# To see heavy ion options: type "update ion_pdf"'),
+#    BEAM POLARIZATION OPTIONAL BLOCK
+        runblock(name='beam_pol', fields=('polbeam1','polbeam2'),
+            template_on=\
+"""#*********************************************************************
+# Beam polarization from -100 (left-handed) to 100 (right-handed)    *
+#*********************************************************************
+     %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
+     %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
+""",                                               
+            template_off='# To see polarised beam options: type "update beam_pol"')
+    ]
+    
+    
     
     def default_setup(self):
         """default value for the run_card.dat"""
