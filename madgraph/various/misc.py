@@ -1336,10 +1336,14 @@ def sprint(*args, **opt):
     if not __debug__:
         return
     
-    use_print = False
+
     import inspect
     if opt.has_key('cond') and not opt['cond']:
         return
+
+    use_print = False    
+    if opt.has_key('use_print') and opt['use_print']:
+        use_print = True
     
     if opt.has_key('log'):
         log = opt['log']
