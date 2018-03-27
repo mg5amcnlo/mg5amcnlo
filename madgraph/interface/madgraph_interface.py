@@ -5791,7 +5791,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         advertisements = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
-                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'SysCalc':['arXiv:1801.08401'],
                           'Golem95':['arXiv:0807.0605'],
                           'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
                           'QCDLoop':['arXiv:0712.1851'],
