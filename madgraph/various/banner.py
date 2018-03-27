@@ -2720,9 +2720,9 @@ class RunCardLO(RunCard):
                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
-        self.add_param("polbeam1", 0.0, fortran_name="pb1",
+        self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
-        self.add_param("polbeam2", 0.0, fortran_name="pb2",
+        self.add_param("polbeam2", 0.0, fortran_name="pb2", hidden=True,
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
                        comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
