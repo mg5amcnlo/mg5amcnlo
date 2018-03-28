@@ -1081,7 +1081,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_import(self, args):
         """check the validity of line"""
-
+        
         modelname = False
         prefix = True
         if '-modelname' in args:
@@ -1094,6 +1094,26 @@ class CheckValidForCmd(cmd.CheckCmd):
         if '--noprefix' in args:
             args.remove('--noprefix')
             prefix = False  
+
+        if args and args[0] == 'model' and '--last' in args:
+            # finding last created directory
+            args.remove('--last')
+            last_change =  0
+            to_search = [pjoin(MG5DIR,'models')]
+            if 'PYTHONPATH' in os.environ:
+                to_search += os.environ['PYTHONPATH'].split(':')
+                to_search = [d for d in to_search if os.path.exists(d)]
+            
+            models = []
+            for d in to_search:
+                for p in misc.glob('*/particles.py', path=d ):
+                    if p.endswith(('__REAL/particles.py','__COMPLEX/particles.py')):
+                        continue
+                    models.append(os.path.dirname(p))
+                
+            lastmodel = max(models, key=os.path.getmtime)
+            logger.info('last model found is %s', lastmodel)
+            args.insert(1, lastmodel)
 
         if not args:
             self.help_import()
