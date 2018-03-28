@@ -6124,7 +6124,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
-        elif len(args) > 0: 
+        elif len(args) > 0:
+            misc.sprint(args, self.cards) 
             if args[0] in self.cards:
                 card = args[0]
             elif "%s.dat" % args[0] in self.cards:
@@ -6136,46 +6137,56 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
+            
+            if card in self.paths:
+                path = self.paths[card]
+            elif os.path.exists(card):
+                path = card
+            elif os.path.exists(pjoin(self.me_dir,'Cards',card)):
+                path = pjoin(self.me_dir,'Cards',card)
+            else:
+                raise Exception, 'unknow path'
+            
             # handling the various option on where to write the line            
             if args[1] == '--clean':
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write("# %s \n" % card)
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
             elif args[1].startswith('--line_position=afterlast'):
                 #position in file determined by user
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 if self.last_editline_pos > 0:
                     pos = self.last_editline_pos +1
                 newline = line.split(None,2)[2]
                 split.insert(pos, newline)
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 pos = int(args[1].split('=',1)[1])
                 newline = line.split(None,2)[2]
                 split.insert(pos, newline)
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = pos
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 for posline,l in  enumerate(split):
                     if not l.startswith('#'):
                         break
                 split.insert(posline, line.split(None,2)[2])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = posline
@@ -6183,7 +6194,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif args[1].startswith('--replace_line='):
                 # catch the line/regular expression and replace the associate line
                 # if no line match go to check if args[2] has other instruction starting with --
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
@@ -6204,7 +6215,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:color:BLACK') 
@@ -6213,7 +6224,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
@@ -6223,14 +6234,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     raise Exception, 'invalid regular expression: not found in file'
                 split.insert(posline, re.split(search_pattern,line)[-1])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
@@ -6240,20 +6251,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     posline=len(split)
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
 
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                                 
                 self.last_editline_pos = posline
                                                  
             else:
-                ff = open(pjoin(self.me_dir,'Cards',card),'a')
+                ff = open(path,'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
                 logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 self.last_editline_pos = -1
 
-            self.reload_card(pjoin(self.me_dir,'Cards',card))
+            self.reload_card(path)
             
     do_edit = do_add
     complete_edit = complete_add
@@ -6336,7 +6347,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.do_set('mw_run inputfile %s' % os.path.relpath(path, self.mother_interface.me_dir))     
             return             
         else:
-            card_name = CommonRunCmd.detect_card_type(path)
+            card_name = self.detect_card_type(path)
 
         if card_name == 'unknown':
             logger.warning('Fail to determine the type of the file. Not copied')
@@ -6351,6 +6362,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.mother_interface.keep_cards(self.cards)
             for card_name in self.cards:
                 self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
+
+    def detect_card_type(self, path):
+        """detect card type"""
+        
+        return CommonRunCmd.detect_card_type(path)
 
     def open_file(self, answer):
         """open the file"""
