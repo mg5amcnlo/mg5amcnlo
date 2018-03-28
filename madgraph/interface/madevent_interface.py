@@ -6456,6 +6456,7 @@ class GridPackCmd(MadEventCmd):
         #print 'run combine!!!'
         #combine_runs.CombineRuns(self.me_dir)
         
+        return
         #update html output
         Presults = sum_html.collect_result(self)
         cross, error = Presults.xsec, Presults.xerru

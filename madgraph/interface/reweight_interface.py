@@ -623,7 +623,7 @@ class ReweightInterface(extended_cmd.Cmd):
             for name in type_rwgt:
                 variance = ratio_square[name]/event_nb - (ratio[name]/event_nb)**2
                 orig_cross, orig_error = self.orig_cross
-                error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
+                error[name] = math.sqrt(max(0,variance/math.sqrt(event_nb))) * orig_cross + ratio[name]/event_nb * orig_error
             results.add_detail('error', error[type_rwgt[0]])
             import madgraph.interface.madevent_interface as ME_interface
 
