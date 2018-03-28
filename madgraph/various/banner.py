@@ -2527,28 +2527,26 @@ class RunCard(ConfigFile):
                     fsock.writelines(line)
             fsock.close()   
 
+    @staticmethod
+    def get_idbmup(lpp):
+        """return the particle colliding pdg code"""
+        if lpp in (1,2, -1,-2):
+            return math.copysign(2212, lpp)
+        elif lpp in (3,-3):
+            return math.copysign(11, lpp)
+        elif lpp == 0:
+            #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+            return 0
+        else:
+            return lpp
 
     def get_banner_init_information(self):
         """return a dictionary with the information needed to write
         the first line of the <init> block of the lhe file."""
         
         output = {}
-        
-        def get_idbmup(lpp):
-            """return the particle colliding pdg code"""
-            if lpp in (1,2, -1,-2):
-                return math.copysign(2212, lpp)
-            elif lpp in (3,-3):
-                return math.copysign(11, lpp)
-            elif lpp == 0:
-                #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
-                return 0
-            else:
-                return lpp
-        
-            
-        output["idbmup1"] = get_idbmup(self['lpp1'])
-        output["idbmup2"] = get_idbmup(self['lpp2'])
+        output["idbmup1"] = self.get_idbmup(self['lpp1'])
+        output["idbmup2"] = self.get_idbmup(self['lpp2'])
         output["ebmup1"] = self["ebeam1"]
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
