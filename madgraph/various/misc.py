@@ -1437,6 +1437,8 @@ def sprint(*args, **opt):
 
     if wait:
         raw_input('press_enter to continue')
+    elif opt.has_key('sleep'):
+        time.sleep(int(opt['sleep']))
 
     return 
 

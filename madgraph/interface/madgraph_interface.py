@@ -4441,9 +4441,11 @@ This implies that with decay chains:
         if not options['reuse']:
             process_checks.clean_up(self._mgme_dir)
 
-    # Generate a new amplitude
-    def do_generate(self, line):
-        """Main commands: Generate an amplitude for a given process"""
+
+    def clean_process(self):
+        """ensure that all processes are cleaned from memory.
+        typically called from import model and generate XXX command
+        """
 
         aloha_lib.KERNEL.clean()
         # Reset amplitudes
@@ -4452,12 +4454,19 @@ This implies that with decay chains:
         self._curr_proc_defs = base_objects.ProcessDefinitionList()
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = line
+        self._generate_info = ""
         # Reset _done_export, since we have new process
         self._done_export = False
         # Also reset _export_format and _export_dir
-        self._export_format = None
+        self._export_format = None        
+        
+            
+    # Generate a new amplitude
+    def do_generate(self, line):
+        """Main commands: Generate an amplitude for a given process"""
 
+        self.clean_process()
+        self._generate_info = line
 
         # Call add process
         args = self.split_arg(line)
@@ -5177,10 +5186,7 @@ This implies that with decay chains:
         if args[0].startswith('model'):
             self._model_v4_path = None
             # Reset amplitudes and matrix elements
-            self._curr_amps = diagram_generation.AmplitudeList()
-            # Reset proc defs
-            self._curr_proc_defs = base_objects.ProcessDefinitionList()
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.clean_process()
             # Import model
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
