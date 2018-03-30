@@ -5012,6 +5012,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 except ValueError as e:
                     logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
                     return
+                except InvalidCmd as e:
+                    logger.warning(str(e))
+                    return
             #else:
             #    logger.warning("too many argument for this command")
             #    return

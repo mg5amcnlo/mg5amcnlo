@@ -1288,10 +1288,10 @@ class ConfigFile(dict):
                 if new_value == value:
                     value = new_value
                 else:
-                    raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                    raise InvalidCmd, "Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value)
             else:
-                raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                raise InvalidCmd, "Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value)                
         else:
             # We have a string we have to format the attribute from the string
@@ -1305,7 +1305,7 @@ class ConfigFile(dict):
                 elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
                     value = True
                 else:
-                    raise Exception, "%s can not be mapped to True/False for %s" % (repr(value),name)
+                    raise InvalidCmd, "%s can not be mapped to True/False for %s" % (repr(value),name)
             elif targettype == str:
                 value = value.strip()
                 if value.startswith('\'') and value.endswith('\''):
@@ -1324,16 +1324,16 @@ class ConfigFile(dict):
                     try:
                         value = float(value.replace('d','e'))
                     except ValueError:
-                        raise Exception, "%s can not be mapped to an integer" % value                    
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value                    
                     try:
                         new_value = int(value)
                     except ValueError:
-                        raise Exception, "%s can not be mapped to an integer" % value
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value
                     else:
                         if value == new_value:
                             value = new_value
                         else:
-                            raise Exception, "incorect input: %s need an integer for %s" % (value,name)
+                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
             elif targettype == float:
                 value = value.replace('d','e') # pass from Fortran formatting
                 try:
@@ -1349,11 +1349,11 @@ class ConfigFile(dict):
                                 v /=  float(split[2*i+2])
                     except:
                         v=0
-                        raise Exception, "%s can not be mapped to a float" % value
+                        raise InvalidCmd, "%s can not be mapped to a float" % value
                     finally:
                         value = v
             else:
-                raise Exception, "type %s is not handle by the card" % targettype
+                raise InvalidCmd, "type %s is not handle by the card" % targettype
             
         return value
             
