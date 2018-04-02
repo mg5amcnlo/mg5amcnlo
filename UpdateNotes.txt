@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-maddmv3 (30-03-18)
+2.6.2.beta (30-04-02)
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
       OM: introduce "update to_full" command to display all the hidden parameter
       OM: improve handling of (some) run_card parameter:
