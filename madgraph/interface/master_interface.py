@@ -216,6 +216,8 @@ class Switcher(object):
                                                             coupling_type=orders)
                     self.change_principal_cmd('MadGraph')
                     return self.cmd.create_loop_induced(self, line, *args, **opts)
+            else:
+                self.change_principal_cmd('MadGraph') 
         try:
             return  self.cmd.do_add(self, line, *args, **opts)
         except fks_base.NoBornException:
@@ -607,6 +609,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
                             %','.join(interface_quick_name.keys()))
         
     def change_principal_cmd(self, name):
+
         old_cmd=self.current_interface
         if name in self.interface_names.keys():
             self.prompt= self.interface_names[name][0]+'>'
