@@ -6128,7 +6128,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           print_only_visible=True)
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
         elif len(args) > 0:
-            misc.sprint(args, self.cards) 
             if args[0] in self.cards:
                 card = args[0]
             elif "%s.dat" % args[0] in self.cards:
