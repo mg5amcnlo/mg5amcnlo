@@ -53,6 +53,24 @@ logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
 
+class MadSpinOptions(banner.ConfigFile):
+    
+    def default_setup(self):
+
+        self.add_param("max_weight", -1)
+        self.add_param('curr_dir', os.path.realpath(os.getcwd()))
+        self.add_param('Nevents_for_max_weigth', 400)
+        self.add_param('BW_cut', -1)
+        self.add_param('nb_sigma', 0)
+        self.add_param('ms_dir', None)
+        self.add_param('max_running_process', 100)
+        self.add_param('onlyhelicity', False)
+        self.add_param('spinmode', "madspin", )
+        self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
+        self.add_param('run_card', None , comment='define cut for spinmode==none.')
+        self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
+
+
 
 class MadSpinInterface(extended_cmd.Cmd):
     """Basic interface for madspin"""
@@ -421,12 +439,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.options['run_card'].remove_all_cut()
                 self.options['run_card'][args[1]] = args[2]
         elif args[0] in 'fixed_order':
-            if args[1].lower() in ['t', 'true']:
-                self.options['fixed_order'] = True
+            self.options['fixed_order'] = banner.ConfigFile.format_variable(args[1], bool, args[0])
+            if self.options['fixed_order']:
                 logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
                 logger.warning('Not all functionality of MadSpin handle this mode correctly (only onshell mode so far).')
-            else:
-                self.options['fixed_order'] = False
             logger.info('fixed_order options set to %s', self.options['fixed_order'])
         else:
             self.options[args[0]] = int(args[1])
