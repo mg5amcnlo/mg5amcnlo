@@ -2618,7 +2618,7 @@ Parameters              %(params)s\n\
 
             fks_i = len(colors)
             # fist look for a colored legs (set j to 1 otherwise)
-            fks_j=1
+            fks_j=0
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
                     fks_j = cpos+1
@@ -2626,6 +2626,8 @@ Parameters              %(params)s\n\
             for cpos, chg in enumerate(charges[:-1]):
                 if chg != 0.:
                     fks_j = cpos+1
+            # no coloured or charged particle found. Pick the final particle in the (Born) process
+            if fks_j==0: fks_j=len(colors)-1    
 
             replace_dict['fks_i_values'] = str(fks_i)
             replace_dict['fks_j_values'] = str(fks_j)

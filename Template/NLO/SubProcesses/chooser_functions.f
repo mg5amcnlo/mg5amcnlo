@@ -422,6 +422,12 @@ C the type and charges of the mother particle
      &         (ch_i.eq.0d0 .and. dabs(ch_j).gt.0d0) ) then
          m_type=j_type
          ch_m= ch_j
+!     special for processes without a proper NLO contribution (i.e., PDG(i_fks)=-21)
+      elseif (i_type.eq.8 .and. j_type.eq.1 .and. ch_i.eq.0d0 .and.
+     $        ch_j.eq.0d0) then
+         m_type=0
+         ch_m=0d0
+         continue
       else
          write(*,*)'Flavour mismatch #2 in get_mother_col_charge',
      &      i_type,j_type,m_type
