@@ -74,10 +74,13 @@ CONTAINS
     INTEGER,INTENT(IN)::iScheme ! 1: alpha(MZ) 2: Gmu
     REAL(KIND(1d0))::SMZWidth_EW
     REAL(KIND(1d0)),EXTERNAL::Width_Z2uu_EW,Width_Z2dd_EW,Width_Z2ll_EW,Width_Z2vv_EW
+    REAL(KIND(1d0)),EXTERNAL::Width_Z2bb_EW
     ! Z > u u~ and Z > c c~
     SMZWidth_EW=2d0*Width_Z2uu_EW(iScheme)
-    ! Z > d d~, Z > s s~, Z > b b~
-    SMZWidth_EW=SMZWidth_EW+3d0*Width_Z2dd_EW(iScheme)
+    ! Z > d d~, Z > s s~
+    SMZWidth_EW=SMZWidth_EW+2d0*Width_Z2dd_EW(iScheme)
+    ! Z > b b~
+    SMZWidth_EW=SMZWidth_EW+Width_Z2bb_EW(iScheme)
     ! Z > e+ e-, Z > m+ m-, Z > tt+ tt-
     SMZWidth_EW=SMZWidth_EW+3d0*Width_Z2ll_EW(iScheme)
     ! Z > ve ve~, Z > vm vm~, Z > vt vt~
