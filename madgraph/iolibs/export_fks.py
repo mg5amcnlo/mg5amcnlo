@@ -1106,6 +1106,16 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 if not order in amp_split_orders:
                     amp_split_orders.append(order)
 
+        # check also the virtual (may be needed for processes without 
+        #  real emissions, e.g. z > v v 
+        #  note that for a loop_matrix_element squared_orders has a different format
+        #  (see the description of the get_split_orders_mapping function in loop_helas_objects)
+        squared_orders, amp_orders = matrix_element.virt_matrix_element.get_split_orders_mapping()
+        squared_orders = [so[0] for so in squared_orders]
+        for order in squared_orders:
+            if not order in amp_split_orders:
+                amp_split_orders.append(order)
+
         amp_split_size=len(amp_split_orders)
 
         text = 'C The orders to be integrated for the Born and at NLO\n'

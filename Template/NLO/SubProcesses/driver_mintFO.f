@@ -497,7 +497,7 @@ c The nbody contributions
 
  11   continue
 c The n+1-body contributions (including counter terms)
-      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
+      if (abrv(1:2).eq.'bo'.or.abrv(1:2).eq.'vi') goto 12
       nbody=.false.
       if (sum) then
          nFKS_min=1
@@ -715,6 +715,7 @@ c
       include 'fks_info.inc'
       include 'run.inc'
       include 'mint.inc'
+      include 'orders.inc'
 c
 c     Arguments
 c
@@ -896,15 +897,26 @@ c-----
       close(83)
 
       if (fks_configs.eq.1) then
-         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
-            write (*,*) 'Process generated with [LOonly=QCD]. '/
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21.and.abrv.ne.'born') then
+C Two cases can occur
+C   1) the process has been generated with the LOonly flav
+C   2) the process has only virtual corrections, e.g. z > v v [QED]
+C the two cases can be distinguished by looking at the values
+C  of AMP_SPLIT_SIZE, AMP_SPLIT_SIZE_BORN (if they are ==, it is 1))
+           if (amp_split_size.eq.amp_split_size_born) then
+             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
-            abrv='born'
-            if (ickkw.eq.3) then
+             abrv='born'
+             if (ickkw.eq.3) then
                write (*,*) 'FxFx merging not possible with'/
      $              /' [LOonly=QCD] processes'
                stop 1
-            endif
+             endif
+           else
+             write (*,*) 'Process only with virtual corrections'/
+     $           /'Setting abrv to "bovi".'
+             abrv='bovi'
+           endif
          endif
       endif
 c
