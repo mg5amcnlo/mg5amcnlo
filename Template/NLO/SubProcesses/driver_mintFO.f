@@ -497,7 +497,9 @@ c The nbody contributions
 
  11   continue
 c The n+1-body contributions (including counter terms)
-      if (abrv(1:2).eq.'bo'.or.abrv(1:2).eq.'vi') goto 12
+      if ( abrv(1:4).eq.'born' .or.
+     $     abrv(1:4).eq.'bovi' .or.
+     $     abrv(1:2).eq.'vi' ) goto 12
       nbody=.false.
       if (sum) then
          nFKS_min=1
