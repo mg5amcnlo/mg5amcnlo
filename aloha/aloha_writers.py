@@ -862,7 +862,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
         lor_list = (self.routine.name,) + lor_names
         line = "    call %(name)s%(addon)s(%(before_coup)s,%(coup)s%(after_coup)s,%(out)s)\n"
-        main = '%(spin)s%(id)d' % {'spin': self.particles[self.offshell -1],
+        main = '%(spin)s%(id)d' % {'spin': self.particles[self.outgoing -1],
                            'id': self.outgoing}
         for i, name in enumerate(lor_list):
             data['name'] = name
@@ -885,7 +885,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 if not offshell:
                     routine.write( '    vertex = vertex + tmp\n')
                 else:
-                    size = self.type_to_size[self.particles[offshell -1]] -2
+                    size = self.type_to_size[self.particles[self.outgoing -1]] -2
                     routine.write(" do i = %s, %s\n" % (self.momentum_size+1, self.momentum_size+size))
                     routine.write("        %(main)s(i) = %(main)s(i) + %(tmp)s(i)\n" %\
                                {'main': main, 'tmp': data['out']})
