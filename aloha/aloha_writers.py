@@ -874,7 +874,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     data['out'] = main
             elif i==1:
                 if self.offshell:
-                    type = self.particles[self.offshell-1]
+                    type = self.particles[self.outgoing-1]
                     self.declaration.add(('list_complex','%stmp' % type))
                 else:
                     type = ''
