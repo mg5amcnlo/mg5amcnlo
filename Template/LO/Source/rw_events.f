@@ -217,7 +217,7 @@ c      aqcd = g*g/4d0/pi
       write(largeBuff,'(a)') '</event>'
       evt_record=trim(evt_record)//CHAR(13)//CHAR(10)//trim(largeBuff)
       return
- 51   format(i9,5i5,5e19.11,f3.0,f4.0)
+ 51   format(i11,5i5,5e19.11,f3.0,f4.0)
       end
 
 
@@ -300,7 +300,7 @@ c      aqcd = g*g/4d0/pi
       enddo
       write(lun,'(a)') '</event>'
       return
- 51   format(i9,5i5,5e19.11,f3.0,f4.0)
+ 51   format(i11,5i5,5e19.11,f3.0,f4.0)
       end
 
       subroutine write_comments(lun)
