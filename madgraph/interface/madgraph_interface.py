@@ -2736,7 +2736,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(line[0:begidx])
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._install_opts)
+            return self.list_completion(text, self._install_opts + self._advanced_install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
         elif len(args)>=2 and args[1] in self._advanced_install_opts:           
@@ -5746,6 +5746,9 @@ After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(prefix,'lib')
             self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)      
+        elif '%s_path' % tool in self.options:
+            self.options['%s_path' % tool] = pjoin(prefix, tool)
+            self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.

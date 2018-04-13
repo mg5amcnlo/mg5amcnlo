@@ -253,17 +253,6 @@ if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller
     print 'Fail to create OfflineHEPToolsInstaller'
     sys.exit()
 
-# 4. Download the offline installer and other similar code
-install_str = """
-cd %s/PLUGIN
-bzr branch lp:~maddm/maddm/new_interface maddm;
-rm -rfv `find maddm -name .bzr -type d` > /dev/null;
-mv maddm/maddm ../bin/;
-cd ..;
-""" % filepath
-os.system(install_str)
-
-
 # 5. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
