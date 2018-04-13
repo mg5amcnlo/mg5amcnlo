@@ -1180,7 +1180,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # to install as argument.   
             args = args[:1]
 
-        if args[0] not in self._install_opts + hidden_prog:
+        if args[0] not in self._install_opts + hidden_prog + self._advanced_install_opts: 
             if not args[0].startswith('td'):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
