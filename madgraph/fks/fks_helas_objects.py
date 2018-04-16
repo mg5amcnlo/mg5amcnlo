@@ -158,7 +158,7 @@ def async_generate_born(args):
     cPickle.dump(outdata,output,protocol=2)
     output.close()
     
-    return [output.name,metag,has_loops,processes]
+    return [output.name,metag,has_loops,processes,helasfull.born_me.get_num_configs(),helasfull.get_nexternal_ninitial()[0]]
 
 
 def async_finalize_matrix_elements(args):
@@ -350,6 +350,9 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 pool.terminate()
                 raise KeyboardInterrupt 
 
+            configs_list = [bout[4] for bout in bornmapout]
+            nparticles_list = [bout[5] for bout in bornmapout]
+
             #remove real temp files
             for realtmp in realmapout:
                 os.remove(realtmp[0])
@@ -450,12 +453,13 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                     break
             self['has_virtuals'] = has_virtuals
             
-            configs_list = []
+            # configs_list and nparticles_list have already
+            # been initialised with the born infos after
+            # async_generate_born
             for meout in realmapout:
                 configs_list.append(meout[1])
             self['max_configs'] = max(configs_list)
             
-            nparticles_list = []
             for meout in realmapout:
                 nparticles_list.append(meout[2])
             self['max_particles'] = max(nparticles_list)        
