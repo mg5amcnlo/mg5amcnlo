@@ -53,9 +53,9 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=7)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=773, NLOOPGROUPS=118, NCTAMPS=201)
+      PARAMETER (NLOOPS=773, NLOOPGROUPS=118, NCTAMPS=207)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=974)
+      PARAMETER (NLOOPAMPS=980)
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
@@ -663,6 +663,14 @@ C      helicity is asked
  101    CONTINUE
         CLOSE(1)
 
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
+
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
           DO J=1,NCOMB
@@ -966,7 +974,7 @@ C         In general, only wavefunction renormalization counterterms
 C         (if needed by the loop UFO model) are of this type.
 C         Quite often and in principle for all loop UFO models from 
 C         FeynRules, there are none of these type of counterterms.
-
+          CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
@@ -2194,7 +2202,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=974)
+      PARAMETER (NLOOPAMPS=980)
 C     
 C     ARGUMENTS
 C     
@@ -2254,8 +2262,8 @@ C
       DATA (LOOPAMPORDERS(I),I=241,245) /    3,    3,    3,    3,    3/
       DATA (LOOPAMPORDERS(I),I=246,250) /    3,    3,    3,    3,    3/
       DATA (LOOPAMPORDERS(I),I=251,255) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=256,260) /    3,    3,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I=261,265) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=256,260) /    3,    3,    3,    3,    3/
+      DATA (LOOPAMPORDERS(I),I=261,265) /    3,    3,    3,    4,    4/
       DATA (LOOPAMPORDERS(I),I=266,270) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=271,275) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=276,280) /    4,    4,    4,    4,    4/
@@ -2397,7 +2405,8 @@ C
       DATA (LOOPAMPORDERS(I),I=956,960) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=961,965) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=966,970) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I=971,974) /    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=971,975) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=976,980) /    4,    4,    4,    4,    4/
 C     -----------
 C     BEGIN CODE
 C     -----------

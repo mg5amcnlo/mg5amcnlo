@@ -166,7 +166,7 @@ class Block(list):
         
         if isinstance(lhacode, int):
             lhacode = (lhacode,)
-            
+          
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:
@@ -175,7 +175,19 @@ class Block(list):
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
+    
+    def rename_keys(self, change_keys):
         
+        misc.sprint(self.param_dict, change_keys, [p.lhacode for p in self])
+        for old_key, new_key in change_keys.items():
+            
+            assert old_key in self.param_dict
+            param = self.param_dict[old_key]
+            del self.param_dict[old_key]
+            self.param_dict[new_key] = param
+            param.lhacode = new_key
+            
+            
     def remove(self, lhacode):
         """ remove a parameter """
         list.remove(self, self.get(lhacode))
@@ -236,7 +248,7 @@ class Block(list):
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
-            data, self.commant = text, ""
+            data, self.comment = text, ""
 
         data = data.lower()
         data = data.split()
@@ -296,7 +308,9 @@ class ParamCard(dict):
 
 
     def __init__(self, input_path=None):
+        dict.__init__(self,{})
         self.order = []
+        self.not_parsed_entry = []
         
         if isinstance(input_path, ParamCard):
             self.read(input_path.write())
@@ -341,6 +355,12 @@ class ParamCard(dict):
                 param.load_str(line[6:])
                 cur_block.append(param)
                 continue
+            
+            if line.startswith('xsection') or cur_block == 'notparsed':
+                cur_block = 'notparsed'
+                self.not_parsed_entry.append(line)
+                continue
+                
 
             if cur_block is None:
                 continue            
@@ -509,6 +529,8 @@ class ParamCard(dict):
         blocks = self.order_block()
         text = self.header
         text += ''.join([block.__str__(precision) for block in blocks])
+        text += '\n'
+        text += '\n'.join(self.not_parsed_entry)
         if not outpath:
             return text
         elif isinstance(outpath, str):
@@ -544,8 +566,56 @@ class ParamCard(dict):
                 return default
             raise
 
+    def get_missing_block(self, identpath):
+        """ """
+        missing = set()
+        all_blocks = set(self.keys())
+        for line in open(identpath):
+            if line.startswith('c  ') or line.startswith('ccccc'):
+                continue
+            split = line.split()
+            if len(split) < 3:
+                continue
+            block = split[0]
+            if block not in self:
+                missing.add(block)
+            elif block in all_blocks:
+                all_blocks.remove(block)
+        
+        unknow = all_blocks
+        return missing, unknow
+     
+    def secure_slha2(self,identpath):
+        
+        missing_set, unknow_set = self.get_missing_block(identpath)
+        
+        apply_conversion = []
+        if missing_set == set(['fralpha']) and 'alpha' in unknow_set:
+            apply_conversion.append('alpha')
+        elif all([b in missing_set for b in ['te','msl2','dsqmix','tu','selmix','msu2','msq2','usqmix','td', 'mse2','msd2']]) and\
+                     all(b in unknow_set for b in ['ae','ad','sbotmix','au','modsel','staumix','stopmix']):
+            apply_conversion.append('to_slha2')
+            
+        if 'to_slha2' in apply_conversion:
+            logger.error('Convention for the param_card seems to be wrong. Trying to automatically convert your file to SLHA2 format. \n'+\
+                         "Please check that the conversion occurs as expected (The converter is not fully general)")
+                            
+            param_card =self.input_path
+            convert_to_mg5card(param_card, writting=True)
+            self.clear()
+            self.__init__(param_card)
+
+        if 'alpha' in apply_conversion:
+            logger.info("Missing block fralpha but found a block alpha, apply automatic conversion")
+            self.rename_blocks({'alpha':'fralpha'})
+            self['fralpha'].rename_keys({(): (1,)})
+            self.write(param_card.input_path)
+        
     def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""
+        
+        self.secure_slha2(identpath)
+        
         
         fout = file_writers.FortranWriter(outpath)
         defaultcard = ParamCard(default)
@@ -853,8 +923,8 @@ class ParamCardIterator(ParamCard):
     def iterate(self):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
-        auto = 'Auto'
         pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        self.autowidth = []
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
@@ -872,14 +942,15 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key].append( (param, eval(def_list)))
                     except SyntaxError, error:
                         raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
-                    
+                elif isinstance(param.value, str) and param.value.strip().lower().startswith('auto'):
+                    self.autowidth.append(param)
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-
+            
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):
@@ -901,7 +972,7 @@ class ParamCardIterator(ParamCard):
             yield param_card
         
     
-    def store_entry(self, run_name, cross, error=None):
+    def store_entry(self, run_name, cross, error=None, param_card_path=None):
         """store the value of the cross-section"""
         if isinstance(cross, dict):
             info = dict(cross)
@@ -911,8 +982,13 @@ class ParamCardIterator(ParamCard):
             if error is None:
                 self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
             else:
-                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
-
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+        if self.autowidth and param_card_path:
+            paramcard = ParamCard(param_card_path)
+        for param in self.autowidth:
+            self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
+            
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
         
@@ -927,6 +1003,12 @@ class ParamCardIterator(ParamCard):
             keys.remove('bench')
             keys.remove('run_name')
             keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
 
         formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
                                              ('%%-%is ' % (nbcol))* len(keys))

@@ -47,9 +47,9 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=14, NLOOPGROUPS=13, NCTAMPS=27)
+      PARAMETER (NLOOPS=14, NLOOPGROUPS=13, NCTAMPS=28)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=41)
+      PARAMETER (NLOOPAMPS=42)
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
@@ -655,6 +655,14 @@ C      helicity is asked
  101    CONTINUE
         CLOSE(1)
 
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
+
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
           DO J=1,NCOMB
@@ -958,7 +966,7 @@ C         In general, only wavefunction renormalization counterterms
 C         (if needed by the loop UFO model) are of this type.
 C         Quite often and in principle for all loop UFO models from 
 C         FeynRules, there are none of these type of counterterms.
-
+          CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
@@ -2158,7 +2166,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=41)
+      PARAMETER (NLOOPAMPS=42)
 C     
 C     ARGUMENTS
 C     
@@ -2175,7 +2183,7 @@ C
       DATA (LOOPAMPORDERS(I),I= 26, 30) /    2,    2,    2,    2,    2/
       DATA (LOOPAMPORDERS(I),I= 31, 35) /    2,    2,    2,    2,    2/
       DATA (LOOPAMPORDERS(I),I= 36, 40) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 41, 41) /    2/
+      DATA (LOOPAMPORDERS(I),I= 41, 42) /    2,    2/
 C     -----------
 C     BEGIN CODE
 C     -----------

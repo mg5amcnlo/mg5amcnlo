@@ -229,7 +229,7 @@ else:
     # remove the apidoc file.
     shutil.rmtree(os.path.join(filepath,'apidoc'))
 
-# 4. Download the offline installer
+# 4. Download the offline installer and other similar code
 install_str = """
 cd %s
 rm -rf download-temp &> /dev/null;
@@ -242,7 +242,12 @@ mv OfflineHEPToolsInstaller.tar.gz ../vendor;
 cd ..;
 rm -rf download-temp;
 """ % filepath
-os.system(install_str) 
+os.system(install_str)
+
+collier_link = "http://collier.hepforge.org/collier-latest.tar.gz" 
+misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
+ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
+misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print 'Fail to create OfflineHEPToolsInstaller'
@@ -254,21 +259,10 @@ logging.info("Create the tar file " + filename)
 # clean all the pyc
 os.system("cd %s;find . -name '*.pyc' -delete" % filepath)
 status2 = subprocess.call(['tar', 'czf', filename, filepath])
-
 if status2:
     logging.error('Non-0 exit code %d from tar. Please check result.' % \
                  status)
     sys.exit()
-
-logging.info("Running tests on directory %s", filepath)
-print os.listdir(filepath)
-import subprocess
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
-print "status:", status
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
-print "status:", status
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
-print "status:", status
 
 try:
     status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
@@ -279,6 +273,18 @@ except:
     logging.warning("Call to gpg to create signature file failed. " +\
                     "Please install and run\n" + \
                     "gpg --armor --sign --detach-sig " + filename)
+
+
+
+logging.info("Running tests on directory %s", filepath)
+print os.listdir(filepath)
+import subprocess
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
+print "status:", status
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
+print "status:", status
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
+print "status:", status
 
 
 logging.info("Thanks for creating a release. please check that the tests were sucessfull before releasing the version")

@@ -2379,7 +2379,7 @@ set key invert
         except OSError:
             # assume that version 4 of gnuplot is the default if
             # gnuplot could not be found
-            gnuplot_output_list=gnuplot_output_list_v4
+            gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
             if float(output.split()[1]) < 5. :

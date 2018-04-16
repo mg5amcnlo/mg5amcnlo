@@ -388,6 +388,7 @@ DECAY 23 2.441404e+00 # wz
 
 DECAY 24 3.000000e+00 # ww
 DECAY 25 2.441404e+00 # wh
+
 """
 
         self.assertEqual(target.split('\n'), output.split('\n')) 
@@ -577,6 +578,7 @@ DECAY 15 0.000000e+00 # fixed by the model
 ###################################
 BLOCK CKMBLOCK # 
       1 0.000000e+00 # fixed by the model
+
 """
       
         self.assertEqual(output.split('\n'), target.split('\n'))
@@ -1405,6 +1407,7 @@ BLOCK MSD2 #
       1 1 2.736847e+05 # mdr(q)
       2 2 2.736847e+05 # msr(q)
       3 3 2.702620e+05 # mbr(q)
+
 """
 
 

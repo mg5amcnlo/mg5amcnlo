@@ -149,6 +149,8 @@ def async_generate_born(args):
                                 gen_color=False)
 
     processes = helasfull.born_me.get('processes')
+
+    max_configs = helasfull.born_me.get_num_configs()
     
     metag = helas_objects.IdentifyMETag.create_tag(helasfull.born_me.get('base_amplitude'))
     
@@ -513,15 +515,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
     def get_max_configs(self):
         """Return max_configs"""
-
+            
         if self['max_configs'] < 0:
             try:
                 self['max_configs'] = max([me.get_num_configs() \
                                   for me in self['real_matrix_elements']])
-            except ValueError:
-                self['max_configs'] = max([me.born_me.get_num_configs() \
-                                  for me in self['matrix_elements']])
-
+            except (ValueError, MG.PhysicsObject.PhysicsObjectError):
+                pass
+            self['max_configs'] = max(self['max_configs'],\
+                                      max([me.born_me.get_num_configs() \
+                                           for me in self['matrix_elements']]))
         return self['max_configs']
 
 

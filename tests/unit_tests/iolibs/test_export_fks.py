@@ -40,6 +40,67 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 
+class IOExportFKSTest(IOTests.IOTestManager):
+    """Test class for the export fks module"""
+
+
+    def generate(self, process, model, multiparticles=[]):
+        """Create a process"""
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        
+        if model.endswith('CMS'):
+            run_cmd('set complex_mass_scheme')
+            model = model[:-3]
+
+        run_cmd('import model %s' % model)
+        for multi in multiparticles:
+            run_cmd('define %s' % multi)
+        if isinstance(process, str):
+            run_cmd('generate %s' % process)
+        else:
+            for p in process:
+                run_cmd('add process %s' % p)
+
+        files.rm(self.IOpath)
+        run_cmd('output %s -f' % self.IOpath)
+
+
+    @IOTests.createIOTest()
+    def testIO_test_pptt_fksreal(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > t t~ QED=0 QCD=2 [real=QCD]'], 'sm')
+
+    @IOTests.createIOTest()
+    def testIO_test_ppw_fksall(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > w+ QED=1 QCD=0 [QCD]'], 'sm')
+
+    @IOTests.createIOTest()
+    def testIO_test_tdecay_fksreal(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['t > j j b QED=2 QCD=0 [real=QCD]'], 'sm')
+
+    @IOTests.createIOTest()
+    def testIO_test_pptt_fks_loonly(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > t t~ QED=0 QCD=2 [LOonly=QCD]'], 'sm')
+
+    @IOTests.createIOTest()
+    def testIO_test_wprod_fksew(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QED]'], 'loop_qcd_qed_smCMS')
+
+    @IOTests.createIOTest()
+    def testIO_test_pptt_fksrealew(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > t t~ QED=0 QCD=2 [real=QED]'], 'sm', 
+                      multiparticles = ['p = u u~ d d~ s s~ c c~ g a'])
+
 
 
 class TestFKSOutput(unittest.TestCase):
@@ -241,6 +302,66 @@ class TestFKSOutput(unittest.TestCase):
         for oldf in \
           (glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', 'V0*', '*.inc')) + \
            glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', 'V0*', '*.f'))):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+
+    def test_wj_loonly_gen(self):
+        """check that the new (memory and cpu efficient) and old generation
+        mode at NLO give the same results for p p > w j [LOonly=QCD]
+        """
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        
+        run_cmd('generate p p > w+ j [LOonly=QCD]')
+        run_cmd('output %s' % os.path.join(path, 'W-oldway'))
+        run_cmd('set low_mem_multicore_nlo_generation True')
+        run_cmd('generate p p > w+ j [LOonly=QCD]')
+        run_cmd('output %s' % os.path.join(path, 'W-newway'))
+        run_cmd('set low_mem_multicore_nlo_generation False')
+        
+        # the P0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.f')) + \
+           [os.path.join(path, 'W-oldway', 'SubProcesses', 'proc_characteristics')]):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+        # the V0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', 'V0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', 'V0*', '*.f'))):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+        # the Source dir 
+        for oldf in \
+          (glob.glob(os.path.join(path, 'W-oldway', 'Source', '*.inc')) + \
+           glob.glob(os.path.join(path, 'W-oldway', 'Source', '*.f'))):
             
             if os.path.islink(oldf): 
                 continue

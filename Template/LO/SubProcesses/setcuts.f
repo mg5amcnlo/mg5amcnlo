@@ -23,7 +23,7 @@ c
 c
 c     LOCAL
 c
-      integer i,j
+      integer i,j,k
       integer icollider,detail_level
       integer ncheck
       logical done,fopened
@@ -94,7 +94,7 @@ c     reading parameters
       integer npara
 c For checking the consistency of the grouping and the cuts defined here
       integer iproc
-      logical equal
+      character*20 fail_reason
       LOGICAL  IS_A_J_SAVE(NEXTERNAL),IS_A_L_SAVE(NEXTERNAL)
      $     ,IS_A_B_SAVE(NEXTERNAL),IS_A_A_SAVE(NEXTERNAL)
      $     ,IS_A_ONIUM_SAVE(NEXTERNAL),IS_A_NU_SAVE(NEXTERNAL)
@@ -114,7 +114,7 @@ c For checking the consistency of the grouping and the cuts defined here
 c
 c     count the number of j/bjet/photon/lepton
 c
-      integer nb_j, nb_b, nb_a, nb_l, nb_nocut
+      integer nb_j, nb_b, nb_a, nb_l, nb_nocut,nb_pdg
       double precision smin_p, smin_m ! local variable to compute smin
 c
 c     setup masses for the final-state particles
@@ -204,7 +204,7 @@ c
          is_a_nu(i)=.false.
 
 
-c-do not apply cuts to these
+c-do not apply cuts to these. CAREFULL: PDG_CUT do not consider do_cuts (they simply check the cut_decays)
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
          if (abs(idup(i,1,iproc)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1,iproc)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
@@ -308,8 +308,27 @@ c                 etamax(i)=etaonium
 c            endif
          endif
       enddo
+c
+c     check for pdg specific cut
+c
+      if (pdg_cut(1).ne.0)then
 
-
+         do j=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               if (abs(idup(i, 1, iproc)).eq.pdg_cut(j))then
+                  etmin(i) = ptmin4pdg(j)
+                  etmax(i)= ptmax4pdg(j)
+                  emin(i)= Emin4pdg(j)
+                  emax(i)= Emax4pdg(j)
+                  etamin(i)= etamin4pdg(j)
+                  etamax(i)= etamax4pdg(j)
+               endif
+            enddo
+         enddo
+      endif
 
 c
 c     delta r cut
@@ -385,6 +404,35 @@ c
             endif
          enddo
       enddo      
+c
+c     smin cut from PDG cut 
+c
+      if (pdg_cut(1).ne.0)then
+         do k=1,pdg_cut(0)
+            do i=nincoming+1, nexternal
+               if(.not.cut_decays.and.from_decay(i))then
+                  cycle
+               endif
+               if (abs(idup(i, 1, iproc)).ne.pdg_cut(k))then
+                  cycle
+               endif
+               do j = i+1,nexternal
+                  if(.not.cut_decays.and.from_decay(j))then
+                     cycle
+                  endif
+                  if (mxxpart_antipart(k))then
+                     if  (idup(j, 1, iproc).eq.-1*idup(i, 1, iproc))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
+                  else
+                     if  (abs(idup(j, 1, iproc)).eq.pdg_cut(k))then
+                        s_min(j,i) = mxxmin4pdg(k)**2
+                     endif
+                  endif
+               enddo
+            enddo
+         enddo
+      endif      
 
 c     
 c     ptll cut (min and max)
@@ -598,6 +646,22 @@ c     check for lepton
          endif
         smin = smin + max(smin_p**2, smin_m, mmnl**2, ptllmin**2, misset**2)
       endif
+c  check for other PDG particle
+      do i = 1,pdg_cut(0)
+         nb_pdg=0
+         do j=nincoming, nexternal
+            if (abs(idup(i,1,iproc)).eq.pdg_cut(i))then
+               k = j ! use to get the mass
+               if(do_cuts(i)) nb_pdg = nb_pdg + 1
+            endif
+         enddo
+         if (nb_pdg.gt.0)then
+            smin_p = nb_pdg *(pmass(k)**2 + ptmin4pdg(i)**2)
+            smin_m = nb_pdg*((2-nb_pdg)*pmass(k)**2 + (nb_pdg-1)/2.*mxxmin4pdg(i)**2)
+            smin = smin + max(smin_p, smin_m)
+         endif
+      enddo
+
 c     ensure symmetry of s_min(i,j)
       do i=nincoming+1,nexternal-1
         do j=nincoming+1,nexternal-1
@@ -637,68 +701,71 @@ c Check that results are consistent among all the grouped subprocesses
             enddo
          enddo
       else
-         equal=.true.
+         fail_reason = ''
          do i=nincoming+1,nexternal
-            if (do_cuts_save(i).neqv.do_cuts(i)) equal=.false.
+            if (do_cuts_save(i).neqv.do_cuts(i)) fail_reason = 'do_cuts'
             if (is_a_j_save(i).neqv.is_a_j(i)) then
-               if (ptjmin4(1).gt.0d0 .or. ptjmax4(1).ge.0d0) equal=.false.
-               if (ptjmin4(2).gt.0d0 .or. ptjmax4(2).ge.0d0) equal=.false.
-               if (ptjmin4(3).gt.0d0 .or. ptjmax4(3).ge.0d0) equal=.false.
-               if (ptjmin4(4).gt.0d0 .or. ptjmax4(4).ge.0d0) equal=.false.
-               if (Htjmin4(2).gt.0d0 .or. Htjmax4(2).ge.0d0) equal=.false.
-               if (Htjmin4(3).gt.0d0 .or. Htjmax4(3).ge.0d0) equal=.false.
-               if (Htjmin4(4).gt.0d0 .or. Htjmax4(4).ge.0d0) equal=.false.
-               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
-               if (htjmin.gt.0d0 .or. htjmax.ge.0d0) equal=.false.
-               if (xptj.gt.0d0) equal=.false.
-               if (xetamin.gt.0d0 .or. deltaeta.gt.0d0) equal=.false.
-               if (ptgmin.ne.0d0) equal=.false.
-               if (kt_durham.gt.0d0) equal=.false.
+               if (ptjmin4(1).gt.0d0 .or. ptjmax4(1).ge.0d0) fail_reason = 'ptjmin4(1)' 
+               if (ptjmin4(2).gt.0d0 .or. ptjmax4(2).ge.0d0) fail_reason = 'ptjmin4(2)' 
+               if (ptjmin4(3).gt.0d0 .or. ptjmax4(3).ge.0d0) fail_reason = 'ptjmin4(3)' 
+               if (ptjmin4(4).gt.0d0 .or. ptjmax4(4).ge.0d0) fail_reason = 'ptjmin4(4)' 
+               if (Htjmin4(2).gt.0d0 .or. Htjmax4(2).ge.0d0) fail_reason = 'Htjmin4(2)' 
+               if (Htjmin4(3).gt.0d0 .or. Htjmax4(3).ge.0d0) fail_reason = 'Htjmin4(3)' 
+               if (Htjmin4(4).gt.0d0 .or. Htjmax4(4).ge.0d0) fail_reason = 'Htjmin4(4)' 
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) fail_reason = 'inclHT' 
+               if (htjmin.gt.0d0 .or. htjmax.ge.0d0) fail_reason = 'htj' 
+               if (xptj.gt.0d0) fail_reason = 'xptj' 
+               if (xetamin.gt.0d0 .or. deltaeta.gt.0d0) 
+     &              fail_reason = 'xetamin' 
+               if (ptgmin.ne.0d0) fail_reason = 'ptgmin' 
+               if (kt_durham.gt.0d0) fail_reason = 'ktdurham' 
             endif
             if (is_a_b_save(i).neqv.is_a_b(i)) then
-               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
-               if (xptb.gt.0d0) equal=.false.
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) fail_reason = 'Htmin'
+               if (xptb.gt.0d0) fail_reason = 'xptb' 
             endif
             if (is_a_a_save(i).neqv.is_a_a(i)) then
-               if (xpta.gt.0d0) equal=.false.
-               if (ptgmin.ne.0d0) equal=.false.
+               if (xpta.gt.0d0) fail_reason = 'xpta' 
+               if (ptgmin.ne.0d0) fail_reason = 'ptgmin'
             endif
             if (is_a_l_save(i).neqv.is_a_l(i)) then
-               if (ptlmin4(1).gt.0d0 .or. ptlmax4(1).ge.0d0) equal=.false.
-               if (ptlmin4(2).gt.0d0 .or. ptlmax4(2).ge.0d0) equal=.false.
-               if (ptlmin4(3).gt.0d0 .or. ptlmax4(3).ge.0d0) equal=.false.
-               if (ptlmin4(4).gt.0d0 .or. ptlmax4(4).ge.0d0) equal=.false.
-               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
-               if (xptl.gt.0d0) equal=.false.
-               if (ptgmin.ne.0d0 .and. isoEM) equal=.false.
+               if (ptlmin4(1).gt.0d0 .or. ptlmax4(1).ge.0d0) fail_reason = 'ptlmin4(1)' 
+               if (ptlmin4(2).gt.0d0 .or. ptlmax4(2).ge.0d0) fail_reason = 'ptlmin4(2)' 
+               if (ptlmin4(3).gt.0d0 .or. ptlmax4(3).ge.0d0) fail_reason = 'ptlmin4(3)' 
+               if (ptlmin4(4).gt.0d0 .or. ptlmax4(4).ge.0d0) fail_reason = 'ptlmin4(4)' 
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) fail_reason = 'mmnl' 
+               if (xptl.gt.0d0) fail_reason = 'xptl' 
+               if (ptgmin.ne.0d0 .and. isoEM) fail_reason = 'ptgmin+iso' 
             endif
             if (is_a_nu_save(i).neqv.is_a_nu(i)) then
-               if (misset.gt.0d0 .or. missetmax.ge.0d0) equal=.false.
-               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
+               if (misset.gt.0d0 .or. missetmax.ge.0d0) 
+     &              fail_reason = 'misset' 
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) fail_reason = 'mmnl' 
             endif
             if (is_heavy_save(i).neqv.is_heavy(i)) then
-               if (ptheavy.gt.0d0) equal=.false.
+               if (ptheavy.gt.0d0) fail_reason = 'ptheavy' 
             endif
-            if (etmin_save(i).ne.etmin(i)) equal=.false.
-            if (etmax_save(i).ne.etmax(i)) equal=.false.
-            if (emin_save(i).ne.emin(i)) equal=.false.
-            if (emax_save(i).ne.emax(i)) equal=.false.
-            if (etamin_save(i).ne.etamin(i)) equal=.false.
-            if (etamax_save(i).ne.etamax(i)) equal=.false.
+            if (etmin_save(i).ne.etmin(i)) fail_reason = 'etmin' 
+            if (etmax_save(i).ne.etmax(i)) fail_reason = 'etmax' 
+            if (emin_save(i).ne.emin(i)) fail_reason = 'emin' 
+            if (emax_save(i).ne.emax(i)) fail_reason = 'emax' 
+            if (etamin_save(i).ne.etamin(i)) fail_reason = 'etamin' 
+            if (etamax_save(i).ne.etamax(i)) fail_reason = 'etamax' 
             if (i.eq.nexternal) cycle
             do j=i+1,nexternal
-               if (r2min_save(j,i).ne.r2min(j,i)) equal=.false.
-               if (r2max_save(j,i).ne.r2max(j,i)) equal=.false.
-               if (s_min_save(j,i).ne.s_min(j,i)) equal=.false.
-               if (s_max_save(j,i).ne.s_max(j,i)) equal=.false.
-               if (ptll_min_save(j,i).ne.ptll_min(j,i)) equal=.false.
-               if (ptll_max_save(j,i).ne.ptll_max(j,i)) equal=.false.
+               if (r2min_save(j,i).ne.r2min(j,i)) fail_reason = 'r2min'
+               if (r2max_save(j,i).ne.r2max(j,i)) fail_reason = 'r2max'
+               if (s_min_save(j,i).ne.s_min(j,i)) fail_reason = 's_min'
+               if (s_max_save(j,i).ne.s_max(j,i)) fail_reason = 's_max'
+               if (ptll_min_save(j,i).ne.ptll_min(j,i)) fail_reason = 'ptll_min' 
+               if (ptll_max_save(j,i).ne.ptll_max(j,i)) fail_reason = 'ptll_max' 
             enddo
          enddo
-         if (.not.equal) then
+         if (fail_reason.ne.'') then
             write (*,*) 'Grouping of subprocesses not'/
      $           /' consistent with setcuts.f. Either change'/
-     $           /' your cuts and/or turn grouping of subprocesses off.'
+     $           /' your cuts and/or turn grouping of subprocesses off:',
+     $           fail_reason
             open(unit=26,file='../../../error',status='unknown')
             write(26,*) 'Error: grouping of subprocesses not'/
      $           /' consistent with setcuts.f. Either change'/

@@ -60,13 +60,13 @@ class InvalidModel(MadGraph5Error):
     """ a class for invalid Model """
 
 last_model_path =''
-def find_ufo_path(model_name):
+def find_ufo_path(model_name, web_search=True):
     """ find the path to a model """
 
     global last_model_path
 
     # Check for a valid directory
-    if model_name.startswith('./') and os.path.isdir(model_name):
+    if model_name.startswith(('./','../')) and os.path.isdir(model_name):
         return model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
         return os.path.join(MG5DIR, 'models', model_name)
@@ -80,12 +80,92 @@ def find_ufo_path(model_name):
     if os.path.isdir(model_name):
         logger.warning('No model %s found in default path. Did you mean \'import model ./%s\'',
                        model_name, model_name)
-        raise UFOImportError("Path %s is not a valid pathname" % model_name)    
+        if os.path.sep in model_name:
+            raise UFOImportError("Path %s is not a valid pathname" % model_name)    
+    elif web_search and '-' not in model_name:
+        found = import_model_from_db(model_name)
+        if found:
+            return find_ufo_path(model_name, web_search=False)
+        else:
+            raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     else:
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     
-
+    raise UFOImportError("Path %s is not a valid pathname" % model_name)
     return
+
+
+def get_model_db():
+    """return the file with the online model database"""
+
+    data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
+                     'http://madgraph.physics.illinois.edu/models_db.dat']
+    import random
+    import urllib
+    r = random.randint(0,1)
+    r = [r, (1-r)]
+
+    for index in r:
+        cluster_path = data_path[index]
+        try:
+            data = urllib.urlopen(cluster_path)
+        except Exception:
+            continue
+        break
+    else:
+        raise MadGraph5Error, '''Model not found locally and Impossible to connect any of us servers.
+        Please check your internet connection or retry later'''
+    return data
+
+def import_model_from_db(model_name, local_dir=False):
+    """ import the model with a given name """
+
+    data =get_model_db()
+    link = None
+    for line in data:
+        split = line.split()
+        if model_name == split[0]:
+            link = split[1]
+            break
+    else:
+        logger.debug('no model with that name found online')
+        return False
+    
+    #get target directory
+    # 1. PYTHONPATH containing UFO
+    # 2. models directory
+    target = None 
+    if 'PYTHONPATH' in os.environ and not local_dir:
+        for directory in os.environ['PYTHONPATH'].split(':'):
+            if 'UFO' in os.path.basename(directory) and os.path.exists(directory):
+                target= directory 
+    if target is None:
+        target = pjoin(MG5DIR, 'models')    
+    try:
+        os.remove(pjoin(target, 'tmp.tgz'))
+    except Exception:
+        pass
+    logger.info("download model from %s to the following directory: %s", link, target, '$MG:color:BLACK')
+    misc.wget(link, 'tmp.tgz', cwd=target)
+
+    #untar the file.
+    # .tgz
+    if link.endswith(('.tgz','.tar.gz','.tar')):
+        try:
+            proc = misc.call('tar -xzpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
+            if proc: raise Exception
+        except:
+            proc = misc.call('tar -xpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
+    # .zip
+    if link.endswith(('.zip')):
+        try:
+            proc = misc.call('unzip tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
+            if proc: raise Exception
+        except:
+            proc = misc.call('tar -xzpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
+    if proc:
+        raise Exception, "Impossible to unpack the model. Please install it manually"
+    return True
 
 def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                                                     complex_mass_scheme = None):
@@ -96,10 +176,17 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         model_path = find_ufo_path(model_name)
     except UFOImportError:
         if '-' not in model_name:
+            if model_name == "mssm":
+                logger.error("mssm model has been replaced by MSSM_SLHA2 model.\n The new model require SLHA2 format. You can use the \"update to_slha2\" command to convert your slha1 param_card.\n That option is available at the time of the edition of the cards.")
             raise
         split = model_name.split('-')
         model_name = '-'.join([text for text in split[:-1]])
-        model_path = find_ufo_path(model_name)
+        try:
+            model_path = find_ufo_path(model_name)
+        except UFOImportError:
+            if model_name == "mssm":
+                logger.error("mssm model has been replaced by MSSM_SLHA2 model.\n The new model require SLHA2 format. You can use the \"update to_slha2\" command to convert your slha1 param_card.\n That option is available at the time of the edition of the cards.")
+            raise
         restrict_name = split[-1]
          
         restrict_file = os.path.join(model_path, 'restrict_%s.dat'% restrict_name)
@@ -326,6 +413,9 @@ class UFOMG5Converter(object):
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
+       
+        if hasattr(model, '__arxiv__'):
+            logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
@@ -1152,9 +1242,6 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
-
-
-    
     def add_lorentz(self, name, spins , expr):
         """ Add a Lorentz expression which is not present in the UFO """
         

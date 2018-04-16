@@ -2271,7 +2271,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
-            new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
+            pat = re.compile('smatrix', re.I)
+            new_text, n  = re.subn(pat, '%ssmatrix' % proc_prefix, text)
             with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
                 f.write(new_text)
             linkfiles.pop(0)
@@ -2720,6 +2721,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                               self.dir_path+'/bin/internal/save_load_object.py') 
         cp(_file_path+'/madevent/gen_crossxhtml.py', 
                               self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/madevent/sum_html.py', 
+                              self.dir_path+'/bin/internal/sum_html.py')
         cp(_file_path+'/various/FO_analyse_card.py', 
                               self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 

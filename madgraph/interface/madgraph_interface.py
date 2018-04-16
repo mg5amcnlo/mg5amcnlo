@@ -39,7 +39,6 @@ import inspect
 import urllib
 import random
 
-
 #useful shortcut
 pjoin = os.path.join
 
@@ -322,6 +321,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        By default, restrict_default.dat is used.")
         logger.info("        Specify model_name-full to get unrestricted model.")
         logger.info("      '--modelname' keeps the original particle names for the model")
+        logger.info("")
+        logger.info("      Type 'display modellist' to have the list of all model available.",'$MG:color:GREEN')
         logger.info("")
         logger.info("   import model_v4 MODEL [--modelname] :",'$MG:color:BLACK')
         logger.info("      Import an MG4 model.")
@@ -846,7 +847,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if len(args) < 1:
             self.help_display()
             raise self.InvalidCmd, 'display requires an argument specifying what to display'
-        if args[0] not in self._display_opts:
+        if args[0] not in self._display_opts + ['model_list']:
             self.help_display()
             raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
@@ -1506,29 +1507,13 @@ This will take effect only in a NEW terminal
             self._export_format = args.pop(0)
         elif args:
             # check for PLUGIN format
-            for plugpath in self.plugin_path:
-                plugindirname = os.path.basename(plugpath)
-                for plug in os.listdir(plugpath):
-                    if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
-                        try:
-                            __import__('%s.%s' % (plugindirname,plug))
-                        except Exception, error:
-                            logger.warning("error detected in plugin: %s.", plug)
-                            logger.warning("%s", error)
-                            continue
-                        plugin = sys.modules['%s.%s' % (plugindirname,plug)]                
-                        if hasattr(plugin, 'new_output'):
-                            if not misc.is_plugin_supported(plugin):
-                                continue
-                            if args[0] in plugin.new_output:
-                                self._export_format = 'plugin'
-                                self._export_plugin = plugin.new_output[args[0]]
-                                logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
-                                args.pop(0)
-                                break
-                else:
-                    continue
-                break
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 args[0], warning=True, 
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                self._export_format = 'plugin'
+                self._export_plugin = output_cls
+                args.pop(0)
             else:
                 self._export_format = default
         else:
@@ -2528,7 +2513,6 @@ class CompleteForCmd(cmd.CompleteCmd):
             args.insert(1, 'all')
             mode = 'all'
 
-
         completion_categories = {}
         # restriction continuation (for UFO)
         if mode in ['model', 'all'] and '-' in  text:
@@ -2539,12 +2523,14 @@ class CompleteForCmd(cmd.CompleteCmd):
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
+
             if os.environ['PYTHONPATH']:
                 for modeldir in os.environ['PYTHONPATH'].split(':'):
                     if not modeldir:
                             continue
                     all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=modeldir)
+            all_name = list(set(all_name))
             # select the possibility according to the current line
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
@@ -2560,7 +2546,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except Exception:
+                except Exception, error:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -2568,7 +2554,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         completion_categories['Path Completion'] = all_dir
                     # Only UFO model here
                     new = []
-                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                 for name in all_dir]
                     if data:
                         completion_categories['Path Completion'] = all_dir + new
@@ -2582,7 +2568,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                     all_path =  self.path_completion(text, cur_path)
                     if mode == 'all':
                         new = []
-                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path, online=False))
                                                                for name in all_path]
                         if data:
                             completion_categories['Path Completion'] = data[0]
@@ -2611,7 +2597,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 completion_categories['model name'] = all_path
                 is_model = False
 
-            if is_model:
+            if is_model and os.path.sep not in text:
                 model_list = [mod_name(name) for name in \
                                                 self.path_completion(text,
                                                 pjoin(MG5DIR,'models'),
@@ -2619,14 +2605,15 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 if file_cond(name)]
                 if mode == 'model' and 'PYTHONPATH' in os.environ:
                     for modeldir in os.environ['PYTHONPATH'].split(':'):
-                        if not modeldir:
+                        if not modeldir or not os.path.exists(modeldir):
                             continue
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
-                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
+                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]                    
+                if mode == 'model':
+                    model_list += [name for name in self._online_model.keys()+self._online_model2
+                                    if name.startswith(text)]
                     
-                    
-
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
                 elif allow_restrict:
@@ -2637,7 +2624,10 @@ class CompleteForCmd(cmd.CompleteCmd):
                                             base_dir=pjoin(MG5DIR,'models'))
                 else:
                     all_name = model_list
-                    
+                
+                #avoid duplication
+                all_name = list(set(all_name))
+                
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
@@ -2645,6 +2635,14 @@ class CompleteForCmd(cmd.CompleteCmd):
                     completion_categories['model name'] = all_path + all_name
                 elif mode == 'model':
                     completion_categories['model name'] = all_name
+            elif os.path.sep in text:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                            if a.endswith(os.path.sep)])
+                except Exception:
+                    cur_path = os.getcwd()
+                all_path =  self.path_completion(text, cur_path)                
+                completion_categories['model name'] = all_path 
 
         # Options
         if mode == 'all' and len(args)>1:
@@ -2658,9 +2656,28 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-        return self.deal_multiple_categories(completion_categories,formatting) 
+        return self.deal_multiple_categories(completion_categories,formatting)
     
-    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
+    _online_model = {'2HDM':[], 
+                         'loop_qcd_qed_sm':['full','no_widths','with_b_mass ', 'with_b_mass_no_widths'],
+                         'loop_qcd_qed_sm_Gmu':['ckm', 'full', 'no_widths'], 
+                         '4Gen':[],
+                         'DY_SM':[],
+                         'EWdim6':['full'],
+                         'heft':['ckm','full', 'no_b_mass','no_masses','no_tau_mass','zeromass_ckm'],
+                         'nmssm':['full'],
+                         'SMScalars':['full'],
+                         'RS':[''],
+                         'sextet_diquarks':[''],
+                         'TopEffTh':[''],
+                         'triplet_diquarks':[''],
+                         'uutt_sch_4fermion':[''],
+                         'uutt_tch_scalar':['']
+                         }   
+    _online_model2 = [] # fill by model on the db if user do "display modellist" 
+    
+    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True,
+                           online=True):
         """find the restriction file associate to a given model"""
 
         # check if the model_name should be keeped as a possibility
@@ -2669,8 +2686,13 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             output = []
 
+        local_model = os.path.exists(pjoin(base_dir, model_name, 'couplings.py'))
         # check that the model is a valid model
-        if not os.path.exists(pjoin(base_dir, model_name, 'couplings.py')):
+        if online and not local_model and model_name in self._online_model:
+            output += ['%s-%s' % (model_name, tag) for tag in self._online_model[model_name]]
+            return output  
+        
+        if not local_model:
             # not valid UFO model
             return output
 
@@ -2735,7 +2757,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
-                     'checks', 'parameters', 'options', 'coupling_order','variable']
+                     'checks', 'parameters', 'options', 'coupling_order','variable',
+                     'modellist']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -2766,7 +2789,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'include_lepton_initiated_processes',
                     'gauge',
                     'EWscheme',
-                    'max_npoint_for_channel']
+                    'max_npoint_for_channel',
+                    'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
@@ -2827,7 +2851,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None,
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
-                          'max_npoint_for_channel': 0 # 0 means automaticly adapted
+                          'max_npoint_for_channel': 0, # 0 means automaticly adapted
+                          'default_unset_couplings': 99 # 99 means infinity
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -2935,8 +2960,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         value = super(MadGraphCmd, self).do_quit(line)
         if madgraph.ReadWrite: #prevent to run on Read Only disk
             self.do_install('update --mode=mg5_end')
-        print
-
         misc.EasterEgg('quit')
         
         
@@ -3507,7 +3530,88 @@ This implies that with decay chains:
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
+            
+        elif args[0] in ["modellist", "model_list"]:
+            outstr = []
+            template = """%-30s | %-60s | %-25s """
+            outstr.append(template % ('name', 'restriction', 'comment'))
+            outstr.append('*'*150)
+            already_done = []
+            #local model #use
+            
+            if 'PYTHONPATH' in os.environ:
+                pythonpath = os.environ['PYTHONPATH'].split(':')
+            else:
+                pythonpath = []
 
+            for base in [pjoin(MG5DIR,'models')] + pythonpath:
+                if not os.path.exists(base):
+                    continue
+                file_cond = lambda p : os.path.exists(pjoin(base,p,'particles.py'))
+                mod_name = lambda name: name
+                
+                model_list = [mod_name(name) for name in \
+                                                self.path_completion('',
+                                                base,
+                                                only_dirs = True) \
+                                                if file_cond(name)]
+                
+                for model_name in model_list:
+                    if model_name in already_done:
+                        continue
+                    all_name = self.find_restrict_card(model_name,
+                                            base_dir=base,
+                                            online=False)
+                    already_done.append(model_name)
+                    restrict = [name[len(model_name):] for name in all_name 
+                                if len(name)>len(model_name)]
+                    
+                    comment = 'from models directory'
+                    if base != pjoin(MG5DIR,'models'):
+                        comment = 'from PYTHONPATH: %s' % base
+                    lrestrict = ', '.join(restrict)
+                    if len(lrestrict) > 50:
+                        for i in range(-1,-len(restrict), -1):
+                            lrestrict = ', '.join(restrict[:i])
+                            if len(lrestrict)<50:
+                                break
+                        outstr.append(template % (model_name, lrestrict, comment))
+                        outstr.append(template % ('', ', '.join(restrict[i:]), ''))
+                    else:
+                        outstr.append(template % (model_name, ', '.join(restrict), comment))
+                outstr.append('*'*150)
+                
+            # Still have to add the one with internal information 
+            for model_name in self._online_model:
+                if model_name in already_done:
+                    continue
+                restrict = [tag for tag in self._online_model[model_name]]
+                comment = 'automatic download from MG5aMC server'
+                outstr.append(template % (model_name, ','.join(restrict), comment))
+                already_done.append(model_name)
+                
+            outstr.append('*'*150)  
+            # other downloadable model
+            data   = import_ufo.get_model_db()
+            self._online_model2 = []
+            for line in data:
+                model_name, path = line.split()
+                if model_name in already_done:
+                    continue
+                if model_name.endswith('_v4'):
+                    continue
+                
+                if 'feynrules' in path:
+                    comment = 'automatic download from FeynRules website'
+                elif 'madgraph.phys' in path:
+                     comment = 'automatic download from MG5aMC server'
+                else:
+                    comment = 'automatic download.'
+                restrict = 'unknown'
+                outstr.append(template % (model_name, restrict, comment))
+                self._online_model2.append(model_name)
+            pydoc.pager('\n'.join(outstr))
+            
 
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
@@ -3551,9 +3655,9 @@ This implies that with decay chains:
 
 
 
-    def draw(self, line,selection='all',type=''):
+    def draw(self, line,selection='all',Dtype=''):
         """ draw the Feynman diagram for the given process.
-        Type refers to born, real or loop"""
+        Dtype refers to born, real or loop"""
 
         args = self.split_arg(line)
         # Check the validity of the arguments
@@ -3580,11 +3684,11 @@ This implies that with decay chains:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
 
-            if selection=='all' and type != 'loop':
+            if selection=='all' and Dtype != 'loop':
                 diags=amp.get('diagrams')
             elif selection=='born':
                 diags=amp.get('born_diagrams')
-            elif selection=='loop' or type == 'loop':
+            elif selection=='loop' or Dtype == 'loop':
                 diags=base_objects.DiagramList([d for d in
                         amp.get('loop_diagrams') if d.get('type')>0])
                 if len(diags) > 5000:
@@ -3596,7 +3700,7 @@ This implies that with decay chains:
                                           model=self._curr_model,
                                           amplitude=amp,
                                           legend=amp.get('process').input_string(),
-                                          diagram_type=type)
+                                          diagram_type=Dtype)
 
 
             logger.info("Drawing " + \
@@ -4407,7 +4511,7 @@ This implies that with decay chains:
         ## Now check for orders/squared orders/constrained orders
         order_pattern = re.compile(\
            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
-                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*")
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*?(?P<after>.*)")
         order_re = order_pattern.match(line)
         squared_orders = {}
         orders = {}
@@ -4454,10 +4558,22 @@ This implies that with decay chains:
                     constrained_orders[name] = (value, type)
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
-                                          
-            line = order_re.group('before')
+             
+            line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
             order_re = order_pattern.match(line)          
-            
+        
+        # handle the case where default is not 99 and some coupling defined
+        if self.options['default_unset_couplings'] != 99 and \
+                                                     (orders or squared_orders): 
+                           
+                to_set = [name for name in self._curr_model.get('coupling_orders')
+                          if name not in orders and name not in squared_orders]
+                if to_set:
+                    logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
+                            (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:color:BLACK')
+                for name in to_set:
+                    orders[name] = self.options['default_unset_couplings']
+        
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
             raise self.InvalidCmd, \
@@ -4555,8 +4671,11 @@ This implies that with decay chains:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
         # Apply the keyword 'all' for perturbed coupling orders.
-        if perturbation_couplings.lower()=='all':
+        if perturbation_couplings.lower() in ['all', 'loonly']:
+            if perturbation_couplings.lower() in ['loonly']:
+                LoopOption = 'LOonly'
             perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
+
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
@@ -4634,7 +4753,6 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-                        
             
             out = base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
@@ -5061,18 +5179,11 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
-                try:
-                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
-                    if os.path.sep in args[1] and "import" in self.history[-1]:
-                        self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
-                except import_ufo.UFOImportError, error:
-                    if 'not a valid UFO model' in str(error):
-                        logger_stderr.warning('WARNING: %s' % error)
-                        logger_stderr.warning('Try to recover by running '+\
-                         'automatically `import model_v4 %s` instead.'% args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
-                    return
+                if os.path.sep in args[1] and "import" in self.history[-1]:
+                    self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
+
                 if self.options['gauge']=='unitary':
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
@@ -5375,16 +5486,10 @@ This implies that with decay chains:
                                                   HepToolsInstaller_web_address)
             # Guess if it is a local or web address
             if '//' in HepToolsInstaller_web_address:
-                if sys.platform == "darwin":
-                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
-                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                misc.wget(HepToolsInstaller_web_address,
+                          pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'),
+                          stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
                                                                          cwd=MG5DIR)
-                else:
-                    misc.call(['wget', HepToolsInstaller_web_address, 
-                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
-                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             else:
                 # If it is a local tarball, then just copy it
                 shutil.copyfile(HepToolsInstaller_web_address,
@@ -5693,7 +5798,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         advertisements = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
-                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'SysCalc':['arXiv:1801.08401'],
                           'Golem95':['arXiv:0807.0605'],
                           'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
                           'QCDLoop':['arXiv:0712.1851'],
@@ -5728,8 +5833,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
 
-            r = random.randint(0,1)
-            r = [r, (1-r)]
 #           Force here to choose one particular server
             if any(a.startswith('--source=') for a in args):
                 source = [a[9:] for a in args if a.startswith('--source=')][-1]
@@ -5832,10 +5935,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
-        if sys.platform == "darwin":
-            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
-        else:
-            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+        misc.wget(path[args[0]], '%s.tgz' % name, cwd=MG5DIR)
 
         # Untar the file
         returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
@@ -6062,8 +6162,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
-                misc.call(['curl', target, '-otd.tgz'],
-                                                  cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'tg.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
@@ -6077,7 +6176,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'td', cwd=pjoin(MG5DIR,'td'))
             os.chmod(pjoin(MG5DIR,'td','td'), 0775)
             self.options['td_path'] = pjoin(MG5DIR,'td')
 
@@ -6138,6 +6237,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         def apply_patch(filetext):
             """function to apply the patch"""
             text = filetext.read()
+            
             pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #=== renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
@@ -6263,7 +6363,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             pattern=re.compile('''^=== link file \'(?P<new>[^\']*)\' \'(?P<old>[^\']*)\'''', re.M)
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
-                        files.ln(old, os.path.dirname(new), os.path.basename(new))
+                        files.ln(pjoin(MG5DIR,old), os.path.dirname(pjoin(MG5DIR,new)), os.path.basename(new))
 
             # Re-compile CutTools and IREGI
             if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
@@ -6413,7 +6513,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             for i in range(data['version_nb'], web_version):
                 try:
                     filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
-#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
                 except Exception:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
@@ -6422,10 +6521,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if need_binary:
                     path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
-                    if sys.platform == "darwin":
-                        misc.call(['curl', path, '-o%s.tgz' % name], cwd=MG5DIR)
-                    else:
-                        misc.call(['wget', path, '--output-document=%s.tgz'% name], cwd=MG5DIR)
+                    misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
                     returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR,
                                      stdout=open(os.devnull, 'w'))
@@ -6546,7 +6642,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     if not os.path.isfile(pjoin(path,'bin','ma5')):
                         self.options['madanalysis5_path'] = None
                     else:
-                        continue
+                        ma5path = pjoin(MG5DIR, path) if os.path.isfile(pjoin(MG5DIR, path)) else path
+                        message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+                        if not message is None:
+                            self.options['madanalysis5_path'] = None
+                            logger.warning(message)
+                            continue
+ 
                 #this is for hw++
                 if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
@@ -7124,6 +7226,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'default_unset_couplings':
+            self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
         elif args[0] == 'f2py_compiler':
             if args[1] != 'None':
                 if log:
@@ -7227,6 +7331,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+
+        elif args[0] == 'madanalysis5_path':
+            ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
+            message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+            if message is None:
+                self.options['madanalysis5_path'] = args[1]
+            else:
+                logger.warning(message)
 
         elif args[0] == 'OLP':
             # Reset the amplitudes, MatrixElements and exporter as they might
@@ -7414,7 +7526,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # That applies only if there is more than one subprocess of course.
             if self._curr_amps[0].get_ninitial() == 1 and \
                                                      len(self._curr_amps)>1:
-                processes = [amp.get('process') for amp in self._curr_amps]            
+                
+                processes = [amp.get('process') for amp in self._curr_amps if 'process' in  amp.keys()]
                 if len(set(proc.get('id') for proc in processes))!=len(processes):
                     # Special warning for loop-induced
                     if any(proc['perturbation_couplings'] != [] for proc in
@@ -7937,6 +8050,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         #
         # add info from decay module
         #
+        
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()
@@ -7967,6 +8081,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
+                for name, val in self.options.items():
+                    if name in me_cmd.options and me_cmd.options[name] != val:
+                        self.exec_cmd('set %s %s --no_save' % (name, val)) 
+                #me_cmd.options.update(self.options)
+                #me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)
                 me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False

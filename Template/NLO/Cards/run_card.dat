@@ -71,7 +71,7 @@
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   %(parton_shower)s   = parton_shower
-  %(shower_scale_factor)s       = shower_scale_factor ! multiply default shower starting
+  %(shower_scale_factor)s = shower_scale_factor ! multiply default shower starting
                                   ! scale by this factor
 #***********************************************************************
 # Renormalization and factorization scales                             *
@@ -166,6 +166,15 @@
   %(xn)s  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
   %(epsgamma)s  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
  %(isoem)s  = isoEM  ! isolate photons from EM energy (photons and leptons)
+#***********************************************************************
+# Cuts associated to MASSIVE particles identified by their PDG codes.  *
+# All cuts are applied to both particles and anti-particles, so use    *
+# POSITIVE PDG CODES only. Example of the syntax is {6 : 100} or       *
+# {6:100, 25:200} for multiple particles                               *
+#***********************************************************************
+  %(pt_min_pdg)s = pt_min_pdg ! Min pT for a massive particle
+  %(pt_max_pdg)s = pt_max_pdg ! Max pT for a massive particle
+  %(mxx_min_pdg)s = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
 # For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
 #***********************************************************************

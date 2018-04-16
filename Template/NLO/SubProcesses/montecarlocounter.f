@@ -1547,7 +1547,8 @@ c BARRED AMPLITUDES
               amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
      &                              amp_split_born(iamp,iord) *iden_comp
             enddo
-          elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
+          elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbars(i,iord)=0d0
             do iamp=1,amp_split_size
               amp_split_bornbars(iamp,i,iord)=0d0
@@ -1562,7 +1563,8 @@ c BARRED AMPLITUDES
               amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 
      &                      dble(amp_split_borntilde(iamp,iord)) *iden_comp
             enddo
-          elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
+          elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0
+     &           .or..not.is_leading_cflow(i)) then
             bornbarstilde(i,iord)=0d0
             do iamp=1,amp_split_size
               amp_split_bornbarstilde(iamp,i,iord)=0d0 
@@ -2821,11 +2823,7 @@ c
          write(*,*)'Fatal error in emscafun'
          stop
       endif
-      if(r.ne.0.5d0)then
-         emscainv=(r-sqrt(r-r**2))/(2*r-1)
-      else
-         emscainv=0.5d0
-      endif
+      emscainv=sqrt(r)/(sqrt(r)+sqrt(1d0-r))
       return
       end
 

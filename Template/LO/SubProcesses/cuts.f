@@ -61,8 +61,9 @@ C
 C     EXTERNAL
 C
       REAL*8 R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS,PtDot
-      logical cut_bw,setclscales
+      logical cut_bw,setclscales,dummy_cuts
       external R2,DOT,ET,RAP,DJ,SumDot,pt,ALPHAS,cut_bw,setclscales,PtDot
+      external dummy_cuts
 C
 C     GLOBAL
 C
@@ -1219,6 +1220,15 @@ c End of loop over photons
  444    continue
 c End photon isolation
 
+c
+c   call the dummy_cuts function to check plugin/user defined cuts
+c
+
+      if(.not.dummy_cuts(P))then
+         passcuts=.false.
+         return
+      endif
+
 
 C...Set couplings if event passed cuts
 
@@ -1238,7 +1248,7 @@ c
 c     Note the following condition is the first line of setclscales
 c      if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
 c     Do not duplicate it since some variable are set for syscalc in the fct
-        if(.not.setclscales(p))then
+        if(.not.setclscales(p,.false.))then
            cutsdone=.false.
            cutspassed=.false.
            passcuts = .false.

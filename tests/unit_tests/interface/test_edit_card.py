@@ -41,7 +41,7 @@ class FakeInterface(object):
     
     def __init__(self, me_dir):
         self.me_dir = me_dir
-        
+        self.inputfile = None
     
 
 class TestEditCardCmd(unittest.TestCase):
@@ -424,7 +424,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('run_card ptj default')        
         self.assertEqual(run['ptj'], ptj)
         
-        run.list_parameter.add('ptj')
+        run.list_parameter['ptj'] = float
         self.cmd.do_set('ptj 100, 300')
         self.assertEqual(run['ptj'], [100, 300])
         self.cmd.do_set('ptj 100  200.1')

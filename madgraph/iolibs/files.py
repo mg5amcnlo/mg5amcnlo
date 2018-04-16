@@ -184,6 +184,15 @@ def mv(path1, path2):
         else:
             raise
         
+def put_at_end(src, *add):
+    
+    with open(src,'ab') as wfd:
+        for f in add:
+            with open(f,'rb') as fd:
+                shutil.copyfileobj(fd, wfd, 1024*1024*100)
+                #100Mb chunk to avoid memory issue
+    
+        
 def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
     """a simple way to have a symbolic link without to have to change directory
     starting_point is the directory where to write the link

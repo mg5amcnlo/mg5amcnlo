@@ -310,8 +310,9 @@ c           Include the Jacobian from helicity sampling
 		ENDIF
         IF (XTOT.NE.0D0) THEN
 		    ANS=ANS*AMP2(%(configID_in_matrix)s)/XTOT
-        ELSE
-            ANS=0D0
+        ELSE IF (ANS.ne.0d0) then
+			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+			stop 1
         ENDIF
     ENDIF
     IF(.not.Force_ML_Helicity_Sum )THEN

@@ -641,7 +641,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for decay in generate_all.all_ME.values():
                 decay['path'] = decay['path'].replace(generate_all.path_me, self.options['ms_dir'])
                 for decay2 in decay['decays']:
-                    decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
+                    if decay2['path']: 
+                        decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
             generate_all.path_me = self.options['ms_dir'] # directory can have been move
             generate_all.ms_dir = generate_all.path_me
         
@@ -1194,7 +1195,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
                         pwidth = totwidth
-                    br = pwidth / totwidth
+                    br *= pwidth / totwidth
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     nb_needed = int(efficiency*nb_needed) +nevents_for_max *nb_mult
@@ -1208,7 +1209,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
                             pwidth = totwidth
-                        br = pwidth / totwidth**nb_mult
+                        br *= pwidth / totwidth**nb_mult
                         br *= math.factorial(nb_mult)
                     else:
                         evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
@@ -1217,13 +1218,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         elif pwidth > totwidth:
                             pwidth = totwidth
                         br *= (pwidth / totwidth)**nb_mult
+                        
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
-        
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)
@@ -1343,6 +1344,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     evt_decayfile[particle.pdg].update(new_file)
                     decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                     continue
+            
             out[particle.pdg].append(decay)
                         
         return out
@@ -1433,10 +1435,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         full_event = lhe_parser.Event(str(production))
         full_event = full_event.add_decays(decays)
         full_me = self.calculate_matrix_element(full_event)
-        
-#        misc.sprint([p.pdg for p in production])
-#        misc.sprint([p.pdg for p in full_event])
-
+        #misc.sprint(full_event)
+        #misc.sprint([p.pdg for p in production])
+        #misc.sprint([p.pdg for p in full_event])
+        #misc.sprint(full_me, production_me, decay_me)
         return full_event, full_me/(production_me*decay_me)
         
         
@@ -1444,7 +1446,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""        
         
         tag, order = event.get_tag_and_order()
-        orig_order = self.all_me[tag]['order']
+        try:
+            orig_order = self.all_me[tag]['order']
+        except Exception:
+            # try to pass to full anti-particles for 1->N
+            init, final = tag
+            if len(init) == 2:
+                raise
+            init = (-init[0],)
+            final = tuple(-i for i in final)
+            tag = (init, final)
+            misc.sprint([k for k in  self.all_me.keys() if len(k[0])==1])
+            orig_order = self.all_me[tag]['order']
+            
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)

@@ -216,6 +216,6 @@ C
 C     
 C     Definition of the EW coupling used in the write out of aqed
 C     
-      MP__GAL(1) = 2 * SQRT(MP__PI/MP__AEWM1)
+      MP__GAL(1) = 2 * SQRT(MP__PI/ABS(MP__AEWM1))
       MP__GAL(2) = 1D0
 
