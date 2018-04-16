@@ -5410,6 +5410,7 @@ This implies that with decay chains:
                     misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
+        photon = False
         for qcd_container in ['p', 'j']:
             if qcd_container not in self._multiparticles:
                 continue
@@ -5427,8 +5428,16 @@ This implies that with decay chains:
                 multi.append(5)
                 multi.append(-5)
                 scheme = 5
+
+            # check if the photon has to be added to j and p
+            if 'QED' in self._curr_model['perturbation_couplings']:
+                multi.append(22)
+                photon = True
+            elif 22 in multi:
+                multi.remove(22)
+                photon = False
                 
-        if scheme in [4,5]:
+        if scheme in [4,5] and not photon:
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
@@ -5438,7 +5447,17 @@ This implies that with decay chains:
                                  scheme) 
                                )
             self.history.append("define j = p")
-                
+
+        if photon:
+            logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme, including the photon." % scheme)
+            for container in ['p', 'j']:
+                if container in defined_multiparticles:
+                    defined_multiparticles.remove(container)
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
         
         if defined_multiparticles:
             if 'all' in defined_multiparticles:
