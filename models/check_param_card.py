@@ -1023,14 +1023,6 @@ class ParamCardIterator(ParamCard):
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
-        '''
-        #print 'FF self.crss' , self.cross 
-        #print 'FF to_print' , to_print 
-        # FF 
-        to_print is a list of the dictionary== self.last_results that is filled while looping in the iteration of the scan parameters.
-        This means that each 'info' is a dictionary with the usual entries as in self.last_results !!!
-        This is why you call info[k] e.g. info['sigmav(xf)']
-        '''
 
         for info in to_print:
             name = info['run_name']

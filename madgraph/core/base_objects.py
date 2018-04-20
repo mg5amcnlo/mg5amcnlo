@@ -3364,8 +3364,6 @@ class Process(PhysicsObject):
         else:
             return legs[0].get('id')
         
-        return [0].get('id')
-
     def get_initial_final_ids(self):
         """return a tuple of two tuple containing the id of the initial/final
            state particles. Each list is ordered"""

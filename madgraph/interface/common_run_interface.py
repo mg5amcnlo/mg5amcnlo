@@ -1040,6 +1040,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
 
+
     @staticmethod
     def detect_card_type(path):
         """detect the type of the card. Return value are
