@@ -1640,16 +1640,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #special options
             --from_card=
         """
-        
+
         try:
-             lhapdf_version = self.get_lhapdf_version()
+            lhapdf_version = self.get_lhapdf_version()
         except Exception:
             logger.info('No version of lhapdf. Can not run systematics computation')
             return
         else:
-             if lhapdf_version.startswith('5'):
-                 logger.info('can not run systematics with lhapdf 5')
-                 return              
+            if lhapdf_version.startswith('5'):
+                logger.info('can not run systematics with lhapdf 5')
+                return              
         
         lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
         if not lhapdf:
@@ -2268,7 +2268,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
             if not opts['force'] :
-                self.ask_edit_cards(['param_card'],[], plot=False)
+                self.ask_edit_cards(['param_card.dat'],[], plot=False)
         
         
         line = 'compute_widths %s %s' % \

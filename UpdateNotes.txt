@@ -24,7 +24,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           not take part in the matching/merging procedure.
       OM: Fixed a bug for loop induced in gridpack mode
       RF: Fixed a bug for ApplGrid: in rare cases the ApplGrid tables were filled twice for the same event
-      OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0. 
+      OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0.
+      RF: Fixed an issue with the computation of (partial) decay width processes at NLO.
+      OM: loop-filter commands are now working for loop-induced processes
+      OM: New  method avoiding that two process are running inside the same output directory.
+          This is implemented only for Gridpack and LO run so far. 
+          The new method should be more robust in case of crash (i.e. not wrongly trigger as before)
 
 2.6.1 (12/12/17)
 
