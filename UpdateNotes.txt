@@ -2,6 +2,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 2.6.2 ()
+
       Heavy ion pdf / pdf in general:
       -------------------------------
       OM: Support for rescaling PDF to ion PDF (assuming independent hadron), this is well suited for Lead-Lead collision, p-Lead collision and fix-target
@@ -18,6 +19,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - add comment that can be displayed via "help NAME"
             - add autocompletion for some parameter
             - add direct rejection of parameter edition if not in some allowed list/range
+
       Bug fixes:
       ----------
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
@@ -41,6 +43,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           format (instead of the very old v4 format).
       OM: Change the default LO output directory structure. Now by default the lepton and neutrino are split 
           in two different directory. This avoids to face problem with the assymetric cut on lepton/neutrino
+      OM: loop-filter commands are now working for loop-induced processes
+      OM: New  method avoiding that two process are running inside the same output directory.
+          This is implemented only for Gridpack and LO run so far. 
+          The new method should be more robust in case of crash (i.e. not wrongly trigger as before)
+
 
 2.6.1 (12/12/17)
 

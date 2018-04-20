@@ -623,7 +623,7 @@ class ReweightInterface(extended_cmd.Cmd):
             for name in type_rwgt:
                 variance = ratio_square[name]/event_nb - (ratio[name]/event_nb)**2
                 orig_cross, orig_error = self.orig_cross
-                error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
+                error[name] = math.sqrt(max(0,variance/math.sqrt(event_nb))) * orig_cross + ratio[name]/event_nb * orig_error
             results.add_detail('error', error[type_rwgt[0]])
             import madgraph.interface.madevent_interface as ME_interface
 
@@ -1712,9 +1712,19 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):
-                    mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
-                    reload(mymod)
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
+                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                    #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
+                    if mod_name in sys.modules.keys():
+                        del sys.modules[mod_name]
+                        tmp_mod_name = mod_name
+                        while '.' in tmp_mod_name:
+                            tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
+                            del sys.modules[tmp_mod_name]
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                    else:
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)    
+                    
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 
@@ -1728,7 +1738,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data = self.id_to_path
             if '_second' in onedir:
                 data = self.id_to_path_second
-                
+
             # get all the information
             all_pdgs = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
@@ -1788,7 +1798,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
                         raise Exception
-                
+
                 data[tag] = order, pdir, hel
              
              

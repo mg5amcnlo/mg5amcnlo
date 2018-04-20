@@ -1086,7 +1086,7 @@ class ConfigFile(dict):
                         val = val.lower()
                         allowed = allowed.lower()
                         if value in allowed:
-                            i = allowed.find(value)
+                            i = allowed.index(value)
                             new_values.append(self.allowed_value[i])
                             continue
                     # no continue -> bad input
@@ -1190,8 +1190,8 @@ class ConfigFile(dict):
                 value = value.lower()
                 allowed = [v.lower() for v in allowed]
                 if value in allowed:
-                    i = allowed.find(value)
-                    value = self.allowed_value[i]
+                    i = allowed.index(value)
+                    value = self.allowed_value[lower_name][i]
                     valid=True
                     
             if not valid:
@@ -1290,10 +1290,10 @@ class ConfigFile(dict):
                 if new_value == value:
                     value = new_value
                 else:
-                    raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                    raise InvalidCmd, "Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value)
             else:
-                raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                raise InvalidCmd, "Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value)                
         else:
             # We have a string we have to format the attribute from the string
@@ -1307,7 +1307,7 @@ class ConfigFile(dict):
                 elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
                     value = True
                 else:
-                    raise Exception, "%s can not be mapped to True/False for %s" % (repr(value),name)
+                    raise InvalidCmd, "%s can not be mapped to True/False for %s" % (repr(value),name)
             elif targettype == str:
                 value = value.strip()
                 if value.startswith('\'') and value.endswith('\''):
@@ -1326,16 +1326,16 @@ class ConfigFile(dict):
                     try:
                         value = float(value.replace('d','e'))
                     except ValueError:
-                        raise Exception, "%s can not be mapped to an integer" % value                    
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value                    
                     try:
                         new_value = int(value)
                     except ValueError:
-                        raise Exception, "%s can not be mapped to an integer" % value
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value
                     else:
                         if value == new_value:
                             value = new_value
                         else:
-                            raise Exception, "incorect input: %s need an integer for %s" % (value,name)
+                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
             elif targettype == float:
                 value = value.replace('d','e') # pass from Fortran formatting
                 try:
@@ -1351,11 +1351,11 @@ class ConfigFile(dict):
                                 v /=  float(split[2*i+2])
                     except:
                         v=0
-                        raise Exception, "%s can not be mapped to a float" % value
+                        raise InvalidCmd, "%s can not be mapped to a float" % value
                     finally:
                         value = v
             else:
-                raise Exception, "type %s is not handle by the card" % targettype
+                raise InvalidCmd, "type %s is not handle by the card" % targettype
             
         return value
             
@@ -2607,28 +2607,26 @@ class RunCard(ConfigFile):
                     fsock.writelines(line)
             fsock.close()   
 
+    @staticmethod
+    def get_idbmup(lpp):
+        """return the particle colliding pdg code"""
+        if lpp in (1,2, -1,-2):
+            return math.copysign(2212, lpp)
+        elif lpp in (3,-3):
+            return math.copysign(11, lpp)
+        elif lpp == 0:
+            #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+            return 0
+        else:
+            return lpp
 
     def get_banner_init_information(self):
         """return a dictionary with the information needed to write
         the first line of the <init> block of the lhe file."""
         
         output = {}
-        
-        def get_idbmup(lpp):
-            """return the particle colliding pdg code"""
-            if lpp in (1,2, -1,-2):
-                return math.copysign(2212, lpp)
-            elif lpp in (3,-3):
-                return math.copysign(11, lpp)
-            elif lpp == 0:
-                #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
-                return 0
-            else:
-                return lpp
-        
-            
-        output["idbmup1"] = get_idbmup(self['lpp1'])
-        output["idbmup2"] = get_idbmup(self['lpp2'])
+        output["idbmup1"] = self.get_idbmup(self['lpp1'])
+        output["idbmup2"] = self.get_idbmup(self['lpp2'])
         output["ebmup1"] = self["ebeam1"]
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
@@ -3748,28 +3746,28 @@ class RunCardNLO(RunCard):
             for scale in scales:
                 if self[scale]:
                     logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
-                                % scale,'$MG:color:BLACK')
+                                % scale,'$MG:BOLD')
                     self[scale]= False
             #and left to default dynamical scale
             if len(self["dynamical_scale_choice"]) > 1 or self["dynamical_scale_choice"][0] != -1:
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
-                                ,'$MG:color:BLACK')
+                                ,'$MG:BOLD')
                 
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
             jetparams=['jetradius','jetalgo']
             for jetparam in jetparams:
                 if float(self[jetparam]) != 1.0:
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
-                                % jetparam ,'$MG:color:BLACK')
+                                % jetparam ,'$MG:BOLD')
                     self[jetparam] = 1.0
         elif self['ickkw'] == -1 and (self["dynamical_scale_choice"][0] != -1 or
                                       len(self["dynamical_scale_choice"]) > 1):
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
-                                ,'$MG:color:BLACK')            
+                                ,'$MG:BOLD')            
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':

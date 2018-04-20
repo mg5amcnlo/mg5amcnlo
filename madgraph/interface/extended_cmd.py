@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __builtin__ import True
 """  A file containing different extension of the cmd basic python library"""
 
 
@@ -35,6 +34,8 @@ except:
 
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
+logger_tuto = logging.getLogger('tutorial') # for stdout
+logger_plugin = logging.getLogger('tutorial_plugin') # for stdout
 
 try:
     import madgraph.various.misc as misc
@@ -768,13 +769,13 @@ class HelpCmd(object):
 
     def help_quit(self):
         logger.info("-- terminates the application",'$MG:color:BLUE')
-        logger.info("syntax: quit",'$MG:color:BLACK')
+        logger.info("syntax: quit",'$MG:BOLD')
     
     help_EOF = help_quit
 
     def help_history(self):
         logger.info("-- interact with the command history.",'$MG:color:BLUE')
-        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:BOLD')
         logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
         logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
@@ -782,17 +783,17 @@ class HelpCmd(object):
         
     def help_help(self):
         logger.info("-- access to the in-line help",'$MG:color:BLUE')
-        logger.info("syntax: help",'$MG:color:BLACK')
+        logger.info("syntax: help",'$MG:BOLD')
 
     def help_save(self):
         """help text for save"""
         logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
-        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:BOLD') 
         
     def help_display(self):
         """help for display command"""
         logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
-        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:BOLD')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -1187,8 +1188,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
-                logger.info('Use %s value' % default, '$MG:color:BLACK')
+                logger.info('The answer to the previous question is not set in your input file', '$MG:BOLD')
+                logger.info('Use %s value' % default, '$MG:BOLD')
                 return str(default)
             
         line = line.replace('\n','').strip()
@@ -2019,7 +2020,7 @@ class CmdShell(Cmd):
     def help_shell(self):
         """help for the shell"""
         logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
-        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:BOLD')
 
 
 
@@ -2068,6 +2069,8 @@ class SmartQuestion(BasicCmd):
             setattr(self, key, value)
         if reprint_opt:
             print question
+            logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
+            logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
         return self.cmdloop()
         
 
@@ -2159,21 +2162,21 @@ class SmartQuestion(BasicCmd):
         
         if not text:
             if out['Options']:
-                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "Here is the list of command available:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
         else:
             if out['Options']:
-                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
             elif not  out['Options']:
-                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
-        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:BOLD')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:BOLD')
     def complete_help(self, text, line, begidx, endidx):
         """ """
         return self.completenames(text, line)
@@ -2837,6 +2840,52 @@ class ControlSwitch(SmartQuestion):
         if info == '':
             info = 'Please install module'
         return info
+    
+    def do_help(self, line, list_command=False):
+        """dedicated help for the control switch"""
+        
+        if line:
+            return self.print_help_for_switch(line)
+        
+        # here for simple "help"
+        logger.info(" ")
+        logger.info("  In order to change a switch you can:")
+        logger.info("   - type 'NAME = VALUE'  to set the switch NAME to a given value.")
+        logger.info("   - type 'ID = VALUE'  to set the switch correspond to the line ID to a given value.")
+        logger.info("   - type 'ID' where ID is the value of the line to pass from one value to the next.")
+        logger.info("   - type 'NAME' to set the switch NAME to the next value.")
+        logger.info("")
+        logger.info("   You can type 'help NAME' for more help on a given switch")
+        logger.info("")
+        logger.info("  Special keyword:", '$MG:BOLD')
+        logger.info("    %s" % '\t'.join([p[4:] for p in dir(self) if p.startswith('ans_')]) )
+        logger.info("    type 'help  XXX' for more information")
+        if list_command:
+            super(ControlSwitch, self).do_help(line)
+
+        
+    def print_help_for_switch(self, line):
+        """ """
+        
+        arg = line.split()[0]
+        
+        if hasattr(self, 'help_%s' % arg):
+            return getattr(self, 'help_%s' % arg)('')
+        
+        if hasattr(self, 'ans_%s' % arg):
+            return getattr(self, 'help_%s' % arg).__doc__
+        
+        if arg in self.switch:
+            logger.info("   information for switch %s: ", arg, '$MG:BOLD')
+            logger.info("   allowed value:")
+            logger.info("      %s", '\t'.join(self.get_allowed(arg)))
+            if hasattr(self, 'help_text_%s' % arg):
+                logger.info("")
+                for line in getattr(self, 'help_text_%s' % arg):
+                    logger.info(line)
+                      
+        
+    
 
     def question_formatting(self, nb_col = 80,
                                   ldescription=0,

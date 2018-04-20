@@ -2590,7 +2590,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     param_card_iterator.write(path)
                     name = misc.get_scan_name(orig_name, self.run_name)
                     path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-                    logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
+                    logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
                     param_card_iterator.write_summary(path)
 
             
@@ -2988,7 +2988,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             scan_name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
-            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
     
 
@@ -5232,7 +5232,7 @@ tar -czf split_$1.tar.gz split_$1
     
         logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['run_card'], args)
+        self.ask_edit_cards(['run_card.dat'], args, plot=False)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -6456,6 +6456,7 @@ class GridPackCmd(MadEventCmd):
         #print 'run combine!!!'
         #combine_runs.CombineRuns(self.me_dir)
         
+        return
         #update html output
         Presults = sum_html.collect_result(self)
         cross, error = Presults.xsec, Presults.xerru

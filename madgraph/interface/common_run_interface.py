@@ -619,6 +619,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """common"""
 
         self.force_run = False # this flag force the run even if RunWeb is present
+        self.stop_for_runweb = False # this flag indicates if we stop this run because of RunWeb. 
         if 'force_run' in opts and opts['force_run']:
             self.force_run = True
             del opts['force_run']
@@ -649,6 +650,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (for this exact same directory) Please wait that this is instance is 
                 closed. If no instance is running, you can delete the file
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
+                self.stop_for_runweb = True
                 raise AlreadyRunning, message
             else:
                 self.write_RunWeb(me_dir)
@@ -685,12 +687,82 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     def write_RunWeb(self, me_dir):
+        self.writeRunWeb(me_dir)
+        self.gen_card_html()
+
+    @staticmethod
+    def writeRunWeb(me_dir):
         pid = os.getpid()
         fsock = open(pjoin(me_dir,'RunWeb'),'w')
         fsock.write(`pid`)
-        fsock.close()
-        self.gen_card_html()
+        fsock.close()        
+        
+    class RunWebHandling(object):
+        
+        def __init__(self, me_dir, crashifpresent=True, warnifpresent=True):
+            """raise error if RunWeb already exists
+            me_dir is the directory where the write RunWeb"""
+            
+            self.remove_run_web = True
+            self.me_dir = me_dir
+            
+            if crashifpresent or warnifpresent:
+                if os.path.exists(pjoin(me_dir, 'RunWeb')):
+                    pid = open(pjoin(me_dir, 'RunWeb')).read()
+                    try:
+                        pid = int(pid)
+                    except Exception:
+                        pid = "unknown"
+                    
+                    if pid == 'unknown' or misc.pid_exists(pid):
+                        # bad situation 
+                        if crashifpresent:
+                            if isinstance(crashifpresent, Exception):
+                                raise crashifpresent
+                            else:
+                                message = '''Another instance of the program is currently running (pid = %s).
+                (for this exact same directory). Please wait that this is instance is 
+                closed. If no instance is running, you can delete the file
+                %s and try again.''' % (pid, pjoin(me_dir, 'RunWeb'))
+                                raise AlreadyRunning, message
+                        elif warnifpresent:
+                            if isinstance( warnifpresent, bool):
+                                logger.warning("%s/RunWeb is present. Please check that only one run is running in that directory.")
+                            else:
+                                logger.log(warnifpresent, "%s/RunWeb is present. Please check that only one run is running in that directory.")
+                            self.remove_run_web = False
+                    else:
+                        logger.debug('RunWeb exists but no associated process. Will Ignore it!')
+                    return
+            
+            # write RunWeb
+            
+            CommonRunCmd.writeRunWeb(me_dir)
+            
+        def __enter__(self):
+            return
+        
+        def __exit__(self,exc_type, exc_value, traceback):
+            
+            if self.remove_run_web:
+                try:
+                    os.remove(pjoin(self.me_dir,'RunWeb'))
+                except Exception:
+                    if os.path.exists(pjoin(self.me_dir,'RunWeb')):
+                        logger.warning('fail to remove: %s' % pjoin(self.me_dir,'RunWeb'))
+            return
 
+        def __call__(self, f):
+            """allow to use this as decorator as well"""
+            def wrapper(*args, **kw):
+                with self:
+                    return f(*args, **kw)
+            return wrapper        
+
+        
+            
+            
+            
     ############################################################################
     def split_arg(self, line, error=False):
         """split argument and remove run_options"""
@@ -967,6 +1039,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
+
 
     @staticmethod
     def detect_card_type(path):
@@ -1491,12 +1564,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def help_systematics(self):
         """help for systematics command"""
-        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:color:BLACK')
+        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:BOLD')
         logger.info("-- Run the systematics run on the RUN_NAME run.")
         logger.info("   RUN_NAME can be a path to a lhef file.")
         logger.info("   OUTPUT can be the path to the output lhe file, otherwise the input file will be overwritten") 
         logger.info("")
-        logger.info("options: (values written are the default)", '$MG:color:BLACK')
+        logger.info("options: (values written are the default)", '$MG:BOLD')
         logger.info("")
         logger.info("   --mur=0.5,1,2     # specify the values for renormalisation scale variation")
         logger.info("   --muf=0.5,1,2     # specify the values for factorisation scale variation")
@@ -1514,7 +1587,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
         logger.info("")
-        logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
+        logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
         logger.info("       errorset : runs over the all the members of the PDF set used to generate the events")
         logger.info("       244800   : runs over the associated set and all its members")
@@ -1525,7 +1598,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       CT10@X   : runs over the Xth member of the associated PDF set")
         logger.info("       XX,YY,ZZ : runs over the sets for XX,YY,ZZ (those three follows above syntax)")
         logger.info("")
-        logger.info("   Allowed value for the keep/remove_wgts options:", '$MG:color:BLACK')
+        logger.info("   Allowed value for the keep/remove_wgts options:", '$MG:BOLD')
         logger.info("       all      : keep/remove all weights")
         logger.info("       name     : keep/remove that particular weight")
         logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
@@ -1569,16 +1642,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #special options
             --from_card=
         """
-        
+
         try:
-             lhapdf_version = self.get_lhapdf_version()
+            lhapdf_version = self.get_lhapdf_version()
         except Exception:
             logger.info('No version of lhapdf. Can not run systematics computation')
             return
         else:
-             if lhapdf_version.startswith('5'):
-                 logger.info('can not run systematics with lhapdf 5')
-                 return              
+            if lhapdf_version.startswith('5'):
+                logger.info('can not run systematics with lhapdf 5')
+                return              
         
         lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
         if not lhapdf:
@@ -2197,7 +2270,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
             if not opts['force'] :
-                self.ask_edit_cards(['param_card'],[], plot=False)
+                self.ask_edit_cards(['param_card.dat'],[], plot=False)
         
         
         line = 'compute_widths %s %s' % \
@@ -3272,6 +3345,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     do_EOF = do_quit
     do_exit = do_quit
 
+    def __del__(self):
+        """try to remove RunWeb?"""
+        
+        if not self.stop_for_runweb and not self.force_run:
+            try:
+                os.remove(pjoin(self.me_dir,'RunWeb'))
+            except Exception:
+                pass
+            
 
     def update_status(self, status, level, makehtml=True, force=True,
                       error=False, starttime = None, update_results=True,
@@ -4204,6 +4286,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             # add some mininal content for this:
             opt['allow_arg'] = range(self.integer_bias, self.integer_bias+len(cards))
 
+        self.param_consistency = True
+        if 'param_consistency' in opt:
+            self.param_consistency = opt['param_consistency']
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
         self.conflict = set()
@@ -4236,6 +4322,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return True
             elif '%s_card.dat' % name in cards:
                 return True
+            elif name in self.paths and self.paths[name] in cards:
+                return True
             else:
                 cardnames = [os.path.basename(p) for p in cards]
                 if '%s_card.dat' % name in cardnames:
@@ -4261,7 +4349,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         self.pname2block = {}
         self.restricted_value = {}
+        self.param_card = {}
         if not self.get_path('param', cards):
+            self.param_consistency = False
             return []
         
         try:
@@ -4275,7 +4365,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.   
-        default_param = check_param_card.ParamCard(self.paths['param_default'])
+        if os.path.exists(self.paths['param_default']):
+            default_param = check_param_card.ParamCard(self.paths['param_default'])
+        else:
+            default_param =  check_param_card.ParamCard(self.param_card)
         self.pname2block, self.restricted_value = default_param.analyze_param_card()
         self.param_card_default = default_param
         return self.pname2block.keys()
@@ -4283,7 +4376,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def init_run(self, cards):
         
         self.run_set = []
-        
         if not self.get_path('run', cards):
             return []
         
@@ -4483,7 +4575,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
           
 #     try:                
         if banner:                      
-            logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
+            logger.info('*** HELP MESSAGE ***', '$MG:BOLD')
          
         args = self.split_arg(line)
         # handle comand related help
@@ -4500,7 +4592,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 print '\t'.join(self.special_shortcut)
                 print
             if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                logger.info('*** END HELP ***', '$MG:BOLD')  
             return out      
         # check for special shortcut.
         # special shortcut:
@@ -4508,7 +4600,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[0] in self.special_shortcut_help:
                 print self.special_shortcut_help[args[0]]
             if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                logger.info('*** END HELP ***', '$MG:BOLD')  
             return       
         
         start = 0
@@ -4545,7 +4637,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info("List of parameter associated", '$MG:color:BLUE')
                     print "\t".join(eval('self.%s' % args[0]).keys())
                 if banner:
-                    logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                    logger.info('*** END HELP ***', '$MG:BOLD')  
                 return card
                     
         #### RUN CARD
@@ -4555,9 +4647,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:BOLD')
 
             self.run_card.do_help(args[start])
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
@@ -4909,6 +5001,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         
         args = self.split_arg(line)
+        
+        
         if len(args) == 0:
             logger.warning("No argument. For help type 'help set'.")
         # fix some formatting problem
@@ -4936,6 +5030,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     values = {str(i): banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])}
                 except ValueError as e:
                     logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
+                    return
+                except InvalidCmd as e:
+                    logger.warning(str(e))
                     return
             #else:
             #    logger.warning("too many argument for this command")
@@ -5585,19 +5682,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if ending_question:
             self.check_card_consistency()
-            try:
-                self.do_update('dependent', timer=20)
-            except MadGraph5Error, error:
-                if 'Missing block:' in str(error):
-                    self.fail_due_to_format +=1
-                    if self.fail_due_to_format == 10:
-                        missing, unknow = str(error).split('\n')[-2:]
-                        logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
-                        logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
-                        self.value = False # to avoid that entering a command stop the question
-                        return self.reask(True)
-                    else:
-                        raise
+            if self.param_consistency:
+                try:
+                    self.do_update('dependent', timer=20)
+                except MadGraph5Error, error:
+                    if 'Missing block:' in str(error):
+                        self.fail_due_to_format +=1
+                        if self.fail_due_to_format == 10:
+                            missing, unknow = str(error).split('\n')[-2:]
+                            logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
+                            logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
+                            self.value = False # to avoid that entering a command stop the question
+                            return self.reask(True)
+                        else:
+                            raise
             
             return ending_question
     
@@ -6097,7 +6195,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
-        elif len(args) > 0: 
+        elif len(args) > 0:
             if args[0] in self.cards:
                 card = args[0]
             elif "%s.dat" % args[0] in self.cards:
@@ -6109,46 +6207,56 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
+            
+            if card in self.paths:
+                path = self.paths[card]
+            elif os.path.exists(card):
+                path = card
+            elif os.path.exists(pjoin(self.me_dir,'Cards',card)):
+                path = pjoin(self.me_dir,'Cards',card)
+            else:
+                raise Exception, 'unknow path'
+            
             # handling the various option on where to write the line            
             if args[1] == '--clean':
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write("# %s \n" % card)
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
                 logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
             elif args[1].startswith('--line_position=afterlast'):
                 #position in file determined by user
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 if self.last_editline_pos > 0:
                     pos = self.last_editline_pos +1
                 newline = line.split(None,2)[2]
                 split.insert(pos, newline)
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 pos = int(args[1].split('=',1)[1])
                 newline = line.split(None,2)[2]
                 split.insert(pos, newline)
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = pos
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 for posline,l in  enumerate(split):
                     if not l.startswith('#'):
                         break
                 split.insert(posline, line.split(None,2)[2])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
                 self.last_editline_pos = posline
@@ -6156,7 +6264,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif args[1].startswith('--replace_line='):
                 # catch the line/regular expression and replace the associate line
                 # if no line match go to check if args[2] has other instruction starting with --
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
@@ -6177,7 +6285,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:color:BLACK') 
@@ -6186,7 +6294,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
@@ -6196,14 +6304,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     raise Exception, 'invalid regular expression: not found in file'
                 split.insert(posline, re.split(search_pattern,line)[-1])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
-                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                text = open(path).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
@@ -6213,20 +6321,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     posline=len(split)
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
-                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff = open(path,'w')
                 ff.write('\n'.join(split))
 
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                                 
                 self.last_editline_pos = posline
                                                  
             else:
-                ff = open(pjoin(self.me_dir,'Cards',card),'a')
+                ff = open(path,'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
                 logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 self.last_editline_pos = -1
 
-            self.reload_card(pjoin(self.me_dir,'Cards',card))
+            self.reload_card(path)
             
     do_edit = do_add
     complete_edit = complete_add
@@ -6309,7 +6417,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.do_set('mw_run inputfile %s' % os.path.relpath(path, self.mother_interface.me_dir))     
             return             
         else:
-            card_name = CommonRunCmd.detect_card_type(path)
+            card_name = self.detect_card_type(path)
 
         if card_name == 'unknown':
             logger.warning('Fail to determine the type of the file. Not copied')
@@ -6324,6 +6432,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.mother_interface.keep_cards(self.cards)
             for card_name in self.cards:
                 self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
+
+    def detect_card_type(self, path):
+        """detect card type"""
+        
+        return CommonRunCmd.detect_card_type(path)
 
     def open_file(self, answer):
         """open the file"""
