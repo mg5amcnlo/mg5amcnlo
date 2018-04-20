@@ -5449,6 +5449,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """This is run on quitting the class. Apply here all the self-consistency
         rule that you want. Do the modification via the set command."""
 
+        ########################################################################
+        #       LO specific check
+        ########################################################################
+        if isinstance(self.run_card,banner_mod.RunCardLO):
+            
+            proc_charac = self.mother_interface.proc_characteristics
+            if proc_charac['grouped_matrix'] and \
+                  abs(self.run_card['lpp1']) == 1 == abs(self.run_card['lpp2']) and \
+                  (self.run_card['nb_proton1'] != self.run_card['nb_proton2'] or
+                 self.run_card['nb_neutron1'] != self.run_card['nb_neutron2'] or
+                 self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
+                raise Exception, "Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\"."
+            
+
+        ########################################################################
+        #       NLO specific check
+        ########################################################################
         # For NLO run forbid any pdg specific cut on massless particle
         if isinstance(self.run_card,banner_mod.RunCardNLO):
             for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+

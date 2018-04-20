@@ -105,13 +105,13 @@ C***********************************************************************
          tmp1 = pdf(1)
          tmp2 = pdf(2)
          tmppdf(1) = nb_proton * tmp1 + nb_neutron * tmp2
-         tmppdf(2) = nb_proton * tmp2 + nb_neutron * tmp2
+         tmppdf(2) = nb_proton * tmp2 + nb_neutron * tmp1
          get_ion_pdf = tmppdf(pdg)
       else if (pdg.eq.-1.or.pdg.eq.-2) then
          tmp1 = pdf(-1)
          tmp2 = pdf(-2)
          tmppdf(-1) = nb_proton * tmp1 + nb_neutron * tmp2
-         tmppdf(-2) = nb_proton * tmp2 + nb_neutron * tmp2
+         tmppdf(-2) = nb_proton * tmp2 + nb_neutron * tmp1
          get_ion_pdf = tmppdf(pdg)
       else 
          get_ion_pdf = pdf(pdg)*(nb_proton+nb_neutron)
