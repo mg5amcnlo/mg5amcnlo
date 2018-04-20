@@ -488,7 +488,7 @@ class ParamCard(dict):
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
+                        logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
                         logger.log(loglevel, 'For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
@@ -511,7 +511,7 @@ class ParamCard(dict):
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
+                        logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
                         logger.log(loglevel,'For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
@@ -955,7 +955,7 @@ class ParamCardIterator(ParamCard):
         for positions in itertools.product(*lengths):
             self.itertag = []
             if self.logging:
-                logger.info("Create the next param_card in the scan definition", '$MG:color:BLACK')
+                logger.info("Create the next param_card in the scan definition", '$MG:BOLD')
             for i, pos in enumerate(positions):
                 key = keys[i]
                 for param, values in all_iterators[key]:
@@ -988,6 +988,7 @@ class ParamCardIterator(ParamCard):
         for param in self.autowidth:
             self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
             
+
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
         
@@ -1016,11 +1017,13 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
-        
+      
+
         if not lastline:
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
+
         for info in to_print:
             name = info['run_name']
             bench = info['bench']
@@ -1268,7 +1271,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        block, id, 0.0, '$MG:color:BLACK')                            
+                                        block, id, 0.0, '$MG:BOLD')                            
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         block, id, 0.0)
@@ -1299,7 +1302,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        (block, id, 1.0), '$MG:color:BLACK')                            
+                                        (block, id, 1.0), '$MG:BOLD')                            
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0))
@@ -1336,7 +1339,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to parameter with id %s',
-                                        block, id1, value2, id2, '$MG:color:BLACK')
+                                        block, id1, value2, id2, '$MG:BOLD')
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to parameter with id %s',
                                         block, id1, value2, id2)
@@ -1365,7 +1368,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
-                                        block, id1, -value2, id2, '$MG:color:BLACK')
+                                        block, id1, -value2, id2, '$MG:BOLD')
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
                                         block, id1, -value2, id2)

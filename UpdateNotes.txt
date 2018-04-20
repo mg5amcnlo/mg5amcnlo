@@ -1,25 +1,56 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
 2.6.2 ()
+
+      Heavy ion pdf / pdf in general:
+      -------------------------------
+      OM: Support for rescaling PDF to ion PDF (assuming independent hadron), this is well suited for Lead-Lead collision, p-Lead collision and fix-target
+      OM: Support in systematics.py for ion pdf. Possiblity to rescale only one beam (usefull to change only on PDF for fix target experiment)
+      OM: Removing internal support for old type of PDF (only supported internal pdf are now cteq6 and nnpdf23)
+
+
+      User Interface
+      --------------
+      OM: introduce "update to_full" command to display all the hidden parameter.
+      OM: introduce "update ion_pdf" and "update beam_pol" to add related section in the run_card.
+          the polarization of the beam is set as hidden parameter instead as default parameter
+      OM: improve handling of (some) run_card parameter:
+            - add comment that can be displayed via "help NAME"
+            - add autocompletion for some parameter
+            - add direct rejection of parameter edition if not in some allowed list/range
+
+      Bug fixes:
+      ----------
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
-      OM: add the value of all the widths in Auto-width in the scan summary file
       OM: fix crash in 1>N reweighting
-      RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
-      RF: For the HwU histograms, if no gnuplot installation is found, write the gnuplot scripts in v5
-          format (instead of the very old v4 format).
       RF+MZ: Fixed a problem with (f)NLO(+PS) runs in case the Born has identical QCD-charged
       	     particles. Cross sections were typically correct, but some distributions might
 	     have shown an asymmetry. 
-      OM: Change the default LO output directory structure. Now by default the lepton and neutrino are split 
-          in two different directory. This avoids to face problem with the assymetric cut on lepton/neutrino
       OM: Change in LO maching for HEFT (or any model with hgg vertex) in the way to flag jet that should
           not take part in the matching/merging procedure.
       OM: Fixed a bug for loop induced in gridpack mode
       RF: Fixed a bug for ApplGrid: in rare cases the ApplGrid tables were filled twice for the same event
-      OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0.
-      RF: Fixed an issue with the computation of (partial) decay width processes at NLO.
+      OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0. 
+      RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
+
+      Enhancement:
+      -----------
+      OM: add the value of all the widths in Auto-width in the scan summary file
+      OM: For 1>N, if the user set fixed_run_scale to True, then the scale is choose accordingly
+          and not following the mass of the inital state anymore
+      RF: For the HwU histograms, if no gnuplot installation is found, write the gnuplot scripts in v5
+          format (instead of the very old v4 format).
+      OM: Change the default LO output directory structure. Now by default the lepton and neutrino are split 
+          in two different directory. This avoids to face problem with the assymetric cut on lepton/neutrino
+      OM: loop-filter commands are now working for loop-induced processes
+      OM: New  method avoiding that two process are running inside the same output directory.
+          This is implemented only for Gridpack and LO run so far. 
+          The new method should be more robust in case of crash (i.e. not wrongly trigger as before)
+
 
 2.6.1 (12/12/17)
+
       RF+MZ: It is now possible to add LO matrix elements (with [LOonly]) 
              to Fx-Fx merged samples. Thanks to Josh Bendavid for testing.
       OM: Re-factoring the code asking which program to use (both at LO and NLO)

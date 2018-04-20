@@ -10,6 +10,9 @@
 #   Lines starting with a '# ' are info or comments                  *
 #                                                                    *
 #   mind the format:   value    = variable     ! comment             *
+#                                                                    *
+#   To display more options, you can type the command:               *
+*      update full_run_card                                          *
 #*********************************************************************
 #
 #*******************                                                 
@@ -36,16 +39,13 @@
      %(lpp2)s        = lpp2    ! beam 2 type
      %(ebeam1)s     = ebeam1  ! beam 1 total energy in GeV
      %(ebeam2)s     = ebeam2  ! beam 2 total energy in GeV
-#*********************************************************************
-# Beam polarization from -100 (left-handed) to 100 (right-handed)    *
-#*********************************************************************
-     %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
-     %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
+$beam_pol
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
      %(pdlabel)s    = pdlabel     ! PDF set                                     
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+$ion_pdf
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
@@ -96,7 +96,7 @@
 #                                                                    
 #
 #*********************************************************************
-# BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$" and decay  
+# BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$$" and decay  
 #*********************************************************************
   %(bwcutoff)s  = bwcutoff      ! (M+/-bwcutoff*Gamma)
 #*********************************************************************

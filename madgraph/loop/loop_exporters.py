@@ -155,7 +155,7 @@ class LoopExporterFortran(object):
         elif self.dependencies=='external':
             if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
                 logger.info('Compiling CutTools. This has to be done only once and'+\
-                                  ' can take a couple of minutes.','$MG:color:BLACK')
+                                  ' can take a couple of minutes.','$MG:BOLD')
                 current = misc.detect_current_compiler(os.path.join(\
                                                   self.cuttools_dir,'makefile'))
                 new = 'gfortran' if self.fortran_compiler is None else \
@@ -1978,7 +1978,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 
                 
                 logger.info('Compiling IREGI. This has to be done only once and'+\
-                             ' can take a couple of minutes.','$MG:color:BLACK')
+                             ' can take a couple of minutes.','$MG:BOLD')
                 
                 current = misc.detect_current_compiler(os.path.join(\
                                                     libpath,'makefile_ML5_lib'))

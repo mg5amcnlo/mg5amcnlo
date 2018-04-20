@@ -2972,8 +2972,10 @@ class Process(PhysicsObject):
         the user-defined list of orders, it can be ommitted for some info
         displays."""
 
-        if prefix:
+        if isinstance(prefix, bool):
             mystr = " " * indent + "Process: "
+        elif isinstance(prefix, str):
+            mystr = prefix
         else:
             mystr = ""
         prevleg = None
@@ -3354,10 +3356,14 @@ class Process(PhysicsObject):
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
 
-        return filter(lambda leg: leg.get('state') == False and\
+        legs = filter(lambda leg: leg.get('state') == False and\
                        leg.get('number') == number,
-                       self.get('legs'))[0].get('id')
-
+                       self.get('legs'))
+        if not legs:
+            return None
+        else:
+            return legs[0].get('id')
+        
     def get_initial_final_ids(self):
         """return a tuple of two tuple containing the id of the initial/final
            state particles. Each list is ordered"""

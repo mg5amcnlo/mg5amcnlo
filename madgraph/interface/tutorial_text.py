@@ -1,6 +1,6 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2018 The MadGraph5_aMC@NLO Development team and Contributors
 #
 # This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
@@ -77,11 +77,10 @@ MG5_aMC>output MY_FIRST_MG5_RUN
 """
 output = """
 If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
-been created which can be used in order to run MadEvent exactly as if
-it was coming from MG4.
+been created which can be used in order to generate LO events/compute cross-section.
 
-Additionally to the MG4 command (see MY_FIRST_MG5_RUN/README), you can also 
-generate your events/compute the cross-section from this interface:
+From that directory you can run the command './bin/generate_events'
+You can also  generate your events/compute the cross-section from this interface:
 Please Enter:
 MG5_aMC> launch MY_FIRST_MG5_RUN
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
@@ -110,12 +109,16 @@ h) How to draw the diagrams for your processes without generating
    MadEvent output
 
 To import a model, write:
-MG5_aMC>import model mssm
+MG5_aMC>import model MSSM_SLHA2
 """
 
 import_model ="""
 You have successfully imported a model. If you followed the tutorial
 this is the MSSM.
+
+MadGraph can auto-download a large class of model (and more can be used). 
+To see the full list of model, write:
+MG5_aMC>display modellist 
 
 If you want to know more information about this model you can use the
 following commands:
@@ -194,9 +197,9 @@ check of your process. For this last command, we will also show how combine
 different command in a single line: 
 MG5_aMC>generate p p > go go; display diagrams
 
-Note that when you run output [madevent_v4], the diagrams are
+Note that when you run output [madevent], the diagrams are
 automatically written to the matrix.ps files in subprocess
-directory, just like with MadGraph 4.
+directory.
 """
 
 display_diagrams = """

@@ -634,6 +634,7 @@ class TestMEfromfile(unittest.TestCase):
 
         if not self.debuging:
             shutil.rmtree(self.path)
+        self.assertFalse(self.debuging)
 
     def test_add_time_of_flight(self):
         """checking time of flight is working fine"""
