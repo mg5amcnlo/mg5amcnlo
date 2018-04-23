@@ -3470,11 +3470,11 @@ C       This is dummy particle used in multiparticle vertices
                           'DATA u1/1*1D0/\nDATA ux2/1*1D0/', 
                           """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
-u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+u1=PDG2PDF(ABS(LPP(1)),2*LP, 1,XBK(1),DSQRT(Q2FACT(1)))
 ENDIF
 IF (ABS(LPP(2)) .GE. 1) THEN
 LP=SIGN(1,LPP(2))
-ux2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ux2=PDG2PDF(ABS(LPP(2)),-2*LP, 2,XBK(2),DSQRT(Q2FACT(2)))
 ENDIF
 PD(0) = 0d0
 IPROC = 0

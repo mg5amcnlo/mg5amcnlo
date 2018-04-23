@@ -938,7 +938,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
                     if  param.value != 0:
                         logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
-                                    % part.name,'$MG:color:BLACK')
+                                    % part.name,'$MG:BOLD')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
@@ -4301,7 +4301,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         #update default path by custom one if specify in cards
         for card in cards:
-            if os.path.exists(card):
+            if os.path.exists(card) and os.path.sep in cards:
                 card_name = CommonRunCmd.detect_card_type(card)
                 card_name = card_name.split('_',1)[0] 
                 self.paths[card_name] = card
@@ -4353,7 +4353,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if not self.get_path('param', cards):
             self.param_consistency = False
             return []
-        
+
         try:
             self.param_card = check_param_card.ParamCard(self.paths['param'])
         except (check_param_card.InvalidParamCard, ValueError) as e:
@@ -4657,9 +4657,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                                   and card in ['','param_card']:
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:BOLD')
                  
             if args[start] == 'width':
                 args[start] = 'decay'
@@ -4692,9 +4692,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif args[start] in self.pname2block and card in ['','param_card']: 
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:BOLD')
                  
             all_var = self.pname2block[args[start]]
             for bname, lhaid in all_var:
@@ -4708,9 +4708,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the madloop_card file', '$MG:color:BLACK')                
+                    logger.info('**   If not explicitely speficy this parameter  will modif the madloop_card file', '$MG:BOLD')                
                 
             self.MLcard.do_help(args[start])
 
@@ -4718,9 +4718,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif self.has_PY8 and args[start] in self.PY8Card:
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
-                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:BOLD')
                 if card == '':
-                    logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:color:BLACK')  
+                    logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:BOLD')  
 
             self.PY8Card.do_help(args[start])
         elif card.startswith('madanalysis5'):
@@ -4731,7 +4731,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             print "no help available" 
           
         if banner:                      
-            logger.info('*** END HELP ***', '$MG:color:BLACK')    
+            logger.info('*** END HELP ***', '$MG:BOLD')    
         #raw_input('press enter to quit the help')
         return card       
 #     except Exception, error:
@@ -5127,12 +5127,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Delphes card defined.')
                 return
             if args[1] == 'atlas':
-                logger.info("set default ATLAS configuration for Delphes", '$MG:color:BLACK')
+                logger.info("set default ATLAS configuration for Delphes", '$MG:BOLD')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
             elif args[1] == 'cms':
-                logger.info("set default CMS configuration for Delphes",'$MG:color:BLACK')
+                logger.info("set default CMS configuration for Delphes",'$MG:BOLD')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
@@ -5140,7 +5140,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
             if args[1] == 'default':
-                logger.info('replace %s by the default card' % args[0],'$MG:color:BLACK')
+                logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
                 if args[0] == 'param_card':
                     self.param_card = check_param_card.ParamCard(self.paths['param'])
@@ -5158,7 +5158,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
         elif args[0] in ['MadLoop_card']:
             if args[1] == 'default':
-                logger.info('replace MadLoopParams.dat by the default card','$MG:color:BLACK')
+                logger.info('replace MadLoopParams.dat by the default card','$MG:BOLD')
                 self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
                 self.MLcard.write(self.paths['ML'],
                                   commentdefault=True)
@@ -5171,7 +5171,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         elif args[0] in ['pythia8_card']:
             if args[1] == 'default':
-                logger.info('replace pythia8_card.dat by the default card','$MG:color:BLACK')
+                logger.info('replace pythia8_card.dat by the default card','$MG:BOLD')
                 self.PY8Card = self.PY8Card_class(self.PY8CardDefault)
                 self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
@@ -5185,7 +5185,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         elif args[0] in ['madspin_card']:
             if args[1] == 'default':
-                logger.info('replace madspin_card.dat by the default card','$MG:color:BLACK')
+                logger.info('replace madspin_card.dat by the default card','$MG:BOLD')
                 files.cp(self.paths['MS_default'], self.paths['madspin'])
                 return
             else:
@@ -5209,7 +5209,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]])
                 else:
-                    logger.info('remove information %s from the run_card' % args[start],'$MG:color:BLACK')
+                    logger.info('remove information %s from the run_card' % args[start],'$MG:BOLD')
                     del self.run_card[args[start]]
             else:
                 if args[0].startswith('sys_') or \
@@ -5223,7 +5223,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.modified_card.add('run') # delayed writing of the run_card
         # special mode for set run_card nocut T (generated by set no_parton_cut
         elif card == 'run_card' and args[start] in ['nocut', 'no_cut']:
-            logger.info("Going to remove all cuts from the run_card", '$MG:color:BLACK')
+            logger.info("Going to remove all cuts from the run_card", '$MG:BOLD')
             self.run_card.remove_all_cut()
             self.modified_card.add('run') # delayed writing of the run_card
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
@@ -5375,7 +5375,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.shower_card.set_param(args[start],default[args[start]], self.paths['shower'])
                 else:
-                    logger.info('remove information %s from the shower_card' % args[start],'$MG:color:BLACK')
+                    logger.info('remove information %s from the shower_card' % args[start],'$MG:BOLD')
                     del self.shower_card[args[start]]
             elif args[start+1].lower() in ['t','.true.','true']:
                 self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
@@ -5454,20 +5454,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('block %s was not present in the current MadWeight card. We are adding it' % block)
             self.mw_card[block] = {}
         elif name not in self.mw_card[block]:
-            logger.info('name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block),'$MG:color:BLACK')
+            logger.info('name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block),'$MG:BOLD')
         if value == 'default':
             import madgraph.madweight.Cards as mwcards
             mw_default = mwcards.Card(self.paths['MadWeight_default'])
             try:
                 value = mw_default[block][name]
             except KeyError:
-                logger.info('removing id "%s" from Block "%s" '% (name, block),'$MG:color:BLACK')
+                logger.info('removing id "%s" from Block "%s" '% (name, block),'$MG:BOLD')
                 if name in self.mw_card[block]:
                     del self.mw_card[block][name]
                 return
         if value:
             logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s',
-                    block, name, value, '$MG:color:BLACK')
+                    block, name, value, '$MG:BOLD')
         else:
             logger.warning("Invalid command: No value. To set default value. Use \"default\" as value")
             return
@@ -5481,7 +5481,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             self.run_card.set(name, value, user=True)
         new_value = self.run_card.get(name)
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:color:BLACK')        
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:BOLD')        
 
 
     def setML(self, name, value, default=False):
@@ -5491,7 +5491,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value),'$MG:color:BLACK')
+        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value),'$MG:BOLD')
         if default and name.lower() in self.MLcard.user_set:
             self.MLcard.user_set.remove(name.lower())
 
@@ -5501,7 +5501,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:color:BLACK')
+        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:BOLD')
         if default and name.lower() in self.PY8Card.user_set:
             self.PY8Card.user_set.remove(name.lower())
 
@@ -5539,7 +5539,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('Invalid input: \'%s\' not valid intput.'% value)
 
         logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value), '$MG:color:BLACK')
+                    (block, lhaid, value), '$MG:BOLD')
         self.param_card[block].param_dict[lhaid].value = value
     
     def check_card_consistency(self):
@@ -5582,7 +5582,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(self.paths['reweight']).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
-                    logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
+                    logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:BOLD' )
                     self.do_set('run_card store_rwgt_info True')
         
         # if external computation for the systematics are asked then switch 
@@ -5597,12 +5597,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # @LO if PY6 shower => event_norm on sum
         if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
             if self.run_card['event_norm'] != 'sum':
-                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
                 self.do_set('run_card event_norm sum') 
         # @LO if PY6 shower => event_norm on sum
         elif 'pythia8_card.dat' in self.cards:
             if self.run_card['event_norm'] == 'sum':
-                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
                 self.do_set('run_card event_norm average')         
         
         # Check the extralibs flag.
@@ -5691,7 +5691,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         if self.fail_due_to_format == 10:
                             missing, unknow = str(error).split('\n')[-2:]
                             logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
-                            logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
+                            logger.info("Type \"update missing\" to use default value.\n ", '$MG:BOLD')
                             self.value = False # to avoid that entering a command stop the question
                             return self.reask(True)
                         else:
@@ -5929,11 +5929,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         add_entry += check_block(self, 'decay')
         
         if add_entry:
-            logger.info('write new param_card with %s new parameter(s).', add_entry, '$MG:color:BLACK')
+            logger.info('write new param_card with %s new parameter(s).', add_entry, '$MG:BOLD')
             open(self.paths['param'],'w').write(''.join(text))
             self.reload_card(self.paths['param'])
         else:
-            logger.info('No missing parameter detected.', '$MG:color:BLACK')
+            logger.info('No missing parameter detected.', '$MG:BOLD')
     
     
     def check_answer_consistency(self):
@@ -6053,7 +6053,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             particle = line.split('>')[0].strip()
             text = open(path).read()
             line = line.replace('--add', '').replace('-add','')
-            logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:BOLD')
             if 'launch' in text:
                 text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
             else: 
@@ -6062,7 +6062,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             # Here we have to remove all the previous definition of the decay
             #first find the particle
             particle = line.split('>')[0].strip()
-            logger.info("change madspin_card to define the decay of %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            logger.info("change madspin_card to define the decay of %s: %s" %(particle, line.strip()), '$MG:BOLD')
             particle = particle.replace('+','\+').replace('-','\-')
             decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
             text= open(path).read()
@@ -6194,7 +6194,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
-            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
+            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:BOLD')
         elif len(args) > 0:
             if args[0] in self.cards:
                 card = args[0]
@@ -6223,7 +6223,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff.write("# %s \n" % card)
                 ff.write("%s \n" %  line.split(None,2)[2])
                 ff.close()
-                logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:BOLD')
             elif args[1].startswith('--line_position=afterlast'):
                 #position in file determined by user
                 text = open(path).read()
@@ -6234,7 +6234,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
                 #position in file determined by user
@@ -6245,7 +6245,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
                 
             elif args[1].startswith('--after_line=banner'):
@@ -6258,7 +6258,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = posline
                 
             elif args[1].startswith('--replace_line='):
@@ -6288,7 +6288,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
-                         (old_line, posline, card, new_line ),'$MG:color:BLACK') 
+                         (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
                                             
             
@@ -6306,7 +6306,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
@@ -6324,14 +6324,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:color:BLACK')                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
                 self.last_editline_pos = posline
                                                  
             else:
                 ff = open(path,'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
-                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
+                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:BOLD')
                 self.last_editline_pos = -1
 
             self.reload_card(path)

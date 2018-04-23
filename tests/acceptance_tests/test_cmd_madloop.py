@@ -74,7 +74,7 @@ class TestCmdLoop(unittest.TestCase):
     
     def do(self, line):
         """ exec a line in the interface """        
-        self.interface.onecmd(line)
+        self.interface.exec_cmd(line)
     
     @classmethod
     def setup_logFile_for_logger(cls,full_logname,restore=False,level=logging.DEBUG):

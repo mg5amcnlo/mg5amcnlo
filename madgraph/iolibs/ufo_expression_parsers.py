@@ -136,7 +136,7 @@ class UFOExpressionParser(object):
         r'(?<!\w)re(?=\()'
         return t
     def t_RE2(self, t):
-        r'\.real|\.imag'
+        r'\.real|\.imag|\.conjugate\(\)'
         return t
     
     def t_COMPLEX(self, t):
@@ -240,6 +240,7 @@ class UFOExpressionParser(object):
         "group : '(' expression ')'"
         p[0] = '(' + p[2] +')'
 
+
     def p_group_parentheses_boolexpr(self, p):
         "boolexpression : '(' boolexpression ')'"
         p[0] = '(' + p[2] +')'
@@ -263,6 +264,22 @@ class UFOExpressionParser(object):
         if re_groups:
             p1 = re_groups.group("name")
         p[0] = p1 + '(' + p[3] + ',' + p[5] + ')'
+
+    def p_expression_function3(self, p):
+        "expression : FUNCTION '(' expression ',' expression ',' expression ')'"
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+        p[0] = p1 + '(' + p[3] + ',' + p[5] + ' , ' + p[7] + ')'
+
+    def p_expression_function4(self, p):
+        "expression : FUNCTION '(' expression ',' expression ',' expression ',' expression ')'"
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+        p[0] = p1 + '(' + p[3] + ',' + p[5] + ' , ' + p[7] + ' , ' + p[9] + ')'
 
     def p_error(self, p):
         if p:
@@ -397,12 +414,18 @@ class UFOExpressionParserFortran(UFOExpressionParser):
             if p[1].startswith('('):
                 p[0] = 'dimag' +p[1]
             else:
-                p[0] = 'dimag(%s)' % p[1]            
+                p[0] = 'dimag(%s)' % p[1]
+        elif p[2] == '.conjugate()':
+            if p[1].startswith('('):
+                p[0] = 'conjg(DCMPLX%s)' % p[1]
+            else:
+                p[0] = 'conjg(DCMPLX(%s))' % p[1]                        
 
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'pi'
         self.to_define.add('pi')
+
 
 class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     """A parser for UFO algebraic expressions, outputting

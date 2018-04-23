@@ -2972,7 +2972,7 @@ class Process(PhysicsObject):
         the user-defined list of orders, it can be ommitted for some info
         displays."""
 
-        if isinstance(prefix, bool):
+        if isinstance(prefix, bool) and prefix:
             mystr = " " * indent + "Process: "
         elif isinstance(prefix, str):
             mystr = prefix
