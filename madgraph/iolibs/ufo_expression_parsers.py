@@ -125,7 +125,6 @@ class UFOExpressionParser(object):
         return t
     def t_PI(self, t):
         r'cmath\.pi'
-        misc.sprint('pi detected')
         return t
     def t_CONJ(self, t):
         r'complexconjugate'
@@ -315,7 +314,6 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def clean(self):
         """remove information about object parse for previous parsing
         """
-        misc.sprint('clean to_define')
         self.to_define = set()
         
         

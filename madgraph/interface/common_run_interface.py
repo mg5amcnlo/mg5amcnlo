@@ -6248,7 +6248,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
                 
-            elif args[1].startswith('--after_line=banner'):
+            elif args[1].startswith(('--after_line=banner','--after_line=\'banner\'','--after_line=\"banner\"')):
                 # write the line at the first not commented line
                 text = open(path).read()
                 split = text.split('\n')
