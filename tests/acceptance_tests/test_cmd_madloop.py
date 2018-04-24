@@ -380,6 +380,10 @@ class TestCmdLoop(unittest.TestCase):
                  'acceptance_test_aem_emvevex.log',
                  'acceptance_test_aem_emvevex_widths_increased.pkl',
                  'acceptance_test_aem_emvevex_widths_increased.log']
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
+                
         output_name = 'SAVEDTMP_CHECK_acceptance_test_aem_emvevex__%s__'
         
         try:
