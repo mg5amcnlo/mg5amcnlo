@@ -2932,7 +2932,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         including the necessary matrix.f and nexternal.inc files"""
 
         cwd = os.getcwd()
-        misc.sprint(type(matrix_element))
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -6200,7 +6199,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_arg
           %(additional)s
           """ %\
-          {"additional": "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct]),
+          {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
            'complex_mp_format':self.mp_complex_format
            }) 
 
@@ -6443,27 +6442,26 @@ class UFO_model_to_mg4(object):
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg"]:
                         ufo_fct_template = """
-          %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
+          %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
           %(definitions)s
-          mp__%(name)s = %(fct)s
+          mp_%(name)s = %(fct)s
 
           return
           end
           """
-          
                         str_fct = self.mp_p_to_f.parse(fct.expr)
-                        if not self.p_to_f.to_define:
+                        if not self.mp_p_to_f.to_define:
                             definitions = []
                         else:
                             definitions=[]
-                            for d in self.p_to_f.to_define:
-                                if d == 'mp_pi':
-                                    definitions.append(' %s mp_pi' % self.mp_real_format)
-                                    definitions.append(' data mp_pi /3.141592653589793238462643383279502884197e+00_16/')
+                            for d in self.mp_p_to_f.to_define:
+                                if d == 'pi': 
+                                    definitions.append(' %s mp__pi' % self.mp_real_format)
+                                    definitions.append(' data mp__pi /3.141592653589793238462643383279502884197e+00_16/')
                                 else:   
-                                    definitions.append(' %s %s' % (self.mp_complex_format,d))
+                                    definitions.append(' %s mp_%s' % (self.mp_complex_format,d))
                         text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", mp__".join(fct.arguments),                
