@@ -40,7 +40,8 @@ extern "C" {
     int nup_in, idprup_in;
     double xwgtup_in, scalup_in, aqedup_in, aqcdup_in;
     int idup_in[500], istup_in[500], mothup_in[500][2], icolup_in[500][2];
-    double pup_in[500][5], vtimup_in[500],spinup_in[500];
+    double pup_in[500][5], vtimup_in[500],spinup_in[500],
+           startscalup_in[500][2], stopscalup_in[500][2];
   } hepeup_in_;
 
 }
@@ -61,7 +62,8 @@ extern "C" {
     int nup_out, idprup_out;
     double xwgtup_out, scalup_out, aqedup_out, aqcdup_out;
     int idup_out[500], istup_out[500], mothup_out[500][2], icolup_out[500][2];
-    double pup_out[500][5], vtimup_out[500],spinup_out[500];
+    double pup_out[500][5], vtimup_out[500],spinup_out[500],
+           startscalup_out[500][2], stopscalup_out[500][2];
   } hepeup_out_;
 
 }

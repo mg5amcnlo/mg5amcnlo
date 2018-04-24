@@ -1049,6 +1049,13 @@ void DireTimes::setupQCDdip( int iSys, int i, int colTag, int colSign,
       else if (sizeIn > 0) pTmax *= pTmaxFudgeMPI;
     //} else pTmax = 0.5 * m( event[iRad], event[iRec]);
     } else pTmax = m( event[iRad], event[iRec]);
+
+    // Force maximal pT to LHEF input value.
+    if ( abs(event[iRad].status()) > 20 &&  abs(event[iRad].status()) < 24
+      && settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+      && event[iRad].scale() > 0.)
+      pTmax = event[iRad].scale();
+
     int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
     int isrType  = (event[iRec].isFinal()) ? 0 : event[iRec].mother1();
     // This line in case mother is a rescattered parton.

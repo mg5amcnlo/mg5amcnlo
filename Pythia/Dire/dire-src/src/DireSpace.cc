@@ -619,6 +619,13 @@ void DireSpace::setupQCDdip( int iSys, int side, int colTag, int colSign,
     if (iSys == 0 || (iSys == 1 && doSecondHard)) pTmax *= pTmaxFudge;
     else if (sizeIn > 0) pTmax *= pTmaxFudgeMPI;
   } else pTmax = 0.5 * m( event[iRad], event[iPartner]);
+
+  // Force maximal pT to LHEF input value.
+  if ( abs(event[iRad].status()) > 20 &&  abs(event[iRad].status()) < 24
+    && settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+    && event[iRad].scale() > 0.)
+    pTmax = event[iRad].scale();
+
   int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
   //dipEnd.push_back( DireSpaceEnd( iSys, side, iRad, iPartner, pTmax, colType,
   //                                0, 0, MEtype, true) );

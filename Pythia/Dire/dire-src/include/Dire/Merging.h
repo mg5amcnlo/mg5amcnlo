@@ -49,7 +49,10 @@ public:
   DireSpace* isr;
 
   // Destructor.
-  ~MyMerging(){ if (myLHEF3Ptr) delete myLHEF3Ptr; }
+  ~MyMerging(){
+    if (myLHEF3Ptr) delete myLHEF3Ptr;
+    if (myHistory) delete myHistory;
+  }
 
   // Initialisation function for internal use inside Pythia source code
   virtual void init();

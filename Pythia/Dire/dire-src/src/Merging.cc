@@ -145,6 +145,10 @@ int MyMerging::mergeProcess(Event& process){
 //stoppingScalesSave.push_back(2.0);
 //stoppingScalesSave.push_back(3.0);
 
+  process.list(true,true);
+  infoPtr->scales->list(cout);
+    abort();
+
 
   int vetoCode = 1;
 

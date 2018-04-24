@@ -18,10 +18,13 @@ C     ------------------------------
      &        MOTHUP_IN(2,MAXNUP_IN),ICOLUP_IN(2,MAXNUP_IN)
       DOUBLE PRECISION XWGTUP_IN,AQEDUP_IN,AQCDUP_IN, SCALUP_IN,
      &       PUP_IN(5,MAXNUP_IN),VTIMUP_IN(MAXNUP_IN),SPINUP_IN(MAXNUP_IN)
+     &       STARTSCALUP_IN(2,MAXNUP_IN),
+     &       STOPSCALUP_IN(2,MAXNUP_IN)
 
       common /hepeup_in/ nup_in, idprup_in, xwgtup_in, scalup_in,
      &                   aqedup_in, aqcdup_in, idup_in, istup_in,
-     &                   mothup_in, icolup_in, pup_in, vtimup_in, spinup_in	 
+     &                   mothup_in, icolup_in, pup_in, vtimup_in, spinup_in,
+     &                   startscalup_in, stopscalup_in
 
 
 C     Ougoing event streams
@@ -44,7 +47,11 @@ C     ------------------------------
      &        MOTHUP_out(2,MAXNUP_out),ICOLUP_out(2,MAXNUP_out)
       DOUBLE PRECISION XWGTUP_out,AQEDUP_out,AQCDUP_out, SCALUP_out,
      &       PUP_out(5,MAXNUP_out),VTIMUP_out(MAXNUP_out),SPINUP_out(MAXNUP_out)
+     &       STARTSCALUP_OUT(2,MAXNUP_OUT),
+     &       STOPSCALUP_OUT(2,MAXNUP_OUT)
 
       common /hepeup_out/ nup_out, idprup_out, xwgtup_out, scalup_out,
      &                   aqedup_out, aqcdup_out, idup_out, istup_out,
-     &                   mothup_out, icolup_out, pup_out, vtimup_out, spinup_out
+     &                   mothup_out, icolup_out, pup_out, vtimup_out, spinup_out,
+     &                   startscalup_out, stopscalup_out
+
