@@ -375,7 +375,17 @@ class TestMECmdRWGT(unittest.TestCase):
         with misc.chdir(pjoin(self.path)):
             if self.path not in sys.path:
                 sys.path.insert(0, self.path)
-            mymod = __import__('rw_mevirt.Source.rwgt2py', globals(), locals(), [],-1)
+            mod_name = 'rw_mevirt.Source.rwgt2py'
+            if mod_name in sys.modules.keys():
+                del sys.modules[mod_name]
+                tmp_mod_name = mod_name
+                while '.' in tmp_mod_name:
+                    tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
+                    del sys.modules[tmp_mod_name]
+                mymod = __import__(mod_name, globals(), locals(), [],-1)  
+            else:
+                mymod = __import__(mod_name, globals(), locals(), [],-1) 
+                
             mymod =  mymod.Source.rwgt2py
             #mymod.initialise([1,1], 244600)
        
@@ -393,24 +403,26 @@ class TestMECmdRWGT(unittest.TestCase):
         #self.assertAlmostEqual(value, 1.0)
             
         out, partial = mymod.get_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)  
-        print ref_wgts, partial, [partial[i]/ref_wgts[i] for i in range(2)]
-        print out, orig_wgt, out/orig_wgt
-
-        
-        
-        
-        
-        if True and __debug__: #this is only for trivial reweighting
-            if not misc.equal(out, orig_wgt,1):
-                for i, computed in enumerate(partial):
-                    if not misc.equal(computed, ref_wgts[i], 3):
-                        misc.sprint("fail since %s != %s for wgt %s " % (computed, ref_wgts[i], i))
-                misc.sprint("fail since %s != %s for the sum." % (out, orig_wgt))
-                #raw_input()
-            
+        #print ref_wgts, partial, [partial[i]/ref_wgts[i] for i in range(2)]
+        #print out, orig_wgt, out/orig_wgt
         self.assertAlmostEqual(partial[0], ref_wgts[0], places=2)
         self.assertAlmostEqual(partial[1], ref_wgts[1], places=2)
-        self.assertAlmostEqual(out, orig_wgt, places=2)    
+        self.assertAlmostEqual(out, orig_wgt, places=2)
+        
+        
+        
+        
+        #if True and __debug__: #this is only for trivial reweighting
+        #    if not misc.equal(out, orig_wgt,1):
+        #        misc.sprint(event)
+        #        for i, computed in enumerate(partial):
+        #            if not misc.equal(computed, ref_wgts[i], 3):
+        #                misc.sprint("fail since %s != %s for wgt %s " % (computed, ref_wgts[i], i))
+        #                misc.sprint(need_V, R, ratio_T)
+        #        misc.sprint("fail since %s != %s for the sum." % (out, orig_wgt))
+        #        misc.sprint( need_V, R, ratio_T)
+        #        raw_input()
+                
 
             
         
