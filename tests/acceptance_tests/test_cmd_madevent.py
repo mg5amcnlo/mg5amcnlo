@@ -297,16 +297,16 @@ class TestMECmdShell(unittest.TestCase):
         text = open('%s/param_card.dat' % self.path).read()
         pattern = re.compile(r"decay\s+23\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
-        self.assertAlmostEqual(2.42823,value, delta=1e-3)
+        self.assertAlmostEqual(2.48883,value, delta=1e-3)
         pattern = re.compile(r"decay\s+24\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
-        self.assertAlmostEqual(2.028440,value, delta=1e-3)
+        self.assertAlmostEqual(2.08465,value, delta=1e-3)
         pattern = re.compile(r"decay\s+25\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
         self.assertAlmostEqual(3.514960e-03,value, delta=1e-3)
         pattern = re.compile(r"decay\s+6\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
-        self.assertAlmostEqual(1.354080,value, delta=5e-3)        
+        self.assertAlmostEqual(1.36728,value, delta=5e-3)        
         
 
 
