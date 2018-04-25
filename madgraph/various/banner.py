@@ -2643,10 +2643,7 @@ class RunCard(ConfigFile):
             else:
                 return lhaid
         else: 
-            return {'none': 0, #'mrs02nl':20250, 'mrs02nn':20270, 
-                    #'cteq4_m': 19150,
-                    #'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
-                    #'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
+            return {'none': 0, 
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
                     }[pdf]    
@@ -2737,7 +2734,7 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1")
+        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo', 'ct14q00','ct14q07','ct14q14','ct14q21']), 
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
@@ -3005,13 +3002,6 @@ class RunCardLO(RunCard):
                     self['mmjj'] = 0.0 
 
         # check validity of the pdf set
-        possible_set = ['lhapdf',
-        'cteq6_m','cteq6_l', 'cteq6l1',
-        'nn23lo', 'nn23lo1', 'nn23nlo',
-        'ct14q00','ct14q07','ct14q14','ct14q21']
-                        
-        if self['pdlabel'] not in possible_set:
-            raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel): %s. Possible choice are:\n %s' % (self['pdlabel'], ', '.join(possible_set))
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
@@ -3646,7 +3636,7 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo')                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'])                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -3715,7 +3705,6 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('g',{'__type__':0.}, include=False)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
@@ -3776,11 +3765,6 @@ class RunCardNLO(RunCard):
         if self['iappl'] != 0 and not self['reweight_scale']:
             raise InvalidRunCard('APPLgrid generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
-
-        # check that the pdf is set correctly
-        possible_set = ['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo', 'ct14q00','ct14q07','ct14q14','ct14q21']
-        if self['pdlabel'] not in possible_set:
-            raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
 
         # Hidden values check
         if self['qes_ref_fixed'] == -1.0:
