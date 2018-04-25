@@ -2331,9 +2331,13 @@ class RunCard(ConfigFile):
             if not self.list_parameter:
                 text = text % self
             else:
-                data = dict(self)
+                data = dict(self)                
                 for name in self.list_parameter:
-                    data[name] = ', '.join(str(v) for v in data[name])
+                    if self.list_parameter[name] != str:
+                        data[name] = ', '.join(str(v) for v in data[name])
+                    else:
+                        data[name] = "['%s']" % "', '".join(str(v) for v in data[name])
+                        misc.sprint(name, self.list_parameter[name], data[name])
                 text = text % data
         else:                        
             text = ""
@@ -2357,7 +2361,7 @@ class RunCard(ConfigFile):
                             if name in to_write:
                                 to_write.remove(name)
                     else:
-                        text += this_group.off_template % self
+                        text += this_group.template_off % self
                     
                 elif len(nline) != 2:
                     text += line
@@ -2687,6 +2691,8 @@ class RunCardLO(RunCard):
   %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  
 """,
             template_off='# To see heavy ion options: type "update ion_pdf"'),
+              
+              
 #    BEAM POLARIZATION OPTIONAL BLOCK
         runblock(name='beam_pol', fields=('polbeam1','polbeam2'),
             template_on=\
@@ -2696,7 +2702,25 @@ class RunCardLO(RunCard):
      %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
      %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
 """,                                               
-            template_off='# To see polarised beam options: type "update beam_pol"')
+            template_off='# To see polarised beam options: type "update beam_pol"'),
+
+#    SYSCALC OPTIONAL BLOCK              
+        runblock(name='syscalc', fields=('sys_scalefact', 'sys_alpsfact','sys_matchscale','sys_pdf'),
+              template_on=\
+"""#**************************************
+# Parameter below of the systematics study
+#  will be used by SysCalc (if installed)
+#**************************************
+#
+%(sys_scalefact)s = sys_scalefact  # factorization/renormalization scale factor
+%(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
+%(sys_matchscale)s = sys_matchscale # variation of merging scale
+# PDF sets and number of members (0 or none for all members).
+%(sys_pdf)s = sys_pdf # list of pdf sets. (errorset not valid for syscalc)
+# MSTW2008nlo68cl.LHgrid 1  = sys_pdf
+#
+""", 
+    template_off= '# Syscalc is deprecated but to see the associate options type\'update syscalc\''),
     ]
     
     
@@ -2882,13 +2906,13 @@ class RunCardLO(RunCard):
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
-        self.add_param('systematics_program', 'auto', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
-        self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
+        self.add_param('systematics_program', 'systematics', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
+        self.add_param('systematics_arguments', ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset'], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
         
-        self.add_param("sys_scalefact", "0.5 1 2", include=False)
-        self.add_param("sys_alpsfact", "None", include=False)
-        self.add_param("sys_matchscale", "auto", include=False)
-        self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
+        self.add_param("sys_scalefact", "0.5 1 2", include=False, hidden=True)
+        self.add_param("sys_alpsfact", "None", include=False, hidden=True)
+        self.add_param("sys_matchscale", "auto", include=False, hidden=True)
+        self.add_param("sys_pdf", "errorset", include=False, hidden=True)
         self.add_param("sys_scalecorrelation", -1, include=False, hidden=True)
 
         #parameter not in the run_card by default
@@ -3702,7 +3726,6 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('g',{'__type__':0.}, include=False)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)

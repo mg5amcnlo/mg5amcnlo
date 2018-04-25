@@ -564,10 +564,13 @@ class MadEventAlreadyRunning(InvalidCmd):
 class AlreadyRunning(MadEventAlreadyRunning):
     pass
 
+class ZeroResult(Exception): pass
+
 #===============================================================================
 # CommonRunCmd
 #===============================================================================
 class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
+
 
     debug_output = 'ME5_debug'
     helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
@@ -3234,20 +3237,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         - Check that no width are too small (raise a warning if this is the case)
         3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
+        return self.static_check_param_card(path, self, run=run, dependent=dependent)
+        
+    @staticmethod
+    def static_check_param_card(path, interface, run=True, dependent=False):
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
         pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
                
         if pattern_scan.search(text):
-            if not isinstance(self, cmd.CmdShell):
+            if not isinstance(interface, cmd.CmdShell):
                 # we are in web mode => forbid scan due to security risk
                 raise Exception, "Scan are not allowed in web mode"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(text)
-            self.param_card_iterator = main_card
+            interface.param_card_iterator = main_card
             first_card = main_card.next(autostart=True)
             first_card.write(path)
-            return self.check_param_card(path, run, dependent=True)
+            return CommonRunCmd.static_check_param_card(path, interface, run, dependent=True)
         
         pdg_info = pattern_width.findall(text)
         if pdg_info:
@@ -3256,9 +3263,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 has_nlo = any(nlo.lower()=="@nlo" for _,nlo in pdg_info)
                 pdg = [pdg for pdg,nlo in pdg_info]
                 if not has_nlo:
-                    self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                    line = '%s' % (' '.join(pdg))
                 else:
-                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path)) 
+                    line = '%s --nlo' % (' '.join(pdg))
+                CommonRunCmd.static_compute_widths(line, interface, path)
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
@@ -3267,8 +3275,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 
         card = check_param_card.ParamCard(path)
         if dependent:   
-            
-            AskforEditCard.update_dependent(self, self.me_dir, card, path, timer=20)
+            AskforEditCard.update_dependent(interface, interface.me_dir, card, path, timer=20)
         
         for param in card['decay']:
             width = param.value
@@ -3290,6 +3297,42 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     time.sleep(5)
                     CommonRunCmd.sleep_for_error = False
         return
+
+    @staticmethod
+    def static_compute_widths(line, interface, path=None):
+        """ factory to try to find a way to call the static method"""
+        
+        handled = True
+        if isinstance(interface, CommonRunCmd):
+            if path:
+                line = '%s %s' % (line, path) 
+            interface.do_compute_widths(line)
+        elif not MADEVENT:
+            import madgraph.interface.master_interface as master
+            if isinstance(interface, master.MasterCmd):
+                interface.do_compute_widths('%s --path=%s' % (line, path))
+            else:
+                handled = False
+        else:
+            handled = False
+            
+        if handled:
+            return
+
+        if hasattr(interface, 'do_compute_width'):
+            interface.do_compute_widths('%s --path=%s' % (line, path))
+        elif hasattr(interface, 'mother') and interface.mother:
+            return CommonRunCmd.static_compute_width(line, interface.mother, path)
+        else:
+            raise Exception, 'fail to find a way to handle Auto width'
+        
+        
+    def store_scan_result(self):
+        """return the information that need to be kept for the scan summary.
+        Auto-width are automatically added."""
+        
+        return {'cross': self.results.current['cross']}
+
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -5996,23 +6039,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # splitting the line
         line = line.strip()
         args = line.split()
-            
         if line == '' and self.default_value is not None:
             self.value = self.default_value
         # check if input is a file
         elif hasattr(self, 'do_%s' % args[0]):
             self.do_set(' '.join(args[1:]))
+        elif line.strip() != '0' and line.strip() != 'done' and \
+            str(line) != 'EOF' and line.strip() in self.allow_arg:  
+            self.open_file(line)
+            self.value = 'repeat'
         elif os.path.isfile(line):
             self.copy_file(line)
             self.value = 'repeat'
         elif self.me_dir and os.path.exists(pjoin(self.me_dir, line)):
             self.copy_file(pjoin(self.me_dir,line))
             self.value = 'repeat'            
-        elif line.strip() != '0' and line.strip() != 'done' and \
-            str(line) != 'EOF' and line.strip() in self.allow_arg:            
-            self.open_file(line)
-            self.value = 'repeat'
-        elif line.strip().startswith(('http:','www')):
+        elif line.strip().startswith(('http:','www', 'https')):
             self.value = 'repeat'
             import tempfile
             fsock, path = tempfile.mkstemp()
@@ -6537,4 +6579,110 @@ You can also copy/paste, your event file here.''')
         else:
             logger.debug('not keep in sync: %s', path)
         return path
+
+
+# A decorator function to handle in a nice way scan/auto width
+def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'param_card.dat'),
+                      check_card=lambda obj: CommonRunCmd.static_check_param_card,
+                      store_for_scan=lambda obj: obj.store_scan_result,
+                      get_run_name=lambda obj: obj.run_name,
+                      set_run_name=lambda obj: obj.set_run_name,
+                      result_path=lambda obj:  pjoin(obj.me_dir, 'Events', 'scan_%s.txt' ),
+                      ignoreerror=ZeroResult):
+    """ This is a decorator for customizing/using scan over the param_card (or technically other)
+    This should be use like this:
+    
+    @scanhandling(arguments)
+    def run_launch(self, *args, **opts)
+
+    possible arguments are listed above and should be function who takes a single
+    argument the instance of intereset. those return
+    input_path -> function that return the path of the card to read
+    check_card -> function that return the function to read the card and init stuff (compute auto-width/init self.iterator/...)
+                  This function should define the self.param_card_iterator if a scan exists
+                  
+    store_for_scan -> function that return a dict of entry to keep in memory
+    get_run_name -> function that  return the string with the current run_name
+    set_run_name -> function that return the function that allow the set the next run_name
+    result_path -> function that return the path of the summary result to write
+    ignoreerror -> one class of error which are not for the error
+    
+    All the function are taking a single argument (an instance of the class on which the decorator is used)
+    and they can either return themself a function or a string.
+    
+    """
+    class restore_iterator(object):
+        """ensure that the original card is always restore even for crash"""  
+        def __init__(self, iterator, path):
+            self.iterator = iterator
+            self.path = path
+
+        def __enter__(self):
+            return self.iterator
+        
+        def __exit__(self, ctype, value, traceback ):
+            self.iterator.write(self.path)
+    
+    def decorator(original_fct):
+        def new_fct(obj, *args, **opts):
+            
+            if isinstance(input_path, str):
+                card_path = input_path
+            else:
+                card_path = input_path(obj)
+            
+            #
+            # This is the function that 
+            #     1. compute the widths
+            #     2. define the scan iterator
+            #     3. raise some warning
+            #     4. update dependent parameter (off by default but for scan)
+            # if scan is found object.param_card_iterator should be define by the function
+            check_card(obj)(card_path, obj)
+
+            param_card_iterator = None
+            if obj.param_card_iterator:
+                param_card_iterator = obj.param_card_iterator
+                obj.param_card_iterator = [] # ensure that the code does not re-trigger a scan
+            
+            if not param_card_iterator:
+                #first run of the function
+                original_fct(obj, *args, **opts)
+                return
+            
+            with restore_iterator(param_card_iterator, card_path):
+                # this with statement ensure that the original card is restore
+                # whatever happens inside those block
+    
+                if not hasattr(obj, 'allow_notification_center'):
+                    obj.allow_notification_center = False
+                with misc.TMP_variable(obj, 'allow_notification_center', False):
+                    orig_name = get_run_name(obj)
+                    next_name = param_card_iterator.get_next_name(orig_name)
+                    set_run_name(obj)(next_name)
+                    # run for the first time
+                    original_fct(obj, *args, **opts)
+                    param_card_iterator.store_entry(next_name, store_for_scan(obj)(), param_card_path=card_path)
+                    for card in param_card_iterator:
+                        card.write(card_path)
+                        # still have to check for the auto-wdith
+                        check_card(obj)(card_path, obj, dependent=True) 
+                        next_name = param_card_iterator.get_next_name(next_name)
+                        set_run_name(obj)(next_name)
+                        try:
+                            original_fct(obj, *args, **opts)
+                        except ignoreerror, error:
+                            param_card_iterator.store_entry(next_name, {'exception': error})
+                        else:
+                            param_card_iterator.store_entry(next_name, store_for_scan(obj)(), param_card_path=card_path)
+                            
+                #param_card_iterator.write(card_path) #-> this is done by the with statement
+                name = misc.get_scan_name(orig_name, next_name)
+                path = result_path(obj) % name 
+                logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
+                param_card_iterator.write_summary(path)
+        return new_fct
+    return decorator    
+
+
 

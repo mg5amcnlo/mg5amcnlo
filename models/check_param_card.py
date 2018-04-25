@@ -19,6 +19,7 @@ except:
     import internal.file_writers as file_writers
     import internal.misc as misc
 
+pjoin = os.path.join 
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -881,7 +882,8 @@ class ParamCardMP(ParamCard):
                 variable, ('%e' % value)))
 
 
-
+  
+    
 class ParamCardIterator(ParamCard):
     """A class keeping track of the scan: flag in the param_card and 
        having an __iter__() function to scan over all the points of the scan.
@@ -973,6 +975,7 @@ class ParamCardIterator(ParamCard):
     
     def store_entry(self, run_name, cross, error=None, param_card_path=None):
         """store the value of the cross-section"""
+        
         if isinstance(cross, dict):
             info = dict(cross)
             info.update({'bench' : self.itertag, 'run_name': run_name})
@@ -985,8 +988,8 @@ class ParamCardIterator(ParamCard):
         
         if self.autowidth and param_card_path:
             paramcard = ParamCard(param_card_path)
-        for param in self.autowidth:
-            self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
+            for param in self.autowidth:
+                self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
             
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
@@ -1000,8 +1003,8 @@ class ParamCardIterator(ParamCard):
             keys = order
         else:
             keys = self.cross[0].keys()
-            keys.remove('bench')
-            keys.remove('run_name')
+            if 'bench' in keys: keys.remove('bench')
+            if 'run_name' in keys: keys.remove('run_name')
             keys.sort()
             if 'cross(pb)' in keys:
                 keys.remove('cross(pb)')
@@ -1029,8 +1032,10 @@ class ParamCardIterator(ParamCard):
             bench = info['bench']
             data = []
             for k in keys:
-                data.append(info[k])
-                
+                if k in info:
+                    data.append(info[k])
+                else:
+                    data.append('nan')
             ff.write(formatting % tuple([name] + bench + data))
                 
         if not path:
@@ -1047,6 +1052,7 @@ class ParamCardIterator(ParamCard):
         # no valid '_' in the name
         return '%s_scan_02' % run_name
     
+
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of
