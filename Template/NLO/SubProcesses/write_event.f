@@ -422,7 +422,7 @@ c********************************************************************
       end
 
       subroutine fill_HEPEUP_event_2(p, wgt, npart, id, status, mothers,
-     &           cols, spin, scale)
+     &           cols, spin, scalup, scales)
       implicit none
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -430,7 +430,7 @@ c********************************************************************
       include "coupl.inc"
 c      include "pmass.inc"
       include 'hep_event_streams.inc'
-      double precision wgt, aqcd, aqed
+      double precision wgt, aqcd, aqed, scalup
 
       double precision p(0:3,nexternal)
       integer id(nexternal)
@@ -438,17 +438,16 @@ c      include "pmass.inc"
       integer cols(2,nexternal)
       integer status(nexternal)
       integer spin(nexternal)
-      double precision scale(2*nexternal)
+      double precision scales(2*nexternal)
       double precision pmass(nexternal)
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
 
-      integer npart, i, proc_code
+      integer npart, i, proc_code, iscale
       logical firsttime
       data firsttime/.true./
 c
-      scalup_out = scale(1)
-      scalup_out = 1d9
+      scalup_out = scalup
 
 c     Read the particle masses.
       include "pmass.inc"
@@ -482,6 +481,7 @@ c********************************************************************
       XWGTUP_out=wgt
       AQEDUP_out=aqed
       AQCDUP_out=aqcd
+      iscale=1
       do i=1,NUP_out
         IDUP_out(i)=id(i)
         ISTUP_out(i)=status(i)
@@ -493,10 +493,11 @@ c********************************************************************
         PUP_out(2,i)=p(2,i)
         PUP_out(3,i)=p(3,i)
         PUP_out(4,i)=p(0,i)
-c        PUP_out(5,i)=dsqrt(max(0.0,p(0,i)*p(0,i) - p(1,i)*p(1,i) - p(2,i)*p(2,i) - p(3,i)*p(3,i)))
         PUP_out(5,i)=pmass(i)
         VTIMUP_out(i)=0.d0
         SPINUP_out(i)=dfloat(spin(i))
+        SCALES_out(1,i)=scales(i)
+        SCALES_out(2,i)=scales(i+NUP_out)
       enddo
 
       return

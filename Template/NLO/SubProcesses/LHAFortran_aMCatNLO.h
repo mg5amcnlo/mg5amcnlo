@@ -40,8 +40,7 @@ extern "C" {
     int nup_in, idprup_in;
     double xwgtup_in, scalup_in, aqedup_in, aqcdup_in;
     int idup_in[500], istup_in[500], mothup_in[500][2], icolup_in[500][2];
-    double pup_in[500][5], vtimup_in[500],spinup_in[500],
-           startscalup_in[500][2], stopscalup_in[500][2];
+    double pup_in[500][5], vtimup_in[500],spinup_in[500], scales_in[500][2];
   } hepeup_in_;
 
 }
@@ -62,8 +61,7 @@ extern "C" {
     int nup_out, idprup_out;
     double xwgtup_out, scalup_out, aqedup_out, aqcdup_out;
     int idup_out[500], istup_out[500], mothup_out[500][2], icolup_out[500][2];
-    double pup_out[500][5], vtimup_out[500],spinup_out[500],
-           startscalup_out[500][2], stopscalup_out[500][2];
+    double pup_out[500][5], vtimup_out[500],spinup_out[500], scales_out[500][2];
   } hepeup_out_;
 
 }
@@ -124,17 +122,52 @@ public:
     setProcess(hepeup_out_.idprup_out, hepeup_out_.xwgtup_out, hepeup_out_.scalup_out,
       hepeup_out_.aqedup_out, hepeup_out_.aqcdup_out);
     // Store particle info.
-    for (int ip = 0; ip < hepeup_out_.nup_out; ++ip) addParticle(hepeup_out_.idup_out[ip],
+    for (int ip = 0; ip < hepeup_out_.nup_out; ++ip) {
+      double scale(0.0);
+      if (settingsPtr->flag("Beams:setProductionScalesFromLHEF")) {
+        if ( hepeup_out_.icolup_out[ip][0] != 0)
+          scale = hepeup_out_.scales_out[ip][0];
+        if ( hepeup_out_.icolup_out[ip][1] != 0)
+          scale = hepeup_out_.scales_out[ip][1];
+        if ( hepeup_out_.icolup_out[ip][0] != 0
+          && hepeup_out_.icolup_out[ip][1] != 0)
+          scale = max(hepeup_out_.scales_out[ip][0],
+                      hepeup_out_.scales_out[ip][1]);
+      }
+      addParticle(hepeup_out_.idup_out[ip],
       hepeup_out_.istup_out[ip], hepeup_out_.mothup_out[ip][0], hepeup_out_.mothup_out[ip][1],
       hepeup_out_.icolup_out[ip][0], hepeup_out_.icolup_out[ip][1], hepeup_out_.pup_out[ip][0],
       hepeup_out_.pup_out[ip][1], hepeup_out_.pup_out[ip][2], hepeup_out_.pup_out[ip][3],
-      hepeup_out_.pup_out[ip][4], hepeup_out_.vtimup_out[ip], hepeup_out_.spinup_out[ip]) ;
+      hepeup_out_.pup_out[ip][4], hepeup_out_.vtimup_out[ip], hepeup_out_.spinup_out[ip],
+      scale);
+    }
     // Store x values (here E = pup_out[ip][3]), but note incomplete info.
     setPdf( hepeup_out_.idup_out[0], hepeup_out_.idup_out[1], hepeup_out_.pup_out[0][3]/eBeamA,
       hepeup_out_.pup_out[1][3]/eBeamB, 0., 0., 0., false);
+
+    // Read in scales.
+    scalesNow.clear();
+    scalesNow.muf   = hepeup_out_.scalup_out;
+    scalesNow.mur   = hepeup_out_.scalup_out;
+    scalesNow.mups  = hepeup_out_.scalup_out;
+    int offset = 3;
+    for (int i = 0; i < hepeup_out_.nup_out; ++i) {
+      stringstream name;
+      name << "mups_col_" << i+offset;
+      scalesNow.attributes.insert(make_pair(name.str(),hepeup_out_.scales_out[i][0]));
+      name.str("");
+      name << "mups_acol_" << i+offset;
+      scalesNow.attributes.insert(make_pair(name.str(),hepeup_out_.scales_out[i][1]));
+    }
+
+    infoPtr->scales = &scalesNow;
+
     // Done.
     return true;
   }
+
+  Settings* settingsPtr;
+  void setPointers(Settings* settings) {settingsPtr = settings;}
 
 protected:
 
@@ -148,6 +181,7 @@ private:
 
   // Save beam energies to calculate x values.
   double eBeamA, eBeamB;
+  LHAscales scalesNow;
 
 };
 

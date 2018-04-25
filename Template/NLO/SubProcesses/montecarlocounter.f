@@ -1014,6 +1014,10 @@ c Emsca stuff
               endif
            endif
         endif
+
+CC      PAOLO: CHECK SCALE SETTING HERE.
+CC      PAOLO: CHECK SCALE SETTING HERE.
+CC      PAOLO: CHECK SCALE SETTING HERE.
         emscav_tmp=emscav
 
 c End of loop over colour partners
@@ -1432,7 +1436,7 @@ c     Calculate suppression factor for H-events.
       nexternal_now=nexternal
       call clear_HEPEUP_event()
       call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
-     &       istup_local, mothup_h, icolup_h, spinup_local, emscav)
+     &       istup_local, mothup_h, icolup_h, spinup_local, emsca, emscav_tmp)
       if (is_pythia_active.eq.0) then
         call dire_init_default()
       endif

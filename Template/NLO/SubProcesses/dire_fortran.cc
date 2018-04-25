@@ -14,6 +14,11 @@ class MyLHAupFortran4dire : public LHAupFortran_aMCatNLO {
     initialised = false;
   }
 
+  MyLHAupFortran4dire(Settings* settings){
+    settingsPtr=settings;
+    initialised = false;
+  }
+
   //the common blocks should be alredy filled at the fortran level
   //so simply return true
   bool fillHepRup(){
@@ -405,7 +410,7 @@ extern "C" {
   Dire dire;
 
   // set up a global instance of LHAup
-  MyLHAupFortran4dire lhareader4dire;
+  MyLHAupFortran4dire lhareader4dire(&pythia4dire.settings);
   LHA3FromPythia8 lhawriter4dire(&pythia4dire.event, &pythia4dire.settings,
     &pythia4dire.info, &pythia4dire.particleData);
   PrintFirstEmission4dire printFirstEmission4dire(&lhawriter4dire); 
@@ -482,6 +487,7 @@ extern "C" {
     pythia4dire.readString("PartonLevel:MPI                 = off");
     pythia4dire.readString("Print:quiet = on");
     pythia4dire.readString("Merging:nRequested = 0");
+    pythia4dire.readString("Beams:setProductionScalesFromLHEF = on");
 
     pythia4dire.setLHAupPtr(&lhareader4dire);
     dire.initSettings(pythia4dire);
