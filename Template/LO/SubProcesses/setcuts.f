@@ -138,8 +138,10 @@ c
             lpp(2)=0
             ebeam(1)=pmass(1)/2d0
             ebeam(2)=pmass(1)/2d0
-            scale=pmass(1)
-            fixed_ren_scale=.true.
+            if (.not.fixed_ren_scale)then
+               scale=pmass(1)
+               fixed_ren_scale=.true.
+            endif
             fixed_fac_scale=.true.
             use_syst=.false.
          endif

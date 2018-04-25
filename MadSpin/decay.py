@@ -3848,7 +3848,7 @@ class decay_all_events(object):
                     min_br = min([m['total_br'] for m in self.all_ME.values()])
                     logger.info('''All production process does not have the same total Branching Ratio.
                     Therefore the total number of events after decay will be lower than the original file.
-                    [max_br = %s, min_br = %s]''' % (max_br, min_br),'$MG:color:BLACK')
+                    [max_br = %s, min_br = %s]''' % (max_br, min_br),'$MG:BOLD')
                 fake_decay = {'br': max_br - production['total_br'], 
                               'path': None, 'matrix_element': None, 
                               'finals': None, 'base_order': None,

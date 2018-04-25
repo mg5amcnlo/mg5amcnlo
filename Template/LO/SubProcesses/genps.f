@@ -575,6 +575,8 @@ c        Set stot
             if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
+            if (mass_ion(2).ge.0d0) m1 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
             if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
             pi1(0)=ebeam(1)
@@ -863,21 +865,20 @@ c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
 
-         tmax = max(tmax,0d0) !This line if want really t freedom
+      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         tmax = max(tmax,0d0) !This line if want really t freedom
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0, -tmin/stot)
+         t = stot*(-x(-ibranch))
 
+      else
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
          t = stot*(-x(-ibranch))
-c
-c     now reset tmax if messed it up for t freedom 3 lines above
-c
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax) 
+      endif
 
-c         write(*,*) tmin,t,tmax
-c         if (t .eq. 0d0) then
-c            jac = -3
-c            return
-c         endif
          if (t .lt. tmin .or. t .gt. tmax) then
             jac=-3d0
             return

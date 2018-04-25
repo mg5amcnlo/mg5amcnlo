@@ -1729,7 +1729,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
             
         if self.allow_notification_center:    
@@ -5229,7 +5229,7 @@ RESTART = %(mint_mode)s
         """read and parse the test_ME/MC.log file"""
         content = open(log).read()
         if 'FAILED' in content:
-            logger.info('Output of the failing test:\n'+content[:-1],'$MG:color:BLACK')
+            logger.info('Output of the failing test:\n'+content[:-1],'$MG:BOLD')
             raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                 'Please check that widths of final state particles (e.g. top) have been' + \
                 ' set to 0 in the param_card.dat.')
@@ -5352,7 +5352,7 @@ RESTART = %(mint_mode)s
             else:
                 logger.info("""Your Parton-shower choice is not available for running.
     The events will be generated for the  associated Parton-Shower.
-    Remember that NLO events without showering are NOT physical.""", '$MG:color:BLACK')           
+    Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
 
         
         # specify the cards which are needed for this run.

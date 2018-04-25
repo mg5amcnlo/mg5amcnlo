@@ -503,7 +503,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
             return
         
-        logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:color:BLACK')
+        logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:BOLD')
         to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
                               path_msg=' ')
         

@@ -1022,6 +1022,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
                     run_card["iseed"] = self.seed
                     run_card['gridpack'] = True
+                    run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']

@@ -1511,10 +1511,10 @@ c                    if non-radiating vertex or last 2->2
                      else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                       n.le.jlast(j))then
                         pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i), 
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
@@ -1543,12 +1543,12 @@ c     Store information for systematics studies
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
                            write(*,*)'        -> rewgt: ',rewgt
 c                           write(*,*)'  (compare for glue: ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       = ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       -> ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
                         endif
 c                       Set scale for mother as this scale
                         pt2pdf(imocl(n))=q2now                           
@@ -1622,7 +1622,7 @@ c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
                 s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
      $           s_xpdf(1,i),s_qpdf(1,i))
             endif
          enddo

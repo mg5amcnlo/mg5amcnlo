@@ -910,6 +910,33 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_compute_widths(self, line):
         return self.mother.do_compute_widths(line)
     
+    
+    dynamical_scale_warning=True
+    def change_kinematics(self, event):
+ 
+
+        if isinstance(self.run_card, banner.RunCardLO):
+            jac = event.change_ext_mass(self.new_param_card)
+            new_event = event
+        else:
+            jac =1
+            new_event = event
+
+        if jac != 1:
+            if self.output_type == 'default':
+                logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
+                raise Exception
+            mode = self.run_card['dynamical_scale_choice']
+            if mode == -1:
+                if self.dynamical_scale_warning:
+                    logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale for renormalisation scale')
+                mode = 3
+            new_event.scale = event.get_scale(mode)
+            new_event.aqcd = self.lhe_input.get_alphas(new_event.scale, lhapdf_config=self.mother.options['lhapdf'])
+         
+        return jac, new_event
+    
+    
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
@@ -922,27 +949,15 @@ class ReweightInterface(extended_cmd.Cmd):
         orig_wgt = event.wgt
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0)
+        
         # reshuffle event for mass effect # external mass only
-        if isinstance(self.run_card, banner.RunCardLO):
-            jac = event.change_ext_mass(self.new_param_card)
-        else:
-            jac =1
-
-        if jac != 1:
-            if self.output_type == 'default':
-                logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
-                raise Exception
-            mode = self.run_card['dynamical_scale_choice']
-            if mode == -1:
-                logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale for renormalisation scale')
-                mode = 3
-            event.scale = event.get_scale(mode)
-            event.aqcd = self.lhe_input.get_alphas(event.scale, lhapdf_config=self.mother.options['lhapdf'])
- 
+        # carefull that new_event can sometimes be = to event 
+        # (i.e. change can be in place)
+        jac, new_event = self.change_kinematics(event)
         
         
         if event.wgt != 0: # impossible reshuffling
-            w_new =  self.calculate_matrix_element(event, 1)
+            w_new =  self.calculate_matrix_element(new_event, 1)
         else:
             w_new = 0
 
@@ -1692,9 +1707,19 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):
-                    mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
-                    reload(mymod)
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
+                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                    #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
+                    if mod_name in sys.modules.keys():
+                        del sys.modules[mod_name]
+                        tmp_mod_name = mod_name
+                        while '.' in tmp_mod_name:
+                            tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
+                            del sys.modules[tmp_mod_name]
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                    else:
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)    
+                    
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 
@@ -1708,7 +1733,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data = self.id_to_path
             if '_second' in onedir:
                 data = self.id_to_path_second
-                
+
             # get all the information
             all_pdgs = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
@@ -1741,7 +1766,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     incoming = pdg[0:2]
                     outgoing = pdg[2:]
-                misc.sprint(incoming, outgoing)
                 order = (list(incoming), list(outgoing))
                 incoming.sort()
                 outgoing.sort()
@@ -1769,7 +1793,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
                         raise Exception
-                
+
                 data[tag] = order, pdir, hel
              
              

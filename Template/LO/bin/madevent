@@ -146,53 +146,58 @@ import internal.madevent_interface as cmd_interface
 
 # Call the cmd interface main loop
 try:
-    if (args and os.path.isfile(args[0])):
-        # They are an input file 
-        input_file = args[0]
-        if options.web:
-            cmd_line = cmd_interface.MadEventCmd()
-            cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
-            cmd_line.use_rawinput = False
-            cmd_line.haspiping = False
-            cmd_line.run_cmd('import command ' + input_file)
-            cmd_line.run_cmd('quit')      
-        else:
-            cmd_line = cmd_interface.MadEventCmdShell()
-            cmd_line.use_rawinput = False
-            cmd_line.haspiping = False
-            cmd_line.run_cmd('import command ' + input_file)
-            cmd_line.run_cmd('quit')
-    elif args:
-        # a single command is provided
-        if options.web:
-            cmd_line = cmd_interface.MadEventCmd()
-        else:
-            cmd_line = cmd_interface.MadEventCmdShell()
-        if not hasattr(cmd_line, 'do_%s' % args[0]):
-            if parser_error:
-                print parser_error
-                print 'and %s  can not be interpreted as a valid command.' % args[0]
+    if '-h' in args or '--help' in args:
+        launch = ME.MadEventCmdShell(me_dir=os.path.dirname(root_path), force_run=True)
+        launch.exec_cmd('help generate_events')
+        sys.exit(0)
+    with cmd_interface.MadEventCmdShell.RunWebHandling(os.path.dirname(root_path), ):
+        if (args and os.path.isfile(args[0])):
+            # They are an input file 
+            input_file = args[0]
+            if options.web:
+                cmd_line = cmd_interface.MadEventCmd(force_run=True)
+                cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
+                cmd_line.use_rawinput = False
+                cmd_line.haspiping = False
+                cmd_line.run_cmd('import command ' + input_file)
+                cmd_line.run_cmd('quit')      
             else:
-                print 'ERROR: %s  not a valid command. Please retry' % args[0]
+                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+                cmd_line.use_rawinput = False
+                cmd_line.haspiping = False
+                cmd_line.run_cmd('import command ' + input_file)
+                cmd_line.run_cmd('quit')
+        elif args:
+            # a single command is provided
+            if options.web:
+                cmd_line = cmd_interface.MadEventCmd(force_run=True)
+            else:
+                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False    
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
         else:
-            cmd_line.use_rawinput = False    
-            cmd_line.run_cmd(' '.join(args))
-            cmd_line.run_cmd('quit')
-    else:
-        # Interactive mode
-        if options.web:
-            cmd_line = cmd_interface.MadEventCmd()
-            cmd_line.cmdloop()
-        else:
-            cmd_line = cmd_interface.MadEventCmdShell()
-            cmd_line.cmdloop()
-            
+            # Interactive mode
+            if options.web:
+                cmd_line = cmd_interface.MadEventCmd(force_run=True)
+                cmd_line.cmdloop()
+            else:
+                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+                cmd_line.cmdloop()
 except KeyboardInterrupt:
     print 'writting history and directory and quit on KeyboardInterrupt' 
     pass
 except cmd_interface.MadEventAlreadyRunning, error:
     logging.error(str(error))
-    sys.exit()
+    sys.exit(1)
+
 try: 
     readline.set_history_length(100)
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
@@ -208,8 +213,8 @@ except:
     pass
 
 
-try:
-    # Remove lock file
-    os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
-except:
-    pass
+#try:
+#    # Remove lock file
+#    os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
+#except:
+#    pass
