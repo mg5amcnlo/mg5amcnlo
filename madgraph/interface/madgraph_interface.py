@@ -5464,7 +5464,8 @@ This implies that with decay chains:
                 scheme = 5
 
             # check if the photon has to be added to j and p
-            if 'QED' in self._curr_model['perturbation_couplings']:
+            if 'perturbation_couplings' in self._curr_model.keys() and \
+              'QED' in self._curr_model['perturbation_couplings']:
                 multi.append(22)
                 photon = True
             elif 22 in multi:
