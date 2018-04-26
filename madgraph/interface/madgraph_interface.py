@@ -3433,17 +3433,20 @@ This implies that with decay chains:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
 
         elif args[0] == 'lorentz':
+            print 'in lorentz'
             if self._model_v4_path:
                 print 'No lorentz information available in V4 model'
                 return
             elif len(args) == 1:
-                raise self.InvalidCmd,\
-                     'display lorentz require an argument: the name of the lorentz structure.'
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print dir(ufomodel.lorentz)
                 return
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
-                print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
-            except Exception:
+                print getattr(ufomodel.lorentz, args[1]).nice_string()
+            except Exception, error:
+                raise
+                logger.info(str(error))
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
 
         elif args[0] == 'checks':
