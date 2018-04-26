@@ -6693,7 +6693,8 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                     obj.allow_notification_center = False
                 with misc.TMP_variable(obj, 'allow_notification_center', False):
                     orig_name = get_run_name(obj)
-                    next_name = param_card_iterator.get_next_name(orig_name)
+                    next_name = orig_name
+                    #next_name = param_card_iterator.get_next_name(orig_name)
                     set_run_name(obj)(next_name)
                     # run for the first time
                     original_fct(obj, *args, **opts)

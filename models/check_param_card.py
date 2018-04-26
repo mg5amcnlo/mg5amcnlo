@@ -1035,7 +1035,8 @@ class ParamCardIterator(ParamCard):
                 if k in info:
                     data.append(info[k])
                 else:
-                    data.append('nan')
+                    data.append(0.)
+            misc.sprint(name, bench, data)
             ff.write(formatting % tuple([name] + bench + data))
                 
         if not path:

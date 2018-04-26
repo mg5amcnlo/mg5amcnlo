@@ -5252,9 +5252,8 @@ tar -czf split_$1.tar.gz split_$1
         if not self.run_name:
             return
         
-        self.results.save()
-        
-        
+
+            
         if not self.to_store:
             return 
         
@@ -5271,7 +5270,6 @@ tar -czf split_$1.tar.gz split_$1
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
-            
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
@@ -5289,8 +5287,9 @@ tar -czf split_$1.tar.gz split_$1
                 self.update_status('Storing Pythia8 files of previous run', 
                                                      level='pythia', error=True)
                 misc.gzip(file_path,stdout=file_path)
-            
+    
         self.update_status('Done', level='pythia',makehtml=False,error=True)
+        self.results.save()        
         
         self.to_store = []
 
