@@ -864,7 +864,7 @@ class L_IdentityL(aloha_lib.LorentzObject):
 
 class IdentityL(aloha_lib.FactoryLorentz):
     
-    object_class = L_Identity
+    object_class = L_IdentityL
 
     @classmethod
     def get_unique_name(self, l1, l2):
