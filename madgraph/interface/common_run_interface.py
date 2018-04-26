@@ -60,7 +60,7 @@ except ImportError:
     import internal.shower_card as shower_card_mod
     import internal.misc as misc
     import internal.cluster as cluster
-    import internal.check_param_card as check_param_card
+    import internal.check_param_card as param_card_mod
     import internal.files as files
 #    import internal.histograms as histograms # imported later to not slow down the loading of the code
     import internal.save_load_object as save_load_object
@@ -83,7 +83,7 @@ else:
     import madgraph.various.FO_analyse_card as FO_analyse_card 
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
-    import models.check_param_card as check_param_card
+    import models.check_param_card as param_card_mod
     import madgraph.madevent.sum_html as sum_html
 #    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
     
@@ -892,9 +892,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if mode in ['param', 'all']:
             if os.path.exists(pjoin(self.me_dir, 'Source', 'MODEL', 'mp_coupl.inc')):
-                param_card = check_param_card.ParamCardMP(opt['param_card'])
+                param_card = param_card_mod.ParamCardMP(opt['param_card'])
             else:
-                param_card = check_param_card.ParamCard(opt['param_card'])
+                param_card = param_card_mod.ParamCard(opt['param_card'])
             outfile = pjoin(opt['output_dir'], 'param_card.inc')
             ident_card = pjoin(self.me_dir,'Cards','ident_card.dat')
             if os.path.isfile(pjoin(self.me_dir,'bin','internal','ufomodel','restrict_default.dat')):
@@ -1745,7 +1745,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # Check that all pdfset are correctly installed
             if 'sys_pdf' in self.run_card:
                 if '&&' in self.run_card['sys_pdf']:
-                    line = ' '.join(self.run_card['sys_pdf'])
+                    if isinstance(self.run_card['sys_pdf'], list):
+                        line = ' '.join(self.run_card['sys_pdf'])
+                    else:
+                        line = self.run_card['sys_pdf']
                     sys_pdf = line.split('&&')
                     lhaid += [l.split()[0] for l in sys_pdf]
                 else:
@@ -3240,7 +3243,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.static_check_param_card(path, self, run=run, dependent=dependent)
         
     @staticmethod
-    def static_check_param_card(path, interface, run=True, dependent=False):
+    def static_check_param_card(path, interface, run=True, dependent=False, 
+                                iterator_class=param_card_mod.ParamCardIterator):
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
         pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
@@ -3250,7 +3254,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # we are in web mode => forbid scan due to security risk
                 raise Exception, "Scan are not allowed in web mode"
             # at least one scan parameter found. create an iterator to go trough the cards
-            main_card = check_param_card.ParamCardIterator(text)
+            main_card = iterator_class(text)
             interface.param_card_iterator = main_card
             first_card = main_card.next(autostart=True)
             first_card.write(path)
@@ -3273,7 +3277,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     If you want to force the computation right now and being able to re-edit
     the cards afterwards, you can type \"compute_wdiths\".''')
                 
-        card = check_param_card.ParamCard(path)
+        card = param_card_mod.ParamCard(path)
         if dependent:   
             AskforEditCard.update_dependent(interface, interface.me_dir, card, path, timer=20)
         
@@ -3307,12 +3311,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if path:
                 line = '%s %s' % (line, path) 
             interface.do_compute_widths(line)
-        elif not MADEVENT:
-            import madgraph.interface.master_interface as master
-            if isinstance(interface, master.MasterCmd):
-                interface.do_compute_widths('%s --path=%s' % (line, path))
-            else:
-                handled = False
         else:
             handled = False
             
@@ -3321,9 +3319,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if hasattr(interface, 'do_compute_width'):
             interface.do_compute_widths('%s --path=%s' % (line, path))
-        elif hasattr(interface, 'mother') and interface.mother:
+        elif hasattr(interface, 'mother') and interface.mother and isinstance(interface, CommonRunCmd):
             return CommonRunCmd.static_compute_width(line, interface.mother, path)
-        else:
+        elif not MADEVENT:
+            from madgraph.interface.master_interface import MasterCmd
+            cmd = MasterCmd()
+            interface.define_child_cmd_interface(cmd, interface=False)
+            if hasattr(interface, 'options'):
+                cmd.options.update(interface.options)
+            try:
+                cmd.exec_cmd('set automatic_html_opening False --no_save')
+            except Exception:
+                pass
+            
+            model = interface.get_model()
+            
+            
+            line = 'compute_widths %s --path=%s' % (line, path)
+            cmd.exec_cmd(line, model=model)
+            interface.child = None
+            
+            
+            
+            
             raise Exception, 'fail to find a way to handle Auto width'
         
         
@@ -4398,20 +4416,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return []
 
         try:
-            self.param_card = check_param_card.ParamCard(self.paths['param'])
-        except (check_param_card.InvalidParamCard, ValueError) as e:
+            self.param_card = param_card_mod.ParamCard(self.paths['param'])
+        except (param_card_mod.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
             logger.error('problem detected: %s' % e)
             files.cp(self.paths['param_default'], self.paths['param'])
-            self.param_card = check_param_card.ParamCard(self.paths['param'])   
+            self.param_card = param_card_mod.ParamCard(self.paths['param'])   
          
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.   
         if os.path.exists(self.paths['param_default']):
-            default_param = check_param_card.ParamCard(self.paths['param_default'])
+            default_param = param_card_mod.ParamCard(self.paths['param_default'])
         else:
-            default_param =  check_param_card.ParamCard(self.param_card)
+            default_param =  param_card_mod.ParamCard(self.param_card)
         self.pname2block, self.restricted_value = default_param.analyze_param_card()
         self.param_card_default = default_param
         return self.pname2block.keys()
@@ -5186,7 +5204,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
                 if args[0] == 'param_card':
-                    self.param_card = check_param_card.ParamCard(self.paths['param'])
+                    self.param_card = param_card_mod.ParamCard(self.paths['param'])
                 elif args[0] == 'run_card':
                     self.run_card = banner_mod.RunCard(self.paths['run'])
                 elif args[0] == 'shower_card':
@@ -5552,7 +5570,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if isinstance(value, str):
             value = value.lower()
             if value == 'default':
-                default = check_param_card.ParamCard(self.paths['param_default'])
+                default = param_card_mod.ParamCard(self.paths['param_default'])
                 value = default[block].param_dict[lhaid].value
 
             elif value in ['auto', 'auto@nlo']:
@@ -5774,7 +5792,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             elif pattern_width.search(param_text):
                 self.do_compute_widths('')
-                self.param_card = check_param_card.ParamCard(self.paths['param'])
+                self.param_card = param_card_mod.ParamCard(self.paths['param'])
         
             # calling the routine doing the work    
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
@@ -5786,18 +5804,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         elif args[0] == 'to_slha2':
             try:
-                check_param_card.convert_to_mg5card(self.paths['param'])
+                param_card_mod.convert_to_mg5card(self.paths['param'])
                 logger.info('card updated')
             except Exception, error:
                 logger.warning('failed to update to slha2 due to %s' % error)
-            self.param_card = check_param_card.ParamCard(self.paths['param'])
+            self.param_card = param_card_mod.ParamCard(self.paths['param'])
         elif args[0] == 'to_slha1':
             try:
-                check_param_card.convert_to_slha1(self.paths['param'])
+                param_card_mod.convert_to_slha1(self.paths['param'])
                 logger.info('card updated')
             except Exception, error:
                 logger.warning('failed to update to slha1 due to %s' % error)
-            self.param_card = check_param_card.ParamCard(self.paths['param'])            
+            self.param_card = param_card_mod.ParamCard(self.paths['param'])            
         elif args[0] == 'to_full':
             return self.update_to_full(args[1:])
         elif args[0] in self.update_block:
@@ -6550,8 +6568,8 @@ You can also copy/paste, your event file here.''')
 
         if path == self.paths['param']:        
             try:
-                self.param_card = check_param_card.ParamCard(path) 
-            except (check_param_card.InvalidParamCard, ValueError) as e:
+                self.param_card = param_card_mod.ParamCard(path) 
+            except (param_card_mod.InvalidParamCard, ValueError) as e:
                 logger.error('Current param_card is not valid. We are going to use the default one.')
                 logger.error('problem detected: %s' % e)
                 logger.error('Please re-open the file and fix the problem.')
@@ -6583,12 +6601,15 @@ You can also copy/paste, your event file here.''')
 
 # A decorator function to handle in a nice way scan/auto width
 def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'param_card.dat'),
-                      check_card=lambda obj: CommonRunCmd.static_check_param_card,
                       store_for_scan=lambda obj: obj.store_scan_result,
                       get_run_name=lambda obj: obj.run_name,
                       set_run_name=lambda obj: obj.set_run_name,
                       result_path=lambda obj:  pjoin(obj.me_dir, 'Events', 'scan_%s.txt' ),
-                      ignoreerror=ZeroResult):
+                      ignoreerror=ZeroResult,
+                      iteratorclass=param_card_mod.ParamCardIterator,
+                      summaryorder=lambda obj: lambda:None,
+                      check_card=lambda obj: CommonRunCmd.static_check_param_card,
+                      ):
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
     
@@ -6598,18 +6619,32 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
     possible arguments are listed above and should be function who takes a single
     argument the instance of intereset. those return
     input_path -> function that return the path of the card to read
-    check_card -> function that return the function to read the card and init stuff (compute auto-width/init self.iterator/...)
-                  This function should define the self.param_card_iterator if a scan exists
-                  
     store_for_scan -> function that return a dict of entry to keep in memory
     get_run_name -> function that  return the string with the current run_name
     set_run_name -> function that return the function that allow the set the next run_name
     result_path -> function that return the path of the summary result to write
     ignoreerror -> one class of error which are not for the error
+    IteratorClass -> class to use for the iterator
+    summaryorder -> function that return the function to call to get the order
     
+    advanced:
+    check_card -> function that return the function to read the card and init stuff (compute auto-width/init self.iterator/...)
+                  This function should define the self.param_card_iterator if a scan exists
+                  and the one calling the auto-width functionalities/...
+                  
     All the function are taking a single argument (an instance of the class on which the decorator is used)
     and they can either return themself a function or a string.
     
+    Note:
+    1. the link to auto-width is not fully trivial due to the model handling
+       a. If you inherit from CommonRunCmd (or if the self.mother is). Then 
+       everything should be automatic.
+      
+       b. If you do not you can/should create the funtion self.get_model(). 
+          Which returns the appropriate MG model (like the one from import_ufo.import_model) 
+    
+       c. You can also have full control by defining your own do_compute_widths(self, line)
+          functions.
     """
     class restore_iterator(object):
         """ensure that the original card is always restore even for crash"""  
@@ -6638,7 +6673,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             #     3. raise some warning
             #     4. update dependent parameter (off by default but for scan)
             # if scan is found object.param_card_iterator should be define by the function
-            check_card(obj)(card_path, obj)
+            check_card(obj)(card_path, obj, iterator_class=iteratorclass)
 
             param_card_iterator = None
             if obj.param_card_iterator:
@@ -6680,7 +6715,8 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                 name = misc.get_scan_name(orig_name, next_name)
                 path = result_path(obj) % name 
                 logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
-                param_card_iterator.write_summary(path)
+                order = summaryorder(obj)()
+                param_card_iterator.write_summary(path, order=order)
         return new_fct
     return decorator    
 

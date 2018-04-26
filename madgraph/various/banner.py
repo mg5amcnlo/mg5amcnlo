@@ -2337,7 +2337,6 @@ class RunCard(ConfigFile):
                         data[name] = ', '.join(str(v) for v in data[name])
                     else:
                         data[name] = "['%s']" % "', '".join(str(v) for v in data[name])
-                        misc.sprint(name, self.list_parameter[name], data[name])
                 text = text % data
         else:                        
             text = ""
