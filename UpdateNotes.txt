@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-2.6.2 ()
+2.6.2 (26/04/18)
 
       Heavy ion pdf / pdf in general:
       -------------------------------
@@ -19,7 +19,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - add comment that can be displayed via "help NAME"
             - add autocompletion for some parameter
             - add direct rejection of parameter edition if not in some allowed list/range
-
+      
       Bug fixes:
       ----------
       OM: Fix issue with madspin introduced in 2.6.1 (failing to generate correct diagram for NLO process)
@@ -33,6 +33,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: Fixed a bug for ApplGrid: in rare cases the ApplGrid tables were filled twice for the same event
       OM: Fixed a bug for fixed target experiment when the energy of the beam was set to 0. 
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
+      OM: Fix issue on Madevent html output where some link where broken
+      OM: Fix issue for the display lorentz function (was also presenting security issue for online use)
 
       Enhancement:
       -----------
@@ -47,7 +49,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: New  method avoiding that two process are running inside the same output directory.
           This is implemented only for Gridpack and LO run so far. 
           The new method should be more robust in case of crash (i.e. not wrongly trigger as before)
-
+      OM: For LO scan, if a crash (or ctrl-c) occurs during the scan, the original param_card is now
+          restored.
 
 2.6.1 (12/12/17)
 
