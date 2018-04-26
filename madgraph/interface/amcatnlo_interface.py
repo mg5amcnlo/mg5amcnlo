@@ -490,8 +490,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             myprocdef.set('orders', orders)
             # warn the user of what happened
-            logger.warning(('Setting the born orders automatically in the process definition to %s.\n' + \
-                            'If this is not what you need, please regenerate with the correct orders.') % myprocdef['orders'])
+            logger.info(('Setting the born orders automatically in the process definition to %s.\n' + \
+                            'If this is not what you need, please regenerate with the correct orders.'), 
+                            ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['orders'].items()]), 
+                            '$MG:BOLD')
 
         myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
         # split all orders in the model, for the moment it's the simplest solution

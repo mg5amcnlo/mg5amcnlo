@@ -329,7 +329,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 #                    loop_orders[coup] = val
 
         for i, born in enumerate(self['born_processes']):
-            logger.info('Generating virtual matrix elements using MadLoop:')
             myproc = copy.copy(born.born_amp['process'])
             # include all particles in the loops
             # i.e. allow all orders to be perturbed
