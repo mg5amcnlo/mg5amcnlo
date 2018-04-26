@@ -95,12 +95,8 @@ else:
 
 
 
-class MadEventError(Exception):
-    pass
-
-class ZeroResult(MadEventError):
-    pass
-
+class MadEventError(Exception): pass
+ZeroResult = common_run.ZeroResult
 class SysCalcError(InvalidCmd): pass
 
 MadEventAlreadyRunning = common_run.MadEventAlreadyRunning
@@ -2467,6 +2463,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
+            
+        self.run_generate_events(switch_mode, args)
+        
+        
+        
+    # this decorator handle the loop related to scan.
+    @common_run.scanparamcardhandling()
+    def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
             # Also the single core mode is not supported for loop-induced.
@@ -2567,33 +2571,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
                 self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
                 self.store_result()
-            
-            if self.param_card_iterator:
-                param_card_iterator = self.param_card_iterator
-                self.param_card_iterator = []
-                path = pjoin(self.me_dir,'Cards','param_card.dat')
-                with misc.TMP_variable(self, 'allow_notification_center', False):
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
-                    #check if the param_card defines a scan.
-                    orig_name = self.run_name
-                    for card in param_card_iterator:
-                        card.write(path)
-                        self.check_param_card(path, dependent=True)
-                        next_name = param_card_iterator.get_next_name(self.run_name)
-                        try:
-                            self.exec_cmd("generate_events -f %s" % next_name,
-                                      precmd=True, postcmd=True,errorhandling=False)
-                        except ZeroResult:
-                            param_card_iterator.store_entry(self.run_name, 0, param_card_path=path)
-                        else:
-                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=path)
-                    param_card_iterator.write(path)
-                    name = misc.get_scan_name(orig_name, self.run_name)
-                    path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-                    logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
-                    param_card_iterator.write_summary(path)
-
-            
+                        
             if self.allow_notification_center:    
                 misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
@@ -5274,9 +5252,8 @@ tar -czf split_$1.tar.gz split_$1
         if not self.run_name:
             return
         
-        self.results.save()
-        
-        
+
+            
         if not self.to_store:
             return 
         
@@ -5293,7 +5270,6 @@ tar -czf split_$1.tar.gz split_$1
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
-            
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
@@ -5311,8 +5287,9 @@ tar -czf split_$1.tar.gz split_$1
                 self.update_status('Storing Pythia8 files of previous run', 
                                                      level='pythia', error=True)
                 misc.gzip(file_path,stdout=file_path)
-            
+    
         self.update_status('Done', level='pythia',makehtml=False,error=True)
+        self.results.save()        
         
         self.to_store = []
 

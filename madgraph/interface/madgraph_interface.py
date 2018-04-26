@@ -1155,7 +1155,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         install_options = {'options_for_HEPToolsInstaller':[],
                    'update_options':[]}
-        hidden_prog = ['Delphes2', 'pythia-pgs']
+        hidden_prog = ['Delphes2', 'pythia-pgs','SysCalc']
 
         if len(args) < 1:
             self.help_install()
@@ -2786,7 +2786,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -3440,17 +3440,20 @@ This implies that with decay chains:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
 
         elif args[0] == 'lorentz':
+            print 'in lorentz'
             if self._model_v4_path:
                 print 'No lorentz information available in V4 model'
                 return
             elif len(args) == 1:
-                raise self.InvalidCmd,\
-                     'display lorentz require an argument: the name of the lorentz structure.'
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print dir(ufomodel.lorentz)
                 return
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
-                print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
-            except Exception:
+                print getattr(ufomodel.lorentz, args[1]).nice_string()
+            except Exception, error:
+                raise
+                logger.info(str(error))
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
 
         elif args[0] == 'checks':

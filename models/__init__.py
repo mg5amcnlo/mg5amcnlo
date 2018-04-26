@@ -28,9 +28,18 @@ def load_model(name, decay=False):
 
     path_split = name.split(os.sep)
     if len(path_split) == 1:
-        model_pos = 'models.%s' % name
-        __import__(model_pos)
-        return sys.modules[model_pos]
+        try:
+            model_pos = 'models.%s' % name
+            __import__(model_pos)
+            return sys.modules[model_pos]
+        except Exception:
+            pass
+        for p in os.environ['PYTHONPATH']:
+            new_name = os.path.join(p, name)
+            try:
+                return load_model(new_name, decay)
+            except Exception:
+                pass
     elif path_split[-1] in sys.modules:
         model_path = os.path.realpath(os.sep.join(path_split))
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
