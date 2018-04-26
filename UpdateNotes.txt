@@ -35,6 +35,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: Fixed an issue where too many files were opened for fNLO runs in rare cases
       OM: Fix issue on Madevent html output where some link where broken
       OM: Fix issue for the display lorentz function (was also presenting security issue for online use)
+      OM: Fix issue for spin 3/2 (one in presence of fermion flow violation and one for custom propagator)
 
       Enhancement:
       -----------
