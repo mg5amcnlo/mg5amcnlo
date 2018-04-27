@@ -252,15 +252,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                              cmdhistory, MG5options, outputflag)
         
 
+        MLCard = banner_mod.MadLoopParam(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
+        # For loop-induced processes and *only* when summing over all helicity configurations
+        # (which is the default for standalone usage), COLLIER is faster than Ninja.
         if self.has_loop_induced:
-            MLCard = banner_mod.MadLoopParam()
             MLCard['MLReductionLib'] = "7|6|1"
+            # Computing the poles with COLLIER also unnecessarily slows down the code
+            # It should only be set to True for checks and it's acceptable to remove them
+            # here because for loop-induced processes they should be zero anyway.
+            # We keep it active for non-loop induced processes because COLLIER is not the
+            # main reduction tool in that case, and the poles wouldn't be zero then
             MLCard['COLLIERComputeUVpoles'] = False
             MLCard['COLLIERComputeIRpoles'] = False
-            misc.sprint(MG5options)
-            misc.sprint(outputflag)
-            MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
-            MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
+
+        MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
+        MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
             
     def write_f2py_makefile(self):
         return
@@ -404,18 +410,10 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
-        
-        # Also put a copy of MadLoopParams.dat into MadLoopParams_default.dat
-        shutil.copy(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'),
-                      pjoin(self.dir_path, 'Cards','MadLoopParams_default.dat'))
 
-        self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.loop_dir,'StandAlone',
-                                                  'Cards', 'MadLoopParams.dat'))
-        # write the output file
-        self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
-                                                           "MadLoopParams.dat"))
+        ln(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'), pjoin(self.dir_path,'SubProcesses'))
 
-        # We might need to give a different name to the MadLoop makefile\
+        # We might need to give a different name to the MadLoop makefile
         shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
                 pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
 
