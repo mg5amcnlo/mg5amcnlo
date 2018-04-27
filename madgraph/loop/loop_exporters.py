@@ -38,6 +38,7 @@ import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
+import madgraph.various.banner as banner_mod
 import madgraph.various.misc as misc
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.iolibs.file_writers as writers
@@ -55,7 +56,7 @@ import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
-import madgraph.various.banner as banner_mod
+
 
 pjoin = os.path.join
 
@@ -235,14 +236,32 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def __init__(self, *args, **opts):
         super(LoopProcessExporterFortranSA,self).__init__(*args,**opts)
         self.unique_id=0 # to allow collier to distinguish the various loop subprocesses
-
+        self.has_loop_induced = False
+        
     def copy_template(self, model):
         """Additional actions needed to setup the Template.
         """
         super(LoopProcessExporterFortranSA, self).copy_template(model)
 
         self.loop_additional_template_setup()
-    
+        
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        """create the global information for loops"""
+        
+        super(LoopProcessExporterFortranSA,self).finalize(matrix_element,
+                                             cmdhistory, MG5options, outputflag)
+        
+
+        if self.has_loop_induced:
+            MLCard = banner_mod.MadLoopParam()
+            MLCard['MLReductionLib'] = "7|6|1"
+            MLCard['COLLIERComputeUVpoles'] = False
+            MLCard['COLLIERComputeIRpoles'] = False
+            misc.sprint(MG5options)
+            misc.sprint(outputflag)
+            MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
+            MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
+            
     def write_f2py_makefile(self):
         return
     
@@ -255,6 +274,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         open(output_path,'w').writelines(file)
         # Make it executable
         os.chmod(output_path, os.stat(output_path).st_mode | stat.S_IEXEC)
+       
     
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
@@ -804,7 +824,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             n_squared_split_orders = 1
 
         LoopInduced = not matrix_element.get('processes')[0].get('has_born')
-        
+        self.has_loop_induced = max(LoopInduced, self.has_loop_induced)
         # Force the computation of loop color flows for loop_induced processes
         ComputeColorFlows = self.compute_color_flows or LoopInduced
         # The variable AmplitudeReduction is just to make the contextual
@@ -814,12 +834,12 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         # is useful when there is more than one squared split order config.
         TIRCaching = AmplitudeReduction or n_squared_split_orders>1
         MadEventOutput = False
-
         return {'LoopInduced': LoopInduced,
                 'ComputeColorFlows': ComputeColorFlows,
                 'AmplitudeReduction': AmplitudeReduction,
                 'TIRCaching': TIRCaching,
                 'MadEventOutput': MadEventOutput}
+
 
     #===========================================================================
     # generate_subprocess_directory
@@ -2042,6 +2062,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                              cmdhistory, MG5options, outputflag)
         self.write_global_specs(matrix_element)
     
+
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):

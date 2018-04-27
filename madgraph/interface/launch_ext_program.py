@@ -49,6 +49,9 @@ class ExtLauncher(object):
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.cmd_int = cmd
+        if 'force' in options:
+            self.force = options['force']
+        
         #include/overwrite options
         for key,value in options.items():
             setattr(self, key, value)
@@ -66,7 +69,7 @@ class ExtLauncher(object):
         if self.cards:
             common_run_interface.CommonRunCmd.ask_edit_card_static(self.cards,
                              mode='fixed', plot=False,
-                             timeout=0, ask=self.cmd_int.ask)
+                             timeout=0, ask=self.cmd_int.ask, force=self.force)
              
         #for card in self.cards:
         #    self.treat_input_file(card, default = 'n')
