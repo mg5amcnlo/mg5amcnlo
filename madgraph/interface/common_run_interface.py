@@ -5288,7 +5288,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.run_card.remove_all_cut()
             self.modified_card.add('run') # delayed writing of the run_card
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
-        elif (args[start] in self.param_card or args[start] == 'width') \
+        elif self.param_card and (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
             #special treatment for scan
             if any(t.startswith('scan') for t in args):
