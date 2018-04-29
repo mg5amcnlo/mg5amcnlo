@@ -1301,7 +1301,24 @@ class AskRunNLO(cmd.ControlSwitch):
 #
 #   MadAnalysis5
 #    
-    get_allowed_madanalysis = get_allowed_madspin
+    def get_allowed_madanalysis(self):
+        
+        if hasattr(self, 'allowed_madanalysis'):
+            return self.allowed_madanalysis
+        
+        self.allowed_madanalysis = []
+        
+        
+        if 'MA5' not in self.available_module:
+            return self.allowed_madanalysis
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.available_module.remove('MA5')
+            self.allowed_madanalysis = ['OFF']
+            return self.allowed_madanalysis
+        else:
+            self.allowed_madanalysis = ['OFF', 'ON']
+            return  self.allowed_madanalysis
     
     def set_default_madanalysis(self):
         """initialise the switch for reweight"""
@@ -1683,16 +1700,18 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.store_result()
         #check if the param_card defines a scan.
         if self.param_card_iterator:
+            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
             param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                            error=self.results.current['error'])
+                                            error=self.results.current['error'],
+                                            param_card_path=cpath)
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
                 for i,card in enumerate(param_card_iterator):
-                    card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                    self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'), dependent=True)
+                    card.write(cpath)
+                    self.check_param_card(cpath, dependent=True)
                     if not options['force']:
                         options['force'] = True
                     if options['run_name']:
@@ -1704,12 +1723,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
                     param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                                    error=self.results.current['error'])
+                                                    error=self.results.current['error'],
+                                                    param_card_path=cpath)
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
             
         if self.allow_notification_center:    
@@ -2241,8 +2261,8 @@ RESTART = %(mint_mode)s
         files_MC_integer=[]
         location=None
         for job in job_group:
-            files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
-            files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+            files_mint_grids.append(pjoin(job['dirname'],'mint_grids'))
+            files_MC_integer.append(pjoin(job['dirname'],'grid.MC_integer'))
             if not location:
                 location=pjoin(job['dirname'].rsplit('_',1)[0])
             else:
@@ -2253,7 +2273,10 @@ RESTART = %(mint_mode)s
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
         for j,fs in enumerate([files_mint_grids,files_MC_integer]):
-            linesoffiles=[f.readlines() for f in fs]
+            linesoffiles=[]
+            for f in fs:
+                with open(f,'r+') as fi:
+                    linesoffiles.append(fi.readlines())
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 try:
@@ -2287,9 +2310,6 @@ RESTART = %(mint_mode)s
                     floatgrps = zip(*floatsbyfile)
                     averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
                     to_write.append(" ".join(str(a) for a in averages) + "\n")
-            # close the files
-            for f in fs:
-                f.close
             # write the data over the master location
             if j==0:
                 with open(pjoin(location,'mint_grids'),'w') as f:
@@ -2602,7 +2622,13 @@ RESTART = %(mint_mode)s
             logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-            misc.call(['./combine_root.sh'] + folder_name, \
+            rootfiles = []
+            for job in jobs:
+                if job['dirname'].endswith('.root'):
+                    rootfiles.append(job['dirname'])
+                else:
+                    rootfiles.append(pjoin(job['dirname'],'MADatNLO.root'))
+            misc.call(['./combine_root.sh'] + folder_name + rootfiles, \
                       stdout=devnull, 
                       cwd=pjoin(self.me_dir, 'SubProcesses'))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
@@ -5161,7 +5187,7 @@ RESTART = %(mint_mode)s
         """read and parse the test_ME/MC.log file"""
         content = open(log).read()
         if 'FAILED' in content:
-            logger.info('Output of the failing test:\n'+content[:-1],'$MG:color:BLACK')
+            logger.info('Output of the failing test:\n'+content[:-1],'$MG:BOLD')
             raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                 'Please check that widths of final state particles (e.g. top) have been' + \
                 ' set to 0 in the param_card.dat.')
@@ -5284,7 +5310,7 @@ RESTART = %(mint_mode)s
             else:
                 logger.info("""Your Parton-shower choice is not available for running.
     The events will be generated for the  associated Parton-Shower.
-    Remember that NLO events without showering are NOT physical.""", '$MG:color:BLACK')           
+    Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
 
         
         # specify the cards which are needed for this run.

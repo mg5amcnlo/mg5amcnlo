@@ -1,6 +1,7 @@
 import logging
 # method to add color to a logging.info add a second argument:
-# '$MG:color:BLACK'
+# '$MG:BOLD'
+# '$MG:color:RED'
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -31,7 +32,7 @@ BOLD_SEQ  = "\033[1m"
 class ColorFormatter(logging.Formatter):
 
     def __init__(self, *args, **kwargs):
-        # can't do super(...) here because Formatter is an old school class
+        # can't do super(...) here because Formatter is an old school class)
         logging.Formatter.__init__(self, *args, **kwargs)
 
     def format(self, record):
@@ -44,6 +45,7 @@ class ColorFormatter(logging.Formatter):
         # A not-so-nice but working way of passing arguments to this formatter
         # from MadGraph.
         color_specified = False
+        bold_specified = False
         for arg in record.args:
             if isinstance(arg,str) and arg.startswith('$MG'):
                 elems=arg.split(':')
@@ -53,12 +55,26 @@ class ColorFormatter(logging.Formatter):
                         color_choice = COLORS[elems[2]]
                     if color_choice == 0:
                         color_choice = 30
+                if len(elems)==2 and elems[1].lower()=='bold':
+                    bold_specified = True
             else:
                 new_args.append(arg)
+        
+
         record.args = tuple(new_args)
-        color     = COLOR_SEQ % (30 + color_choice)
+        if bold_specified:
+            color = BOLD_SEQ
+            color_specified = True
+        else:
+            color     = COLOR_SEQ % (30 + color_choice)
         message   = logging.Formatter.format(self, record)
-        if not message.endswith('$RESET'):
+        if not message:
+            return message
+        # if some need to be applied no matter what:
+        message = message.replace('$_BOLD', BOLD_SEQ).replace('$_RESET', RESET_SEQ).replace('$BR','\n')
+        
+        # for the conditional one
+        if '$RESET' not in message:
             message +=  '$RESET'
         for k,v in COLORS.items():
             color_flag = COLOR_SEQ % (v+30)

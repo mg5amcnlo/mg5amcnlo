@@ -145,6 +145,19 @@ c**************************************************
       return
       end
 
+      logical function is_octet(ipdg)
+c**************************************************
+c   determines whether particle is a QCD octet
+c**************************************************
+      implicit none
+      integer ipdg, irfl
+      integer get_color
+
+      is_octet=(iabs(get_color(ipdg)).eq.8)
+
+      return
+      end
+
       logical function isjet(ipdg)
 c**************************************************
 c   determines whether particle is qcd jet particle
@@ -533,10 +546,11 @@ c     Variables for keeping track of jets
       save chclusold
       integer tmpindex
 
-      logical isqcd,isjet,isparton,cluster,isjetvx
+      logical isqcd,isjet,isparton,cluster,isjetvx,is_octet
       integer ifsno
       double precision alphas
       external isqcd, isjet, isparton, cluster, isjetvx, alphas, ifsno
+      external is_octet
       setclscales=.true.
 
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) then
@@ -730,19 +744,29 @@ c          Check QCD jet, take care so not a decay
 c          Remove non-gluon jets that lead up to non-jet vertices
            if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c          The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)then
-                 iqjets(ipart(1,imocl(n)))=0
-              else if (ipdgcl(imocl(n),igraphs(1),iproc).eq.21)then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc)))then
+                 ! split case for q a > q and for g > g h (with the gluon splitting into quark)
+                 if (ipart(2,imocl(n)).eq.0) then ! q a > q case
+                    iqjets(ipart(1,imocl(n)))=0
+                 else ! octet. want to be sure that both are tagged as jet before removing one
+                    ! this prevent that both are removed in case of g > g h , g > q1 q2, q1 > a q1.
+                    ! at least one of the two should be kept as jet
+                    ! introduce for q q > a a g q q in heft
+                    if (iqjets(ipart(1,imocl(n))).gt.0.and.iqjets(ipart(2,imocl(n))).gt.0)then
+                       iqjets(ipart(1,imocl(n)))=0
+                    endif
+                 endif
+              else if (is_octet(ipdgcl(imocl(n),igraphs(1),iproc)))then
 c                special case for g > g h remove also the hardest gluon
                  iqjets(ipart(1,imocl(n)))=0
               endif
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.or.
-     $                                   ipdgcl(imocl(n),igraphs(1),iproc).ne.21) then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc)).and.
+     $                                   .not.is_octet(ipdgcl(imocl(n),igraphs(1),iproc))) then
 c                 The second condition is to prevent the case of ggh where the gluon split in quark later.
-c                 The first quark is already remove so we shouldn't remove this one.      
+c                 The first quark is already remove so we shouldn't remove this one. introduce for gg_hgqq (in heft)      
               iqjets(ipart(2,imocl(n)))=0
               endif
            endif
@@ -1487,10 +1511,10 @@ c                    if non-radiating vertex or last 2->2
                      else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                       n.le.jlast(j))then
                         pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i), 
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
@@ -1519,12 +1543,12 @@ c     Store information for systematics studies
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
                            write(*,*)'        -> rewgt: ',rewgt
 c                           write(*,*)'  (compare for glue: ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       = ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       -> ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
                         endif
 c                       Set scale for mother as this scale
                         pt2pdf(imocl(n))=q2now                           
@@ -1598,7 +1622,7 @@ c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
                 s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
      $           s_xpdf(1,i),s_qpdf(1,i))
             endif
          enddo

@@ -13,7 +13,7 @@
 #
 ################################################################################
 from __future__ import division
-from __builtin__ import True, False
+
 if __name__ == "__main__":
     import sys
     import os
@@ -55,7 +55,9 @@ class Systematics(object):
                  keep_wgts=[],
                  start_id=None,
                  lhapdf_config=misc.which('lhapdf-config'),
-                 log=lambda x: sys.stdout.write(str(x)+'\n')
+                 log=lambda x: sys.stdout.write(str(x)+'\n'),
+                 only_beam=False,
+                 ion_scaling=True,
                  ):
 
         # INPUT/OUTPUT FILE
@@ -100,10 +102,19 @@ class Systematics(object):
             self.b1 = beam1//2212
             self.b2 = beam2//2212
     
+        self.orig_ion_pdf = False
+        self.ion_scaling = ion_scaling
+        self.only_beam = only_beam 
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
                 raise SystematicsError, 'The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.'
+            
+            if self.banner.run_card['nb_neutron1'] != 0 or \
+               self.banner.run_card['nb_neutron2'] != 0 or \
+               self.banner.run_card['nb_proton1'] != 1 or \
+               self.banner.run_card['nb_proton2'] != 1:
+                self.orig_ion_pdf = True
         else:
             self.is_lo = False
             if not self.banner.run_card['store_rwgt_info']:
@@ -362,8 +373,18 @@ class Systematics(object):
         self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
         if self.output.name != self.output_path:
-            import shutil
-            shutil.move(self.output.name, self.output_path)
+            #check problem for .gz missinf in output.name
+            if not os.path.exists(self.output.name) and os.path.exists('%s.gz' % self.output.name):
+                to_check = '%s.gz' % self.output.name
+            else:
+                to_check = self.output.name
+            
+            if to_check != self.output_path:
+                if '%s.gz' % to_check == self.output_path:
+                    misc.gzip(to_check) 
+                else:
+                    import shutil
+                    shutil.move(self.output.name, self.output_path)
         
         return all_cross
         
@@ -693,32 +714,86 @@ class Systematics(object):
         self.pdfQ2 = {}
         
             
-    def get_pdfQ(self, pdf, pdg, x, scale):
+    def get_pdfQ(self, pdf, pdg, x, scale, beam=1):
         
         if pdg in [-21,-22]:
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
         
-        f = pdf.xfxQ(pdg, x, scale)/x
+        if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
+            return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
+        
+        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+            nb_p = self.banner.run_card["nb_proton%s" % beam]
+            nb_n = self.banner.run_card["nb_neutron%s" % beam]
+
+
+            if pdg in [1,2]:
+                pdf1 =  pdf.xfxQ(1, x, scale)/x
+                pdf2 =  pdf.xfxQ(2, x, scale)/x
+                if pdg == 1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1
+            elif pdg in [-1,-2]:
+                pdf1 =  pdf.xfxQ(-1, x, scale)/x
+                pdf2 =  pdf.xfxQ(-2, x, scale)/x
+                if pdg == -1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1                    
+            else: 
+                f = (nb_p + nb_n) * pdf.xfxQ(pdg, x, scale)/x
+                
+            f = f * (nb_p+nb_n) 
+        else:
+            f = pdf.xfxQ(pdg, x, scale)/x
 #        if f == 0 and pdf.memberID ==0:
 #            pdfset = pdf.set()
 #            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
 #            f = pdfset.uncertainty(allnumber).central /x
         return f
 
-    def get_pdfQ2(self, pdf, pdg, x, scale):
+    def get_pdfQ2(self, pdf, pdg, x, scale, beam=1):
 
         if pdg in [-21,-22]:
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
+        
+        if (pdf, pdg,x,scale, beam) in self.pdfQ2:
+            return self.pdfQ2[(pdf, pdg,x,scale,beam)]
+        
+        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+            nb_p = self.banner.run_card["nb_proton%s" % beam]
+            nb_n = self.banner.run_card["nb_neutron%s" % beam]
+
+
+            if pdg in [1,2]:
+                pdf1 =  pdf.xfxQ2(1, x, scale)/x
+                pdf2 =  pdf.xfxQ2(2, x, scale)/x
+                if pdg == 1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1
+            elif pdg in [-1,-2]:
+                pdf1 =  pdf.xfxQ2(-1, x, scale)/x
+                pdf2 =  pdf.xfxQ2(-2, x, scale)/x
+                if pdg == -1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1                    
+            else: 
+                f = (nb_p + nb_n) * pdf.xfxQ2(pdg, x, scale)/x
                 
-        if (pdf, pdg,x,scale) in self.pdfQ2:
-            return self.pdfQ2[(pdf, pdg,x,scale)]
-        f = pdf.xfxQ2(pdg, x, scale)/x
-        self.pdfQ2[(pdf, pdg,x,scale)] = f
+            f = f * (nb_p+nb_n)      
+        else:
+            f = pdf.xfxQ2(pdg, x, scale)/x
+        self.pdfQ2[(pdf, pdg,x,scale,beam)] = f
         return f        
+        
+        
         
         #one method to handle the nnpd2.3 problem -> now just move to central
         if f == 0 and pdf.memberID ==0:
@@ -767,8 +842,8 @@ class Systematics(object):
         else:
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
-        wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
-        wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
+        wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1) 
+        wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:
             if self.b1 == 0 == self.b2:
@@ -779,13 +854,13 @@ class Systematics(object):
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
             scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
-            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
-            wgt /= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
+            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale, beam=1)
+            wgt /= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale, beam=1)
 
         for i in range(loinfo['n_pdfrw2']-1):
             scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
-            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
-            wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
+            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale, beam=2)
+            wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale, beam=2)            
         
         return wgt
 
@@ -879,10 +954,10 @@ def call_systematics(args, result=sys.stdout, running=True,
                     opts[key]=[tuple(values)]
             elif key == 'result':
                 result = open(values[0],'w')
-            elif key in ['start_event', 'stop_event']:
-                opts[key] = int(values[0])
-            elif key == 'write_banner':
-                opts[key] = banner_mod.ConfigFile.format_variable(values[0], bool, 'write_banner')
+            elif key in ['start_event', 'stop_event', 'only_beam']:
+                opts[key] = banner_mod.ConfigFile.format_variable(values[0], int, key)
+            elif key in ['write_banner', 'ion_scalling']:
+                opts[key] = banner_mod.ConfigFile.format_variable(values[0], bool, key)
             else:
                 if key in opts:
                     opts[key] += values

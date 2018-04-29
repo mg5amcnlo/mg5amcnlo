@@ -914,7 +914,6 @@ class OneTagResults(dict):
                             (exists(pjoin(path,"%s_pythia_events.hep.gz" % tag)) or
                              exists(pjoin(path,"%s_pythia_events.hep" % tag))):
                 self.pythia.append('hep')
-
             if 'log' not in self.pythia and \
                           exists(pjoin(path,"%s_pythia.log" % tag)):
                 self.pythia.append('log')  

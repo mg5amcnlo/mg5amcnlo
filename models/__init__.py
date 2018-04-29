@@ -16,6 +16,7 @@
 
 import os
 import sys
+import madgraph.various.misc as misc
 
 def load_model(name, decay=False):
     
@@ -24,11 +25,21 @@ def load_model(name, decay=False):
         name = name[:-1]
     
 
+
     path_split = name.split(os.sep)
     if len(path_split) == 1:
-        model_pos = 'models.%s' % name
-        __import__(model_pos)
-        return sys.modules[model_pos]
+        try:
+            model_pos = 'models.%s' % name
+            __import__(model_pos)
+            return sys.modules[model_pos]
+        except Exception:
+            pass
+        for p in os.environ['PYTHONPATH']:
+            new_name = os.path.join(p, name)
+            try:
+                return load_model(new_name, decay)
+            except Exception:
+                pass
     elif path_split[-1] in sys.modules:
         model_path = os.path.realpath(os.sep.join(path_split))
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
@@ -36,8 +47,8 @@ def load_model(name, decay=False):
             raise Exception, 'name %s already consider as a python library cann\'t be reassigned(%s!=%s)' % \
                 (path_split[-1], model_path, sys_path) 
 
-    sys.path.insert(0, os.sep.join(path_split[:-1]))
-    __import__(path_split[-1])
+    with misc.TMP_variable(sys, 'path', [os.sep.join(path_split[:-1])]):
+        __import__(path_split[-1])
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]
@@ -47,9 +58,5 @@ def load_model(name, decay=False):
             pass
         else:
             output.all_decays = sys.modules[dec_name].all_decays
-    
-    sys.path.pop(0)
-    
-    
-    
+        
     return sys.modules[path_split[-1]]

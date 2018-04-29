@@ -19,6 +19,7 @@ except:
     import internal.file_writers as file_writers
     import internal.misc as misc
 
+pjoin = os.path.join 
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -247,7 +248,7 @@ class Block(list):
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
-            data, self.commant = text, ""
+            data, self.comment = text, ""
 
         data = data.lower()
         data = data.split()
@@ -488,7 +489,7 @@ class ParamCard(dict):
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
+                        logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
                         logger.log(loglevel, 'For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
@@ -511,7 +512,7 @@ class ParamCard(dict):
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
+                        logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
                         logger.log(loglevel,'For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
@@ -881,7 +882,8 @@ class ParamCardMP(ParamCard):
                 variable, ('%e' % value)))
 
 
-
+  
+    
 class ParamCardIterator(ParamCard):
     """A class keeping track of the scan: flag in the param_card and 
        having an __iter__() function to scan over all the points of the scan.
@@ -922,8 +924,8 @@ class ParamCardIterator(ParamCard):
     def iterate(self):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
-        auto = 'Auto'
         pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        self.autowidth = []
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
@@ -941,20 +943,21 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key].append( (param, eval(def_list)))
                     except SyntaxError, error:
                         raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
-                    
+                elif isinstance(param.value, str) and param.value.strip().lower().startswith('auto'):
+                    self.autowidth.append(param)
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-
+            
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):
             self.itertag = []
             if self.logging:
-                logger.info("Create the next param_card in the scan definition", '$MG:color:BLACK')
+                logger.info("Create the next param_card in the scan definition", '$MG:BOLD')
             for i, pos in enumerate(positions):
                 key = keys[i]
                 for param, values in all_iterators[key]:
@@ -970,8 +973,9 @@ class ParamCardIterator(ParamCard):
             yield param_card
         
     
-    def store_entry(self, run_name, cross, error=None):
+    def store_entry(self, run_name, cross, error=None, param_card_path=None):
         """store the value of the cross-section"""
+        
         if isinstance(cross, dict):
             info = dict(cross)
             info.update({'bench' : self.itertag, 'run_name': run_name})
@@ -980,7 +984,13 @@ class ParamCardIterator(ParamCard):
             if error is None:
                 self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
             else:
-                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})        
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+        if self.autowidth and param_card_path:
+            paramcard = ParamCard(param_card_path)
+            for param in self.autowidth:
+                self.cross[-1]['width#%s' % param.lhacode[0]] = paramcard.get_value(param.lhablock, param.lhacode)
+            
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
@@ -993,9 +1003,15 @@ class ParamCardIterator(ParamCard):
             keys = order
         else:
             keys = self.cross[0].keys()
-            keys.remove('bench')
-            keys.remove('run_name')
+            if 'bench' in keys: keys.remove('bench')
+            if 'run_name' in keys: keys.remove('run_name')
             keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
 
         formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
                                              ('%%-%is ' % (nbcol))* len(keys))
@@ -1004,18 +1020,23 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
-        
+      
+
         if not lastline:
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
+
         for info in to_print:
             name = info['run_name']
             bench = info['bench']
             data = []
             for k in keys:
-                data.append(info[k])
-                
+                if k in info:
+                    data.append(info[k])
+                else:
+                    data.append(0.)
+            misc.sprint(name, bench, data)
             ff.write(formatting % tuple([name] + bench + data))
                 
         if not path:
@@ -1032,6 +1053,7 @@ class ParamCardIterator(ParamCard):
         # no valid '_' in the name
         return '%s_scan_02' % run_name
     
+
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of
@@ -1256,7 +1278,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        block, id, 0.0, '$MG:color:BLACK')                            
+                                        block, id, 0.0, '$MG:BOLD')                            
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         block, id, 0.0)
@@ -1287,7 +1309,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        (block, id, 1.0), '$MG:color:BLACK')                            
+                                        (block, id, 1.0), '$MG:BOLD')                            
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0))
@@ -1324,7 +1346,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to parameter with id %s',
-                                        block, id1, value2, id2, '$MG:color:BLACK')
+                                        block, id1, value2, id2, '$MG:BOLD')
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to parameter with id %s',
                                         block, id1, value2, id2)
@@ -1353,7 +1375,7 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
-                                        block, id1, -value2, id2, '$MG:color:BLACK')
+                                        block, id1, -value2, id2, '$MG:BOLD')
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
                                         block, id1, -value2, id2)

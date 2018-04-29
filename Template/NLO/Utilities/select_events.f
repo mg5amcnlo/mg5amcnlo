@@ -40,9 +40,10 @@ c
       write(*,*)'     3 to keep a subset of events'
       read(*,*)itype
       if(itype.lt.3)then
-         write(*,*)'Type the Born multiplicity.'
+         write(*,*)'Enter the Born multiplicity, counting only initial-'
+         write(*,*)'   and final-state particles (no resonances).'
          write(*,*)'If the line after each event starts'
-         write(*,*)'with a hash, ''#'', this is not used'
+         write(*,*)'with a hash, ''#'', this entry is ignored'
          read(*,*)nBorn
       endif
 
@@ -82,8 +83,9 @@ c
          write(*,*)'Invalid itype',itype
          stop
       endif
-
-c first round to establish ievts_ok
+c
+c first round to establish ievts_ok (number of accepted events)
+c
       ifile=34
       extra=.false.
       open(unit=ifile,file=event_file,status='unknown')
@@ -114,15 +116,18 @@ c first round to establish ievts_ok
      &           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
                if(itype.eq.iSorH_lhe)ievts_ok=ievts_ok+1
             else
-               if(itype.eq.1+nup-nBorn)ievts_ok=ievts_ok+1
-c Comment the following if-statement if the file has more than two
-c multiplicities (for example when intermediate resonances are not
-c written in all the events)
-               if(nup-nBorn.ne.0.and.nup-nBorn.ne.1)then
+               npart=0
+               do k=1,nup
+                  if(abs(ISTUP(k)).eq.1)npart=npart+1
+               enddo
+               if(npart-nBorn.ne.0.and.npart-nBorn.ne.1)then
                   write(*,*)'The Born multiplicity seems incorrect:'
-                  write(*,*)'cannot extract S/H events from this file'
+                  write(*,*)'cannot extract S/H events from this file.'
+                  write(*,*)'  Event #',i,pup(4,1),pup(4,2)
+                  write(*,*)npart,nup,nborn
                   stop
                endif
+               if(itype.eq.(1+npart-nBorn))ievts_ok=ievts_ok+1
             endif
             i=i+1
          enddo
@@ -132,12 +137,13 @@ c written in all the events)
       close(34)
       if(ievts_ok.eq.0)then
          write(*,*)' '
-         write(*,*)'No events of desired type found in file !'
+         write(*,*)'No events of desired type found in file'
          write(*,*)' '
          stop
       endif
-
+c
 c second round to write file
+c
       ifile=34
       ofile=35
       open(unit=ifile,file=event_file,status='old')
@@ -179,9 +185,10 @@ c second round to write file
          enddo
          call phspncheck_nocms2(i,npart,xmass,xmom)
          if( (itype.le.2.and.extra.and.itype.eq.iSorH_lhe).or.
-     &       (itype.eq.1.and..not.extra.and.nup.eq.nBorn).or.
-     &       (itype.eq.2.and..not.extra.and.nup.eq.nBorn+1).or.
+     &       (itype.eq.1.and..not.extra.and.npart.eq.nBorn).or.
+     &       (itype.eq.2.and..not.extra.and.npart.eq.nBorn+1).or.
      &       (itype.eq.3.and.i.ge.nevmin) )then
+            ievts_ok=ievts_ok+1
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -203,6 +210,9 @@ c second round to write file
       enddo
       write(ofile,*)'</LesHouchesEvents>'
       if(itype.eq.3)write(*,*)'The sum of the weights is:',sum_wgt
+
+      write(*,*)'  '
+      write(*,*)'Number of events kept:',ievts_ok
 
       close(34)
       close(35)

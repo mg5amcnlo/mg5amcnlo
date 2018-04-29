@@ -641,7 +641,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for decay in generate_all.all_ME.values():
                 decay['path'] = decay['path'].replace(generate_all.path_me, self.options['ms_dir'])
                 for decay2 in decay['decays']:
-                    decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
+                    if decay2['path']: 
+                        decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
             generate_all.path_me = self.options['ms_dir'] # directory can have been move
             generate_all.ms_dir = generate_all.path_me
         
@@ -1021,6 +1022,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
                     run_card["iseed"] = self.seed
                     run_card['gridpack'] = True
+                    run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']
@@ -1343,6 +1345,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     evt_decayfile[particle.pdg].update(new_file)
                     decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                     continue
+            
             out[particle.pdg].append(decay)
                         
         return out
@@ -1433,10 +1436,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         full_event = lhe_parser.Event(str(production))
         full_event = full_event.add_decays(decays)
         full_me = self.calculate_matrix_element(full_event)
-        
-#        misc.sprint([p.pdg for p in production])
-#        misc.sprint([p.pdg for p in full_event])
-
+        #misc.sprint(full_event)
+        #misc.sprint([p.pdg for p in production])
+        #misc.sprint([p.pdg for p in full_event])
+        #misc.sprint(full_me, production_me, decay_me)
         return full_event, full_me/(production_me*decay_me)
         
         
@@ -1444,7 +1447,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""        
         
         tag, order = event.get_tag_and_order()
-        orig_order = self.all_me[tag]['order']
+        try:
+            orig_order = self.all_me[tag]['order']
+        except Exception:
+            # try to pass to full anti-particles for 1->N
+            init, final = tag
+            if len(init) == 2:
+                raise
+            init = (-init[0],)
+            final = tuple(-i for i in final)
+            tag = (init, final)
+            misc.sprint([k for k in  self.all_me.keys() if len(k[0])==1])
+            orig_order = self.all_me[tag]['order']
+            
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)

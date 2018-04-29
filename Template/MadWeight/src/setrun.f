@@ -292,6 +292,13 @@ c*********************************************************************
       else 
          call get_integer (npara,param,value," iseed ",iseed,0)
       endif
+c
+c     forcd pp collision
+c
+      nb_proton(1) = 1
+      nb_proton(2) = 1
+      nb_neutron(1) = 0
+      nb_neutron(2) = 0
 
 c************************************************************************     
 c     Renormalization and factorization scales                          *
@@ -492,6 +499,40 @@ C-------------------------------------------------
         pdfgup(i)=0
         pdfsup(i)=mpdf
       enddo
+
+      return
+      end
+
+      logical FUNCTION dummy_cuts(P)
+C**************************************************************************
+C     INPUT:
+C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            COMMON/JETCUTS/   CUTS ON JETS
+C     OUTPUT:
+C            TRUE IF EVENTS PASSES ALL CUTS LISTED
+C**************************************************************************
+      IMPLICIT NONE
+c
+c     Constants
+c
+      include 'nexternal.inc'
+C
+C     ARGUMENTS
+C
+      REAL*8 P(0:3,nexternal)
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+c
+c     particle identification
+c
+
+      dummy_cuts=.true.
 
       return
       end

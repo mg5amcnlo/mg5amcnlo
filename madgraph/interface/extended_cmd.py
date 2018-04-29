@@ -34,6 +34,8 @@ except:
 
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
+logger_tuto = logging.getLogger('tutorial') # for stdout
+logger_plugin = logging.getLogger('tutorial_plugin') # for stdout
 
 try:
     import madgraph.various.misc as misc
@@ -467,7 +469,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return out
+            return list(set(out))
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
@@ -767,13 +769,13 @@ class HelpCmd(object):
 
     def help_quit(self):
         logger.info("-- terminates the application",'$MG:color:BLUE')
-        logger.info("syntax: quit",'$MG:color:BLACK')
+        logger.info("syntax: quit",'$MG:BOLD')
     
     help_EOF = help_quit
 
     def help_history(self):
         logger.info("-- interact with the command history.",'$MG:color:BLUE')
-        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:BOLD')
         logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
         logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
@@ -781,17 +783,17 @@ class HelpCmd(object):
         
     def help_help(self):
         logger.info("-- access to the in-line help",'$MG:color:BLUE')
-        logger.info("syntax: help",'$MG:color:BLACK')
+        logger.info("syntax: help",'$MG:BOLD')
 
     def help_save(self):
         """help text for save"""
         logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
-        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:BOLD') 
         
     def help_display(self):
         """help for display command"""
         logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
-        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:BOLD')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -1020,6 +1022,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.child = obj_instance
         self.child.mother = self
         
+        
         #ensure that notification are sync:
         self.child.allow_notification_center = self.allow_notification_center
 
@@ -1185,8 +1188,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
-                logger.info('Use %s value' % default, '$MG:color:BLACK')
+                logger.info('The answer to the previous question is not set in your input file', '$MG:BOLD')
+                logger.info('Use %s value' % default, '$MG:BOLD')
                 return str(default)
             
         line = line.replace('\n','').strip()
@@ -1210,6 +1213,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         elif path:
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
+                return line
+            if line.startswith(('http', 'www')):
                 return line
         elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
             for entry in question_instance.allow_arg:
@@ -1321,9 +1326,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                 self.options['crash_on_error']:
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
+            
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            return True 
+        if self.use_rawinput == False or self.inputfile:
+            return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+                
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True 
+        
         return False
 
 
@@ -1346,9 +1360,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                 self.options['crash_on_error']:
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
+
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
+        if self.use_rawinput == False or self.inputfile:
             return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True                
+            
         # Remove failed command from history
         self.history.pop()
         return False
@@ -1382,9 +1404,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
         
-        #stop the execution if on a non interactive mode                                
-        if self.use_rawinput == False:
+        #stop the execution if on a non interactive mode
+        if self.use_rawinput == False or self.inputfile:
             return True
+        elif self.mother:
+            if self.mother.use_rawinput is False:
+                return True
+            elif self.mother.mother:
+                if self.mother.mother.use_rawinput is False:
+                    return True                             
+
         # Remove failed command from history                                            
         if self.history:
             self.history.pop()
@@ -1427,26 +1456,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             me_dir = os.path.basename(me_dir) + ' '
         
         misc.EasterEgg('error')
-            
+        stop=False
         try:
             raise 
-        except self.InvalidCmd as error:            
+        except self.InvalidCmd as error:
             if __debug__:
-                self.nice_error_handling(error, line)
+                stop = self.nice_error_handling(error, line)
                 self.history.pop()
             else:
-                self.nice_user_error(error, line)
+                stop = self.nice_user_error(error, line)
+
             if self.allow_notification_center:
                 misc.apple_notify('Run %sfailed' % me_dir,
                               'Invalid Command: %s' % error.__class__.__name__)
 
         except self.ConfigurationError as error:
-            self.nice_config_error(error, line)
+            stop = self.nice_config_error(error, line)
             if self.allow_notification_center:
                 misc.apple_notify('Run %sfailed' % me_dir,
                               'Configuration error')
         except Exception as error:
-            self.nice_error_handling(error, line)
+            stop = self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
             if self.allow_notification_center:
@@ -1457,6 +1487,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if __debug__:
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
+
+        
+        if stop:
+            self.do_quit('all')
         
 
 
@@ -1705,12 +1739,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         elif self.mother:
             self.mother.child = None
             if line == 'all':
+                self.mother.do_quit('all')
                 pass
             elif line:
                 level = int(line) - 1
                 if level:
                     self.mother.lastcmd = 'quit %s' % level
-        logger.info(' ')
+        elif self.inputfile:
+            for line in self.inputfile:
+                logger.warning('command not executed: %s' % line.replace('\n','')) 
+
         return True
 
     # Aliases
@@ -1982,11 +2020,11 @@ class CmdShell(Cmd):
     def help_shell(self):
         """help for the shell"""
         logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
-        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:BOLD')
 
 
 
-
+class NotValidInput(Exception): pass
 #===============================================================================
 # Question with auto-completion
 #===============================================================================
@@ -2006,6 +2044,7 @@ class SmartQuestion(BasicCmd):
 
     def __init__(self, question, allow_arg=[], default=None, 
                                             mother_interface=None, *arg, **opt):
+
         self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
@@ -2030,6 +2069,8 @@ class SmartQuestion(BasicCmd):
             setattr(self, key, value)
         if reprint_opt:
             print question
+            logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
+            logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
         return self.cmdloop()
         
 
@@ -2100,8 +2141,8 @@ class SmartQuestion(BasicCmd):
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
-            print self.question
-            
+            print self.question.encode('utf8')
+
         if self.mother_interface:
             answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
                                                                 path=self.allowpath)
@@ -2121,21 +2162,21 @@ class SmartQuestion(BasicCmd):
         
         if not text:
             if out['Options']:
-                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "Here is the list of command available:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
         else:
             if out['Options']:
-                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
             if out['command']: 
-                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
             elif not  out['Options']:
-                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
-        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:BOLD')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:BOLD')
     def complete_help(self, text, line, begidx, endidx):
         """ """
         return self.completenames(text, line)
@@ -2302,6 +2343,7 @@ class ControlSwitch(SmartQuestion):
        
        Behavior for each switch can be customize via:
        set_default_XXXX() -> set default value
+           This is super-seeded by self.default_switch if that attribute is defined (and has a key for XXXX)
        get_allowed_XXXX() -> return list of possible value
        check_value_XXXX(value) -> return True/False if the user can set such value
        switch_off_XXXXX()      -> set it off (called for special mode)
@@ -2364,7 +2406,8 @@ class ControlSwitch(SmartQuestion):
             allowed_args += opts['allow_arg']
             del opts['allow_arg']
 
-        super(ControlSwitch, self).__init__(question, allowed_args, *args, **opts)
+        allowed_args +=["0", "done"]
+        SmartQuestion.__init__(self, question, allowed_args, *args, **opts)
         self.options = self.mother_interface.options
 
     def special_check_answer_in_input_file(self, line, default):
@@ -2383,7 +2426,7 @@ class ControlSwitch(SmartQuestion):
                 return str(default) 
             return None
         key, value = line.split('=',1)
-        if key in self.switch:
+        if key.lower() in self.switch:
             return line
         if key in [str(i+1) for i in range(len(self.to_control))]:
             self.value='reask'
@@ -2402,11 +2445,14 @@ class ControlSwitch(SmartQuestion):
         
         for key,_ in self.to_control:
             key = key.lower()
+            if hasattr(self, 'default_switch') and key in self.default_switch:
+                self.switch[key] = self.default_switch[key]
+                continue
             if hasattr(self, 'set_default_%s' % key):
                 getattr(self, 'set_default_%s' % key)()
             else:
                 self.default_switch_for(key)
-    
+        
     def default_switch_for(self, key):
         """use this if they are no dedicated function for such key"""
         
@@ -2461,8 +2507,8 @@ class ControlSwitch(SmartQuestion):
             return getattr(self, 'get_allowed_%s' % key)()
         else:
             return ['ON', 'OFF']    
-        
-    def default(self, line):
+            
+    def default(self, line, raise_error=False):
         """Default action if line is not recognized"""
         
         line=line.strip().replace('@', '__at__')
@@ -2474,6 +2520,8 @@ class ControlSwitch(SmartQuestion):
         
         if '=' in line:
             base, value = line.split('=',1)
+            base = base.strip()
+            value = value.strip()
             # allow 1=OFF
             if base.isdigit() :
                 try:
@@ -2484,7 +2532,7 @@ class ControlSwitch(SmartQuestion):
             base, value = line.split(' ', 1)
         elif hasattr(self, 'ans_%s' % line.lower()):
             base, value = line.lower(), None
-        elif line.isdigit() and line in [`i` for i in range(1, len(self.switch)+1)]:
+        elif line.isdigit() and line in [`i` for i in range(1, len(self.to_control)+1)]:
             # go from one valid option to the next in the get_allowed for that option
             base = self.to_control[int(line)-1][0].lower()
             return self.default(base) # just recall this function with the associate name
@@ -2496,7 +2544,7 @@ class ControlSwitch(SmartQuestion):
             except:
                 if self.get_allowed(base):
                     value = self.get_allowed(base)[0]
-                else:                                            
+                else:                      
                     logger.warning('Can not switch "%s" to another value via number', base)
                     self.value='reask'
                     return
@@ -2511,6 +2559,8 @@ class ControlSwitch(SmartQuestion):
         elif line in 'auto':
             self.switch['dynamical'] = True
             return super(ControlSwitch, self).default(line)
+        elif raise_error:
+            raise NotValidInput('unknow command: %s' % line)
         else:
             logger.warning('unknow command: %s' % line)
             self.value = 'reask'
@@ -2523,7 +2573,9 @@ class ControlSwitch(SmartQuestion):
                 value = value.lower()
             getattr(self, 'ans_%s' % base)(value)
         elif base in self.switch:
-            self.set_switch(base, value)        
+            self.set_switch(base, value)
+        elif raise_error:
+            raise NotValidInput('Not valid command: %s' % line)                
         else:
             logger.warning('Not valid command: %s' % line)
    
@@ -2571,8 +2623,6 @@ class ControlSwitch(SmartQuestion):
         """change a switch to a given value"""
 
         assert key in self.switch
-
-        
         
         if hasattr(self, 'ans_%s' % key):
             if not self.is_case_sensitive(key):
@@ -2790,6 +2840,52 @@ class ControlSwitch(SmartQuestion):
         if info == '':
             info = 'Please install module'
         return info
+    
+    def do_help(self, line, list_command=False):
+        """dedicated help for the control switch"""
+        
+        if line:
+            return self.print_help_for_switch(line)
+        
+        # here for simple "help"
+        logger.info(" ")
+        logger.info("  In order to change a switch you can:")
+        logger.info("   - type 'NAME = VALUE'  to set the switch NAME to a given value.")
+        logger.info("   - type 'ID = VALUE'  to set the switch correspond to the line ID to a given value.")
+        logger.info("   - type 'ID' where ID is the value of the line to pass from one value to the next.")
+        logger.info("   - type 'NAME' to set the switch NAME to the next value.")
+        logger.info("")
+        logger.info("   You can type 'help NAME' for more help on a given switch")
+        logger.info("")
+        logger.info("  Special keyword:", '$MG:BOLD')
+        logger.info("    %s" % '\t'.join([p[4:] for p in dir(self) if p.startswith('ans_')]) )
+        logger.info("    type 'help  XXX' for more information")
+        if list_command:
+            super(ControlSwitch, self).do_help(line)
+
+        
+    def print_help_for_switch(self, line):
+        """ """
+        
+        arg = line.split()[0]
+        
+        if hasattr(self, 'help_%s' % arg):
+            return getattr(self, 'help_%s' % arg)('')
+        
+        if hasattr(self, 'ans_%s' % arg):
+            return getattr(self, 'help_%s' % arg).__doc__
+        
+        if arg in self.switch:
+            logger.info("   information for switch %s: ", arg, '$MG:BOLD')
+            logger.info("   allowed value:")
+            logger.info("      %s", '\t'.join(self.get_allowed(arg)))
+            if hasattr(self, 'help_text_%s' % arg):
+                logger.info("")
+                for line in getattr(self, 'help_text_%s' % arg):
+                    logger.info(line)
+                      
+        
+    
 
     def question_formatting(self, nb_col = 80,
                                   ldescription=0,
@@ -2963,7 +3059,7 @@ class ControlSwitch(SmartQuestion):
         
         return upper, lower, f1, f2
                 
-    def create_question(self):
+    def create_question(self, help_text=True):
         """ create the question  with correct formatting"""
         
         # geth the number of line and column of the shell to adapt the printing
@@ -3053,30 +3149,29 @@ class ControlSwitch(SmartQuestion):
                 
         if not example:
             example = ('KEY', 'VALUE')
+        
+        if help_text:
+            text += \
+              ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
+               "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
+               "Type 'help' for the list of all valid option",
+               "Type '0', 'auto', 'done' or just press enter when you are done."]
             
-        text += \
-          ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
-           "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
-           "Type 'help' for the list of all valid option",
-           "Type '0', 'auto', 'done' or just press enter when you are done."]
-        
-        # check on the number of row:
-        if len(text) > nb_rows:
-            # too many lines. Remove some
-            to_remove = [ -2, #Type 'help' for the list of all valid option
-                          -5,  # \====/
-                          -4, #Either type the switch number (1 to %s) to change its setting,
-                          -3, # Set any switch explicitly
-                          -1, # Type '0', 'auto', 'done' or just press enter when you are done.
-                         ] 
-            to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
-            text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
-        
+            # check on the number of row:
+            if len(text) > nb_rows:
+                # too many lines. Remove some
+                to_remove = [ -2, #Type 'help' for the list of all valid option
+                              -5,  # \====/
+                              -4, #Either type the switch number (1 to %s) to change its setting,
+                              -3, # Set any switch explicitly
+                              -1, # Type '0', 'auto', 'done' or just press enter when you are done.
+                             ] 
+                to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
+                text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
+            
         self.question =    "\n".join(text)                                                              
         return self.question
     
-
-
 
 #===============================================================================
 # 

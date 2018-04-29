@@ -102,11 +102,9 @@ c its value to the list of weights using the add_wgt subroutine
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
-     $     ,wgt1,fx_ev,sudakov_damp
-      external dot,f_damp,fks_Sij
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
+     $     ,sudakov_damp
+      external fks_Sij
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -116,9 +114,6 @@ c its value to the list of weights using the add_wgt subroutine
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
-      x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-      ffact = f_damp(x)
-      if (ffact.le.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
@@ -330,10 +325,10 @@ c respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       integer nofpartners,i
-      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
-     $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
-     $     ,xmcxsec(nexternal),g22,wgt1,xlum_mc_fact,fks_Hij
-      external dot,fks_Sij,f_damp,fks_Hij
+      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
+     $     ,sevmc,dummy,zhw(nexternal),xmcxsec(nexternal),g22,wgt1
+     $     ,xlum_mc_fact,fks_Hij
+      external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -357,15 +352,9 @@ c respectively.
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
-         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-         ffact = f_damp(x)
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-         sevmc = sevmc*ffact
       else
-         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
-         ffact = f_damp(x)
          sevmc = fks_Hij(p,i_fks,j_fks)
-         sevmc = sevmc*ffact
       endif
       if (sevmc.eq.0d0) return
       call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
@@ -431,14 +420,56 @@ c it only checks the 0th and 3rd components (energy and z-direction).
                   return
                endif
             else
-               if (abs((p1(j,i)-p2(j,i))/max(p1(j,i),p2(j,i))).gt.vtiny)
-     &              then
+               if (abs((p1(j,i)-p2(j,i))/
+     $                    max(abs(p1(j,i)),abs(p2(j,i)))).gt.vtiny) then
                   momenta_equal=.false.
                   return
                endif
             endif
          enddo
       enddo
+      end
+      
+      logical function momenta_equal_uborn(p1,p2,jfks1,ifks1,jfks2
+     $     ,ifks2)
+c Returns .true. only if the momenta p1 and p2 are equal, but with the
+c momenta of i_fks and j_fks summed. To save time, it only checks the
+c 0th and 3rd components (energy and z-direction).
+      implicit none
+      include 'nexternal.inc'
+      integer i,j,jfks1,ifks1,jfks2,ifks2
+      double precision p1(0:3,nexternal),p2(0:3,nexternal),vtiny,pb1(0:3
+     $     ,nexternal),pb2(0:3,nexternal)
+      logical momenta_equal
+      external momenta_equal
+      parameter (vtiny=1d-8)
+c Fill the underlying Born momenta pb1 and pb2
+      do i=1,nexternal
+         do j=0,3,3 ! skip x and y components, since they are not used in
+                    ! the 'momenta_equal' function
+            if (i.lt.ifks1) then
+               pb1(j,i)=p1(j,i)
+            elseif (i.eq.ifks1) then
+c Sum the i_fks to the j_fks momenta (i_fks is always greater than
+c j_fks, so this is fine: it will NOT be overwritten later in the
+c do-loop)
+               pb1(j,jfks1)=pb1(j,jfks1)+p1(j,i)
+               pb1(j,nexternal)=0d0 ! fill the final one with zero's
+            else
+               pb1(j,i-1)=p1(j,i)   ! skip the i_fks momenta
+            endif
+            if (i.lt.ifks2) then
+               pb2(j,i)=p2(j,i)
+            elseif (i.eq.ifks2) then
+               pb2(j,jfks2)=pb2(j,jfks2)+p2(j,i) ! sum i_fks to j_fks momenta
+               pb2(j,nexternal)=0d0 ! fill the final one with zero's
+            else
+               pb2(j,i-1)=p2(j,i)   ! skip the i_fks momenta
+            endif
+         enddo
+      enddo
+c Check if they are equal
+      momenta_equal_uborn=momenta_equal(pb1,pb2)
       end
       
       subroutine set_FxFx_scale(iterm,p)
@@ -1790,9 +1821,10 @@ c to greatly reduce the calls to the analysis routines.
       implicit none
       include 'nexternal.inc'
       include 'timing_variables.inc'
+      include 'fks_info.inc'
       integer i,ii,j,max_weight
-      logical momenta_equal,pdg_equal
-      external momenta_equal,pdg_equal
+      logical momenta_equal,momenta_equal_uborn,pdg_equal
+      external momenta_equal,momenta_equal_uborn,pdg_equal
       double precision,allocatable :: www(:)
       save max_weight
       call cpu_time(tBefore)
@@ -1823,7 +1855,14 @@ c contribution makes sure that it is added as a new element.
             else
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
             endif
-            if (.not.momenta_equal(momenta(0,1,ii),momenta(0,1,i)))cycle
+            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+               if (.not.momenta_equal_uborn(momenta(0,1,ii),momenta(0,1
+     $              ,i),fks_j_d(nFKS(ii)),fks_i_d(nFKS(ii))
+     $                 ,fks_j_d(nFKS(i)) ,fks_i_d(nFKS(i)))) cycle
+            else
+               if (.not.momenta_equal(momenta(0,1,ii),momenta(0,1,i)))
+     $              cycle
+            endif
             do j=1,iwgt
                plot_wgts(j,ii)=plot_wgts(j,ii)+wgts(j,i)
             enddo
