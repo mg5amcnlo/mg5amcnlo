@@ -293,7 +293,6 @@ class MECmdShell(IOTests.IOTestManager):
         # check that original event has top onshell
         nb_event = 0
         for event in lhe_parser.EventFile(orig_lhe):
-            misc.sprint(str(event))
             nb_event +=1
             nb_final = 0
             m_inv_t = 0
