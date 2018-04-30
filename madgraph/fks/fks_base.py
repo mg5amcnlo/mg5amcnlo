@@ -193,11 +193,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for leg in procdef['legs']:
                 if any([id in soft_particles for id in leg['ids']]) \
                         and sorted(leg['ids']) != soft_particles:
-                    logger.warning(('%s can have real emission processes ' + \
-            'which are not finite.\nTo avoid this, please use multiparticles ' + \
-            'when generating the process and be sure to include all the following ' + \
-            'particles in the multiparticle definition:\n %s' ) \
-               % (procdef.nice_string(), soft_particles_string) )
+                    logger.warning('Use of multiparticles is non-trivial for NLO '+ \
+                         'process generation and depends on the orders included, '+ \
+                         'the process considered, as well as the PDF set chosen. '+ \
+                         'See appendix D of arXiv:1804.10017 [hep-ph] for some '+ \
+                         'guidance.')
                     break
 
         amps = self.get('amplitudes')
