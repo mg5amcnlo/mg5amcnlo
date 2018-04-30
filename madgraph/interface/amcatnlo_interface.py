@@ -479,6 +479,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             # find the minimum weighted order, then extract the values for the varius
             # couplings in the model
             weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
+            if not weighted:
+                raise MadGraph5Error,'\nProcess orders cannot be determined automatically. \n' + \
+                                      'Please specify them from the command line.'
 
             # this is a very rough attempt, and works only to guess QED/QCD
             qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
