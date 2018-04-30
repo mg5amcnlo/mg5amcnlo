@@ -13,7 +13,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
 
-2.6.2 (26/04/18)
+2.6.2 (27/04/18)
 
       Heavy ion pdf / pdf in general:
       -------------------------------

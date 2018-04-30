@@ -2043,7 +2043,7 @@ def wget(http, path, *args, **opt):
     """a wget function for both unix and mac"""
 
     if sys.platform == "darwin":
-        return call(['curl', http, '-o%s' % path], *args, **opt)
+        return call(['curl', '-L', http, '-o%s' % path], *args, **opt)
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 

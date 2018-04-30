@@ -292,6 +292,13 @@ c*********************************************************************
       else 
          call get_integer (npara,param,value," iseed ",iseed,0)
       endif
+c
+c     forcd pp collision
+c
+      nb_proton(1) = 1
+      nb_proton(2) = 1
+      nb_neutron(1) = 0
+      nb_neutron(2) = 0
 
 c************************************************************************     
 c     Renormalization and factorization scales                          *
