@@ -942,6 +942,9 @@ class AskRunNLO(cmd.ControlSwitch):
             out['runshower'] = True
         return out
 
+    def default(self,*args, **opts):
+        self.nb_fo_warning = 0
+        super(AskRunNLO, self).default(*args, **opts)
 
     def check_available_module(self, options):
         
@@ -1078,13 +1081,30 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return self.red % switch_value    
     
-    def consistency_fixed_order(self, value, switch):
-        
-        if value == "OFF":
-            logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
-            self.switch['fixed_order'] = "ON"
-            return {}
-    
+   
+    def consistency_no_ps(self, value, switch):
+        """ temporary way to forbid event generation due to lack of validation"""
+
+        out = {}
+        to_check ={'fixed_order': ['ON'],
+                   'shower': ['OFF'],
+                   'madanalysis': ['OFF'],
+                   'madspin': ['OFF','onshell'],
+                   'reweight': ['OFF']}
+        for key, allowed  in to_check.items():
+            if switch[key] not in allowed:
+                out[key] = allowed[0]
+                if not self.nb_fo_warning:
+                    logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
+                    self.nb_fo_warning = 1
+        return out 
+    #apply to all related to the group 
+    consistency_fixed_order = consistency_no_ps
+    consistency_shower = consistency_no_ps
+    consistency_madanalysis = consistency_no_ps
+    consistency_madspin = consistency_no_ps
+    consistency_reweight = consistency_no_ps
+      
     def consistency_fixed_order_shower(self, vfix, vshower):
         """ consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX

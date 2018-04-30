@@ -2751,15 +2751,14 @@ class ControlSwitch(SmartQuestion):
         # validate tmp_switch.
         to_check = [(key, value)] + to_check
 
-        i = 0
-        while len(to_check) and i < 50:
-            #misc.sprint(i, to_check, tmp_switch)
+        nstep = 0
+        while len(to_check) and nstep < 50:
             # check in a iterative way the consistency of the tmp_switch parameter
-            i +=1
+            nstep +=1
             key2, value2 = to_check.pop(0)
             if hasattr(self, 'consistency_%s' % key2):
-                rules2 = dict([(key2, None) for key2 in self.switch])
-                rules2.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
+                rules = dict([(k, None) for k in self.switch])
+                rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
                 rules = {}
                 for key3,value3 in self.switch.items():
@@ -2783,7 +2782,7 @@ class ControlSwitch(SmartQuestion):
                 if pos[key] == i:
                     to_check_new.append((key,value))
             to_check = to_check_new
-        if i>=50:
+        if nstep >=50:
             logger.critical('Failed to find a consistent set of switch values.')
             
         # Now tmp_switch is to a fully consistent setup for sure.
