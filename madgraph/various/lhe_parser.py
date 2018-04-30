@@ -100,6 +100,7 @@ class Particle(object):
     
     def __str__(self):
         """string representing the particles"""
+
         return " %8d %2d %4d %4d %4d %4d %+13.10e %+13.10e %+13.10e %14.10e %14.10e %10.4e %10.4e" \
             % (self.pid, 
                self.status,
@@ -154,6 +155,7 @@ class Particle(object):
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
+    allow_empty_event = False
 
     def __new__(self, path, mode='r', *args, **opt):
         
@@ -261,7 +263,7 @@ class EventFile(object):
                     text += line
             if self.parsing:
                 out = Event(text)
-                if len(out) == 0:
+                if len(out) == 0  and not self.allow_empty_event:
                     raise Exception
                 return out
             else:
@@ -1246,6 +1248,26 @@ class Event(list):
         self.assign_mother()
         
     def assign_mother(self):
+        """convert the number in actual particle"""
+        #Security if not incoming particle. Define a fake particle and set all particle as 
+        # decaying from that fake particle
+        if all(p.status != -1 for p in self):
+            if self.warning_order:
+                Event.warning_order = False
+                logger.warning("Weird format for lhe format: no incoming particle... adding a fake one")
+            
+            mother = Particle(event=self)
+            mother.status = -1
+            mother.pid = 0
+            self.insert(0,mother)
+            mother.color2 = 0
+            mother.event_id = 0
+            for p in self[1:]:
+                p.mother1 = 1
+                p.mother2 = 1
+                p.event_id += 1
+            
+        
         # assign the mother:
         for i,particle in enumerate(self):
             if i < particle.mother1 or i < particle.mother2:

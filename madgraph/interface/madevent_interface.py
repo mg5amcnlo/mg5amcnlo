@@ -5232,7 +5232,7 @@ tar -czf split_$1.tar.gz split_$1
     
         logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['run_card.dat'], plot=False, args)
+        self.ask_edit_cards(['run_card.dat'], plot=False, *args)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
