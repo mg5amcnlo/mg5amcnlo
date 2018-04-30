@@ -1,9 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.0 (XX/xx/XX):
-
-     We did not do anything, but found funny to call it 3.0.0
-
+     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections)
+     HS: inclusion of SMWidth for fast evaluation of NLO accurate widths for all SM particles
+     RF+SF: Resonance-aware phase-space mapping for NLO computations 
+     RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
      OM: remove ./bin/mg5 executable
 
 
