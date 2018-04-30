@@ -1044,16 +1044,23 @@ class AskRunNLO(cmd.ControlSwitch):
 #    
     def get_allowed_fixed_order(self):
         """ """
+        
         if self.proc_characteristics['ninitial'] == 1:
             return ['ON']
         else:
             return ['ON', 'OFF']
         
-    def set_default_fixed_order(self):  
-        
+    def set_default_fixed_order(self):
+          
+        self.switch['fixed_order'] = 'ON'
+        return
+
         if self.last_mode in ['LO', 'NLO']:
             self.switch['fixed_order'] = 'ON'
-        self.switch['fixed_order'] = 'OFF'
+        elif self.proc_characteristics['ninitial'] == 1:
+            self.switch['fixed_order'] = 'ON'
+        else:
+            self.switch['fixed_order'] = 'OFF'
 
     def color_for_fixed_order(self, switch_value):
          
@@ -1071,6 +1078,13 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return self.red % switch_value    
     
+    def consistency_fixed_order(self, value, switch):
+        
+        if value == "OFF":
+            logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
+            self.switch['fixed_order'] = "ON"
+            return {}
+    
     def consistency_fixed_order_shower(self, vfix, vshower):
         """ consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
@@ -1084,6 +1098,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     consistency_fixed_order_madspin = consistency_fixed_order_shower
     consistency_fixed_order_reweight = consistency_fixed_order_shower
+
 
     def consistency_fixed_order_madanalysis(self, vfix, vma5):
         
@@ -1160,11 +1175,15 @@ class AskRunNLO(cmd.ControlSwitch):
             return 
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-            self.switch['shower'] = self.run_card['parton_shower']  
-            #self.switch['shower'] = 'ON'
-            self.switch['fixed_order'] = "OFF"
+            if self.switch['fixed_order'] == "OFF":
+                self.switch['shower'] = self.run_card['parton_shower']  
+            elif self.switch['fixed_order'] == "ON":
+                self.switch['shower'] = "OFF" 
         else:
-            self.switch['shower'] = 'OFF'
+            if self.switch['fixed_order'] == "ON":
+                self.switch['shower'] = 'OFF'
+            else:
+                self.switch['shower'] = 'OFF (%s)' % self.run_card['parton_shower']
 
     def consistency_shower_madanalysis(self, vshower, vma5):
         """ MA5 only possible with (N)LO+PS if shower is run"""
