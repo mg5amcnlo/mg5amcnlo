@@ -931,7 +931,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
-                           and p.color != 1 and p.width != zero]
+                           and p.width != zero]
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
@@ -3015,7 +3015,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
         nb_init = self.ninitial
-        pat = re.compile(r'''DATA \(IDUP\(ILH,\d+\),ILH=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        pat = re.compile(r'''DATA \(IDUP\(ILH|I,\d+\),ILH|I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
             text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
             group = pat.findall(text)
