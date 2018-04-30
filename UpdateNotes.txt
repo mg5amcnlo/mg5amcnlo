@@ -1,7 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.0 (XX/xx/XX):
-     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections)
+
+     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
+         [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
+	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
+	 that when doing QCD corrections only --contrary to previous versions-- also loop diagrams with non-QCD-charged 
+	 particles will be included (e.g., the pentagons in Higgs production via vector-boson fusion).]
      HS: inclusion of SMWidth for fast evaluation of NLO accurate widths for all SM particles
      RF+SF: Resonance-aware phase-space mapping for NLO computations 
      RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
