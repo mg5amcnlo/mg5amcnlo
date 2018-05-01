@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.0.0 (XX/xx/XX):
+3.0.0 (01/05/18):
 
      RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
          [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
