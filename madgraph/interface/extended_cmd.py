@@ -1137,6 +1137,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if value == default and ask_class:
             value = question_instance.default(default)
+            if hasattr(question_instance, 'answer'):
+                value = question_instance.answer
+           
 
         if not return_instance:
             return value
@@ -2605,7 +2608,7 @@ class ControlSwitch(SmartQuestion):
         for key,_ in self.to_control:
             if not self.check_value(key, self.switch[key]):
                 self.switch[key] = 'OFF'
-        
+
         if not self.inconsistent_keys:
             return self.switch
         else:

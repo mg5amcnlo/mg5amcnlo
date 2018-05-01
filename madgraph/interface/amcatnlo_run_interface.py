@@ -934,9 +934,8 @@ class AskRunNLO(cmd.ControlSwitch):
             hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
         
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
-                                     *args, hide_line=hide_line,
+                                     *args, hide_line=hide_line, force=force,
                                       **opt)
-
 
     @property
     def answer(self):
@@ -5398,6 +5397,7 @@ RESTART = %(mint_mode)s
             force = True
         elif mode:
             passing_cmd.append(mode)
+        mode = None # allow to overwrite it due to EW
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=force,
@@ -5406,7 +5406,6 @@ RESTART = %(mint_mode)s
 
         if 'mode' in switch:
             mode = switch['mode']
-
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
             if switch['order'] == 'LO':
