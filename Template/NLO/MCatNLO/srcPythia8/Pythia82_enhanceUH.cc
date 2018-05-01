@@ -14,6 +14,35 @@
 
 using namespace Pythia8;
 
+//MZ add UserHooks
+class EnhanceHooks : public UserHooks {
+
+public:
+
+  // Constructor and destructor do nothing.
+  EnhanceHooks() {}
+  ~EnhanceHooks() {}
+
+  // Enhance real-emission rate. Thus no trial-emission enhancement.
+  bool canEnhanceEmission() { return true;}
+  bool canEnhanceTrial()    { return false;}
+
+  // Function to return the weight enhance factor.
+  double enhanceFactor(string name) {
+    if (name == "isr:Q2QA") return 10.;
+    return 1.0;
+  }
+
+  // Function to return the vetoing probability.
+  double vetoProbability(string name) {
+    if (name == "isr:Q2QA") return 0.1;
+    return 0.0;
+  }
+
+};
+//MZ
+
+
 extern "C" {
   extern struct {
     double EVWGT;
@@ -29,10 +58,21 @@ extern "C" {
 
 int main() {
   Pythia pythia;
+  //MZ pt0 min
+  pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
+  pythia.settings.forceParm("TimeShower:pT0Ref", 0.);
+  //
 
   int cwgtinfo_nn;
   char cwgtinfo_weights_info[1024][50];
   double cwgt_ww[1024];
+
+
+  //MZ Set up a user hook and send it in.
+  UserHooks* enhanceHooks = 0;
+  enhanceHooks = new EnhanceHooks();
+  pythia.setUserHooksPtr( enhanceHooks);
+  //MZ
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
@@ -100,6 +140,11 @@ int main() {
       if (++iAbort < nAbort) continue;
       break;
     }
+    //MZ compute the enhanced weight
+
+    double enhance = enhanceHooks->getEnhancedEventWeight();
+    
+    //MZ
     // the number of events read by Pythia so far
     nSelected=double(pythia.info.nSelected());
     // normalisation factor for the default analyses defined in pyanal_
@@ -114,7 +159,7 @@ int main() {
       ++iPrintLHA;
     }
 
-    double evtweight = pythia.info.weight();
+    double evtweight = pythia.info.weight() * enhance;//MZ
     double normhepmc;
     // Add the weight of the current event to the cross section.
     normhepmc = 1. / double(iEventshower);
@@ -132,7 +177,7 @@ int main() {
     _hepevtio->write_event(hepmcevt);
     
     //event weight
-    cevwgt.EVWGT=hepmcevt->weights()[0];
+    cevwgt.EVWGT=hepmcevt->weights()[0]*enhance;//MZ
 
     //call the FORTRAN analysis for this event. First, make sure to
     //re-synchronize the reading of the weights with the reading of

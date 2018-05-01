@@ -868,10 +868,14 @@ c
 
       if (split_type(qcd_pos).and.split_type(qed_pos)) then
         write(*,*) "Error in fill_icolor_H, NOT IMPLEMENTED"
-        stop
+        stop 1
       endif
 
       imother=min(i_fks,j_fks)
+      if (imother.lt.1.or.imother.gt.nexternal) then
+        write(*,*) "Error in fill_icolor_H, invalid imother", imother
+        stop 1
+      endif
 c The following works only if i_fks is always greater than j_fks.      
       if (j_fks.gt.nincoming) then
          if (j_part.eq.3.and.i_part.eq.-3) then ! g/a > q qb
@@ -888,7 +892,7 @@ c The following works only if i_fks is always greater than j_fks.
               jpart(5,i_fks)=jpart(5,imother)
               jpart(4,j_fks)=jpart(4,imother)
               jpart(5,j_fks)=0
-            elseif (split_type(qcd_pos)) then
+            elseif (split_type(qed_pos)) then
               ! photon (singlet) splitting, add a new color index
               jpart(4,i_fks)=0
               jpart(5,i_fks)=lc+1
@@ -909,7 +913,7 @@ c The following works only if i_fks is always greater than j_fks.
               jpart(5,i_fks)=0
               jpart(4,j_fks)=0
               jpart(5,j_fks)=jpart(5,imother) 
-            elseif (split_type(qcd_pos)) then
+            elseif (split_type(qed_pos)) then
               ! photon (singlet) splitting, add a new color index
               jpart(4,i_fks)=lc+1
               jpart(5,i_fks)=0
@@ -932,20 +936,20 @@ c The following works only if i_fks is always greater than j_fks.
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=0
-            jpart(5,i_fks)=0
+            jpart(4,i_fks)=lc+1
+            jpart(5,i_fks)=jpart(5,imother)
             jpart(4,j_fks)=0
-            jpart(5,j_fks)=jpart(5,imother)
+            jpart(5,j_fks)=lc+1
          elseif (j_part.eq.3.and.i_part.eq.1) then ! q > q a 
             jpart(4,i_fks)=0
             jpart(5,i_fks)=0
             jpart(4,j_fks)=jpart(4,imother)
             jpart(5,j_fks)=0
          elseif (j_part.eq.-3.and.i_part.eq.1) then ! qb > q a
-            jpart(4,i_fks)=lc+1
-            jpart(5,i_fks)=jpart(5,imother)
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
             jpart(4,j_fks)=0
-            jpart(5,j_fks)=lc+1
+            jpart(5,j_fks)=jpart(5,imother)
          elseif (j_part.eq.8.and.i_part.eq.8) then ! g > g g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #7 in fill_icolor_H',
@@ -987,7 +991,7 @@ c The following works only if i_fks is always greater than j_fks.
               jpart(5,i_fks)=jpart(4,imother)
               jpart(4,j_fks)=0
               jpart(5,j_fks)=jpart(5,imother)
-            elseif (split_type(qcd_pos)) then
+            elseif (split_type(qed_pos)) then
               ! photon (singlet) splitting, add a new color index
               jpart(4,i_fks)=0
               jpart(5,i_fks)=lc+1
@@ -1008,7 +1012,7 @@ c The following works only if i_fks is always greater than j_fks.
               jpart(5,i_fks)=0
               jpart(4,j_fks)=jpart(4,imother)
               jpart(5,j_fks)=0
-            elseif (split_type(qcd_pos)) then
+            elseif (split_type(qed_pos)) then
               ! photon (singlet) splitting, add a new color index
               jpart(4,i_fks)=lc+1
               jpart(5,i_fks)=0
