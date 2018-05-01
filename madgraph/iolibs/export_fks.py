@@ -773,6 +773,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        # determine perturbation order
+        perturbation_order = []
+        firstprocess = history.get('generate')
+        order = re.findall("\[(.*)\]", firstprocess)
+        if 'QED' in order[0]:
+            perturbation_order.append('QED')
+        if 'QCD' in order[0]:
+            perturbation_order.append('QCD')
+        self.proc_characteristic['perturbation_order'] = perturbation_order 
+        
         self.create_proc_charac()
 
         self.create_run_card(matrix_elements.get_processes(), history)

@@ -1413,7 +1413,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('colored_pdgs', [1,2,3,4,5])
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
-        self.add_param('pdg_initial2', [0])        
+        self.add_param('pdg_initial2', [0])
+        self.add_param('perturbation_order', [], typelist=str)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

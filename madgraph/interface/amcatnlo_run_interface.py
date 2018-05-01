@@ -921,13 +921,22 @@ class AskRunNLO(cmd.ControlSwitch):
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
         
+
+            
         self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+
+        hide_line = []
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
+        
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
-                                     *args, **opt)
+                                     *args, hide_line=hide_line,
+                                      **opt)
+
 
     @property
     def answer(self):
@@ -1048,7 +1057,8 @@ class AskRunNLO(cmd.ControlSwitch):
     def get_allowed_fixed_order(self):
         """ """
         
-        if self.proc_characteristics['ninitial'] == 1:
+        if self.proc_characteristics['ninitial'] == 1 or \
+           'QED' in self.proc_characteristics['perturbation_order']:
             return ['ON']
         else:
             return ['ON', 'OFF']
@@ -1062,6 +1072,8 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['fixed_order'] = 'ON'
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['fixed_order'] = 'ON'
+        elif 'QED' in self.proc_characteristics['perturbation_order']:
+             self.switch['fixed_order'] = 'ON'
         else:
             self.switch['fixed_order'] = 'OFF'
 
@@ -1071,6 +1083,13 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.green % switch_value
         else:
             return self.red % switch_value
+    
+    def print_info_fixed_order(self):
+        
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            return "No NLO+PS available for EW correction"
+        else:
+            return self.print_info('fixed_order', check_attribute=False)
     
     def color_for_shower(self, switch_value):
          
@@ -1082,28 +1101,35 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.red % switch_value    
     
    
-    def consistency_no_ps(self, value, switch):
+    def consistency_QED(self, key, value, switch):
         """ temporary way to forbid event generation due to lack of validation"""
-
-        out = {}
-        to_check ={'fixed_order': ['ON'],
-                   'shower': ['OFF'],
-                   'madanalysis': ['OFF'],
-                   'madspin': ['OFF','onshell'],
-                   'reweight': ['OFF']}
-        for key, allowed  in to_check.items():
-            if switch[key] not in allowed:
-                out[key] = allowed[0]
-                if not self.nb_fo_warning:
-                    logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
-                    self.nb_fo_warning = 1
+        
+        if True:
+        #if 'QED' in self.proc_characteristics['perturbation_order']:
+            out = {}
+            to_check ={'fixed_order': ['ON'],
+                       'shower': ['OFF'],
+                       'madanalysis': ['OFF'],
+                       'madspin': ['OFF','onshell','none'],
+                       'reweight': ['OFF']}
+            for key, allowed  in to_check.items():        
+                if switch[key] not in allowed:
+                    out[key] = allowed[0]
+                    if not self.nb_fo_warning:
+                        if 'QED' in self.proc_characteristics['perturbation_order']:
+                            logger.warning("NLO+PS mode are not allowed for Electroweak correction")
+                        else:  
+                            logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
+                        self.nb_fo_warning = 1
+        else: 
+            return self.check_consistency_with_all(key, value, switch)
         return out 
     #apply to all related to the group 
-    consistency_fixed_order = consistency_no_ps
-    consistency_shower = consistency_no_ps
-    consistency_madanalysis = consistency_no_ps
-    consistency_madspin = consistency_no_ps
-    consistency_reweight = consistency_no_ps
+    consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
+    consistency_shower = lambda self, *args, **opts: self.consistency_QED('shower', *args, **opts)
+    consistency_madanalysis = lambda self, *args, **opts: self.consistency_QED('madanalysis', *args, **opts)
+    consistency_madspin = lambda self, *args, **opts: self.consistency_QED('madspin', *args, **opts)
+    consistency_reweight = lambda self, *args, **opts: self.consistency_QED('reweight', *args, **opts)
       
     def consistency_fixed_order_shower(self, vfix, vshower):
         """ consistency_XX_YY(val_XX, val_YY)
@@ -1152,6 +1178,10 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            self.allowed_shower = ['OFF']
+            return self.allowed_shower
+        
         if self.proc_characteristics['ninitial'] == 1:
             self.allowed_shower = ['OFF']
             return ['OFF']
@@ -1190,11 +1220,11 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def set_default_shower(self): 
         
-        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
-            self.switch['shower'] = 'OFF'
-            return 
-         
-        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            self.switch['shower'] = 'Not avail.'
+        elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+            self.switch['shower'] = 'OFF'         
+        elif os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             if self.switch['fixed_order'] == "OFF":
                 self.switch['shower'] = self.run_card['parton_shower']  
             elif self.switch['fixed_order'] == "ON":
@@ -1243,8 +1273,11 @@ class AskRunNLO(cmd.ControlSwitch):
             self.available_module.remove('MadSpin')
             self.allowed_madspin = ['OFF']
             return self.allowed_madspin
-        else:
-            self.allowed_madspin = ['OFF', 'ON', 'onshell']
+        else:        
+            if 'QED' in self.proc_characteristics['perturbation_order']:
+                self.allowed_madspin = ['OFF', 'onshell']
+            else:
+                self.allowed_madspin = ['OFF', 'ON', 'onshell']
             return  self.allowed_madspin
         
     def check_value_madspin(self, value):
@@ -1302,7 +1335,11 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_reweight'):
             return getattr(self, 'allowed_reweight')
         
+
+
         self.allowed_reweight = []
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            return self.allowed_reweight 
         if 'reweight' not in self.available_module:
             return self.allowed_reweight
         if self.proc_characteristics['ninitial'] == 1:
@@ -1316,7 +1353,9 @@ class AskRunNLO(cmd.ControlSwitch):
     def set_default_reweight(self):
         """initialise the switch for reweight"""
         
-        if 'reweight' in self.available_module:
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            self.switch['reweight'] = 'Not avail.'
+        elif 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                 self.switch['reweight'] = 'ON'
             else:
@@ -1347,6 +1386,8 @@ class AskRunNLO(cmd.ControlSwitch):
         
         self.allowed_madanalysis = []
         
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            return self.allowed_madanalysis
         
         if 'MA5' not in self.available_module:
             return self.allowed_madanalysis
@@ -1362,7 +1403,9 @@ class AskRunNLO(cmd.ControlSwitch):
     def set_default_madanalysis(self):
         """initialise the switch for reweight"""
         
-        if 'MA5' not in self.available_module: 
+        if 'QED' in self.proc_characteristics['perturbation_order']:
+            self.switch['madanalysis'] = 'Not avail.'
+        elif 'MA5' not in self.available_module: 
             self.switch['madanalysis'] =  'Not Avail.'
         elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
             self.switch['madanalysis'] = 'ON'

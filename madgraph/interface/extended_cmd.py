@@ -2381,6 +2381,11 @@ class ControlSwitch(SmartQuestion):
         """
     
         self.to_control = to_control
+        if 'hide_line' in opts:
+            self.hide_line = opts['hide_line']
+        else:
+            self.hide_line = []
+
         self.mother_interface = motherinstance
         self.inconsistent_keys = {} #flag parameter which are currently not consistent
                                     # and the value by witch they will be replaced if the
@@ -2760,12 +2765,7 @@ class ControlSwitch(SmartQuestion):
                 rules = dict([(k, None) for k in self.switch])
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
-                rules = {}
-                for key3,value3 in self.switch.items():
-                    if hasattr(self, 'consistency_%s_%s' % (key2,key3)):
-                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value3)
-                    else:
-                        rules[key3] = None
+                rules = self.check_consistency_with_all(key2)
                         
             for key, replacement in rules.items():
                 if replacement:
@@ -2795,6 +2795,15 @@ class ControlSwitch(SmartQuestion):
                     continue
                 self.inconsistent_keys[key2] = value2
             
+            
+    def check_consistency_with_all(self, key, value):
+        rules = {}
+        for key2,value2 in self.switch.items():
+            if hasattr(self, 'consistency_%s_%s' % (key,key2)):
+                rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+            else:
+                rules[key2] = None
+        return rules
     #    
     # Helper routine for putting questions with correct color 
     #
@@ -2822,10 +2831,10 @@ class ControlSwitch(SmartQuestion):
             else:
                 return self.red % switch_value
 
-    def print_info(self,key):
+    def print_info(self,key, check_attribute=True):
     
-        if hasattr(self, 'print_info_%s' % key):
-            return getattr(self, 'print_info_%s' % key)
+        if hasattr(self, 'print_info_%s' % key) and check_attribute:
+            return getattr(self, 'print_info_%s' % key)()
 
         #re-order the options in order to have those in cycling order    
         try:
@@ -3076,8 +3085,12 @@ class ControlSwitch(SmartQuestion):
         max_len_add_info = 0
         max_len_potential_switch = 0
         max_nb_key = 1 + int(math.log10(len(self.to_control)))
-
+        
+        
         for key, descrip in self.to_control:
+            if key in self.hide_line:
+                continue
+
             if len(descrip) > max_len_description: max_len_description = len(descrip)
             if len(key) >  max_len_name: max_len_name = len(key)
             if key in self.inconsistent_keys:
@@ -3108,7 +3121,8 @@ class ControlSwitch(SmartQuestion):
         
         for i,(key, descrip) in enumerate(self.to_control):
 
-
+            if key in self.hide_line and not __debug__:
+                continue
             
             data_to_format = {'nb': i+1,
                            'descrip': descrip,
@@ -3118,6 +3132,12 @@ class ControlSwitch(SmartQuestion):
                            'switch_nc': self.switch[key],
                            'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }
+            
+            if __debug__ and key in self.hide_line:
+                data_to_format['descrip'] = '\x1b[34m%s\x1b[0m' % data_to_format['descrip']
+                data_to_format['add_info'] = '\x1b[34m%s\x1b[0m' % data_to_format['add_info']
+                data_to_format['name'] = '\x1b[34m%s\x1b[0m' % data_to_format['name']
+                
             if key in self.inconsistent_keys:
                 # redefine the formatting here, due to the need to know the conflict size
                 _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
