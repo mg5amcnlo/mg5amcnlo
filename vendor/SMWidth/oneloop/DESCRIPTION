@@ -1,0 +1,201 @@
+########################################################################
+Here follows a list of the routines that
+become available if the module "avh_olo" is USEd.
+
+  subroutine olo_precision( ndecimals )
+  subroutine olo_unit( iunit ,message )
+  subroutine olo_scale( muscale )
+  subroutine olo_onshell( thrs )
+  subroutine olo_a0( rslt ,mm ,rmu )
+  subroutine olo_an( rslt ,rank ,mm ,rmu )
+  subroutine olo_b0( rslt ,pp ,m1,m2 ,rmu )
+  subroutine olo_b11( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
+  subroutine olo_bn( rslt ,rank ,pp,m1,m2 ,rmu )
+  subroutine olo_c0( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
+  subroutine olo_d0( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
+  integer function olo_dp_precision()
+  integer function olo_qp_precision()
+  integer function olo_dd_precision()
+  integer function olo_qd_precision()
+  integer function olo_mp_precision()
+
+They are described one by one below. The routines for the evaluation
+of loop integrals are generic, ie they can be called with real and
+with complex arguments, and with or without the last argument. If the
+program is compiled with several levels of precision, the same routines
+are called with different kinds and types of input. The output is
+complex of the same kind/type as the input.
+
+The extensions "_a0", "_b0" etc. may be omitted, you can also just
+  call olo( rslt ,mm ,rmu )
+  call olo( rslt ,rank ,mm ,rmu )
+  call olo( rslt ,pp ,m1,m2 ,rmu )
+  call olo( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
+  call olo( rslt ,rank ,pp,m1,m2 ,rmu )
+  call olo( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
+  call olo( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
+
+If the names of routines in "avh_olo" lead to name clashes, realize that
+these can be cured in the USE statement, eg
+  use avh_olo, my_olo=>olo
+and then
+  call my_olo( rslt ,pp ,m1,m2 ,rmu )
+etc.
+
+########################################################################
+  subroutine olo_precision( ndecimals )
+  integer ,intent(in) :: ndecimals
+
+If OneLOop is operating at arbitrary precision, the number of decimals
+can be set with this routine. It is the responsibility of the user that
+this number corresponds to the actual precision of the variables.
+The precision can be changed during runtime.
+
+This has no effect on routine calls with Fortran intrinsic types, or
+types with fixed precision.
+
+########################################################################
+  subroutine olo_unit( iunit ,message )
+  integer     ,intent(in) :: iunit
+  character(*),intent(in),optional :: message
+
+Set the units to which messages are send. The argument "message"
+specifies the type of message for which you want to set the unit.
+At the moment, the options and their defaults are
+
+  'error'--> 6, 'warning'--> 6, 'message'--> 6, 'printall'--> 0.
+
+-If the unit for 'printall' is positive, then all input and output for
+ all calls to the loop functions will be printed to that unit.
+-If iunit is not positive, then nothing will be printed.
+-If the routine is called without the second argument, then all units
+ will be set to iunit, except the unit for 'printall', which will be
+ set to 0.
+
+########################################################################
+  subroutine olo_scale( muscale )
+  real(kind(1d0)) ,intent(in) :: muscale
+
+The type/kind of the input is hard-wired strictly to real(kind(1d0)).
+
+Set the default renormalization scale. The input has the units of mass,
+not mass^2.
+If this routine is not called, the scale is set to 1.
+
+########################################################################
+  subroutine olo_onshell( thrs )
+  real(kind(1d0)) ,intent(in) :: thrs
+
+The type/kind of the input is hard-wired strictly to real(kind(1d0)).
+
+Set threshold to consider internal masses identical zero and external
+squared momenta identical zero or equal to internal masses, if this
+leads to an IR divergent case. For example, if  |p1-m1|<thrs, and p1=m1
+consitutes an IR-divergent case, then the loop integral is considered to
+be IR-divergent.  Here  thrs  is the input for this routine.  If this
+routine is not called,  thrs  will essentially be considerd identically
+zero, but warnings will be given when an IR-divergent case is
+approached. If this routine is called with thrs=0d0, then these warnings
+will not appear anymore.
+
+########################################################################
+  subroutine olo_a0( rslt ,mm ,rmu )
+  subroutine olo_b0( rslt ,pp ,m1,m2 ,rmu )
+  subroutine olo_c0( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
+  subroutine olo_d0( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
+
+The scalar one-loop functions. All have complex output "rslt(0:2)",
+where
+
+  rslt(0) is the eps^0   -coefficient
+  rslt(1) is the eps^(-1)-coefficient
+  rslt(2) is the eps^(-2)-coefficient
+
+The real input "rmu" sets the renormalization scale for the
+particular call. It does overrule, but not change the default scale.
+If the routines are called without this argument, the default scale
+is used.
+
+The other input is real or complex, with the
+following possibilities:
+  - everything is real,
+  - all momenta are real and all masses are complex,
+  - everything is complex.
+
+Remarks:
+  - If the momenta are complex and any has a non-zero imaginary part,
+    an error-message is issued and the imaginary part is considered to
+    be zero.
+  - If the masses are complex and any has a positive imaginary part,
+    an error-message is issued and the imaginary part is considered to
+    have the opposite sign.
+
+########################################################################
+  subroutine olo_b11( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
+
+The 2-point Passarino-Veltman functions.
+The complex output is  "b11(0:2),b00(0:2),b1(0:2),b0(0:2)"
+
+where bX(0) is the eps^0   -coefficient
+      bX(1) is the eps^(-1)-coefficient
+      bX(2) is the eps^(-2)-coefficient
+
+for X={11,00,1,0} defined such that
+
+  B{mu,nu} = g{mu,nu}*b00 + p1{mu}*p1{nu}*b11
+  B{mu} = p1{mu}*b1
+
+For the input, the same holds as for the scalar function.
+
+########################################################################
+  subroutine olo_an( rslt ,rank ,mm ,rmu )
+
+The 1-point Passarino-Veltman functions, up to rank 4.
+The complex output is of shape rslt(0:2,0:2). 
+For input rank=0, only rslt(:,0  ) is filled,
+For input rank=1, only rslt(:,0  ) is filled,
+For input rank=2, only rslt(:,0:1) is filled.
+For input rank=3, only rslt(:,0:1) is filled.
+  rslt(:,0) = A0
+  rslt(:,1) = A00
+  rslt(:,2) = A0000
+
+where rslt(0,:) is the eps^0   -coefficient
+      rslt(1,:) is the eps^(-1)-coefficient
+      rslt(2,:) is the eps^(-2)-coefficient
+
+For the input, the same holds as for the scalar function.
+
+########################################################################
+  subroutine olo_bn( rslt ,rank ,pp,m1,m2 ,rmu )
+
+The 2-point Passarino-Veltman functions, up to rank 4.
+The complex output is of shape rslt(0:2,0:8). 
+For input rank=0, only rslt(:,0  ) is filled,
+For input rank=1, only rslt(:,0:1) is filled,
+For input rank=2, only rslt(:,0:3) is filled.
+For input rank=3, only rslt(:,0:5) is filled.
+  rslt(:,0) = B0    rslt(:,4) = B001
+  rslt(:,1) = B1    rslt(:,5) = B111
+  rslt(:,2) = B00   rslt(:,6) = B0000
+  rslt(:,3) = B11   rslt(:,7) = B0011
+                    rslt(:,8) = B1111
+
+where rslt(0,:) is the eps^0   -coefficient
+      rslt(1,:) is the eps^(-1)-coefficient
+      rslt(2,:) is the eps^(-2)-coefficient
+
+For the input, the same holds as for the scalar function.
+
+########################################################################
+  integer function olo_dp_precision()
+  integer function olo_qp_precision()
+  integer function olo_dd_precision()
+  integer function olo_qd_precision()
+  integer function olo_mp_precision()
+
+These functions give the precisions at which the routines are operating.
+They return the number of decimals.
+
+########################################################################
+
