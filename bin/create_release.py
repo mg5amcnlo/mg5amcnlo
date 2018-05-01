@@ -249,6 +249,10 @@ misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
 ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
+# Add the tarball for SMWidth
+swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
+misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
+
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print 'Fail to create OfflineHEPToolsInstaller'
     sys.exit()
