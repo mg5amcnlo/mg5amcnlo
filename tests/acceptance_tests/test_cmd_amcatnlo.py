@@ -293,7 +293,6 @@ class MECmdShell(IOTests.IOTestManager):
         # check that original event has top onshell
         nb_event = 0
         for event in lhe_parser.EventFile(orig_lhe):
-            misc.sprint(str(event))
             nb_event +=1
             nb_final = 0
             m_inv_t = 0
@@ -350,7 +349,6 @@ class MECmdShell(IOTests.IOTestManager):
         # check that each events has the decay ON mode
         nb_event = 0
         for event in lhe_parser.EventFile(lhe_onshell):
-            misc.sprint(event)
             nb_event +=1
             nb_final = 0
             m_inv_t = 0
@@ -365,13 +363,11 @@ class MECmdShell(IOTests.IOTestManager):
                         #if m_inv_t != 0:
                         #    self.assertTrue(False, 'two top decaying')
                         m_inv_t = p.mass
-                        misc.sprint(m_inv_t, mt)
                         self.assertTrue( mt - 1 < m_inv_t < mt + 1)
                     elif p.pdg == -6:
                         #if m_inv_t != 0:
                         #    self.assertTrue(False, 'two antitop decaying')
                         m_inv_tbar = p.mass
-                        misc.sprint(m_inv_tbar, mt)
                         self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
@@ -446,7 +442,7 @@ class MECmdShell(IOTests.IOTestManager):
                         if m_inv_w != 0:
                             self.assertTrue(False, 'two W')
                         m_inv_w = p.mass
-                        self.assertTrue( 93 < m_inv_w < 95)
+                        self.assertTrue( 80 < m_inv_w < 81)
                     else:
                         self.assertTrue(False, 'not W decaying')
             self.assertTrue(nb_final in [2])

@@ -575,6 +575,37 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
             # reset it to change the next file
             mod = False
 
+def pid_exists(pid):
+    """Check whether pid exists in the current process table.
+    UNIX only.
+    https://stackoverflow.com/questions/568271/how-to-check-if-there-exists-a-process-with-a-given-pid-in-python
+    """
+    import errno
+    
+    if pid < 0:
+        return False
+    if pid == 0:
+        # According to "man 2 kill" PID 0 refers to every process
+        # in the process group of the calling process.
+        # On certain systems 0 is a valid PID but we have no way
+        # to know that in a portable fashion.
+        raise ValueError('invalid PID 0')
+    try:
+        os.kill(pid, 0)
+    except OSError as err:
+        if err.errno == errno.ESRCH:
+            # ESRCH == No such process
+            return False
+        elif err.errno == errno.EPERM:
+            # EPERM clearly means there's a process to deny access to
+            return True
+        else:
+            # According to "man 2 kill" possible error values are
+            # (EINVAL, EPERM, ESRCH)
+            raise
+    else:
+        return True
+
 #===============================================================================
 # mute_logger (designed to work as with statement)
 #===============================================================================
@@ -873,6 +904,19 @@ def call(arg, *args, **opt):
 def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
     return subprocess.Popen(arg, *args, **opt)
+
+@check_system_error()
+def call_stdout(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    try:
+        out = subprocess.Popen(arg, *args, stdout=subprocess.PIPE, **opt)
+    except OSError:
+        arg[0] = './%s' % arg[0]
+        out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
+        
+    str_out = out.stdout.read().strip()
+    return str_out
+    
 
 @multiple_try()
 def mult_try_open(filepath, *args, **opt):
@@ -1397,6 +1441,8 @@ def sprint(*args, **opt):
 
     if wait:
         raw_input('press_enter to continue')
+    elif opt.has_key('sleep'):
+        time.sleep(int(opt['sleep']))
 
     return 
 
@@ -1901,9 +1947,9 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
                     else:
                         if keyname in getattr(plugin, target_type):
                             if not info:
-                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:color:BLACK')
+                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:BOLD')
                             else:
-                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:color:BLACK')
+                                logger.info(info % {'plug': plug, 'key':keyname}, '$MG:BOLD')
                             return getattr(plugin, target_type)[keyname]
                         
     if not keyname:
@@ -1997,7 +2043,7 @@ def wget(http, path, *args, **opt):
     """a wget function for both unix and mac"""
 
     if sys.platform == "darwin":
-        return call(['curl', http, '-o%s' % path], *args, **opt)
+        return call(['curl', '-L', http, '-o%s' % path], *args, **opt)
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 

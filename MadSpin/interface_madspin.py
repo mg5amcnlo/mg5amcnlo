@@ -161,6 +161,7 @@ class MadSpinInterface(extended_cmd.Cmd):
            -> this requires that a command import model appears in the card!
         """
         
+        logger.info("Setup the code for pure decay mode")
         self.proc_option = []
         self.final_state_full = ''
         self.final_state_compact = ''
@@ -796,18 +797,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif self.options['input_format'] in ['hepmc']:
             import madgraph.various.hepmc_parser as hepmc_parser
             orig_lhe = hepmc_parser.HEPMC_EventFile(filename)
+            logger.info("Parsing input event to know how many decay to generate. This can takes few minuts.")
         else:
             raise Exception
             
         to_decay = collections.defaultdict(int)
         nb_event = 0
+ 
+        
+        misc.sprint("start parsing")
         for event in orig_lhe:
             nb_event +=1
             for particle in event:
+                misc.sprint(particle.pdg, asked_to_decay, particle.pdg in asked_to_decay, cond=particle.status == 1 and particle.pdg != 22)
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
 
+        misc.sprint(to_decay, asked_to_decay)
         # Handle the banner of the output file
         if not self.options['seed']:
             self.options['seed'] = random.randint(0, int(30081*30081))
@@ -912,7 +919,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.banner.scale_init_cross(self.branching_ratio)
         else:
             
-            if self.options['input_format'] == 'lhe_no_banner' and 'init' not in self.banner:
+            if self.options['input_format'] in ['lhe_no_banner','hepmc'] and 'init' not in self.banner:
                 self.cross = sum(self.options['cross_section'].values())
                 self.error = 0
                 self.branching_ratio = 1
@@ -1115,6 +1122,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
                     run_card["iseed"] = self.options['seed']
                     run_card['gridpack'] = True
+                    run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']

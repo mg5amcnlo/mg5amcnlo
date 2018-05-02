@@ -236,9 +236,11 @@ class HEPMC_EventFile(object):
         
         super(HEPMC_EventFile, self).__init__(path, mode, *args, **opt)
         self.header = ''
+        misc.sprint(mode)
         if mode == 'r':
             line = ''
             while 'HepMC::IO_GenEvent-START_EVENT_LISTING' not in line:
+                misc.sprint(line)
                 try:
                     line  = super(HEPMC_EventFile, self).next()
                 except StopIteration:
@@ -247,6 +249,7 @@ class HEPMC_EventFile(object):
                     break 
                 self.header += line
         self.start_event = ''
+        misc.sprint("DONE")
 
     def next(self):
         """get next event"""
@@ -258,6 +261,7 @@ class HEPMC_EventFile(object):
             if line.startswith('E'):
                 self.start_event = line
                 if text:
+                    misc.sprint('*****************', "DONE", '**************')
                     return HEPMC_Event(text)
                 else:
                     text += line

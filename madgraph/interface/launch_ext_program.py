@@ -49,6 +49,9 @@ class ExtLauncher(object):
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.cmd_int = cmd
+        if 'force' in options:
+            self.force = options['force']
+        
         #include/overwrite options
         for key,value in options.items():
             setattr(self, key, value)
@@ -66,7 +69,7 @@ class ExtLauncher(object):
         if self.cards:
             common_run_interface.CommonRunCmd.ask_edit_card_static(self.cards,
                              mode='fixed', plot=False,
-                             timeout=0, ask=self.cmd_int.ask)
+                             timeout=0, ask=self.cmd_int.ask, force=self.force)
              
         #for card in self.cards:
         #    self.treat_input_file(card, default = 'n')
@@ -625,73 +628,75 @@ class MELauncher(ExtLauncher):
         import madgraph.interface.madevent_interface as ME
         
         stdout_level = self.cmd_int.options['stdout_level']
-        if self.shell:
-            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options)
-        else:
-            usecmd = ME.MadEventCmd(me_dir=self.running_dir, options=self.options)
-            usecmd.pass_in_web_mode()
-        #Check if some configuration were overwritten by a command. If so use it    
-        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
-        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
-        for line in set_cmd:
-            arg = line.split()
-            if arg[1] not in all_options:
-                continue
+        
+        with ME.MadEventCmd.RunWebHandling(self.running_dir):
+            if self.shell:
+                usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options, force_run=True)
+            else:
+                usecmd = ME.MadEventCmd(me_dir=self.running_dir, options=self.options, force_run=True)
+                usecmd.pass_in_web_mode()
+            #Check if some configuration were overwritten by a command. If so use it    
+            set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+            all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
+            for line in set_cmd:
+                arg = line.split()
+                if arg[1] not in all_options:
+                    continue
+                try:
+                    usecmd.do_set(line[3:], log=False)
+                except usecmd.InvalidCmd:
+                    pass
+            usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
+            #ensure that the logger level 
+            launch = self.cmd_int.define_child_cmd_interface(
+                         usecmd, interface=False)
+            #launch.me_dir = self.running_dir
+            if self.unit == 'pb':
+                command = 'generate_events %s' % self.name
+            else:
+                warning_text = '''\
+                Note that since 2.3. The launch for 1>N pass in event generation
+                For efficient width computation see arXiv:1402.1178.'''
+                logger.warning(warning_text)
+                command = 'generate_events %s' % self.name
+            if mode == "1":
+                command += " --cluster"
+            elif mode == "2":
+                command += " --nb_core=%s" % nb_node
+            
+            if self.force:
+                command+= " -f"
+            
+            if self.laststep:
+                command += ' --laststep=%s' % self.laststep
+            if self.reweight:
+                command += ' -R '
+            if self.madspin:
+                command += ' -M '
+            
+            
             try:
-                usecmd.do_set(line[3:], log=False)
-            except usecmd.InvalidCmd:
+                os.remove('ME5_debug')
+            except:
                 pass
-        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
-        #ensure that the logger level 
-        launch = self.cmd_int.define_child_cmd_interface(
-                     usecmd, interface=False)
-        #launch.me_dir = self.running_dir
-        if self.unit == 'pb':
-            command = 'generate_events %s' % self.name
-        else:
-            warning_text = '''\
-            Note that since 2.3. The launch for 1>N pass in event generation
-            For efficient width computation see arXiv:1402.1178.'''
-            logger.warning(warning_text)
-            command = 'generate_events %s' % self.name
-        if mode == "1":
-            command += " --cluster"
-        elif mode == "2":
-            command += " --nb_core=%s" % nb_node
-        
-        if self.force:
-            command+= " -f"
-        
-        if self.laststep:
-            command += ' --laststep=%s' % self.laststep
-        if self.reweight:
-            command += ' -R '
-        if self.madspin:
-            command += ' -M '
-        
-        
-        try:
-            os.remove('ME5_debug')
-        except:
-            pass
-
-        launch.run_cmd(command)
-        launch.run_cmd('quit')
-        
-        if os.path.exists('ME5_debug'):
-            return True
-        
-        # Display the cross-section to the screen
-        path = os.path.join(self.running_dir, 'SubProcesses', 'results.dat') 
-        if not os.path.exists(path):
-            logger.error('Generation failed (no results.dat file found)')
-            return
-        fsock = open(path)
-        line = fsock.readline()
-        cross, error = line.split()[0:2]
-        
-        logger.info('more information in %s' 
-                                 % os.path.join(self.running_dir, 'index.html'))
+    
+            launch.run_cmd(command)
+            launch.run_cmd('quit')
+            
+            if os.path.exists('ME5_debug'):
+                return True
+            
+            # Display the cross-section to the screen
+            path = os.path.join(self.running_dir, 'SubProcesses', 'results.dat') 
+            if not os.path.exists(path):
+                logger.error('Generation failed (no results.dat file found)')
+                return
+            fsock = open(path)
+            line = fsock.readline()
+            cross, error = line.split()[0:2]
+            
+            logger.info('more information in %s' 
+                                     % os.path.join(self.running_dir, 'index.html'))
                 
 
 class Pythia8Launcher(ExtLauncher):

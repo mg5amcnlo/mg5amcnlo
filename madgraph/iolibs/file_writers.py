@@ -86,7 +86,7 @@ class FileWriter(file):
 
         pass
 
-    def writelines(self, lines, context={}):
+    def writelines(self, lines, context={}, formatting=True):
         """Extends the regular file.writeline() function to write out
         nicely formatted code. When defining a context, then the lines
         will be preprocessed to apply possible conditional statements on the
@@ -107,7 +107,10 @@ class FileWriter(file):
             splitlines = self.preprocess_template(splitlines,context=context)
 
         for line in splitlines:
-            res_lines = self.write_line(line)
+            if formatting:
+                res_lines = self.write_line(line)
+            else:
+                res_lines = [line+'\n']
             for line_to_write in res_lines:
                 self.write(line_to_write)
                 
@@ -200,6 +203,7 @@ class FortranWriter(FileWriter):
     __indent = 0
     __keyword_list = []
     __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*)", re.IGNORECASE)
+    __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -220,7 +224,8 @@ class FortranWriter(FileWriter):
             # This is a comment
             res_lines = self.write_comment_line(line.lstrip()[1:])
             return res_lines
-
+        elif self.__continuation_line.search(line):
+            return line+'\n'
         else:
             # This is a regular Fortran line
 
@@ -406,7 +411,7 @@ class FortranWriter(FileWriter):
            fct_names should be a list of functions to remove
         """
 
-        f77_type = ['real*8', 'integer', 'double precision']
+        f77_type = ['real*8', 'integer', 'double precision', 'logical']
         pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                              % {'type':'|'.join(f77_type)}, re.I)
         
