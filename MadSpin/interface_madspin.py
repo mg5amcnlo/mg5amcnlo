@@ -804,17 +804,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         to_decay = collections.defaultdict(int)
         nb_event = 0
  
-        
-        misc.sprint("start parsing")
         for event in orig_lhe:
             nb_event +=1
             for particle in event:
-                misc.sprint(particle.pdg, asked_to_decay, particle.pdg in asked_to_decay, cond=particle.status == 1 and particle.pdg != 22)
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
+            if self.options['input_format'] == 'hepmc' and nb_event == 250:
+                for key in to_decay:
+                    to_decay[key] *= 50
+                break
 
-        misc.sprint(to_decay, asked_to_decay)
         # Handle the banner of the output file
         if not self.options['seed']:
             self.options['seed'] = random.randint(0, int(30081*30081))
@@ -929,9 +929,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.branching_ratio = new_cross / self.cross
                 self.cross = new_cross   
                 self.error = new_error
-        
+
         # 3. Merge the various file together.
-        output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe.gz'), 'w')
+        if self.options['input_format'] == 'hepmc':
+            output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.hepmc', '_decayed.lhe.gz'), 'w')
+        else:
+            output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe.gz'), 'w')
         try:
             self.banner.write(output_lhe, close_tag=False)
         except Exception:
@@ -946,8 +949,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         start = time.time()
         counter = 0
         orig_lhe.seek(0)
+
         for event in orig_lhe:
-            if counter and counter % 1000 == 0 and float(str(counter)[1:]) ==0:
+            if counter and counter % 100 == 0 and float(str(counter)[1:]) ==0:
                 print "decaying event number %s [%s s]" % (counter, time.time()-start)
             counter +=1
             
@@ -957,10 +961,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             random.shuffle(particles)
             ids = [particle.pid for particle in particles]
             br = 1 #br for that particular events (for special/weighted case)
+            hepmc_output = lhe_parser.Event() #for hepmc case: collect the decay particle
             for i,particle in enumerate(particles):
-                
+                #misc.sprint(i, particle.pdg, particle.pid)
+                #misc.sprint(self.final_state, evt_decayfile)
                 # check if we need to decay the particle 
-                if particle.pdg not in self.final_state or particle.pdg not in evt_decayfile:
+                if not (particle.pdg in self.final_state or particle.pdg in evt_decayfile):
                     continue # nothing to do for this particle
                 # check how the decay need to be done
                 nb_decay = len(evt_decayfile[particle.pdg])
@@ -991,7 +997,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if tot_width:
                         br = decay_file.cross / tot_width
                 # ok start the procedure
-                helicity = particle.helicity
+                if hasattr(particle,'helicity'):
+                    helicity = particle.helicity
+                else:
+                    helicity = 9
                 bufferedEvents = bufferedEvents_decay[particle.pdg][decay_file_nb]
                 
                 # now that we have the file to read. find the associate event
@@ -1023,18 +1032,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                             # only add to the buffering if the buffer is not too large
                             bufferedEvents[helicity].append(decay)
                 # now that we have the event make the merge
-                particle.add_decay(decay)
+                if self.options['input_format'] != 'hepmc':
+                    particle.add_decay(decay)
+                else:
+                    if len(hepmc_output) == 0:
+                        hepmc_output.append(lhe_parser.Particle(event=hepmc_output))
+                        hepmc_output[0].color2 = 0
+                    decayed_particle = lhe_parser.Particle(particle, hepmc_output)
+                    hepmc_output.append(decayed_particle)
+                    decayed_particle.add_decay(decay)
             # change the weight associate to the event
             if self.options['new_wgt'] == 'cross-section':
                 event.wgt *= self.branching_ratio
                 br = self.branching_ratio
             else:
                 event.wgt *= br
-            wgts = event.parse_reweight()
-            for key in wgts:
-                wgts[key] *= br
-            # all particle have been decay if needed
-            output_lhe.write(str(event))
+                
+            if self.options['input_format'] != 'hepmc':
+                wgts = event.parse_reweight()
+                for key in wgts:
+                    wgts[key] *= br
+                # all particle have been decay if needed
+                output_lhe.write(str(event))
+            else:
+                hepmc_output.wgt = event.wgt
+                output_lhe.write(str(hepmc_output))
         output_lhe.write('</LesHouchesEvents>\n')        
                     
     
@@ -1246,8 +1268,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
-        #misc.sprint(to_decay)
-        #misc.sprint("import the mode -> temporary with logging")   
+
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             if not self.model:
@@ -1542,10 +1563,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         full_event = lhe_parser.Event(str(production))
         full_event = full_event.add_decays(decays)
         full_me = self.calculate_matrix_element(full_event)
-        #misc.sprint(full_event)
-        #misc.sprint([p.pdg for p in production])
-        #misc.sprint([p.pdg for p in full_event])
-        #misc.sprint(full_me, production_me, decay_me)
         return full_event, full_me/(production_me*decay_me)
         
         

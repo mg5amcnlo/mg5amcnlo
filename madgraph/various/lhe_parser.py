@@ -52,7 +52,28 @@ class Particle(object):
             if event:
                 self.event = event
             return
-        
+        else:
+            try:
+                import madgraph.various.hepmc_parser as hepmc_parser
+            except Exception:
+                pass
+            else:
+                if isinstance(line, hepmc_parser.HEPMC_Particle):
+                    self.event = event
+                    self.event_id = len(event) #not yet in the event
+                    for key in ['pid', 'status', 'E','px','py','pz','mass']:
+                        setattr(self, key, getattr(line, key))
+                    self.mother1 = 1
+                    self.mother2 = 1
+                    self.color1 = 0
+                    self.color2 = 0
+                    self.vtim = 0
+                    self.comment = ''
+                    self.helicity = 9
+                    self.rwgt = 0
+                    return
+
+                
         self.event = event
         self.event_id = len(event) #not yet in the event
         # LHE information
@@ -100,7 +121,6 @@ class Particle(object):
     
     def __str__(self):
         """string representing the particles"""
-
         return " %8d %2d %4d %4d %4d %4d %+13.10e %+13.10e %+13.10e %14.10e %14.10e %10.4e %10.4e" \
             % (self.pid, 
                self.status,

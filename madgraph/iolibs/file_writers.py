@@ -393,11 +393,11 @@ class FortranWriter(FileWriter):
         splitline = line.split('\'')
         i = 0
         while i < len(splitline):
-           if i % 2 == 1:
+            if i % 2 == 1:
                 # This is a quote - check for escaped \'s
                 while  splitline[i] and splitline[i][-1] == '\\':
                     splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
-           i = i + 1
+            i = i + 1
         return len(splitline)-1
 
 #===============================================================================

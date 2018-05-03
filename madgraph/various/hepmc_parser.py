@@ -6,6 +6,7 @@ if '__main__' == __name__:
     import sys
     sys.path.append('../../')
 import misc
+import os
 import logging
 
 class HEPMC_Particle(object):
@@ -28,6 +29,16 @@ class HEPMC_Particle(object):
         
         if text:
             self.parse(text, event)
+    
+    @property
+    def pdg_code(self):
+        return self.pdg
+    
+    pid = pdg_code
+
+    @property
+    def helicity(self):
+        return 9
     
     def parse(self,line=None, event=None):
         """ P 3 -2 0 0 3.0332529367341937e+01 3.0332529367341937e+01 0 21 0 0 -3 1 2 501"""
@@ -144,6 +155,18 @@ class HEPMC_Event(object):
         if text:
             self.parse(text)
 
+    @property
+    def wgt(self):
+        if self.weights:
+            return self.weights[0]
+        else:
+            return 0.
+    @wgt.setter
+    def wgt(self, value):
+        self.nb_weight = 1
+        self.weights = [value]
+    
+    
     def parse(self, text):
 
         for line in text.split('\n'):
@@ -219,7 +242,11 @@ class HEPMC_EventFile(object):
     
     def __new__(self, path, mode='r', *args, **opt):
 
-        if  path.endswith(".gz"):
+        if not path.endswith(".gz"):
+            return file.__new__(HEPMC_EventFileNoGzip, path, mode, *args, **opt)
+        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
+            return HEPMC_EventFile.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)
+        else:
             try:
                 return gzip.GzipFile.__new__(HEPMC_EventFileGzip, path, mode, *args, **opt)
             except IOError, error:
@@ -227,20 +254,34 @@ class HEPMC_EventFile(object):
             except Exception, error:
                 if mode == 'r':
                     misc.gunzip(path)
-                return file.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            return file.__new__(HEPMC_EventFileNoGzip, path, mode, *args, **opt)
+                return file.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)  
+  
     
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
+
+        self.to_zip = False
+        if path.endswith('.gz') and mode == 'w' and\
+                                              isinstance(self, HEPMC_EventFileNoGzip):
+            path = path[:-3]
+            self.to_zip = True # force to zip the file at close() with misc.gzip
         
-        super(HEPMC_EventFile, self).__init__(path, mode, *args, **opt)
+        self.parsing = True # check if/when we need to parse the event.
+        self.eventgroup  = False
+        try:
+            super(HEPMC_EventFile, self).__init__(path, mode, *args, **opt)
+        except IOError:
+            if '.gz' in path and isinstance(self, HEPMC_EventFileNoGzip) and\
+                mode == 'r' and os.path.exists(path[:-3]):
+                super(HEPMC_EventFile, self).__init__(path[:-3], mode, *args, **opt)
+            else:
+                raise
+
         self.header = ''
-        misc.sprint(mode)
         if mode == 'r':
             line = ''
             while 'HepMC::IO_GenEvent-START_EVENT_LISTING' not in line:
-                misc.sprint(line)
+
                 try:
                     line  = super(HEPMC_EventFile, self).next()
                 except StopIteration:
@@ -249,29 +290,30 @@ class HEPMC_EventFile(object):
                     break 
                 self.header += line
         self.start_event = ''
-        misc.sprint("DONE")
 
+    def seek(self, value):
+        self.start_event = ""
+        super(HEPMC_EventFile, self).seek(value)
+        
     def next(self):
         """get next event"""
         text = self.start_event
         line = ''
-        
         while 1:
             line = super(HEPMC_EventFile, self).next()
             if line.startswith('E'):
                 self.start_event = line
                 if text:
-                    misc.sprint('*****************', "DONE", '**************')
                     return HEPMC_Event(text)
                 else:
                     text += line
                     
             elif line.startswith('HepMC::IO_GenEvent-END_EVENT_LISTING'):
-                return HEPMC_Event(text)
+                if text:
+                    return HEPMC_Event(text)
             else:
                 text += line
-        print "fail"
-                
+
 
 class HEPMC_EventFileGzip(HEPMC_EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
@@ -279,7 +321,11 @@ class HEPMC_EventFileGzip(HEPMC_EventFile, gzip.GzipFile):
 class HEPMC_EventFileNoGzip(HEPMC_EventFile, file):
     """A way to read a standard event file"""
     
-    
+    def close(self,*args, **opts):
+        
+        out = super(EventFileNoGzip, self).close(*args, **opts)
+        if self.to_zip:
+            misc.gzip(self.name)
     
     
 if "__main__" == __name__:
