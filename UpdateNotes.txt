@@ -1,6 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+2.6.3 ()
+      OM: adding a hidden parameter to the run_card (python_seed) to allow to control the randon number 
+          generated within python and be able to have full reproducibility of the events
+      
 2.6.2 (29/04/18)
 
       Heavy ion pdf / pdf in general:

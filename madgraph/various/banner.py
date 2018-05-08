@@ -1037,7 +1037,10 @@ class ConfigFile(dict):
             
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
-            targettype = self.list_parameter[lower_name] 
+            targettype = self.list_parameter[lower_name]
+            
+            
+            
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1058,8 +1061,6 @@ class ConfigFile(dict):
                         i+=2
                     new_value += current
  
-                            
-                           
                 value = new_value                           
                 
             elif not hasattr(value, '__iter__'):
@@ -2368,7 +2369,10 @@ class RunCard(ConfigFile):
                     name = nline[1].strip().lower()
                     value = self[name]
                     if name in self.list_parameter:
-                        value = ', '.join([str(v) for v in value])
+                        if self.list_parameter[name] != str:
+                            value = ', '.join([str(v) for v in value])
+                        else:
+                            value =  "['%s']" % "', '".join(str(v) for v in value)
                     if python_template:
                         text += line % {nline[1].strip():value, name:value}
                         written.add(name)
@@ -2732,6 +2736,7 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
+        self.add_param("python_seed", -1, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],

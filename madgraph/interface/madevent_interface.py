@@ -5573,6 +5573,14 @@ tar -czf split_$1.tar.gz split_$1
                 break
         else:
             self.random = random.randint(1, 30107)
+        
+        #set random seed for python part of the code
+        if self.run_card['python_seed'] == -2: #-2 means same as run_card
+            import random
+            random.seed(self.random)
+        elif self.run_card['python_seed'] >= 0:
+            import random
+            random.seed(self.run_card['python_seed'])
                                                                
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
@@ -5812,7 +5820,10 @@ tar -czf split_$1.tar.gz split_$1
         if self.random > 30081*30081: # can't use too big random number
             raise MadGraph5Error,\
                   'Random seed too large ' + str(self.random) + ' > 30081*30081'
-
+        if self.run_card['python_seed'] == -2: 
+            import random
+            random.seed(self.random)
+            
     ############################################################################
     def save_random(self):
         """save random number in appropirate file"""
