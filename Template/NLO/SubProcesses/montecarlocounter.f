@@ -386,13 +386,16 @@ c$$$        write(*,*) 'wgt_read=',wgt_read
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
             if(colorflow(npartner,cflows).eq.0)factor=0d0
-            MCsec(npartner,cflows)=factor*
-     &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
-     &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            MCsec(npartner,cflows)=0d0
+            if(colorflow(npartner,cflows).ne.0)then
+               MCsec(npartner,cflows)=factor*
+     &         (xkern(1)*bornbars(colorflow(npartner,cflows))+
+     &         xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            endif
             xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,xmcxsec2,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 
@@ -1005,7 +1008,7 @@ c Emsca stuff
               if(ptresc.le.0d0)then
                  emscwgt(npartner)=1d0
                  emscav(npartner)=emsca_bare
-              elseif(ptresc.lt.1d0)then
+              elseif(ptresc.lt.1d0)then 
                  emscwgt(npartner)=1-emscafun(ptresc,one)
                  emscav(npartner)=emsca_bare
               else
@@ -1014,11 +1017,7 @@ c Emsca stuff
               endif
            endif
         endif
-
-CC      PAOLO: CHECK SCALE SETTING HERE.
-CC      PAOLO: CHECK SCALE SETTING HERE.
-CC      PAOLO: CHECK SCALE SETTING HERE.
-        emscav_tmp=emscav
+        emscav_tmp(npartner)=emscav(npartner)
 
 c End of loop over colour partners
 c      enddo
@@ -1027,7 +1026,7 @@ c      enddo
       end
 
 
-      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,xmcxsec2,probne)
+      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1078,6 +1077,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer i
       double precision tiny
       parameter(tiny=1d-7)
+      double precision MCsec(nexternal-1,max_bcol),sumMCsec(max_bcol)
 
 c     Input check
       do npartner=1,ipartners(0)
@@ -1098,11 +1098,17 @@ c     Input check
 c     Compute MC cross section
       wgt=0d0
       wgt2=0d0
+      sumMCsec=0d0
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
       enddo
       do cflows=1,max_bcol
          wgt2=wgt2+xmcxsec2(cflows)
+      enddo
+      do cflows=1,max_bcol
+         do npartner=1,ipartners(0)
+            sumMCsec(cflows)=sumMCsec(cflows)+MCsec(npartner,cflows)
+         enddo
       enddo
 c
       if( (abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny) .or.
@@ -1111,6 +1117,30 @@ c
          write(*,*)wgt,wgt2
          stop
       endif
+      do cflows=1,max_bcol
+         if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows))/abs(sumMCsec(cflows)).gt.tiny) .or.
+     &   (abs(sumMCsec(cflows)).le.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
+            write(*,*)'Fatal error 3 in complete_xmcsubt'
+            write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
+            stop
+         endif
+      enddo
+
+c     Assign flow on statistical basis
+      rrnd=ran2()
+      wgt11=0d0
+      jflow=0
+      cflows=0
+      do while(jflow.eq.0.and.cflows.lt.max_bcol)
+         cflows=cflows+1
+         wgt11=wgt11+xmcxsec2(cflows)
+         if(wgt11.ge.rrnd*wgt2)jflow=cflows
+      enddo
+      if(jflow.eq.0)then
+         write(*,*)'Error in xmcsubt: flow unweighting failed'
+         stop
+      endif
+
 
 c     Assign emsca on statistical basis
       if(dampMCsubt.and.wgt.gt.1d-30)then
@@ -1119,8 +1149,8 @@ c     Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
            if(lzone(npartner).and.jpartner.eq.0)then
-              wgt11=wgt11+xmcxsec(npartner)
-              if(wgt11.ge.rrnd*wgt)then
+              wgt11=wgt11+MCsec(npartner,jflow)
+              if(wgt11.ge.rrnd*xmcxsec2(jflow))then
                  jpartner=ipartners(npartner)
                  mpartner=npartner
               endif
@@ -1156,21 +1186,6 @@ c min() avoids troubles if ran2()=1
          endif
       endif
 
-c Assign flow on statistical basis
-      rrnd=ran2()
-      wgt11=0d0
-      jflow=0
-      cflows=0
-      do while(jflow.eq.0.and.cflows.lt.max_bcol)
-         cflows=cflows+1
-         wgt11=wgt11+xmcxsec2(cflows)
-         if(wgt11.ge.rrnd*wgt2)jflow=cflows
-      enddo
-      if(jflow.eq.0)then
-         write(*,*)'Error in xmcsubt: flow unweighting failed'
-         stop
-      endif
-
 c PAOLO: INSERT HERE PROBNE COMPUTATION
 c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE
 c COMPUTATION IN ROUTINE XMCSUBT AND ALSO EMSCAV UNWEIGHTING
@@ -1189,7 +1204,7 @@ c IN THIS ROUTINE, ABOVE
 
 
 
-      subroutine complete_xmcsubt_2(p,wgt,lzone,xmcxsec,xmcxsec2,probne)
+      subroutine complete_xmcsubt_2(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1272,6 +1287,7 @@ C     To access Pythia8 control variables
       logical         Hevents
       common/SHevents/Hevents
       integer nexternal_now
+      double precision MCsec(nexternal-1,max_bcol),sumMCsec(max_bcol)
 
       do i=1,2
         istup_local(i) = -1
@@ -1303,11 +1319,17 @@ c     Input check
 c     Compute MC cross section
       wgt=0d0
       wgt2=0d0
+      sumMCsec=0d0
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
       enddo
       do cflows=1,max_bcol
          wgt2=wgt2+xmcxsec2(cflows)
+      enddo
+      do cflows=1,max_bcol
+         do npartner=1,ipartners(0)
+            sumMCsec(cflows)=sumMCsec(cflows)+MCsec(npartner,cflows)
+         enddo
       enddo
 c
       if( (abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny) .or.
@@ -1316,6 +1338,30 @@ c
          write(*,*)wgt,wgt2
          stop
       endif
+      do cflows=1,max_bcol
+         if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows))/abs(sumMCsec(cflows)).gt.tiny) .or.
+     &   (abs(sumMCsec(cflows)).le.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
+            write(*,*)'Fatal error 3 in complete_xmcsubt'
+            write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
+            stop
+         endif
+      enddo
+
+c     Assign flow on statistical basis
+      rrnd=ran2()
+      wgt11=0d0
+      jflow=0
+      cflows=0
+      do while(jflow.eq.0.and.cflows.lt.max_bcol)
+         cflows=cflows+1
+         wgt11=wgt11+xmcxsec2(cflows)
+         if(wgt11.ge.rrnd*wgt2)jflow=cflows
+      enddo
+      if(jflow.eq.0)then
+         write(*,*)'Error in xmcsubt: flow unweighting failed'
+         stop
+      endif
+
 
 c     Assign emsca on statistical basis
       if(dampMCsubt.and.wgt.gt.1d-30)then
@@ -1324,8 +1370,8 @@ c     Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
            if(lzone(npartner).and.jpartner.eq.0)then
-              wgt11=wgt11+xmcxsec(npartner)
-              if(wgt11.ge.rrnd*wgt)then
+              wgt11=wgt11+MCsec(npartner,jflow)
+              if(wgt11.ge.rrnd*xmcxsec2(jflow))then
                  jpartner=ipartners(npartner)
                  mpartner=npartner
               endif
@@ -1361,20 +1407,6 @@ c min() avoids troubles if ran2()=1
          endif
       endif
 
-c Assign flow on statistical basis
-      rrnd=ran2()
-      wgt11=0d0
-      jflow=0
-      cflows=0
-      do while(jflow.eq.0.and.cflows.lt.max_bcol)
-         cflows=cflows+1
-         wgt11=wgt11+xmcxsec2(cflows)
-         if(wgt11.ge.rrnd*wgt2)jflow=cflows
-      enddo
-      if(jflow.eq.0)then
-         write(*,*)'Error in xmcsubt: flow unweighting failed'
-         stop
-      endif
 
 c PAOLO: INSERT HERE PROBNE COMPUTATION
 c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE

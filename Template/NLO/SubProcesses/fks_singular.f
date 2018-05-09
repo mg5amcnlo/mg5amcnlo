@@ -448,9 +448,12 @@ c -- call to MC counterterm functions
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
             if(colorflow(npartner,cflows).eq.0)factor=0d0
-            MCsec(npartner,cflows)=factor*
-     &           (xkern(1)*bornbars(colorflow(npartner,cflows))+
-     &           xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            MCsec(npartner,cflows)=0d0
+            if(colorflow(npartner,cflows).ne.0)then
+               MCsec(npartner,cflows)=factor*
+     &         (xkern(1)*bornbars(colorflow(npartner,cflows))+
+     &         xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
+            endif
             xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
             xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
 c -- positivity check
@@ -536,8 +539,8 @@ cccccccccccccccccc
 cccccccccccccccccc
 
 
-c      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,probne)
-      if(.not.is_pt_hard)call complete_xmcsubt_2(p,dummy,lzone,xmcxsec,xmcxsec2,probne)
+c      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt_2(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c -- end of call to MC counterterm functions
 
       MCcntcalled=.true.
