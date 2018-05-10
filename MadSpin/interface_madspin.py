@@ -72,7 +72,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('seed', 0, comment='control the seed of madspin')
         self.add_param('cross_section', {'__type__':0.}, comment="forcing normalization of cross-section after MS (for none/onshell)" )
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
-        self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc','4momenta', 'lhe_no_banner'])
+        self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         
         
     ############################################################################
@@ -787,7 +787,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif '.hepmc' in filename:
                 self.options['input_format']  = 'hepmc'
             else:
-                self.options['input_format']  = '4momenta'
+                raise Exception, "fail to recognized input format automatically"
                 
         if self.options['input_format'] in ['lhe', 'lhe_no_banner']:
             orig_lhe = lhe_parser.EventFile(filename)
@@ -1642,9 +1642,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
             rwgt_interface.ReweightInterface.get_LO_definition_from_NLO()        
         
-# 4 momentum class
-# particle.status = 1
-# particle.pdg = ????        
 
 
 if __name__ == '__main__':
