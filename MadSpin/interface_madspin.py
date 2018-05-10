@@ -187,6 +187,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not os.path.exists(inputfile):
             if inputfile.endswith('.gz'):
                 if not os.path.exists(inputfile[:-3]):
+                    misc.sprint(os.getcwd(), os.listdir('.'), inputfile, os.path.exists(inputfile), os.path.exists(inputfile[:-3]))
                     raise self.InvalidCmd('No such file or directory : %s' % inputfile)
                 else: 
                     inputfile = inputfile[:-3]
@@ -932,9 +933,16 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # 3. Merge the various file together.
         if self.options['input_format'] == 'hepmc':
-            output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.hepmc', '_decayed.lhe.gz'), 'w')
+            name = orig_lhe.name.replace('.hepmc', '_decayed.lhe')
+            if not name.endswith('.gz'):
+                name = '%s.gz' % name
+            
+            output_lhe = lhe_parser.EventFile(name, 'w')
         else:
-            output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe.gz'), 'w')
+            name = orig_lhe.name.replace('.lhe', '_decayed.lhe')
+            if not name.endswith('.gz'):
+                name = '%s.gz' % name
+            output_lhe = lhe_parser.EventFile(name, 'w')
         try:
             self.banner.write(output_lhe, close_tag=False)
         except Exception:
