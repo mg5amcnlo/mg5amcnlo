@@ -308,9 +308,11 @@ class HEPMC_EventFile(object):
                 else:
                     text += line
                     
-            elif line.startswith('HepMC::IO_GenEvent-END_EVENT_LISTING'):
+            elif line.lstrip().startswith('HepMC::IO_GenEvent-END_EVENT_LISTING'):
                 if text:
                     return HEPMC_Event(text)
+            elif line.lstrip().startswith('HepMC::IO_GenEvent-START_EVENT_LISTING'):
+                text = ''
             else:
                 text += line
 

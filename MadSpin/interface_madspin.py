@@ -940,6 +940,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         except Exception:
             if self.options['input_format'] == 'lhe':
                 raise
+            
         # initialise object which store not use event due to wrong helicity
         bufferedEvents_decay = {}
         for pdg in evt_decayfile:
@@ -1057,6 +1058,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 hepmc_output.wgt = event.wgt
                 output_lhe.write(str(hepmc_output))
+        else:
+            if counter==0:
+                raise Exception
         output_lhe.write('</LesHouchesEvents>\n')        
                     
     
