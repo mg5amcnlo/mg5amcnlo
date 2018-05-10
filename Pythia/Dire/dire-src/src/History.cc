@@ -1071,11 +1071,11 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
   }
 
 
-  cout << "No-emission probability="
-  << scientific << setprecision(5) << setw(14) << wt
-  << " at pT="
-  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-  << endl;
+  //cout << "No-emission probability="
+  //<< scientific << setprecision(5) << setw(14) << wt
+  //<< " at pT="
+  //<< scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
+  //<< endl;
 
   if (wt > 1. || wt < 0.)
   cout << "Warning: Unusual no-emission probability="
@@ -3027,8 +3027,9 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
   while ( true ) {
 
-//cout << "enter trial shower"  << endl;
-//process.list();
+    //cout << "enter trial shower"  << endl;
+    //process.list();
+    //infoPtr->scales->list(cout);
 
     // Reset trialShower object
     trial->resetTrial();

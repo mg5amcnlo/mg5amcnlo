@@ -1098,7 +1098,9 @@ c     Input check
 c     Compute MC cross section
       wgt=0d0
       wgt2=0d0
-      sumMCsec=0d0
+      do i=1,max_bcol
+         sumMCsec(i)=0d0
+      enddo
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
       enddo
@@ -1287,7 +1289,7 @@ C     To access Pythia8 control variables
       logical         Hevents
       common/SHevents/Hevents
       integer nexternal_now
-      double precision MCsec(nexternal-1,max_bcol),sumMCsec(max_bcol)
+      double precision sumMCsec(max_bcol)
 
       do i=1,2
         istup_local(i) = -1
@@ -1319,7 +1321,9 @@ c     Input check
 c     Compute MC cross section
       wgt=0d0
       wgt2=0d0
-      sumMCsec=0d0
+      do i=1,max_bcol
+         sumMCsec(i)=0d0
+      enddo
       do npartner=1,ipartners(0)
          wgt=wgt+xmcxsec(npartner)
       enddo
@@ -1477,11 +1481,10 @@ c     Calculate suppression factor for H-events.
       call dire_get_mergingweight(wgt_sudakov)
       call dire_get_sudakov_stopping_scales(scales)
 
-      do i=0,9
-        write(*,*) scales(i)
-      enddo
-
-      write(*,*) 'No-emission probability =', wgt_sudakov
+c      do i=0,9
+c        write(*,*) scales(i)
+c      enddo
+c      write(*,*) 'No-emission probability =', wgt_sudakov
 
       probne = wgt_sudakov
 

@@ -141,6 +141,7 @@ public:
       hepeup_out_.pup_out[ip][4], hepeup_out_.vtimup_out[ip], hepeup_out_.spinup_out[ip],
       scale);
     }
+
     // Store x values (here E = pup_out[ip][3]), but note incomplete info.
     setPdf( hepeup_out_.idup_out[0], hepeup_out_.idup_out[1], hepeup_out_.pup_out[0][3]/eBeamA,
       hepeup_out_.pup_out[1][3]/eBeamB, 0., 0., 0., false);
@@ -151,13 +152,29 @@ public:
     scalesNow.mur   = hepeup_out_.scalup_out;
     scalesNow.mups  = hepeup_out_.scalup_out;
     int offset = 3;
+    //string tag = (forUnderlying) ? "mups_underlying" : "mups_event";
+    string tag = "mups_underlying";
     for (int i = 0; i < hepeup_out_.nup_out; ++i) {
       stringstream name;
-      name << "mups_col_" << i+offset;
-      scalesNow.attributes.insert(make_pair(name.str(),hepeup_out_.scales_out[i][0]));
-      name.str("");
-      name << "mups_acol_" << i+offset;
-      scalesNow.attributes.insert(make_pair(name.str(),hepeup_out_.scales_out[i][1]));
+      name << tag << "_col_" << i+offset;
+      if (hepeup_out_.icolup_out[i][0] != 0) {
+        stringstream name;
+        if (hepeup_out_.istup_out[i] < 0)
+             name << tag << "_inc_col_" << hepeup_out_.icolup_out[i][0];
+        else name << tag << "_out_col_" << hepeup_out_.icolup_out[i][0];
+        double scale = settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+                     ? hepeup_out_.scales_out[i][0] : hepeup_out_.scalup_out;
+        scalesNow.attributes.insert(make_pair(name.str(), scale));
+      }
+      if (hepeup_out_.icolup_out[i][1] != 0) {
+        stringstream name;
+        if (hepeup_out_.istup_out[i] < 0)
+             name << tag << "_inc_acol_" << hepeup_out_.icolup_out[i][1];
+        else name << tag << "_out_acol_" << hepeup_out_.icolup_out[i][1];
+        double scale = settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+                     ? hepeup_out_.scales_out[i][1] : hepeup_out_.scalup_out;
+        scalesNow.attributes.insert(make_pair(name.str(), scale));
+      }
     }
 
     infoPtr->scales = &scalesNow;

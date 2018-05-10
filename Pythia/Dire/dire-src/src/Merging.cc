@@ -123,7 +123,10 @@ void MyMerging::storeInfos() {
     //double z = stateVars["z"];
     //double t = stateVars["t"];
 
-cout << "Emission of " <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id() << " at pT " << myHistory->children[i]->clusterIn.pT() << endl;
+    //cout << "Emission of "
+    // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
+    // << " at pT "
+    // << myHistory->children[i]->clusterIn.pT() << endl;
 
     // Just store pT for now.
     stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
@@ -145,10 +148,8 @@ int MyMerging::mergeProcess(Event& process){
 //stoppingScalesSave.push_back(2.0);
 //stoppingScalesSave.push_back(3.0);
 
-  process.list(true,true);
-  infoPtr->scales->list(cout);
-    abort();
-
+  //process.list(true,true);
+  //infoPtr->scales->list(cout);
 
   int vetoCode = 1;
 

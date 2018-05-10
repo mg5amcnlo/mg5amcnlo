@@ -438,7 +438,8 @@ c      include "pmass.inc"
       integer cols(2,nexternal)
       integer status(nexternal)
       integer spin(nexternal)
-      double precision scales(2*nexternal)
+c      double precision scales(2*nexternal)
+      double precision scales(nexternal)
       double precision pmass(nexternal)
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)

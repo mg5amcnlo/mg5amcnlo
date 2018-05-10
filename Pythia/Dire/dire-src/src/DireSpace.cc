@@ -626,6 +626,14 @@ void DireSpace::setupQCDdip( int iSys, int side, int colTag, int colSign,
     && event[iRad].scale() > 0.)
     pTmax = event[iRad].scale();
 
+  // Force maximal pT to LHEF scales tag value.
+  double mups   = infoPtr->getScalesAttribute("mups");
+  bool nan_mups = abs(mups-mups) > 1e5 || mups  != mups;
+  if ( abs(event[iRad].status()) > 20
+    && abs(event[iRad].status()) < 24
+    && !nan_mups)
+    pTmax = mups;
+
   int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
   //dipEnd.push_back( DireSpaceEnd( iSys, side, iRad, iPartner, pTmax, colType,
   //                                0, 0, MEtype, true) );
@@ -1050,7 +1058,10 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
 
   debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
-  //cout << "Next ISR starting from " << pTbegAll << endl;
+
+  //cout << "Next ISR starting from " << pTbegAll << " " << pow2(pTbegAll)
+  //     << " " << sqrt(pTbegAll) 
+  //     << " " << infoPtr->getScalesAttribute("mups") << endl;
 
   // Current cm energy, in case it varies between events.
   sCM           = m2( beamAPtr->p(), beamBPtr->p());
@@ -2222,6 +2233,8 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
   //double pT2endDip = max( pT2sel, pT2min);
   double pT2endDip = max( pT2sel, pT2cutMin(&dip));
   if (pT2begDip < pT2endDip) return false;
+
+  //cout << __func__ << " " << sqrt(pT2begDip) << endl;
 
   // Reset dipole mass.
   int iRadi  = dip.iRadiator; 

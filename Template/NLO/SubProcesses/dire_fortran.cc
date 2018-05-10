@@ -487,7 +487,7 @@ extern "C" {
     pythia4dire.readString("PartonLevel:MPI                 = off");
     pythia4dire.readString("Print:quiet = on");
     pythia4dire.readString("Merging:nRequested = 0");
-    pythia4dire.readString("Beams:setProductionScalesFromLHEF = on");
+    pythia4dire.readString("Beams:setProductionScalesFromLHEF = off");
 
     pythia4dire.setLHAupPtr(&lhareader4dire);
     dire.initSettings(pythia4dire);
