@@ -2097,7 +2097,7 @@ class Event(list):
                
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
-                
+        
         out="""<event%(event_flag)s>
 %(scale)s
 %(particles)s
@@ -2114,11 +2114,9 @@ class Event(list):
         else:
             event_flag = ''
 
-        if self.nexternal:
-            scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+        scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
-        else:
-            scale_str = ''
+
             
         if self.reweight_data:
             # check that all key have an order if not add them at the end
