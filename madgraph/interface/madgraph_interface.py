@@ -5469,8 +5469,9 @@ This implies that with decay chains:
             # check if the photon has to be added to j and p
             if 'perturbation_couplings' in self._curr_model.keys() and \
               'QED' in self._curr_model['perturbation_couplings']:
-                multi.append(22)
-                photon = True
+                if 22 not in multi:
+                    multi.append(22)
+                    photon = True
             elif 22 in multi:
                 multi.remove(22)
                 photon = False
