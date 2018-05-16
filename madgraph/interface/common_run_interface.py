@@ -6613,7 +6613,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
     
-    @scanhandling(arguments)
+    @scanparamcardhandling(arguments)
     def run_launch(self, *args, **opts)
 
     possible arguments are listed above and should be function who takes a single

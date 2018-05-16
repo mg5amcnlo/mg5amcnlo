@@ -530,6 +530,8 @@ class AskRun(cmd.ControlSwitch):
         if options['delphes_path']:
             if 'PY6' in self.available_module or 'PY8' in self.available_module:
                 self.available_module.add('Delphes')
+            else:
+                logger.warning("Delphes program installed but no parton shower module detected.\n    Please install pythia8")
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
@@ -658,7 +660,7 @@ class AskRun(cmd.ControlSwitch):
             self.switch['detector'] = 'Delphes'
         elif self.get_allowed_detector():
             self.switch['detector'] = 'OFF'
-        else: 
+        else:
             self.switch['detector'] =  'Not Avail.'
                 
 #   old mode to activate pgs            
