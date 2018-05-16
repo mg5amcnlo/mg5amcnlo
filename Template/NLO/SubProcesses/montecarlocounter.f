@@ -379,8 +379,6 @@ c$$$          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
 c$$$        enddo
 c$$$        write(*,*) 'wgt_read=',wgt_read
 
-
-
             call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
@@ -1468,6 +1466,10 @@ c      do i=1,nexternal
 c        write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
 c      enddo
 
+c      emsca = emsca*10.0
+c      write(*,*)
+c      write(*,*) 'emsca=', emsca, scalemax
+
 c     Calculate suppression factor for H-events.
       nexternal_now=nexternal
       call clear_HEPEUP_event()
@@ -1487,9 +1489,17 @@ c      enddo
 c      write(*,*) 'No-emission probability =', wgt_sudakov
 
       probne = wgt_sudakov
+      if(probne.lt.0.d0)then
+        write(*,*)'SFWARNING1',probne
+        probne=0.d0
+      endif
+      if(probne.gt.1.d0)then
+        write(*,*)'SFWARNING2',probne
+        probne=1.d0
+      endif
 
-      if (probne .gt. 0.999999 .and. probne .lt. 1.000001) write(*,*) 'Sudakov close to one'
-      write(*,*)
+c      if (probne .gt. 0.999999 .and. probne .lt. 1.000001) write(*,*) 'Sudakov close to one'
+c      write(*,*) 'sudakov', probne
 
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne

@@ -794,6 +794,10 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      double precision probne_bog
+      common/cprobne_bog/probne_bog
+      integer kk,kk0,kkunit
+      kkunit=90+imode
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -888,6 +892,10 @@ c check if event or counter-event passes cuts
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
+            if(passcuts_n1body.and.(.not.passcuts_nbody))then
+              write(*,*)'SFWARNING4',passcuts_n1body,passcuts_nbody
+              stop
+            endif
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
@@ -922,6 +930,7 @@ c
                   call set_FxFx_scale(3,p)
                endif
             endif               
+            kk0=0
             if (passcuts_nbody .and. abrv.ne.'real') then
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
@@ -929,12 +938,22 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+                  kk0=1
+                  write(kkunit,554)'SDK',probne,probne_bog
+c                  write(*,*)'at the end',probne,probne_bog
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
+               if(kk0.eq.1)then
+               do kk=1,nexternal
+                 write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+               enddo
+               endif
+ 554           format(1x,a,2(1x,e14.8))
+ 555           format(1x,i2,5(1x,e14.8))
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set

@@ -1071,18 +1071,18 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
   }
 
 
-  //cout << "No-emission probability="
-  //<< scientific << setprecision(5) << setw(14) << wt
-  //<< " at pT="
-  //<< scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-  //<< endl;
+//  cout << "No-emission probability="
+//  << scientific << setprecision(5) << setw(14) << wt
+//  << " at pT="
+//  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
+//  << endl;
 
-  if (wt > 1. || wt < 0.)
-  cout << "Warning: Unusual no-emission probability="
-  << scientific << setprecision(5) << setw(14) << wt
-  << " at pT="
-  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-  << endl;
+//  if (wt > 1. || wt < 0.)
+//  cout << "Warning: Unusual no-emission probability="
+//  << scientific << setprecision(5) << setw(14) << wt
+//  << " at pT="
+//  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
+//  << endl;
 
 //cout << __PRETTY_FUNCTION__ << wt << endl;
 //cout << depth << " " << nSteps-1 << " " << nSteps << " " << maxScale << endl;
