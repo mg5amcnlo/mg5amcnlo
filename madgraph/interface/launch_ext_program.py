@@ -179,15 +179,6 @@ class MadLoopLauncher(ExtLauncher):
                 self.edit_file(os.path.join(dir_path,'PS.input'))
         else:
             super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
-            if filename == 'MadLoopParams.dat':
-                # Make sure to update the changes
-                MadLoopparam = banner_mod.MadLoopParam(
-                               os.path.join(self.card_dir, 'MadLoopParams.dat'))   
-                # Unless user asked for it, don't doublecheck the helicity filter.
-                MadLoopparam.set('DoubleCheckHelicityFilter', False, 
-                                                             changeifuserset=False)
-                MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
-                                           'SubProcesses', 'MadLoopParams.dat'))
 
     def launch_program(self):
         """launch the main program"""
@@ -215,12 +206,26 @@ class MadLoopLauncher(ExtLauncher):
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
-                # param_car.dat
+                # param_card.dat
                 me_cmd.MadLoopInitializer.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
+                
+                # Make sure to temporarily disable the double-check of the helicity filter
+                # as this would disable the stability check.
+                MadLoopparam = banner_mod.MadLoopParam(
+                                          os.path.join(self.card_dir, 'MadLoopParams.dat'))   
+                bu_helicity_filter_value = MadLoopparam['DoubleCheckHelicityFilter']
+                MadLoopparam.set('DoubleCheckHelicityFilter', False)
+                MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
+                
                 # check
                 t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
+                
+                # Restore the original value of 'DoubleCheckHelicityFilter'
+                MadLoopparam.set('DoubleCheckHelicityFilter', bu_helicity_filter_value)
+                MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
+
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name
