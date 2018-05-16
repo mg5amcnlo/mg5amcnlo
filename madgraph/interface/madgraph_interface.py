@@ -6127,7 +6127,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 ff.close()
                 import stat
                 os.chmod(pjoin(MG5DIR, 'bin', '%s.py' % name), stat.S_IRWXU)
-                logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s.py' % name)
+                logger.info('To use this module, you need to quit MG5aMC and run the executable bin/%s.py' % name)
             status=0
                 
         elif logger.level <= logging.INFO:
