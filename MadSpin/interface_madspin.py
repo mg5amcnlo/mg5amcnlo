@@ -35,6 +35,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.interface.madevent_interface as madevent_interface
+import madgraph.interface.common_run_interface as common_run_interface
 import madgraph.interface.reweight_interface as rwgt_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
@@ -813,7 +814,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     to_decay[particle.pdg] += 1
             if self.options['input_format'] == 'hepmc' and nb_event == 250:
                 for key in to_decay:
-                    to_decay[key] *= 50
+                    to_decay[key] *= 50.013 # to avoid accidental coincidence with nevents
                 break
 
         # Handle the banner of the output file
@@ -862,7 +863,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches:
                         continue
                     else:
-                        evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5, cumul=True)                    
+                        try:
+                            evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5, cumul=True)
+                        except common_run_interface.ZeroResult:
+                            logger.warning("Branching ratio is zero for this particle. Not decaying it")
+                            del to_decay[pdg]                    
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
@@ -948,7 +953,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         except Exception:
             if self.options['input_format'] == 'lhe':
                 raise
-            
+        
         # initialise object which store not use event due to wrong helicity
         bufferedEvents_decay = {}
         for pdg in evt_decayfile:
@@ -1105,7 +1110,7 @@ class MadSpinInterface(extended_cmd.Cmd):
            cumul allow to merge all the definition in one run (add process)
                  to generate events according to cross-section
         """
-        
+        nb_event = int(nb_event) # in case of hepmc request the nb_event is not an integer
         if cumul:
             width = 0.
         else:   
