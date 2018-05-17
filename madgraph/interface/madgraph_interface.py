@@ -2782,7 +2782,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -5801,7 +5801,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm']
+    install_plugin = ['maddm', 'maddump']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
@@ -5819,7 +5819,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190']}
+                          'maddm':['arXiv:1505.04190'],
+                          'maddump':['arXiv:1806.xxxxx']}
+    
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
@@ -5869,6 +5871,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 #            logger.info('{:^80}'.format("-"*70), '$MG:BOLD')
             logger.info("   You are installing '%s', please cite ref(s): \033[92m%s\033[0m. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:BOLD')
 
+        source = None
         # Load file with path of the different program:
         import urllib
         if paths:
@@ -5961,6 +5964,24 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except Exception:
             pass
+
+        if args[0] not in path:
+            if not source:
+                if index ==1:
+                    othersource = 'ucl'
+                else:
+                    othersource = 'uiuc'
+                # try with the mirror
+                misc.sprint('try other mirror', othersource, ' '.join(args))
+                return self.do_install('%s --source=%s' % (' '.join(args), othersource), 
+                                       paths, additional_options) 
+            else:
+                if 'xxx' in advertisements[name][0]:
+                    logger.warning("Program not yet released. Please try later")
+                else:
+                    raise Exception, "Online server are corrupted. No tarball available for %s" % name
+                return
+            
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
