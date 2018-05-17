@@ -177,6 +177,7 @@ class TestConfigFileCase(unittest.TestCase):
         # add a parameter which can be a list
         self.config.add_param("dict", {'__type__':1.0})
         self.assertEqual(self.config['dict'], {})
+        self.assertFalse(self.config['dict'])
         self.assertEqual(dict.__getitem__(self.config,'dict'), {})
          
         # try to write info in it via the string
@@ -256,6 +257,24 @@ class TestConfigFileCase(unittest.TestCase):
         self.config.set('test', '1 4', user=False)
         self.assertEqual(self.config['test'], [1,4])         
 
+    def test_config_iadd(self):
+        
+        self.config['lower'] +=1
+        self.assertTrue(self.config['lower'],2)
+        
+        #check that postscript are correctly called
+        self.config.control = False
+
+        #Note that this is a bit hacky since this is not a normall class fct
+        # but this does the job
+        def f( value, *args, **opts):
+            self.config.control=True
+            
+        self.config.post_set_lower = f
+        self.config['lower'] +=1
+        self.assertTrue(self.config['lower'],3)
+        self.assertTrue(self.config.control)
+      
       
     def test_for_loop(self):
         """ check correct handling of case"""

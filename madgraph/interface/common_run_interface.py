@@ -3338,11 +3338,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             line = 'compute_widths %s --path=%s' % (line, path)
             cmd.exec_cmd(line, model=model)
             interface.child = None
+            del cmd
+            return 
             
             
             
-            
-            raise Exception, 'fail to find a way to handle Auto width'
+        raise Exception, 'fail to find a way to handle Auto width'
         
         
     def store_scan_result(self):
@@ -6715,7 +6716,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                 #param_card_iterator.write(card_path) #-> this is done by the with statement
                 name = misc.get_scan_name(orig_name, next_name)
                 path = result_path(obj) % name 
-                logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
+                logger.info("write scan results in %s" % path ,'$MG:BOLD')
                 order = summaryorder(obj)()
                 param_card_iterator.write_summary(path, order=order)
         return new_fct
