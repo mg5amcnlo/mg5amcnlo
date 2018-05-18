@@ -47,6 +47,22 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 pjoin = os.path.join
 
+def check_html_page(cls, link):
+    """return True if all link in the html page are existing on disk.
+       otherwise raise an assertion error"""
+        
+    text=open(link).read()
+    pattern = re.compile(r'href=[\"\']?(.*?)?[\"\'\s\#]', re.DOTALL)
+    
+    cwd = os.path.dirname(link)
+    with misc.chdir(cwd):
+        for path in pattern.findall(text):
+            if not path:
+                continue # means is just a linke starting with #
+            cls.assertTrue(os.path.exists(path))
+    return True
+    
+
 #===============================================================================
 # TestCmd
 #===============================================================================
@@ -588,6 +604,12 @@ class TestMECmdShell(unittest.TestCase):
             text = fsock.read()
             self.assertTrue(text.count('dynamical scheme') >= 3)
         
+        # check that the html link makes sense
+        #check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
+    
+        
+        
+        
                 
     def check_pythia_output(self, run_name='run_01', syst=False):
         """ """
@@ -825,6 +847,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
         
         self.check_parton_output(cross=4.541638, error=0.035)
+    
         self.check_parton_output('run_02', cross=4.41887317, error=0.035)
         self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
@@ -878,7 +901,10 @@ class TestMEfromfile(unittest.TestCase):
                             'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
                             )
             self.assertTrue(float(data[0]['error']) < 3 * error)
-                            
+            
+        check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
+        check_html_page(self, pjoin(self.run_dir,'HTML', run_name, 'results.html'))
+        
     def check_pythia_output(self, run_name='run_01'):
         """ """
         # check that the number of event is fine:
