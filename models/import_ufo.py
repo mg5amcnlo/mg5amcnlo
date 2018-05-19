@@ -529,6 +529,11 @@ class UFOMG5Converter(object):
             for interaction_info in self.ufomodel.all_CTvertices:
                 self.add_CTinteraction(interaction_info, color_info)
     
+
+        for interaction in self.interactions:
+            self.optimise_interaction(interaction)
+    
+    
         self.model.set('conserved_charge', self.conservecharge)
 
         # If we deal with a Loop model here, the order hierarchy MUST be 
@@ -576,7 +581,101 @@ class UFOMG5Converter(object):
         del self.checked_lor
 
         return self.model
+    
+    def optimise_interaction(self, interaction):
         
+        # we want to check if the same coupling is used for two lorentz strucutre 
+        # for the same color structure. 
+        to_lor = {}
+        #misc.sprint(interaction, interaction['couplings'])
+        for (color, lor), coup in interaction['couplings'].items():
+            key = (color, coup)
+            if key in to_lor:
+                to_lor[key].append(lor)
+                #misc.sprint("we can otimise!", key, len(to_lor[key]))
+            else:
+                to_lor[key] = [lor]
+                
+        nb_reduce = []
+        optimize = False
+        for key in to_lor:
+            if len(to_lor[key]) >1:
+                nb_reduce.append(len(to_lor[key])-1)
+                optimize = True
+           
+        if not optimize:
+            return
+        
+        if not hasattr(self, 'defined_lorentz_expr'):
+            self.defined_lorentz_expr = {}
+            self.lorentz_info = {}
+            self.lorentz_combine = {}
+            for lor in self.model['lorentz']:
+                self.defined_lorentz_expr[lor.get('structure')] = lor.get('name')
+                self.lorentz_info[lor.get('name')] = lor #(lor.get('structure'), lor.get('spins'))
+        
+        for key in to_lor:
+            if len(to_lor[key]) == 1:
+                continue
+            names = [interaction['lorentz'][i] for i in to_lor[key]]
+            names.sort()
+            
+            # get name of the new lorentz
+            if tuple(names) in self.lorentz_combine:
+                # already created new loretnz
+                new_name = self.lorentz_combine[tuple(names)]
+            else:
+                new_name = self.add_merge_lorentz(names)
+                
+            # remove the old couplings 
+            color, coup = key
+            to_remove = [(color, lor) for lor in to_lor[key]]  
+            for rm in to_remove:
+                del interaction['couplings'][rm]
+                
+            #add the lorentz structure to the interaction            
+            if new_name not in [l for l in interaction.get('lorentz')]:
+                interaction.get('lorentz').append(new_name)
+
+            #find the associate index
+            new_l = interaction.get('lorentz').index(new_name)
+            # adding the new combination (color,lor) associate to this sum of structure
+            interaction['couplings'][(color, new_l)] = coup  
+                
+    
+    def add_merge_lorentz(self, names):
+        """add a lorentz structure which is the sume of the list given above"""
+        
+        
+        #create new_name
+        ii = len(names[0])
+        while ii>0:
+            if not all(n.startswith(names[0][:ii]) for n in names[1:]):
+                ii -=1
+            else:
+                base_name = names[0][:ii]
+                break
+        else:
+            base_name = 'LMER'
+        i = 0
+        while '%s%s' %(base_name, i) in self.lorentz_info:
+            i +=1
+        new_name = '%s%s' %(base_name, i)
+        self.lorentz_combine[tuple(names)] = new_name
+        
+        # load the associate lorentz expression
+        new_struct = ' + '.join([self.lorentz_info[n].get('structure') for n in names])
+        spins = self.lorentz_info[names[0]].get('spins')
+        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        self.lorentz_info[new_name] = new_lor
+        
+        return new_name
+                
+                # We also have to create the new lorentz
+                
+                    
+            
+            
     
     def add_particle(self, particle_info):
         """ convert and add a particle in the particle list """
@@ -980,7 +1079,6 @@ class UFOMG5Converter(object):
                           (intType if poleOrder==0 else (intType+str(poleOrder)+\
                                                              'eps')),loop_particles)
 
-
     def find_color_anti_color_rep(self, output=None):
         """find which color are in the 3/3bar states"""
         # method look at the 3 3bar 8 configuration.
@@ -1197,6 +1295,7 @@ class UFOMG5Converter(object):
                 self.conservecharge.discard(charge)
         
         
+        
     def get_sign_flow(self, flow, nb_fermion):
         """ensure that the flow of particles/lorentz are coherent with flow 
            and return a correct version if needed"""
@@ -1248,7 +1347,7 @@ class UFOMG5Converter(object):
         
         self.model['lorentz'].append(new)
         self.model.create_lorentz_dict()
-        return name
+        return new
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
