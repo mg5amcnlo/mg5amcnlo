@@ -389,9 +389,6 @@ c respectively.
       double precision wgt_read
       double precision wgt_sudakov
 
-      double precision probne_bog
-      common/cprobne_bog/probne_bog
-
 C     To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
@@ -548,10 +545,6 @@ cccccccccccccccccc
 c      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
       if(.not.is_pt_hard)call complete_xmcsubt_2(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c -- end of call to MC counterterm functions
-
-c New or standard MC@NLO formulation
-      if(.not.UseSudakov)probne=1.d0
-      probne_bog=probne
 
       MCcntcalled=.true.
       if(ileg.gt.4 .or. ileg.lt.1)then
