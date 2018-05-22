@@ -2614,7 +2614,7 @@ c Sum of final-state transverse masses
          stop
       endif
 c Safety threshold for the reference scale
-      ref_sc=max(ref_sc,30d0)
+      ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
 
       return
       end
