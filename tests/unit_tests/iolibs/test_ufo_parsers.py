@@ -79,6 +79,9 @@ class UFOParserTest(unittest.TestCase):
                   ('1/a if a else 1',
          'MP_CONDIF(CMPLX(mp__a,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(1.000000e+00_16/mp__a,KIND=16),CMPLX(1.000000e+00_16,KIND=16))') ]
 
+        print self.mp_calc.parse('grreglog(logswitch, a, b, c)')
+        print self.mp_calc.parse('reglogp(a)')
+
         for toParse, sol in tests:
             #print toParse
             self.assertEqual(self.mp_calc.parse(toParse), sol)
@@ -217,3 +220,31 @@ class UFOParserTest(unittest.TestCase):
         
         for toParse, sol in tests:
             self.assertEqual(self.mp_calc.parse(toParse), sol)  
+
+
+    def test_parse_special_fortran_fct(self):
+        """Test that we parse a few special functions defined in ufo parsers"""
+        
+        tests = [('cond(a,b,c)','COND(DCMPLX(a),DCMPLX(b),DCMPLX(c))'),
+                 ('reglog(z)','reglog(DCMPLX(z))'),
+                 ('reglogp(z)','reglogp(DCMPLX(z))'),
+                 ('reglogm(z)','reglogm(DCMPLX(z))'),
+                 ('arg(z)','arg(DCMPLX(z))'),
+                 ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))')]
+
+        for toParse, sol in tests:
+            self.assertEqual(self.calc.parse(toParse), sol)
+
+    def test_parse_special_fortran_fct_MP(self):
+        """Test that we parse a few special functions defined in ufo parsers"""
+
+        tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),
+                 ('reglog(z)','mp_reglog(CMPLX((mp__z),KIND=16))'),
+                 ('reglogp(z)','mp_reglogp(CMPLX((mp__z),KIND=16))'),
+                 ('reglogm(z)','mp_reglogm(CMPLX((mp__z),KIND=16))'),
+                 ('arg(z)','mp_arg(CMPLX((mp__z),KIND=16))'),
+                 ('recms(cms==1.0,z)','MP_RECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))')]
+
+
+        for toParse, sol in tests:
+            self.assertEqual(self.mp_calc.parse(toParse), sol)
