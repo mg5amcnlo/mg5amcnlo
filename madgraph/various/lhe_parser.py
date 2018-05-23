@@ -1282,6 +1282,7 @@ class Event(list):
             self.insert(0,mother)
             mother.color2 = 0
             mother.event_id = 0
+            self.nexternal += 1
             for p in self[1:]:
                 p.mother1 = 1
                 p.mother2 = 1

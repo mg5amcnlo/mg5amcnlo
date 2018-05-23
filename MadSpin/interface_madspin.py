@@ -60,9 +60,10 @@ class MadSpinOptions(banner.ConfigFile):
 
         self.add_param("max_weight", -1)
         self.add_param('curr_dir', os.path.realpath(os.getcwd()))
-        self.add_param('Nevents_for_max_weigth', 400)
+        self.add_param('Nevents_for_max_weigth', 0)
+        self.add_param("max_weight_ps_point", 400)
         self.add_param('BW_cut', -1)
-        self.add_param('nb_sigma', 0)
+        self.add_param('nb_sigma', 0.)
         self.add_param('ms_dir', None)
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
@@ -209,6 +210,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             inputfile = inputfile[:-3]
         # Read the banner of the inputfile
         self.events_file = open(os.path.realpath(inputfile))
+        self.banner = banner.Banner(self.events_file)
         
 
         # Check the validity of the banner:
@@ -1070,6 +1072,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 output_lhe.write(str(event))
             else:
                 hepmc_output.wgt = event.wgt
+                hepmc_output.nexternal = len(hepmc_output) # the append does not update nexternal
+                hepmc_output.assign_mother()
                 output_lhe.write(str(hepmc_output))
         else:
             if counter==0:

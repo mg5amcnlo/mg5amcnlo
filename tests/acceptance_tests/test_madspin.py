@@ -40,7 +40,7 @@ class TestMadSpin(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False
+        self.debuging = True#False
         if self.debuging:
             self.path = pjoin(MG5DIR, 'MS_TEST')
             if os.path.exists(self.path):
@@ -101,6 +101,7 @@ class TestMadSpin(unittest.TestCase):
         nb_dec = 0
         nb_photon = 0
         for event in lhe:
+            self.assertEqual(event.nexternal, len(event))
             for particle in event:
                 if particle.pdg == 130:
                     self.assertEqual(particle.status,2)
