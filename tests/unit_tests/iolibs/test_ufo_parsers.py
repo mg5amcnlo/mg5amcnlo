@@ -217,3 +217,37 @@ class UFOParserTest(unittest.TestCase):
         
         for toParse, sol in tests:
             self.assertEqual(self.mp_calc.parse(toParse), sol)  
+
+
+    def test_parse_special_fortran_fct(self):
+        """Test that we parse a few special functions defined in ufo parsers"""
+
+        tests = [('cond(a,b,c)','COND(DCMPLX(a),DCMPLX(b),DCMPLX(c))'),
+                 ('reglog(z)','reglog(DCMPLX(z))'),
+                 ('reglogp(z)','reglogp(DCMPLX(z))'),
+                 ('reglogm(z)','reglogm(DCMPLX(z))'),
+                 ('arg(z)','arg(DCMPLX(z))'),
+                 ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))'),
+                 ('grreglog(logswitch,z1,z2)','GRREGLOG(logswitch,DCMPLX(z1),DCMPLX(z2))'),
+                 ('regsqrt(z)','regsqrt(DCMPLX(z))'),
+                 ('crecms(cms==1.0,z)','CRECMS(cms.EQ.1.000000d+00,DCMPLX(z))')]
+
+        for toParse, sol in tests:
+            self.assertEqual(self.calc.parse(toParse), sol)
+
+    def test_parse_special_fortran_fct_MP(self):
+        """Test that we parse a few special functions defined in ufo parsers"""
+
+        tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),
+                 ('reglog(z)','mp_reglog(CMPLX((mp__z),KIND=16))'),
+                 ('reglogp(z)','mp_reglogp(CMPLX((mp__z),KIND=16))'),
+                 ('reglogm(z)','mp_reglogm(CMPLX((mp__z),KIND=16))'),
+                 ('arg(z)','mp_arg(CMPLX((mp__z),KIND=16))'),
+                 ('recms(cms==1.0,z)','MP_RECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))'),
+                 ('grreglog(logswitch,z1,z2)','MP_GRREGLOG(mp__logswitch,CMPLX(mp__z1,KIND=16),CMPLX(mp__z2,KIND=16))'),
+                 ('regsqrt(z)','mp_regsqrt(CMPLX((mp__z),KIND=16))'),
+                 ('crecms(cms==1.0,z)','MP_CRECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))')]
+
+
+        for toParse, sol in tests:
+            self.assertEqual(self.mp_calc.parse(toParse), sol)
