@@ -2595,6 +2595,7 @@ c
       subroutine assign_ref_scale(p,xii,sh,ref_sc)
       implicit none
       include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
       integer i_scale,i
       parameter(i_scale=1)
