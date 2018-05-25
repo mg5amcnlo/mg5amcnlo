@@ -1736,7 +1736,7 @@ c Gets smoothly to 0 as w goes to 1.
 c Call with
 c   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
 c   0 < |beta| <= 1;
-c   0 < delta < 2.
+c   0 < delta <= 2.
       implicit none
       double precision tiny
       parameter (tiny=1.d-5)
@@ -1755,7 +1755,7 @@ c
           write(*,*)'Incorrect beta in gfunction',beta
           stop
         endif
-        if(delta.ge.2d0.or.delta.le.0d0)then
+        if(delta.gt.2d0.or.delta.le.0d0)then
           write(*,*)'Incorrect delta in gfunction',delta
           stop
         endif
