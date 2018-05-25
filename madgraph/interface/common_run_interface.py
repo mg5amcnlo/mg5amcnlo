@@ -3389,6 +3389,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.remove(pjoin(self.me_dir,'RunWeb'))
             except Exception:
                 pass
+
         try:
             self.store_result()
         except Exception:
@@ -3687,6 +3688,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
             self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
+            self.to_store.append("event")
 
         self.run_name = new_run
         self.banner = madspin_cmd.banner

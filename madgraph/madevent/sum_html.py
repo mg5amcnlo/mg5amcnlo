@@ -575,6 +575,12 @@ class Combine_results(list, OneResult):
                     mod_link = '../../SubProcesses/%(P)s/%(G)s/log.txt' % \
                                             {'P': os.path.basename(self.name),
                                              'G': oneresult.name}
+                    if not os.path.exists(link) and not os.path.exists(mod_link):
+                        P = os.path.basename(self.name)
+                        base = pjoin(me_dir, 'SubProcesses', P, os.path.dirname(link))
+                        pos = [pjoin(base,c) for c in os.listdir(base) if c.endswith('.log')]
+                        if len(pos) == 1:
+                            link = pos[0]
             else:
                 link = '#%s' % oneresult.name
                 mod_link = link

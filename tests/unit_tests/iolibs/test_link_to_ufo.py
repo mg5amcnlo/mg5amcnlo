@@ -28,6 +28,7 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
 from madgraph.iolibs import save_load_object
+import madgraph.interface.master_interface as Cmd
 
 
 
@@ -40,12 +41,16 @@ root_path = os.path.join(file_dir_path, os.pardir, os.pardir, os.pardir)
 class TestUFOExpressionParsers(unittest.TestCase):
         
     def setUp(self):
+        if not hasattr(TestUFOExpressionParsers, 'model'):
+            self.cmd = Cmd.MasterCmd()
+            self.cmd.exec_cmd("import model sm")
+            TestUFOExpressionParsers.model = self.cmd._curr_model
         pass
     
     def test_parse_to_fortran(self):
         """Test Python to Fortran expression parser"""
         
-        ufo_to_fortran = ufo_expression_parsers.UFOExpressionParserFortran()
+        ufo_to_fortran = ufo_expression_parsers.UFOExpressionParserFortran(TestUFOExpressionParsers.model)
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_fortran.parse(expr)
         self.assertTrue(isinstance(converted, str))
@@ -83,7 +88,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
     def test_convert_number_to_fortran(self):
         """ test it can convert number in fortran string"""
         
-        py2f77 = ufo_expression_parsers.UFOExpressionParserFortran()
+        py2f77 = ufo_expression_parsers.UFOExpressionParserFortran(TestUFOExpressionParsers.model)
         expr = str(2)
         converted = py2f77.parse(expr)
         self.assertTrue(isinstance(converted, str))

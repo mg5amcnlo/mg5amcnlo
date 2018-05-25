@@ -59,7 +59,7 @@ def check_html_page(cls, link):
         for path in pattern.findall(text):
             if not path:
                 continue # means is just a linke starting with #
-            cls.assertTrue(os.path.exists(path))
+            cls.assertTrue(os.path.exists(path), '%s/%s' %(cwd,path))
     return True
     
 
@@ -903,7 +903,8 @@ class TestMEfromfile(unittest.TestCase):
             self.assertTrue(float(data[0]['error']) < 3 * error)
             
         check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
-        check_html_page(self, pjoin(self.run_dir,'HTML', run_name, 'results.html'))
+        if 'decayed' not in run_name:
+            check_html_page(self, pjoin(self.run_dir,'HTML', run_name, 'results.html'))
         
     def check_pythia_output(self, run_name='run_01'):
         """ """
