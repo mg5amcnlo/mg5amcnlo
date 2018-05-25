@@ -84,9 +84,6 @@ class UFOParserTest(unittest.TestCase):
                   ('1/a if a else 1',
          'MP_CONDIF(CMPLX(mp__a,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(1.000000e+00_16/mp__a,KIND=16),CMPLX(1.000000e+00_16,KIND=16))') ]
 
-        print self.mp_calc.parse('grreglog(logswitch, a, b, c)')
-        print self.mp_calc.parse('reglogp(a)')
-
         for toParse, sol in tests:
             #print toParse
             self.assertEqual(self.mp_calc.parse(toParse), sol)

@@ -527,7 +527,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     types_def = {   bool: lambda v: v ,
                     int :lambda v: 'mp__%s' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-')) else v,
                     float: lambda v: 'mp__%s' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-')) else v, 
-                    complex: lambda v: 'CMPLX(mp__%s, KIND=16)' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-')) else 'CMPLX(%s, KIND=16)' % v}
+                    complex: lambda v: 'CMPLX(mp__%s, KIND=16)' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-' )) else 'CMPLX(%s, KIND=16)' % v}
 
 
     # The following parser expressions need to be defined for each
@@ -637,6 +637,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                     p[0] = 'MP_' + p1 + '(' + p[3] + ',' + p[5] + ' , ' + p[7] + ' , ' + p[9] + ')'
                 else:
                     types = [self.types_def[t] for t in self.modelfct[p1].argstype]
+                    misc.sprint(types)
                     p[0] = 'MP_' + p1 + '(' + types[0](p[3]) + ',' + types[1](p[5]) + ' , ' + types[2](p[7]) + ' , ' + types[3](p[9]) + ')'
                     
             else:
