@@ -64,7 +64,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param("max_weight_ps_point", 400)
         self.add_param('BW_cut', -1)
         self.add_param('nb_sigma', 0.)
-        self.add_param('ms_dir', None)
+        self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
         self.add_param('spinmode', "madspin", allowed=['madspin','none','onshell'])
@@ -83,8 +83,7 @@ class MadSpinOptions(banner.ConfigFile):
     def post_set_ms_dir(self, value, change_userdefine, raiseerror):
         """ special handling for set ms_dir """
         
-        self.__setitem__('curr_dir', value, change_userdefine=change_userdefine,
-                          raiserror=raiseerror)
+        self.__setitem__('curr_dir', value, change_userdefine=change_userdefine)
         
     ############################################################################
     def post_set_seed(self, value, change_userdefine, raiseerror):
@@ -465,7 +464,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         args = self.split_arg(line)
         self.check_set(args)
-        
+
         self.options[args[0]] = ' '.join(args[1:])
         
 

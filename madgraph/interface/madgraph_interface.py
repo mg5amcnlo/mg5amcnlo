@@ -2786,7 +2786,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5','MadAnalysis']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -5919,15 +5919,16 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
-        if args[0] == 'MadAnalysis4':
-            args[0] = 'MadAnalysis'
+
 
         try:
             name = self.install_name
             name = name[args[0]]
         except KeyError:
             name = args[0]
-
+        if args[0] == 'MadAnalysis4':
+            args[0] = 'MadAnalysis'
+        
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -5982,7 +5983,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     raise Exception, "Online server are corrupted. No tarball available for %s" % name
                 return
             
-
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
         misc.wget(path[args[0]], '%s.tgz' % name, cwd=MG5DIR)
@@ -6214,7 +6214,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
-                misc.wget(target, 'tg.tgz', cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
