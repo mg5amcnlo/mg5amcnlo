@@ -205,7 +205,7 @@ class UFOExpressionParser(object):
         ('right','IM'),
         ('right', 'BUILTIN'),
         ('right','FUNCTION'),
-        #('right','COMPLEX'),
+        ('right','COMPLEX'),
         ('right','COND'),
         )
 
@@ -1035,7 +1035,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
-        elif p[1] in self.buitin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
+        elif p[1] in self.builtin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
