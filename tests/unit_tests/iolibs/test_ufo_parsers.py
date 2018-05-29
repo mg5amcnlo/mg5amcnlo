@@ -234,7 +234,12 @@ class UFOParserTest(unittest.TestCase):
                  ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))'),
                  ('grreglog(logswitch,z1,z2)','grreglog(DBLE(logswitch),DCMPLX(z1) , DCMPLX(z2))'),
                  ('regsqrt(z)','regsqrt(DCMPLX(z))'),
-                 ('crecms(cms==1.0,z)','crecms(cms.EQ.1.000000d+00,DCMPLX(z))')]
+                 ('crecms(cms==1.0,z)','crecms(cms.EQ.1.000000d+00,DCMPLX(z))'),
+                 ('abs(1.0)', 'ABS(1.000000d+00)'),
+                 ('abs(float(1))' , 'ABS(REAL(1.000000d+00))'),
+                 ('abs(int(1))' , 'ABS(INTEGER(1.000000d+00))')
+                 ]
+        
 
         for toParse, sol in tests:
             self.assertEqual(self.calc.parse(toParse), sol)
@@ -255,6 +260,8 @@ class UFOParserTest(unittest.TestCase):
                  ('crecms(cms==1.0, 2*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(2.000000e+00_16*mp__y, KIND=16))'),
                  ('crecms(cms==1.0, -y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-mp__y, KIND=16))'),
                  ('crecms(cms==1.0, -1*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-1.000000e+00_16*mp__y, KIND=16))'),
+                 ('abs(1.0)', 'ABS(1.000000e+00_16)'),
+                 ('abs(float(x))' , 'ABS(REAL((mp__x), KIND=16))')
                  ]
 
 

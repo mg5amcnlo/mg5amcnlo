@@ -65,7 +65,7 @@ class UFOExpressionParser(object):
     # List of tokens and literals
     tokens = (
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN', 'ATAN',
-        'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
+        'SQRT', 'BUILTIN', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','RECMS','ARG'
         )
     literals = "=+-*/(),"
@@ -128,6 +128,9 @@ class UFOExpressionParser(object):
         return t
     def t_CONJ(self, t):
         r'complexconjugate'
+        return t
+    def t_BUILTIN(self, t):
+        r'(?<!\w)abs|bool|float|int|min|max(?=\()'
         return t
     def t_IM(self, t):
         r'(?<!\w)im(?=\()'
@@ -200,8 +203,9 @@ class UFOExpressionParser(object):
         ('right','CONJ'),
         ('right','RE'),
         ('right','IM'),
+        ('right', 'BUILTIN'),
         ('right','FUNCTION'),
-        ('right','COMPLEX'),
+        #('right','COMPLEX'),
         ('right','COND'),
         )
 
@@ -293,6 +297,14 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     Fortran-style code."""
 
 
+    builtin_equiv = {'abs': 'ABS',
+                     'bool': 'LOGICAL',
+                     'float': 'REAL',
+                     #'complex': 'COMPLEX', handle separatly
+                     'int': 'INTEGER',
+                     'min': 'MIN',
+                     'max': 'MAX'
+    } 
 
     # The following parser expressions need to be defined for each
     # output language/framework
@@ -327,6 +339,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_number(self, p):
         "expression : NUMBER"
+    
         if p[1].endswith('j'):
             p[0] = ('DCMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
         else:
@@ -388,7 +401,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | REGLOGP group
                       | REGLOGM group
                       | TAN group
-                      | ATAN group'''
+                      | ATAN group
+                      | BUILTIN group'''
 
         if p[1] == 'csc': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/cos' + p[2]
@@ -404,6 +418,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
         elif p[1] == 'reglogp': p[0] = 'reglogp(DCMPLX' + p[2] + ')'
         elif p[1] == 'reglogm': p[0] = 'reglogm(DCMPLX' + p[2] + ')'
+        elif p[1] in self.builtin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
 
         if p[1] in ['reglog', 'reglogp', 'reglogm']:
             self.to_define.add(p[1])
@@ -529,6 +544,14 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                     float: lambda v: 'mp__%s' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-')) else v, 
                     complex: lambda v: 'CMPLX(mp__%s, KIND=16)' % v if not v.startswith(('(','mp__','1','2','3','4','5','6','7','8','9','0','-' )) else 'CMPLX(%s, KIND=16)' % v}
 
+    builtin_equiv = {'abs': lambda v: 'ABS' +v,
+                     'bool': lambda v: 'LOGICAL' +v ,
+                     'float': lambda v: 'REAL(' +v+", KIND=16)",
+                     'complex': lambda v: 'COMPLEX(' +v+", KIND=16)",
+                     'int': lambda v: 'INTEGER' +v ,
+                     'min': lambda v: 'MIN' +v ,
+                     'max': lambda v: 'MAX' +v 
+    } 
 
     # The following parser expressions need to be defined for each
     # output language/framework
@@ -685,7 +708,8 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | REGLOGP group
                       | REGLOGM group
                       | TAN group
-                      | ATAN group'''
+                      | ATAN group
+                      | BUILTIN group'''
         
         if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
@@ -701,6 +725,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
         elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglogm': p[0] = 'mp_reglogm(CMPLX(' + p[2] + ',KIND=16))'
+        elif p[1] in self.builtin_equiv: p[0] = self.builtin_equiv[p[1]](p[2])
 
         if p[1] in ['reglog', 'reglogp', 'reglogm']:
             self.to_define.add(p[1])
@@ -740,6 +765,15 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                      '<':'<',
                      'or':'||',
                      'and':'&&'}
+    
+    builtin_equiv = {'abs': 'ABS',
+                     'bool': 'bool',
+                     'float': 'float',
+                     #'complex': 'COMPLEX', handle separatly
+                     'int': 'int',
+                     'min': 'min',
+                     'max': 'max'
+    } 
 
     # The following parser expressions need to be defined for each
     # output language/framework
@@ -817,7 +851,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group 
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | BUILTIN group '''
         if p[1] == 'csc': p[0] = '1./cos' + p[2]
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -832,6 +867,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
+        elif p[1] in self.buitin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
+        
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
@@ -865,6 +902,15 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                      '<':'<',
                      'or':' or ',
                      'and':' and '}
+    
+    builtin_equiv = {'abs': 'abs',
+                     'bool': 'bool',
+                     'float': 'float',
+                     #'complex': 'COMPLEX', handle separatly
+                     'int': 'int',
+                     'min': 'min',
+                     'max': 'max'
+    } 
 
     def __init__(self, *args,**kw):
         """Initialize the lex and yacc"""
@@ -973,7 +1019,8 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | BUILTIN group'''
         if p[1] == 'csc': p[0] = 'csc' + p[2]
         elif p[1] == 'sec': p[0] = 'sec' + p[2]
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
@@ -988,6 +1035,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
+        elif p[1] in self.buitin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
