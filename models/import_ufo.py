@@ -587,12 +587,10 @@ class UFOMG5Converter(object):
         # we want to check if the same coupling is used for two lorentz strucutre 
         # for the same color structure. 
         to_lor = {}
-        #misc.sprint(interaction, interaction['couplings'])
         for (color, lor), coup in interaction['couplings'].items():
             key = (color, coup)
             if key in to_lor:
                 to_lor[key].append(lor)
-                #misc.sprint("we can otimise!", key, len(to_lor[key]))
             else:
                 to_lor[key] = [lor]
                 
@@ -657,7 +655,7 @@ class UFOMG5Converter(object):
                 break
         else:
             base_name = 'LMER'
-        i = 0
+        i = 1
         while '%s%s' %(base_name, i) in self.lorentz_info:
             i +=1
         new_name = '%s%s' %(base_name, i)
@@ -1801,6 +1799,10 @@ class RestrictModel(model_reader.ModelReader):
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
        
+        # modify interaction to avoid to have identical coupling with different lorentz
+        for interaction in self.get('interactions'):
+            self.optimise_interaction(interaction)
+            
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
@@ -2325,11 +2327,108 @@ class RestrictModel(model_reader.ModelReader):
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
 
+    def optimise_interaction(self, interaction):
+        
+        # we want to check if the same coupling (up to the sign) is used for two lorentz structure 
+        # for the same color structure. 
+        to_lor = {}
+        for (color, lor), coup in interaction['couplings'].items():
+            abscoup, coeff = (coup[1:],-1) if coup.startswith('-') else (coup, 1)
+            key = (color, abscoup)
+            if key in to_lor:
+                to_lor[key].append((lor,coeff))
+            else:
+                to_lor[key] = [(lor,coeff)]
+
+        nb_reduce = []
+        optimize = False
+        for key in to_lor:
+            if len(to_lor[key]) >1:
+                nb_reduce.append(len(to_lor[key])-1)
+                optimize = True
+           
+        if not optimize:
+            return
+        
+        if not hasattr(self, 'defined_lorentz_expr'):
+            self.defined_lorentz_expr = {}
+            self.lorentz_info = {}
+            self.lorentz_combine = {}
+            for lor in self.get('lorentz'):
+                self.defined_lorentz_expr[lor.get('structure')] = lor.get('name')
+                self.lorentz_info[lor.get('name')] = lor #(lor.get('structure'), lor.get('spins'))
+            
+        for key in to_lor:
+            if len(to_lor[key]) == 1:
+                continue
+            names = ['u%s' % interaction['lorentz'][i[0]] if i[1] ==1 else \
+                     'd%s' % interaction['lorentz'][i[0]] for i in to_lor[key]]
+
+            names.sort()
+            
+            # get name of the new lorentz
+            if tuple(names) in self.lorentz_combine:
+                # already created new loretnz
+                new_name = self.lorentz_combine[tuple(names)]
+            else:
+                new_name = self.add_merge_lorentz(names)
                 
-
-
-
+            # remove the old couplings 
+            color, coup = key
+            to_remove = [(color, lor[0]) for lor in to_lor[key]] 
+            for rm in to_remove:
+                del interaction['couplings'][rm]
                 
+            #add the lorentz structure to the interaction            
+            if new_name not in [l for l in interaction.get('lorentz')]:
+                interaction.get('lorentz').append(new_name)
+
+            #find the associate index
+            new_l = interaction.get('lorentz').index(new_name)
+            # adding the new combination (color,lor) associate to this sum of structure
+            interaction['couplings'][(color, new_l)] = coup     
+
+
+
+    def add_merge_lorentz(self, names):
+        """add a lorentz structure which is the sume of the list given above"""
+        
+        #create new_name
+        ii = len(names[0])
+        while ii>1:
+            #do not count the initial "u/d letter whcih indicates the sign"
+            if not all(n[1:].startswith(names[0][1:ii]) for n in names[1:]):
+                ii -=1
+            else:
+                base_name = names[0][1:ii]
+                break
+        else:
+            base_name = 'LMER'
+        i = 1
+        while '%s%s' %(base_name, i) in self.lorentz_info:
+            i +=1
+        new_name = '%s%s' %(base_name, i)
+        self.lorentz_combine[tuple(names)] = new_name
+        
+        # load the associate lorentz expression
+        new_struct = ' + '.join([self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('u')])
+        new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
+        spins = self.lorentz_info[names[0][1:]].get('spins')
+        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        self.lorentz_info[new_name] = new_lor
+        
+        return new_name
+    
+    def add_lorentz(self, name, spin, struct):
+        
+        new = self['lorentz'][0].__class__(name = name,
+                                           spins = spin,
+                                           structure = struct)
+        self['lorentz'].append(new)
+        self.create_lorentz_dict()
+        
+        return None
+                                
         
         
         
