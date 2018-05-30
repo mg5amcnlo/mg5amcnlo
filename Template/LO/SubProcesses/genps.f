@@ -104,7 +104,7 @@ c     Arguments
 c
       integer iconfig,mincfig,maxcfig,invar
       double precision p1(0:3,nexternal+1)
-      double precision x(maxinvar)
+      double precision x(*)
       double precision wgt
 c
 c     Local
@@ -663,7 +663,7 @@ c
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
       double precision jac,pswgt
       integer nbranch
-      double precision x(40) ! ja 3/2/11 21->40 after strange segfault
+      double precision x(*) ! ja 3/2/11 21->40 after strange segfault
 c
 c     Local
 c

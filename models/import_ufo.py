@@ -1871,14 +1871,23 @@ class RestrictModel(model_reader.ModelReader):
                 return self.detect_identical_couplings(strict_zero=True)
 
             
-            if value in dict_value_coupling:
-                iden_key.add(value)
-                dict_value_coupling[value].append(name)
+            if value in dict_value_coupling or -1*value in dict_value_coupling:
+                if value in dict_value_coupling:
+                    iden_key.add(value)
+                    dict_value_coupling[value].append((name,1))
+                else:
+                    iden_key.add(-1*value)
+                    dict_value_coupling[-1*value].append((name,-1))
             else:
-                dict_value_coupling[value] = [name]
-        
+                dict_value_coupling[value] = [(name,1)]
         for key in iden_key:
-            iden_coupling.append(dict_value_coupling[key])
+            tmp = []
+            if key in dict_value_coupling:
+                tmp += dict_value_coupling[key]
+            elif -1*key in dict_value_coupling:
+                tmp += dict_value_coupling[-1*key]
+            assert tmp
+            iden_coupling.append(tmp)
 
         return zero_coupling, iden_coupling
     
@@ -1997,17 +2006,52 @@ class RestrictModel(model_reader.ModelReader):
         return output
 
 
+    @staticmethod
+    def get_new_coupling_name(main, coupling, value, coeff):
+        """ We have main == coeff * coupling
+            coeff is only +1 or -1
+            main can be either GC_X or -GC_X
+            coupling can be either GC_Y or -GC_Y
+            value is either GC_Y or -GC_Y
+            the return is either GC_X or -GC_X
+            such that we have value == OUTPUT
+        """
+        assert coeff in [-1,1]
+        assert value == coupling or value == '-%s' % coupling or coupling == '-%s' % value
+        assert isinstance(main, str)
+        assert isinstance(coupling, str)
+        assert isinstance(value, str)
+        if coeff ==1: 
+            if value == coupling:
+                return main # 4/4
+            else:
+                if main.startswith('-'):
+                    return main[1:] # 2/2
+                else:
+                    return '-%s' % main # 2/2
+        else:
+            if value == coupling:
+                if main.startswith('-'):
+                    return main[1:] # 2/2
+                else:
+                    return '-%s' % main # 2/2
+            else:
+                return main # 4/4
+
+
     def merge_iden_couplings(self, couplings):
         """merge the identical couplings in the interactions and particle 
         counterterms"""
 
         
         logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
-                        ', '.join([obj for obj in couplings]))
+                        ', '.join([str(obj) for obj in couplings]))
+
+        main = couplings[0][0]
+        assert couplings[0][1] == 1
+        self.del_coup += [c[0] for c in couplings[1:]] # add the other coupl to the suppress list
         
-        main = couplings[0]
-        self.del_coup += couplings[1:] # add the other coupl to the suppress list
-        for coupling in couplings[1:]:
+        for coupling, coeff in couplings[1:]:
             # check if param is linked to an interaction
             if coupling not in self.coupling_pos:
                 continue
@@ -2016,13 +2060,12 @@ class RestrictModel(model_reader.ModelReader):
                          isinstance(vert, base_objects.Interaction)]
             for vertex in vertices:
                 for key, value in vertex['couplings'].items():
-                    if value == coupling:
-                        vertex['couplings'][key] = main
-                    elif value == '-%s' % coupling:
-                        if main.startswith('-'):
-                            vertex['couplings'][key] = main[1:]
-                        else:
-                            vertex['couplings'][key] = '-%s' % main
+                    if value == coupling or value == '-%s' % coupling or coupling == '-%s' % value:
+                        vertex['couplings'][key] = self.get_new_coupling_name(\
+                                                   main, coupling, value, coeff)
+                    
+                    
+                            
                         
             # replace the coupling appearing in the particle counterterm
             particles_ct = [ pct for pct in self.coupling_pos[coupling] if 

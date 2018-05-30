@@ -384,7 +384,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
-                        self.draw(' '.join(args[1:]), type=diag_type)
+                        self.draw(' '.join(args[1:]), Dtype=diag_type)
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 

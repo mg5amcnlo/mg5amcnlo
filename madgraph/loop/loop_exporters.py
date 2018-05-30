@@ -411,6 +411,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
+        cp(pjoin(self.loop_dir,'StandAlone/Cards/MadLoopParams.dat'),
+           pjoin(self.dir_path, 'Cards/MadLoopParams_default.dat'))
+
         ln(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'), pjoin(self.dir_path,'SubProcesses'))
 
         # We might need to give a different name to the MadLoop makefile
