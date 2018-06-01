@@ -1952,6 +1952,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make_model_symbolic_link()
 
     #===========================================================================
+    # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+    #===========================================================================
+    def write_procdef_mg5(self, file_pos, modelname, process_str):
+        """ write an equivalent of the MG4 proc_card in order that all the Madevent
+        Perl script of MadEvent4 are still working properly for pure MG5 run.
+        Not needed for StandAlone so just return
+        """
+        
+        return
+
+
+    #===========================================================================
     # Make the Helas and Model directories for Standalone directory
     #===========================================================================
     def make(self):
