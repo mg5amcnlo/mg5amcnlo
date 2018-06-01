@@ -145,13 +145,41 @@ class TestImportUFONoSideEffect(unittest.TestCase):
 
         self.assertEqual(original_all_particles,ufo_model.all_particles)
         self.assertEqual(original_all_vertices,ufo_model.all_vertices)
-#        self.assertEqual(original_all_couplings,ufo_model.all_couplings)
+        self.assertEqual(original_all_couplings,ufo_model.all_couplings)
         self.assertEqual(original_all_lorentz,ufo_model.all_lorentz)
         self.assertEqual(original_all_parameters,ufo_model.all_parameters)
         self.assertEqual(original_all_orders,ufo_model.all_orders)
         self.assertEqual(original_all_functions,ufo_model.all_functions)
         self.assertEqual(original_all_CTvertices,ufo_model.all_CTvertices)
         self.assertEqual(original_all_CTparameters,ufo_model.all_CTparameters)
+
+        # Also test that one new lorentz struture has been added within the model
+        # and that the associate optimization is working as expected.
+        self.assertEqual(len(original_all_lorentz) + 1, len(model['lorentz']))
+        new_l = [l for l  in model['lorentz'] if l not in original_all_lorentz][0]
+        new_name = new_l.name
+        self.assertEqual(new_l.name, 'R2RGA_VVVV1')
+        # find interactions with that lorentz structure
+        int_with_it = []
+        for id, vertices in model.get('interaction_dict').items():
+            if new_name in vertices['lorentz']:
+                int_with_it.append(vertices)
+        self.assertEqual(len(int_with_it), 2)
+        # check the first one
+        vert = int_with_it[0]
+        pdg = [p['pdg_code'] for p in vert['particles']]
+        self.assertEqual(pdg, [21,21,21,21])
+        # check the equivalent vertex in the original model
+        old_vert = [ v for v in ufo_model.all_CTvertices if pdg == [p.pdg_code for p in v.particles]]
+        #pick one
+        old_vert = old_vert[0]
+        
+        # find the number of coupling associate to this lorentz structure
+        ind = vert['lorentz'].index(new_name)
+        coup_name = [ c for ((l,col),c) in vert['couplings'].items() if l ==ind]
+        nb_old = len([ c for ((l,col),c) in vert['couplings'].items() if c == coup_name[0]])
+        nb_new = len([ c for ((l,col,k),c) in old_vert.couplings.items() if c.name == coup_name[0]])
+        self.assertEqual(3*nb_old, nb_new)
 
 #===============================================================================
 # TestRestrictModel

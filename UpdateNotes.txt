@@ -1,9 +1,19 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.6.3 ()
+      OM: When importing model, we now run one additional layer of optimisation:
+           - if a vertex as two identical coupling for the same color structure then the associated lorentz 
+             structure are merged in a single one and the vertex is modified accordingly
+      OM: When restricting a model, we also run one additional layer of optimisation
+           - Opposite sign coupling are now identified and merged into a single one
+           - if a vertex as two identical coupling (up to the sign) for the same color structure
+             then the associated lorentz structure are merged in a single one and the 
+             vertex is modified accordingly 
+      VH+OM: changing the ALOHA naming scheme for combine routine when the function name starts to be too long. 
       OM: adding a hidden parameter to the run_card (python_seed) to allow to control the randon number 
           generated within python and be able to have full reproducibility of the events
-      
+      OM: Adding Qnumbers block for ghost (the latest version of py8 was crashing due to their absence)
+
 2.6.2 (29/04/18)
 
       Heavy ion pdf / pdf in general:

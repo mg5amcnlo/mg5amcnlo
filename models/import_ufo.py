@@ -497,7 +497,7 @@ class UFOMG5Converter(object):
         color_info = self.find_color_anti_color_rep()
 
         # load the lorentz structure.
-        self.model.set('lorentz', self.ufomodel.all_lorentz)
+        self.model.set('lorentz', list(self.ufomodel.all_lorentz))
         
         # Substitute the expression of CT couplings which include CTparameters
         # in their definition with the corresponding dictionaries, e.g.
@@ -655,11 +655,14 @@ class UFOMG5Converter(object):
                 break
         else:
             base_name = 'LMER'
+            
         i = 1
         while '%s%s' %(base_name, i) in self.lorentz_info:
             i +=1
         new_name = '%s%s' %(base_name, i)
         self.lorentz_combine[tuple(names)] = new_name
+        assert new_name not in self.lorentz_info
+        assert new_name not in [l.name for l in self.model['lorentz']]
         
         # load the associate lorentz expression
         new_struct = ' + '.join([self.lorentz_info[n].get('structure') for n in names])
@@ -1338,12 +1341,16 @@ class UFOMG5Converter(object):
 
     def add_lorentz(self, name, spins , expr):
         """ Add a Lorentz expression which is not present in the UFO """
-        
-        new = self.model['lorentz'][0].__class__(name = name,
-                spins = spins,
-                structure = expr)
-        
-        self.model['lorentz'].append(new)
+
+        assert name not in [l.name for l in self.model['lorentz']]
+        with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
+                               self.model['lorentz']):
+            new = self.model['lorentz'][0].__class__(name = name,
+                    spins = spins,
+                    structure = expr)
+        assert name in [l.name for l in self.model['lorentz']]
+        assert name not in [l.name for l in self.ufomodel.all_lorentz]
+        #self.model['lorentz'].append(new) # already done by above command
         self.model.create_lorentz_dict()
         return new
     
@@ -2412,7 +2419,8 @@ class RestrictModel(model_reader.ModelReader):
         
         # load the associate lorentz expression
         new_struct = ' + '.join([self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('u')])
-        new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
+        if any( n.startswith('d') for n in names ):
+            new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
         spins = self.lorentz_info[names[0][1:]].get('spins')
         new_lor = self.add_lorentz(new_name, spins, new_struct)
         self.lorentz_info[new_name] = new_lor
@@ -2420,7 +2428,7 @@ class RestrictModel(model_reader.ModelReader):
         return new_name
     
     def add_lorentz(self, name, spin, struct):
-        
+        """adding lorentz structure to the current model"""
         new = self['lorentz'][0].__class__(name = name,
                                            spins = spin,
                                            structure = struct)
