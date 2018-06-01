@@ -1464,7 +1464,8 @@ def equal(a,b,sig_fig=6, zero_limit=True):
             else:
                 return a == b  
         else:
-            power = sig_fig - int(math.log10(abs(a))) + 1
+            power = sig_fig - int(math.log10(abs(a)))
+
         return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
     else:
         return abs(a-b) < sig_fig
