@@ -938,7 +938,7 @@ class AbstractALOHAModel(dict):
                 if self.has_key((lorentzname, outgoing)):
                     self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                 else:
-                    lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                    lorentz = eval('self.model.lorentz.%s' % list_l_name[0])
                     assert lorentz.structure == 'external'
             else:
                 l_lorentz = []
