@@ -3044,7 +3044,18 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         context['MadEventOutput'] = True
         return context
         
-    
+    #===========================================================================
+    # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+    #===========================================================================
+    def write_procdef_mg5(self, file_pos, modelname, process_str):
+        """ write an equivalent of the MG4 proc_card in order that all the Madevent
+        Perl script of MadEvent4 are still working properly for pure MG5 run.
+        Not needed for StandAlone so we need to call the correct one 
+        """
+        
+        return export_v4.ProcessExporterFortranMEGroup.write_procdef_mg5(
+            self, file_pos, modelname, process_str)
+
     def get_source_libraries_list(self):
         """ Returns the list of libraries to be compiling when compiling the
         SOURCE directory. It is different for loop_induced processes and 
