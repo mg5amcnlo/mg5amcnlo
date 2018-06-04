@@ -842,7 +842,7 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          firsttime=.false.
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
-         call setup_proc_map(sum,proc_map)
+         call setup_proc_map(sum,proc_map,ini_fin_fks)
 c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
@@ -869,16 +869,6 @@ c "npNLO".
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-         if (ini_fin_fks.eq.1) then
-            do while (fks_j_d(proc_map(proc_map(0,1),1)).le.nincoming) 
-               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-            enddo
-         elseif (ini_fin_fks.eq.2) then
-            do while (fks_j_d(proc_map(proc_map(0,1),1)).gt.nincoming) 
-               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-            enddo
-         endif
-
 c The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
@@ -1043,7 +1033,7 @@ c determined which contributions are identical.
       end
 
 
-      subroutine setup_proc_map(sum,proc_map)
+      subroutine setup_proc_map(sum,proc_map,ini_fin_fks)
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
       implicit none
@@ -1056,7 +1046,7 @@ c summed explicitly and which by MC-ing.
       logical found_ini1,found_ini2,found_fnl
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
-     $     ,j_fks_pdg_proc(fks_configs),i,sum,j
+     $     ,j_fks_pdg_proc(fks_configs),i,sum,j,ini_fin_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       INTEGER              IPROC
@@ -1097,6 +1087,8 @@ c First find all the nFKSprocesses that have a soft singularity and put
 c them in the process map
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
+            if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
+            if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
             if (need_color_links.or.need_charge_links) then
                proc_map(0,0)=proc_map(0,0)+1
                proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
@@ -1156,6 +1148,8 @@ c singularity and put them together with the corresponding gluon to
 c gluons splitting
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
+            if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
+            if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
             if (.not.(need_color_links.or.need_charge_links)) then
                if (j_fks.eq.1 .and. found_ini1) then
                   do i=1,proc_map(0,0)

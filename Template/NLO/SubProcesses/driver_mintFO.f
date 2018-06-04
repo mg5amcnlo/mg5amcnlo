@@ -402,9 +402,10 @@ c timing statistics
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
-     $     ,nFKS_max,izero,ione,itwo,mohdr
+     $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
-      logical passcuts,passcuts_nbody,passcuts_n1body,sum
+      logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
+      data firsttime/.true./
       external passcuts
       integer             ini_fin_fks(maxchannels)
       common/fks_channels/ini_fin_fks
@@ -431,6 +432,16 @@ c timing statistics
       common /for_applgrid/ iappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer ini_fin_fks_map(0:2,0:fks_configs)
+      save ini_fin_fks_map
+      if (firsttime) then
+         firsttime=.false.
+         call setup_ini_fin_fks_map(ini_fin_fks_map)
+         write (*,*) 'initial-final FKS maps:'
+         write (*,*) 0 ,':',ini_fin_fks_map(0,:)
+         write (*,*) 1 ,':',ini_fin_fks_map(1,:)
+         write (*,*) 2 ,':',ini_fin_fks_map(2,:)
+      endif
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
@@ -453,20 +464,9 @@ c timing statistics
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
-      call get_MC_integer(max(ini_fin_fks(ichan),1),fks_configs
-     $     ,nFKS_picked,vol)
-      if (ini_fin_fks(ichan).eq.1) then
-         do while (fks_j_d(nFKS_picked).le.nincoming) 
-            call get_MC_integer(ini_fin_fks(ichan),fks_configs
-     $           ,nFKS_picked,vol)
-         enddo
-      elseif (ini_fin_fks(ichan).eq.2) then
-         do while (fks_j_d(nFKS_picked).gt.nincoming) 
-            call get_MC_integer(ini_fin_fks(ichan),fks_configs
-     $           ,nFKS_picked,vol)
-         enddo
-      endif
-
+      call get_MC_integer(max(ini_fin_fks(ichan),1)
+     $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
+      nFKS_picked=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
       
 c The nbody contributions
       if (abrv.eq.'real') goto 11
@@ -503,14 +503,15 @@ c The n+1-body contributions (including counter terms)
       nbody=.false.
       if (sum) then
          nFKS_min=1
-         nFKS_max=fks_configs
+         nFKS_max=ini_fin_fks_map(ini_fin_fks(ichan),0)
          MC_int_wgt=1d0
       else
-         nFKS_min=nFKS_picked
-         nFKS_max=nFKS_picked
+         nFKS_min=iran_picked
+         nFKS_max=iran_picked
          MC_int_wgt=1d0/vol
       endif
-      do iFKS=nFKS_min,nFKS_max
+      do i=nFKS_min,nFKS_max
+         iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
          calculatedBorn=.false. 
          ! MZ this is a temporary fix for processes without
          ! soft singularities associated to the initial state
@@ -566,11 +567,11 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
 c Importance sampling for FKS configurations
       if (sum) then
          call get_wgt_nbody(sig)
-         call fill_MC_integer(max(ini_fin_fks(ichan),1),nFKS_picked
+         call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig))
       else
          call get_wgt_no_nbody(sig)
-         call fill_MC_integer(max(ini_fin_fks(ichan),1),nFKS_picked
+         call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig)*vol)
       endif
 
@@ -595,6 +596,35 @@ c Finalize PS point
       return
       end
       
+      subroutine setup_ini_fin_FKS_map(ini_fin_FKS_map)
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer ini_fin_FKS_map(0:2,0:fks_configs),iFKS
+      ini_fin_FKS_map(0,0)=0
+      ini_fin_FKS_map(1,0)=0
+      ini_fin_FKS_map(2,0)=0
+      do iFKS=1,fks_configs
+         ini_fin_FKS_map(0,0)=ini_fin_FKS_map(0,0)+1
+         ini_fin_FKS_map(0,ini_fin_FKS_map(0,0))=iFKS
+         if (fks_j_d(iFKS).le.nincoming .and.
+     $       fks_j_d(iFKS).gt.0) then
+            ini_fin_FKS_map(2,0)=ini_fin_FKS_map(2,0)+1
+            ini_fin_FKS_map(2,ini_fin_FKS_map(2,0))=iFKS
+         elseif (fks_j_d(iFKS).gt.nincoming .and.
+     $           fks_j_d(iFKS).le.nexternal) then
+            ini_fin_FKS_map(1,0)=ini_fin_FKS_map(1,0)+1
+            ini_fin_FKS_map(1,ini_fin_FKS_map(1,0))=iFKS
+         else
+            write (*,*) 'ERROR in setup_ini_fin_FKS_map',fks_j_d(iFKS)
+     $           ,nincoming,iFKS
+            stop 1
+         endif
+      enddo
+      return
+      end
+
       subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
       implicit none
       include 'nexternal.inc'

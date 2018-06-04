@@ -184,6 +184,7 @@ c**************************************************************************
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'fks_info.inc'
       integer ic(nexternal-1),i
       integer get_color
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
@@ -197,11 +198,11 @@ c**************************************************************************
             check_swap=.false.
             return
          endif
-         if (abs(get_color(idup(i,1))).gt.1) then
-            ! permuted particles are identical, but not colour neutral
-            ! (Since we use symmetry when setting up the FKS
+         if ( any(i.eq.fks_i_d) .or. any(ic(i).eq.fks_i_d) .or.
+     &        any(i.eq.fks_j_d) .or. any(ic(i).eq.fks_j_d)) then
+            ! Since we use symmetry when setting up the FKS
             ! configurations, we cannot use symmetry here as well to
-            ! reduce the number of integration channels).
+            ! reduce the number of integration channels.
             check_swap=.false.
             return
          endif

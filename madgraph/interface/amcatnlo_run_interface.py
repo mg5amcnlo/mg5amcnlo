@@ -108,7 +108,7 @@ def compile_dir(*arguments):
     elif len(arguments)==7:
         (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
     else:
-        raise aMCatNLOError, 'not correct number of argument'
+        raise aMCatNLOError, 'Wrong number of arguments'
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
@@ -156,9 +156,9 @@ def check_compiler(options, block=False):
     """check that the current fortran compiler is gfortran 4.6 or later.
     If block, stops the execution, otherwise just print a warning"""
 
-    msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
-            'gfortran 4.6 or later installed.\n%s has been detected\n'+\
-            'Note that You can still run all MadEvent run without any problem!'
+    msg = 'In order to be able to run MadGraph5_aMC@NLO at NLO, you need to have ' + \
+            'gfortran 4.6 or later installed.\n%s has been detected.\n'+\
+            'Note that you can still run MadEvent (at LO) without any problem!'
     #first check that gfortran is installed
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
@@ -198,7 +198,7 @@ class CmdExtended(common_run.CommonRunCmd):
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
+    config_debug = 'If you need help with this issue, please, contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -442,12 +442,12 @@ class CheckValidForCmd(object):
         td = self.options['td_path']        
         
         if not madir:
-            error_msg = 'No Madanalysis path correctly set.'
+            error_msg = 'No valid Madanalysis path set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
         if not  td:
-            error_msg = 'No path to td directory correctly set.'
+            error_msg = 'No valid path to your topdrawer directory set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
@@ -455,7 +455,7 @@ class CheckValidForCmd(object):
         if len(args) == 0:
             if not hasattr(self, 'run_name') or not self.run_name:
                 self.help_plot()
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+                raise self.InvalidCmd('No run name defined. Please add this information.')             
             args.append('all')
             return
 
@@ -467,7 +467,7 @@ class CheckValidForCmd(object):
                 args.append('all')
         elif not self.run_name:
             self.help_plot()
-            raise self.InvalidCmd('No run name currently define. Please add this information.')                             
+            raise self.InvalidCmd('No run name defined. Please add this information.')                             
         
         for arg in args:
             if arg not in self._plot_mode and arg != self.run_name:
@@ -487,7 +487,7 @@ class CheckValidForCmd(object):
       
         if not self.options['pythia-pgs_path'] or not \
             os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
-            error_msg = 'No pythia-pgs path correctly set.'
+            error_msg = 'No valid pythia-pgs path set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)          
@@ -502,7 +502,7 @@ class CheckValidForCmd(object):
             if self.results.lastrun:
                 arg.insert(0, self.results.lastrun)
             else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+                raise self.InvalidCmd('No run name defined. Please add this information.')             
         
         if len(arg) == 1 and self.run_name == arg[0]:
             arg.pop(0)
@@ -510,8 +510,7 @@ class CheckValidForCmd(object):
         if not len(arg) and \
            not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
             self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
+            raise self.InvalidCmd('''No file pythia_events.hep currently available. Please specify a valid run_name''')
                 
         lock = None              
         if len(arg) == 1:
@@ -519,7 +518,7 @@ class CheckValidForCmd(object):
             filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
 
             if not filenames:
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
+                raise self.InvalidCmd('No event file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
             else:
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
@@ -546,7 +545,7 @@ class CheckValidForCmd(object):
             self.set_configuration()
       
         if not self.options['delphes_path']:
-            error_msg = 'No delphes path correctly set.'
+            error_msg = 'No valid delphes path set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
@@ -561,7 +560,7 @@ class CheckValidForCmd(object):
             if self.results.lastrun:
                 arg.insert(0, self.results.lastrun)
             else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+                raise self.InvalidCmd('No run name defined. Please add this information.')             
         
         if len(arg) == 1 and self.run_name == arg[0]:
             arg.pop(0)
@@ -569,8 +568,7 @@ class CheckValidForCmd(object):
         if not len(arg) and \
            not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
             self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
+            raise self.InvalidCmd('''No file pythia_events.hep currently available. Please specify a valid run_name''')
                               
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'delphes')
@@ -578,7 +576,7 @@ class CheckValidForCmd(object):
             
             
             if not filenames:
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                raise self.InvalidCmd('No event file corresponding to %s run with tag %s.:%s '\
                     % (self.run_name, prev_tag, 
                        pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
             else:
@@ -607,7 +605,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_calculate_xsect()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd, 'Invalid Syntax: too many arguments'
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
@@ -632,7 +630,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_generate_events()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd, 'Invalid Syntax: too many arguments'
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
@@ -719,7 +717,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_launch()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd, 'Invalid Syntax: too many arguments'
 
         elif len(args) == 1:
             if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO','auto']:
@@ -749,7 +747,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_compile()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd, 'Invalid Syntax: too many arguments'
 
         elif len(args) == 1:
             if not args[0] in ['MC', 'FO']:
@@ -1116,9 +1114,9 @@ class AskRunNLO(cmd.ControlSwitch):
                     out[key] = allowed[0]
                     if not self.nb_fo_warning:
                         if 'QED' in self.proc_characteristics['perturbation_order']:
-                            logger.warning("NLO+PS mode are not allowed for Electroweak correction")
+                            logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
                         else:  
-                            logger.warning("NLO+PS mode are not allowed in this version of MG5aMC. Please use the official release of MG5aMC for such type of run.")
+                            logger.warning("NLO+PS mode is not allowed in this version of MG5_aMC. Please use the official release of MG5_aMC for event generation at NLO accuracy.")
                         self.nb_fo_warning = 1
         else: 
             return self.check_consistency_with_all(key, value, switch)
@@ -1553,7 +1551,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if len(filenames) != 1:
                 filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
                 if len(filenames) != 1:
-                    logger.info('No shower level file found for run %s' % \
+                    logger.info('No shower-level event file found for run %s' % \
                                 self.run_name)
                     return
                 filename = filenames[0]
@@ -1561,7 +1559,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     if aMCatNLO and not self.options['mg5_path']:
-                        raise "plotting NLO HEP file needs MG5 utilities"
+                        raise "plotting NLO HEP files requires MG5 utilities."
                     
                     files.cp(pjoin(self.options['mg5_path'], 'Template','LO', 'Cards', 'pythia_card_default.dat'),
                              pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
@@ -1585,7 +1583,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.create_plot('PGS')
                 misc.gzip(filename)                
             else:
-                logger.info('No valid files for pgs plot')
+                logger.info('No valid files to make PGS plots')
                 
         if any([arg in ['all','delphes'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
@@ -1598,7 +1596,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
                 misc.gzip(filename)                
             else:
-                logger.info('No valid files for delphes plot')
+                logger.info('No valid files to make Delphes plots')
 
 
     ############################################################################      
@@ -1635,7 +1633,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         # Check if we want to modify the run
         if not self.force:
-            ans = self.ask('Do you want to modify the Cards/Run Type?', 'n', ['y','n'])
+            ans = self.ask('Do you want to modify the Run type and/or any of the Cards?', 'n', ['y','n'])
             if ans == 'n':
                 self.force = True
         
@@ -1765,18 +1763,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
 
         elif mode == 'noshower':
-            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
-Please, shower the Les Houches events before using them for physics analyses.""")
+            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical. Please, shower the Les Houches events before using them for physics analyses.""")
 
 
         self.update_status('', level='all', update_results=True)
         if self.run_card['ickkw'] == 3 and \
            (mode in ['noshower'] or \
             (('PYTHIA8' not in self.run_card['parton_shower'].upper()) and (mode in ['aMC@NLO']))):
-            logger.warning("""You are running with FxFx merging enabled.
-To be able to merge samples of various multiplicities without double counting,
-you have to remove some events after showering 'by hand'.
-Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+            logger.warning("""You are running with FxFx merging enabled. To be able to merge samples of various multiplicities without double counting, you have to remove some events after showering 'by hand'. Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.store_result()
         #check if the param_card defines a scan.
@@ -2042,7 +2036,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['wgt_mult']=1.0
                         jobs_to_run.append(job)
                     if channels:
-                        raise aMCatNLOError('channels is not empty %s' % channels)
+                        raise aMCatNLOError('"channels" is not empty %s' % channels)
                 else:
                     for channel in channels:
                         job={}
@@ -2066,7 +2060,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['dirname']=pjoin(self.me_dir,'SubProcesses',job['dirname'].rsplit('/SubProcesses/',1)[1])
                 jobs_to_run=copy.copy(jobs_to_collect)
             except:
-                raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
+                raise aMCatNLOError('Cannot reconstruct jobs from saved job status in %s' % \
                                     pjoin(self.me_dir,'SubProcesses','job_status.pkl'))
             # Update cross sections and determine which jobs to run next
             if fixed_order:
@@ -2836,7 +2830,7 @@ RESTART = %(mint_mode)s
         else:
             lhe = []
             lenlhe = []     
-            misc.sprint('need to combine %s event file' % len(jobs))
+            misc.sprint('Need to combine %s event files' % len(jobs))
             globallhe = lhe_parser.MultiEventFile()
             globallhe.eventgroup = True
             for job in jobs:
@@ -2860,14 +2854,14 @@ RESTART = %(mint_mode)s
             globallhe.close()
             fsock.write('</LesHouchesEvents>\n') 
             fsock.close()
-            misc.sprint('combining lhe file done in ', time.time()-start)
+            misc.sprint('The combining of the LHE files has taken ', time.time()-start)
             for job in jobs:
                 dirname = job['dirname']
                 os.remove(pjoin(dirname,'events.lhe'))
                                 
                                            
                         
-        misc.sprint('combining lhe file done in ', time.time()-start)
+        misc.sprint('The combining of the LHE files has taken ', time.time()-start)
                         
                         
                     
@@ -2951,7 +2945,7 @@ RESTART = %(mint_mode)s
                 max(time_stamps.iterkeys(), key=(lambda key: 
                                                time_stamps[key])).split('/')[-2]
             logger.info('No --appl_start_grid option given. '+\
-                    'Guessing that start grid from run "%s" should be used.' \
+                    'Guessing that starting_grid from run "%s" should be used.' \
                             % options['appl_start_grid'])
 
         if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
@@ -3059,8 +3053,8 @@ RESTART = %(mint_mode)s
                 logger.info('Using %d cores' % self.nb_core)
             except ImportError:
                 self.nb_core = 1
-                logger.warning('Impossible to detect the number of cores => Using One.\n'+
-                        'Use set nb_core X in order to set this number and be able to'+
+                logger.warning('Impossible to detect the number of cores => Using one.\n'+
+                        'Use set nb_core X in order to set this number and be able to '+
                         'run in multicore.')
 
             self.cluster = cluster.MultiCore(**self.options)
@@ -3231,7 +3225,7 @@ RESTART = %(mint_mode)s
             all_log_files = misc.glob(pjoin('P*','born_G*','log_MINT*.txt'), 
                                       pjoin(self.me_dir, 'SubProcesses')) 
         else:
-            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+            raise aMCatNLOError, 'Run mode %s not supported.'%mode
 
         try:
             message, debug_msg = \
@@ -3240,7 +3234,7 @@ RESTART = %(mint_mode)s
             debug_msg = 'Advanced statistics collection failed with error "%s"\n'%str(e)
             err_string = StringIO.StringIO()
             traceback.print_exc(limit=4, file=err_string)
-            debug_msg += 'Please report this backtrace to a MadGraph developer:\n%s'\
+            debug_msg += 'Please report this backtrace to a MG5_aMC developer:\n%s'\
                                                           %err_string.getvalue()
 
         logger.debug(debug_msg+'\n')
@@ -4013,7 +4007,7 @@ RESTART = %(mint_mode)s
                 if self.shower_card['nsplit_jobs'] == 1:
                     files.mv(os.path.join(rundir, 'events.%s.gz' % ext), hep_file) 
                     message = ('The file %s has been generated. \nIt contains showered' + \
-                     ' and hadronized events in the %s format obtained' + \
+                     ' and hadronized events in the %s format obtained by' + \
                      ' showering the parton-level event file %s.gz with %s') % \
                      (hep_file, hep_format, evt_file, shower)
                 else:
@@ -4022,7 +4016,7 @@ RESTART = %(mint_mode)s
                         hep_list.append(hep_file.replace('.%s.gz' % ext, '__%d.%s.gz' % (i + 1, ext)))
                         files.mv(os.path.join(rundir, 'events_%d.%s.gz' % (i + 1, ext)), hep_list[-1]) 
                     message = ('The following files have been generated:\n  %s\nThey contain showered' + \
-                     ' and hadronized events in the %s format obtained' + \
+                     ' and hadronized events in the %s format obtained by' + \
                      ' showering the (split) parton-level event file %s.gz with %s') % \
                      ('\n  '.join(hep_list), hep_format, evt_file, shower)
 
@@ -4572,9 +4566,9 @@ RESTART = %(mint_mode)s
                     pjoin(self.me_dir, 'SubProcesses', evt_file)], \
                     stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
-                raise aMCatNLOError('An error occurred during reweight. Check the' + \
+                raise aMCatNLOError('An error occurred during reweighting. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
-                        '\'SubProcesses/P*/G*/ directories for details')
+                        '\'SubProcesses/P*/G*/\' directories for details')
 
         #update file name in nevents_unweighted
         newfile = open(nev_unw, 'w')
@@ -5170,13 +5164,13 @@ RESTART = %(mint_mode)s
         if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
             not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
             if  os.path.exists(pjoin(sourcedir,'StdHEP')):
-                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                logger.info('Compiling StdHEP ...')
                 misc.compile(['StdHEP'], cwd = sourcedir)
                 logger.info('          ...done.')      
             else:
                 raise aMCatNLOError('Could not compile StdHEP because its'+\
                    ' source directory could not be found in the SOURCE folder.\n'+\
-                             " Check the MG5_aMC option 'output_dependencies.'")
+                             " Check the MG5_aMC option 'output_dependencies'.")
 
         # make CutTools (only necessary with MG option output_dependencies='internal')
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
@@ -5276,7 +5270,7 @@ RESTART = %(mint_mode)s
         try:
             compile_cluster.wait(self.me_dir, update_status)
         except Exception, error:
-            logger.warning("Fail to compile the Subprocesses")
+            logger.warning("Compilation of the Subprocesses failed")
             if __debug__:
                 raise
             compile_cluster.remove()
@@ -5311,9 +5305,7 @@ RESTART = %(mint_mode)s
         content = open(log).read()
         if 'FAILED' in content:
             logger.info('Output of the failing test:\n'+content[:-1],'$MG:BOLD')
-            raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
-                'Please check that widths of final state particles (e.g. top) have been' + \
-                ' set to 0 in the param_card.dat.')
+            raise aMCatNLOError('Some tests failed, run cannot continue. Please search on https://answers.launchpad.net/mg5amcnlo for more information, and in case there is none, report the problem there.')
         else:
             lines = [l for l in content.split('\n') if 'PASSED' in l]
             logger.info('   Passed.')
@@ -5426,14 +5418,9 @@ RESTART = %(mint_mode)s
 
         if mode == 'noshower':
             if switch['shower'] == 'OFF':
-                logger.warning("""You have chosen not to run a parton shower.
-    NLO events without showering are NOT physical.
-    Please, shower the LesHouches events before using them for physics analyses.
-    You have to choose NOW which parton-shower you WILL use and specify it in the run_card.""")   
+                logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical. Please, shower the LesHouches events before using them for physics analyses. You have to choose NOW which parton-shower you WILL use and specify it in the run_card.""")   
             else:
-                logger.info("""Your Parton-shower choice is not available for running.
-    The events will be generated for the  associated Parton-Shower.
-    Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
+                logger.info("""Your parton-shower choice is not available for running. Events will be generated for the associated parton shower. Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
 
         
         # specify the cards which are needed for this run.
@@ -5492,13 +5479,10 @@ RESTART = %(mint_mode)s
             if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
             elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower']:
-                logger.warning("""You are running with FxFx merging enabled.  To be able to merge
-    samples of various multiplicities without double counting, you
-    have to remove some events after showering 'by hand'.  Please
-    read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+                logger.warning("""You are running with FxFx merging enabled. To be able to merge samples of various multiplicities without double counting, you have to remove some events after showering 'by hand'. Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
-                    raise self.InvalidCmd("""FxFx merging does not work with Q-squared ordered showers.""")
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
+                    raise self.InvalidCmd("""FxFx merging does not work with Pythia6's Q-squared ordered showers.""")
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIGPP':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
@@ -5539,8 +5523,7 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross section and the filling of parton-level histograms \n" + \
-                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     computation of the total cross section and the filling of parton-level histograms.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
                 "     in the run_card.dat\n"
@@ -5578,8 +5561,7 @@ _generate_events_usage = "generate_events [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross section and the filling of parton-level histograms \n" + \
-                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     computation of the total cross section and the filling of parton-level histograms.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
                 "     in the run_card.dat\n"
@@ -5642,7 +5624,7 @@ if '__main__' == __name__:
     import sys
     if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
         sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
-               'Please upgrate your version of python.')
+               'Please update your version of python.')
 
     import os
     import optparse
