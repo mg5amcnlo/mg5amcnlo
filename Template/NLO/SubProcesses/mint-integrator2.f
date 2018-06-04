@@ -216,7 +216,7 @@ c Initialize upper bounding envelope
             ans_chan(0)=ans_chan(0)+ans(1,kchan)
          enddo
       endif
-      cross_section=ans_chan(0)
+      cross_section=ans_chan(0) * wgt_mult
       nit=0
       nit_included=0
       do i=1,nintegrals
