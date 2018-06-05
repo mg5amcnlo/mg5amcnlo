@@ -99,6 +99,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doMECs",false);
   pythia.settings.addFlag("Dire:doMOPS",false);
   pythia.settings.addFlag("Dire:doMcAtNloDelta",false);
+  pythia.settings.addFlag("Dire:doSingleLegSudakovs",false);
   pythia.settings.addFlag("Dire:doExitAfterMerging",false);
   pythia.settings.addParm("Dire:pTminMECs",1.0,false,false,0.0,1e10);
   pythia.settings.addMode("Dire:nFinalMaxMECs",-1,true,false,-1,100000000);

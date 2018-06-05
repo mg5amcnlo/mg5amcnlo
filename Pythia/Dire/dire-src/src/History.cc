@@ -141,7 +141,8 @@ MyHistory::MyHistory( int depth,
       fsr(fsrIn),
       isr(isrIn),
       coupSMPtr(coupSMPtrIn),
-      psweights(psweightsIn)
+      psweights(psweightsIn),
+      doSingleLegSudakovs(mergingHooksPtr->settingsPtr->flag("Dire:doSingleLegSudakovs"))
     {
 
   // Initialize.
@@ -1059,7 +1060,7 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
 
   // Do trial shower, calculation of alpha_S ratios, PDF ratios
   double wt = 1.;
-  if (depth > 0) {
+  if (!doSingleLegSudakovs && depth > 0) {
     wt   = selected->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale );
 // no alphas or pdf ratios
 //    if (wt != 0.) asWeight  = selected->weightTreeALPHAS( asME, asFSR, asISR,
@@ -1068,14 +1069,45 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
 //                             aemISR, nSteps-1, nSteps);
 //    if (wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
 //                             selected->clusterIn.pT(), nSteps-1, nSteps);
+  } else if (depth > 0) {
+
+    double lastp = 0.;
+    double sumAll(0.);
+    for ( map<double, MyHistory*>::iterator it = goodBranches.begin();
+      it != goodBranches.end(); ++it ) {
+      sumAll     += it->second->prodOfProbs;
+    }
+
+    for ( map<double, MyHistory*>::iterator it = goodBranches.begin();
+      it != goodBranches.end(); ++it ) {
+
+      if (wt == 0.) break;
+
+      // Double to access path.
+      double indexNow =  (lastp + 0.5*(it->first - lastp))/sumAll;
+      lastp = it->first;
+
+     // Select a path of clusterings
+      MyHistory *  selNow = select(indexNow);
+      selNow->setSelectedChild();
+      selNow->setScalesInMyHistory();
+
+      // Calculate CKKWL weight:
+      double w = selNow->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale);
+      wt *= w;
+
+      cout << scientific << setprecision(8) << "No-emission probability for leg "
+      << selNow->clusterIn.radBef << " at tmin=" << selNow->clusterIn.pT()
+      << " w=" << w << "\t Overall w=" << wt << endl;
+
+    }
   }
 
-
-//  cout << "No-emission probability="
-//  << scientific << setprecision(5) << setw(14) << wt
+  cout << "No-emission probability="
+  << scientific << setprecision(5) << setw(14) << wt
 //  << " at pT="
 //  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-//  << endl;
+  << endl;
 
 //  if (wt > 1. || wt < 0.)
 //  cout << "Warning: Unusual no-emission probability="
@@ -3018,6 +3050,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
   if ( mergingHooksPtr->getNumberOfClusteringSteps(process) == 0 )
     startingScale = hardStartScale(process);
 
+  int rad = clusterIn.radBef;
+
   // Set output.
   //bool doVeto          = false;
   double wt            = 1.;
@@ -3041,6 +3075,10 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Reset process scale so that shower starting scale is correctly set.
     process.scale(startingScale);
     //doVeto = false;
+
+//mother->state.list();
+//process.list();
+//cout << rad << endl;
 
     // Get pT before reclustering
     double minScale = (minscaleIn > 0.) ? minscaleIn : scale;
@@ -3138,6 +3176,14 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
       else if (iRecAft == -1 && event[i].status() == -42) iRecAft = i;
       if (iRadAft != -1 && iEmt != -1 && iRecAft != -1) break;
     }
+
+    int iRadBef = (typeTrial == 1) ? -1 : (typeTrial == 2) ? event[iRadAft].daughter2() : event[iRadAft].mother1();
+
+    if (doSingleLegSudakovs && iRadBef != rad) continue;
+
+//event.list();
+cout << rad << " " << iRadBef << endl;
+//abort();
 
     // Check if the splitting occured in a small window around a flavour
     // threshold.
@@ -4203,7 +4249,7 @@ Event MyHistory::cluster( MyClustering & inSystem ) {
       isFSR = fsr->isTimelike(state, rad, emt, rec, "");
     }
 
-    if (isFSR) {
+    /*if (isFSR) {
       return (hasPartonLevel
             ? showers->timesPtr->clustered( state, rad, emt, rec, name)
             : hasShowers ? fsr->clustered( state, rad, emt, rec, name)
@@ -4213,7 +4259,25 @@ Event MyHistory::cluster( MyClustering & inSystem ) {
             ? showers->spacePtr->clustered( state, rad, emt, rec, name)
             : hasShowers ? isr->clustered( state, rad, emt, rec, name)
             : newEvent);
+    }*/
+
+    if (isFSR) {
+      newEvent = (hasPartonLevel
+            ? showers->timesPtr->clustered( state, rad, emt, rec, name)
+            : hasShowers ? fsr->clustered( state, rad, emt, rec, name)
+            : newEvent);
+    } else {
+      newEvent = (hasPartonLevel
+            ? showers->spacePtr->clustered( state, rad, emt, rec, name)
+            : hasShowers ? isr->clustered( state, rad, emt, rec, name)
+            : newEvent);
     }
+
+    // Store radiator and recoiler positions.
+    inSystem.recBef = newEvent[0].mother2();
+    inSystem.radBef = newEvent[0].mother1();
+    newEvent[0].mothers(0,0);
+
   }
 
   // Done

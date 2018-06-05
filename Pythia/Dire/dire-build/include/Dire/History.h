@@ -903,6 +903,8 @@ private:
   WeightContainer* psweights;
 
   int nStepsMax;
+  bool doSingleLegSudakovs;
+
 
 };
 

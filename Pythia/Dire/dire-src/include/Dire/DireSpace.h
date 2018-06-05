@@ -306,7 +306,11 @@ public:
     int iRad, int iEmt, int iRecAft, string name);
   virtual Event clustered( const Event& state, int iRad, int iEmt, int iRecAft,
     string name) {
-    return clustered_internal(state,iRad, iEmt, iRecAft, name).first; }
+    pair <Event, pair<int,int> > reclus
+      = clustered_internal(state,iRad, iEmt, iRecAft, name);
+    reclus.first[0].mothers(reclus.second.first,reclus.second.second);
+    return reclus.first;}
+//    return clustered_internal(state,iRad, iEmt, iRecAft, name).first; }
   bool cluster_II( const Event& state, int iRad,
     int iEmt, int iRecAft, int idRadBef, Particle& radBef, Particle& recBef,
     Event& partialState);

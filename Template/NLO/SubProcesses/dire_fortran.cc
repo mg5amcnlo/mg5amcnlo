@@ -502,6 +502,7 @@ extern "C" {
     pythia4dire.readString("Dire:doGenerateMergingWeights   = on");
     pythia4dire.readString("Dire:doGenerateSubtractions     = on");
     pythia4dire.readString("Dire:doMcAtNloDelta             = on");
+    pythia4dire.readString("Dire:doSingleLegSudakovs        = on");
     pythia4dire.readString("1:m0 = 0.0");
     pythia4dire.readString("2:m0 = 0.0");
     pythia4dire.readString("3:m0 = 0.0");
