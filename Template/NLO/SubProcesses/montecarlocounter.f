@@ -1744,6 +1744,11 @@ c   0 < delta <= 2.
       logical firsttime
       save firsttime
       data firsttime /.true./
+      double precision cutoff,cutoff2
+      parameter(cutoff=1d0)
+      parameter(cutoff2=0.99d0)
+c
+c     set cutoff < 1 and cutoff2 = cutoff in the final version
 c
       if(firsttime)then
         firsttime=.false.
@@ -1768,15 +1773,15 @@ c
         else
           wmin=max(0d0,1d0-delta)
         endif
-        wg=min(1d0-(1-wmin)*abs(beta),0.99d0-tiny)
-        if(abs(w).gt.wg.and.abs(w).lt.0.99d0)then
-          tt=(abs(w)-wg)/(0.99d0-wg)
+        wg=min(1d0-(1-wmin)*abs(beta),cutoff-tiny)
+        if(abs(w).gt.wg.and.abs(w).lt.cutoff2)then
+          tt=(abs(w)-wg)/(cutoff-wg)
           if(tt.gt.1d0)then
             write(*,*)'Fatal error in gfunction',tt
             stop
           endif
           tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
-        elseif(abs(w).ge.0.99d0)then
+        elseif(abs(w).ge.cutoff2)then
           tmp=0d0
         endif
       endif
