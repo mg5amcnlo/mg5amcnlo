@@ -1732,26 +1732,53 @@ c the same holds for bornbarstilde(i).
 
 
       function gfunction(w,alpha,beta,delta)
-c Gets smoothly to 0 as w goes to 1
+c Gets smoothly to 0 as w goes to 1.
+c Call with
+c   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
+c   0 < |beta| <= 1;
+c   0 < delta <= 2.
       implicit none
+      double precision tiny
+      parameter (tiny=1.d-5)
       double precision gfunction,alpha,beta,delta,w,wmin,wg,tt,tmp
-
-      if(beta.lt.0d0)then
-         wmin=0d0
-      else
-         wmin=max(0d0,1d0-delta)
+      logical firsttime
+      save firsttime
+      data firsttime /.true./
+c
+      if(firsttime)then
+        firsttime=.false.
+        if(alpha.ge.0d0.and.alpha.lt.1d0)then
+          write(*,*)'Incorrect alpha in gfunction',alpha
+          stop
+        endif
+        if(abs(beta).gt.1d0)then
+          write(*,*)'Incorrect beta in gfunction',beta
+          stop
+        endif
+        if(delta.gt.2d0.or.delta.le.0d0)then
+          write(*,*)'Incorrect delta in gfunction',delta
+          stop
+        endif
       endif
-      wg=min(1d0-(1-wmin)*abs(beta),0.99d0)
-      tt=(abs(w)-wg)/(1d0-wg)
-      if(tt.gt.1d0)then
-         write(*,*)'Fatal error in gfunction',tt
-         stop
-      endif
+c
       tmp=1d0
       if(alpha.gt.0d0)then
-         if(tt.gt.0d0.and.abs(w).lt.0.99d0)
-     &   tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
-         if(abs(w).ge.0.99d0)tmp=0d0
+        if(beta.lt.0d0)then
+          wmin=0d0
+        else
+          wmin=max(0d0,1d0-delta)
+        endif
+        wg=min(1d0-(1-wmin)*abs(beta),0.99d0-tiny)
+        if(abs(w).gt.wg.and.abs(w).lt.0.99d0)then
+          tt=(abs(w)-wg)/(0.99d0-wg)
+          if(tt.gt.1d0)then
+            write(*,*)'Fatal error in gfunction',tt
+            stop
+          endif
+          tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
+        elseif(abs(w).ge.0.99d0)then
+          tmp=0d0
+        endif
       endif
       gfunction=tmp
       return
