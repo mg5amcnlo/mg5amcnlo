@@ -6143,6 +6143,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
+        
+        # ensure that the card is in sync
+        if 'param' in self.modified_card:
+            self.write_card('param')
+            self.modified_card.discard('param')
+            
         path = self.paths['param']
         pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
@@ -6260,7 +6266,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:BOLD')
         elif len(args) > 0:
             if args[0] in self.cards:
-                card = args[0]
+                card = args[0]                
             elif "%s.dat" % args[0] in self.cards:
                 card = "%s.dat" % args[0]
             elif "%s_card.dat" % args[0] in self.cards: 
@@ -6270,7 +6276,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
-            
+            # ensure that the card is in sync
+            if card in self.modified_card:
+                self.write_card(card)
+                self.modified_card.discard(card)
+                
             if card in self.paths:
                 path = self.paths[card]
             elif os.path.exists(card):
@@ -6433,6 +6443,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_asperge(self, line):
         """Running ASperGe"""
         signal.alarm(0) # avoid timer if any
+
+        # ensure that the card is in sync
+        if 'param' in self.modified_card:
+            self.write_card('param')
+            self.modified_card.discard('param')
+
 
         path = pjoin(self.me_dir,'bin','internal','ufomodel','ASperGE')
         if not os.path.exists(path):
