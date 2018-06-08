@@ -7,8 +7,16 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - non minimal QED sample
             - heft model when multiple radiation coming from the higgs decay/scattering
           This can also impact MLM since it use the same definition for the dynamical scale
-
-
+      OM: Fix some issue for DIS scattering where the shat was wrongly defined for low energy scattering.
+          Low energy scattering are not adviced since they break the factorization theorem.
+          In particular the z-boost of the events are quite ill defined in that scenario.
+      OM: changing the format of the param_card for NLO model to match expectation from the latest PY8
+      OM: Update of MadSpin to allow special input file for the case of spinmode=none. 
+          With that very simple mode of decay, you can now decay hepmc file or wrongly formatted leshouches event
+          (in that mode we do not have spin correlation and width effect)
+      PT: 
+      OM: Fix some issue for the new QED model (including one in the handling of complex mass scheme of such model)
+      OM: Fixing an issue of the param_card out of sync when running compute-widths
       
 2.6.2 (29/04/18)
 
