@@ -3,6 +3,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.6.3 ()
       OM: adding a hidden parameter to the run_card (python_seed) to allow to control the randon number 
           generated within python and be able to have full reproducibility of the events
+      OM: Fixing some issue with the default dynamical scale choice for 
+            - non minimal QED sample
+            - heft model when multiple radiation coming from the higgs decay/scattering
+          This can also impact MLM since it use the same definition for the dynamical scale
+
+
       
 2.6.2 (29/04/18)
 
