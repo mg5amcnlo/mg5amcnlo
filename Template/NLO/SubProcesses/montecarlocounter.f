@@ -1327,17 +1327,17 @@ c     Fill selected color configuration into jpart array.
 
 c     Calculate suppression factor for H-events.
       nexternal_now=nexternal
-c$$$      call clear_HEPEUP_event()
-c$$$      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
-c$$$     &       istup_local, mothup_h, icolup_h, spinup_local,
-c$$$     &       emsca, emscav_tmp, emscav_tmp_a)
-c$$$      if (is_pythia_active.eq.0) then
-c$$$        call dire_init_default()
-c$$$      endif
-c$$$      call dire_setevent()
-c$$$      call dire_next()
-c$$$      call dire_get_mergingweight(wgt_sudakov)
-c$$$      call dire_get_sudakov_stopping_scales(scales)
+      call clear_HEPEUP_event()
+      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+     &       istup_local, mothup_h, icolup_h, spinup_local,
+     &       emsca, emscav_tmp, emscav_tmp_a)
+      if (is_pythia_active.eq.0) then
+        call dire_init_default()
+      endif
+      call dire_setevent()
+      call dire_next()
+      call dire_get_mergingweight(wgt_sudakov)
+      call dire_get_sudakov_stopping_scales(scales)
 c
 c     target scales for H events are computed by Pythia;
 c     stored in target_scales_H
