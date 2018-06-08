@@ -46,9 +46,45 @@ c
       logical passcuts,check_swap
       double precision ran2
       external passcuts,check_swap,ran2
+      logical force_one_job
+      integer narg
+      character*20 run_mode
 c-----
 c  Begin Code
 c-----
+
+      narg=command_argument_count()
+      if (narg.le.0) then
+         write (*,*) 'Please, give the run_mode'
+         read (*,*) run_mode
+      elseif (narg.eq.1) then
+         call get_command_argument(1,run_mode)
+      else
+         write (*,*) 'This code requires zero or one arguments'
+         stop 1
+      endif
+
+      write (*,*) 'run_mode given is: ',run_mode
+
+      if (run_mode(1:3).eq.'NLO' .or. run_mode(1:2).eq.'LO') then
+         force_one_job=.false.
+      elseif (run_mode(1:7 ).eq.'aMC@NLO' .or.
+     $        run_mode(1:6 ).eq.'aMC@LO' .or.
+     $        run_mode(1:8 ).eq.'noshower' .or.
+     $        run_mode(1:10).eq.'noshowerLO') then
+c when doing event generation, cannot split the integration channels
+c according to initial and final-state FKS configurations, respectively:
+c since for such running the Born is split in two (contributing half to
+c initial state FKS configurations and half to final state FKS
+c configurations), the relative contributions with j_fks <= nincoming
+c and j_fks > nincoming are not correct, resulting --probably among
+c other things-- in a wrong shower starting scale.
+         force_one_job=.true.
+      else
+         write (*,*) 'unknown run_mode is gensym'
+         stop 1
+      endif
+      
       multi_channel=.true.
       nbody=.true.
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
@@ -172,7 +208,7 @@ c        Look for matches
       enddo
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
-      call write_bash(mapconfig,use_config)
+      call write_bash(mapconfig,use_config,force_one_job)
       return
       end
 
@@ -263,7 +299,7 @@ c*******************************************************************************
       end
 
 
-      subroutine write_bash(mapconfig,use_config)
+      subroutine write_bash(mapconfig,use_config,force_one_job)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
 c     configurations, but only for "non-identical" configurations.
@@ -277,14 +313,19 @@ c***************************************************************************
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs),i,lname
       character*30 fname,mname
       character*2 postfix
-      logical j_fks_ini,j_fks_fin,two_jobs
+      logical j_fks_ini,j_fks_fin,two_jobs,force_one_job
+      
       j_fks_ini=.false.
       j_fks_fin=.false.
       do i=1,fks_configs
          if (fks_j_d(i).le.nincoming) j_fks_ini=.true.
          if (fks_j_d(i).gt.nincoming) j_fks_fin=.true.
       enddo
-      if (j_fks_ini.and.j_fks_fin) two_jobs=.true.
+      if ((.not.force_one_job) .and. j_fks_ini .and. j_fks_fin) then
+         two_jobs=.true.
+      else
+         two_jobs=.false.
+      endif
       fname='ajob'
       lname=4
       call open_bash_file(26,fname,lname)
