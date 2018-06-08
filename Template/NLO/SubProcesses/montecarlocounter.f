@@ -19,7 +19,7 @@ c is the number of color flows at Born level
       logical notagluon,found
       common/cnotagluon/notagluon
       integer nglu,nsngl
-      logical isspecial,isspecial0
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
       logical spec_case
 c
@@ -68,9 +68,9 @@ c
 
       fksfather=min(i_fks,j_fks)
 
-c isspecial will be set equal to .true. only if the father is a gluon,
-c and another gluon will be found which is connected to it by both
-c colour and anticolour
+c isspecial will be set equal to .true. colour flow by colour flow only
+c if the father is a gluon, and another gluon will be found which is
+c connected to it by both colour and anticolour
       isspecial=.false.
 c
 c consider only leading colour flows
@@ -89,7 +89,6 @@ c
       do i=1,max_bcol
          if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
-         isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
 c colour singlets in the Born process, according to the information 
 c stored in ICOLUP
@@ -178,19 +177,18 @@ c by one unit, so decrease it
                             stop
                          endif
                          colorflow(k0,colorflow(k0,0))=i
-                         isspecial0=.true.
+                         isspecial(i)=.true.
                      endif
                   endif
                enddo
             endif
          enddo
          if( ((nglu+nsngl).gt.(nexternal-2)) .or.
-     #       (isspecial0.and.(nglu+nsngl).ne.(nexternal-2)) )then
+     #       (isspecial(i).and.(nglu+nsngl).ne.(nexternal-2)) )then
            write(*,*)'Error #4 in set_matrices'
-           write(*,*)isspecial0,nglu,nsngl
+           write(*,*)isspecial(i),nglu,nsngl
            stop
          endif
-         isspecial=isspecial.or.isspecial0
       enddo
       call check_mc_matrices
       return
@@ -213,7 +211,7 @@ c      include "fks.inc"
       common/cfksfather/fksfather
       logical notagluon
       common/cnotagluon/notagluon
-      logical isspecial
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
@@ -275,8 +273,8 @@ c
 c
       if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
      #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial).and.ntot.ne.(2*num_leading_cflows) .or.
-     #        (isspecial.and.ntot.ne.num_leading_cflows) ) ) )then
+     #      ( (.not.isspecial(1)).and.ntot.ne.(2*num_leading_cflows) .or.
+     #        (isspecial(1).and.ntot.ne.num_leading_cflows) ) ) )then
          write(*,*)'Error #6 in check_mc_matrices',
      #     notagluon,ntot,num_leading_cflows,max_bcol
          stop
@@ -429,7 +427,7 @@ c Main routine for MC counterterms
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
-      logical isspecial
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
 
       integer fksfather
@@ -633,7 +631,6 @@ c g  --> g  g ( icode = 1 )
 c go --> go g
                   if(ileg.le.2)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
                         xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
@@ -650,7 +647,6 @@ c go --> go g
 c
                   elseif(ileg.eq.3)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(non_limit)then
                         xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
@@ -661,7 +657,6 @@ c
 c
                   elseif(ileg.eq.4)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*( 8*vca*
      &                       (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
@@ -697,7 +692,6 @@ c a --> q q~
 c
                   elseif(ileg.eq.4)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                        (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
@@ -730,7 +724,6 @@ c q --> g q ( icode = 3 )
 c a --> a q
                   if(ileg.le.2)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
                         xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
@@ -925,8 +918,10 @@ c Dead zone
            xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
         enddo
         do cflows=1,colorflow(npartner,0)
-           born_red=born_red+bornbars(colorflow(npartner,cflows))
-           born_red_tilde=born_red_tilde+bornbarstilde(colorflow(npartner,cflows))
+           N_p=1
+           if(isspecial(cflows))N_p=2d0
+           born_red=born_red+N_p*bornbars(colorflow(npartner,cflows))
+           born_red_tilde=born_red_tilde+N_p*bornbarstilde(colorflow(npartner,cflows))
         enddo
 c Change here, to include also xkern(2)!
         xmcxsec(npartner)=xkern(1)*born_red+xkernazi(1)*born_red_tilde
@@ -2652,7 +2647,7 @@ c Sum of final-state transverse masses
          stop
       endif
 c Safety threshold for the reference scale
-      ref_sc=max(ref_sc,30d0)
+      ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
 
       return
       end
