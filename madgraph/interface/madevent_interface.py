@@ -852,7 +852,7 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return
-        self.allowed_reweight = ['ON', 'OFF']
+        self.allowed_reweight = ['OFF', 'ON']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path

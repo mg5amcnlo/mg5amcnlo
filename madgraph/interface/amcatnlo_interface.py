@@ -402,7 +402,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     text += '\n\nReal diagrams:'
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
                     text += '\n\nLoop diagrams:\n'
-                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['virt']())
+                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['loop']())
                 pydoc.pager(text)
 
                 # set _curr_amps back to empty

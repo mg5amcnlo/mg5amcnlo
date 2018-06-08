@@ -2408,6 +2408,12 @@ class FourMomentum(object):
         """ return |\vec p|^2 """
         return self.px**2 + self.py**2 + self.pz**2
     
+    @property
+    def theta(self):                                                                                                  
+        """return the mass square""" 
+        import math  
+        return math.atan(math.sqrt((self.px**2+self.py**2)/self.pz**2))
+    
     
     def __add__(self, obj):
         
