@@ -37,7 +37,7 @@ c missing???
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
       integer npart
-      double precision shower_scale
+      double precision shower_scale,shower_scale_a(nexternal,nexternal)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -72,7 +72,7 @@ c
          endif
          Hevents=.true.
          call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        .false.,ndim,x,jpart,npart,pb,shower_scale)
+     &        .false.,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 c Put the Hevent info in a common block
          NUP_H=npart
          do i=1,NUP_H
@@ -94,7 +94,7 @@ c Put the Hevent info in a common block
       endif
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
+     &     putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 
 cC     ---------------------------------------------------------------
 cC     START of example of a dynamic call to PY8 using current event
@@ -140,7 +140,7 @@ c      endif
 c      if (abrv.ne.'grid') then
 c  Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale,ickkw)
+     $     ,shower_scale,shower_scale_a,ickkw)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -216,7 +216,7 @@ c get info on beam and PDFs
       end
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
-     $     ,ickkw)
+     $     ,shower_scale_a,ickkw)
       use extra_weights
       implicit none
       include "nexternal.inc"
@@ -229,10 +229,10 @@ c get info on beam and PDFs
       parameter (zero=0.d0)
       integer ievent,izero
       parameter (izero=0)
-      double precision aqcd,aqed,scale
+      double precision aqcd,aqed,scale,scale_a(nexternal,nexternal)
       character*140 buff
-      double precision shower_scale
-      INTEGER MAXNUP,i
+      double precision shower_scale,shower_scale_a(nexternal,nexternal)
+      INTEGER MAXNUP,i,j,k
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
@@ -253,13 +253,29 @@ c get info on beam and PDFs
      #                              muF22_current,QES2_current
       logical firsttime
       data firsttime/.true./
+      common/cscale_a/scale_a
 c
       if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
+         do j=1,nexternal
+            do k=1,nexternal
+               scale_a(j,k)=sqrt(muF12_current)
+            enddo
+         enddo
       elseif (ickkw.eq.-1) then
          scale = mu_r
+         do j=1,nexternal
+            do k=1,nexternal
+               scale_a(j,k)=mu_r
+            enddo
+         enddo
       else
          scale = shower_scale
+         do j=1,nexternal
+            do k=1,nexternal
+               scale_a(j,k)=shower_scale_a(j,k)
+            enddo
+         enddo
       endif
 
       aqcd=g**2/(4d0*pi)
@@ -356,73 +372,73 @@ C     ---------------------------------------------------------------
 C     Pythia8 accessibility subroutines
 C     ---------------------------------------------------------------
 
-      subroutine fill_HEPEUP_event(p,wgt,ic,npart,shower_scale)
-      implicit none
-      double precision pi
-      parameter (pi=3.1415926535897932385d0)
-      include "nexternal.inc"
-      include "coupl.inc"
-      include 'hep_event_streams.inc'
-      double precision shower_scale, aqcd, aqed
-
-      double precision p(0:4,2*nexternal-3),wgt
-      integer ic(7,2*nexternal-3),npart, i, proc_code
-      logical firsttime
-      data firsttime/.true./
-c
-      scalup_out = shower_scale
-      scalup_out = 1d9
-
-      aqcd=g**2/(4d0*pi)
-      aqed=gal(1)**2/(4d0*pi)
-c
-c 'fill_HEPrup_block' should be called after 'aqcd' has been set,
-c because it includes a call to 'setrun', which resets the value of
-c alpha_s to the one in the param_card.dat (without any running).
-      if (firsttime) then
-         call fill_HEPRUP_init()
-         firsttime=.false.
-      endif
-
-c
-
-c********************************************************************
-c     Fill in LesHouches event block according to conventions
-c     ic(1,*) = Particle ID
-c     ic(2.*) = Mothup(1)
-c     ic(3,*) = Mothup(2)
-c     ic(4,*) = ICOLUP(1)
-c     ic(5,*) = ICOLUP(2)
-c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
-c     ic(7,*) = Helicity
-c********************************************************************
-      proc_code = 66
-      NUP_out=npart
-      IDPRUP_out=proc_code
-      XWGTUP_out=wgt
-      AQEDUP_out=aqed
-      AQCDUP_out=aqcd
-      do i=1,NUP_out
-        IDUP_out(i)=ic(1,i)
-        ISTUP_out(i)=ic(6,i)
-        MOTHUP_out(1,i)=ic(2,i)
-        MOTHUP_out(2,i)=ic(3,i)
-        ICOLUP_out(1,i)=ic(4,i)
-        ICOLUP_out(2,i)=ic(5,i)
-        PUP_out(1,i)=p(1,i)
-        PUP_out(2,i)=p(2,i)
-        PUP_out(3,i)=p(3,i)
-        PUP_out(4,i)=p(0,i)
-        PUP_out(5,i)=p(4,i)
-        VTIMUP_out(i)=0.d0
-        SPINUP_out(i)=dfloat(ic(7,i))
-      enddo
-
-      return
-      end
+c$$$      subroutine fill_HEPEUP_event(p,wgt,ic,npart,shower_scale)
+c$$$      implicit none
+c$$$      double precision pi
+c$$$      parameter (pi=3.1415926535897932385d0)
+c$$$      include "nexternal.inc"
+c$$$      include "coupl.inc"
+c$$$      include 'hep_event_streams.inc'
+c$$$      double precision shower_scale, aqcd, aqed
+c$$$
+c$$$      double precision p(0:4,2*nexternal-3),wgt
+c$$$      integer ic(7,2*nexternal-3),npart, i, proc_code
+c$$$      logical firsttime
+c$$$      data firsttime/.true./
+c$$$c
+c$$$      scalup_out = shower_scale
+c$$$      scalup_out = 1d9
+c$$$
+c$$$      aqcd=g**2/(4d0*pi)
+c$$$      aqed=gal(1)**2/(4d0*pi)
+c$$$c
+c$$$c 'fill_HEPrup_block' should be called after 'aqcd' has been set,
+c$$$c because it includes a call to 'setrun', which resets the value of
+c$$$c alpha_s to the one in the param_card.dat (without any running).
+c$$$      if (firsttime) then
+c$$$         call fill_HEPRUP_init()
+c$$$         firsttime=.false.
+c$$$      endif
+c$$$
+c$$$c
+c$$$
+c$$$c********************************************************************
+c$$$c     Fill in LesHouches event block according to conventions
+c$$$c     ic(1,*) = Particle ID
+c$$$c     ic(2.*) = Mothup(1)
+c$$$c     ic(3,*) = Mothup(2)
+c$$$c     ic(4,*) = ICOLUP(1)
+c$$$c     ic(5,*) = ICOLUP(2)
+c$$$c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
+c$$$c     ic(7,*) = Helicity
+c$$$c********************************************************************
+c$$$      proc_code = 66
+c$$$      NUP_out=npart
+c$$$      IDPRUP_out=proc_code
+c$$$      XWGTUP_out=wgt
+c$$$      AQEDUP_out=aqed
+c$$$      AQCDUP_out=aqcd
+c$$$      do i=1,NUP_out
+c$$$        IDUP_out(i)=ic(1,i)
+c$$$        ISTUP_out(i)=ic(6,i)
+c$$$        MOTHUP_out(1,i)=ic(2,i)
+c$$$        MOTHUP_out(2,i)=ic(3,i)
+c$$$        ICOLUP_out(1,i)=ic(4,i)
+c$$$        ICOLUP_out(2,i)=ic(5,i)
+c$$$        PUP_out(1,i)=p(1,i)
+c$$$        PUP_out(2,i)=p(2,i)
+c$$$        PUP_out(3,i)=p(3,i)
+c$$$        PUP_out(4,i)=p(0,i)
+c$$$        PUP_out(5,i)=p(4,i)
+c$$$        VTIMUP_out(i)=0.d0
+c$$$        SPINUP_out(i)=dfloat(ic(7,i))
+c$$$      enddo
+c$$$
+c$$$      return
+c$$$      end
 
       subroutine fill_HEPEUP_event_2(p, wgt, npart, id, status, mothers,
-     &           cols, spin, scalup, scales)
+     &           cols, spin, scalup, scales, scales_a)
       implicit none
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -438,17 +454,22 @@ c      include "pmass.inc"
       integer cols(2,nexternal)
       integer status(nexternal)
       integer spin(nexternal)
-c      double precision scales(2*nexternal)
       double precision scales(nexternal)
+      double precision scales_a(nexternal,nexternal)
       double precision pmass(nexternal)
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
 
-      integer npart, i, proc_code, iscale
+      integer npart, i, j, proc_code, iscale
       logical firsttime
       data firsttime/.true./
 c
       scalup_out = scalup
+      do i=1,nexternal
+         do j=1,nexternal
+            scalup_out_a(i,j) = scales_a(i,j)
+         enddo
+      enddo
 
 c     Read the particle masses.
       include "pmass.inc"

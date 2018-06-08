@@ -384,7 +384,6 @@ c respectively.
       double precision wgt
       integer spinup_local(nexternal)
       integer istup_local(nexternal)
-      integer emscav(2*nexternal)
       double precision p_read(0:3,nexternal)
       double precision wgt_read
       double precision wgt_sudakov
@@ -443,10 +442,7 @@ c -- call to MC counterterm functions
          do npartner=1,ipartners(0)
             if(is_pt_hard)cycle
             factor=1d0
-
-c           write(*,*) 
-c           write(*,*) 
-
+c
             call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      &           nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
@@ -460,7 +456,7 @@ c           write(*,*)
             endif
             xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
             xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
-c -- positivity check
+c     positivity check
             if(xmcxsec(npartner).le.-tiny)then
                write(*,*)'Negative xmcxsec',npartner,xmcxsec(npartner)
                stop
@@ -473,77 +469,9 @@ c -- positivity check
             elseif(xmcxsec2(cflows).le.0d0)then
                xmcxsec2(cflows)=0d0
             endif
-c$$$  Colour and flavour 
-c$$$  the emitter is min(i_fks,j_fks)
-c$$$  its partner is ipartners(npartner)
-c     S-event kinematics read from born_leshouche.inc
-            do i=1,nexternal-1
-               IDUP_S(i,1)=IDUP(i,1)
-               MOTHUP_S(1,i,1)=MOTHUP(1,i,1)
-               MOTHUP_S(2,i,1)=MOTHUP(2,i,1)
-               do j=1,max_bcol
-                  ICOLUP_S(1,i,j)=ICOLUP(1,i,j)
-                  ICOLUP_S(2,i,j)=ICOLUP(2,i,j)
-               enddo
-            enddo            
-c     H-event kinematics, filled in read_leshouche_info
-            if (firsttime1)then
-               call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
-               firsttime1=.false.
-            endif
-
-            do j=1,niprocs_d(nFKSprocess)
-               do i=1,nexternal
-                  IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
-                  MOTHUP_H(1,i,j)=MOTHUP_D(nFKSprocess,1,i,j)
-                  MOTHUP_H(2,i,j)=MOTHUP_D(nFKSprocess,2,i,j)
-               enddo
-            enddo
-c     for colour flows, two alternatives
-c     1) access to all possible H-event flows, even colour subleading
-c     2) access to one H-event flow (picked at random) per S-event flow
-c$$$            do j=1,maxflow_used
-c$$$               do i=1,nexternal
-c$$$                  ICOLUP_H(1,i,j)=ICOLUP_D(nFKSprocess,1,i,j)
-c$$$                  ICOLUP_H(2,i,j)=ICOLUP_D(nFKSprocess,2,i,j)
-c$$$               enddo
-c$$$            enddo
-
-c     Calculate Sudakov suppression for every color structure. Currently unused.
-c            do j=1,max_bcol
-c               call fill_icolor_H(j,jpart)
-c               do i=1,nexternal
-c                  ICOLUP_H(1,i,j)=jpart(4,i)
-c                  ICOLUP_H(2,i,j)=jpart(5,i)
-c               enddo
-c               nexternal_now=nexternal
-c
-c               call clear_HEPEUP_event()
-c               call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
-c     &                istup_local, mothup_h, icolup_h, spinup_local, emscav)
-c               if (is_pythia_active.eq.0) then
-c                 call dire_init_default()
-c               endif
-c               call dire_setevent()
-c               call dire_next()
-c               call dire_get_mergingweight(wgt_sudakov)
-c            enddo
-            
          enddo
       enddo
-
-
-cccccccccccccccccc
-cccccccccccccccccc
-cccccccccccccccccc
-cccccccccccccccccc
-c      if ( hevents ) call abort
-cccccccccccccccccc
-cccccccccccccccccc
-cccccccccccccccccc
-
-c      if(.not.is_pt_hard)call complete_xmcsubt(dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
-      if(.not.is_pt_hard)call complete_xmcsubt_2(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c -- end of call to MC counterterm functions
 
       MCcntcalled=.true.
@@ -2077,7 +2005,7 @@ c FKS configuration that is included in the current PS point.
       include 'nexternal.inc'
       include 'run.inc'
       include 'nFKSconfigs.inc'
-      integer i,iFKS,Hevents,izero,mohdr
+      integer i,j,k,iFKS,Hevents,izero,mohdr
       double precision ddum(6),p(0:3,nexternal)
       logical ldum
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -2094,6 +2022,8 @@ c FKS configuration that is included in the current PS point.
       common/c_MCcntcalled/MCcntcalled
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
       parameter (izero=0,mohdr=-100)
 c Compute the shower starting scale including the shape function
       if ( (.not. MCcntcalled) .and.
@@ -2101,6 +2031,7 @@ c Compute the shower starting scale including the shape function
          if(p(0,1).ne.-99d0)then
             call set_cms_stuff(mohdr)
             call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
+            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
             call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,p,ileg,
      &           xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6)
      &           ,ldum)
@@ -2117,9 +2048,19 @@ c (i.e. nFKS(i)=iFKS)
             if (H_event(i)) then
 c H-event contribution
                shower_scale(i)=SCALUP(iFKS*2)
+               do j=1,nexternal
+                  do k=1,nexternal
+                     shower_scale_a(i,j,k)=SCALUP_a(iFKS*2,j,k)
+                  enddo
+               enddo
             else
 c S-event contribution
                shower_scale(i)=SCALUP(iFKS*2-1)
+               do j=1,nexternal
+                  do k=1,nexternal
+                     shower_scale_a(i,j,k)=SCALUP_a(iFKS*2-1,j,k)
+                  enddo
+               enddo
             endif
          endif
       enddo
@@ -2243,12 +2184,18 @@ c for the summed contribution.
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict
+      integer i,j,k,l,ict
       double precision tmp_wgt(fks_configs),showerscale(fks_configs)
-     $     ,temp_wgt,shsctemp
+     $     ,showerscale_a(fks_configs,nexternal,nexternal)
+     $     ,temp_wgt,shsctemp,shsctemp_a(nexternal,nexternal)
       do i=1,fks_configs
          tmp_wgt(i)=0d0
          showerscale(i)=-1d0
+         do j=1,nexternal
+            do k=1,nexternal
+               showerscale_a(i,j,k)=-1d0
+            enddo
+         enddo
       enddo
 c sum the weights that contribute to a single FKS configuration.
       do i=1,icontr
@@ -2268,25 +2215,64 @@ c contribution to a given FKS configuration.
      $              ,showerscale(nFKS(ict)),shower_scale(ict)
                stop 1
             endif
+            do l=1,nexternal
+               do k=1,nexternal
+                  if (showerscale_a(nFKS(ict),l,k).eq.-1d0) then
+                     showerscale_a(nFKS(ict),l,k)=shower_scale_a(ict,l,k)
+c check that all the shower starting scales are identical for all the
+c contribution to a given FKS configuration.
+                  elseif ( abs((showerscale_a(nFKS(ict),l,k)-shower_scale_a(ict,l,k))
+     $                  /(showerscale_a(nFKS(ict),l,k)+shower_scale_a(ict,l,k)))
+     $                                                  .gt. 1d-6 ) then
+                     write (*,*) 'ERR 2 in update_shower_scale_Sevents'
+     $               ,showerscale_a(nFKS(ict),l,k),shower_scale_a(ict,l,k)
+                     stop 1
+                  endif
+               enddo
+            enddo
          enddo
       enddo
 c Compute the weighted average of the shower scale. Weight is given by
 c the ABS cross section to given FKS configuration.
       temp_wgt=0d0
       shsctemp=0d0
+      shsctemp_a=0d0
       do i=1,fks_configs
          temp_wgt=temp_wgt+abs(tmp_wgt(i))
          shsctemp=shsctemp+abs(tmp_wgt(i))*showerscale(i)
+         do j=1,nexternal
+            do k=1,nexternal
+               shsctemp_a(j,k)=shsctemp_a(j,k)+abs(tmp_wgt(i))*showerscale_a(i,j,k)
+            enddo
+         enddo
       enddo
       if (temp_wgt.ne.0d0) then
          shsctemp=shsctemp/temp_wgt
+         do j=1,nexternal
+            do k=1,nexternal
+               shsctemp_a(j,k)=shsctemp_a(j,k)/temp_wgt
+            enddo
+         enddo
       else
          shsctemp=0d0
+         do j=1,nexternal
+            do k=1,nexternal
+               shsctemp_a(j,k)=0d0
+            enddo
+         enddo
       endif
 c Overwrite the shower scale for the S-events
       do i=1,icontr
          if (H_event(i)) cycle
-         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
+         if (icontr_sum(0,i).ne.0) then
+            shower_scale(i)=shsctemp
+         do j=1,nexternal
+            do k=1,nexternal
+               shower_scale_a(i,j,k)=shsctemp_a(j,k)
+            enddo
+         enddo
+
+         endif
       enddo
       return
       end
@@ -2392,7 +2378,7 @@ c PS point that should be written in the event file.
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'timing_variables.inc'
-      integer i,j,k,iFKS_picked,ict
+      integer i,j,k,l,iFKS_picked,ict
       double precision tot_sum,rnd,ran2,current,target
       external ran2
       integer           i_process_addwrite
@@ -2409,6 +2395,8 @@ c PS point that should be written in the event file.
       common/c_nFKSprocess/nFKSprocess
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale/SCALUP_a
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
@@ -2438,6 +2426,11 @@ c found the contribution that should be written:
          i_process_addwrite=iproc_picked
          iFKS_picked=nFKS(icontr_picked)
          SCALUP(iFKS_picked*2)=shower_scale(icontr_picked)
+         do k=1,nexternal
+            do l=1,nexternal
+               SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked,k,l)
+            enddo
+         enddo
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
@@ -2453,6 +2446,11 @@ c found the contribution that should be written:
             endif
          enddo
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
+         do k=1,nexternal
+            do l=1,nexternal
+               SCALUP_a(iFKS_picked*2-1,k,l)=shower_scale_a(icontr_picked,k,l)
+            enddo
+         enddo
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       call cpu_time(tAfter)
@@ -2884,7 +2882,7 @@ c
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
-      integer iFKS
+      integer iFKS,i,j
       logical Hevents
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
@@ -2894,11 +2892,18 @@ c
       double precision emsca,scalemin,scalemax,emsca_bare
       logical emscasharp
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+      double precision emsca_a(nexternal,nexternal)
+      double precision emsca_bare_a(nexternal,nexternal)
+      logical emscasharp_a(nexternal,nexternal)
+      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
       character*4 abrv
       common/to_abrv/abrv
       include 'nFKSconfigs.inc'
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
      &     ,pt_hardness
@@ -2908,6 +2913,9 @@ c
       double precision xm12
       integer ileg
       common/cscaleminmax/xm12,ileg
+      double precision target_scales_S(nexternal,nexternal)
+      double precision target_scales_H(nexternal,nexternal)
+      common/c_target_scales/target_scales_S,target_scales_H
 
 c Initialise
       SCALUP(iFKS)=0d0
@@ -2936,7 +2944,41 @@ c H events
       endif
 c Minimal starting scale
       SCALUP(iFKS)=max(SCALUP(iFKS),3d0)
-
+c
+c
+      do i=1,nexternal-1
+         do j=i+1,nexternal
+c Initialise
+            SCALUP_a(iFKS,i,j)=0d0
+c S events
+            if(.not.Hevents)then
+               if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
+     &         dampMCsubt.and.emsca_a(i,j).ne.0d0)then
+                  SCALUP_a(iFKS,i,j)=target_scales_S(i,j)
+               else
+                  call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a
+     $            ,scalemax_a,ileg,xm12)
+                  SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
+               endif
+               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),shower_S_scale(iFKS))
+c H events
+            else
+               if(dampMCsubt.and.emsca_a(i,j).ne.0d0)then
+                  SCALUP_a(iFKS,i,j)=target_scales_H(i,j)
+               else
+                  call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a(i,j)
+     $            ,scalemax_a(i,j),ileg,xm12)
+                  SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
+               endif
+               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),max(shower_H_scale(iFKS),
+     &            ref_H_scale(iFKS)-min(emsca_a(i,j),scalemax_a(i,j))))
+            endif
+c Minimal starting scale
+            SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),3d0)
+            SCALUP_a(iFKS,j,i)=SCALUP_a(iFKS,i,j)
+         enddo
+      enddo
+c
       return
       end
 

@@ -660,6 +660,8 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      character*500 scale_str
+      character*50 str_tmp
       include './run.inc'
       include 'unlops.inc'
 c     if event_id is zero or positive (that means that there was a call
@@ -794,6 +796,20 @@ c
             endif
          endif
       endif
+c$$$c     write the scales block
+c$$$      scale_str="<scales muf='-1.000000E+00' mur='-1.000000E+00'"
+c$$$      do i=1,NUP-1
+c$$$         do j=i+1,NUP
+c$$$            if(SCALUP_a(i,j).ne.-1d0)then
+c$$$               write(str_tmp,701)
+c$$$     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+c$$$               scale_str=trim(scale_str)//trim(str_tmp)
+c$$$            endif
+c$$$         enddo
+c$$$      enddo
+c$$$      write(ifile,'(a)')"  "//trim(scale_str)//">"
+c$$$      write(ifile,'(a)') "  </scales>"
+c$$$c
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -806,6 +822,7 @@ c
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
+ 701  format(a8,i1,a1,i1,a2,e14.6,a1)
 c
       return
       end
@@ -942,6 +959,9 @@ c
          string=buff(1:len_trim(buff))
          buff=' '
       endif
+c$$$      call read_scale_line(ifile)
+c$$$      read(ifile,'(a)')
+
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))

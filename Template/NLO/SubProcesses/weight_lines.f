@@ -12,6 +12,7 @@
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
      $        ,plot_wgts(:,:),shower_scale(:),unwgt(:,:),bias_wgt(:)
+     $        ,shower_scale_a(:,:,:)
          save
       end module weight_lines
 
@@ -169,6 +170,10 @@ c shower_scale
          allocate(temp1(n_contr))
          temp1(1:max_contr)=shower_scale
          call move_alloc(temp1,shower_scale)
+c shower_scale_a
+         allocate(temp3(n_contr,nexternal,nexternal))
+         temp3(1:max_contr,1:nexternal,1:nexternal)=shower_scale_a
+         call move_alloc(temp3,shower_scale_a)
 c unwgt
          allocate(temp2(max_iproc,n_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
@@ -208,6 +213,7 @@ c update maximum
       allocate(bias_wgt(1))
       allocate(plot_wgts(1,1))
       allocate(shower_scale(1))
+      allocate(shower_scale_a(1,nexternal,nexternal))
       allocate(unwgt(1,1))
       max_contr=1
       max_wgt=1
@@ -246,6 +252,7 @@ c update maximum
       if (allocated(bias_wgt)) deallocate(bias_wgt)
       if (allocated(plot_wgts)) deallocate(plot_wgts)
       if (allocated(shower_scale)) deallocate(shower_scale)
+      if (allocated(shower_scale_a)) deallocate(shower_scale_a)
       if (allocated(unwgt)) deallocate(unwgt)
       return
       end

@@ -46,9 +46,9 @@ C     ------------------------------
      &        MOTHUP_out(2,MAXNUP_out),ICOLUP_out(2,MAXNUP_out)
       DOUBLE PRECISION XWGTUP_out,AQEDUP_out,AQCDUP_out, SCALUP_out,
      &       PUP_out(5,MAXNUP_out),VTIMUP_out(MAXNUP_out),SPINUP_out(MAXNUP_out),
-     &       SCALES_OUT(2,MAXNUP_OUT)
+     &       SCALES_out(2,MAXNUP_OUT),SCALUP_out_a(MAXNUP_OUT,MAXNUP_OUT)
 
       common /hepeup_out/ nup_out, idprup_out, xwgtup_out, scalup_out,
      &                   aqedup_out, aqcdup_out, idup_out, istup_out,
      &                   mothup_out, icolup_out, pup_out, vtimup_out, spinup_out,
-     &                   scales_out
+     &                   scales_out, scalup_out_a

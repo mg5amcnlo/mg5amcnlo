@@ -1,5 +1,5 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
@@ -14,6 +14,7 @@ c intermediate resonances. It also boosts the events to the lab frame
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
       double precision ybst_til_tolab,shower_scale
+     &,shower_scale_a(nexternal,nexternal)
       integer iconfig
       logical Hevents,putonshell
       integer ndim,jpart(7,-nexternal+3:2*nexternal-3),npart
@@ -115,10 +116,13 @@ c cFKSprocess
       integer save_nFKSprocess
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+c Born colour flow picked in montecarlocounter.f
       integer jflow
       common/c_colour_flow/jflow
 
@@ -198,8 +202,18 @@ c Copy the saved information to the arrays actually used
 c Set the shower scale
       if (Hevents) then
          shower_scale=SCALUP(nFKSprocess*2)
+         do i=1,nexternal
+            do j=1,nexternal
+               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2,i,j)
+            enddo
+         enddo
       else
          shower_scale=SCALUP(nFKSprocess*2-1)
+         do i=1,nexternal
+            do j=1,nexternal
+               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2-1,i,j)
+            enddo
+         enddo
       endif
 
 c This is an (n+1)-body process (see update_unwgt_table in
@@ -273,10 +287,8 @@ c
          endif
       enddo
 
-c     PAOLO: UNCOMMENT NEXT LINE ('iflow=jflow') AND COMMENT DETERMINATION
-c     OF iflow ABOVE (SHOULD BE EVERYTHING BELOW COMMENT  'Get color flow
-c     that ..' BUT CROSS CHECK)    
-c      iflow=jflow
+c Born colour-flow value set equal to the one picked in montecarloconuter.f
+      iflow=jflow
 
       if (iflow.gt.max_bcol) then
          write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol

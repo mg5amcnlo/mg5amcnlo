@@ -347,38 +347,21 @@ c
       double precision mu_r
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision p_read(0:4,2*nexternal-3), wgt_read
-      integer jpart(7,-nexternal+3:2*nexternal-3)
       integer npart
       double precision MCsec(nexternal-1,max_bcol)
-
+      double precision dummy
+c
 c True MC subtraction term
       first_MCcnt_call=.true.
       is_pt_hard=.false.
       xmcxsec=0d0
+      xmcxsec2=0d0
       do cflows=1,max_bcol
          if(is_pt_hard)cycle
          do npartner=1,ipartners(0)
             if(is_pt_hard)cycle
             factor=1d0
-
-c$$$        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
-c$$$C       Check if Pythia8 needs to be initialized
-c$$$cC         By default, we now use an empty command file
-c$$$c          call pythia_init(pythia_cmd_file)
-c$$$C       Send current event to Pythia8
-c$$$        call pythia_setevent()
-c$$$C       Ask Pythia8 to shower current event
-c$$$        call pythia_next()
-c$$$C       Ask Pythia8 to printout its internal record of the event
-c$$$        call pythia_stat()
-c$$$C       Read (i.e. simply access) the output HEPEUP event stream
-c$$$        call read_HEPEUP_event(p_read,wgt_read)
-c$$$C       And printout the corresponding event kinematics and weight
-c$$$        do j=1,2*nexternal-3
-c$$$          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
-c$$$        enddo
-c$$$        write(*,*) 'wgt_read=',wgt_read
-
+c
             call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
@@ -391,9 +374,10 @@ c$$$        write(*,*) 'wgt_read=',wgt_read
      &         xkernazi(1)*bornbarstilde(colorflow(npartner,cflows)))
             endif
             xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
+            xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(xmc,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 
@@ -489,10 +473,13 @@ c Main routine for MC counterterms
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
+      double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
       integer jpartner,mpartner
       logical emscasharp
       double precision emscav_tmp(nexternal)
+      double precision emscav_tmp_a(nexternal,nexternal)
       common/cemscav_tmp/emscav_tmp
+      common/cemscav_tmp_a/emscav_tmp_a
 
       double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
@@ -535,6 +522,12 @@ c Main routine for MC counterterms
 
       double precision emsca
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+
+      logical emscasharp_a(nexternal,nexternal)
+      double precision emsca_a(nexternal,nexternal),emsca_bare_a(nexternal,nexternal)
+      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
+      double precision ptresc_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
 
       double precision ran2,iseed
       external ran2
@@ -648,6 +641,7 @@ c New or standard MC@NLO formulation
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
       call assign_emsca(pp,xi_i_fks,y_ij_fks)
+      call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 
 c Distinguish ISR and FSR
       if(ileg.le.2)then
@@ -676,6 +670,7 @@ c than the jets at the Born, hence no need to include the MC counter
 c terms when the radiation is hard.
       if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
          emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+         emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
          is_pt_hard=.true.
          return
       endif
@@ -1020,6 +1015,40 @@ c Emsca stuff
            endif
         endif
         emscav_tmp(npartner)=emscav(npartner)
+c Emsca stuff
+        do i=1,nexternal-2
+           do j=i+1,nexternal-1 
+              if(dampMCsubt)then
+                 if(emscasharp_a(i,j))then
+                    if(qMC.le.scalemax_a(i,j))then
+                       emscwgt_a(i,j)=1d0
+                       emscav_a(i,j)=emsca_bare_a(i,j)
+                    else
+                       emscwgt_a(i,j)=0d0
+                       emscav_a(i,j)=scalemax_a(i,j)
+                    endif
+                 else
+                    ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
+                    if(ptresc_a(i,j).le.0d0)then
+                       emscwgt_a(i,j)=1d0
+                       emscav_a(i,j)=emsca_bare_a(i,j)
+                    elseif(ptresc_a(i,j).lt.1d0)then 
+                       emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),one)
+                       emscav_a(i,j)=emsca_bare_a(i,j)
+                    else
+                       emscwgt_a(i,j)=0d0
+                       emscav_a(i,j)=scalemax_a(i,j)
+                    endif
+                 endif
+              endif
+              emscav_tmp_a(i,j)=emscav_a(i,j)
+c
+              ptresc_a(j,i)=ptresc_a(i,j)
+              emscwgt_a(j,i)=emscwgt_a(i,j)
+              emscav_a(j,i)=emscav_a(i,j)
+              emscav_tmp_a(j,i)=emscav_tmp_a(i,j)
+           enddo
+        enddo
 
 c End of loop over colour partners
 c      enddo
@@ -1028,7 +1057,7 @@ c      enddo
       end
 
 
-      subroutine complete_xmcsubt(wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      subroutine complete_xmcsubt(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1038,12 +1067,19 @@ c      enddo
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
+      double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
       integer jpartner,mpartner,cflows,jflow
       common/c_colour_flow/jflow
       logical emscasharp
 
       double precision emsca
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+
+      double precision emsca_a(nexternal,nexternal)
+      double precision emsca_bare_a(nexternal,nexternal)
+      logical emscasharp_a(nexternal,nexternal)
+      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
 
       common/cqMC/qMC
 
@@ -1071,187 +1107,9 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
 
       integer npartner
       double precision emscav_tmp(nexternal)
+      double precision emscav_tmp_a(nexternal,nexternal)
       common/cemscav_tmp/emscav_tmp
-
-      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
-      logical lzone(nexternal)
-
-      integer i
-      double precision tiny
-      parameter(tiny=1d-7)
-      double precision MCsec(nexternal-1,max_bcol),sumMCsec(max_bcol)
-
-c     Input check
-      do npartner=1,ipartners(0)
-         if(xmcxsec(npartner).lt.0d0)then
-            write(*,*)'Fatal error 1 in complete_xmcsubt'
-            write(*,*)npartner,xmcxsec(npartner)
-            stop
-         endif
-      enddo
-      do cflows=1,max_bcol
-         if(xmcxsec2(cflows).lt.0d0)then
-            write(*,*)'Fatal error 2 in complete_xmcsubt'
-            write(*,*)cflows,xmcxsec2(cflows)
-            stop
-         endif
-      enddo
-
-c     Compute MC cross section
-      wgt=0d0
-      wgt2=0d0
-      do i=1,max_bcol
-         sumMCsec(i)=0d0
-      enddo
-      do npartner=1,ipartners(0)
-         wgt=wgt+xmcxsec(npartner)
-      enddo
-      do cflows=1,max_bcol
-         wgt2=wgt2+xmcxsec2(cflows)
-      enddo
-      do cflows=1,max_bcol
-         do npartner=1,ipartners(0)
-            sumMCsec(cflows)=sumMCsec(cflows)+MCsec(npartner,cflows)
-         enddo
-      enddo
-c
-      if( (abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny) .or.
-     &    (abs(wgt).le.1.d-10 .and.abs(wgt-wgt2).gt.tiny) )then
-         write(*,*)'Fatal error 3 in complete_xmcsubt'
-         write(*,*)wgt,wgt2
-         stop
-      endif
-      do cflows=1,max_bcol
-         if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows))/abs(sumMCsec(cflows)).gt.tiny) .or.
-     &   (abs(sumMCsec(cflows)).le.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
-            write(*,*)'Fatal error 3 in complete_xmcsubt'
-            write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
-            stop
-         endif
-      enddo
-
-c     Assign flow on statistical basis
-      rrnd=ran2()
-      wgt11=0d0
-      jflow=0
-      cflows=0
-      do while(jflow.eq.0.and.cflows.lt.max_bcol)
-         cflows=cflows+1
-         wgt11=wgt11+xmcxsec2(cflows)
-         if(wgt11.ge.rrnd*wgt2)jflow=cflows
-      enddo
-      if(jflow.eq.0)then
-         write(*,*)'Error in xmcsubt: flow unweighting failed'
-         stop
-      endif
-
-
-c     Assign emsca on statistical basis
-      if(dampMCsubt.and.wgt.gt.1d-30)then
-        rrnd=ran2()
-        wgt11=0d0
-        jpartner=0
-        do npartner=1,ipartners(0)
-           if(lzone(npartner).and.jpartner.eq.0)then
-              wgt11=wgt11+MCsec(npartner,jflow)
-              if(wgt11.ge.rrnd*xmcxsec2(jflow))then
-                 jpartner=ipartners(npartner)
-                 mpartner=npartner
-              endif
-           endif
-        enddo
-        if(jpartner.eq.0)then
-           write(*,*)'Error in xmcsubt: emsca unweighting failed'
-           stop
-        else
-           emsca=emscav_tmp(mpartner)
-        endif
-      endif
-      if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
-
-c Additional information for LHE
-      if(AddInfoLHE)then
-         fksfather_lhe(nFKSprocess)=fksfather
-         if(jpartner.ne.0)then
-            ipartner_lhe(nFKSprocess)=jpartner
-         else
-c min() avoids troubles if ran2()=1
-            ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-            ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
-         endif
-         scale1_lhe(nFKSprocess)=qMC
-      endif
-
-      if(dampMCsubt)then
-         if(emsca.lt.scalemin)then
-            write(*,*)'Error in xmcsubt: emsca too small'
-            write(*,*)emsca,jpartner,lzone(jpartner)
-            stop
-         endif
-      endif
-
-c PAOLO: INSERT HERE PROBNE COMPUTATION
-c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE
-c COMPUTATION IN ROUTINE XMCSUBT AND ALSO EMSCAV UNWEIGHTING
-c IN THIS ROUTINE, ABOVE
-
-      do i=1,nexternal
-         if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne
-         if(i.gt.ipartners(0))xmcxsec(i)=0d0
-      enddo
-
-      return
-      end
-
-
-
-
-
-
-      subroutine complete_xmcsubt_2(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
-      implicit none
-      include "born_nhel.inc"
-      include 'nFKSconfigs.inc'
-      include 'nexternal.inc'
-      include 'madfks_mcatnlo.inc'
-
-      double precision emsca_bare,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
-      double precision emscwgt(nexternal),emscav(nexternal)
-      integer jpartner,mpartner,cflows,jflow
-      common/c_colour_flow/jflow
-      logical emscasharp
-
-      double precision emsca
-      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-
-      common/cqMC/qMC
-
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial
-      common/cisspecial/isspecial
-
-      integer fksfather
-      common/cfksfather/fksfather
-
-      double precision ran2,iseed
-      external ran2
-      logical extra
-
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
-     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
-      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-
-      integer npartner
-      double precision emscav_tmp(nexternal)
-      common/cemscav_tmp/emscav_tmp
+      common/cemscav_tmp_a/emscav_tmp_a
 
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
       logical lzone(nexternal)
@@ -1292,6 +1150,9 @@ C     To access Pythia8 control variables
       common/SHevents/Hevents
       integer nexternal_now
       double precision sumMCsec(max_bcol)
+      double precision target_scales_S(nexternal,nexternal)
+      double precision target_scales_H(nexternal,nexternal)
+      common/c_target_scales/target_scales_S,target_scales_H
 
       do i=1,2
         istup_local(i) = -1
@@ -1345,8 +1206,11 @@ c
          stop
       endif
       do cflows=1,max_bcol
-         if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows))/abs(sumMCsec(cflows)).gt.tiny) .or.
-     &   (abs(sumMCsec(cflows)).le.1.d-10 .and.abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
+         if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.
+     &        abs(sumMCsec(cflows)-xmcxsec2(cflows))/
+     &        abs(sumMCsec(cflows)).gt.tiny) .or.
+     &       (abs(sumMCsec(cflows)).le.1.d-10 .and.
+     &        abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
             write(*,*)'Fatal error 3 in complete_xmcsubt'
             write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
             stop
@@ -1368,8 +1232,7 @@ c     Assign flow on statistical basis
          stop
       endif
 
-
-c     Assign emsca on statistical basis
+c     Assign emsca (scalar) on statistical basis
       if(dampMCsubt.and.wgt.gt.1d-30)then
         rrnd=ran2()
         wgt11=0d0
@@ -1413,26 +1276,37 @@ c min() avoids troubles if ran2()=1
          endif
       endif
 
-
-c PAOLO: INSERT HERE PROBNE COMPUTATION
-c AFTER DOING THIS PROPERLY, ONE SHOULD COMMENT OUT PROBNE
-c COMPUTATION IN ROUTINE XMCSUBT AND ALSO EMSCAV UNWEIGHTING
-c IN THIS ROUTINE, ABOVE
-
 c     S-event information.
 c     ids, mothers read from born_leshouche.inc
-c     color configuration read from born_les_houche.inc and "jflows" 
+c     color configuration read from born_leshouche.inc and jflow 
       do i=1,nexternal-1
         IDUP_S(i)=IDUP(i,1)
         MOTHUP_S(1,i)=MOTHUP(1,i,1)
         MOTHUP_S(2,i)=MOTHUP(2,i,1)
-        ICOLUP_S(1,i)=ICOLUP(1,i,1)
-        ICOLUP_S(2,i)=ICOLUP(2,i,1)
-      enddo            
-c     S-event momenta read from
-
+        ICOLUP_S(1,i)=ICOLUP(1,i,jflow)
+        ICOLUP_S(2,i)=ICOLUP(2,i,jflow)
+      enddo
+c
+c     target scales for S events are read from emsca_v_tmp matrix;
+c     stored in target_scales_S for the colour lines beloinging to
+c     jflow, to be written to LH file. Set to -1 if lines belonging
+c     to other flows
+      target_scales_S=-1d0
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1
+            if( (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
+     &          (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(2,j)).or.
+     &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(1,j)).or.
+     &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j)) )then
+               target_scales_S(i,j)=emscav_tmp_a(i,j)
+               target_scales_S(j,i)=emscav_tmp_a(j,i)
+            endif
+         enddo
+      enddo
+c
+c
 c     H-event information.
-c     First write ids, mothers and all colors.
+c     First write ids, mothers and all colours.
       if (firsttime1)then
         call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
         firsttime1=.false.
@@ -1451,46 +1325,24 @@ c     Fill selected color configuration into jpart array.
         ICOLUP_H(2,i)=jpart(5,i)
       enddo
 
-cc     Add some print-out for debugging.
-c      write (*,*) 'S-event configuration'
-c      do i=1,nexternal-1
-c        write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_s(i),
-c     &             ' col_h=', icolup_s(1,i), ' acol_h=', icolup_s(2,i)
-c      enddo
-ccc     Note: Momentum printing incorrect - these are the H-event momenta
-cc      do i=1,nexternal
-cc        write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-cc      enddo
-c      write (*,*) 'H-event configuration for flow=', jflow
-c      do i=1,nexternal
-c        write(*,*) 'i=', i, 'status=', istup_local(i), ' id_h=', idup_h(i,1),
-c     &             ' col_h=', icolup_h(1,i), ' acol_h=', icolup_h(2,i)
-c      enddo
-c      do i=1,nexternal
-c        write(*,*) p(0,i), p(1,i), p(2,i), p(3,i)
-c      enddo
-
-c      emsca = emsca*10.0
-c      write(*,*)
-c      write(*,*) 'emsca=', emsca, scalemax
-
 c     Calculate suppression factor for H-events.
       nexternal_now=nexternal
-      call clear_HEPEUP_event()
-      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
-     &       istup_local, mothup_h, icolup_h, spinup_local, emsca, emscav_tmp)
-      if (is_pythia_active.eq.0) then
-        call dire_init_default()
-      endif
-      call dire_setevent()
-      call dire_next()
-      call dire_get_mergingweight(wgt_sudakov)
-      call dire_get_sudakov_stopping_scales(scales)
-
-c      do i=0,9
-c        write(*,*) scales(i)
-c      enddo
-c      write(*,*) 'No-emission probability =', wgt_sudakov
+c$$$      call clear_HEPEUP_event()
+c$$$      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+c$$$     &       istup_local, mothup_h, icolup_h, spinup_local,
+c$$$     &       emsca, emscav_tmp, emscav_tmp_a)
+c$$$      if (is_pythia_active.eq.0) then
+c$$$        call dire_init_default()
+c$$$      endif
+c$$$      call dire_setevent()
+c$$$      call dire_next()
+c$$$      call dire_get_mergingweight(wgt_sudakov)
+c$$$      call dire_get_sudakov_stopping_scales(scales)
+c
+c     target scales for H events are computed by Pythia;
+c     stored in target_scales_H
+      target_scales_H=-1d0
+c     complete with information from scales array
 
       probne = wgt_sudakov
       if(probne.lt.0.d0)then
@@ -1501,9 +1353,6 @@ c      write(*,*) 'No-emission probability =', wgt_sudakov
         write(*,*)'SFWARNING2',probne
         probne=1.d0
       endif
-
-c      if (probne .gt. 0.999999 .and. probne .lt. 1.000001) write(*,*) 'Sudakov close to one'
-c      write(*,*) 'sudakov', probne
 
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne
@@ -3108,7 +2957,6 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax)
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
@@ -3124,6 +2972,69 @@ c Consistency check
             if(ptresc.ge.1d0)emsca=scalemax
          endif
       endif
+
+      return
+      end
+
+
+      subroutine assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+      implicit none
+      include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
+      include "run.inc"
+      include "born_nhel.inc"
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
+      double precision emsca_bare_a(nexternal,nexternal),ref_scale_a(nexternal,nexternal),
+     &scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal),rrnd,ran2,emscainv,
+     &dum(5),xm12,qMC,ptresc_a(nexternal,nexternal)
+      integer ileg,npartner,i,j
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+      common /MC_info/ ipartners,colorflow
+
+      logical emscasharp_a(nexternal,nexternal)
+      double precision emsca_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+
+c Consistency check
+      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if(abs(shattmp/shat-1d0).gt.1d-5)then
+         write(*,*)'Error in assign_emsca_array: inconsistent shat'
+         write(*,*)shattmp,shat
+         stop
+      endif
+
+      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
+     &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
+      call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
+      emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
+
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1
+            if(dampMCsubt)then
+               emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.(1d-3*scalemax_a(i,j))
+               if(emscasharp_a(i,j))then
+                  emsca_bare_a(i,j)=scalemax_a(i,j)
+                  emsca_a(i,j)=emsca_bare_a(i,j)
+               else
+                  rrnd=ran2()
+                  rrnd=emscainv(rrnd,1d0)
+                  emsca_bare_a(i,j)=scalemin_a(i,j)+rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+                  ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
+                  if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
+                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
+               endif
+            endif
+            emsca_a(j,i)=emsca_a(i,j)
+            emsca_bare_a(j,i)=emsca_bare_a(i,j)
+            emscasharp_a(j,i)=emscasharp_a(i,j)
+            ptresc_a(j,i)=ptresc_a(i,j)
+         enddo
+      enddo
 
       return
       end
@@ -3158,6 +3069,41 @@ c
       end
 
 
+      subroutine assign_scaleminmax_array(shat,xi,xscalemin_a,xscalemax_a,ileg,xm12)
+      implicit none
+      include "nexternal.inc"
+      include "run.inc"
+      include "madfks_mcatnlo.inc"
+      integer i,j,ileg
+      double precision shat,xi,ref_scale_a(nexternal,nexternal),xm12
+      double precision xscalemax_a(nexternal,nexternal),xscalemin_a(nexternal,nexternal)
+      character*4 abrv
+      common/to_abrv/abrv
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+
+      call assign_ref_scale_array(p_born,xi,shat,ref_scale_a)
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1
+            xscalemin_a(i,j)=max(shower_scale_factor*frac_low*ref_scale_a(i,j),scaleMClow)
+            xscalemax_a(i,j)=max(shower_scale_factor*frac_upp*ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
+            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0*sqrt(ebeam(1)*ebeam(2)))
+            xscalemin_a(i,j)=min(xscalemin_a(i,j),xscalemax_a(i,j))
+c
+            if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+               xscalemin_a(i,j)=max(xscalemin_a(i,j),sqrt(xm12))
+               xscalemax_a(i,j)=max(xscalemin_a(i,j),xscalemax_a(i,j))
+            endif
+c
+            xscalemin_a(j,i)=xscalemin_a(i,j)
+            xscalemax_a(j,i)=xscalemax_a(i,j)
+         enddo
+      enddo
+c
+      return
+      end
+
+
       subroutine assign_ref_scale(p,xii,sh,ref_sc)
       implicit none
       include "nexternal.inc"
@@ -3183,6 +3129,26 @@ c Sum of final-state transverse masses
 c Safety threshold for the reference scale
       ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
 
+      return
+      end
+
+
+      subroutine assign_ref_scale_array(p,xii,sh,ref_sc_a)
+      implicit none
+      include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
+      double precision p(0:3,nexternal-1),xii,sh,dot
+      double precision ref_sc_a(nexternal,nexternal)
+      integer i,j
+
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1
+            ref_sc_a(i,j)=sqrt(dot(p(0,i),p(0,j)))
+            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
+            ref_sc_a(j,i)=ref_sc_a(i,j)
+         enddo
+      enddo
+c
       return
       end
 
