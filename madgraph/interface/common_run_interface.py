@@ -5742,8 +5742,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     fail_due_to_format = 0 #parameter to avoid infinite loop
     def postcmd(self, stop, line):
-        ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
 
+        if line not in [None, '0', 'done', '']:
+            ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+        else:
+            ending_question = True
+        
         if ending_question:
             self.check_card_consistency()
             if self.param_consistency:
@@ -6560,8 +6564,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if answer in self.modified_card:
             self.write_card(answer)
-        elif answer.replace('_card.dat','') in self.modified_card:
-            self.write_card(answer.replace('_card.dat',''))
+        elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
+            self.write_card(os.path.basename(answer.replace('_card.dat','')))
 
         try:
             self.mother_interface.exec_cmd('open %s' % path)
