@@ -23,7 +23,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Update of MadSpin to allow special input file for the case of spinmode=none. 
           With that very simple mode of decay, you can now decay hepmc file or wrongly formatted leshouches event
           (in that mode we do not have spin correlation and width effect)
-      PT: 
+      PT: in montecarlocounter.f: improved colour-flow treatment in the case gluons are twice colour-connected to each other
+          new gfunction(w) to get smoothly to 0 as w -> 1. (for NLO+PS run)
       OM: Fix some issue for the new QED model (including one in the handling of complex mass scheme of such model)
       OM: Fixing an issue of the param_card out of sync when running compute-widths
       OM: Adding Qnumbers block for ghost (the latest version of py8 was crashing due to their absence)
