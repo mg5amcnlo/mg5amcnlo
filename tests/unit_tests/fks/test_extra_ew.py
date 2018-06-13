@@ -48,6 +48,14 @@ class TestAMCatNLOEW(unittest.TestCase):
             'u u~ > d d~ QCD=2 QED=2 [real=QED]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED QCD]']
 
+        # exp[ected splitting types
+        split_type_list = [['QCD'],
+                           ['QED','QCD'],
+                           ['QED','QCD'],
+                           ['QED','QCD'],
+                           ['QED','QCD'],
+                           ['QED','QCD']]
+
         # expected born_orders
         born_orders_list = [{'QED':0, 'QCD':2},
                             {'QED':0, 'QCD':2},
@@ -96,10 +104,12 @@ class TestAMCatNLOEW(unittest.TestCase):
                            [17, 17, 17, 17, 17, 17],
                            [17, 17, 17, 17, 17, 17]]
 
-        for cmd, born_orders, squared_orders, pert_couplings, nborndiag, nrealproc, nrealdiags in \
+        for cmd, born_orders, squared_orders, pert_couplings, nborndiag, nrealproc, nrealdiags, split in \
                 zip(cmd_list, born_orders_list, squared_orders_list, pert_couplings_list, nborndiag_list, 
-                        nrealproc_list, nrealdiags_list):
+                        nrealproc_list, nrealdiags_list, split_type_list):
             self.interface.do_generate(cmd)
+
+            self.assertEqual(set(split), self.interface._fks_multi_proc['splitting_types'])
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 

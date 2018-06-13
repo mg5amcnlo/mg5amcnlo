@@ -1414,6 +1414,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
+        self.add_param('splitting_types', ['QCD'])
         self.add_param('perturbation_order', [], typelist=str)        
 
     def read(self, finput):
