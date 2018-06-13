@@ -188,7 +188,6 @@ class Banner(dict):
         """return the cross-section of the file"""
 
         if "init" not in self:
-            misc.sprint(self.keys())
             raise Exception
         
         text = self["init"].split('\n')
@@ -339,6 +338,12 @@ class Banner(dict):
 #        assert "all" in cross
         assert "init" in self
         
+        cross = dict(cross)
+        for key in cross.keys():
+            if isinstance(key, str) and key.isdigit() and int(key) not in cross:
+                cross[int(key)] = cross[key]
+        
+        
         all_lines = self["init"].split('\n')
         new_data = []
         new_data.append(all_lines[0])
@@ -353,7 +358,10 @@ class Banner(dict):
             if int(pid) not in cross:
                 raise Exception
             pid = int(pid)
-            ratio = cross[pid]/float(xsec)
+            if float(xsec):
+                ratio = cross[pid]/float(xsec)
+            else:
+                ratio = 0
             line = "   %+13.7e %+13.7e %+13.7e %i" % \
                 (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
             new_data.append(line)
@@ -1003,17 +1011,23 @@ class ConfigFile(dict):
         
         return log(text)
 
+    def post_set(self, name, value, change_userdefine, raiseerror):
+        
+        if value is None:
+            value = self[name]
+
+        if hasattr(self, 'post_set_%s' % name):
+            return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror)
     
     def __setitem__(self, name, value, change_userdefine=False,raiseerror=False):
         """set the attribute and set correctly the type if the value is a string.
            change_userdefine on True if we have to add the parameter in user_set
         """
-                        
+                       
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()
-        
-        
+                
         name = name.strip()
         lower_name = name.lower() 
 
@@ -1031,13 +1045,17 @@ class ConfigFile(dict):
                 if lower_name in self.user_set:
                     self.user_set.remove(lower_name)
                 #keep old value.
+                self.post_set(lower_name, 'auto', change_userdefine, raiseerror)
                 return 
             elif lower_name in self.auto_set:
                 self.auto_set.remove(lower_name)
             
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
-            targettype = self.list_parameter[lower_name] 
+            targettype = self.list_parameter[lower_name]
+            
+            
+            
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1058,8 +1076,6 @@ class ConfigFile(dict):
                         i+=2
                     new_value += current
  
-                            
-                           
                 value = new_value                           
                 
             elif not hasattr(value, '__iter__'):
@@ -1111,7 +1127,8 @@ class ConfigFile(dict):
             dict.__setitem__(self, lower_name, values) 
             if change_userdefine:
                 self.user_set.add(lower_name)
-            return  
+            #check for specific action
+            return self.post_set(lower_name, None, change_userdefine, raiseerror) 
         elif lower_name in self.dict_parameter:
             targettype = self.dict_parameter[lower_name] 
             full_reset = True #check if we just update the current dict or not
@@ -1161,7 +1178,7 @@ class ConfigFile(dict):
                 raise Exception, '%s should be of dict type'% lower_name
             if change_userdefine:
                 self.user_set.add(lower_name)
-            return
+            return self.post_set(lower_name, None, change_userdefine, raiseerror)
         elif name in self:            
             targettype = type(self[name])
         else:
@@ -1175,7 +1192,7 @@ class ConfigFile(dict):
             self.lower_to_case[lower_name] = name
             if change_userdefine:
                 self.user_set.add(lower_name)
-            return
+            return self.post_set(lower_name, None, change_userdefine, raiseerror)
     
         value = self.format_variable(value, targettype, name=name)
         #check that the value is allowed:
@@ -1206,6 +1223,7 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         if change_userdefine:
             self.user_set.add(lower_name)
+        self.post_set(lower_name, None, change_userdefine, raiseerror)
 
 
     def add_param(self, name, value, system=False, comment=False, typelist=None,
@@ -2370,7 +2388,10 @@ class RunCard(ConfigFile):
                     name = nline[1].strip().lower()
                     value = self[name]
                     if name in self.list_parameter:
-                        value = ', '.join([str(v) for v in value])
+                        if self.list_parameter[name] != str:
+                            value = ', '.join([str(v) for v in value])
+                        else:
+                            value =  "['%s']" % "', '".join(str(v) for v in value)
                     if python_template:
                         text += line % {nline[1].strip():value, name:value}
                         written.add(name)
@@ -2734,6 +2755,7 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
+        self.add_param("python_seed", -1, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],

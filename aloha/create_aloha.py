@@ -469,8 +469,8 @@ in presence of majorana particle/flow violation"""
                 propaR = deltaL('pr1',id) * deltaL('pr2', 'I2') * delta('pr2', spin_id) * delta('pr1', 'I3')
             #numerator += "*deltaL('pr_1',id) * deltaL('pr_2', 'I2') * delta('pr_1', spin_id) * delta('pr_2', 'I3')"
         elif spin == 5 :
-            tag = {'1': _spin2_mult + id, '2': 2 * _spin2_mult + id, 
-                   '51': 'I2', '52': 'I3', 'id':id}
+            tag = {'1': _spin2_mult + id, '2': 'I2', 
+                   '51': 2 * _spin2_mult + id, '52': 'I3', 'id':id}
         
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
@@ -939,7 +939,7 @@ class AbstractALOHAModel(dict):
                 if self.has_key((lorentzname, outgoing)):
                     self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                 else:
-                    lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                    lorentz = eval('self.model.lorentz.%s' % list_l_name[0])
                     assert lorentz.structure == 'external'
             else:
                 l_lorentz = []
@@ -1241,7 +1241,6 @@ def create_prop_library(tag, lib={}):
     
     # avoid to add tag in global
     old_tag = set(aloha_lib.KERNEL.use_tag)
-    print 'create lib',tag
     name, i = tag
     if name == "Spin2Prop":
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \

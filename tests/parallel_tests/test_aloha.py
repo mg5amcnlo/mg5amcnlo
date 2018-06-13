@@ -21,6 +21,7 @@ import os
 import time
 import tempfile as tempfile
 from functools import wraps
+from collections import namedtuple
 
 import aloha
 import aloha.aloha_object as aloha_obj
@@ -3121,7 +3122,7 @@ class test_aloha_creation(unittest.TestCase):
         helas_suite.look_for_multiple_lorentz_interactions()
         solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS1': [('FFS3',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
-        
+
 
     def test_short_aloha_multiple_lorentz_and_symmetry(self):
         """ check if the detection of multiple lorentz work """
@@ -3466,6 +3467,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         self.assertEqual(amp.name, conjg_amp.name)
         self.assertEqual(amp.tag + ['C1'], conjg_amp.tag)
         
+        
     def test_short_aloha_expr_FFFF3(self):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
@@ -3498,6 +3500,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         solution = [(-518016-1383424j), (317568-1604608j), (162600-4898488j), (-31800-8538056j)]
         for out,sol in zip(ufo_value,solution):
             self.assertAlmostEqual(out, sol)
+            
 
     def test_short_aloha_expr_VVS1(self):
         """Test analytical expression for VVS from SILH. 
@@ -3668,7 +3671,170 @@ class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
 class TestAlohaWriter(unittest.TestCase):
     """ simple unittest of the writer more test are in test_export_v4
     and test_export_pythia"""
-    
+
+    @set_global()
+    def test_get_custom_propa(self):
+        
+        FFVV = UFOLorentz(name = 'FFVV',
+               spins = [ 2, 2, 3, 3])
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        Propagator = namedtuple('Propagator', ('name', 'numerator', 'denominator'))
+        modelclass = namedtuple('modelclass', ('propagators'))
+        propa = namedtuple('propa', ('mypropa'))
+                           
+        #start by the scalar case                
+        S = Propagator(name = "S",
+               numerator = "complex(0,1)",
+               denominator = "P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
+               )
+        
+        abstract.model= modelclass(propagators=propa(mypropa=S))
+        out = abstract.get_custom_propa('mypropa', 1, 1)
+        # check numerator/denominator
+        self.assertEqual(str(out), '1j')
+        self.assertEqual(str(abstract.denominator), '( (TMP0) + (-1 * M1 * M1) + (1j * M1 * W1) )')
+        
+        # check simple modification of the propagators
+        S = Propagator(name = "S",
+               numerator = "P('mu',id) **2",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=S))
+        out = abstract.get_custom_propa('mypropa', 1, 2)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(_P^2_mu * _P^2_mu)')
+        self.assertEqual(str(abstract.denominator), '(M2 * M2)')
+        
+        # check simple modification of the propagators
+        F = Propagator(name = "F",
+               numerator = "P('mu', id)* Gamma('mu',1,2)",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=F))
+        out = abstract.get_custom_propa('mypropa', 2, 2)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(_P^2_mu * Gamma^mu_I2_2)')
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 0)
+        self.assertEqual(out.nb_spin, 2)
+        self.assertEqual(str(abstract.denominator), '(M2 * M2)')     
+        
+        # check propa with conjugate routine
+        F = Propagator(name = "F",
+               numerator = "P('mu', id)* Gamma('mu',1,2)",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract = abstract.define_conjugate_builder(1)
+        abstract.model= modelclass(propagators=propa(mypropa=F))
+        out = abstract.get_custom_propa('mypropa', 2, 2)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(-1 * _P^2_mu * Gamma^mu_51_I2)')
+        # the next line does not check the propagator in itself but show the consistency
+        # of the 51 index.
+        self.assertEqual(str(abstract.lorentz_expr), '(1) * C(51,2) * C(52,1)')
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 0)
+        self.assertEqual(out.nb_spin, 2)
+        self.assertEqual(out.spin_ind, [51, 'I2'])
+        
+
+        # check simple modification of the propagators for Vector
+        V = Propagator(name = "V",
+               numerator = "P(1, id)* P(2, id) * FCT(P('mu', id)* P('mu', id))",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=V))
+        out = abstract.get_custom_propa('mypropa', 3, 3)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(_P^3_3 * _P^3_I2 * _FCT0)')
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 2)
+        self.assertEqual(out.nb_spin, 0)
+        self.assertEqual(out.lorentz_ind, ['I2',3])
+        self.assertEqual(str(abstract.denominator), '(M3 * M3)')
+        
+        # check simple modification of the spin3/2 propagators
+        R = Propagator(name = "R",
+               numerator = "P(1, id)* Gamma(2,1,2)",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=R))
+        out = abstract.get_custom_propa('mypropa', 4, 1)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(-1 * _P^1_pr1 * Gamma^pr2_pr1_pr2 * IdL_pr1_1 * IdL_pr2_I2 * Id_pr1_1 * Id_pr2_I3)')
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 2)
+        self.assertEqual(out.nb_spin, 2)
+        self.assertEqual(out.lorentz_ind, [1, 'I2'])
+        self.assertEqual(out.spin_ind, ['I3', 1])
+        self.assertEqual(str(abstract.denominator), '(M1 * M1)')     
+        
+        
+
+        # check simple modification of the spin3/2 propagators
+        R = Propagator(name = "R",
+               numerator = "P(1, id)* Gamma(2,1,2)",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=R))
+        abstract = abstract.define_conjugate_builder(1)
+        out = abstract.get_custom_propa('mypropa', 4, 1)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(_P^1_pr1 * Gamma^pr2_pr1_pr2 * IdL_pr1_1 * IdL_pr2_I2 * Id_pr2_52 * Id_pr1_I3)')
+                        
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 2)
+        self.assertEqual(out.nb_spin, 2)
+        self.assertEqual(out.lorentz_ind, [1, 'I2'])
+        self.assertEqual(out.spin_ind, ['I3', 52])
+        self.assertEqual(str(abstract.denominator), '(M1 * M1)') 
+        
+         
+        # check simple modification of the propagators for Vector
+        S2 = Propagator(name = "S2",
+               numerator = "P(1, id)* P(2, id) * FCT(P('mu', id)* P('mu', id)) * Metric(51,52)",
+               denominator = "Mass(id) * Mass(id)"
+               )
+        
+        abstract = AbstractRoutineBuilder(FFVV)
+        abstract.model= modelclass(propagators=propa(mypropa=S2))
+        out = abstract.get_custom_propa('mypropa', 5, 3)
+        # check numerator/denominator
+        self.assertEqual(str(out), '(_P^3_1003 * _P^3_I2 * _FCT0 * _ETA_2003_I3)')
+        self.assertEqual(type(out), aloha.aloha_lib.MultLorentz )
+        out = out.expand()
+        self.assertEqual(type(out), aloha.aloha_lib.LorentzObjectRepresentation )
+        self.assertEqual(out.nb_lor, 4)
+        self.assertEqual(out.nb_spin, 0)
+        self.assertEqual(out.lorentz_ind, ['I2', 1003, 2003, 'I3'])
+        self.assertEqual(str(abstract.denominator), '(M3 * M3)')        
+        
+               
+        
+           
     def old_test_reorder_call_listFFVV(self):
         
         FFVV = UFOLorentz(name = 'FFVV',

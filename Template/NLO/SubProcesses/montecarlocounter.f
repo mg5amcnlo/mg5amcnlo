@@ -19,7 +19,7 @@ c is the number of color flows at Born level
       logical notagluon,found
       common/cnotagluon/notagluon
       integer nglu,nsngl
-      logical isspecial,isspecial0
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
       logical spec_case
 
@@ -77,9 +77,9 @@ c
 
       fksfather=min(i_fks,j_fks)
 
-c isspecial will be set equal to .true. only if the father is a gluon,
-c and another gluon will be found which is connected to it by both
-c colour and anticolour
+c isspecial will be set equal to .true. colour flow by colour flow only
+c if the father is a gluon, and another gluon will be found which is
+c connected to it by both colour and anticolour
       isspecial=.false.
 c
       if (split_type(qcd_pos)) then
@@ -100,7 +100,6 @@ c
         do i=1,max_bcol
           if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
-          isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
 c colour singlets in the Born process, according to the information 
 c stored in ICOLUP
@@ -189,19 +188,18 @@ c by one unit, so decrease it
                             stop
                          endif
                          colorflow(k0,colorflow(k0,0))=i
-                         isspecial0=.true.
+                         isspecial(i)=.true.
                      endif
                   endif
                enddo
             endif
-          enddo
-          if( ((nglu+nsngl).gt.(nexternal-2)) .or.
-     #       (isspecial0.and.(nglu+nsngl).ne.(nexternal-2)) )then
+         enddo
+         if( ((nglu+nsngl).gt.(nexternal-2)) .or.
+     #       (isspecial(i).and.(nglu+nsngl).ne.(nexternal-2)) )then
            write(*,*)'Error #4 in set_matrices'
-           write(*,*)isspecial0,nglu,nsngl
+           write(*,*)isspecial(i),nglu,nsngl
            stop
           endif
-          isspecial=isspecial.or.isspecial0
         enddo
 
       else if (split_type(qed_pos)) then
@@ -230,7 +228,7 @@ c      include "fks.inc"
       common/cfksfather/fksfather
       logical notagluon
       common/cnotagluon/notagluon
-      logical isspecial
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
 
       include 'orders.inc'
@@ -300,9 +298,9 @@ c
 c
         if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
      #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial).and.ntot.ne.(2*num_leading_cflows) .or.
-     #        (isspecial.and.ntot.ne.num_leading_cflows) ) ) )then
-          write(*,*)'Error #6 in check_mc_matrices',
+     #      ( (.not.isspecial(1)).and.ntot.ne.(2*num_leading_cflows) .or.
+     #        (isspecial(1).and.ntot.ne.num_leading_cflows) ) ) )then
+         write(*,*)'Error #6 in check_mc_matrices',
      #     notagluon,ntot,num_leading_cflows,max_bcol
           stop
         endif
@@ -631,7 +629,7 @@ c Main routine for MC counterterms
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
-      logical isspecial
+      logical isspecial(max_bcol)
       common/cisspecial/isspecial
 
       integer fksfather
@@ -863,7 +861,6 @@ c Compute MC subtraction terms
 c g->gg, go->gog (icode=1)
                   if(ileg.le.2)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
                         xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
@@ -891,7 +888,6 @@ c g->gg, go->gog (icode=1)
 c
                   elseif(ileg.eq.3)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(non_limit)then
                         xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
@@ -904,7 +900,6 @@ c
 c
                   elseif(ileg.eq.4)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*( 8*vca*
      &                       (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
@@ -952,7 +947,6 @@ c g->qq, a->qq, a->ee (icode=2)
 c
                   elseif(ileg.eq.4)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                        (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
@@ -988,7 +982,6 @@ c
 c q->gq, q->aq, e->ae (icode=3)
                   if(ileg.le.2)then
                      N_p=2
-                     if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
                         xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
@@ -1163,9 +1156,11 @@ c Dead zone
            xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
         enddo
         do cflows=1,colorflow(npartner,0)
+          N_p=1
+          if(isspecial(cflows))N_p=2
           do iord = 1, nsplitorders
-            born_red(iord)=born_red(iord)+bornbars(colorflow(npartner,cflows),iord)
-            born_red_tilde(iord)=born_red_tilde(iord)+bornbarstilde(colorflow(npartner,cflows),iord)
+            born_red(iord)=born_red(iord)+N_p*bornbars(colorflow(npartner,cflows),iord)
+            born_red_tilde(iord)=born_red_tilde(iord)+N_p*bornbarstilde(colorflow(npartner,cflows),iord)
             do iamp=1,amp_split_size
               amp_split_bornred(iamp,iord)=amp_split_bornred(iamp,iord)+
      &           amp_split_bornbars(iamp,colorflow(npartner,cflows),iord)
@@ -1585,26 +1580,58 @@ c the same holds for bornbarstilde(i).
 
 
       function gfunction(w,alpha,beta,delta)
-c Gets smoothly to 0 as w goes to 1
+c Gets smoothly to 0 as w goes to 1.
+c Call with
+c   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
+c   0 < |beta| <= 1;
+c   0 < delta <= 2.
       implicit none
+      double precision tiny
+      parameter (tiny=1.d-5)
       double precision gfunction,alpha,beta,delta,w,wmin,wg,tt,tmp
-
-      if(beta.lt.0d0)then
-         wmin=0d0
-      else
-         wmin=max(0d0,1d0-delta)
+      logical firsttime
+      save firsttime
+      data firsttime /.true./
+      double precision cutoff,cutoff2
+      parameter(cutoff=1d0)
+      parameter(cutoff2=0.99d0)
+c
+c     set cutoff < 1 and cutoff2 = cutoff in the final version
+c
+      if(firsttime)then
+        firsttime=.false.
+        if(alpha.ge.0d0.and.alpha.lt.1d0)then
+          write(*,*)'Incorrect alpha in gfunction',alpha
+          stop
+        endif
+        if(abs(beta).gt.1d0)then
+          write(*,*)'Incorrect beta in gfunction',beta
+          stop
+        endif
+        if(delta.gt.2d0.or.delta.le.0d0)then
+          write(*,*)'Incorrect delta in gfunction',delta
+          stop
+        endif
       endif
-      wg=min(1d0-(1-wmin)*abs(beta),0.99d0)
-      tt=(abs(w)-wg)/(1d0-wg)
-      if(tt.gt.1d0)then
-         write(*,*)'Fatal error in gfunction',tt
-         stop
-      endif
+c
       tmp=1d0
       if(alpha.gt.0d0)then
-         if(tt.gt.0d0.and.abs(w).lt.0.99d0)
-     &   tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
-         if(abs(w).ge.0.99d0)tmp=0d0
+        if(beta.lt.0d0)then
+          wmin=0d0
+        else
+          wmin=max(0d0,1d0-delta)
+        endif
+        wg=min(1d0-(1-wmin)*abs(beta),cutoff-tiny)
+        if(abs(w).gt.wg.and.abs(w).lt.cutoff2)then
+          tt=(abs(w)-wg)/(cutoff-wg)
+          if(tt.gt.1d0)then
+            write(*,*)'Fatal error in gfunction',tt
+            stop
+          endif
+          tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
+        elseif(abs(w).ge.cutoff2)then
+          tmp=0d0
+        endif
       endif
       gfunction=tmp
       return
@@ -2978,6 +3005,7 @@ c
       subroutine assign_ref_scale(p,xii,sh,ref_sc)
       implicit none
       include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
       integer i_scale,i
       parameter(i_scale=1)
@@ -2997,7 +3025,7 @@ c Sum of final-state transverse masses
          stop
       endif
 c Safety threshold for the reference scale
-      ref_sc=max(ref_sc,30d0)
+      ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
 
       return
       end

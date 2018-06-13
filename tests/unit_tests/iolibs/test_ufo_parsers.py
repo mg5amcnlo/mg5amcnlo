@@ -16,7 +16,7 @@
 """Unit test library for the UFO parsing"""
 
 import tests.unit_tests as unittest
-
+import madgraph.interface.master_interface as Cmd
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 #===============================================================================
@@ -26,10 +26,15 @@ class UFOParserTest(unittest.TestCase):
     """Test class for ufo_expression_parsers.py"""
 
     def setUp(self):
+        if not hasattr(UFOParserTest, 'model'):
+            self.cmd = Cmd.MasterCmd()
+            self.cmd.exec_cmd("import model loop_qcd_qed_sm")
+            UFOParserTest.model = self.cmd._curr_model
+            
         if not hasattr(self, 'calc'):
-            self.calc = parsers.UFOExpressionParserFortran()
+            self.calc = parsers.UFOExpressionParserFortran(UFOParserTest.model)
         if not hasattr(self, 'mp_calc'):
-            self.mp_calc = parsers.UFOExpressionParserMPFortran()
+            self.mp_calc = parsers.UFOExpressionParserMPFortran(UFOParserTest.model)
 
     def tearDown(self):
         pass
@@ -229,14 +234,19 @@ class UFOParserTest(unittest.TestCase):
                  ('arg(z)','arg(DCMPLX(z))'),
                  ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))'),
                  ('grreglog(logswitch,z1,z2)','GRREGLOG(logswitch,DCMPLX(z1),DCMPLX(z2))'),
+                 ('grreglog(logswitch,z1,z2)','grreglog(DBLE(logswitch),DCMPLX(z1) , DCMPLX(z2))'),
                  ('regsqrt(z)','regsqrt(DCMPLX(z))'),
-                 ('crecms(cms==1.0,z)','CRECMS(cms.EQ.1.000000d+00,DCMPLX(z))')]
+                 ('crecms(cms==1.0,z)','crecms(cms.EQ.1.000000d+00,DCMPLX(z))'),
+                 ('abs(1.0)', 'ABS(1.000000d+00)'),
+                 ('abs(float(1))' , 'ABS(REAL(1.000000d+00))'),
+                 ('abs(int(1))' , 'ABS(INTEGER(1.000000d+00))')
+                 ]
+        
 
         for toParse, sol in tests:
             self.assertEqual(self.calc.parse(toParse), sol)
 
-    def test_parse_special_fortran_fct_MP(self):
-        """Test that we parse a few special functions defined in ufo parsers"""
+        # same for MP
 
         tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),
                  ('reglog(z)','mp_reglog(CMPLX((mp__z),KIND=16))'),
@@ -244,9 +254,18 @@ class UFOParserTest(unittest.TestCase):
                  ('reglogm(z)','mp_reglogm(CMPLX((mp__z),KIND=16))'),
                  ('arg(z)','mp_arg(CMPLX((mp__z),KIND=16))'),
                  ('recms(cms==1.0,z)','MP_RECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))'),
-                 ('grreglog(logswitch,z1,z2)','MP_GRREGLOG(mp__logswitch,CMPLX(mp__z1,KIND=16),CMPLX(mp__z2,KIND=16))'),
-                 ('regsqrt(z)','mp_regsqrt(CMPLX((mp__z),KIND=16))'),
-                 ('crecms(cms==1.0,z)','MP_CRECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))')]
+                 ('grreglog(logswitch,z1,z2)','MP_grreglog(mp__logswitch,CMPLX(mp__z1, KIND=16) , CMPLX(mp__z2, KIND=16))'),
+                 ('regsqrt(z)','MP_regsqrt(CMPLX(mp__z, KIND=16))'),
+                 ('crecms(cms==1.0,z)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z, KIND=16))'),
+                 ('crecms(cms==1.0,z*y)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z*mp__y, KIND=16))'),
+                 ('crecms(cms==1.0,z+y)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z+mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, (x*y) )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX((mp__x*mp__y), KIND=16))'),
+                 ('crecms(cms==1.0, 2*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(2.000000e+00_16*mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, -y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, -1*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-1.000000e+00_16*mp__y, KIND=16))'),
+                 ('abs(1.0)', 'ABS(1.000000e+00_16)'),
+                 ('abs(float(x))' , 'ABS(REAL((mp__x), KIND=16))')
+                 ]
 
 
         for toParse, sol in tests:

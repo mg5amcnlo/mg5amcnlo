@@ -2786,11 +2786,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5','MadAnalysis']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -5829,7 +5829,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm']
+    install_plugin = ['maddm', 'maddump']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
@@ -5847,7 +5847,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190']}
+                          'maddm':['arXiv:1505.04190'],
+                          'maddump':['arXiv:1806.xxxxx']}
+    
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
@@ -5897,6 +5899,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 #            logger.info('{:^80}'.format("-"*70), '$MG:BOLD')
             logger.info("   You are installing '%s', please cite ref(s): \033[92m%s\033[0m. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:BOLD')
 
+        source = None
         # Load file with path of the different program:
         import urllib
         if paths:
@@ -5944,15 +5947,16 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
-        if args[0] == 'MadAnalysis4':
-            args[0] = 'MadAnalysis'
+
 
         try:
             name = self.install_name
             name = name[args[0]]
         except KeyError:
             name = args[0]
-
+        if args[0] == 'MadAnalysis4':
+            args[0] = 'MadAnalysis'
+        
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -5990,6 +5994,23 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         except Exception:
             pass
 
+        if args[0] not in path:
+            if not source:
+                if index ==1:
+                    othersource = 'ucl'
+                else:
+                    othersource = 'uiuc'
+                # try with the mirror
+                misc.sprint('try other mirror', othersource, ' '.join(args))
+                return self.do_install('%s --source=%s' % (' '.join(args), othersource), 
+                                       paths, additional_options) 
+            else:
+                if 'xxx' in advertisements[name][0]:
+                    logger.warning("Program not yet released. Please try later")
+                else:
+                    raise Exception, "Online server are corrupted. No tarball available for %s" % name
+                return
+            
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
         misc.wget(path[args[0]], '%s.tgz' % name, cwd=MG5DIR)
@@ -6155,7 +6176,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 ff.close()
                 import stat
                 os.chmod(pjoin(MG5DIR, 'bin', '%s.py' % name), stat.S_IRWXU)
-                logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s.py' % name)
+                logger.info('To use this module, you need to quit MG5aMC and run the executable bin/%s.py' % name)
             status=0
                 
         elif logger.level <= logging.INFO:
@@ -6221,7 +6242,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
-                misc.wget(target, 'tg.tgz', cwd=pjoin(MG5DIR,'td'))
+                misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
@@ -6263,6 +6284,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             files.cp(pjoin(card_dir,'delphes_card_ATLAS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_ATLAS.dat'))
             
+            if not self.options['pythia-pgs_path'] and not self.options['pythia8_path']:
+                logger.warning("We noticed that no parton-shower module are installed/linked. \n In order to use Delphes from MG5aMC please install/link pythia8.")
 
         #reset the position of the executable
         options_name = {'Delphes': 'delphes_path',

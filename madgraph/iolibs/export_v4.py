@@ -1953,6 +1953,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make_model_symbolic_link()
 
     #===========================================================================
+    # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+    #===========================================================================
+    def write_procdef_mg5(self, file_pos, modelname, process_str):
+        """ write an equivalent of the MG4 proc_card in order that all the Madevent
+        Perl script of MadEvent4 are still working properly for pure MG5 run.
+        Not needed for StandAlone so just return
+        """
+        
+        return
+
+
+    #===========================================================================
     # Make the Helas and Model directories for Standalone directory
     #===========================================================================
     def make(self):
@@ -5396,8 +5408,8 @@ class UFO_model_to_mg4(object):
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
-        self.p_to_f = parsers.UFOExpressionParserFortran()
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran()            
+        self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -6200,8 +6212,8 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "grreglog",
-                                    "recms", "crecms","arg", "cot","regsqrt"]:
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                                    "grreglog","regsqrt"]:
                     additional_fct.append(fct.name)
 
         
@@ -6216,6 +6228,8 @@ class UFO_model_to_mg4(object):
           double complex recms
           double complex crecms
           double complex arg
+          double complex grreglog
+          double complex regsqrt
           %s
           """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
 
@@ -6231,6 +6245,8 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_crecms
           %(complex_mp_format)s mp_arg
+          %(complex_mp_format)s mp_grreglog
+          %(complex_mp_format)s mp_regsqrt
           %(additional)s
           """ %\
           {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
@@ -6588,7 +6604,7 @@ class UFO_model_to_mg4(object):
                     else
                        mp_grreglog=log(expr1) + logsw*TWOPII
                     endif
-                 endif 
+                 endif
               endif
               end
               
@@ -6620,7 +6636,9 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
-                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "grreglog","recms","crecms","arg","regsqrt"]:
+                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
+                                    "grreglog","regsqrt"]:
+
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -6656,7 +6674,9 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
-                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "grreglog","recms","crecms","arg","regsqrt"]:
+                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
+                                        "grreglog","regsqrt"]:
+
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
           implicit none

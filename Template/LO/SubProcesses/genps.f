@@ -104,7 +104,7 @@ c     Arguments
 c
       integer iconfig,mincfig,maxcfig,invar
       double precision p1(0:3,nexternal+1)
-      double precision x(maxinvar)
+      double precision x(*)
       double precision wgt
 c
 c     Local
@@ -279,19 +279,18 @@ c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m2**2+2*xbk(1)*ebeam(1) *
-     $                 (ebeam(2)+sqrt(ebeam(2)**2-m2**2))
+         s(-nbranch) = x(ndim)*stot         
       elseif (abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(2) = x(ndim)
+
 c        Set CM rapidity for use in the rap() function
          p0=ebeam(1)+xbk(2)*ebeam(2)
          p3=sqrt(ebeam(1)**2-m1**2)-xbk(2)*ebeam(2)
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m1**2+2*(ebeam(1)+sqrt(ebeam(1)**2-m1**2))
-     $                 * xbk(2)*ebeam(2)
+         s(-nbranch) =  x(ndim)*stot         
       else
 c        Set CM rapidity for use in the rap() function
          p0=ebeam(1) + ebeam(2)
@@ -663,7 +662,7 @@ c
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
       double precision jac,pswgt
       integer nbranch
-      double precision x(40) ! ja 3/2/11 21->40 after strange segfault
+      double precision x(*) ! ja 3/2/11 21->40 after strange segfault
 c
 c     Local
 c

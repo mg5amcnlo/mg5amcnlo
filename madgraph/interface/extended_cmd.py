@@ -2353,6 +2353,8 @@ class ControlSwitch(SmartQuestion):
        color_for_XXXX(value)   -> return the representation on the screen for value
        get_cardcmd_for_XXXX(value)> return the command to run to customize the cards to 
                                   match the status
+       print_options_XXXX()    -> return the text to disply below "other options"
+                                  default is other possible value (ordered correctly)
 
        consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
@@ -2561,6 +2563,12 @@ class ControlSwitch(SmartQuestion):
                     value = self.get_allowed(base)[cur+1]
                 except IndexError:
                     value = self.get_allowed(base)[0]
+                    if value == "OFF" and  cur == 0:
+                        logger.warning("Invalid action: %s" % self.print_options(base))
+                    elif cur == 0: 
+                        logger.warning("Can not change value for this parameter")
+                        
+                        
         elif line in ['', 'done', 'EOF', 'eof','0']:
             super(ControlSwitch, self).default(line)
             return self.answer
@@ -2834,10 +2842,10 @@ class ControlSwitch(SmartQuestion):
             else:
                 return self.red % switch_value
 
-    def print_info(self,key, check_attribute=True):
-    
-        if hasattr(self, 'print_info_%s' % key) and check_attribute:
-            return getattr(self, 'print_info_%s' % key)()
+    def print_options(self,key, keep_default=False):
+
+        if hasattr(self, 'print_options_%s' % key) and not keep_default:
+            return getattr(self, 'print_options_%s' % key)()
 
         #re-order the options in order to have those in cycling order    
         try:
@@ -3102,7 +3110,7 @@ class ControlSwitch(SmartQuestion):
                 to_display = self.switch[key]
             if len(to_display) > max_len_switch: max_len_switch=len(to_display)
             
-            info = self.print_info(key)
+            info = self.print_options(key)
             if len(info)> max_len_add_info: max_len_add_info = len(info)
 
             if self.get_allowed(key):
@@ -3131,7 +3139,7 @@ class ControlSwitch(SmartQuestion):
                            'descrip': descrip,
                            'name': key,
                            'switch': self.color_for_value(key,self.switch[key]),
-                           'add_info': self.print_info(key),
+                           'add_info': self.print_options(key),
                            'switch_nc': self.switch[key],
                            'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }

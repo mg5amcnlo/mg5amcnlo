@@ -44,6 +44,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+from tests.acceptance_tests.test_cmd_madevent import check_html_page
 
 pjoin = os.path.join
 
@@ -602,6 +603,9 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
         
 
     def test_calculate_xsect_nlo(self):
@@ -619,6 +623,9 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
 
 
     def test_calculate_xsect_lo(self):

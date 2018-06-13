@@ -2339,8 +2339,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         already created and can be specified here instead of being generated.
         This can make a difference for very complicated models."""
         
-        
-        if alohaModel is None:
+        if not alohaModel:# is None:
             # Generate it here
             model = self.get('processes')[0].get('model')
             myAlohaModel = create_aloha.AbstractALOHAModel(model.get('name'))

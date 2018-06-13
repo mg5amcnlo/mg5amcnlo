@@ -3341,11 +3341,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             line = 'compute_widths %s --path=%s' % (line, path)
             cmd.exec_cmd(line, model=model)
             interface.child = None
+            del cmd
+            return 
             
             
             
-            
-            raise Exception, 'fail to find a way to handle Auto width'
+        raise Exception, 'fail to find a way to handle Auto width'
         
         
     def store_scan_result(self):
@@ -3391,6 +3392,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.remove(pjoin(self.me_dir,'RunWeb'))
             except Exception:
                 pass
+
         try:
             self.store_result()
         except Exception:
@@ -3689,6 +3691,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
             self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
+            self.to_store.append("event")
 
         self.run_name = new_run
         self.banner = madspin_cmd.banner
@@ -5743,8 +5746,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     fail_due_to_format = 0 #parameter to avoid infinite loop
     def postcmd(self, stop, line):
-        ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
 
+        if line not in [None, '0', 'done', '']:
+            ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+        else:
+            ending_question = True
+        
         if ending_question:
             self.check_card_consistency()
             if self.param_consistency:
@@ -6144,6 +6151,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
+        
+        # ensure that the card is in sync
+        if 'param' in self.modified_card:
+            self.write_card('param')
+            self.modified_card.discard('param')
+            
         path = self.paths['param']
         pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
@@ -6261,7 +6274,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:BOLD')
         elif len(args) > 0:
             if args[0] in self.cards:
-                card = args[0]
+                card = args[0]                
             elif "%s.dat" % args[0] in self.cards:
                 card = "%s.dat" % args[0]
             elif "%s_card.dat" % args[0] in self.cards: 
@@ -6271,7 +6284,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
-            
+            # ensure that the card is in sync
+            if card in self.modified_card:
+                self.write_card(card)
+                self.modified_card.discard(card)
+                
             if card in self.paths:
                 path = self.paths[card]
             elif os.path.exists(card):
@@ -6435,6 +6452,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """Running ASperGe"""
         signal.alarm(0) # avoid timer if any
 
+        # ensure that the card is in sync
+        if 'param' in self.modified_card:
+            self.write_card('param')
+            self.modified_card.discard('param')
+
+
         path = pjoin(self.me_dir,'bin','internal','ufomodel','ASperGE')
         if not os.path.exists(path):
             logger.error('ASperge has not been detected in the current model, therefore it will not be run.')
@@ -6545,8 +6568,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if answer in self.modified_card:
             self.write_card(answer)
-        elif answer.replace('_card.dat','') in self.modified_card:
-            self.write_card(answer.replace('_card.dat',''))
+        elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
+            self.write_card(os.path.basename(answer.replace('_card.dat','')))
 
         try:
             self.mother_interface.exec_cmd('open %s' % path)
@@ -6617,7 +6640,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
     
-    @scanhandling(arguments)
+    @scanparamcardhandling(arguments)
     def run_launch(self, *args, **opts)
 
     possible arguments are listed above and should be function who takes a single
@@ -6719,7 +6742,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                 #param_card_iterator.write(card_path) #-> this is done by the with statement
                 name = misc.get_scan_name(orig_name, next_name)
                 path = result_path(obj) % name 
-                logger.info("write all cross-section results in %s" % path ,'$MG:BOLD')
+                logger.info("write scan results in %s" % path ,'$MG:BOLD')
                 order = summaryorder(obj)()
                 param_card_iterator.write_summary(path, order=order)
         return new_fct

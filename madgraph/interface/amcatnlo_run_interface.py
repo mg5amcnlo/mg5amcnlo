@@ -1081,12 +1081,12 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return self.red % switch_value
     
-    def print_info_fixed_order(self):
+    def print_options_fixed_order(self):
         
         if 'QED' in self.proc_characteristics['perturbation_order']:
             return "No NLO+PS available for EW correction"
         else:
-            return self.print_info('fixed_order', check_attribute=False)
+            return self.print_options('fixed_order', keep_default=True)
     
     def color_for_shower(self, switch_value):
          
@@ -2133,7 +2133,7 @@ RESTART = %(mint_mode)s
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
- 1 -0.1    ! alpha, beta for Gazi
+-1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
