@@ -1096,18 +1096,18 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
       double w = selNow->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale);
       wt *= w;
 
-      cout << scientific << setprecision(8) << "No-emission probability for leg "
-      << selNow->clusterIn.radBef << " at tmin=" << selNow->clusterIn.pT()
-      << " w=" << w << "\t Overall w=" << wt << endl;
+//      cout << scientific << setprecision(8) << "No-emission probability for leg "
+//      << selNow->clusterIn.radBef << " at tmin=" << selNow->clusterIn.pT()
+//      << " w=" << w << "\t Overall w=" << wt << endl;
 
     }
   }
 
-  cout << "No-emission probability="
-  << scientific << setprecision(5) << setw(14) << wt
+//  cout << "No-emission probability="
+//  << scientific << setprecision(5) << setw(14) << wt
 //  << " at pT="
 //  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-  << endl;
+//  << endl;
 
 //  if (wt > 1. || wt < 0.)
 //  cout << "Warning: Unusual no-emission probability="
@@ -3182,7 +3182,7 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     if (doSingleLegSudakovs && iRadBef != rad) continue;
 
 //event.list();
-cout << rad << " " << iRadBef << endl;
+//cout << rad << " " << iRadBef << endl;
 //abort();
 
     // Check if the splitting occured in a small window around a flavour

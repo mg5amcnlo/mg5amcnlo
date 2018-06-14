@@ -602,5 +602,10 @@ extern "C" {
 
   }
 
+  void dire_get_stopping_info_( double scales [100][100],
+    double mass [100][100] ) {
+    merging->getStoppingInfo(scales, mass);
+  }
+
 }
 

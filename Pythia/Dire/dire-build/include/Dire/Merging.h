@@ -110,7 +110,11 @@ public:
 
   void clearInfos() {
     stoppingScalesSave.clear();
+    mDipSave.clear();
     startingScalesSave.clear();
+    radSave.clear();
+    emtSave.clear();
+    recSave.clear();
   }
   void storeInfos();
 
@@ -120,7 +124,9 @@ public:
   vector<double> getStartingScales() { 
     return startingScalesSave;
   }
-  vector<double> stoppingScalesSave;
+  void getStoppingInfo(double scales [100][100], double masses [100][100]);
+  vector<double> stoppingScalesSave, mDipSave;
+  vector<int> radSave, emtSave, recSave;
   vector<double> startingScalesSave;
 
 protected:

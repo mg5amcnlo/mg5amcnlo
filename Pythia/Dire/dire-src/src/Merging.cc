@@ -130,6 +130,22 @@ void MyMerging::storeInfos() {
 
     // Just store pT for now.
     stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
+    radSave.push_back(myHistory->children[i]->clusterIn.radPos());
+    emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
+    recSave.push_back(myHistory->children[i]->clusterIn.recPos());
+    mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
+  }
+
+}
+
+//--------------------------------------------------------------------------
+
+void MyMerging::getStoppingInfo(double scales [100][100],
+  double masses [100][100]) {
+
+  for (unsigned int i=0; i < radSave.size(); ++i){
+    scales[radSave[i]][recSave[i]] = stoppingScalesSave[i];
+    masses[radSave[i]][recSave[i]] = mDipSave[i];
   }
 
 }

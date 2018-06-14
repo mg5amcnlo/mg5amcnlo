@@ -1154,6 +1154,10 @@ C     To access Pythia8 control variables
       double precision target_scales_H(nexternal,nexternal)
       common/c_target_scales/target_scales_S,target_scales_H
 
+      integer iii,jjj
+      double precision xscales(0:99,0:99)
+      double precision xmasses(0:99,0:99)
+
       do i=1,2
         istup_local(i) = -1
       enddo
@@ -1338,7 +1342,27 @@ c     Calculate suppression factor for H-events.
       call dire_next()
       call dire_get_mergingweight(wgt_sudakov)
       call dire_get_sudakov_stopping_scales(scales)
+
+      xscales=-1d0
+      xmasses=-1d0
+      call dire_get_stopping_info(xscales,xmasses)
+
+c      write(*,*)'scales'
+c      do iii=0,99
+c        write(*,*) 'i=',iii
+c        do jjj=0,99
+c          write(*,*) xscales(iii,jjj)
+c        enddo
+c      enddo
 c
+c      write(*,*)'masses'
+c      do iii=0,99
+c        write(*,*) 'i=',iii
+c        do jjj=0,99
+c          write(*,*) xmasses(iii,jjj)
+c        enddo
+c      enddo
+
 c     target scales for H events are computed by Pythia;
 c     stored in target_scales_H
       target_scales_H=-1d0

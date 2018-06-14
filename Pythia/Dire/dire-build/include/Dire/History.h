@@ -119,6 +119,20 @@ public:
   // Function to return pythia pT scale of clustering
   double pT() const { return pTscale; }
 
+  // Function to return the dipole mass for this clustering.
+  double mass() const {
+    double sik = 2.*radSave->p()*recSave->p();
+    double sij = 2.*radSave->p()*emtSave->p();
+    double sjk = 2.*emtSave->p()*recSave->p();
+
+    double m2=-1.;
+    if      ( radSave->isFinal() &&  recSave->isFinal()) m2 = sik+sij+sjk;
+    else if ( radSave->isFinal() && !recSave->isFinal()) m2 =-sik+sij-sjk;
+    else if (!radSave->isFinal() &&  recSave->isFinal()) m2 =-sik-sij+sjk;
+    else if (!radSave->isFinal() && !recSave->isFinal()) m2 = sik-sij-sjk;
+    return sqrt(m2);
+  }
+
   // print for debug
   void list() const;
 
