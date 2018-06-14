@@ -1898,6 +1898,7 @@ class RestrictModel(model_reader.ModelReader):
             elif -1*key in dict_value_coupling:
                 tmp += dict_value_coupling[-1*key]
             assert tmp
+
             #ensure that all coupling have the same coupling order.
             ords = [self.get_coupling_order(k) for k,c in tmp]
             coup_by_ord = collections.defaultdict(list)
@@ -1908,6 +1909,8 @@ class RestrictModel(model_reader.ModelReader):
             # add the remaining identical
             for tmp3 in coup_by_ord.values():
                 if len(tmp3) > 1:
+                    if tmp3[0][1] == -1: #ensure that the first coupling has positif value
+                        tmp3 = [(t0,-t1) for t0, t1 in tmp3]
                     iden_coupling.append(tmp3)
 
             

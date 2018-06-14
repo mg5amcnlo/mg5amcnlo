@@ -5313,6 +5313,7 @@ RESTART = %(mint_mode)s
     Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
 
         
+        misc.sprint(switch)
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
         ignore = []
