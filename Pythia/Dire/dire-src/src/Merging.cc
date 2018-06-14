@@ -134,6 +134,10 @@ void MyMerging::storeInfos() {
     emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
     recSave.push_back(myHistory->children[i]->clusterIn.recPos());
     mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
+
+//myHistory->state.list();
+//abort();
+
   }
 
 }
@@ -143,9 +147,10 @@ void MyMerging::storeInfos() {
 void MyMerging::getStoppingInfo(double scales [100][100],
   double masses [100][100]) {
 
+  int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    scales[radSave[i]][recSave[i]] = stoppingScalesSave[i];
-    masses[radSave[i]][recSave[i]] = mDipSave[i];
+    scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
+    masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
 
 }
