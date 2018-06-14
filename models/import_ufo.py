@@ -21,6 +21,7 @@ import os
 import re
 import sys
 import time
+import collections
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -1761,6 +1762,7 @@ class RestrictModel(model_reader.ModelReader):
         super(RestrictModel, self).default_setup()
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
+        self.coupling_order_dict ={}
      
     def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
                                                       complex_mass_scheme=None):
@@ -1896,10 +1898,40 @@ class RestrictModel(model_reader.ModelReader):
             elif -1*key in dict_value_coupling:
                 tmp += dict_value_coupling[-1*key]
             assert tmp
-            iden_coupling.append(tmp)
+            #ensure that all coupling have the same coupling order.
+            ords = [self.get_coupling_order(k) for k,c in tmp]
+            coup_by_ord = collections.defaultdict(list)
+            for o,t in zip(ords, tmp):
+                if not o:
+                    continue # not vertex associated anyway so not include it
+                coup_by_ord[str(o)].append(t)
+            # add the remaining identical
+            for tmp3 in coup_by_ord.values():
+                if len(tmp3) > 1:
+                    iden_coupling.append(tmp3)
+
+            
+            
 
         return zero_coupling, iden_coupling
     
+    def get_coupling_order(self, cname):
+        """return the coupling order associated to a coupling """
+        
+        if cname in self.coupling_order_dict:
+            return self.coupling_order_dict[cname]
+
+        for v in self['interactions']:
+            for c in v['couplings'].values():
+                self.coupling_order_dict[c] = v['orders']
+        
+        if cname not in self.coupling_order_dict:
+            self.coupling_order_dict[cname] = None
+            #can happen when some vertex are discarded due to ghost/...
+        
+        return self.coupling_order_dict[cname]
+
+
     
     def detect_special_parameters(self):
         """ return the list of (name of) parameter which are zero """
