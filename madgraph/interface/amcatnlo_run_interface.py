@@ -5313,7 +5313,6 @@ RESTART = %(mint_mode)s
     Remember that NLO events without showering are NOT physical.""", '$MG:BOLD')           
 
         
-        misc.sprint(switch)
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
         ignore = []
@@ -5326,7 +5325,7 @@ RESTART = %(mint_mode)s
                 cards.append('madspin_card.dat')
             if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
-            if switch['madanalysis'] == 'HADRON':
+            if switch['madanalysis'] in ['HADRON', 'ON']:
                 cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
