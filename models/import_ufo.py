@@ -1903,8 +1903,6 @@ class RestrictModel(model_reader.ModelReader):
             ords = [self.get_coupling_order(k) for k,c in tmp]
             coup_by_ord = collections.defaultdict(list)
             for o,t in zip(ords, tmp):
-                if not o:
-                    continue # not vertex associated anyway so not include it
                 coup_by_ord[str(o)].append(t)
             # add the remaining identical
             for tmp3 in coup_by_ord.values():
@@ -1931,6 +1929,7 @@ class RestrictModel(model_reader.ModelReader):
         if cname not in self.coupling_order_dict:
             self.coupling_order_dict[cname] = None
             #can happen when some vertex are discarded due to ghost/...
+            
         
         return self.coupling_order_dict[cname]
 
