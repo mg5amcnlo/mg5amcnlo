@@ -52,7 +52,28 @@ class Particle(object):
             if event:
                 self.event = event
             return
-        
+        else:
+            try:
+                import madgraph.various.hepmc_parser as hepmc_parser
+            except Exception:
+                pass
+            else:
+                if isinstance(line, hepmc_parser.HEPMC_Particle):
+                    self.event = event
+                    self.event_id = len(event) #not yet in the event
+                    for key in ['pid', 'status', 'E','px','py','pz','mass']:
+                        setattr(self, key, getattr(line, key))
+                    self.mother1 = 1
+                    self.mother2 = 1
+                    self.color1 = 0
+                    self.color2 = 0
+                    self.vtim = 0
+                    self.comment = ''
+                    self.helicity = 9
+                    self.rwgt = 0
+                    return
+
+                
         self.event = event
         self.event_id = len(event) #not yet in the event
         # LHE information
@@ -154,6 +175,7 @@ class Particle(object):
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
+    allow_empty_event = False
 
     def __new__(self, path, mode='r', *args, **opt):
         
@@ -261,7 +283,7 @@ class EventFile(object):
                     text += line
             if self.parsing:
                 out = Event(text)
-                if len(out) == 0:
+                if len(out) == 0  and not self.allow_empty_event:
                     raise Exception
                 return out
             else:
@@ -1246,6 +1268,27 @@ class Event(list):
         self.assign_mother()
         
     def assign_mother(self):
+        """convert the number in actual particle"""
+        #Security if not incoming particle. Define a fake particle and set all particle as 
+        # decaying from that fake particle
+        if all(p.status != -1 for p in self):
+            if self.warning_order:
+                Event.warning_order = False
+                logger.warning("Weird format for lhe format: no incoming particle... adding a fake one")
+            
+            mother = Particle(event=self)
+            mother.status = -1
+            mother.pid = 0
+            self.insert(0,mother)
+            mother.color2 = 0
+            mother.event_id = 0
+            self.nexternal += 1
+            for p in self[1:]:
+                p.mother1 = 1
+                p.mother2 = 1
+                p.event_id += 1
+            
+        
         # assign the mother:
         for i,particle in enumerate(self):
             if i < particle.mother1 or i < particle.mother2:
@@ -2055,7 +2098,7 @@ class Event(list):
                
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
-                
+        
         out="""<event%(event_flag)s>
 %(scale)s
 %(particles)s
@@ -2072,11 +2115,9 @@ class Event(list):
         else:
             event_flag = ''
 
-        if self.nexternal:
-            scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+        scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
-        else:
-            scale_str = ''
+
             
         if self.reweight_data:
             # check that all key have an order if not add them at the end
@@ -2366,6 +2407,12 @@ class FourMomentum(object):
     def norm_sq(self):
         """ return |\vec p|^2 """
         return self.px**2 + self.py**2 + self.pz**2
+    
+    @property
+    def theta(self):                                                                                                  
+        """return the mass square""" 
+        import math  
+        return math.atan(math.sqrt((self.px**2+self.py**2)/self.pz**2))
     
     
     def __add__(self, obj):

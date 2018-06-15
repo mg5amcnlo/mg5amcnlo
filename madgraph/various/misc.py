@@ -1082,7 +1082,8 @@ class TMP_directory(object):
         return self.path
     
 class TMP_variable(object):
-    """create a temporary directory and ensure this one to be cleaned.
+    """replace an attribute of a class with another value for the time of the
+       context manager
     """
 
     def __init__(self, cls, attribute, value):
@@ -1463,8 +1464,8 @@ def equal(a,b,sig_fig=6, zero_limit=True):
             else:
                 return a == b  
         else:
-            power = sig_fig - int(math.log10(abs(a))) + 1
-    
+            power = sig_fig - int(math.log10(abs(a)))
+
         return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
     else:
         return abs(a-b) < sig_fig

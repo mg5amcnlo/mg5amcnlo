@@ -22,6 +22,7 @@ import copy
 import logging
 import itertools
 import math
+import os
 
 import aloha
 import aloha.create_aloha as create_aloha
@@ -2316,11 +2317,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         already created and can be specified here instead of being generated.
         This can make a difference for very complicated models."""
         
-        
-        if alohaModel is None:
+        if not alohaModel:# is None:
             # Generate it here
             model = self.get('processes')[0].get('model')
-            myAlohaModel = create_aloha.AbstractALOHAModel(model.get('name'))
+            myAlohaModel = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
             myAlohaModel.add_Lorentz_object(model.get('lorentz'))
         else:
             # Use the one provided

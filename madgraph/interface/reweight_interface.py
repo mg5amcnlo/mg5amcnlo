@@ -467,6 +467,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.has_standalone_dir:                           
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
+                if opts['rwgt_name']:
+                    self.options['rwgt_name'] = opts['rwgt_name']
                 if not self.rwgt_dir:
                     self.me_dir = self.rwgt_dir
                 self.load_module()       # load the fortran information from the f2py module

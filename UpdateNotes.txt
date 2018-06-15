@@ -1,5 +1,33 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.3 (15/06/18)
+      OM: When importing model, we now run one additional layer of optimisation:
+           - if a vertex as two identical coupling for the same color structure then the associated lorentz 
+             structure are merged in a single one and the vertex is modified accordingly
+      OM: When restricting a model, we also run one additional layer of optimisation
+           - Opposite sign coupling are now identified and merged into a single one
+           - if a vertex as two identical coupling (up to the sign) for the same color structure
+             then the associated lorentz structure are merged in a single one and the 
+             vertex is modified accordingly 
+      VH+OM: changing the ALOHA naming scheme for combine routine when the function name starts to be too long. 
+      OM: adding a hidden parameter to the run_card (python_seed) to allow to control the randon number 
+          generated within python and be able to have full reproducibility of the events
+      OM: Fixing some issue with the default dynamical scale choice for 
+            - non minimal QED sample
+            - heft model when multiple radiation coming from the higgs decay/scattering
+          This can also impact MLM since it use the same definition for the dynamical scale
+      OM: Fix some issue for DIS scattering where the shat was wrongly defined for low energy scattering.
+          Low energy scattering are not adviced since they break the factorization theorem.
+          In particular the z-boost of the events are quite ill defined in that scenario.
+      OM: changing the format of the param_card for NLO model to match expectation from the latest PY8
+      OM: Update of MadSpin to allow special input file for the case of spinmode=none. 
+          With that very simple mode of decay, you can now decay hepmc file or wrongly formatted leshouches event
+          (in that mode we do not have spin correlation and width effect)
+      PT: in montecarlocounter.f: improved colour-flow treatment in the case gluons are twice colour-connected to each other
+          new gfunction(w) to get smoothly to 0 as w -> 1. (for NLO+PS run)
+      OM: Fix some issue for the new QED model (including one in the handling of complex mass scheme of such model)
+      OM: Fixing an issue of the param_card out of sync when running compute-widths
+      OM: Adding Qnumbers block for ghost (the latest version of py8 was crashing due to their absence)
 
 2.6.2 (29/04/18)
 

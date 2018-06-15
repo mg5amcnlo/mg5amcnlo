@@ -2058,7 +2058,7 @@ RESTART = %(mint_mode)s
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
- 1 -0.1    ! alpha, beta for Gazi
+-1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
@@ -5325,7 +5325,7 @@ RESTART = %(mint_mode)s
                 cards.append('madspin_card.dat')
             if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
-            if switch['madanalysis'] == 'HADRON':
+            if switch['madanalysis'] in ['HADRON', 'ON']:
                 cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')

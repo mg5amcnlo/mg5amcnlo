@@ -530,6 +530,8 @@ class AskRun(cmd.ControlSwitch):
         if options['delphes_path']:
             if 'PY6' in self.available_module or 'PY8' in self.available_module:
                 self.available_module.add('Delphes')
+            else:
+                logger.warning("Delphes program installed but no parton shower module detected.\n    Please install pythia8")
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
@@ -658,7 +660,7 @@ class AskRun(cmd.ControlSwitch):
             self.switch['detector'] = 'Delphes'
         elif self.get_allowed_detector():
             self.switch['detector'] = 'OFF'
-        else: 
+        else:
             self.switch['detector'] =  'Not Avail.'
                 
 #   old mode to activate pgs            
@@ -850,7 +852,7 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return
-        self.allowed_reweight = ['ON', 'OFF']
+        self.allowed_reweight = ['OFF', 'ON']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path
@@ -5573,6 +5575,14 @@ tar -czf split_$1.tar.gz split_$1
                 break
         else:
             self.random = random.randint(1, 30107)
+        
+        #set random seed for python part of the code
+        if self.run_card['python_seed'] == -2: #-2 means same as run_card
+            import random
+            random.seed(self.random)
+        elif self.run_card['python_seed'] >= 0:
+            import random
+            random.seed(self.run_card['python_seed'])
                                                                
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
@@ -5812,7 +5822,10 @@ tar -czf split_$1.tar.gz split_$1
         if self.random > 30081*30081: # can't use too big random number
             raise MadGraph5Error,\
                   'Random seed too large ' + str(self.random) + ' > 30081*30081'
-
+        if self.run_card['python_seed'] == -2: 
+            import random
+            random.seed(self.random)
+            
     ############################################################################
     def save_random(self):
         """save random number in appropirate file"""
