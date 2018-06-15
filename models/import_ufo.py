@@ -14,7 +14,7 @@
 ################################################################################
 """ How to import a UFO model to the MG5 format """
 
-
+import collections
 import fractions
 import logging
 import os
@@ -531,8 +531,10 @@ class UFOMG5Converter(object):
                 self.add_CTinteraction(interaction_info, color_info)
     
 
-        for interaction in self.interactions:
+        for interaction in list(self.interactions):
             self.optimise_interaction(interaction)
+            if not interaction['couplings']:
+                self.interactions.remove(interaction)
     
     
         self.model.set('conserved_charge', self.conservecharge)
@@ -584,6 +586,32 @@ class UFOMG5Converter(object):
         return self.model
     
     def optimise_interaction(self, interaction):
+        
+        
+        #  Check if two couplings have exactly the same definition. 
+        #  If so replace one by the other
+        if not hasattr(self, 'iden_couplings'):
+            coups = collections.defaultdict(list)
+            coups['0'].append('ZERO')
+            for coupling in self.ufomodel.all_couplings:
+                #if isinstance(coupling.value, str):
+                coups[str(coupling.value)].append( coupling.name)
+            
+            self.iden_couplings = {}
+            for idens in [c for c in coups.values() if len(c)>1]:
+                for i in range(1, len(idens)):
+                    self.iden_couplings[idens[i]] = idens[0]
+
+        # apply the replacement by identical expression
+        for key, coup in list(interaction['couplings'].items()):
+            if coup in self.iden_couplings:
+                interaction['couplings'][key] = self.iden_couplings[coup] 
+            if interaction['couplings'][key] == 'ZERO':
+                del interaction['couplings'][key]
+                
+        
+                
+
         
         # we want to check if the same coupling is used for two lorentz strucutre 
         # for the same color structure. 
@@ -1809,9 +1837,9 @@ class RestrictModel(model_reader.ModelReader):
         self.remove_couplings(self.del_coup)
        
         # modify interaction to avoid to have identical coupling with different lorentz
-        for interaction in self.get('interactions'):
+        for interaction in list(self.get('interactions')):
             self.optimise_interaction(interaction)
-            
+                
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
