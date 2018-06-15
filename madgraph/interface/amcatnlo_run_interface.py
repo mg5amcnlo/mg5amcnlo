@@ -5435,7 +5435,7 @@ RESTART = %(mint_mode)s
                 cards.append('madspin_card.dat')
             if switch['reweight'] != 'OFF':
                 cards.append('reweight_card.dat')
-            if switch['madanalysis'] == 'HADRON':
+            if switch['madanalysis'] in ['HADRON', 'ON']:
                 cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
