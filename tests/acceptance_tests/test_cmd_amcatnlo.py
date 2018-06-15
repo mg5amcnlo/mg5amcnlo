@@ -191,7 +191,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -216,7 +216,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.cmd_line.exec_cmd('set  pythia8_path None')
         self.do('generate_events -pf')
         # test the lhe event file exists
@@ -243,7 +243,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( ' -1 = nevt_job' in card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no-save')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -259,7 +259,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         nevents =20
         text = """
-        set crash_on_error True
+        set crash_on_error True --no_save
         generate p p > t t~ [QCD]
         output %s
         launch
@@ -379,7 +379,7 @@ class MECmdShell(IOTests.IOTestManager):
     def test_madspin_LOonly(self):
         
         text = """
-        set crash_on_error True
+        set crash_on_error True --no_save
         generate p p > w+ [LOonly]
         output %s
         launch

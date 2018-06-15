@@ -152,8 +152,8 @@ class TestMadWeight(unittest.TestCase):
         except Exception, error:
             pass
         
-        cmd = """set automatic_html_opening False --no-save
-                 set cluster_temp_path /tmp --no-save
+        cmd = """set automatic_html_opening False --no_save
+                 set cluster_temp_path /tmp --no_save
                  generate p p > w+, w+ > e+ ve
                  output madweight TEST_MW_W_prod -f
                  launch
@@ -215,8 +215,8 @@ class TestMadWeight(unittest.TestCase):
         except Exception, error:
             pass
         
-        cmd = """set automatic_html_opening False --no-save
-                 set cluster_temp_path /tmp --no-save
+        cmd = """set automatic_html_opening False --no_save
+                 set cluster_temp_path /tmp --no_save
                  generate p p > w+ j j, w+ > e+ ve
                  output madweight TEST_MW_W2J_prod
                  launch

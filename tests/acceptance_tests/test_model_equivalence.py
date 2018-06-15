@@ -378,7 +378,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #    else:
                 #        solutions[variable].append(singlevalue)
         self.assertEqual(nb_value, 116 - len(checked_solutions))
-        self.assertEqual(set(checked_solutions), set(['GC_%s ' % i for i in [27,67,54,38,78,15,52,79,96,73,9,74,4,50]]))
+        self.assertEqual(set(checked_solutions), set(['GC_%s ' % i for i in [27,67,54,38,78,15,79,96,73,9,74,4,50]]))
 
         
         
