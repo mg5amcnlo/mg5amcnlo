@@ -6226,10 +6226,7 @@ class UFO_model_to_mg4(object):
           double complex regsqrt
           double complex grreglog
           double complex recms
-          double complex crecms
           double complex arg
-          double complex grreglog
-          double complex regsqrt
           %s
           """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
 
@@ -6243,10 +6240,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_regsqrt
           %(complex_mp_format)s mp_grreglog
           %(complex_mp_format)s mp_recms
-          %(complex_mp_format)s mp_crecms
           %(complex_mp_format)s mp_arg
-          %(complex_mp_format)s mp_grreglog
-          %(complex_mp_format)s mp_regsqrt
           %(additional)s
           """ %\
           {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
@@ -6292,17 +6286,6 @@ class UFO_model_to_mg4(object):
           endif
           end
 
-          double complex function crecms(condition,expr)
-          implicit none
-          logical condition
-          double complex expr
-          if(condition)then
-             crecms=dconjg(expr)
-          else
-             crecms=dcmplx(dble(expr))
-          endif
-          end
-          
           double complex function reglog(arg_in)
           implicit none
           double complex TWOPII
@@ -6473,16 +6456,6 @@ class UFO_model_to_mg4(object):
               endif
               end
 
-              %(complex_mp_format)s function mp_crecms(condition,expr)
-              implicit none
-              logical condition
-              %(complex_mp_format)s expr
-              if(condition)then
-                 mp_crecms=conjg(expr)
-              else
-                 mp_crecms=cmplx(real(expr),kind=16)
-              endif
-              end
               
               %(complex_mp_format)s function mp_reglog(arg_in)
               implicit none
