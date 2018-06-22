@@ -3641,6 +3641,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         madspin_cmd = interface_madspin.MadSpinInterface(args[0])
         # pass current options to the interface
         madspin_cmd.mg5cmd.options.update(self.options)
+        for key, value in self.options.items():
+            if isinstance(value, str):
+                madspin_cmd.mg5cmd.exec_cmd( 'set %s %s' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
         madspin_cmd.cluster = self.cluster
         
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)

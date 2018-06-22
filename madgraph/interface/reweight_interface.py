@@ -830,7 +830,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         if self.output_type == 'default':
-            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' weight_name_strategy=\'includeIdInWeightName\'>\n'
         else:
             self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:

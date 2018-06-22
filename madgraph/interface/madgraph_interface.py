@@ -4596,7 +4596,7 @@ This implies that with decay chains:
                     logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
                             (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:BOLD')
                 for name in to_set:
-                    orders[name] = self.options['default_unset_couplings']
+                    orders[name] = int(self.options['default_unset_couplings'])
         
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
@@ -8044,6 +8044,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     param_card.write(opts['path'])
 
         data = model.set_parameters_and_couplings(opts['path'])
+        
 
         # find UFO particles linked to the require names.
         if do2body:
@@ -8061,6 +8062,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 data = model.set_parameters_and_couplings(opts['path'], scale= mass)
                 total = 0
     
+                # check if the value of alphas is set to zero and raise warning if appropriate
+                if 'aS' in data and data['aS'] == 0 and particle.get('color') != 1:
+                    logger.warning("aS set to zero for this particle since the running is not defined for such low mass.")
+                        
                 for mode, expr in particle.partial_widths.items():
                     tmp_mass = mass
                     for p in mode:

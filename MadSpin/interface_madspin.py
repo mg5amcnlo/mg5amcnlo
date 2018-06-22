@@ -814,8 +814,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
             if self.options['input_format'] == 'hepmc' and nb_event == 250:
+                currpos = orig_lhe.tell()
+                filesize = orig_lhe.getfilesize()
                 for key in to_decay:
-                    to_decay[key] *= 50.013 # to avoid accidental coincidence with nevents
+                    to_decay[key] *= 1.05 * filesize/ currpos 
+                    # 1.05 to avoid accidental coincidence with nevents
                 break
 
         # Handle the banner of the output file
@@ -845,7 +848,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             for pdg, nb_needed in to_decay.items():
                 #check if a splitting is needed
                 if nb_needed == nb_event:
-                    evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5)
+                    evt_decayfile[pdg] = self.generate_events(pdg, min(nb_needed,100000), mg5)
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     part = self.model.get_particle(pdg)
@@ -853,9 +856,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches:
                         continue
                     elif len(self.list_branches[name]) == nb_mult:
-                        evt_decayfile[pdg] = self.generate_events(pdg, nb_event, mg5)
+                        evt_decayfile[pdg] = self.generate_events(pdg, min(nb_event,100000), mg5)
                     else:
-                        evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5, cumul=True)
+                        evt_decayfile[pdg] = self.generate_events(pdg, min(nb_needed,100000), mg5, cumul=True)
                 elif self.options['cross_section']:
                     #cross-section hard-coded -> allow 
                     part = self.model.get_particle(pdg)
@@ -865,7 +868,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         continue
                     else:
                         try:
-                            evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5, cumul=True)
+                            evt_decayfile[pdg] = self.generate_events(pdg, min(nb_needed,100000), mg5, cumul=True)
                         except common_run_interface.ZeroResult:
                             logger.warning("Branching ratio is zero for this particle. Not decaying it")
                             del to_decay[pdg]                    
@@ -1030,8 +1033,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         except StopIteration:
                             # check how far we are
                             ratio = counter / nb_event 
-                            needed = 1.05 * to_decay[particle.pdg]/ratio - counter
-                            needed = min(1000, max(needed, 1000))
+                            needed = 1.05 * to_decay[particle.pdg] - counter
+                            needed = min(100000, max(needed, 6000))
                             with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
                                 new_file = self.generate_events(particle.pdg, needed, mg5, [decay_file_nb])
                             evt_decayfile[particle.pdg].update(new_file)
@@ -1113,6 +1116,11 @@ class MadSpinInterface(extended_cmd.Cmd):
            cumul allow to merge all the definition in one run (add process)
                  to generate events according to cross-section
         """
+        if not hasattr(self, 'me_int'):
+            self.me_int = {}
+            
+        
+        
         nb_event = int(nb_event) # in case of hepmc request the nb_event is not an integer
         if cumul:
             width = 0.
@@ -1145,18 +1153,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                 options = dict(mg5.options)
                 if self.options['ms_dir']:
                     # we are in gridpack mode -> create it
-                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                            decay_dir), options=options)
-                    me5_cmd.options["automatic_html_opening"] = False
-                    me5_cmd.options["madanalysis5_path"] = None
-                    me5_cmd.options["madanalysis_path"] = None
-                    me5_cmd.allow_notification_center = False
-                    try:
-                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
-                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
-                    except Exception,error:
-                        logger.debug(error)
-                        pass            
+                    if decay_dir in self.me_int:
+                        me5_cmd = self.me_int[decay_dir]
+                    else:
+                        me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                decay_dir), options=options)
+                        me5_cmd.options["automatic_html_opening"] = False
+                        me5_cmd.options["madanalysis5_path"] = None
+                        me5_cmd.options["madanalysis_path"] = None
+                        me5_cmd.allow_notification_center = False
+                        try:
+                            os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
+                            os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
+                        except Exception,error:
+                            logger.debug(error)
+                            pass 
+                        self.me_int[decay_dir] = me5_cmd
+
                     if self.options["run_card"]:
                         run_card = self.run_card
                     else:
@@ -1183,21 +1196,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                     misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir)
             
             # Now generate the events
-
             if not self.options['ms_dir']:
-                me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                                decay_dir), options=mg5.options)
-                me5_cmd.options["automatic_html_opening"] = False
-                me5_cmd.options["automatic_html_opening"] = False
-                me5_cmd.options["madanalysis5_path"] = None
-                me5_cmd.options["madanalysis_path"] = None
-                me5_cmd.allow_notification_center = False
-                try:
-                    os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
-                    os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
-                except Exception,error:
-                    logger.debug(error)
-                    pass                    
+                if decay_dir in self.me_int:
+                        me5_cmd = self.me_int[decay_dir]
+                else:
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                    decay_dir), options=mg5.options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    me5_cmd.options["automatic_html_opening"] = False
+                    me5_cmd.options["madanalysis5_path"] = None
+                    me5_cmd.options["madanalysis_path"] = None
+                    me5_cmd.allow_notification_center = False
+                    try:
+                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
+                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
+                    except Exception,error:
+                        logger.debug(error)
+                        pass                 
+                    self.me_int[decay_dir] = me5_cmd
                 if self.options["run_card"]:
                     run_card = self.run_card
                 else:
