@@ -1,10 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.6.4 ()
+2.6.3.2 (22/06/18)
       OM: Fix a bug in auto-width when mass are below QCD scale.
       OM: Fix a bug for g b initial state where the mass in the lhe file was not always correctly assigned
           Note that the momentum was fine (i.e. in the file P^2 was not equal to the mention M but to the correct one)
       OM: Improvment for madspin in the mode spinmode=none
+      OM: Fix a bug in MadSpin which was making MadSpin to work only in debug mode
 
 2.6.3 (15/06/18)
       OM: When importing model, we now run one additional layer of optimisation:

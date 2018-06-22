@@ -1180,7 +1180,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                     run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
-                    misc.sprint(run_card['nevents'])
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                     self.options['seed'] += 1
@@ -1244,7 +1243,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd.exec_cmd("exit")
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
             else:
-                misc.sprint('running the gridpack')
                 misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
             if cumul:

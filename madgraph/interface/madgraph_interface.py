@@ -4596,7 +4596,7 @@ This implies that with decay chains:
                     logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
                             (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:BOLD')
                 for name in to_set:
-                    orders[name] = self.options['default_unset_couplings']
+                    orders[name] = int(self.options['default_unset_couplings'])
         
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
