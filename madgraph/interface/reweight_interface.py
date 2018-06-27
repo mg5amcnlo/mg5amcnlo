@@ -1787,7 +1787,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         for i in range(len(pdg)):
                             if pdg[i] == oldpdg[i]:
                                 continue
-                            if not self.model or not getattr(self.model, 'get_mass'):
+                            if not self.model or not hasattr(self.model, 'get_mass'):
                                 continue
                             if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
                                 continue
