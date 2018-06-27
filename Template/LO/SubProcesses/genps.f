@@ -41,7 +41,7 @@ c
       integer mincfig,maxcfig                  !Range of configurations
       integer invar
       double precision wgt                     !(input and output)
-      double precision x(maxdim),p(maxdim)     !x,p (output) [p(0:3,nexternal)]
+      double precision x(*),p(*)     !x,p (output) [p(0:3,nexternal)]
 c
 c     Local
 c
