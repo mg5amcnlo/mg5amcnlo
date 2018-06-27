@@ -568,7 +568,7 @@ c        Set stot
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
-            if (mass_ion(2).ge.0d0) m1 = mass_ion(2)
+            if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
             if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
             pi1(0)=ebeam(1)
