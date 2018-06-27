@@ -1335,31 +1335,31 @@ c     Calculate suppression factor for H-events.
       call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
      &       emsca, emscav_tmp, emscav_tmp_a)
-      if (is_pythia_active.eq.0) then
-        call dire_init_default()
-      endif
-      call dire_setevent()
-      call dire_next()
-      call dire_get_mergingweight(wgt_sudakov)
-      call dire_get_sudakov_stopping_scales(scales)
+c$$$      if (is_pythia_active.eq.0) then
+c$$$        call dire_init_default()
+c$$$      endif
+c$$$      call dire_setevent()
+c$$$      call dire_next()
+c$$$      call dire_get_mergingweight(wgt_sudakov)
+c$$$      call dire_get_sudakov_stopping_scales(scales)
+c$$$
+c$$$      xscales=-1d0
+c$$$      xmasses=-1d0
+c$$$      call dire_get_stopping_info(xscales,xmasses)
 
-      xscales=-1d0
-      xmasses=-1d0
-      call dire_get_stopping_info(xscales,xmasses)
-
-c      write(*,*)'scales'
+c      write(33,*)'scales'
 c      do iii=0,99
-c        write(*,*) 'i=',iii
+c        write(33,*) 'i=',iii
 c        do jjj=0,99
-c          write(*,*) xscales(iii,jjj)
+c          write(33,*) xscales(iii,jjj)
 c        enddo
 c      enddo
 c
-c      write(*,*)'masses'
+c      write(33,*)'masses'
 c      do iii=0,99
-c        write(*,*) 'i=',iii
+c        write(33,*) 'i=',iii
 c        do jjj=0,99
-c          write(*,*) xmasses(iii,jjj)
+c          write(33,*) xmasses(iii,jjj)
 c        enddo
 c      enddo
 

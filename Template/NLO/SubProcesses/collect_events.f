@@ -231,6 +231,7 @@ c
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       character*140 buff
       character*10 MonteCarlo,MonteCarlo1, MonteCarlo0
       character*100 path
@@ -409,9 +410,10 @@ c      header. Check consistency in this case
       do i=1,maxevt
         rnd=fk88random(iseed)
         call whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit,i0)
+        SCALUP_a=-1d0
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
         if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
@@ -448,7 +450,7 @@ c reweighting
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       enddo
       write(ioutput,'(a)')'</LesHouchesEvents>'
       return

@@ -641,7 +641,7 @@ c
 
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
@@ -664,6 +664,7 @@ c
       character*50 str_tmp
       include './run.inc'
       include 'unlops.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -796,20 +797,21 @@ c
             endif
          endif
       endif
-c$$$c     write the scales block
-c$$$      scale_str="<scales muf='-1.000000E+00' mur='-1.000000E+00'"
-c$$$      do i=1,NUP-1
-c$$$         do j=i+1,NUP
-c$$$            if(SCALUP_a(i,j).ne.-1d0)then
-c$$$               write(str_tmp,701)
-c$$$     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
-c$$$               scale_str=trim(scale_str)//trim(str_tmp)
-c$$$            endif
-c$$$         enddo
-c$$$      enddo
-c$$$      write(ifile,'(a)')"  "//trim(scale_str)//">"
-c$$$      write(ifile,'(a)') "  </scales>"
-c$$$c
+c
+c     write the 'scales' block
+      scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+      do i=1,NUP-1
+         do j=i+1,NUP
+            if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
+               write(str_tmp,701)
+     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+               scale_str=trim(scale_str)//trim(str_tmp)
+            endif
+         enddo
+      enddo
+      write(ifile,'(a)')"  "//trim(scale_str)//">"
+      write(ifile,'(a)') "  </scales>"
+c
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -822,7 +824,7 @@ c$$$c
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
- 701  format(a8,i1,a1,i1,a2,e14.6,a1)
+ 701  format(a8,i1,a1,i1,a2,e14.8,a1)
 c
       return
       end
@@ -830,15 +832,15 @@ c
 
       subroutine read_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,jj
       character*140 buff
-      character*80 string
+      character*500 string
       character*12 dummy12
       character*2 dummy2
       character*9 ch1
@@ -852,6 +854,7 @@ c
       common/event_attributes/nattr,npNLO,npLO
       include 'unlops.inc'
       include 'run.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c
       read(ifile,'(a)')string
       nattr=0
@@ -959,9 +962,18 @@ c
          string=buff(1:len_trim(buff))
          buff=' '
       endif
-c$$$      call read_scale_line(ifile)
-c$$$      read(ifile,'(a)')
-
+c
+c     read the 'scales' block
+      do i=1,len(trim(string))-6
+         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
+            read(string(i+7:i+7),*)ii
+            read(string(i+9:i+9),*)jj
+            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+         endif
+      enddo
+      read(ifile,'(a)')string
+      read(ifile,'(a)')string
+c
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -980,15 +992,15 @@ c
 c Same as read_lhef_event, except for the end-of-file catch
       subroutine read_lhef_event_catch(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,jj
       character*140 buff
-      character*80 string
+      character*500 string
       character*12 dummy12
       character*2 dummy2
       character*9 ch1
@@ -1002,6 +1014,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/event_attributes/nattr,npNLO,npLO
       include 'unlops.inc'
       include 'run.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -1118,6 +1131,19 @@ c
          string=buff(1:len_trim(buff))
          buff=' '
       endif
+c
+c     read the 'scales' block
+      read(ifile,'(a)')string
+      do i=1,len(trim(string))-6
+         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
+            read(string(i+7:i+7),*)ii
+            read(string(i+9:i+9),*)jj
+            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+         endif
+      enddo
+      read(ifile,'(a)')string
+      read(ifile,'(a)')string
+c
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))

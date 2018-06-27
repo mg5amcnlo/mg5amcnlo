@@ -229,7 +229,7 @@ c get info on beam and PDFs
       parameter (zero=0.d0)
       integer ievent,izero
       parameter (izero=0)
-      double precision aqcd,aqed,scale,scale_a(nexternal,nexternal)
+      double precision aqcd,aqed,scale
       character*140 buff
       double precision shower_scale,shower_scale_a(nexternal,nexternal)
       INTEGER MAXNUP,i,j,k
@@ -237,7 +237,8 @@ c get info on beam and PDFs
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
       include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -253,27 +254,27 @@ c get info on beam and PDFs
      #                              muF22_current,QES2_current
       logical firsttime
       data firsttime/.true./
-      common/cscale_a/scale_a
 c
+      scalup_a=-1d0
       if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
          do j=1,nexternal
             do k=1,nexternal
-               scale_a(j,k)=sqrt(muF12_current)
+               scalup_a(j,k)=sqrt(muF12_current)
             enddo
          enddo
       elseif (ickkw.eq.-1) then
          scale = mu_r
          do j=1,nexternal
             do k=1,nexternal
-               scale_a(j,k)=mu_r
+               scalup_a(j,k)=mu_r
             enddo
          enddo
       else
          scale = shower_scale
          do j=1,nexternal
             do k=1,nexternal
-               scale_a(j,k)=shower_scale_a(j,k)
+               scalup_a(j,k)=shower_scale_a(j,k)
             enddo
          enddo
       endif
@@ -346,9 +347,10 @@ c********************************************************************
         VTIMUP(i)=0.d0
         SPINUP(i)=dfloat(ic(7,i))
       enddo
+
       call write_lhef_event(lunlhe,
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
