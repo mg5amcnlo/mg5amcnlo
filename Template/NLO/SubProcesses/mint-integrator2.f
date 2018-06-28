@@ -985,8 +985,8 @@ c imode=3 store generation efficiency in x(1)
       integer ndim,imode
       include "mint.inc"
       real * 8 fun,xgrid(0:nintervals,ndimmax,maxchannels)
-     $     ,ymax(nintervals,ndimmax,maxchannels),ymax_virt(maxchannels)
-     $     ,x(ndimmax)
+     $     ,ymax(nintervals,ndimmax,maxchannels)
+     $     ,ymax_virt(0:maxchannels),x(ndimmax)
       real * 8 dx(ndimmax),xx(ndimmax),vol_chan,dummy
       integer icell(ndimmax),ncell(ndimmax),ncell_virt
       integer ifold(ndimmax),kfold(ndimmax)
