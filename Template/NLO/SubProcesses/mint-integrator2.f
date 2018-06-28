@@ -77,7 +77,7 @@ c others: same as 1 (for now)
      $     ,ans(nintegrals,0:maxchannels),unc(nintegrals,0:maxchannels)
      $     ,ans3(nintegrals,3),unc3(nintegrals,3),ans_l3(nintegrals)
      $     ,unc_l3(nintegrals),chi2_l3(nintegrals),vol_chan
-      real * 8 xint_virt(maxchannels),ymax_virt(maxchannels)
+      real * 8 xint_virt(maxchannels),ymax_virt(0:maxchannels)
      $     ,ans_chan(0:maxchannels)
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax,maxchannels)
