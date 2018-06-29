@@ -193,6 +193,7 @@ public:
     isInitSave   = false;
     nMPI         = 0;
     usePDFalphas = false;
+    usePDF       = true;
   }
 
   DireSpace(Pythia8::Pythia* pythiaPtr) :
@@ -204,8 +205,8 @@ public:
     pT20(0.), pT2min(0.), m2min(0.), mTolErr(0.), pTmaxFudgeMPI(0.),
     strengthIntAsym(0.), pT2minVariations(0.), pT2minMECs(0.),
     alphaS2piOverestimate(0.), usePDFalphas(false), usePDFmasses(false),
-    useSummedPDF(false), useGlobalMapIF(false), forceMassiveMap(false),
-    useMassiveBeams(false) {
+    useSummedPDF(false), usePDF(true), useGlobalMapIF(false),
+    forceMassiveMap(false), useMassiveBeams(false) {
     beamOffset        = 0;
     pTdampFudge       = 0.;
     infoPtr           = &pythiaPtr->info;
@@ -290,6 +291,11 @@ public:
   // Select next pT in downwards evolution.
   virtual double pTnext( Event& event, double pTbegAll, double pTendAll,
     int nRadIn = -1, bool = false);
+
+  // Select next pT in downwards evolution, based only on dipole mass and
+  // incoming momentum fraction.
+  double pTnext( double pTbegAll, double pTendAll, double m2dip,
+    double s = -1., double x = -1.);
 
   // Setup branching kinematics.
   virtual bool branch( Event& event);
@@ -498,7 +504,7 @@ private:
          pT2min, m2min, mTolErr, pTmaxFudgeMPI, strengthIntAsym,
          pT2minVariations, pT2minMECs;
   double alphaS2piOverestimate;
-  bool  usePDFalphas, usePDFmasses, useSummedPDF, useGlobalMapIF,
+  bool  usePDFalphas, usePDFmasses, useSummedPDF, usePDF, useGlobalMapIF,
         forceMassiveMap, useMassiveBeams;
 
   map<int,double> pT2cutSave;
@@ -610,6 +616,32 @@ private:
   double tinypdf( double x) {
     double xref = 0.01;
     return TINYPDF*log(1-x)/log(1-xref);
+  }
+
+  double getXPDF( int id, int x, double scale2, int iSys = 0,
+    BeamParticle* beam = NULL) {
+
+    // Return one if no PDF should be used.
+    bool   hasPDF = usePDF
+      && (particleDataPtr->colType(id) != 0
+      || (particleDataPtr->isLepton(id) && settingsPtr->flag("PDF:lepton")));
+    if (!hasPDF) return 1.0;
+
+    // Else get PDF from beam particle.
+    BeamParticle* b = beam;
+    if (b == NULL) {
+      if (beamAPtr != NULL || beamBPtr != NULL) {
+        b = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id()))
+            ? beamAPtr
+          : (beamBPtr != NULL && particleDataPtr->isHadron(beamBPtr->id()))
+            ? beamBPtr : NULL;
+      }
+      if (b == NULL && beamAPtr != 0) beam = beamAPtr;
+      if (b == NULL && beamBPtr != 0) beam = beamBPtr;
+    }
+
+    // Done.
+    return (useSummedPDF) ? b->xf(id, x, scale2) : b->xfISR(iSys,id, x, scale2);
   }
 
   SplittingLibrary* splittingsPtr;

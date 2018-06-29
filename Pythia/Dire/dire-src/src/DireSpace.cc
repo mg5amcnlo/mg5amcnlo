@@ -246,6 +246,7 @@ void DireSpace::init( BeamParticle* beamAPtrIn,
 
   usePDFalphas       = settingsPtr->flag("ShowerPDF:usePDFalphas");
   useSummedPDF       = settingsPtr->flag("ShowerPDF:useSummedPDF");
+  usePDF             = settingsPtr->flag("ShowerPDF:usePDF");
   BeamParticle& beam = (particleDataPtr->isHadron(beamAPtr->id())) ? *beamAPtr : *beamBPtr;
   alphaS2piOverestimate = (usePDFalphas) ? beam.alphaS(pT2min) * 0.5/M_PI
                         : (alphaSorder > 0) ? alphaS.alphaS(pT2min) * 0.5/M_PI
@@ -739,9 +740,13 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
   if (iPartner > 0) {
     //dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
     //  pTmax, colType, 0, 0, 0, true));
-    dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
-      pTmax, colType, 0, 0, 0, true, false, false, 0, vector<int>()));
-    dipEnds.back().init(event);
+//    dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
+//      pTmax, colType, 0, 0, 0, true, false, false, 0, vector<int>()));
+//    dipEnds.back().init(event);
+    appendDipole( event, 0, side, iRad, iPartner, pTmax, colType, 0, 0, 0,
+      true, false, false, 0, vector<int>(), vector<int>(), vector<double>(),
+      dipEnds);
+
   }
 }
 
@@ -1057,6 +1062,9 @@ void DireSpace::update( int iSys, Event& event, bool) {
 double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
 
+  pTnext( pTbegAll, pTendAll, pow2(100.), pow2(7000.), 0.001);
+
+
   debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
 
   //cout << "Next ISR starting from " << pTbegAll << " " << pow2(pTbegAll)
@@ -1187,6 +1195,185 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   return (dipEndSel == 0) ? 0. : sqrt(pT2sel);
 
 }
+
+//--------------------------------------------------------------------------
+
+// Select next pT in downwards evolution of the existing dipoles.
+
+double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
+  double s, double x) {
+
+  // Current cm energy, in case it varies between events.
+  sCM           = s;
+  eCM           = sqrt(s);
+  pTbegRef      = pTbegAll;
+
+  double x1 = x;
+  double x2 = m2dip/s/x1;
+
+  // Starting values: no radiating dipole found.
+  double pT2sel = pow2(pTendAll);
+  iDipSel       = 0;
+  iSysSel       = 0;
+  dipEndSel     = 0;
+  splittingNowName="";
+  splittingSelName="";
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) it->second->splitInfo.clear();
+  splitSel.clear();
+  kernelSel.clear();
+  kernelNow.clear();
+  auxSel = overSel = auxNow = overNow = 0.;
+
+  // Make dummy event with two entries.
+  Event event;
+  event.init("(dummy event)", particleDataPtr);
+  // Setup two dipole ends for each flavor combination.
+  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  Vec4 pB(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+
+  int iSys = 0;
+
+  int idA = 21;
+  int colA  = 1;
+  int acolA = 2;
+
+  int idB = 21;
+  int colB  = 2;
+  int acolB = 1;
+
+  // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
+  event.append( 0, 0, 0, 0, 0, 0, 0, 0, pA+pB, 0.0, sqrt(m2dip) );  
+  event.append( idA, -21, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+  event.append( idB, -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+
+  // Find positions of incoming colliding partons.
+  int in1 = 1;
+  int in2 = 2;
+
+  // Set splitting library.
+  splits = splittingsPtr->getSplittings();
+  overhead.clear();
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) overhead.insert(make_pair(it->first,1.));
+
+  vector<DireSpaceEnd> dipEnds;
+  int colTag = event[in1].col();
+  if (colTag > 0)  getQCDdip( in1,  colTag,  1, event, dipEnds);
+  // Find dipole end formed by anticolour index.
+  int acolTag = event[in1].acol();
+  if (acolTag > 0) getQCDdip( in1, acolTag, -1, event, dipEnds);
+  // Find dipole end formed by colour index.
+  colTag = event[in2].col();
+  if (colTag > 0)  getQCDdip( in2,  colTag,  1, event, dipEnds);
+  // Find dipole end formed by anticolour index.
+  acolTag = event[in2].acol();
+  if (acolTag > 0) getQCDdip( in2, acolTag, -1, event, dipEnds);
+
+  // Counter of proposed emissions.
+  nProposedPT.clear();
+  if ( nProposedPT.find(iSys) == nProposedPT.end() )
+    nProposedPT.insert(make_pair(iSys,0));
+
+  splittingSelName="";
+  splittingNowName="";
+  dipEndSel = 0;
+
+  // Clear weighted shower book-keeping.
+  for ( map<string, multimap<double,double> >::iterator
+    it = rejectProbability.begin(); it != rejectProbability.end(); ++it )
+    it->second.clear();
+  for ( map<string, map<double,double> >::iterator
+    it = acceptProbability.begin(); it != acceptProbability.end(); ++it )
+    it->second.clear();
+
+  // Loop over all possible dipole ends.
+  for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
+    iDipNow        = iDipEnd;
+    dipEndNow      = &dipEnds[iDipEnd];
+    double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
+
+    // Limit final state multiplicity. For debugging only
+    int nFinal = 0;
+    for (int i=0; i < event.size(); ++i)
+      if (event[i].isFinal()) nFinal++;
+    if (nFinalMax > -10 && nFinal > nFinalMax) continue;
+
+    // Check whether dipole end should be allowed to shower.
+    double pT2begDip = pow2(pTbegDip);
+    double pT2endDip = 0.;
+    // Determine lower cut for evolution for QCD
+    pT2endDip = max( pT2cutMin(dipEndNow), pTendAll*pTendAll);
+    pT2endDip = max(pT2endDip, pT2sel);
+
+    // Find properties of dipole and radiating dipole end.
+    sideA         = ( abs(dipEndNow->side) == 1 );
+    iNow          = dipEndNow->iRadiator;
+    iRec          = dipEndNow->iRecoiler;
+    idDaughter    = event[dipEndNow->iRadiator].id();
+    xDaughter     = x1;
+    x1Now         = (sideA) ? x1 : x2;
+    x2Now         = (sideA) ? x2 : x1;
+    // Note dipole mass correction when recoiler is a rescatter.
+    m2Rec         = (dipEndNow->normalRecoil) ? 0. : event[iRec].m2();
+    m2Dip         = abs(2.*event[iNow].p()*event[iRec].p());
+
+    // Dipole properties.
+    dipEndNow->m2Dip  = m2Dip;
+    // Reset emission properties.
+    dipEndNow->pT2         =  0.0;
+    dipEndNow->z           = -1.0;
+    dipEndNow->phi         = -1.0;
+    // Reset properties of 1->3 splittings.
+    dipEndNow->sa1         =  0.0;
+    dipEndNow->xa          = -1.0;
+    dipEndNow->phia1       = -1.0;
+
+    // Now do evolution in pT2, for QCD
+    if (pT2begDip > pT2endDip) {
+
+      if ( dipEndNow->canEmit() ) pT2nextQCD( pT2begDip, pT2endDip, 
+        *dipEndNow, event);
+
+      // Update if found larger pT than current maximum.
+      if (dipEndNow->pT2 > pT2sel) {
+        pT2sel    = dipEndNow->pT2;
+        iDipSel   = iDipNow;
+        iSysSel   = iSys;
+        dipEndSel = dipEndNow;
+        splittingSelName = splittingNowName;
+        splitSel.store(splits[splittingSelName]->splitInfo);
+        kernelSel = kernelNow;
+        auxSel    = auxNow;
+        overSel   = overNow;
+        boostSel  = boostNow;
+      }
+
+    }
+  // End loop over dipole ends.
+  }
+
+  // Insert additional weights.
+  for ( map<string, multimap<double,double> >::iterator
+    itR = rejectProbability.begin(); itR != rejectProbability.end(); ++itR){
+    weights->insertWeights(acceptProbability[itR->first], itR->second,
+                           itR->first);
+  }
+
+  for ( map<string, multimap<double,double> >::iterator
+    it = rejectProbability.begin(); it != rejectProbability.end(); ++it )
+    it->second.clear();
+  for ( map<string, map<double,double> >::iterator
+    it = acceptProbability.begin(); it != acceptProbability.end(); ++it )
+    it->second.clear();
+
+  resetOverheadFactors();
+
+  // Return nonvanishing value if found pT is bigger than already found.
+  return (dipEndSel == 0) ? 0. : sqrt(pT2sel);
+
+}
+
 
 //--------------------------------------------------------------------------
 
@@ -1337,17 +1524,21 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     double scale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tOld;
     scale2        = max(scale2, pT2min);
     bool inD = beam.insideBounds(xDau, scale2); 
-    double xPDFdaughter = (useSummedPDF) ? beam.xf(idDau, xDau, scale2)
-                        : beam.xfISR(iSysNow,idDau, xDau, scale2);
+    //double xPDFdaughter = (useSummedPDF) ? beam.xf(idDau, xDau, scale2)
+    //                    : beam.xfISR(iSysNow,idDau, xDau, scale2);
+    double xPDFdaughter = getXPDF( idDau, xDau, scale2, iSysNow, &beam);
+
     // Make PDF ratio overestimate larger close to threshold.
     if (abs(idDau) == 4 && m2cPhys > 0. && tOld < 4.*m2cPhys) {
-      double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2cPhys+0.1)
-                        : beam.xfISR(iSysNow,idDau, xDau, m2cPhys+0.1);
+      //double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2cPhys+0.1)
+      //                  : beam.xfISR(iSysNow, idDau, xDau, m2cPhys+0.1);
+      double xPDFthres = getXPDF( idDau, xDau, m2cPhys+0.1, iSysNow, &beam);
       xPDFdaughter     = min(xPDFdaughter, xPDFthres);
     }
     if (abs(idDau) == 5 && m2bPhys > 0. && tOld < 4.*m2bPhys) {
-      double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2bPhys+0.1)
-                        : beam.xfISR(iSysNow,idDau, xDau, m2bPhys+0.1);
+      //double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2bPhys+0.1)
+      //                  : beam.xfISR(iSysNow,idDau, xDau, m2bPhys+0.1);
+      double xPDFthres = getXPDF( idDau, xDau, m2bPhys+0.1, iSysNow, &beam);
       xPDFdaughter     = min(xPDFdaughter, xPDFthres);
     }
 
@@ -1360,18 +1551,21 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       // Sum over all potential quark mothers to a g.
       double xPDFmother = 0.;
       for (int iQuark = -nQuarkIn; iQuark <= nQuarkIn; ++iQuark) {
-        if (iQuark != 0) xPDFmother += (useSummedPDF)
-                                    ? beam.xf(iQuark, xDau, scale2)
-                                    : beam.xfISR(iSysNow,iQuark, xDau, scale2);
+        //if (iQuark != 0) xPDFmother += (useSummedPDF)
+        //                            ? beam.xf(iQuark, xDau, scale2)
+        //                            : beam.xfISR(iSysNow,iQuark, xDau, scale2);
+        if (iQuark != 0) xPDFmother += getXPDF( iQuark, xDau, scale2, iSysNow, &beam);
       }
       pdfRatio = xPDFmother / xPDFdaughter;
 
     // PDF factors for G -> QQ
     //} else if (name.find("isr_qcd_21->1&1") != string::npos) {
     } else if (it->second->is(splittingsPtr->isrQCD_21_to_1_and_1)) {
-      double xPDFmother = (useSummedPDF)
-                        ? beam.xf(21, xDau, scale2)
-                        : beam.xfISR(iSysNow,21, xDau, scale2);
+      //double xPDFmother = (useSummedPDF)
+      //                  ? beam.xf(21, xDau, scale2)
+      //                  : beam.xfISR(iSysNow,21, xDau, scale2);
+      double xPDFmother = getXPDF( 21, xDau, scale2, iSysNow, &beam);
+
       //if ( abs(xPDFmother) < TINYPDF) {
       if ( abs(xPDFmother) < tinypdf(xDau)) {
         int sign   = (xPDFmother > 0.) ? 1 : -1;
@@ -1387,22 +1581,26 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       double xPDFmother = 0.;
       for (int iQuark =-nQuarkIn; iQuark <= nQuarkIn; ++iQuark)
         if (abs(iQuark) != abs(idDau) && iQuark != 0) {
-          double xPDFnow = (useSummedPDF)
-                         ? beam.xf( iQuark, xDau, scale2)
-                         : beam.xfISR( iSysNow, iQuark, xDau, scale2);
+          //double xPDFnow = (useSummedPDF)
+          //               ? beam.xf( iQuark, xDau, scale2)
+          //               : beam.xfISR( iSysNow, iQuark, xDau, scale2);
+          double xPDFnow = getXPDF( iQuark, xDau, scale2, iSysNow, &beam);
+
           // Make overestimate larger if heavy quark converts to valence quark.
           if (particleDataPtr->isHadron(beam.id()) && (iQuark == 1 || iQuark == 2)) {
             if (abs(idDau) == 4 && m2cPhys > 0. && tOld < 4.*m2cPhys) {
-              double xPDFval = (useSummedPDF)
-                             ? beam.xf( iQuark, 0.25, scale2)
-                             : beam.xfISR( iSysNow, iQuark, 0.25, scale2);
-               xPDFnow = max(xPDFnow, xPDFval);
+              //double xPDFval = (useSummedPDF)
+              //               ? beam.xf( iQuark, 0.25, scale2)
+              //               : beam.xfISR( iSysNow, iQuark, 0.25, scale2);
+              double xPDFval = getXPDF( iQuark, 0.25, scale2, iSysNow, &beam);
+              xPDFnow = max(xPDFnow, xPDFval);
             }
             if (abs(idDau) == 5 && m2bPhys > 0. && tOld < 4.*m2bPhys) {
-              double xPDFval = (useSummedPDF)
-                             ? beam.xf( iQuark, 0.25, scale2)
-                             : beam.xfISR( iSysNow, iQuark, 0.25, scale2);
-               xPDFnow = max(xPDFnow, xPDFval);
+              //double xPDFval = (useSummedPDF)
+              //               ? beam.xf( iQuark, 0.25, scale2)
+              //               : beam.xfISR( iSysNow, iQuark, 0.25, scale2);
+              double xPDFval = getXPDF( iQuark, 0.25, scale2, iSysNow, &beam);
+              xPDFnow = max(xPDFnow, xPDFval);
             }
           }
           xPDFmother += xPDFnow;
@@ -1412,9 +1610,11 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     // PDF factors for q --> qbar splitting.
     //} else if (name.compare("isr_qcd_1->1&1&1_CS") == 0) {
     } else if (it->second->is(splittingsPtr->isrQCD_1_to_1_and_1_and_1)) {
-      double xPDFmother = (useSummedPDF)
-                        ? beam.xf(-idDau, xDau, scale2)
-                        : beam.xfISR(iSysNow, -idDau, xDau, scale2);
+      //double xPDFmother = (useSummedPDF)
+      //                  ? beam.xf(-idDau, xDau, scale2)
+      //                  : beam.xfISR(iSysNow, -idDau, xDau, scale2);
+      double xPDFmother = getXPDF(-idDau, xDau, scale2, iSysNow, &beam);
+
       //if ( abs(xPDFmother) < TINYPDF) {
       if ( abs(xPDFmother) < tinypdf(xDau)) {
         int sign   = (xPDFmother > 0.) ? 1 : -1;
@@ -1435,8 +1635,9 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
         double tNew = pT2min + double(i)/double(NTSTEPS)*(max(tOld, pT2min) - pT2min);
         for (int j=1; j <= NXSTEPS; ++j) {
           double xNew = xDau + double(j)/double(NXSTEPS)*(1.-xDau);
-          double xPDFnew = (useSummedPDF)
-            ? beam.xf(21, xNew, tNew) : beam.xfISR(iSysNow, 21, xNew, tNew);
+          //double xPDFnew = (useSummedPDF)
+          //  ? beam.xf(21, xNew, tNew) : beam.xfISR(iSysNow, 21, xNew, tNew);
+          double xPDFnew = getXPDF( 21, xNew, tNew, iSysNow, &beam);
           xPDFmother = max(xPDFmother, xPDFnew);
         }
       }
@@ -1506,17 +1707,21 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   double scale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * tOld;
   scale2        = max(scale2, pT2min);
   bool inD = beam.insideBounds(xDau, scale2); 
-  double xPDFdaughter = (useSummedPDF) ? beam.xf(idDau, xDau, scale2)
-                      : beam.xfISR(iSysNow,idDau, xDau, scale2);
+  //double xPDFdaughter = (useSummedPDF) ? beam.xf(idDau, xDau, scale2)
+  //                    : beam.xfISR(iSysNow,idDau, xDau, scale2);
+  double xPDFdaughter = getXPDF( idDau, xDau, scale2, iSysNow, &beam);
+
   // Make PDF ratio overestimate larger close to threshold.
   if (abs(idDau) == 4 && m2cPhys > 0. && tOld < 4.*m2cPhys) {
-    double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2cPhys+0.1)
-                      : beam.xfISR(iSysNow,idDau, xDau, m2cPhys+0.1);
+    //double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2cPhys+0.1)
+    //                  : beam.xfISR(iSysNow,idDau, xDau, m2cPhys+0.1);
+    double xPDFthres = getXPDF( idDau, xDau, m2cPhys+0.1, iSysNow, &beam);
     xPDFdaughter     = min(xPDFdaughter, xPDFthres);
   }
   if (abs(idDau) == 5 && m2bPhys > 0. && tOld < 4.*m2bPhys) {
-    double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2bPhys+0.1)
-                      : beam.xfISR(iSysNow,idDau, xDau, m2bPhys+0.1);
+    //double xPDFthres = (useSummedPDF) ? beam.xf(idDau, xDau, m2bPhys+0.1)
+    //                  : beam.xfISR(iSysNow,idDau, xDau, m2bPhys+0.1);
+    double xPDFthres = getXPDF( idDau, xDau, m2bPhys, iSysNow, &beam);
     xPDFdaughter     = min(xPDFdaughter, xPDFthres);
   }
 
@@ -1532,9 +1737,10 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
       if (iQuark == 0) {
         xPDFmother[10] = 0.;
       } else {
-        xPDFmother[iQuark+10] = (useSummedPDF)
-                              ? beam.xf(iQuark, xDau, scale2)
-                              : beam.xfISR(iSysNow,iQuark, xDau, scale2);
+        //xPDFmother[iQuark+10] = (useSummedPDF)
+        //                      ? beam.xf(iQuark, xDau, scale2)
+        //                      : beam.xfISR(iSysNow,iQuark, xDau, scale2);
+        xPDFmother[iQuark+10] = getXPDF( iQuark, xDau, scale2, iSysNow, &beam);
         xPDFmotherSum += xPDFmother[iQuark+10];
       }
     }
@@ -1549,9 +1755,10 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
 
   // PDF factors for G -> QQ
   } else if (splitNow->is(splittingsPtr->isrQCD_21_to_1_and_1)){
-    double xPDFmother = (useSummedPDF)
-                      ? beam.xf(21, xDau, scale2)
-                      : beam.xfISR(iSysNow,21, xDau, scale2);
+    //double xPDFmother = (useSummedPDF)
+    //                  ? beam.xf(21, xDau, scale2)
+    //                  : beam.xfISR(iSysNow,21, xDau, scale2);
+    double xPDFmother = getXPDF( 21, xDau, scale2, iSysNow, &beam);
     //if ( abs(xPDFmother) < TINYPDF) {
     if ( abs(xPDFmother) < tinypdf(xDau) ) {
       int sign   = (xPDFmother > 0.) ? 1 : -1;
@@ -1568,22 +1775,25 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
     double xPDFmotherSum = 0.;
     for (int i =-nQuarkIn; i <= nQuarkIn; ++i)
       if (abs(i) != abs(idDau) && i != 0) {
-        double temp = (useSummedPDF)
-                    ? beam.xf(i, xDau, scale2)
-                    : beam.xfISR(iSysNow, i, xDau, scale2);
+        //double temp = (useSummedPDF)
+        //            ? beam.xf(i, xDau, scale2)
+        //            : beam.xfISR(iSysNow, i, xDau, scale2);
+        double temp = getXPDF( i, xDau, scale2, iSysNow, &beam);
         // Make overestimate larger if heavy quark converts to valence quark.
         if (particleDataPtr->isHadron(beam.id()) && (i == 1 || i == 2)) {
           if (abs(idDau) == 4 && m2cPhys > 0. && tOld < 4.*m2cPhys) {
-            double xPDFval = (useSummedPDF)
-                           ? beam.xf( i, 0.25, scale2)
-                           : beam.xfISR( iSysNow, i, 0.25, scale2);
-             temp = max(temp, xPDFval);
+            //double xPDFval = (useSummedPDF)
+            //               ? beam.xf( i, 0.25, scale2)
+            //               : beam.xfISR( iSysNow, i, 0.25, scale2);
+            double xPDFval = getXPDF( i, 0.25, scale2, iSysNow, &beam);
+            temp = max(temp, xPDFval);
           }
           if (abs(idDau) == 5 && m2bPhys > 0. && tOld < 4.*m2bPhys) {
-            double xPDFval = (useSummedPDF)
-                           ? beam.xf( i, 0.25, scale2)
-                           : beam.xfISR( iSysNow, i, 0.25, scale2);
-             temp = max(temp, xPDFval);
+            //double xPDFval = (useSummedPDF)
+            //               ? beam.xf( i, 0.25, scale2)
+            //               : beam.xfISR( iSysNow, i, 0.25, scale2);
+            double xPDFval = getXPDF( i, 0.25, scale2, iSysNow, &beam);
+            temp = max(temp, xPDFval);
           }
         }
         xPDFmotherSum += temp;
@@ -1605,9 +1815,10 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
   // PDF factors for q --> qbar splitting.
   } else if (splitNow->is(splittingsPtr->isrQCD_1_to_1_and_1_and_1)) {
 
-    double xPDFmother = (useSummedPDF)
-                      ? beam.xf( -idDau, xDau, scale2)
-                      : beam.xfISR( iSysNow, -idDau, xDau, scale2);
+    //double xPDFmother = (useSummedPDF)
+    //                  ? beam.xf( -idDau, xDau, scale2)
+    //                  : beam.xfISR( iSysNow, -idDau, xDau, scale2);
+    double xPDFmother = getXPDF( -idDau, xDau, scale2, iSysNow, &beam);
     //if ( abs(xPDFmother) < TINYPDF) {
     if ( abs(xPDFmother) < tinypdf(xDau) ) {
       int sign   = (xPDFmother > 0.) ? 1 : -1;
@@ -1627,8 +1838,9 @@ void DireSpace::getNewSplitting( const Event& state, DireSpaceEnd* dip,
       double tNew = pT2min + double(i)/double(NTSTEPS)*(max(tOld, pT2min) - pT2min);
       for (int j=1; j <= NXSTEPS; ++j) {
         double xNew = xDau + double(j)/double(NXSTEPS)*(1.-xDau);
-        double xPDFnew = (useSummedPDF)
-          ? beam.xf(21, xNew, tNew) : beam.xfISR(iSysNow, 21, xNew, tNew);
+        //double xPDFnew = (useSummedPDF)
+        //  ? beam.xf(21, xNew, tNew) : beam.xfISR(iSysNow, 21, xNew, tNew);
+        double xPDFnew = getXPDF( 21, xNew, tNew, iSysNow, &beam);
         xPDFmother = max(xPDFmother, xPDFnew);
       }
     }
@@ -1951,6 +2163,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
   double m2dip, double xOld, int splitType, double m2RadBef, double m2r,
   double m2s, double m2e, vector<double> aux) {
 
+  double xIncoming = usePDF ? xOld : 0.;
+
   // splitType == 1 -> Massless IF
   if (splitType == 1) {
 
@@ -1966,7 +2180,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
     } 
 
     // Forbidden emission if outside allowed z range for given pT2.
-    if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > 1. ) return false;
+    //if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > 1. ) return false;
+    if ( xCS < xIncoming || xCS > 1. || uCS < 0. || uCS > 1. ) return false;
 
   // splitType == 2 -> Massive IF
   } else if (splitType == 2 && aux.size() == 0) {
@@ -1979,7 +2194,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
     double mu2Rec = m2s / pijpa * xCS;
     double uCSmax = (1. - xCS) / (1. - xCS + mu2Rec );
     // Forbidden emission if outside allowed z range for given pT2.
-    if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
+    //if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
+    if ( xCS < xIncoming || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
 
   // splitType == 2 -> Massive 1->3 IF
   } else if (splitType == 2 && aux.size() > 0) {
@@ -2009,7 +2225,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
     double mu2Rec = m2jk/(-q2+m2jk) * xCS;
     double uCSmax = (1. - xCS) / (1. - xCS + mu2Rec );
     // Forbidden emission if outside allowed z range for given pT2.
-    if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
+    //if ( xCS < xOld || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
+    if ( xCS < xIncoming || xCS > 1. || uCS < 0. || uCS > uCSmax ) return false;
 
     // Check that kinematical kT is valid.
     double s_i_jk = (1. - 1./xCS)*(q2 - m2a) + (m2i + m2jk) / xCS;
@@ -2049,7 +2266,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
     }
 
     // Forbidden emission if outside allowed z range for given pT2.
-    if (xCS < xOld || xCS > 1. || vCS < 0. || vCS > 1.) return false;
+    //if (xCS < xOld || xCS > 1. || vCS < 0. || vCS > 1.) return false;
+    if (xCS < xIncoming || xCS > 1. || vCS < 0. || vCS > 1.) return false;
 
   // splitType ==-2 -> Massive II
   } else if (splitType == -2 && aux.size() == 0) {
@@ -2095,7 +2313,8 @@ bool DireSpace::inAllowedPhasespace( int kinType, double z, double pT2,
     double m2k    = aux[10];
     double m2ai  = -sai + m2a + m2i;
 
-    if (za < xOld || za > 1.) return false;
+    //if (za < xOld || za > 1.) return false;
+    if (za < xIncoming || za > 1.) return false;
 
     // Check "first" step.
     double p2ab = q2_1/za + m2a + m2k;
@@ -2248,7 +2467,7 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
   double xMaxAbs     = beam.xMax(iSysNow);
   double zMinAbs     = xDaughter;
 
-  if (xMaxAbs < 0.) {
+  if (usePDF && xMaxAbs < 0.) {
     infoPtr->errorMsg("Warning in DireSpace::pT2nextQCD_II: "
     "xMaxAbs negative");
     return false;
@@ -2317,7 +2536,7 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     double tnew = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
     tnew        = max(tnew, pT2min);
     bool inNew  = beam.insideBounds(xDaughter, tnew); 
-    if (!inNew) {  dip.pT2 = 0.0; return false; }
+    if (usePDF && !inNew) {  dip.pT2 = 0.0; return false; }
 
     // Bad sign if repeated looping with small daughter PDF, so fail.
     // (Example: if all PDF's = 0 below Q_0, except for c/b companion.)
@@ -2366,11 +2585,13 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
       // Parton density of daughter at current scale.
       pdfScale2    = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
       pdfScale2    = max(pdfScale2, pT2min);
-      xPDFdaughter = (useSummedPDF)
-                   ? beam.xf(idDaughter, xDaughter, pdfScale2)
-                   : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
+      //xPDFdaughter = (useSummedPDF)
+      //             ? beam.xf(idDaughter, xDaughter, pdfScale2)
+      //             : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
+      xPDFdaughter = getXPDF( idDaughter, xDaughter, pdfScale2, iSysNow, &beam);
+
       //if (abs(xPDFdaughter) < TINYPDF) {
-      if (abs(xPDFdaughter) < tinypdf(xDaughter)) {
+      if (usePDF && abs(xPDFdaughter) < tinypdf(xDaughter)) {
         int sign      = (xPDFdaughter > 0.) ? 1 : -1;
         //xPDFdaughter  = sign*TINYPDF;
         xPDFdaughter  = sign*tinypdf(xDaughter);
@@ -2550,14 +2771,18 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     pdfScale2 = max(pdfScale2, tnow);
     bool inD = beam.insideBounds(xDaughter, pdfScale2); 
     bool inM = beam.insideBounds(xMother,   pdfScale2); 
-    double xPDFdaughterNew = 
-      (useSummedPDF) ? beam.xf(idDaughter, xDaughter, pdfScale2)
-                     : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
-    double xPDFmotherNew =
-      (useSummedPDF) ? beam.xf(idMother, xMother, pdfScale2)
-                     : beam.xfISR(iSysNow, idMother, xMother, pdfScale2);
+    //double xPDFdaughterNew = 
+    //  (useSummedPDF) ? beam.xf(idDaughter, xDaughter, pdfScale2)
+    //                 : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
+    double xPDFdaughterNew = getXPDF( idDaughter, xDaughter, pdfScale2,
+      iSysNow, &beam);
+    //double xPDFmotherNew =
+    //  (useSummedPDF) ? beam.xf(idMother, xMother, pdfScale2)
+    //                 : beam.xfISR(iSysNow, idMother, xMother, pdfScale2);
+    double xPDFmotherNew = getXPDF( idMother, xMother, pdfScale2, iSysNow, &beam);
+
     //if ( abs(xPDFdaughterNew) < TINYPDF ) {
-    if ( abs(xPDFdaughterNew) < tinypdf(xDaughter) ) {
+    if ( usePDF && abs(xPDFdaughterNew) < tinypdf(xDaughter) ) {
       hasTinyPDFdau = true;
       needNewPDF    = true;
       fullWeightsNow.clear();
@@ -2569,10 +2794,13 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     // zero. In this case, cut off branching probability if daughter PDF fell too
     // rapidly, to avoid large shower weights. (Note: Last resort - would like
     // something more physical here!)
-    double xPDFdaughterLow = (useSummedPDF)
-      ? beam.xf(idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min))
-      : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min));
-    if ( idDaughter == 21
+    //double xPDFdaughterLow = (useSummedPDF)
+    //  ? beam.xf(idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min))
+    //  : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min));
+    double xPDFdaughterLow = getXPDF( idDaughter, xDaughter, 
+      pdfScale2*pdfScale2/max(teval,pT2min), iSysNow, &beam);
+
+    if ( usePDF && idDaughter == 21
       && ( abs(xPDFdaughterNew/xPDFdaughter) < 1e-4
         || abs(xPDFdaughterLow/xPDFdaughterNew) < 1e-4) ) {
       hasTinyPDFdau = true;
@@ -2583,10 +2811,11 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     }
 
     // Set PDF ratio to zero if x-/pT-values are out-of-bounds.
-    double pdfRatio = (inD && inM) ? xPDFmotherNew/xPDFdaughterNew : 0.;
+    double pdfRatio = (inD && inM) ? xPDFmotherNew/xPDFdaughterNew
+                    : (usePDF) ? 0. : 1.;
 
     // More last resort.
-    if (idDaughter == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
+    if (usePDF && idDaughter == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
 
     wt             *= pdfRatio*jacobian;
     fullWeightNow  *= pdfRatio*jacobian;
@@ -2788,7 +3017,7 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
                      : partonSystemsPtr->getInA(iSysNow);
   Vec4 pOther(event[iOther].p());
 
-  if (xMaxAbs < 0.) {
+  if (usePDF && xMaxAbs < 0.) {
     infoPtr->errorMsg("Warning in DireSpace::pT2nextQCD_IF: "
     "xMaxAbs negative");
     return false;
@@ -2856,7 +3085,7 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     double tnew = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
     tnew        = max(tnew, pT2min);
     bool inNew  = beam.insideBounds(xDaughter, tnew); 
-    if (!inNew) {  dip.pT2 = 0.0; return false; }
+    if (usePDF && !inNew) {  dip.pT2 = 0.0; return false; }
 
     // Bad sign if repeated looping with small daughter PDF, so fail.
     // (Example: if all PDF's = 0 below Q_0, except for c/b companion.)
@@ -2907,10 +3136,12 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
       // Parton density of daughter at current scale.
       pdfScale2    = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
       pdfScale2    = max(pdfScale2, pT2min);
-      xPDFdaughter = (useSummedPDF)
-                   ? beam.xf(idDaughter, xDaughter, pdfScale2)
-                   : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
-      if (abs(xPDFdaughter) < tinypdf(xDaughter)) {
+      //xPDFdaughter = (useSummedPDF)
+      //             ? beam.xf(idDaughter, xDaughter, pdfScale2)
+      //             : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
+      xPDFdaughter = getXPDF( idDaughter, xDaughter, pdfScale2, iSysNow, &beam);
+
+      if (usePDF && abs(xPDFdaughter) < tinypdf(xDaughter)) {
         int sign      = (xPDFdaughter > 0.) ? 1 : -1;
         xPDFdaughter  = sign*tinypdf(xDaughter);
         hasTinyPDFdau = true;
@@ -3175,15 +3406,18 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     pdfScale2 = max(pdfScale2, pT2min);
     bool inD = beam.insideBounds(xDaughter, pdfScale2); 
     bool inM = beam.insideBounds(xMother,   pdfScale2); 
-    double xPDFdaughterNew =
-      (useSummedPDF) ? beam.xf(idDaughter, xDaughter, pdfScale2)
-                     : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
-    double xPDFmotherNew =
-      (useSummedPDF) ? beam.xf(idMother, xMother, pdfScale2)
-                     : beam.xfISR(iSysNow, idMother, xMother, pdfScale2);
+    //double xPDFdaughterNew =
+    //  (useSummedPDF) ? beam.xf(idDaughter, xDaughter, pdfScale2)
+    //                 : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2);
+    double xPDFdaughterNew = getXPDF( idDaughter, xDaughter, pdfScale2,
+      iSysNow, &beam);
+    //double xPDFmotherNew =
+    //  (useSummedPDF) ? beam.xf(idMother, xMother, pdfScale2)
+    //                 : beam.xfISR(iSysNow, idMother, xMother, pdfScale2);
+    double xPDFmotherNew = getXPDF( idMother, xMother, pdfScale2, iSysNow, &beam);
 
     //if (abs(xPDFdaughterNew) < TINYPDF ) {
-    if (abs(xPDFdaughterNew) < tinypdf(xDaughter) ) {
+    if (usePDF && abs(xPDFdaughterNew) < tinypdf(xDaughter) ) {
       hasTinyPDFdau = true;
       needNewPDF = true;
       fullWeightsNow.clear();
@@ -3195,10 +3429,13 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     // approaches zero. In this case, cut off branching probability if
     // daughter PDF fell too rapidly, to avoid large shower weights.
     // (Note: Last resort - would like something more physical here!)
-    double xPDFdaughterLow = (useSummedPDF)
-      ? beam.xf(idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min))
-      : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min));
-    if ( idDaughter == 21
+    //double xPDFdaughterLow = (useSummedPDF)
+    //  ? beam.xf(idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min))
+    //  : beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2*pdfScale2/max(teval, pT2min));
+    double xPDFdaughterLow = getXPDF( idDaughter, xDaughter,
+      pdfScale2 * pdfScale2/max(teval,pT2min), iSysNow, &beam);
+
+    if ( usePDF && idDaughter == 21
       && ( abs(xPDFdaughterNew/xPDFdaughter) < 1e-4
         || abs(xPDFdaughterLow/xPDFdaughterNew) < 1e-4) ) {
       hasTinyPDFdau = true;
@@ -3209,10 +3446,11 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     }
 
     // Set PDF ratio to zero if x-/pT-values are out-of-bounds.
-    pdfRatio = (inD && inM) ? xPDFmotherNew/xPDFdaughterNew : 0.;
+    pdfRatio = (inD && inM) ? xPDFmotherNew/xPDFdaughterNew
+              : (usePDF) ? 0. : 1.;
 
     // More last resort.
-    if (idDaughter == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
+    if (usePDF && idDaughter == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
 
     wt             *= pdfRatio;
     fullWeightNow  *= pdfRatio;
@@ -3858,7 +4096,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
       double xOld = (*beamAPtr)[iSysSelNow].x();
       (*beamAPtr)[iSysSelNow].iPos(iAnew);
       (*beamAPtr)[iSysSelNow].x(xAnew);
-      if (beamAPtr->xMax(-1) < 0.0) {
+      if (usePDF && beamAPtr->xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireSpace::branch_II: "
           "used up beam momentum; discard splitting.");
         physical = false;
@@ -3871,7 +4109,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
       double xOld = (*beamBPtr)[iSysSelNow].x();
       (*beamBPtr)[iSysSelNow].iPos(iBnew);
       (*beamBPtr)[iSysSelNow].x(xBnew);
-      if (beamBPtr->xMax(-1) < 0.0) {
+      if (usePDF && beamBPtr->xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireSpace::branch_II: "
           "used up beam momentum; discard splitting.");
         physical = false;
@@ -4158,7 +4396,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
       double xOld = (*beamAPtr)[iSysSelNow].x();
       (*beamAPtr)[iSysSelNow].iPos(iAnew);
       (*beamAPtr)[iSysSelNow].x(xAnew);
-      if (beamAPtr->xMax(-1) < 0.0) {
+      if (usePDF && beamAPtr->xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireSpace::branch_II: "
           "used up beam momentum; discard splitting.");
         physical = false;
@@ -4167,7 +4405,7 @@ bool DireSpace::branch_II( Event& event, bool trial,
       (*beamAPtr)[iSysSelNow].iPos(iAold);
       (*beamAPtr)[iSysSelNow].x(xOld);
     }
-    if (beamBPtr->size() > 0) {
+    if (usePDF && beamBPtr->size() > 0) {
       double xOld = (*beamBPtr)[iSysSelNow].x();
       (*beamBPtr)[iSysSelNow].iPos(iBnew);
       (*beamBPtr)[iSysSelNow].x(xBnew);
@@ -4976,7 +5214,7 @@ bool DireSpace::branch_IF( Event& event, bool trial,
               : 2.*mother.e()        / (beamAPtr->e() + beamBPtr->e());
     double iBold = (mother.mother1() == 1) ? iOther : iDaughter;
     double iBnew = (mother.mother1() == 1) ? iNewRecoiler : iOther;
-    if (beamAPtr->size() > 0) {
+    if (usePDF && beamAPtr->size() > 0) {
       double xOld = (*beamAPtr)[iSysSelNow].x();
       (*beamAPtr)[iSysSelNow].iPos(iAnew);
       (*beamAPtr)[iSysSelNow].x(xAnew);
@@ -4989,7 +5227,7 @@ bool DireSpace::branch_IF( Event& event, bool trial,
       (*beamAPtr)[iSysSelNow].iPos(iAold);
       (*beamAPtr)[iSysSelNow].x(xOld);
     }
-    if (beamBPtr->size() > 0) {
+    if (usePDF && beamBPtr->size() > 0) {
       double xOld = (*beamBPtr)[iSysSelNow].x();
       (*beamBPtr)[iSysSelNow].iPos(iBnew);
       (*beamBPtr)[iSysSelNow].x(xBnew);
@@ -5321,7 +5559,7 @@ bool DireSpace::branch_IF( Event& event, bool trial,
                 : 2.*mother1.e()     / (beamAPtr->e() + beamBPtr->e());
       double iBold = (mother.mother1() == 1) ? iOther : iDaughter;
       double iBnew = (mother.mother1() == 1) ? iOther : iMother1;
-      if (beamAPtr->size() > 0) {
+      if (usePDF && beamAPtr->size() > 0) {
         double xOld = (*beamAPtr)[iSysSelNow].x();
         (*beamAPtr)[iSysSelNow].iPos(iAnew);
         (*beamAPtr)[iSysSelNow].x(xAnew);
@@ -5334,7 +5572,7 @@ bool DireSpace::branch_IF( Event& event, bool trial,
         (*beamAPtr)[iSysSelNow].iPos(iAold);
         (*beamAPtr)[iSysSelNow].x(xOld);
       }
-      if (beamBPtr->size() > 0) {
+      if (usePDF && beamBPtr->size() > 0) {
         double xOld = (*beamBPtr)[iSysSelNow].x();
         (*beamBPtr)[iSysSelNow].iPos(iBnew);
         (*beamBPtr)[iSysSelNow].x(xBnew);
