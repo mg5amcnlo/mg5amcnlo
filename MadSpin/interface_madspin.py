@@ -984,7 +984,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #misc.sprint(i, particle.pdg, particle.pid)
                 #misc.sprint(self.final_state, evt_decayfile)
                 # check if we need to decay the particle 
-                if not (particle.pdg in self.final_state or particle.pdg in evt_decayfile):
+                if particle.pdg not in self.final_state or particle.pdg not in evt_decayfile:
                     continue # nothing to do for this particle
                 # check how the decay need to be done
                 nb_decay = len(evt_decayfile[particle.pdg])
