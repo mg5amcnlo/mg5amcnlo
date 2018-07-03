@@ -607,5 +607,12 @@ extern "C" {
     merging->getStoppingInfo(scales, mass);
   }
 
+  void dire_get_no_emission_prob_( double noemProb, double startingScale,
+    double stoppingScale, double mDipole, int id, int type ) {
+    noemProb = merging->generateSingleSudakov ( startingScale,
+      stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
+  }
+
+
 }
 

@@ -1158,6 +1158,9 @@ C     To access Pythia8 control variables
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
 
+      integer id, type
+      double precision noemProb, startingScale, stoppingScale, mDipole
+
       do i=1,2
         istup_local(i) = -1
       enddo
@@ -1335,17 +1338,26 @@ c     Calculate suppression factor for H-events.
       call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
      &       emsca, emscav_tmp, emscav_tmp_a)
-c$$$      if (is_pythia_active.eq.0) then
-c$$$        call dire_init_default()
-c$$$      endif
-c$$$      call dire_setevent()
-c$$$      call dire_next()
-c$$$      call dire_get_mergingweight(wgt_sudakov)
-c$$$      call dire_get_sudakov_stopping_scales(scales)
-c$$$
-c$$$      xscales=-1d0
-c$$$      xmasses=-1d0
-c$$$      call dire_get_stopping_info(xscales,xmasses)
+      if (is_pythia_active.eq.0) then
+        call dire_init_default()
+      endif
+      call dire_setevent()
+      call dire_next()
+      call dire_get_mergingweight(wgt_sudakov)
+      call dire_get_sudakov_stopping_scales(scales)
+
+      xscales=-1d0
+      xmasses=-1d0
+      call dire_get_stopping_info(xscales,xmasses)
+
+c      startingScale = 1000.0
+c      stoppingScale = 1.0
+c      mDipole = 100.0
+c      id = 1
+c      type = -2
+c      call dire_get_no_emission_prob( noemProb, startingScale, stoppingScale, mDipole, id, type);
+c      write(*,*) noemProb
+c      call exit(0)
 
 c      write(33,*)'scales'
 c      do iii=0,99

@@ -2,6 +2,8 @@
 // Copyright (C) 2018 Stefan Prestel.
 
 #include "Dire/Merging.h"
+#include "Dire/DireSpace.h"
+#include "Dire/DireTimes.h"
 
 namespace Pythia8 {
 
@@ -153,6 +155,12 @@ void MyMerging::getStoppingInfo(double scales [100][100],
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
 
+}
+
+double MyMerging::generateSingleSudakov ( double pTbegAll, 
+  double pTendAll, double m2dip, int idA, int type, double s, double x) {
+  return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+    type, s, x);
 }
 
 //--------------------------------------------------------------------------

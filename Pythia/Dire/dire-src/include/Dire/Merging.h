@@ -129,6 +129,10 @@ public:
   vector<int> radSave, emtSave, recSave;
   vector<double> startingScalesSave;
 
+  double generateSingleSudakov ( double pTbegAll, 
+   double pTendAll, double m2dip, int idA, int type, double s = -1.,
+   double x = -1.);
+
 protected:
 
   //----------------------------------------------------------------------//

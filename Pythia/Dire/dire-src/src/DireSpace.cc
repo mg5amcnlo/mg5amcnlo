@@ -709,14 +709,17 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
 
   int iPartner = 0;
 
+  vector<int> recPos;
+
   // Colour: other end by same index in final state or opposite in beam.
   if (colSign > 0)
   for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
     if (iRecNow == iRad) continue;
     if ( ( event[iRecNow].col()  == colTag &&  event[iRecNow].isFinal() )
       || ( event[iRecNow].acol() == colTag && !event[iRecNow].isFinal() ) ) {
-      iPartner = iRecNow;
-      break;
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
     }
   }
 
@@ -726,28 +729,24 @@ void DireSpace::getQCDdip( int iRad, int colTag, int colSign,
     if (iRecNow == iRad) continue;
     if ( ( event[iRecNow].acol() == colTag &&  event[iRecNow].isFinal() )
       || ( event[iRecNow].col()  == colTag && !event[iRecNow].isFinal() ) ) {
-      iPartner = iRecNow;
-      break;
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
     }
   }
 
   // Store dipole colour end(s).
-  // Max scale either by parton scale or by half dipole mass.
-  double pTmax = abs(2.*event[iRad].p()*event[iPartner].p());
-  int side     = (event[iRad].pz() > 0.) ? 1 : 2;
-  int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
-
-  if (iPartner > 0) {
-    //dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
-    //  pTmax, colType, 0, 0, 0, true));
-//    dipEnds.push_back( DireSpaceEnd( 0, side, iRad, iPartner,
-//      pTmax, colType, 0, 0, 0, true, false, false, 0, vector<int>()));
-//    dipEnds.back().init(event);
-    appendDipole( event, 0, side, iRad, iPartner, pTmax, colType, 0, 0, 0,
+  for (unsigned int i = 0; i < recPos.size(); ++i) {
+    int iRecNow = recPos[i];
+    // Max scale either by parton scale or by half dipole mass.
+    double pTmax = abs(2.*event[iRad].p()*event[iRecNow].p());
+    int side     = (event[iRad].pz() > 0.) ? 1 : 2;
+    int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
+    appendDipole( event, 0, side, iRad, iRecNow, pTmax, colType, 0, 0, 0,
       true, false, false, 0, vector<int>(), vector<int>(), vector<double>(),
       dipEnds);
-
   }
+
 }
 
 //--------------------------------------------------------------------------
@@ -1062,7 +1061,7 @@ void DireSpace::update( int iSys, Event& event, bool) {
 double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
 
-  pTnext( pTbegAll, pTendAll, pow2(100.), pow2(7000.), 0.001);
+//  pTnext( pTbegAll, pTendAll, pow2(100.), 21, -1, pow2(7000.), 0.001);
 
 
   debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
@@ -1200,8 +1199,8 @@ double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
 
 // Select next pT in downwards evolution of the existing dipoles.
 
-double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
-  double s, double x) {
+double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
+  double m2dip, int idA, int type, double s, double x) {
 
   // Current cm energy, in case it varies between events.
   sCM           = s;
@@ -1210,6 +1209,178 @@ double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
 
   double x1 = x;
   double x2 = m2dip/s/x1;
+
+  // Starting values: no radiating dipole found.
+//  double pT2sel = pow2(pTendAll);
+//  iDipSel       = 0;
+//  iSysSel       = 0;
+//  dipEndSel     = 0;
+  splittingNowName="";
+  splittingSelName="";
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) it->second->splitInfo.clear();
+//  splitSel.clear();
+//  kernelSel.clear();
+//  kernelNow.clear();
+//  auxSel = overSel = auxNow = overNow = 0.;
+
+  // Make dummy event with two entries.
+  Event state;
+  state.init("(dummy event)", particleDataPtr);
+  // Setup two dipole ends for each flavor combination.
+  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip)), pB;
+  if (type < 0) pB.p(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  if (type > 0) pB.p(0., 0.,0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+
+  int iSys = 0;
+
+  int colA  = 1;
+  int acolA = 2;
+  if (particleDataPtr->colType(idA) == 1) {colA = 1; acolA = 0;}
+  if (particleDataPtr->colType(idA) ==-1) {colA = 0; acolA = 1;}
+
+  // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
+  state.append( 0, 0, 0, 0, 0, 0, 0, 0, pA+pB, 0.0, sqrt(m2dip) );  
+  state.append( idA, -21, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+
+  // Now loop through possible recoilers.
+  vector<int> recids(createvector<int>(1)(-1)(2)(-2)(3)(-3)(4)(-4)(5)(-5)
+    (6)(-6)(21));
+  vector<int> recpos;
+
+  for (unsigned int i = 0; i < recids.size(); ++i) {
+    int colB(2), acolB(1);
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 1
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) ==-1
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if (type < 0) state.append( recids[i], -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    if (type > 0) state.append( recids[i],  23, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    recpos.push_back(i+1);
+  }
+
+//  // Set splitting library.
+//  splits = splittingsPtr->getSplittings();
+//  overhead.clear();
+//  for ( map<string,Splitting*>::iterator it = splits.begin();
+//    it != splits.end(); ++it ) overhead.insert(make_pair(it->first,1.));
+
+  // Find positions of incoming colliding partons.
+  int in1 = 1;
+  vector<DireSpaceEnd> dipEnds;
+  int colTag = state[in1].col();
+  if (colTag > 0)  getQCDdip( in1,  colTag,  1, state, dipEnds);
+  int acolTag = state[in1].acol();
+  if (acolTag > 0) getQCDdip( in1, acolTag, -1, state, dipEnds);
+
+//  // Counter of proposed emissions.
+//  nProposedPT.clear();
+//  if ( nProposedPT.find(iSys) == nProposedPT.end() )
+//    nProposedPT.insert(make_pair(iSys,0));
+
+//  splittingSelName="";
+//  splittingNowName="";
+//  dipEndSel = 0;
+
+//  // Clear weighted shower book-keeping.
+//  for ( map<string, multimap<double,double> >::iterator
+//    it = rejectProbability.begin(); it != rejectProbability.end(); ++it )
+//    it->second.clear();
+//  for ( map<string, map<double,double> >::iterator
+//    it = acceptProbability.begin(); it != acceptProbability.end(); ++it )
+//    it->second.clear();
+
+  // Set starting scale.
+  double startingScale = pTbegAll;
+
+  // Set output.
+  double wt            = 1.;
+
+  while ( true ) {
+
+cout << __LINE__ << scientific << setprecision(8) << " " << wt << endl;
+
+    // Reset process scale so that shower starting scale is correctly set.
+    state.scale(startingScale);
+    //doVeto = false;
+
+    // Get pT before reclustering
+    double minScale = pTendAll;
+
+    mergingHooksPtr->setShowerStoppingScale(minScale);
+
+    // If the maximal scale and the minimal scale coincide (as would
+    // be the case for the corrected scales of unordered histories),
+    // do not generate Sudakov
+    if (minScale >= startingScale) break;
+
+    // Get trial shower pT.
+    double pTtrial = pTnext( dipEnds, state, startingScale, minScale, m2dip, idA, type, s, x);
+
+    pair<double,double> wtShower
+      = weights->getWeight( (pTtrial <= 0.) ? pow2(minScale) : pow2(pTtrial));
+
+    //double wrnew = psweights->getRejectWeight( pow2(pTtrial), "base");
+    double enhancement = 1.; 
+    if ( pTtrial > minScale) enhancement
+      = weights->getTrialEnhancement( pow2(pTtrial));
+
+    weights->reset();
+    weights->clearTrialEnhancements();
+
+cout << pTtrial << endl;
+
+    // Done if evolution scale has fallen below minimum
+    //if ( pTtrial < minScale ) break;
+    if ( pTtrial < minScale ) { wt *= wtShower.second; break;}
+
+    // Reset starting scale.
+    startingScale = pTtrial;
+
+    //if ( pTtrial > minScale) wt *= wtShower.second*(1. - wtShower.first);
+    if ( pTtrial > minScale) wt *= wtShower.first*wtShower.second
+                                 * (1.-1./enhancement);
+    if ( wt == 0.) break;
+    if ( pTtrial > minScale) continue;
+
+    // Done
+    break;
+
+  }
+
+cout << wt << endl;
+//abort();
+
+  // Done
+  double res = wt;
+  return res;
+
+}
+
+double DireSpace::pTnext( vector<DireSpaceEnd> dipEnds, Event event,
+  double pTbegAll, double pTendAll, double m2dip, int idA, int type, double s, double x) {
+
+  double x1 = x;
+  double x2 = m2dip/s/x1;
+  int iSys = 0;
+
+  /*// Current cm energy, in case it varies between events.
+  sCM           = s;
+  eCM           = sqrt(s);
+  pTbegRef      = pTbegAll;
+
+  double x1 = x;
+  double x2 = m2dip/s/x1;*/
 
   // Starting values: no radiating dipole found.
   double pT2sel = pow2(pTendAll);
@@ -1225,31 +1396,50 @@ double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
   kernelNow.clear();
   auxSel = overSel = auxNow = overNow = 0.;
 
-  // Make dummy event with two entries.
+  /*// Make dummy event with two entries.
   Event event;
   event.init("(dummy event)", particleDataPtr);
   // Setup two dipole ends for each flavor combination.
-  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
-  Vec4 pB(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip)), pB;
+  if (type < 0) pB.p(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  if (type > 0) pB.p(0., 0.,0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
 
   int iSys = 0;
 
-  int idA = 21;
   int colA  = 1;
   int acolA = 2;
-
-  int idB = 21;
-  int colB  = 2;
-  int acolB = 1;
+  if (particleDataPtr->colType(idA) == 1) {colA = 1; acolA = 0;}
+  if (particleDataPtr->colType(idA) ==-1) {colA = 0; acolA = 1;}
 
   // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
   event.append( 0, 0, 0, 0, 0, 0, 0, 0, pA+pB, 0.0, sqrt(m2dip) );  
   event.append( idA, -21, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
-  event.append( idB, -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
 
-  // Find positions of incoming colliding partons.
-  int in1 = 1;
-  int in2 = 2;
+  // Now loop through possible recoilers.
+  vector<int> recids(createvector<int>(1)(-1)(2)(-2)(3)(-3)(4)(-4)(5)(-5)
+    (6)(-6)(21));
+  vector<int> recpos;
+
+  for (unsigned int i = 0; i < recids.size(); ++i) {
+    int colB(2), acolB(1);
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 1
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) ==-1
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if (type < 0) event.append( recids[i], -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    if (type > 0) event.append( recids[i],  23, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    recpos.push_back(i+1);
+  }*/
 
   // Set splitting library.
   splits = splittingsPtr->getSplittings();
@@ -1257,18 +1447,13 @@ double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
   for ( map<string,Splitting*>::iterator it = splits.begin();
     it != splits.end(); ++it ) overhead.insert(make_pair(it->first,1.));
 
+  /*// Find positions of incoming colliding partons.
+  int in1 = 1;
   vector<DireSpaceEnd> dipEnds;
   int colTag = event[in1].col();
   if (colTag > 0)  getQCDdip( in1,  colTag,  1, event, dipEnds);
-  // Find dipole end formed by anticolour index.
   int acolTag = event[in1].acol();
-  if (acolTag > 0) getQCDdip( in1, acolTag, -1, event, dipEnds);
-  // Find dipole end formed by colour index.
-  colTag = event[in2].col();
-  if (colTag > 0)  getQCDdip( in2,  colTag,  1, event, dipEnds);
-  // Find dipole end formed by anticolour index.
-  acolTag = event[in2].acol();
-  if (acolTag > 0) getQCDdip( in2, acolTag, -1, event, dipEnds);
+  if (acolTag > 0) getQCDdip( in1, acolTag, -1, event, dipEnds);*/
 
   // Counter of proposed emissions.
   nProposedPT.clear();
@@ -1289,6 +1474,7 @@ double DireSpace::pTnext( double pTbegAll, double pTendAll, double m2dip,
 
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
+
     iDipNow        = iDipEnd;
     dipEndNow      = &dipEnds[iDipEnd];
     double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
