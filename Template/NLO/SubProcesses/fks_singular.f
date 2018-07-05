@@ -1080,6 +1080,16 @@ c     the iproc contribution
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       double precision     iden_comp
       common /c_iden_comp/ iden_comp
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+
+cRF: do only S-events
+      if(type.eq.1 .or. type.eq.8 .or. type.eq.9 .or. type.eq.10 .or.
+     $     type.eq.13)then
+         return
+      endif
+
+
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -4444,6 +4454,9 @@ c convert to Binoth Les Houches Accord standards
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
+
+               virt_wgt=0d0
+               
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)

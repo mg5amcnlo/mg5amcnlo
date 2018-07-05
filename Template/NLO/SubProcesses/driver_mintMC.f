@@ -760,6 +760,7 @@ c
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      save vol1,proc_map
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
@@ -809,17 +810,20 @@ c "npNLO".
       endif
 
       fold=ifl
-      if (ifl.eq.0) then
-         icontr=0
-         virt_wgt_mint=0d0
-         born_wgt_mint=0d0
-         virtual_over_born=0d0
+      if (ifl.eq.0 .or. ifl.eq.1) then
+         if (ifl.eq.0) then
+            icontr=0
+            virt_wgt_mint=0d0
+            born_wgt_mint=0d0
+            virtual_over_born=0d0
+         endif
          MCcntcalled=.false.
          wgt_me_real=0d0
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+         if (ifl.eq.0)
+     &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -959,7 +963,7 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-         
+
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
@@ -971,9 +975,9 @@ c determined which contributions are identical.
          call update_shower_scale_Sevents
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-      elseif(ifl.eq.1) then
-         write (*,*) 'Folding not implemented'
-         stop 1
+
+
+         
       elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
