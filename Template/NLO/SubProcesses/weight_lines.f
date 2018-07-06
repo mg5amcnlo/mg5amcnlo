@@ -8,6 +8,7 @@
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
      $        ,plot_id(:),niproc(:),parton_pdf(:,:,:),icontr_sum(:,:)
+     $        ,ifold_cnt(:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -105,6 +106,10 @@ c plot_id
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=plot_id
          call move_alloc(itemp1,plot_id)
+c ifold_cnt
+         allocate(itemp1(n_contr))
+         itemp1(1:max_contr)=ifold_cnt
+         call move_alloc(itemp1,ifold_cnt)
 c niproc
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=niproc
@@ -192,6 +197,7 @@ c update maximum
       allocate(parton_pdg_uborn(nexternal,1,1))
       allocate(parton_pdg(nexternal,1,1))
       allocate(plot_id(1))
+      allocate(ifold_cnt(1))
       allocate(niproc(1))
       allocate(parton_pdf(nexternal,1,1))
       allocate(icontr_sum(0:1,1))
@@ -230,6 +236,7 @@ c update maximum
       if (allocated(parton_pdg_uborn)) deallocate(parton_pdg_uborn)
       if (allocated(parton_pdg)) deallocate(parton_pdg)
       if (allocated(plot_id)) deallocate(plot_id)
+      if (allocated(ifold_cnt)) deallocate(ifold_cnt)
       if (allocated(niproc)) deallocate(niproc)
       if (allocated(parton_pdf)) deallocate(parton_pdf)
       if (allocated(icontr_sum)) deallocate(icontr_sum)

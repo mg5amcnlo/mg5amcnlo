@@ -1082,6 +1082,8 @@ c     the iproc contribution
       common /c_iden_comp/ iden_comp
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
 
 cRF: do only S-events
       if(type.eq.1 .or. type.eq.8 .or. type.eq.9 .or. type.eq.10 .or.
@@ -1109,6 +1111,8 @@ c Check for NaN's and INF's. Simply skip the contribution
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
+      shower_scale(icontr)=-99d9
+      ifold_cnt(icontr)=ifold_counter
       call set_pdg(icontr,nFKSprocess)
       if (type.eq.2) then
 c     Born contribution
@@ -1968,6 +1972,8 @@ c FKS configuration that is included in the current PS point.
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
       parameter (izero=0,mohdr=-100)
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
 c Compute the shower starting scale including the shape function
       if ( (.not. MCcntcalled) .and.
      &     abrv.ne.'born' .and. ickkw.ne.4) then
@@ -1983,9 +1989,11 @@ c Compute the shower starting scale including the shape function
       call set_shower_scale(iFKS*2-1,.false.)
       call set_cms_stuff(mohdr)
       call set_shower_scale(iFKS*2,.true.)
+      
 c loop over all the weights and update the relevant ones
-c (i.e. nFKS(i)=iFKS)
+c     (i.e. nFKS(i)=iFKS)
       do i=1,icontr
+         if (ifold_cnt(i).ne.ifold_counter) cycle
          if (nFKS(i).eq.iFKS) then
             if (H_event(i)) then
 c H-event contribution
@@ -2105,7 +2113,7 @@ c include it here!
       return
       end
 
-      subroutine update_shower_scale_Sevents
+      subroutine update_shower_scale_Sevents(ifold_counter)
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
@@ -2116,12 +2124,14 @@ c for the summed contribution.
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict
-      double precision tmp_wgt(fks_configs),showerscale(fks_configs)
-     $     ,temp_wgt,shsctemp
+      integer i,j,ict,ifl,ifold_counter
+      double precision tmp_wgt(fks_configs,ifold_counter)
+     $     ,showerscale(fks_configs,ifold_counter),temp_wgt,shsctemp
       do i=1,fks_configs
-         tmp_wgt(i)=0d0
-         showerscale(i)=-1d0
+         do ifl=1,ifold_counter
+            tmp_wgt(i,ifl)=0d0
+            showerscale(i,ifl)=-1d0
+         enddo
       enddo
 c sum the weights that contribute to a single FKS configuration.
       do i=1,icontr
@@ -2129,16 +2139,17 @@ c sum the weights that contribute to a single FKS configuration.
          if (icontr_sum(0,i).eq.0) cycle
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
-            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,i)
-            if (showerscale(nFKS(ict)).eq.-1d0) then
-               showerscale(nFKS(ict))=shower_scale(ict)
+            ifl=ifold_cnt(ict)
+            tmp_wgt(nFKS(ict),ifl)=tmp_wgt(nFKS(ict),ifl)+wgts(1,i)
+            if (showerscale(nFKS(ict),ifl).eq.-1d0) then
+               showerscale(nFKS(ict),ifl)=shower_scale(ict)
 c check that all the shower starting scales are identical for all the
 c contribution to a given FKS configuration.
-            elseif ( abs((showerscale(nFKS(ict))-shower_scale(ict))
-     $                  /(showerscale(nFKS(ict))+shower_scale(ict)))
+            elseif ( abs((showerscale(nFKS(ict),ifl)-shower_scale(ict))
+     $                  /(showerscale(nFKS(ict),ifl)+shower_scale(ict)))
      $                                                  .gt. 1d-6 ) then
                write (*,*) 'ERROR in update_shower_scale_Sevents'
-     $              ,showerscale(nFKS(ict)),shower_scale(ict)
+     $              ,showerscale(nFKS(ict),ifl),shower_scale(ict)
                stop 1
             endif
          enddo
@@ -2148,8 +2159,12 @@ c the ABS cross section to given FKS configuration.
       temp_wgt=0d0
       shsctemp=0d0
       do i=1,fks_configs
-         temp_wgt=temp_wgt+abs(tmp_wgt(i))
-         shsctemp=shsctemp+abs(tmp_wgt(i))*showerscale(i)
+         do ifl=1,ifold_counter
+            if (tmp_wgt(i,ifl).ne.0d0) then
+               temp_wgt=temp_wgt+abs(tmp_wgt(i,ifl))
+               shsctemp=shsctemp+abs(tmp_wgt(i,ifl))*showerscale(i,ifl)
+            endif
+         enddo
       enddo
       if (temp_wgt.ne.0d0) then
          shsctemp=shsctemp/temp_wgt
@@ -2787,7 +2802,7 @@ c Initialise
 c S events
       if(.not.Hevents)then
          if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
-     &      dampMCsubt.and.emsca.ne.0d0)then
+     &        dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=min(emsca,scalemax)
          else
             call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
@@ -5232,16 +5247,12 @@ c
       logical nbody
       common/cnbody/nbody
 
-      integer fold
-      common /cfl/fold
-
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
 
       softtest=.false.
       colltest=.false.
-      fold=0
 
       if (j_fks.gt.nincoming)then
          delta_used=deltaO

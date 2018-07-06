@@ -766,8 +766,8 @@ c
       data firsttime/.true./
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer     fold
-      common /cfl/fold
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
@@ -790,6 +790,11 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer ifold(ndimmax) 
+      common /cifold/ifold
+      integer               ifold_energy,ifold_phi,ifold_yij
+      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -807,6 +812,12 @@ c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
 c "npNLO".
          call setup_event_attributes
+      endif
+
+      if (ifl.eq.0) then
+         ifold_counter=1
+      elseif(ifl.eq.1) then
+         ifold_counter=ifold_counter+1
       endif
 
       fold=ifl
@@ -963,7 +974,14 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-
+      elseif(ifl.eq.2) then
+         if (ifold_counter .ne.
+     $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then
+            write (*,*) "ERROR in folding parameters (driver_mintMC.f)"
+     $           ,ifold_counter,ifold_energy,ifold_phi,ifold_yij
+            write (*,*) ifold(:)
+            stop 1
+         endif
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
@@ -972,13 +990,10 @@ c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents
+         call update_shower_scale_Sevents(ifold_counter)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-
-
          
-      elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return

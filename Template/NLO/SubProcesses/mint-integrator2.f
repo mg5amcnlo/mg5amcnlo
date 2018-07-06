@@ -369,6 +369,7 @@ c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
 c contribution to integral
          if(imode.eq.0) then
             dummy=fun(x,vol,ifirst,f1)
+            dummy=fun(x,vol,2,f1)
             do i=1,nintegrals
                f(i)=f(i)+f1(i)
             enddo
