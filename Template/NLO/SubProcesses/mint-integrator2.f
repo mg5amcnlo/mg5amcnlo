@@ -173,7 +173,7 @@ c Initialize grids
          do kchan=1,maxchannels
             nhits_in_grids(kchan)=0
          enddo
-         call init_ave_virt(nint_used_virt,ndim)
+         call init_ave_virt(nint_used_virt,ndim-3)
          do kchan=0,nchans
             ans_chan(kchan)=0d0
          enddo
@@ -365,7 +365,7 @@ c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
             if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=
      $           nhits(icell(kdim),kdim,ichan)+1
          enddo
-         call get_ave_virt(x,nint_used_virt,ndim,average_virtual)
+         call get_ave_virt(x,nint_used_virt,ndim-3,average_virtual)
 c contribution to integral
          if(imode.eq.0) then
             dummy=fun(x,vol,ifirst,f1)
@@ -400,7 +400,7 @@ c the virtual was not computed for this phase-space point. Compensate by
 c including the virtual_fraction.
             if (f(3).ne.0d0) then
                f(6)=f(6)/virtual_fraction(ichan)
-               call fill_ave_virt(x,nint_used_virt,ndim,f(3),f(6))
+               call fill_ave_virt(x,nint_used_virt,ndim-3,f(3),f(6))
             else
                f(6)=0d0
             endif
@@ -574,7 +574,7 @@ c Reset the MINT grids
                do kchan=1,maxchannels
                   nhits_in_grids(kchan)=0
                enddo
-               call init_ave_virt(nint_used_virt,ndim)
+               call init_ave_virt(nint_used_virt,ndim-3)
                do kchan=0,nchans
                   ans_chan(kchan)=0d0
                enddo
@@ -753,7 +753,7 @@ c Iteration is finished; now rearrange the grid
      $              ,regridded(kchan))
             enddo
          enddo
-         call regrid_ave_virt(nint_used_virt,ndim)
+         call regrid_ave_virt(nint_used_virt,ndim-3)
 c Regrid the MC over integers (used for the MC over FKS dirs)
          call regrid_MC_integer
       endif
@@ -796,7 +796,7 @@ c Double the number of intervals in the grids if not yet reach the maximum
          nint_used=2*nint_used
       endif
       if (2*nint_used_virt.le.nintervals_virt .and. double_events) then
-         call double_ave_virt(nint_used_virt,ndim)
+         call double_ave_virt(nint_used_virt,ndim-3)
          nint_used_virt=2*nint_used_virt
       endif
 
@@ -1062,7 +1062,15 @@ c imode=3 store generation efficiency in x(1)
          stop
       endif
  10   continue
-      call get_channel(ymax_virt,vol_chan)
+      if (nchans.ne.1) then
+         write (*,*) 'ERROR in mint-integrator2.f: for event '/
+     $        /'generation, can do only 1 channel at a time',nchans
+         stop 1
+      else
+         ! should not do anything except set 'ichan' and 'iconfig'
+         ! correctly:
+         call get_channel(ymax_virt,vol_chan)
+      endif
       new_point=.true.
       if (vn.eq.1) then
          icalls_virt=icalls_virt+1
@@ -1112,7 +1120,7 @@ c Choose cell flat
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
          x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx(kdim)
       enddo
-      call get_ave_virt(x,nintcurr_virt,ndim,average_virtual)
+      call get_ave_virt(x,nintcurr_virt,ndim-3,average_virtual)
       if (vn.eq.1) then
          ubound=ymax_virt(ichan)
       endif
