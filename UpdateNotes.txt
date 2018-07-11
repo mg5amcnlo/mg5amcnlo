@@ -1,8 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.1 
-
-     include 2.6.3 see below 
+     include 2.6.3 see below
+     RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
+         cuts and --to a lesser extend-- processes with massive final state particles:
+	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
 
 3.0.0 (01/05/18):
 

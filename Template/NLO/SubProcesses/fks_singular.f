@@ -1115,8 +1115,6 @@ c terms.
       double precision    xi_i_fks_ev,y_ij_fks_ev
       double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision   xi_i_fks_cnt(-2:2)
@@ -1249,7 +1247,7 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
       endif
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
-      prefact=1d0/xi_i_hat_ev/(1-y_ij_fks_ev)
+      prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
       f_r=prefact*jac_ev*enhance_real*fkssymmetryfactor*vegas_wgt
       f_MC_S=f_r
       f_MC_H=f_r
