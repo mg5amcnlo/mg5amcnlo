@@ -993,7 +993,6 @@ c determined which contributions are identical.
          call update_shower_scale_Sevents(ifold_counter)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-         
          call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return

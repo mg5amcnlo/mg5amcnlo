@@ -2126,9 +2126,11 @@ c for the summed contribution.
       include 'nFKSconfigs.inc'
       integer i,j,ict,ifl,ifold_counter
       double precision tmp_wgt(fks_configs,ifold_counter),ran2,target
-     $     ,showerscale(fks_configs,ifold_counter),temp_wgt,shsctemp
+     $     ,showerscale(fks_configs,ifold_counter)
+     $     ,temp_wgt(0:ifold_counter),shsctemp(0:ifold_counter)
       external ran2
-      
+
+      if (icontr.le.0) return
       do i=1,fks_configs
          do ifl=1,ifold_counter
             tmp_wgt(i,ifl)=0d0
@@ -2142,7 +2144,7 @@ c sum the weights that contribute to a single FKS configuration.
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
             ifl=ifold_cnt(ict)
-            tmp_wgt(nFKS(ict),ifl)=tmp_wgt(nFKS(ict),ifl)+wgts(1,i)
+            tmp_wgt(nFKS(ict),ifl)=tmp_wgt(nFKS(ict),ifl)+wgts(1,(ifl-1)+i)
             if (showerscale(nFKS(ict),ifl).eq.-1d0) then
                showerscale(nFKS(ict),ifl)=shower_scale(ict)
 c check that all the shower starting scales are identical for all the
@@ -2156,31 +2158,66 @@ c contribution to a given FKS configuration and fold.
             endif
          enddo
       enddo
+      
 c Compute the weighted average of the shower scale. Weight is given by
 c the ABS cross section to given FKS configuration and fold.
-      temp_wgt=0d0
-      do i=1,fks_configs
-         do ifl=1,ifold_counter
-            temp_wgt=temp_wgt+abs(tmp_wgt(i,ifl))
+c$$$      temp_wgt=0d0
+c$$$      do i=1,fks_configs
+c$$$         do ifl=1,ifold_counter
+c$$$            temp_wgt=temp_wgt+abs(tmp_wgt(i,ifl))
+c$$$         enddo
+c$$$      enddo
+c$$$      shsctemp=0d0
+c$$$      target=temp_wgt*ran2()
+c$$$      do j=0,fks_configs*ifold_counter-1
+c$$$         ifl=j/fks_configs + 1
+c$$$         i=j-(ifl-1)*fks_configs + 1
+c$$$         shsctemp=shsctemp+abs(tmp_wgt(i,ifl))
+c$$$         if (shsctemp.gt.target) then
+c$$$            shsctemp=showerscale(i,ifl)
+c$$$            exit
+c$$$         endif
+c$$$      enddo
+c$$$                  
+c$$$c Overwrite the shower scale for the S-events
+c$$$      do i=1,icontr
+c$$$         if (H_event(i)) cycle
+c$$$         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
+c$$$  enddo
+
+      shsctemp(:)=0d0
+      temp_wgt(:)=0d0
+      do ifl=1,ifold_counter
+         do i=1,fks_configs
+            temp_wgt(ifl)=temp_wgt(ifl)+abs(tmp_wgt(i,ifl))
+            shsctemp(ifl)=shsctemp(ifl)+abs(tmp_wgt(i,ifl))
+     $                                  *showerscale(i,ifl)
          enddo
+         temp_wgt(0)=temp_wgt(0)+temp_wgt(ifl)
       enddo
-      shsctemp=0d0
-      target=temp_wgt*ran2()
-      do j=0,fks_configs*ifold_counter-1
-         ifl=j/fks_configs + 1
-         i=j-(ifl-1)*fks_configs + 1
-         shsctemp=shsctemp+abs(tmp_wgt(i,ifl))
-         if (shsctemp.gt.target) then
-            shsctemp=showerscale(i,ifl)
+      target=temp_wgt(0)*ran2()
+      do ifl=1,ifold_counter
+         shsctemp(0)=shsctemp(0)+temp_wgt(ifl)
+         if (shsctemp(0).gt.target) then
             exit
          endif
       enddo
-                  
+
+      if (ifl.lt.1 .or. ifl.gt.ifold_counter) then
+         write (*,*) 'ERROR in update_shower_starting scale',ifl
+     $        ,ifold_counter,target,shsctemp(0),temp_wgt(0),icontr
+         stop 1
+      endif
+      
+      shsctemp(ifl)=shsctemp(ifl)/temp_wgt(ifl)
+      
 c Overwrite the shower scale for the S-events
       do i=1,icontr
          if (H_event(i)) cycle
-         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
+         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp(ifl)
       enddo
+
+      
       return
       end
 
