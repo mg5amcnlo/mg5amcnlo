@@ -3716,7 +3716,10 @@ class RunCardNLO(RunCard):
         self.add_param('store_rwgt_info', False)
         self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
-             
+
+        #technical
+        self.add_param('folding', [1,1,1], include=False)
+        
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)
@@ -3896,7 +3899,12 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard, "'rw_rscale' has two or more identical entries. They have to be all different for the code to work correctly."
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard, "'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly."
-
+    # Check the folding parameters
+        if len(self['folding']) != 3:
+            raise InvalidRunCard, "'folding' should contain exactly three integers"
+        for ifold in self['folding']:
+            if ifold not in [1,2,4,8]: 
+                raise InvalidRunCard, "The three 'folding' parameters should be equal to 1, 2, 4, or 8."
 
     def update_system_parameter_for_include(self):
         

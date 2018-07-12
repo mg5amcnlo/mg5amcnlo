@@ -172,3 +172,10 @@
 #***********************************************************************
  %(iappl)s = iappl ! aMCfast switch (0=OFF, 1=prepare grids, 2=fill grids)
 #***********************************************************************
+# Folding parameters for S-events to reduce the number of negatively   *
+# weighted events. Allowed values are 1, 2, 4 or 8 for each of the     *
+# three variables. Typically, folding in y_ij or xi_i results in the   *
+# largest reduction of negatively weighted events                      *
+#***********************************************************************
+ %(folding)s = folding ! correspond to folding in xi_i, phi_i, and y_ij
+#***********************************************************************

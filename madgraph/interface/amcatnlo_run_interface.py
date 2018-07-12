@@ -2054,6 +2054,7 @@ RESTART = %(mint_mode)s
 """ \
               % job
         else:
+            job['fold_string']=' '.join(map(str, self.run_card['folding']))
             content = \
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
@@ -2063,7 +2064,7 @@ RESTART = %(mint_mode)s
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
 %(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%(fold_string)s      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
 %(run_mode)s        ! all, born, real, virt
 """ \
                     % job
