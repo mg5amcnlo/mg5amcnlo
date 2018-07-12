@@ -94,7 +94,10 @@ c general MadFKS parameters
       include "FKSParams.inc"
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
-
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+      
 C-----
 C  BEGIN CODE
 C-----  
@@ -396,14 +399,15 @@ c fill the information for the write_header_init common block
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
-            call pick_unweight_contr(iFKS_picked)
+            call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
             endif
-            call finalize_event(x,weight,lunlhe,putonshell)
+            call finalize_event(x_save(1,ifold_picked),weight,lunlhe
+     $           ,putonshell)
          enddo
          call deallocate_weight_lines
          vn=-1
@@ -794,6 +798,10 @@ c
       common /cifold/ifold
       integer               ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+
       
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
@@ -833,6 +841,9 @@ c "npNLO".
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
+         do i=1,ndim
+            x_save(i,ifold_counter)=x(i)
+         enddo
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -990,7 +1001,7 @@ c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents(ifold_counter)
+         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
          call fill_mint_function_NLOPS(f,n1body_wgt)

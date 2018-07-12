@@ -1084,14 +1084,6 @@ c     the iproc contribution
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
-
-cRF: do only S-events
-      if(type.eq.1 .or. type.eq.8 .or. type.eq.9 .or. type.eq.10 .or.
-     $     type.eq.13)then
-         return
-      endif
-
-
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -2113,7 +2105,7 @@ c include it here!
       return
       end
 
-      subroutine update_shower_scale_Sevents(ifold_counter)
+      subroutine update_shower_scale_Sevents(ifold_counter,ifold_picked)
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
@@ -2121,15 +2113,17 @@ c necessarily the same for all of these summed FKS configurations and/or
 c folds).
       use weight_lines
       implicit none
-      integer ifold_counter,i
+      integer ifold_counter,i,ifold_picked
       double precision showerscale
       logical improved_scale_choice
       parameter (improved_scale_choice=.false.)
       if (icontr.eq.0) return
       if (.not. improved_scale_choice) then
-         call update_shower_scale_Sevents_v1(ifold_counter,showerscale)
+         call update_shower_scale_Sevents_v1(ifold_counter,showerscale
+     $        ,ifold_picked)
       else
-         call update_shower_scale_Sevents_v2(ifold_counter,showerscale)
+         call update_shower_scale_Sevents_v2(ifold_counter,showerscale
+     $        ,ifold_picked)
       endif
 c Overwrite the shower scale for the S-events
       do i=1,icontr
@@ -2140,7 +2134,7 @@ c Overwrite the shower scale for the S-events
       end
 
       subroutine update_shower_scale_Sevents_v1(ifold_counter
-     $     ,showerscale)
+     $     ,showerscale,ifold_picked)
 c Original way of assigning shower starting scales. This is for backward
 c compatibility. It picks a fold randomly, based on the weight of the
 c fold to the sum over all folds. Within a fold, take the weighted
@@ -2148,7 +2142,7 @@ c average of shower scales for the FKS configurations.
       use weight_lines
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict,ifl,ifold_counter,iFKS
+      integer i,j,ict,ifl,ifold_counter,iFKS,ifold_picked
       double precision tmp_wgt(fks_configs,ifold_counter),ran2,target
      $     ,tmp_scale(fks_configs,ifold_counter),showerscale,ifold_accum
      $     ,temp_wgt(ifold_counter),shsctemp(ifold_counter),temp_wgt_sum
@@ -2197,6 +2191,7 @@ c is given by the ABS cross section to given FKS configuration.
          enddo
          temp_wgt_sum=temp_wgt_sum+temp_wgt(ifl)
       enddo
+      if (temp_wgt_sum.eq.0d0) return
 c Randomly pick one of the folds
       target=temp_wgt_sum*ran2()
       ifold_accum=0d0
@@ -2211,12 +2206,13 @@ c Randomly pick one of the folds
       endif
 c Shower scale is weighted average within the fold
       showerscale=shsctemp(ifl)/temp_wgt(ifl)
+      ifold_picked=ifl
       return
       end
 
 
       subroutine update_shower_scale_Sevents_v2(ifold_counter
-     $     ,showerscale)
+     $     ,showerscale,ifold_picked)
 c Improved way of assigning shower starting scales. It picks a fold
 c randomly, based on the weight of the fold to the sum over all
 c folds. Within a fold, pick an FKS configuration randomly, weighted by
@@ -2226,7 +2222,7 @@ c contributions to the picked fold, use the weights of those instead).
       use weight_lines
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict,ifl,ifold_counter,iFKS
+      integer i,j,ict,ifl,ifold_counter,iFKS,ifold_picked
       double precision wgt_fold_fks(fks_configs,ifold_counter),ran2
      $     ,target,tmp_scale(fks_configs,ifold_counter),showerscale
      $     ,wgt_fold_fks_born(fks_configs,ifold_counter)
@@ -2315,6 +2311,7 @@ c instead.
          do iFKS=1,fks_configs
             wgt_sum=wgt_sum+abs(wgt_fold_fks_born(iFKS,ifl))
          enddo
+         if (wgt_sum.eq.0d0) return
          target=wgt_sum*ran2()
          wgt_accum=0d0
          do iFKS=1,fks_configs
@@ -2328,6 +2325,7 @@ c instead.
          endif
       endif
       showerscale=tmp_scale(iFKS,ifl)
+      ifold_picked=ifl
       return
       end
 
@@ -2422,7 +2420,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
       end
 
 
-      subroutine pick_unweight_contr(iFKS_picked)
+      subroutine pick_unweight_contr(iFKS_picked,ifold_picked)
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
       use weight_lines
@@ -2432,7 +2430,7 @@ c PS point that should be written in the event file.
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'timing_variables.inc'
-      integer i,j,k,iFKS_picked,ict
+      integer i,j,k,iFKS_picked,ict,ifold_picked
       double precision tot_sum,rnd,ran2,current,target
       external ran2
       integer           i_process_addwrite
@@ -2477,10 +2475,13 @@ c found the contribution that should be written:
          Hevents=.true.
          i_process_addwrite=iproc_picked
          iFKS_picked=nFKS(icontr_picked)
+         ifold_picked=ifold_cnt(icontr_picked)
          SCALUP(iFKS_picked*2)=shower_scale(icontr_picked)
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
+c For S-events, ifold_picked is already set in update_shower_scale_Sevents()
+c$$$         ifold_picked=ifold_cnt(icontr_picked)
          do k=1,icontr_sum(0,icontr_picked)
             ict=icontr_sum(k,icontr_picked)
             if (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
