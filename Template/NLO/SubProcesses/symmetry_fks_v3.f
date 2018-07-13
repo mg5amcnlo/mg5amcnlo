@@ -208,7 +208,7 @@ c        Look for matches
       enddo
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
-      call write_bash(mapconfig,use_config,force_one_job)
+      call write_bash(use_config,force_one_job)
       return
       end
 
@@ -299,7 +299,7 @@ c*******************************************************************************
       end
 
 
-      subroutine write_bash(mapconfig,use_config,force_one_job)
+      subroutine write_bash(use_config,force_one_job)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
 c     configurations, but only for "non-identical" configurations.
@@ -310,7 +310,8 @@ c***************************************************************************
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs),i,lname
+      include 'born_conf.inc' ! needed for mapconfig
+      integer use_config(0:lmaxconfigs),i,lname
       character*30 fname,mname
       character*2 postfix
       logical j_fks_ini,j_fks_fin,two_jobs,force_one_job

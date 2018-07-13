@@ -77,7 +77,7 @@ c others: same as 1 (for now)
      $     ,ans(nintegrals,0:maxchannels),unc(nintegrals,0:maxchannels)
      $     ,ans3(nintegrals,3),unc3(nintegrals,3),ans_l3(nintegrals)
      $     ,unc_l3(nintegrals),chi2_l3(nintegrals),vol_chan,error_virt
-      real * 8 xint_virt(maxchannels),ymax_virt(maxchannels)
+      real * 8 xint_virt(maxchannels),ymax_virt(0:maxchannels)
      $     ,ans_chan(0:maxchannels)
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax,maxchannels)
@@ -1031,8 +1031,8 @@ c imode=3 store generation efficiency in x(1)
       integer ndim,imode
       include "mint.inc"
       real * 8 fun,xgrid(0:nintervals,ndimmax,maxchannels)
-     $     ,ymax(nintervals,ndimmax,maxchannels),ymax_virt(maxchannels)
-     $     ,x(ndimmax)
+     $     ,ymax(nintervals,ndimmax,maxchannels)
+     $     ,ymax_virt(0:maxchannels),x(ndimmax)
       real * 8 dx(ndimmax),xx(ndimmax),vol_chan,dummy
       integer icell(ndimmax),ncell(ndimmax),ncell_virt
       integer ifold(ndimmax),kfold(ndimmax)

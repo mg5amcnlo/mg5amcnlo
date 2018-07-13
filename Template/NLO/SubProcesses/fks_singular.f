@@ -1734,11 +1734,16 @@ c include the weight also in the 'wgt' array that contain the
 c coefficients for PDF and scale computations. 
       use weight_lines
       implicit none
-      integer i,j
+      include 'orders.inc'
+      include 'mint.inc'
+      integer orders(nsplitorders)
+      integer i,j,iamp
+      logical virt_found
       double precision bias
       character*7 event_norm
       common /event_normalisation/event_norm
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
 c Set the bias_wgt to 1 in case we do not have to do any biassing
       if (event_norm(1:4).ne.'bias') then
@@ -1747,6 +1752,7 @@ c Set the bias_wgt to 1 in case we do not have to do any biassing
          enddo
          return
       endif
+      virt_found=.false.
 c loop over all contributions
       do i=1,icontr
          if (itype(i).eq.1) then
@@ -1769,9 +1775,15 @@ c Update the weights:
          do j=1,3
             wgt(j,i)=wgt(j,i)*bias_wgt(i)
          enddo
-         if (itype(i).eq.14) then
-            virt_wgt_mint=virt_wgt_mint*bias_wgt(i)
-            born_wgt_mint=born_wgt_mint*bias_wgt(i)
+         if (itype(i).eq.14 .and. .not.virt_found) then
+            virt_found=.true.
+            virt_wgt_mint(0)=virt_wgt_mint(0)*bias_wgt(i)
+            born_wgt_mint(0)=born_wgt_mint(0)*bias_wgt(i)
+            do iamp=1,amp_split_size
+               call amp_split_pos_to_orders(iamp, orders)
+               virt_wgt_mint(iamp)=virt_wgt_mint(iamp)*bias_wgt(i)
+               born_wgt_mint(iamp)=born_wgt_mint(iamp)*bias_wgt(i)
+            enddo
          endif
       enddo
       return

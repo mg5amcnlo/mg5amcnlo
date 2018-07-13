@@ -18,7 +18,7 @@ C
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      double precision p(0:3, nexternal), prambo(0:3, nexternal)
+      double precision p(0:3, nexternal), prambo(0:3,100)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double precision pswgt
@@ -48,7 +48,7 @@ cc
       include 'coupl.inc'
       include 'q_es.inc'
       integer nsqso,MLResArrayDim
-      double precision pmass(nexternal), pmass_rambo(nexternal)
+      double precision pmass(nexternal), pmass_rambo(100)
       integer nfail
       logical first_time
       data first_time/.TRUE./

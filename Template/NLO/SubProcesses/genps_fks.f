@@ -2557,7 +2557,7 @@ c next-to-last, with granny itself as the final one.
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
      &     cBW_width(-1:1,-nexternal:-1)
-      double precision s_mass(-nexternal:-1)
+      double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass
 c Common block with granny information
       logical granny_is_res
