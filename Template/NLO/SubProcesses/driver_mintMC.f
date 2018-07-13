@@ -59,7 +59,7 @@ c Vegas stuff
       common /event_normalisation/event_norm
 c For MINT:
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
-     $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
+     $     ,ndimmax,maxchannels),ymax_virt(0:maxchannels),ans(nintegrals
      $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
      $     ,0:maxchannels),x(ndimmax)
       integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
