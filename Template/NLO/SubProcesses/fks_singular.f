@@ -1080,8 +1080,6 @@ c     the iproc contribution
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       double precision     iden_comp
       common /c_iden_comp/ iden_comp
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
@@ -1433,8 +1431,6 @@ c wgts() array to include the weights.
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c currently we have 'iwgt' weights in the wgts() array.
@@ -2022,8 +2018,6 @@ c various FKS configurations can be summed together.
       logical               only_virt
       integer         imode
       common /c_imode/imode,only_virt
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
