@@ -1002,7 +1002,6 @@ c Sum the contributions that can be summed before taking the ABS value
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
          call update_shower_scale_Sevents(ifold_counter,ifold_picked)
-         call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
          call fill_mint_function_NLOPS(f,n1body_wgt)
       endif

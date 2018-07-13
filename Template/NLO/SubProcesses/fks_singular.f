@@ -38,7 +38,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'run.inc'
       include 'timing_variables.inc'
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
-     &     ,g22,wgt4
+     &     ,g22,wgt4,tmp_virt_wgt
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -86,9 +86,10 @@ c value to the list of weights using the add_wgt subroutine
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-      virt_wgt_mint=virt_wgt*f_nb/g22
-      born_wgt_mint=born_wgt*f_b/g2
-      call add_wgt(14,virt_wgt_mint,0d0,0d0)
+      tmp_virt_wgt=virt_wgt*f_nb/g22
+      call add_wgt(14,tmp_virt_wgt,0d0,0d0)
+      virt_wgt_mint=virt_wgt_mint+tmp_virt_wgt
+      born_wgt_mint=born_wgt_mint+born_wgt*f_b/g2
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
       return
@@ -1198,6 +1199,7 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       integer i,j,k
+      logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
      $     ,wgt_wo_pdf
       external rwgt_muR_dep_fac
@@ -1212,6 +1214,7 @@ c or to fill histograms.
       COMMON /SUBPROC/ PD, IPROC
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+      virt_found=.false.
       do i=1,icontr
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
@@ -1235,7 +1238,8 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
-         if (itype(i).eq.14) then
+         if (itype(i).eq.14 .and. .not.virt_found) then
+            virt_found=.true.
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
@@ -1262,6 +1266,7 @@ c coefficients for PDF and scale computations.
       use weight_lines
       implicit none
       integer i,j
+      logical virt_found
       double precision bias
       character*7 event_norm
       common /event_normalisation/event_norm
@@ -1274,6 +1279,7 @@ c Set the bias_wgt to 1 in case we do not have to do any biassing
          enddo
          return
       endif
+      virt_found=.false.
 c loop over all contributions
       do i=1,icontr
          if (itype(i).eq.1) then
@@ -1296,7 +1302,8 @@ c Update the weights:
          do j=1,3
             wgt(j,i)=wgt(j,i)*bias_wgt(i)
          enddo
-         if (itype(i).eq.14) then
+         if (itype(i).eq.14 .and. .not.virt_found) then
+            virt_found=.true.
             virt_wgt_mint=virt_wgt_mint*bias_wgt(i)
             born_wgt_mint=born_wgt_mint*bias_wgt(i)
          endif
@@ -2404,6 +2411,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
       endif
+      
       f(1)=sigint_ABS
       f(2)=sigint
       f(3)=virt_wgt_mint
@@ -4616,10 +4624,6 @@ c convert to Binoth Les Houches Accord standards
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
-
-               virt_wgt=0d0
-               
-c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
@@ -4628,12 +4632,12 @@ c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                if (abrv.ne.'virt') then
                   virt_wgt=virt_wgt/virtual_fraction(ichan)
                endif
-               virt_wgt_save=virt_wgt
-c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
+            else
+               virt_wgt=0d0
             endif
+            virt_wgt_save=virt_wgt
          elseif(fold.eq.1) then
             virt_wgt=virt_wgt_save
-c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
          if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
      &        avv_wgt=average_virtual(ichan)*born_wgt*ao2pi
