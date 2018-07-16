@@ -556,25 +556,31 @@ class Combine_results(list, OneResult):
                 # this is for the (aMC@)NLO logs
                 if os.path.exists(pjoin(me_dir, 'Events', run, 'alllogs_1.html')):
                     link = '../../Events/%(R)s/alllogs_1.html#/%(P)s/%(G)s' % \
-                                        {'P': self.name,
+                                        {'P': os.path.basename(self.name),
                                          'G': oneresult.name,
                                          'R': run}
                     mod_link = link
                 elif os.path.exists(pjoin(me_dir, 'Events', run, 'alllogs_0.html')):
                     link = '../../Events/%(R)s/alllogs_0.html#/%(P)s/%(G)s' % \
-                                        {'P': self.name,
+                                        {'P': os.path.basename(self.name),
                                          'G': oneresult.name,
                                          'R': run}
                     mod_link = link
                 else:
                     # this is for madevent runs
                     link = '../../SubProcesses/%(P)s/%(G)s/%(R)s_log.txt' % \
-                                            {'P': self.name,
+                                            {'P': os.path.basename(self.name),
                                              'G': oneresult.name,
                                              'R': run}
                     mod_link = '../../SubProcesses/%(P)s/%(G)s/log.txt' % \
-                                            {'P': self.name,
+                                            {'P': os.path.basename(self.name),
                                              'G': oneresult.name}
+                    if not os.path.exists(link) and not os.path.exists(mod_link):
+                        P = os.path.basename(self.name)
+                        base = pjoin(me_dir, 'SubProcesses', P, os.path.dirname(link))
+                        pos = [pjoin(base,c) for c in os.listdir(base) if c.endswith('.log')]
+                        if len(pos) == 1:
+                            link = pos[0]
             else:
                 link = '#%s' % oneresult.name
                 mod_link = link

@@ -3470,11 +3470,11 @@ C       This is dummy particle used in multiparticle vertices
                           'DATA u1/1*1D0/\nDATA ux2/1*1D0/', 
                           """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
-u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+u1=PDG2PDF(ABS(LPP(1)),2*LP, 1,XBK(1),DSQRT(Q2FACT(1)))
 ENDIF
 IF (ABS(LPP(2)) .GE. 1) THEN
 LP=SIGN(1,LPP(2))
-ux2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ux2=PDG2PDF(ABS(LPP(2)),-2*LP, 2,XBK(2),DSQRT(Q2FACT(2)))
 ENDIF
 PD(0) = 0d0
 IPROC = 0
@@ -9832,7 +9832,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_4', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_9', 'GC_15', 'GC_21', 'GC_27', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_67', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_73', 'GC_74', 'GC_75', 'GC_76', 'GC_77', 'GC_78', 'GC_79', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_96', 'GC_97', 'GC_98', 'GC_99', 'GC_100']
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_21', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_39', 'GC_51','GC_52', 'GC_53', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_75', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_97', 'GC_98', 'GC_99', 'GC_100']
         
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 

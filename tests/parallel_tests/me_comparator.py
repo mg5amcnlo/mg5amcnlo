@@ -386,7 +386,6 @@ class MG5Runner(MG4Runner):
         self.orders = orders
         self.energy = energy
         self.non_zero = 0 
-
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
 
         # Create a proc_card.dat in the v5 format
@@ -457,7 +456,7 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        if model != 'mssm':
+        if model != 'mssm' and os.path.exists( os.path.join(self.model_dir, model)):
             v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
         else:
             v5_string = "import model %s \n" %  model
@@ -469,7 +468,6 @@ class MG5_UFO_Runner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
-
         return v5_string
 
 class MG5_UFO_gauge_Runner(MG5Runner):

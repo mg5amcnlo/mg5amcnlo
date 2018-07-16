@@ -222,7 +222,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = card.replace('10000 = nevents', '6 = nevents')
         card = card.replace(' -1 = req_acc', '0.1 = req_acc')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))

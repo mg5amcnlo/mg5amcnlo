@@ -862,7 +862,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
         lor_list = (self.routine.name,) + lor_names
         line = "    call %(name)s%(addon)s(%(before_coup)s,%(coup)s%(after_coup)s,%(out)s)\n"
-        main = '%(spin)s%(id)d' % {'spin': self.particles[self.offshell -1],
+        main = '%(spin)s%(id)d' % {'spin': self.particles[self.outgoing -1],
                            'id': self.outgoing}
         for i, name in enumerate(lor_list):
             data['name'] = name
@@ -874,7 +874,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     data['out'] = main
             elif i==1:
                 if self.offshell:
-                    type = self.particles[self.offshell-1]
+                    type = self.particles[self.outgoing-1]
                     self.declaration.add(('list_complex','%stmp' % type))
                 else:
                     type = ''
@@ -885,7 +885,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 if not offshell:
                     routine.write( '    vertex = vertex + tmp\n')
                 else:
-                    size = self.type_to_size[self.particles[offshell -1]] -2
+                    size = self.type_to_size[self.particles[self.outgoing -1]] -2
                     routine.write(" do i = %s, %s\n" % (self.momentum_size+1, self.momentum_size+size))
                     routine.write("        %(main)s(i) = %(main)s(i) + %(tmp)s(i)\n" %\
                                {'main': main, 'tmp': data['out']})
@@ -1177,7 +1177,7 @@ class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop):
 
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
-    
+
     assert (name and outgoing is not None) or abstract
 
     if tag is None:
@@ -1204,6 +1204,14 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
 
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
+
+    def myHash(target_string):
+        if len(target_string)<50:
+            return target_string
+        if '%(propa)s' in target_string:
+            return 'ALOHA_'+(str(hash(target_string.lower()))).replace('-','m')+'%(propa)s'
+        else:
+            return 'ALOHA_'+(str(hash(target_string.lower()))).replace('-','m')
 
     if tag and any(t.startswith('P') for t in tag[:-1]):
         # propagator need to be the last entry for the tag
@@ -1238,9 +1246,11 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
         if unknown_propa and outgoing:
             routine += '%(propa)s'
         if outgoing is not None:
-            return routine +'_%s' % outgoing
+            return myHash(routine)+'_%s' % outgoing
+#            return routine +'_%s' % outgoing
         else:
-            return routine
+            return myHash(routine)
+#            return routine
 
     if tag is not None:
         addon = ''.join(tag)
@@ -1257,10 +1267,15 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     if unknown_propa:
         addon += '%(propa)s'
 
+#    if outgoing is not None:
+#        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+#    else:
+#        return '_'.join((name,) + tuple(other_names)) + addon
+
     if outgoing is not None:
-        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+        return myHash('_'.join((name,) + tuple(other_names))) + addon + '_%s' % outgoing
     else:
-        return '_'.join((name,) + tuple(other_names)) + addon
+        return myHash('_'.join((name,) + tuple(other_names))) + addon
 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
@@ -1736,7 +1751,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             # added to another file
             self.mode = 'no_include'
         
-        #name = combine_name(self.name, lor_names, offshell, self.tag)
+
         
         #h_text = self.write_combined_h(lor_names, offshell, **opt)
         cc_text, h_text = StringIO() , StringIO() 

@@ -1455,21 +1455,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
 
-                for initial_state in init_states:
+                for nbi,initial_state in enumerate(init_states):
                     if initial_state in pdf_codes.keys():
                         if subproc_group:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
                                           i + 1, i + 1)
                         else:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP, %d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
+                                          i + 1,
                                           i + 1, i + 1)
                 pdf_lines = pdf_lines + "ENDIF\n"
 
@@ -1949,6 +1950,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         fsock.close()
         
         self.make_model_symbolic_link()
+
+    #===========================================================================
+    # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+    #===========================================================================
+    def write_procdef_mg5(self, file_pos, modelname, process_str):
+        """ write an equivalent of the MG4 proc_card in order that all the Madevent
+        Perl script of MadEvent4 are still working properly for pure MG5 run.
+        Not needed for StandAlone so just return
+        """
+        
+        return
+
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
@@ -2720,6 +2733,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                               self.dir_path+'/bin/internal/save_load_object.py') 
         cp(_file_path+'/madevent/gen_crossxhtml.py', 
                               self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/madevent/sum_html.py', 
+                              self.dir_path+'/bin/internal/sum_html.py')
         cp(_file_path+'/various/FO_analyse_card.py', 
                               self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 
@@ -2929,7 +2944,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         including the necessary matrix.f and nexternal.inc files"""
 
         cwd = os.getcwd()
-        misc.sprint(type(matrix_element))
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -3782,7 +3796,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
-
+        # indicate the PDG of all initial particle
+        try:
+            pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
+            pdgs2 = [p.get_initial_pdg(2) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(2)]
+        except AttributeError:
+            pdgs1 = [p.get_initial_pdg(1) for m in matrix_elements.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
+            pdgs2 = [p.get_initial_pdg(2) for m in matrix_elements.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(2)]
+        self.proc_characteristic['pdg_initial1'] = pdgs1
+        self.proc_characteristic['pdg_initial2'] = pdgs2
+        
+        
         modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
             param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
@@ -5383,8 +5407,8 @@ class UFO_model_to_mg4(object):
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
-        self.p_to_f = parsers.UFOExpressionParserFortran()
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran()            
+        self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -6161,7 +6185,8 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot"]:
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                                    "grreglog","regsqrt"]:
                     additional_fct.append(fct.name)
 
         
@@ -6173,6 +6198,8 @@ class UFO_model_to_mg4(object):
           double complex reglogm
           double complex recms
           double complex arg
+          double complex grreglog
+          double complex regsqrt
           %s
           """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
 
@@ -6185,9 +6212,11 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_reglogm
           %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_arg
+          %(complex_mp_format)s mp_grreglog
+          %(complex_mp_format)s mp_regsqrt
           %(additional)s
           """ %\
-          {"additional": "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct]),
+          {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
            'complex_mp_format':self.mp_complex_format
            }) 
 
@@ -6270,6 +6299,62 @@ class UFO_model_to_mg4(object):
                 reglogm=log(arg) - TWOPII
              else
                 reglogm=log(arg)
+             endif
+          endif
+          end
+
+          double complex function regsqrt(arg_in)
+          implicit none
+          double complex arg_in
+          double complex arg
+          arg=arg_in
+          if(dabs(dimag(arg)).eq.0.0d0)then
+             arg=dcmplx(dble(arg),0.0d0)
+          endif
+          if(dabs(dble(arg)).eq.0.0d0)then
+             arg=dcmplx(0.0d0,dimag(arg))
+          endif
+          regsqrt=sqrt(arg)
+          end
+
+          double complex function grreglog(logsw,expr1_in,expr2_in)
+          implicit none
+          double complex TWOPII
+          parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex expr1_in,expr2_in
+          double complex expr1,expr2
+          double precision logsw
+          double precision imagexpr
+          logical firstsheet
+          expr1=expr1_in
+          expr2=expr2_in
+          if(dabs(dimag(expr1)).eq.0.0d0)then
+             expr1=dcmplx(dble(expr1),0.0d0)
+          endif
+          if(dabs(dble(expr1)).eq.0.0d0)then
+             expr1=dcmplx(0.0d0,dimag(expr1))
+          endif
+          if(dabs(dimag(expr2)).eq.0.0d0)then
+             expr2=dcmplx(dble(expr2),0.0d0)
+          endif
+          if(dabs(dble(expr2)).eq.0.0d0)then
+             expr2=dcmplx(0.0d0,dimag(expr2))
+          endif
+          if(expr1.eq.(0.0d0,0.0d0))then
+             grreglog=(0.0d0,0.0d0)
+          else
+             imagexpr=dimag(expr1)*dimag(expr2)
+             firstsheet=imagexpr.ge.0.0d0
+             firstsheet=firstsheet.or.dble(expr1).ge.0.0d0
+             firstsheet=firstsheet.or.dble(expr2).ge.0.0d0
+             if(firstsheet)then
+                grreglog=log(expr1)
+             else
+                if(dimag(expr1).gt.0.0d0)then
+                   grreglog=log(expr1) - logsw*TWOPII
+                else
+                   grreglog=log(expr1) + logsw*TWOPII
+                endif
              endif
           endif
           end
@@ -6363,6 +6448,63 @@ class UFO_model_to_mg4(object):
                  endif 
               endif
               end
+
+              %(complex_mp_format)s function mp_regsqrt(arg_in)
+              implicit none
+              %(complex_mp_format)s arg_in
+              %(complex_mp_format)s arg
+              arg=arg_in
+              if(abs(imagpart(arg)).eq.0.0e0_16)then
+                 arg=cmplx(real(arg,kind=16),0.0e0_16)
+              endif
+              if(abs(real(arg,kind=16)).eq.0.0e0_16)then
+                 arg=cmplx(0.0e0_16,imagpart(arg))
+              endif
+              mp_regsqrt=sqrt(arg)
+              end
+
+
+              %(complex_mp_format)s function mp_grreglog(logsw,expr1_in,expr2_in)
+              implicit none
+              %(complex_mp_format)s TWOPII
+              parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s expr1_in,expr2_in
+              %(complex_mp_format)s expr1,expr2
+              %(real_mp_format)s logsw
+              %(real_mp_format)s imagexpr
+              logical firstsheet
+              expr1=expr1_in
+              expr2=expr2_in
+              if(abs(imagpart(expr1)).eq.0.0e0_16)then
+                 expr1=cmplx(real(expr1,kind=16),0.0e0_16)
+              endif
+              if(abs(real(expr1,kind=16)).eq.0.0e0_16)then
+                 expr1=cmplx(0.0e0_16,imagpart(expr1))
+              endif
+              if(abs(imagpart(expr2)).eq.0.0e0_16)then
+                 expr2=cmplx(real(expr2,kind=16),0.0e0_16)
+              endif
+              if(abs(real(expr2,kind=16)).eq.0.0e0_16)then
+                 expr2=cmplx(0.0e0_16,imagpart(expr2))
+              endif
+              if(expr1.eq.(0.0e0_16,0.0e0_16))then
+                 mp_grreglog=(0.0e0_16,0.0e0_16)
+              else
+                 imagexpr=imagpart(expr1)*imagpart(expr2)
+                 firstsheet=imagexpr.ge.0.0e0_16
+                 firstsheet=firstsheet.or.real(expr1,kind=16).ge.0.0e0_16
+                 firstsheet=firstsheet.or.real(expr2,kind=16).ge.0.0e0_16
+                 if(firstsheet)then
+                    mp_grreglog=log(expr1)
+                 else
+                    if(imagpart(expr1).gt.0.0e0_16)then
+                       mp_grreglog=log(expr1) - logsw*TWOPII
+                    else
+                       mp_grreglog=log(expr1) + logsw*TWOPII
+                    endif
+                 endif
+              endif
+              end
               
               %(complex_mp_format)s function mp_arg(comnum)
               implicit none
@@ -6374,7 +6516,7 @@ class UFO_model_to_mg4(object):
               else
                  mp_arg=log(comnum/abs(comnum))/imm
               endif
-              end"""%{'complex_mp_format':self.mp_complex_format})
+              end"""%{'complex_mp_format':self.mp_complex_format,'real_mp_format':self.mp_real_format})
 
 
         #check for the file functions.f
@@ -6392,7 +6534,8 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
-                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg"]:
+                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
+                                    "grreglog","regsqrt"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -6428,29 +6571,29 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
-                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg"]:
+                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
+                                        "grreglog","regsqrt"]:
                         ufo_fct_template = """
-          %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
+          %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
           %(definitions)s
-          mp__%(name)s = %(fct)s
+          mp_%(name)s = %(fct)s
 
           return
           end
           """
-          
                         str_fct = self.mp_p_to_f.parse(fct.expr)
-                        if not self.p_to_f.to_define:
+                        if not self.mp_p_to_f.to_define:
                             definitions = []
                         else:
                             definitions=[]
-                            for d in self.p_to_f.to_define:
-                                if d == 'mp_pi':
-                                    definitions.append(' %s mp_pi' % self.mp_real_format)
-                                    definitions.append(' data mp_pi /3.141592653589793238462643383279502884197e+00_16/')
+                            for d in self.mp_p_to_f.to_define:
+                                if d == 'pi': 
+                                    definitions.append(' %s mp__pi' % self.mp_real_format)
+                                    definitions.append(' data mp__pi /3.141592653589793238462643383279502884197e+00_16/')
                                 else:   
-                                    definitions.append(' %s %s' % (self.mp_complex_format,d))
+                                    definitions.append(' %s mp_%s' % (self.mp_complex_format,d))
                         text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", mp__".join(fct.arguments),                

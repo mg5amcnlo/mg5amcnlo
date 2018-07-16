@@ -308,8 +308,8 @@ class ParamCardWriter(object):
             if part["pdg_code"] in self.sm_pdg or part["pdg_code"] < 0:
                 continue
             # don't write ghosts in the QNumbers block
-            if part["type"] == 'ghost':
-                continue
+            #if part["type"] == 'ghost':
+            #    continue
             text += self.qnumber_str % {'pdg': part["pdg_code"],
                                  'name': part["name"],
                                  'charge': 3 * part["charge"],

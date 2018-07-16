@@ -32,6 +32,8 @@ c
       integer iappl
       common /for_applgrid/ iappl
       integer idum
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 c jet-rate distance. To be set to 1 for FxFx
       double precision D
       common/to_dj/D
@@ -108,26 +110,28 @@ c Set alphaS(mZ)
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
+      if (nlo_ps) then
 C Fill common block for Les Houches init info
-      do i=1,2
-         if(lpp(i).eq.1.or.lpp(i).eq.2) then
-            idbmup(i)=2212
-         elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
-            idbmup(i)=-2212
-         elseif(lpp(i).eq.3) then
-            idbmup(i)=11
-         elseif(lpp(i).eq.-3) then
-            idbmup(i)=-11
-         elseif(lpp(i).eq.0) then
-            open (unit=71,status='old',file='initial_states_map.dat')
-            read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
-            close (71)
-         else
-            idbmup(i)=lpp(i)
-         endif
-         ebmup(i)=ebeam(i)
-      enddo
-      call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+         do i=1,2
+            if(lpp(i).eq.1.or.lpp(i).eq.2) then
+               idbmup(i)=2212
+            elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
+               idbmup(i)=-2212
+            elseif(lpp(i).eq.3) then
+               idbmup(i)=11
+            elseif(lpp(i).eq.-3) then
+               idbmup(i)=-11
+            elseif(lpp(i).eq.0) then
+               open (unit=71,status='old',file='initial_states_map.dat')
+               read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
+               close (71)
+            else
+               idbmup(i)=lpp(i)
+            endif
+            ebmup(i)=ebeam(i)
+         enddo
+         call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+      endif
 c Fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
       if (lpdfvar(1) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then

@@ -44,6 +44,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+from tests.acceptance_tests.test_cmd_madevent import check_html_page
 
 pjoin = os.path.join
 
@@ -190,7 +191,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -215,7 +216,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.cmd_line.exec_cmd('set  pythia8_path None')
         self.do('generate_events -pf')
         # test the lhe event file exists
@@ -242,7 +243,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( ' -1 = nevt_job' in card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no-save')
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -256,19 +257,23 @@ class MECmdShell(IOTests.IOTestManager):
 
     def test_madspin_ON_and_onshell_atNLO(self):
 
+        nevents =20
         text = """
-        set crash_on_error True
+        set crash_on_error True --no_save
         generate p p > t t~ [QCD]
         output %s
         launch
         madspin=ON
-        set nevents 10
+        shower=OFF
+        set nevents %s
+        set mt 174
+        set wt = 1.5
         decay t > w+ b
         decay t~ > w- b~
         launch -i
         decay_events run_01
-        add madspin --replace_line="set spinmode.*" --after_line="banner" set spinmode=onshell 
-        """ % self.path
+        add madspin --replace_line="set spinmode.*" --after_line=banner set spinmode=onshell 
+        """ % (self.path,nevents)
         
         interface = MGCmd.MasterCmd()
         interface.no_notification()
@@ -278,12 +283,41 @@ class MECmdShell(IOTests.IOTestManager):
         interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
         
         # perform some basic check
+        orig_lhe = pjoin(self.path,'Events','run_01','events.lhe.gz')
         lhe_on = pjoin(self.path,'Events','run_01_decayed_1','events.lhe.gz')
         lhe_onshell= pjoin(self.path,'Events','run_01_decayed_2','events.lhe.gz')
         
         self.assertTrue(lhe_on)
         mt =174
         wt = 1.5
+        
+        # check that original event has top onshell
+        nb_event = 0
+        for event in lhe_parser.EventFile(orig_lhe):
+            nb_event +=1
+            nb_final = 0
+            m_inv_t = 0
+            m_inv_tbar = 0
+            for p in event:
+                if p.status == -1:
+                    continue
+                elif p.status == 1:
+                    nb_final += 1
+                    if p.pdg == 6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two top decaying')
+                        m_inv_t = p.mass
+                        self.assertTrue( mt - 0.1*wt < m_inv_t < mt + 0.1*wt)
+                    elif p.pdg == -6:
+                        #if m_inv_t != 0:
+                        #    self.assertTrue(False, 'two antitop decaying')
+                        m_inv_tbar = p.mass
+                        self.assertTrue( mt - 0.1*wt < m_inv_tbar < mt + 0.1*wt)
+                    #else:
+                    #    self.assertTrue(False, 'not top-antitop decaying')
+            self.assertTrue(nb_final in [2,3])
+        self.assertEqual(nb_event, nevents)        
+        
         
         # check that each events has the decay ON mode
         nb_event = 0
@@ -311,7 +345,7 @@ class MECmdShell(IOTests.IOTestManager):
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
             self.assertTrue(nb_final in [4,5])
-        self.assertEqual(nb_event, 10)
+        self.assertEqual(nb_event, nevents)
 
         # check that each events has the decay ON mode
         nb_event = 0
@@ -338,15 +372,14 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            misc.sprint(nb_final)
             self.assertTrue(nb_final in [4,5])
-        self.assertEqual(nb_event, 10)        
+        self.assertEqual(nb_event, nevents)        
 
         
     def test_madspin_LOonly(self):
         
         text = """
-        set crash_on_error True
+        set crash_on_error True --no_save
         generate p p > w+ [LOonly]
         output %s
         launch
@@ -410,7 +443,7 @@ class MECmdShell(IOTests.IOTestManager):
                         if m_inv_w != 0:
                             self.assertTrue(False, 'two W')
                         m_inv_w = p.mass
-                        self.assertTrue( 93 < m_inv_w < 95)
+                        self.assertTrue( 80 < m_inv_w < 81)
                     else:
                         self.assertTrue(False, 'not W decaying')
             self.assertTrue(nb_final in [2])
@@ -564,6 +597,9 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
         
 
     def test_calculate_xsect_nlo(self):
@@ -581,6 +617,9 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
 
 
     def test_calculate_xsect_lo(self):

@@ -137,6 +137,7 @@ def cp(path1, path2, log=True, error=False):
     try:
         shutil.copy(path1, path2)
     except IOError, why:
+        import madgraph.various.misc as misc
         try: 
             if os.path.exists(path2):
                 path2 = os.path.join(path2, os.path.split(path1)[1])
@@ -146,6 +147,8 @@ def cp(path1, path2, log=True, error=False):
                 raise
             if log:
                 logger.warning(why)
+            else:
+                misc.sprint("fail to cp", why)
     except shutil.Error:
         # idetical file
         pass
@@ -227,6 +230,7 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
         os.symlink(target, os.path.join(starting_dir, name))
     except Exception, error:
         if log:
+            logger.debug(error)
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))
 

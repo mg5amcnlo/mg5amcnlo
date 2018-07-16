@@ -1397,7 +1397,7 @@ class Test_DecayModel(unittest.TestCase):
         except KeyError:
             coup0 = model['couplings'][()][0]        
         # coupling depend on aS
-        coup_aS = model['couplings'][('aS',)][0]
+        coup_aS = model['couplings'][('aS',)][1]
         # coupling depend on both aS and aEWM1
         try:
             coup_both = model['couplings'][('aS', 'aEWM1')][0]
@@ -1427,7 +1427,7 @@ class Test_DecayModel(unittest.TestCase):
 
         # Both of GC_114 ('aS',) and GC_15 ('aEWSM1', 'aS') should change
         self.assertAlmostEqual(eval('decay_objects.'+coup_aS.name), \
-                                   -decay_objects.G)
+                                   1j*decay_objects.G**2)
 
         # copying the expr of 
         self.assertAlmostEqual(eval('decay_objects.'+coup_both.name), \

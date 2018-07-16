@@ -467,6 +467,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.has_standalone_dir:                           
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
+                if opts['rwgt_name']:
+                    self.options['rwgt_name'] = opts['rwgt_name']
                 if not self.rwgt_dir:
                     self.me_dir = self.rwgt_dir
                 self.load_module()       # load the fortran information from the f2py module
@@ -623,7 +625,7 @@ class ReweightInterface(extended_cmd.Cmd):
             for name in type_rwgt:
                 variance = ratio_square[name]/event_nb - (ratio[name]/event_nb)**2
                 orig_cross, orig_error = self.orig_cross
-                error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
+                error[name] = math.sqrt(max(0,variance/math.sqrt(event_nb))) * orig_cross + ratio[name]/event_nb * orig_error
             results.add_detail('error', error[type_rwgt[0]])
             import madgraph.interface.madevent_interface as ME_interface
 
@@ -828,7 +830,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         if self.output_type == 'default':
-            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' weight_name_strategy=\'includeIdInWeightName\'>\n'
         else:
             self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
@@ -915,6 +917,33 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_compute_widths(self, line):
         return self.mother.do_compute_widths(line)
     
+    
+    dynamical_scale_warning=True
+    def change_kinematics(self, event):
+ 
+
+        if isinstance(self.run_card, banner.RunCardLO):
+            jac = event.change_ext_mass(self.new_param_card)
+            new_event = event
+        else:
+            jac =1
+            new_event = event
+
+        if jac != 1:
+            if self.output_type == 'default':
+                logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
+                raise Exception
+            mode = self.run_card['dynamical_scale_choice']
+            if mode == -1:
+                if self.dynamical_scale_warning:
+                    logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale for renormalisation scale')
+                mode = 3
+            new_event.scale = event.get_scale(mode)
+            new_event.aqcd = self.lhe_input.get_alphas(new_event.scale, lhapdf_config=self.mother.options['lhapdf'])
+         
+        return jac, new_event
+    
+    
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
@@ -927,27 +956,15 @@ class ReweightInterface(extended_cmd.Cmd):
         orig_wgt = event.wgt
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0)
+        
         # reshuffle event for mass effect # external mass only
-        if isinstance(self.run_card, banner.RunCardLO):
-            jac = event.change_ext_mass(self.new_param_card)
-        else:
-            jac =1
-
-        if jac != 1:
-            if self.output_type == 'default':
-                logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
-                raise Exception
-            mode = self.run_card['dynamical_scale_choice']
-            if mode == -1:
-                logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale for renormalisation scale')
-                mode = 3
-            event.scale = event.get_scale(mode)
-            event.aqcd = self.lhe_input.get_alphas(event.scale, lhapdf_config=self.mother.options['lhapdf'])
- 
+        # carefull that new_event can sometimes be = to event 
+        # (i.e. change can be in place)
+        jac, new_event = self.change_kinematics(event)
         
         
         if event.wgt != 0: # impossible reshuffling
-            w_new =  self.calculate_matrix_element(event, 1)
+            w_new =  self.calculate_matrix_element(new_event, 1)
         else:
             w_new = 0
 
@@ -1697,9 +1714,19 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):
-                    mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
-                    reload(mymod)
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
+                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                    #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
+                    if mod_name in sys.modules.keys():
+                        del sys.modules[mod_name]
+                        tmp_mod_name = mod_name
+                        while '.' in tmp_mod_name:
+                            tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
+                            del sys.modules[tmp_mod_name]
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                    else:
+                        mymod = __import__(mod_name, globals(), locals(), [],-1)    
+                    
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 
@@ -1713,7 +1740,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data = self.id_to_path
             if '_second' in onedir:
                 data = self.id_to_path_second
-                
+
             # get all the information
             all_pdgs = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
@@ -1746,7 +1773,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     incoming = pdg[0:2]
                     outgoing = pdg[2:]
-                misc.sprint(incoming, outgoing)
                 order = (list(incoming), list(outgoing))
                 incoming.sort()
                 outgoing.sort()
@@ -1761,7 +1787,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         for i in range(len(pdg)):
                             if pdg[i] == oldpdg[i]:
                                 continue
-                            if not self.model or not getattr(self.model, 'get_mass'):
+                            if not self.model or not hasattr(self.model, 'get_mass'):
                                 continue
                             if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
                                 continue
@@ -1774,7 +1800,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
                         raise Exception
-                
+
                 data[tag] = order, pdir, hel
              
              
