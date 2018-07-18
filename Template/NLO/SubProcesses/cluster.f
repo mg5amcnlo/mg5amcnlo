@@ -41,14 +41,14 @@ C given by the to_mconfigs common block.
       logical firsttime(0:fks_configs),skip_first
       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
       save ipdg,cluster_list,cluster_pdg,firsttime
-      if (iproc.eq.0) then
+      if (iproc.eq.0) then      ! n-body contribution
          next=nexternal-1
          do i=1,next
             do j=0,3
                pcl(j,i)=p_born(j,i)
             enddo
          enddo
-      else
+      else                      ! n+1-body contribution
          next=nexternal
          do i=1,next
             do j=0,3
@@ -379,7 +379,6 @@ c     includes a numerical 1D integral), more efficiently would be, for
 c     each line, to compute where it starts and where it ends and only
 c     after compute the Sudakov for that line. We might consider this if
 c     need be.
-
 c     - The renormalisation scale of the 'central process' will be set
 c     to the geometric mean of ALL cluster scales that involve
 c     clusterings with exactly 2 QCD partons with scales harder than the
@@ -391,7 +390,6 @@ c     reduced to the 2nd to hardest). The value will be returned in
 c     qcd_ren_scale(0). Furthermore, in the
 c     qcd_ren_scale(1:nqcdrenscale) the renormalisation scales relevant
 c     to reweighting are given for nqcdrenscale alpha_S values.
-
 c     - The factorisation scale will be set to the smallest
 c     cluster_scale (irrespective if that is an initial scale
 c     splitting). In case there is no valid QCD-vertex, its set equal to
@@ -1070,8 +1068,9 @@ c     pick one at "random"
 c Determines the cluster scale for the clustering of momenta pi and pj
       implicit none
       integer nbr,i,j,id_ij,iBWlist(2,0:nbr)
-      double precision pi(0:4),pj(0:4),sumdot,dj_clus,tiny,djb_clus
-      parameter (tiny=1d-6)
+      double precision pi(0:4),pj(0:4),sumdot,dj_clus,one_plus_tiny
+     $     ,djb_clus
+      parameter (one_plus_tiny=1.000001d0)
       logical is_bw
       external sumdot,dj_clus,djb_clus
       if (j.le.2) then
@@ -1079,7 +1078,7 @@ c     initial state clustering
          cluster_scale=sqrt(djb_clus(pi))
          ! prefer clustering when outgoing is in the direction of incoming
          if(sign(1d0,pi(3)).ne.sign(1d0,pj(3)))
-     $        cluster_scale=cluster_scale*(1d0+tiny)
+     $        cluster_scale=cluster_scale*one_plus_tiny
       else
 c     final state clustering
          is_bw=.false.
@@ -1362,7 +1361,7 @@ c expansion of the former.
       integer i,j,next,type(0:next)
       double precision q0,q2,q1,mass(next),tmp1(next),tmp2(next)
      $     ,expanded_QCDsudakov_exp,QCDsudakov_exp,expanded_sudakov_exp
-     $     ,sudakov_exp
+     $     ,sudakov_exp,q1tmp
       logical found
       external sudakov_exp,expanded_sudakov_exp
       do i=1,type(0)
@@ -1376,14 +1375,16 @@ c expansion of the former.
                exit
             endif
          enddo
+c$$$         q1tmp=q1
+         q1tmp=max(q1,mass(i))
          if (.not. found) then
             ! not yet computed. Do it now:
-            if (q2.gt.q1 .and. q1.gt.q0) then
+            if (q2.gt.q1tmp .and. q1tmp.gt.q0) then
                tmp1(i)=sudakov_exp(q0,q2,type(i),mass(i))
-     $                -sudakov_exp(q0,q1,type(i),mass(i))
+     $                -sudakov_exp(q0,q1tmp,type(i),mass(i))
                tmp2(i)=expanded_sudakov_exp(q0,q2,type(i),mass(i))
-     $                -expanded_sudakov_exp(q0,q1,type(i),mass(i))
-            elseif(q2.gt.q1 .and. q1.eq.q0) then
+     $                -expanded_sudakov_exp(q0,q1tmp,type(i),mass(i))
+            elseif(q2.gt.q1tmp .and. q1tmp.eq.q0) then
                tmp1(i)=sudakov_exp(q0,q2,type(i),mass(i))
                tmp2(i)=expanded_sudakov_exp(q0,q2,type(i),mass(i))
             else
