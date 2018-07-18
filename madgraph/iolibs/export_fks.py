@@ -519,9 +519,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               me_number)
 
         filename = 'fks_info.inc'
-        self.write_fks_info_file(writers.FortranWriter(filename), 
+        # write_fks_info_list returns a set of the splitting types
+        self.proc_characteristic['splitting_types'] = \
+                self.proc_characteristic['splitting_types'].union(\
+                    self.write_fks_info_file(writers.FortranWriter(filename), 
                                  matrix_element, 
-                                 fortran_model)
+                                 fortran_model))
 
         filename = 'leshouche_info.dat'
         nfksconfs,maxproc,maxflow,nexternal=\
@@ -2722,6 +2725,7 @@ Parameters              %(params)s\n\
         replace_dict['splitorders_name'] = ', '.join(split_orders)
 
         bool_dict = {True: '.true.', False: '.false.'}
+        split_types_return = set(sum([info['fks_info']['splitting_type'] for info in fks_info_list], []))
 
         # this is for processes with 'real' or 'all' as NLO mode 
         if len(fks_info_list) > 0:
@@ -2843,7 +2847,7 @@ Parameters              %(params)s\n\
         
         writer.writelines(content)
     
-        return True
+        return split_types_return
 
  
     #===============================================================================

@@ -274,11 +274,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         self['has_isr'] = any([proc.isr for proc in self['born_processes']])
         self['has_fsr'] = any([proc.fsr for proc in self['born_processes']])
-        self['splitting_types'] = [info['splitting_type'] \
-                                   for proc in self['born_processes'] \
-                                   for real in proc.real_amps \
-                                   for info in real.fks_infos]
-        self['splitting_types'] = set(sum(self['splitting_types'], []))
 
     def add(self, other):
         """combines self and other, extending the lists of born/real amplitudes"""
@@ -289,8 +284,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['pdgs'].extend(other['pdgs'])
         self['has_isr'] = self['has_isr'] or other['has_isr']
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
-
-        self['splitting_types'] = self['splitting_types'].union(other['splitting_types']) 
+        self['OLP'] = other['OLP']
+        self['ncores_for_proc_gen'] = other['ncores_for_proc_gen']
 
 
     def get_born_amplitudes(self):
