@@ -1432,7 +1432,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('splitting_types', set())
+        self.add_param('splitting_types',[], typelist=str)
         self.add_param('perturbation_order', [], typelist=str)        
 
     def read(self, finput):
@@ -1467,9 +1467,6 @@ class ProcCharacteristic(ConfigFile):
         fsock.write(template)
         
         for key, value in self.items():
-            # special treatment for set (splitting_types)
-            if type(value) == set:
-                value = list(value)
             fsock.write(" %s = %s \n" % (key, value))
         
         fsock.close()   

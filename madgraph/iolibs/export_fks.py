@@ -520,11 +520,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'fks_info.inc'
         # write_fks_info_list returns a set of the splitting types
-        self.proc_characteristic['splitting_types'] = \
-                self.proc_characteristic['splitting_types'].union(\
+        self.proc_characteristic['splitting_types'] = list(\
+                set(self.proc_characteristic['splitting_types']).union(\
                     self.write_fks_info_file(writers.FortranWriter(filename), 
                                  matrix_element, 
-                                 fortran_model))
+                                 fortran_model)))
 
         filename = 'leshouche_info.dat'
         nfksconfs,maxproc,maxflow,nexternal=\

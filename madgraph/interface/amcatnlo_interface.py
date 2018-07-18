@@ -798,13 +798,18 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self.born_processes_for_olp = []
                 max_loop_vertex_ranks = []
                 
+                # transform proc_charac['splitting_types'] into a set
+                splitting_types = set(proc_charac['splitting_types'])
                 for diroutput in diroutputmap:
-                    proc_charac['splitting_types'] = proc_charac['splitting_types'].union(diroutput[3]['splitting_types'])
+                    splitting_types = splitting_types.union(set(diroutput[3]['splitting_types']))
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
                     self.born_processes.extend(diroutput[4])
                     self.born_processes_for_olp.append(diroutput[4][0])
+
+                # transform proc_charac['splitting_types'] back to a list
+                proc_charac['splitting_types'] = list(splitting_types)
 
             else:
                 max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for \
