@@ -1610,7 +1610,8 @@ c     q->q+g
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
          endif
          if (mode.eq.2) then
-            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+            Gamma=Gamma+CF*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
          endif
       elseif (type.eq.3) then !  massless vector, colour octet
 c Gluon sudakov         
@@ -1627,7 +1628,8 @@ c     g->q+qbar contribution
             endif
          enddo
          if (mode.eq.2) then
-            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+            Gamma=Gamma+CA*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
          endif
       elseif (type.eq.4 .or. type.eq.5) then
 c Sudakov for massive particle (in the large-mass limit, hence no spin
@@ -1639,9 +1641,10 @@ c     X->X+g
             colfac=CA ! X is colour octet
          endif
          Gamma=colfac*alphasq0*(log(Q1/mass)-1d0/2d0)/pi
-         if (mode.eq.2) then
-            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
-         endif
+c$$$         if (mode.eq.2) then
+c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$         endif
       else
          write (*,*) 'ERROR in reweight.f: do not know'/
      $        /' which Sudakov to compute',type
