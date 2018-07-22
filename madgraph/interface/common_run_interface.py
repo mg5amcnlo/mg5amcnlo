@@ -963,13 +963,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return None
 
-    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
+    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None, from_banner=None,
+                       banner=None):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
-                                  self.ask, first_cmd=first_cmd)
+                                  self.ask, first_cmd=first_cmd, from_banner=from_banner,
+                                  banner=banner)
         
         for c in cards:
             if not os.path.isabs(c):
@@ -4342,7 +4344,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
      
     
-    def __init__(self, question, cards=[], mode='auto', *args, **opt):
+    def __init__(self, question, cards=[], from_banner=None, banner=None, mode='auto', *args, **opt):
 
 
         self.load_default()        
@@ -4365,7 +4367,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.all_vars = set()
         self.modified_card = set() #set of cards not in sync with filesystem
                               # need to sync them before editing/leaving
-
+        self.init_from_banner(from_banner, banner)
+        
         #update default path by custom one if specify in cards
         for card in cards:
             if os.path.exists(card) and os.path.sep in cards:
@@ -4379,11 +4382,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
             self.all_vars.union(new_vars)
+            
+
+    def init_from_banner(self, from_banner, banner):
+        """ defined card that need to be initialized from the banner file 
+            from_banner should be a list of card to load from the banner object
+        """
+
+        if from_banner is None:
+            self.from_banner = {}
+            return
+        
+        self.from_banner = {}
+        for card in from_banner:
+            self.from_banner[card] = banner.charge_card(card)
+        return self.from_banner
+    
 
     def get_path(self, name, cards):
         """initialise the path if requested"""
 
         defname = '%s_default' % name
+        
+        if name in self.from_banner:
+            return self.from_banner[name]
+        
         if isinstance(cards, list):
             if name in cards:
                 return True
@@ -4417,7 +4440,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.pname2block = {}
         self.restricted_value = {}
         self.param_card = {}
-        if not self.get_path('param', cards):
+        
+        is_valid_path = self.get_path('param', cards)
+        if not is_valid_path:
+            self.param_consistency = False
+            return []
+        if isinstance(is_valid_path, param_card_mod.ParamCard):
+            self.param_card = is_valid_path
             self.param_consistency = False
             return []
 
@@ -4441,10 +4470,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.pname2block.keys()
         
     def init_run(self, cards):
-        
+      
         self.run_set = []
-        if not self.get_path('run', cards):
+        is_valid_path = self.get_path('run', cards)
+        if not is_valid_path:
             return []
+        if isinstance(is_valid_path, banner_mod.RunCard):
+            self.run_card = is_valid_path
+            return []
+        
         
         try:
             self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
@@ -4454,6 +4488,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             run_card_def = banner_mod.RunCard(self.paths['run_default'])
         except IOError:
             run_card_def = {}
+
 
         if run_card_def:
             if self.run_card:
@@ -5263,6 +5298,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_set:
+                if card in self.from_banner or 'run' in self.from_banner:
+                    raise Exception, "change not allowed for this card: event already generated!"
                 args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
             if args[start] in self.conflict and card == '':

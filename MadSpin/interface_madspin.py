@@ -199,10 +199,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self.inputfile = inputfile
         if self.options['spinmode'] == 'none' and \
-           (self.options['input_format'] != 'lhe' or (self.options['input_format'] == 'auto' and '.lhe' in inputfile[:-5])):  
+           (self.options['input_format'] not in ['lhe','auto'] or 
+             (self.options['input_format'] == 'auto' and '.lhe'  not in inputfile[-7:])):  
             self.banner = banner.Banner()
             self.setup_for_pure_decay()
-            return   
+            return  
         
         if inputfile.endswith('.gz'):
             misc.gunzip(inputfile)
@@ -282,6 +283,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
+        misc.sprint(model_name)
         if model_name:
             model_name = os.path.expanduser(model_name)
             self.load_model(model_name, mg_names, complex_mass)
@@ -984,8 +986,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #misc.sprint(i, particle.pdg, particle.pid)
                 #misc.sprint(self.final_state, evt_decayfile)
                 # check if we need to decay the particle 
-                if particle.pdg not in self.final_state or particle.pdg not in evt_decayfile:
+                if self.final_state and particle.pdg not in self.final_state:
                     continue # nothing to do for this particle
+                if particle.pdg not in evt_decayfile:
+                    continue # nothing to do for this particle
+                
                 # check how the decay need to be done
                 nb_decay = len(evt_decayfile[particle.pdg])
                 if nb_decay == 0:

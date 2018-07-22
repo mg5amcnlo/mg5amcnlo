@@ -483,9 +483,9 @@ class Banner(dict):
     def charge_card(self, tag):
         """Build the python object associated to the card"""
         
-        if tag == 'param_card':
+        if tag in ['param_card', 'param']:
             tag = 'slha'
-        elif tag == 'run_card':
+        elif tag  in ['run_card', 'run']:
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
@@ -2970,7 +2970,7 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], system=True)   
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
-            
+                     
              
     def check_validity(self):
         """ """

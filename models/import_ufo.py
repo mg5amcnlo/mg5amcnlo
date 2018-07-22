@@ -138,7 +138,8 @@ def import_model_from_db(model_name, local_dir=False):
     target = None 
     if 'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
-            if 'UFO' in os.path.basename(directory) and os.path.exists(directory):
+            if 'UFO' in os.path.basename(directory) and os.path.exists(directory) and\
+                    misc.glob('*/couplings.py', path=directory):
                 target= directory 
     if target is None:
         target = pjoin(MG5DIR, 'models')    
@@ -646,14 +647,15 @@ class UFOMG5Converter(object):
                 continue
             names = [interaction['lorentz'][i] for i in to_lor[key]]
             names.sort()
-            
+            if self.lorentz_info[names[0]].get('structure') == 'external':
+                continue
             # get name of the new lorentz
             if tuple(names) in self.lorentz_combine:
                 # already created new loretnz
                 new_name = self.lorentz_combine[tuple(names)]
             else:
                 new_name = self.add_merge_lorentz(names)
-                
+
             # remove the old couplings 
             color, coup = key
             to_remove = [(color, lor) for lor in to_lor[key]]  
@@ -1371,6 +1373,7 @@ class UFOMG5Converter(object):
     def add_lorentz(self, name, spins , expr):
         """ Add a Lorentz expression which is not present in the UFO """
 
+        logger.debug('MG5 converter defines %s to %s', name, expr)
         assert name not in [l.name for l in self.model['lorentz']]
         with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
                                self.model['lorentz']):
