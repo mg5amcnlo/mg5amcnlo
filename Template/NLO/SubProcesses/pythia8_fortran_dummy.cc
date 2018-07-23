@@ -21,6 +21,6 @@ extern "C" {
   void dire_stat_() {}
   void dire_get_mergingweight_(double& w) {}
   void dire_get_sudakov_stopping_scales_( double scales [1000] ) {}
-
+  void dire_get_stopping_info_( double scales [100][100], double mass [100][100] ) {}
 }
 
