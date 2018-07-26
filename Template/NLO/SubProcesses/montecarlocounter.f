@@ -1359,26 +1359,14 @@ c      call dire_get_no_emission_prob( noemProb, startingScale, stoppingScale, m
 c      write(*,*) noemProb
 c      call exit(0)
 
-c      write(33,*)'scales'
-c      do iii=0,99
-c        write(33,*) 'i=',iii
-c        do jjj=0,99
-c          write(33,*) xscales(iii,jjj)
-c        enddo
-c      enddo
-c
-c      write(33,*)'masses'
-c      do iii=0,99
-c        write(33,*) 'i=',iii
-c        do jjj=0,99
-c          write(33,*) xmasses(iii,jjj)
-c        enddo
-c      enddo
-
 c     target scales for H events are computed by Pythia;
 c     stored in target_scales_H
       target_scales_H=-1d0
-c     complete with information from scales array
+      do i=1,nexternal
+         do j=1,nexternal
+            target_scales_H(i,j)=xscales(i,j)
+         enddo
+      enddo
 
       probne = wgt_sudakov
       if(probne.lt.0.d0)then
