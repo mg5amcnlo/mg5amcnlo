@@ -2141,6 +2141,7 @@ c compatibility. It picks a fold randomly, based on the weight of the
 c fold to the sum over all folds. Within a fold, take the weighted
 c average of shower scales for the FKS configurations.
       use weight_lines
+      implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       integer i,j,ict,ifl,ifold_counter,iFKS,ifold_picked
@@ -2221,13 +2222,14 @@ c its contribution without including the born (and nbody_noborn)
 c contributions. (If there are only born (and nbody_noborn)
 c contributions to the picked fold, use the weights of those instead).
       use weight_lines
+      implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       integer i,j,ict,ifl,ifold_counter,iFKS,ifold_picked
       double precision wgt_fold_fks(fks_configs,ifold_counter),ran2
      $     ,target,tmp_scale(fks_configs,ifold_counter),showerscale
      $     ,wgt_fold_fks_born(fks_configs,ifold_counter)
-     $     ,wgt_fold(ifold_counter),wgt_sum
+     $     ,wgt_fold(ifold_counter),wgt_sum,wgt_accum
       external ran2
       do ifl=1,ifold_counter
          do iFKS=1,fks_configs
@@ -2274,6 +2276,7 @@ c pick the fold at random, weighted by their relative contributions
       do ifl=1,ifold_counter
          wgt_sum=wgt_sum+abs(wgt_fold(ifl))
       enddo
+      if (wgt_sum.le.0d0) return
       target=wgt_sum*ran2()
       wgt_accum=0d0
       do ifl=1,ifold_counter
