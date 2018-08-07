@@ -2618,6 +2618,13 @@ class ControlSwitch(SmartQuestion):
 
     def postcmd(self, stop, line):
         
+        # for diamond class arch where both branch defines the postcmd
+        # set it up to be in coop mode
+        try:
+            out = super(ControlSwitch,self).postcmd(stop, line)
+        except AttributeError:
+            pass
+        
         line = line.strip()
         if ';' in line:
             line= [l for l in line.split(';') if l][-1] 
@@ -2675,6 +2682,7 @@ class ControlSwitch(SmartQuestion):
         
     def check_consistency(self, key, value):
         """check the consistency of the new flag with the old ones"""
+        
         
         if key in self.last_changed:
             self.last_changed.remove(key)
