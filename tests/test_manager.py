@@ -558,7 +558,7 @@ class TestSuiteModified(unittest.TestSuite):
             else:
                 MyTextTestRunner.stream.write('T')
                 #print dir(self._tests[0]), type(self._tests[0]),self._tests[0] 
-#               MyTextTestRunner.bypassed.append(str(self._tests[0]).split()[0])
+                MyTextTestRunner.bypassed.append(str(self._tests[0]).split()[0])
                 return
 
         
