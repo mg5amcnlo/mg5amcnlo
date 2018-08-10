@@ -21,6 +21,7 @@ import shutil
 import time
 import logging
 import re
+import sys
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -498,9 +499,15 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         """Code to install the reduction library if needed"""
         
         opt = self.options
+                
         # Check if first time:
         if not force and ((opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a')))): 
             return
+
+        # do not trigger the question for tests
+        if 'test_manager.py' in sys.argv[0]:
+            from unittest.case import SkipTest
+            raise SkipTest
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:BOLD')
         to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
