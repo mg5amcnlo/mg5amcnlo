@@ -2782,7 +2782,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
+                     'looptools']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -5857,6 +5858,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if args[0] == 'update':
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
+        elif args[0] == 'looptools':
+            self.install_reduction_library(force=True)
+            return
+        
 
         plugin = self.install_plugin
         

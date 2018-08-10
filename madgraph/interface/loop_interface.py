@@ -494,13 +494,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         aloha.mp_precision = aloha_original_quad_mode
 
 
-    def install_reduction_library(self):
+    def install_reduction_library(self, force=False):
         """Code to install the reduction library if needed"""
         
         opt = self.options
-        
         # Check if first time:
-        if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
+        if not force and ((opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a')))): 
             return
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:BOLD')
@@ -950,9 +949,11 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if os.path.exists(pjoin(install_dir1, 'collier')):
                 self.code['collier'] =  pjoin(install_dir1, 'collier')
             if os.path.exists(pjoin(install_dir2, 'PJFry','bin','qd-config')):
-                self.code['collier'] =  pjoin(install_dir2, 'PJFry')
+                self.code['pjfry'] =  pjoin(install_dir2, 'PJFry')
             if os.path.exists(pjoin(install_dir2, 'golem95')):
-                self.code['collier'] =  pjoin(install_dir2, 'golem95')
+                self.code['glem'] =  pjoin(install_dir2, 'golem95')
+            if os.path.exists(pjoin(install_dir1, 'ninja')):
+                self.code['ninja'] =  pjoin(install_dir2, 'ninja','lib')
         
         # 1. create the question
         question, allowed_answer = self.create_question(first=True)
