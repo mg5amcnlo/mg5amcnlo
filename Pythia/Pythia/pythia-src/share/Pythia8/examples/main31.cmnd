@@ -41,7 +41,7 @@ POWHEG:veto = 1
 
 ! After 'vetoCount' accepted emissions in a row, no more emissions
 ! are checked. 'vetoCount = 0' means that no emissions are checked.
-! Use a very large value, e.g. 10000, to have all emissions checked. 
+! Use a very large value, e.g. 10000, to have all emissions checked.
 POWHEG:vetoCount = 3
 
 ! Selection of pThard (note, for events where there is no

@@ -194,6 +194,7 @@ public:
     nMPI         = 0;
     usePDFalphas = false;
     usePDF       = true;
+    useSystems   = true;
   }
 
   DireSpace(Pythia8::Pythia* pythiaPtr) :
@@ -205,7 +206,7 @@ public:
     pT20(0.), pT2min(0.), m2min(0.), mTolErr(0.), pTmaxFudgeMPI(0.),
     strengthIntAsym(0.), pT2minVariations(0.), pT2minMECs(0.),
     alphaS2piOverestimate(0.), usePDFalphas(false), usePDFmasses(false),
-    useSummedPDF(false), usePDF(true), useGlobalMapIF(false),
+    useSummedPDF(false), usePDF(true), useSystems(true), useGlobalMapIF(false),
     forceMassiveMap(false), useMassiveBeams(false) {
     beamOffset        = 0;
     pTdampFudge       = 0.;
@@ -506,7 +507,7 @@ private:
          pT2min, m2min, mTolErr, pTmaxFudgeMPI, strengthIntAsym,
          pT2minVariations, pT2minMECs;
   double alphaS2piOverestimate;
-  bool  usePDFalphas, usePDFmasses, useSummedPDF, usePDF, useGlobalMapIF,
+  bool  usePDFalphas, usePDFmasses, useSummedPDF, usePDF, useSystems, useGlobalMapIF,
         forceMassiveMap, useMassiveBeams;
 
   map<int,double> pT2cutSave;
@@ -620,7 +621,7 @@ private:
     return TINYPDF*log(1-x)/log(1-xref);
   }
 
-  double getXPDF( int id, int x, double scale2, int iSys = 0,
+  double getXPDF( int id, double x, double scale2, int iSys = 0,
     BeamParticle* beam = NULL) {
 
     // Return one if no PDF should be used.
@@ -642,8 +643,25 @@ private:
       if (b == NULL && beamBPtr != 0) beam = beamBPtr;
     }
 
+//cout << __LINE__ << " " << useSummedPDF << " " << x << " " << scale2 << " " <<  b->xf(id, x, scale2) << "\t\t" << b << " " << beamAPtr << " " << beamBPtr << endl;
+
     // Done.
     return (useSummedPDF) ? b->xf(id, x, scale2) : b->xfISR(iSys,id, x, scale2);
+  }
+
+  int getInA ( int system, const Event& state = Event() ) {
+    if (useSystems) return partonSystemsPtr->getInA(system);
+    int inA = 0;
+    for (int i=0; i < state.size(); ++i)
+      if (state[i].mother1() == 1) {inA = i; break; }
+    return inA;
+  }
+  int getInB ( int system, const Event& state = Event() ) {
+    if (useSystems) return partonSystemsPtr->getInB(system);
+    int inB = 0;
+    for (int i=0; i < state.size(); ++i)
+      if (state[i].mother1() == 2) {inB = i; break; }
+    return inB;
   }
 
   SplittingLibrary* splittingsPtr;

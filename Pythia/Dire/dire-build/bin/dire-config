@@ -20,7 +20,7 @@
 ################################################################################
 DIRE_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build/share/Dire/main/Makefile.inc
 
-PYTHIA_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/Makefile.inc
+PYTHIA_CFG_FILE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/share/Pythia8/examples/Makefile.inc
 
 ################################################################################
 # Helper function to check if libraries exist.

@@ -195,6 +195,7 @@ void DireTimes::init( BeamParticle* beamAPtrIn,
 
   usePDFalphas       = settingsPtr->flag("ShowerPDF:usePDFalphas");
   useSummedPDF       = settingsPtr->flag("ShowerPDF:useSummedPDF");
+  usePDF             = settingsPtr->flag("ShowerPDF:usePDF");
   BeamParticle* beam = NULL;
   if (beamAPtr != NULL || beamBPtr != NULL) {
     beam = (beamAPtr != NULL && particleDataPtr->isHadron(beamAPtr->id())) ? beamAPtr
@@ -206,6 +207,7 @@ void DireTimes::init( BeamParticle* beamAPtrIn,
                         ? beam->alphaS(pT2colCut) * 0.5/M_PI
                         : (alphaSorder > 0) ? alphaS.alphaS(pT2colCut)*0.5/M_PI
                                             :  0.5 * 0.5/M_PI;
+  useSystems = true;
 
   // Parameters of alphaEM generation.
   alphaEMorder       = settingsPtr->mode("TimeShower:alphaEMorder");

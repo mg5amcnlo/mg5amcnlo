@@ -3216,6 +3216,9 @@ vector <int> isr_qcd_Q2QG::recPositions( const Event& state, int iRad, int iEmt)
 double isr_qcd_Q2QG::zSplit(double zMinAbs, double, double m2dip) {
   double Rz = rndmPtr->flat();
   double kappa2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+//kappa2 = pow4(kappa2);
+
   double p = pow( 1. + pow2(1-zMinAbs)/kappa2, Rz );
   double res = 1. - sqrt( p - 1. )*sqrt(kappa2);
   return res;
@@ -3229,6 +3232,9 @@ double isr_qcd_Q2QG::overestimateInt(double zMinAbs, double,
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+//kappa2 = pow4(kappa2);
+
   wt  = preFac * softRescaleInt(order)
       * 2. * 0.5 * log( 1. + pow2(1.-zMinAbs)/kappa2);
   return wt;
@@ -3241,6 +3247,9 @@ double isr_qcd_Q2QG::overestimateDiff(double z, double m2dip, int orderNow) {
   //int order        = (orderNow > 0) ? orderNow : correctionOrder;
   int order        = (orderNow > -1) ? orderNow : correctionOrder;
   double kappaOld2 = pow2(settingsPtr->parm("SpaceShower:pTmin"))/m2dip;
+
+//kappaOld2 = pow4(kappaOld2);
+
   wt  = preFac * softRescaleInt(order)
       * 2.* (1.-z) / ( pow2(1.-z) + kappaOld2);
   return wt;
@@ -3260,6 +3269,8 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
+
+//kappa2 = 0.;
 
   map<string,double> wts;
   //double wt_base_as1 = preFac * ( 2.*(1.-z)/(pow2(1.-z) + kappa2) - (1.+z) );

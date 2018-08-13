@@ -132,6 +132,7 @@ public:
   double generateSingleSudakov ( double pTbegAll, 
    double pTendAll, double m2dip, int idA, int type, double s = -1.,
    double x = -1.);
+  int genSud( Event& process);
 
 protected:
 

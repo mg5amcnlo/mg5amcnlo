@@ -499,7 +499,7 @@ private:
          pTmaxFudgeMPI, sumCharge2L, sumCharge2Q, sumCharge2Tot,
          pT2minVariations, pT2minMECs, pT2recombine;
   double alphaS2piOverestimate;
-  bool usePDFalphas, usePDFmasses, useSummedPDF, useMassiveBeams;
+  bool usePDFalphas, usePDFmasses, useSummedPDF, usePDF, useSystems, useMassiveBeams;
 
   map<int,double> pT2cutSave;
   double pT2cut(int id) {

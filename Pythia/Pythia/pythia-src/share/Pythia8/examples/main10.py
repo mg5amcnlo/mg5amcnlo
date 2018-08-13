@@ -1,5 +1,5 @@
 # main10.py is a part of the PYTHIA event generator.
-# Copyright (C) 2016 Torbjorn Sjostrand.
+# Copyright (C) 2017 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -63,47 +63,47 @@ class MyUserHooks(pythia8.UserHooks):
 
     # Allow a veto for the interleaved evolution in pT.
     def canVetoPT(self): return True
-  
+
     # Do the veto test at a pT scale of 5 GeV.
     def scaleVetoPT(self): return 5.
-  
+
     # Access the event in the interleaved evolution.
     def doVetoPT(self, iPos, event):
-        
+
         # iPos <= 3 for interleaved evolution; skip others.
         if iPos > 3: return False
 
         # Fill histogram of pT spectrum at this stage.
         pTselect.fill(self.pTHat)
-        
+
         # Extract a copy of the partons in the hardest system.
         self.subEvent(event)
         nPartonsB.fill(self.workEvent.size())
-        
+
         # Find number of jets with given conditions.
         self.slowJet.analyze(event);
         nJet = self.slowJet.sizeJet()
         nJets.fill(nJet)
-        
+
         # Veto events which do not have exactly three jets.
         if nJet != 3: return True
-        
+
         # Statistics of survivors.
         nPartonsA.fill(self.workEvent.size())
         pTaccept.fill(self.pTHat)
-        
+
         # Do not veto events that got this far.
         return False
-  
+
     # Allow a veto after (by default) first step.
     def canVetoStep(self): return True
-  
+
     # Access the event in the interleaved evolution after first step.
     def doVetoStep(self, iPos, nISR, nFSR, event):
-  
+
         # Only want to study what happens at first ISR emission
         if iPos == 2 and nISR == 1: nFSRatISR.fill(nFSR)
-  
+
         # Not intending to veto any events here.
         return False
 

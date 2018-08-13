@@ -78,6 +78,9 @@ private:
     return -1.;
  }
 
+ double scale2minSave;
+ double scale2minPDF() { return scale2minSave; }
+
 };
 
 //--------------------------------------------------------------------------
@@ -130,6 +133,7 @@ void LHAPDF6::init(string setName, int member, Info *info) {
   mcPDFSave = pdf->info().get_entry_as<double>("MCharm");
   msPDFSave = pdf->info().get_entry_as<double>("MStrange");
   mbPDFSave = pdf->info().get_entry_as<double>("MBottom");
+  scale2minSave = pdf->q2Min();
 
 }
 

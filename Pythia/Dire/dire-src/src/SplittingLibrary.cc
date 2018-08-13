@@ -329,10 +329,10 @@ void SplittingLibrary::initISR() {
   splittings.insert( make_pair( name, new isr_qcd_Q2QG( name, order,
     settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
-  // G -> Q Q~ (regular DGLAP kernel)
-  name = "isr_qcd_21->1&1_CS";
-  splittings.insert( make_pair( name, new isr_qcd_G2QQ( name, order,
-    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
+//  // G -> Q Q~ (regular DGLAP kernel)
+//  name = "isr_qcd_21->1&1_CS";
+//  splittings.insert( make_pair( name, new isr_qcd_G2QQ( name, order,
+//    settingsPtr, particleDataPtr, rndmPtr, beamAPtr, beamBPtr, coupSMPtr, infoPtr)) );
 
   // G -> G G, soft part.
   name = "isr_qcd_21->21&21a_CS";

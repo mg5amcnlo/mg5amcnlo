@@ -1,15 +1,15 @@
 ! main89unlops.cmnd
 
 ! Specify statistics parameters.
-Main:numberOfEvents         = 10000  ! number of events generated
+Main:numberOfEvents         = 10000
 ! Tell Pythia that LHEF input is used
 Beams:frameType             = 4
 
 ! Specify merging parameters for CKKW-L, UMEPS, UNLOPS.
-Merging:TMS                 = 10.                  ! merging scale value
-Merging:Process             = pp>LEPTONS,NEUTRINOS ! process definition
-Merging:nJetMax             = 2        ! maximal number of additional LO jets
-Merging:nJetMaxNLO          = 1        ! maximal number of additional NLO jets
+Merging:TMS                 = 10.
+Merging:Process             = pp>LEPTONS,NEUTRINOS ! ladida
+Merging:nJetMax             = 2 
+Merging:nJetMaxNLO          = 1  
 
 ! Wimpy shower
 TimeShower:pTmaxMatch       = 1
@@ -22,7 +22,7 @@ Merging:muFacInME           = 91.188
 Merging:muRenInME           = 91.188
 
 ! Use same PDFs / alpha_s value as in ME calculation (not necessary!)
-PDF:pSet                  = LHAPDF5:CT10.LHgrid
+#PDF:pSet                  = LHAPDF5:CT10.LHgrid
 SpaceShower:alphaSvalue   = 0.118
 TimeShower:alphaSvalue    = 0.118
 

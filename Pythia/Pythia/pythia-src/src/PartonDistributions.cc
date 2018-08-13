@@ -2557,10 +2557,14 @@ LHAPDF::LHAPDF(int idIn, string pSet, Info* infoPtrIn) :
   // Determine the plugin library name.
   if (pSet.size() < 8) {
     printErr("Error in LHAPDF::LHAPDF: invalid pSet " + pSet, infoPtr);
+
+cout << __LINE__ << idIn << " " << pSet << " " << pSet.size() << endl;
+
     return;
   }
   libName = pSet.substr(0, 7);
   if (libName != "LHAPDF5" && libName != "LHAPDF6") {
+cout << __LINE__ << idIn << " " << pSet << " " << pSet.size() << " " << libName << endl;
     printErr("Error in LHAPDF::LHAPDF: invalid pSet " + pSet, infoPtr);
     return;
   }

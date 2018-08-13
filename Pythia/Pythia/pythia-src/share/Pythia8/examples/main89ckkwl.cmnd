@@ -19,7 +19,7 @@ Merging:muFacInME           = 91.188
 Merging:muRenInME           = 91.188
 
 ! Use same PDFs / alpha_s value as in ME calculation (not necessary!)
-PDF:pSet                  = LHAPDF5:CT10.LHgrid
+#PDF:pSet                  = LHAPDF5:CT10.LHgrid
 SpaceShower:alphaSvalue   = 0.118
 TimeShower:alphaSvalue    = 0.118
 

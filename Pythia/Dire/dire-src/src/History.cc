@@ -1052,7 +1052,7 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
   // Get weight.
   //double asWeight  = 1.;
   //double aemWeight = 1.;
-  //double pdfWeight = 1.;
+  double pdfWeight = 1.;
 
   double nSteps = mergingHooksPtr->getNumberOfClusteringSteps(state);
 
@@ -1061,6 +1061,9 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
   // Do trial shower, calculation of alpha_S ratios, PDF ratios
   double wt = 1.;
   if (!doSingleLegSudakovs && depth > 0) {
+
+//cout << "aaaaaaaaaaaaaaa" << endl;
+
     wt   = selected->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale );
 // no alphas or pdf ratios
 //    if (wt != 0.) asWeight  = selected->weightTreeALPHAS( asME, asFSR, asISR,
@@ -1092,16 +1095,48 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
       selNow->setSelectedChild();
       selNow->setScalesInMyHistory();
 
+if (selNow->state[selNow->clusterIn.radBef].pz() < 0.) continue;
+
       // Calculate CKKWL weight:
-      double w = selNow->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale);
+      double w = 0.;
+
+//      for (int i=0; i < 10; ++i)
+//      w += selNow->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale) / 10;
+   
+      w = selNow->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale);
+
       wt *= w;
 
-//      cout << scientific << setprecision(8) << "No-emission probability for leg "
-//      << selNow->clusterIn.radBef << " at tmin=" << selNow->clusterIn.pT()
-//      << " w=" << w << "\t Overall w=" << wt << endl;
+      int iRad = selNow->clusterIn.radBef;
+      int iRec = (iRad==3) ? 4 : 3;
+      int sideRad = (selNow->state[iRad].pz() > 0) ? 1 :-1;
+      // Find x value and flavour
+      double xRad = 2.*selNow->state[iRad].e() / selNow->state[0].e();
+      int flavRad = selNow->state[iRad].id();
+      // Find numerator/denominator scale
+      double scaleDen = selNow->clusterIn.pT();
+      double scaleNum = infoPtr->scalup();
+      double pdfratio_1 = getPDFratio(sideRad, false, true, flavRad, xRad, scaleNum, flavRad, xRad,
+              scaleDen);
+
+      int sideRec = (selNow->state[iRec].pz() > 0) ? 1 : -1;
+      double xRec = 2.*selNow->state[iRec].e() / selNow->state[0].e();
+      int flavRec = selNow->state[iRec].id();
+      double pdfratio_2 = getPDFratio(sideRec, false, true, flavRec, xRec, scaleNum, flavRec, xRec,
+              scaleDen);
+
+//pdfratio_2 = 1.;
+//wt *= pdfratio_1*pdfratio_2;
 
     }
   }
+
+//cout << wt << endl;
+
+//  if (depth > 0 && wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
+//    selected->clusterIn.pT(), nSteps-1, nSteps);
+
+//pdfWeight = 1.;
 
 //  cout << "No-emission probability="
 //  << scientific << setprecision(5) << setw(14) << wt
@@ -1121,7 +1156,7 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
 
 //abort();
 
-  return wt;
+  return wt*pdfWeight;
 
 
 //  // no mpi no-emission probability
@@ -1413,6 +1448,8 @@ double MyHistory::getPDFratio( int side, bool forSudakov, bool useHardPDFs,
   if ( forSudakov && abs(flavNum) ==4 && abs(flavDen) == 4 && muDen == muNum
     && muNum < particleDataPtr->m0(4))
     pdfDen = pdfNum = 1.0;
+
+//cout << scientific << setprecision(4) << flavNum << " " << flavDen << "\t\t " << xNum << " " << xDen << "\t\t " << muNum << " " << muDen << "\t\t " << pdfNum << " " << pdfDen << endl;
 
   // Return ratio of pdfs
   if ( pdfNum > 1e-15 && pdfDen > 1e-10 ) {
@@ -2540,7 +2577,7 @@ double MyHistory::weightTreeEmissions( PartonLevel* trial, int type,
   // If this node has too many jets, no not calculate no-emission probability.
   int njetNow = mergingHooksPtr->getNumberOfClusteringSteps( state) ;
 
-//cout << __PRETTY_FUNCTION__ << njetNow << " " << njetMax << endl;
+//cout << __PRETTY_FUNCTION__ << " " << njetMin << " " << njetNow << " " << njetMax << endl;
 
   if (njetNow >= njetMax) return 1.0;
   if (njetNow < njetMin ) w *= 1.0;
@@ -3061,7 +3098,7 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
   while ( true ) {
 
-    //cout << "enter trial shower"  << endl;
+//    cout << "enter trial shower"  << endl;
     //process.list();
     //infoPtr->scales->list(cout);
 
@@ -3083,7 +3120,7 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Get pT before reclustering
     double minScale = (minscaleIn > 0.) ? minscaleIn : scale;
 
-    //cout << "enter trial shower with ptmax=" << startingScale << " and ptmin=" << minScale << endl;
+//    cout << "enter trial shower with ptmax=" << startingScale << " and ptmin=" << minScale << endl;
 
     mergingHooksPtr->setShowerStoppingScale(minScale);
 
@@ -3123,7 +3160,7 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Clear parton systems.
     trial->resetTrial();
 
-    //cout << "found trial response code=" << typeTrial << " at pt=" << pTtrial << endl;
+//    cout << "found trial response code=" << typeTrial << " at pt=" << pTtrial << endl;
 
     // Get enhanced trial emission weight.
     /*double pTEnhanced = (canEnhanceTrial)
@@ -3260,6 +3297,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     break;
 
   }
+
+//cout << wt << endl;
 
   // Done
   //double res = (canEnhanceTrial) ? wt : ( (doVeto) ? 0. : 1. );

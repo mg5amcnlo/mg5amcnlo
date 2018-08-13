@@ -1,5 +1,5 @@
 // main92LinkDef.h is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
+// Copyright (C) 2017 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -48,8 +48,5 @@
 #pragma link C++ class Pythia8::ResonanceWRight+;
 #pragma link C++ class Pythia8::ResonanceHchgchgLeft+;
 #pragma link C++ class Pythia8::ResonanceHchgchgRight+;
-#pragma link C++ class Pythia8::ResonanceWidths+;
 #pragma link C++ class Pythia8::SigmaProcess+;
-#pragma link C++ class std::vector<ResonanceWidths>+;
-#pragma link C++ class std::pair<int,ParticleDataEntry>+;
 #endif

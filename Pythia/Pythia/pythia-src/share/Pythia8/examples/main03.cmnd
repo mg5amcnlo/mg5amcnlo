@@ -28,9 +28,12 @@ HardQCD:all = on                   ! switch on all QCD jet + jet processes
 PromptPhoton:all = on              ! swich on gamma + jet and gamma + gamma
 PhaseSpace:pTHatMin = 50.          ! minimal pT scale in process
 
+#PDF:pSet                  = LHAPDF6:CT10.LHgrid ! aaa
+#PDF:pSet                  = LHAPDF6:CT10.LHgrid
+
 ! Example 2: t-tbar production.
-#Top:gg2ttbar = on                  ! g g -> t tbar
-#Top:qqbar2ttbar = on               ! q qbar -> t tbar
+#Top:gg2ttbar = on      ! blaa 
+Top:qqbar2ttbar = on               ! q qbar -> t tbar
 
 ! Example 3: Z0 production; should set mMin.
 #WeakSingleBoson:ffbar2gmZ = on     ! q qbar -> gamma*/Z0

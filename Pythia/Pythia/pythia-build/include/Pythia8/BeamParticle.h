@@ -167,7 +167,7 @@ public:
 
   // Special hard-process parton distributions (can agree with standard ones).
   double xfHard(int idIn, double x, double Q2)
-    {return pdfHardBeamPtr->xf(idIn, x, Q2);}
+    {/*return 1.;*/ return pdfHardBeamPtr->xf(idIn, x, Q2);}
 
   // Overestimate for PDFs. Same as normal except photons inside leptons.
   double xfMax(int idIn, double x, double Q2)
@@ -180,7 +180,7 @@ public:
 
   // Standard parton distributions.
   double xf(int idIn, double x, double Q2)
-    {return pdfBeamPtr->xf(idIn, x, Q2);}
+    {/*return 1.;*/ return pdfBeamPtr->xf(idIn, x, Q2);}
 
   // Ditto, split into valence and sea parts (where gluon counts as sea).
   double xfVal(int idIn, double x, double Q2)
@@ -191,9 +191,9 @@ public:
   // Rescaled parton distributions, as needed for MPI and ISR.
   // For ISR also allow split valence/sea, and only return relevant part.
   double xfMPI(int idIn, double x, double Q2)
-    {return xfModified(-1, idIn, x, Q2);}
+    {/*return 1.;*/ return xfModified(-1, idIn, x, Q2);}
   double xfISR(int indexMPI, int idIn, double x, double Q2)
-    {return xfModified( indexMPI, idIn, x, Q2);}
+    {/*return 1.;*/ return xfModified( indexMPI, idIn, x, Q2);}
 
   // Check whether x and Q2 values fall inside the fit bounds (LHAPDF6 only).
   bool insideBounds(double x, double Q2)
@@ -204,6 +204,9 @@ public:
 
   // Return quark masses used in the PDF fit (LHAPDF6 only).
   double mQuarkPDF(int idIn) {return pdfBeamPtr->mQuarkPDF(idIn);}
+
+  // Return minimum scale used in the PDF fit (LHAPDF6 only).
+  double scale2minPDF() {return pdfBeamPtr->scale2minPDF();}
 
   // Decide whether chosen quark is valence, sea or companion.
   int pickValSeaComp();

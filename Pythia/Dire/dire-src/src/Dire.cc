@@ -11,6 +11,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("ShowerPDF:usePDFalphas",false);
   pythia.settings.addFlag("ShowerPDF:usePDFmasses",true);
   pythia.settings.addFlag("ShowerPDF:useSummedPDF",true);
+  pythia.settings.addFlag("ShowerPDF:usePDF",true);
   pythia.settings.addFlag("DireSpace:useGlobalMapIF",false);
   pythia.settings.addFlag("DireSpace:forceMassiveMap",true);
   pythia.settings.addMode("DireTimes:nFinalMax",-10,true,false,-1,10000000);

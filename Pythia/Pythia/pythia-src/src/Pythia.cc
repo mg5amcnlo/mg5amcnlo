@@ -1799,6 +1799,8 @@ bool Pythia::next() {
       }
     }
 
+//cout << __LINE__ << endl;
+
     // Possibility to perform matrix element merging for this event.
     if (doMerging) {
       int veto = mergingPtr->mergeProcess( process );
@@ -1817,6 +1819,9 @@ bool Pythia::next() {
       // structure has been changed because of reclusterings.
       if (veto == 2 && doResDec) processLevel.nextDecays( process);
     }
+
+//cout << __LINE__ << endl;
+//abort();
 
     // Possibility to stop the generation at this stage.
     if (!doPartonLevel) {

@@ -137,9 +137,6 @@ void MyMerging::storeInfos() {
     recSave.push_back(myHistory->children[i]->clusterIn.recPos());
     mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
 
-//myHistory->state.list();
-//abort();
-
   }
 
 }
@@ -159,15 +156,104 @@ void MyMerging::getStoppingInfo(double scales [100][100],
 
 double MyMerging::generateSingleSudakov ( double pTbegAll, 
   double pTendAll, double m2dip, int idA, int type, double s, double x) {
-  return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
-    type, s, x);
+
+  if (type == 1) {
+    return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
+
+  } else if (type == 2) {
+//FF
+    return 0.;
+  } else if (type == 3) {
+    return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  } else if (type == 4) {
+//FI
+    return 0.;
+  }
+
+  return 0.;
+
 }
+
+
+//--------------------------------------------------------------------------
+
+// Function to perform CKKW-L merging on this event.
+
+int MyMerging::genSud( Event& process) {
+
+  double startingScale = infoPtr->scalup();
+  double s = pow2(infoPtr->eCM());
+
+  int iz=0, ig = 0;
+  for (int i = process.size()-1; i > 0; --i)
+    if (process[i].idAbs() == 23) { iz = i; break; }
+  for (int i = process.size()-1; i > 0; --i)
+    if (process[i].colType() != 0) { ig = i; break; }
+  double stoppingScale = process[iz].pT();
+
+  double m2dip = process[iz].m2Calc();
+
+  int idA = process[3].id();
+  int idB = process[4].id();
+  int type = -1;
+  double xA = 2.*process[3].e()/infoPtr->eCM();
+  double xB = 2.*process[4].e()/infoPtr->eCM();
+
+  double sbi = -2.*process[3].p()*process[ig].p();
+  double sai = -2.*process[4].p()*process[ig].p();
+  double sab =  2.*process[3].p()*process[4].p();
+  double zA = 1 + sbi/sab;
+  double zB = 1 + sai/sab;
+
+zA = isr->z_II(process[3], process[ig], process[4]);
+
+  // Calculate CS variables.
+double pT2    = isr->pT2_II(process[3], process[ig], process[4]);
+double Q2     = 2.*process[3].p()*process[4].p()
+                - 2.*process[3].p()*process[ig].p()
+                - 2.*process[ig].p()*process[4].p();
+double kappa2 = pT2 / Q2;
+double xCS    = (zA*(1-zA)- kappa2)/(1-zA);
+
+stoppingScale = sqrt(pT2);
+
+//process.list();
+//cout << scientific << setprecision(4) << "z=" << zA << " xOld= " << xCS*xA << endl;
+
+  double w1 = isr->noEmissionProbability( startingScale, stoppingScale, m2dip, idA,
+    type, s, xCS*xA);
+
+//cout << scientific << setprecision(4) << " x= " << zA*xA << " " << zB*xA << "\t\t" << zB*xB << endl;
+
+//  double w2 = isr->noEmissionProbability( startingScale, stoppingScale, m2dip, idB,
+//    type, s, zB*xB);
+
+  double w2 = 1.;
+if (process[ig].idAbs() < 9 && process[3].id() != 21) w1= 1.;
+
+  bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
+  // Save the weight of the event for histogramming.
+  if (!includeWGT) mergingHooksPtr->setWeightCKKWL(w1*w2);
+  // Update the event weight.
+  double norm = (abs(infoPtr->lhaStrategy()) == 4) ? 1/1e9 : 1.;
+  if ( includeWGT) infoPtr->updateWeight(infoPtr->weight()*w1*w2*norm);
+
+  // Done
+  return 1;
+
+}
+
+
 
 //--------------------------------------------------------------------------
 
 // Function to steer different merging prescriptions.
 
 int MyMerging::mergeProcess(Event& process){
+
+//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
 
     // Clear all previous event-by-event information.
     clearInfos();
@@ -176,6 +262,11 @@ int MyMerging::mergeProcess(Event& process){
 //stoppingScalesSave.push_back(1.0);
 //stoppingScalesSave.push_back(2.0);
 //stoppingScalesSave.push_back(3.0);
+
+  int ig =0;
+  for (int i = process.size()-1; i > 0; --i)
+    if (process[i].colType() != 0) { ig = i; break; }
+  if (process[ig].id() != 21) return 0;
 
   //process.list(true,true);
   //infoPtr->scales->list(cout);
@@ -237,6 +328,20 @@ int MyMerging::mergeProcess(Event& process){
   // Ensure that merging weight is not counted twice.
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
 
+
+
+//return genSud(process);
+
+
+
+
+
+
+//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
+
+
+
+
   // Possibility to apply merging scale to an input event.
   bool applyTMSCut = settingsPtr->flag("Merging:doXSectionEstimate");
   if ( applyTMSCut && cutOnProcess(process) ) {
@@ -271,6 +376,19 @@ int MyMerging::mergeProcess(Event& process){
     if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
       settingsPtr->mode("Merging:nRequested", nPartons);
 
+
+
+
+
+
+
+    settingsPtr->mode("Merging:nRequested", nPartons);
+
+
+
+
+
+
     mergingHooksPtr->hasJetMaxLocal  = false;
     mergingHooksPtr->nJetMaxLocal
       = mergingHooksPtr->nJetMaxSave;
@@ -298,10 +416,14 @@ int MyMerging::mergeProcess(Event& process){
     //double RNpath(rndmPtr->flat());
     bool useAll = settingsPtr->flag("Dire:doMOPS");
 
+//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
+
     double RNpath = getPathIndex(useAll);
     if ( (settingsPtr->flag("Dire:doMOPS") && returnCode > 0)
       || settingsPtr->flag("Dire:doGenerateMergingWeights") )
       returnCode = calculateWeights(RNpath, useAll);
+
+//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
 
     //if (!generateHistories(process) ) return -1;
     //return calculateWeights(rndmPtr->flat());
@@ -1261,11 +1383,15 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
   //  (e.g. because of clustering W/Z/gluino)
   vector <int> oldResonance;
   for ( int i=0; i < newProcess.size(); ++i )
-    if ( newProcess[i].status() == 22 )
+//    if ( newProcess[i].status() == 22 )
+    if ( newProcess[i].isFinal()
+      && particleDataPtr->isResonance(newProcess[i].id()))
       oldResonance.push_back(newProcess[i].id());
   vector <int> newResonance;
   for ( int i=0; i < process.size(); ++i )
-    if ( process[i].status() == 22 )
+//    if ( process[i].status() == 22 )
+    if ( process[i].isFinal()
+      && particleDataPtr->isResonance(process[i].id()))
       newResonance.push_back(process[i].id());
   // Compare old and new resonances
   for ( int i=0; i < int(oldResonance.size()); ++i )
@@ -1399,11 +1525,15 @@ bool MyMerging::calculateSubtractions() {
     //  (e.g. because of clustering W/Z/gluino)
     vector <int> oldResonance;
     for ( int n=0; n < myHistory->state.size(); ++n )
-      if ( myHistory->state[n].status() == 22 )
+//      if ( myHistory->state[n].status() == 22 )
+      if ( myHistory->state[n].isFinal()
+        && particleDataPtr->isResonance(myHistory->state[n].id()))
         oldResonance.push_back(myHistory->state[n].id());
     vector <int> newResonance;
     for ( int n=0; n < psppoint.size(); ++n )
-      if ( psppoint[n].status() == 22 )
+//      if ( psppoint[n].status() == 22 )
+      if ( psppoint[n].isFinal()
+        && particleDataPtr->isResonance(psppoint[n].id()))
         newResonance.push_back(psppoint[n].id());
     // Compare old and new resonances
     for ( int n=0; n < int(oldResonance.size()); ++n )
@@ -1419,7 +1549,7 @@ bool MyMerging::calculateSubtractions() {
     // If necessary, reattach resonance decay products.
     if (!hasNewResonances) mergingHooksPtr->reattachResonanceDecays(psppoint);
     else {
-      cout << "Warning in MyMerging::generateHistories: Resonance "
+      cout << "Warning in MyMerging::calculateSubtractions: Resonance "
            << "structure changed due to clustering. Cannot attach decay "
            << "products correctly." << endl;
     }
@@ -1606,8 +1736,12 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   bool doUNLOPS2 = false;
   int depth = (!doUNLOPS2) ? -1 : ( (containsRealKin) ? nSteps-1 : nSteps);
 
+//  if (settingsPtr->flag("Dire:doMcAtNloDelta"))
+//    depth = (containsRealKin) ? 1 : 0;
+
   if (settingsPtr->flag("Dire:doMcAtNloDelta"))
-    depth = (containsRealKin) ? 1 : 0;
+    depth = (nSteps>0) ? 1 : 0;
+
 
   if (!useAll) {
 
@@ -1699,6 +1833,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   }
 
   mergingHooksPtr->setWeightCKKWL(wgt);
+
+//cout << wgt << endl;
 
   // Check if we need to subtract the O(\alpha_s)-term. If the number
   // of additional partons is larger than the number of jets for
@@ -1812,11 +1948,15 @@ int MyMerging::getStartingConditions( double RNpath, Event& process) {
   //  (e.g. because of clustering W/Z/gluino)
   vector <int> oldResonance;
   for ( int i=0; i < myHistory->state.size(); ++i )
-    if ( myHistory->state[i].status() == 22 )
+//    if ( myHistory->state[i].status() == 22 )
+    if ( myHistory->state[i].isFinal()
+      && particleDataPtr->isResonance(myHistory->state[i].id()))
       oldResonance.push_back(myHistory->state[i].id());
   vector <int> newResonance;
   for ( int i=0; i < process.size(); ++i )
-    if ( process[i].status() == 22 )
+//    if ( process[i].status() == 22 )
+    if ( process[i].isFinal()
+      && particleDataPtr->isResonance(process[i].id()))
       newResonance.push_back(process[i].id());
   // Compare old and new resonances
   for ( int i=0; i < int(oldResonance.size()); ++i )

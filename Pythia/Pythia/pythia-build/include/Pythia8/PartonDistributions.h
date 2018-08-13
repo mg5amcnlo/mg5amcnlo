@@ -74,6 +74,7 @@ public:
 
   // Return quark masses used in the PDF fit (LHAPDF6 only).
   virtual double mQuarkPDF(int) { return -1.;}
+  virtual double scale2minPDF() { return -1.;}
 
   // Approximate photon PDFs by decoupling the scale and x-dependence.
   virtual double gammaPDFxDependence(int, double) { return 0.; }
@@ -668,6 +669,11 @@ public:
   // Return quark masses used in the PDF fit (LHAPDF6 only).
   double mQuarkPDF(int idIn) {
     if(pdfPtr) return pdfPtr->mQuarkPDF(idIn); else return -1.;}
+
+  // Return minimum scale used in the PDF fit (LHAPDF6 only).
+  double scale2minPDF() {
+    if(pdfPtr) return pdfPtr->scale2minPDF(); else return -1.;}
+
 
 private:
 

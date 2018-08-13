@@ -1,5 +1,5 @@
 // main17.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2016 Torbjorn Sjostrand.
+// Copyright (C) 2017 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -116,7 +116,7 @@ int main() {
   // Set up to do a user veto and send it in.
   // First argument: multiplies the pT0 of multiparton interactions
   // to define the pT dampeing scale.
-  // Second argument: howe many powers of alpha_strong to
+  // Second argument: how many powers of alpha_strong to
   // reweight with new (larger) argument.
   // Third argument: choice of process scale two different ways;
   // probably does not make much difference.
