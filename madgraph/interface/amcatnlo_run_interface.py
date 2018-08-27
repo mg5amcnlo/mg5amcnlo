@@ -2603,7 +2603,13 @@ RESTART = %(mint_mode)s
         devnull = open(os.devnull, 'w') 
         
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
-            misc.call(['./combine_plots_FO.sh'] + folder_name, \
+            topfiles = []
+            for job in jobs:
+                if job['dirname'].endswith('.top'):
+                    topfiles.append(job['dirname'])
+                else:
+                    topfiles.append(pjoin(job['dirname'],'MADatNLO.top'))
+            misc.call(['./combine_plots_FO.sh'] + topfiles, \
                       stdout=devnull, 
                       cwd=pjoin(self.me_dir, 'SubProcesses'))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),

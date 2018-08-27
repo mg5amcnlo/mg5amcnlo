@@ -1,6 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.6.4 (//)
+      RF: Fixed a bug when using TopDrawer plots for f(N)LO runs, where the combination of the plots could lead
+          to completely wrong histograms/distributions in case of high-precision runs.
       OM: Fix some MLM crash for some processes (in particular BSM processes with W'). 
       OM: Fix a bug in the reweighting due to the new lhe format (the one avoiding some issue with py8)
       OM: add a new command "install looptools" to trigger the question that is automatically trigger 
