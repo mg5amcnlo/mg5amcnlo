@@ -47,27 +47,22 @@ fi
 }
 
 make read40
+rm -f MADatNLO*.top
 
 if [ "$#" -gt 64000 ]; then
     combine "MADatNLO_A" "$@"
-    files_to_combine=($(ls ${MADatNLO_A}*.top))
-    combine "MADatNLO_B" $files_to_combine
-    files_to_combine=($(ls ${MADatNLO_B}*.top))
-    combine "MADatNLO_C" $files_to_combine
-    files_to_combine=($(ls ${MADatNLO_C}*.top))
-    combine "MADatNLO_D" $files_to_combine
+    combine "MADatNLO_B" MADatNLO_A*.top
+    combine "MADatNLO_C" MADatNLO_B*.top
+    combine "MADatNLO_D" MADatNLO_C*.top
     mv MADatNLO_D_1.top MADatNLO.top
 elif [ "$#" -gt 1600 ]; then
     combine "MADatNLO_A" "$@"
-    files_to_combine=($(ls ${MADatNLO_A}*.top))
-    combine "MADatNLO_B" $files_to_combine
-    files_to_combine=($(ls ${MADatNLO_B}*.top))
-    combine "MADatNLO_C" $files_to_combine
+    combine "MADatNLO_B" MADatNLO_A*.top
+    combine "MADatNLO_C" MADatNLO_B*.top
     mv MADatNLO_C_1.top MADatNLO.top
 elif [ "$#" -gt 40 ]; then
     combine "MADatNLO_A" "$@"
-    files_to_combine=($(ls ${MADatNLO_A}*.top))
-    combine "MADatNLO_B" $files_to_combine
+    combine "MADatNLO_B" MADatNLO_A*.top
     mv MADatNLO_B_1.top MADatNLO.top
 elif [ "$#" -gt 1 ]; then
     combine "MADatNLO_A" "$@"
