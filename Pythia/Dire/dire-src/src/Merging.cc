@@ -160,19 +160,18 @@ double MyMerging::generateSingleSudakov ( double pTbegAll,
   if (type == 1) {
     return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
       -1, s, x);
-
   } else if (type == 2) {
 //FF
-    return 0.;
+    return 1.;
   } else if (type == 3) {
     return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
       1, s, x);
   } else if (type == 4) {
 //FI
-    return 0.;
+    return 1.;
   }
 
-  return 0.;
+  return 1.;
 
 }
 

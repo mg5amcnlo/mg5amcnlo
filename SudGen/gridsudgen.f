@@ -59,10 +59,16 @@ c
 c
       call dire_init(mcmass)
 
-      write(*,*)'enter lower and upper bounds of st range'
-      read(*,*)stlow,stupp
-      write(*,*)'enter lower and upper bounds of M range'
-      read(*,*)xmlow,xmupp
+c      write(*,*)'enter lower and upper bounds of st range'
+c      read(*,*)stlow,stupp
+c      write(*,*)'enter lower and upper bounds of M range'
+c      read(*,*)xmlow,xmupp
+
+      stlow=1.0
+      stupp=1000.0
+      xmlow=1.0
+      xmupp=100.0
+
       call getalq0(nnst,xkst,stlow,stupp,base,alst,q0st)
       call getalq0(nnxm,xkxm,xmlow,xmupp,base,alxm,q0xm)
 c
@@ -75,10 +81,14 @@ c
         grid(ipmap(ipart))=.true.
       enddo
       do itype=1,4
+c        if (itype .gt. 1) cycle
         do ipart=1,npart
+c          if (ipart .gt. 1) cycle
           do inxm=1,nnxm
+c            if (inxm .lt. nnxm) cycle
             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
             do inst=1,nnst
+c            if (inst .gt. 10) cycle
               st(inst)=qnodeval(inst,nnst,xkst,base,alst,q0st)
 c              grids(inst,inxm,ipart,itype)=
 c     #           ifakegrid(inst,inxm,ipmap(ipart),itype)
@@ -470,13 +480,10 @@ c
       integer id, itype
       real*8 mcmass(21)
       double precision temp
-c
 
       call dire_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype)
       py_compute_sudakov=temp
-
-C      py_compute_sudakov=1.1      
 
       write(*,*) 'id=', id, 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
