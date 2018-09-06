@@ -12,9 +12,9 @@ c
         mcmass(i)=0.d0
       enddo
       include 'MCmasses_PYTHIA8.inc'
-
-      call dire_init(mcmass)
-
+c
+c      call dire_init(mcmass)
+c
       call getalq0(26,1.d0,1.d0,100.d0,10.d0,alst,q0st)
       call getalq0(20,1.d0,2.d0,200.d0,10.d0,alxm,q0xm)
       write(6,*)'enter 0 for a manual test'
@@ -165,37 +165,37 @@ c
       FK88RANDOM = SEED*MINV
       END
 
-      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
-      implicit none
-      double precision py_compute_sudakov, stlow, stupp, md
-      integer id, itype
-      real*8 mcmass(21)
-      double precision temp
-
-      call dire_get_no_emission_prob(temp, stupp,
-     #     stlow, md, id, itype)
-      py_compute_sudakov=temp
-
-      return
-      end
-
-      function pysudakov(stlo,md,id,itype,mcmass)
-      implicit none
-      double precision pysudakov, stlo, sthi, md
-      integer id, itype
-      real*8 mcmass(21)
-c$$$      external SUDAKOV FUNCTION
-      external py_compute_sudakov
-      double precision py_compute_sudakov
-      double precision stupp, temp1, temp2
+c      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
+c      implicit none
+c      double precision py_compute_sudakov, stlow, stupp, md
+c      integer id, itype
+c      real*8 mcmass(21)
+c      double precision temp
 c
-      stupp = 1000.0
-      sthi=stupp
-
-      temp1 = py_compute_sudakov(stlo,md,id,itype,mcmass,stupp)
-      temp2 = py_compute_sudakov(sthi,md,id,itype,mcmass,stupp)
-
-      pysudakov=temp1/temp2
-
-      return
-      end
+c      call dire_get_no_emission_prob(temp, stupp,
+c     #     stlow, md, id, itype)
+c      py_compute_sudakov=temp
+c
+c      return
+c      end
+c
+c      function pysudakov(stlo,md,id,itype,mcmass)
+c      implicit none
+c      double precision pysudakov, stlo, sthi, md
+c      integer id, itype
+c      real*8 mcmass(21)
+cc$$$      external SUDAKOV FUNCTION
+c      external py_compute_sudakov
+c      double precision py_compute_sudakov
+c      double precision stupp, temp1, temp2
+cc
+c      stupp = 1000.0
+c      sthi=stupp
+c
+c      temp1 = py_compute_sudakov(stlo,md,id,itype,mcmass,stupp)
+c      temp2 = py_compute_sudakov(sthi,md,id,itype,mcmass,stupp)
+c
+c      pysudakov=temp1/temp2
+c
+c      return
+c      end
