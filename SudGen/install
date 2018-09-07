@@ -1,0 +1,16 @@
+
+workd=$(pwd)/../
+
+cd $workd
+cd SudGen
+printf ""
+echo "WORK=$workd" > makefile.inc
+echo "PYTHIA8INCLUDE=\$(WORK)/Pythia/Pythia/pythia-src/include" >> makefile.inc
+echo "PYTHIA8LIB=\$(WORK)/Pythia/Pythia/pythia-src/lib" >> makefile.inc
+echo "DIRELIB=\$(WORK)/Pythia/Pythia/pythia-src/../../Dire/dire-src/lib" >> makefile.inc
+echo "PYTHIA8FLAGS=-lstdc++ -lz -ldl -fPIC" >> makefile.inc
+
+make gridsudgen
+
+cd $workd
+

@@ -59,15 +59,16 @@ c
 c
       call dire_init(mcmass)
 
-c      write(*,*)'enter lower and upper bounds of st range'
-c      read(*,*)stlow,stupp
-c      write(*,*)'enter lower and upper bounds of M range'
-c      read(*,*)xmlow,xmupp
+      write(*,*)'enter lower and upper bounds of st range'
+      read(*,*)stlow,stupp
+      write(*,*)'enter lower and upper bounds of M range'
+      read(*,*)xmlow,xmupp
 
-      stlow=1.0
-      stupp=1000.0
-      xmlow=1.0
-      xmupp=100.0
+c     just not to have to type things during debugging.
+c      stlow=1.0
+c      stupp=1000.0
+c      xmlow=1.0
+c      xmupp=100.0
 
       call getalq0(nnst,xkst,stlow,stupp,base,alst,q0st)
       call getalq0(nnxm,xkxm,xmlow,xmupp,base,alxm,q0xm)

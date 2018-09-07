@@ -1,8 +1,4 @@
-WORK=/home/prestel/work/2018/MG5/PY8meetsMG5aMC
-PYTHIA8INCLUDE=$(WORK)/Pythia/Pythia/pythia-src/include
-PYTHIA8LIB=$(WORK)/Pythia/Pythia/pythia-src/lib
-DIRELIB=$(WORK)/Pythia/Pythia/pythia-src/../../Dire/dire-src/lib
-PYTHIA8FLAGS=-lstdc++ -lz -ldl -fPIC
+-include makefile.inc
 
 ps_interface.o: ps_interface.cc
 	gcc $(PYTHIA8FLAGS) -c -I. -I$(PYTHIA8INCLUDE) -I$(DIREINCLUDE) $^

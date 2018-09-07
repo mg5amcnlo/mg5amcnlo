@@ -1,9 +1,9 @@
 # DIRE configuration file.
-# Generated on Wed Jul 25 15:36:01 CDT 2018 with the user supplied options:
+# Generated on Fri Sep 7 09:24:48 CEST 2018 with the user supplied options:
 # --prefix=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build
-# --with-pythia8=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build
+# --with-pythia8=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
 # Configure string:
-# ./configure --prefix=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build --with-pythia8=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build
+# ./configure --prefix=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build --with-pythia8=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
 
 # Install directory prefixes.
 PREFIX_BIN=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Dire/dire-build/bin
@@ -22,12 +22,12 @@ LIB_SUFFIX=.so
 
 # PYTHIA8 configuration.
 PYTHIA8_USE=true
-PYTHIA8_BIN=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/bin/
-PYTHIA8_INCLUDE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/include
-PYTHIA8_LIB=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/lib
-PYTHIA8_PREFIX=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build
-PYTHIA8_SHARE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/share
-PYTHIA8_EXAMPLES=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-build/share/Pythia8/examples
+PYTHIA8_BIN=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/bin/
+PYTHIA8_INCLUDE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/include
+PYTHIA8_LIB=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/lib
+PYTHIA8_PREFIX=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src
+PYTHIA8_SHARE=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/share
+PYTHIA8_EXAMPLES=/home/prestel/work/2018/MG5/PY8meetsMG5aMC/Pythia/Pythia/pythia-src/share/Pythia8/examples
 
 # MG5MES configuration.
 MG5MES_USE=false

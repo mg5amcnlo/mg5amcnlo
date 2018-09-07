@@ -6,15 +6,17 @@ c If changes occur there, they must be done here as well
       implicit real*8(a-h,o-z)
       real*8 mcmass(21)
       integer ifk88seed
+      double precision st1, st2, xm1, xm2, stupp
       common/cifk88seed/ifk88seed
 c
       do i=1,21
         mcmass(i)=0.d0
       enddo
       include 'MCmasses_PYTHIA8.inc'
-c
-c      call dire_init(mcmass)
-c
+
+      stupp = 1000.0
+      call dire_init(mcmass)
+
       call getalq0(26,1.d0,1.d0,100.d0,10.d0,alst,q0st)
       call getalq0(20,1.d0,2.d0,200.d0,10.d0,alxm,q0xm)
       write(6,*)'enter 0 for a manual test'
@@ -31,15 +33,42 @@ c
       call invqnodeval(xm,20,1.d0,10.d0,alxm,q0xm,j1xm,j2xm)
       write(6,*)'nearest nodes:',j1st,j2st,j1xm,j2xm
       write(6,*)'grid values at nodes:'
-      write(6,*)ifakegrid(j1st,j1xm,id,itype)
-      write(6,*)ifakegrid(j2st,j1xm,id,itype)
-      write(6,*)ifakegrid(j1st,j2xm,id,itype)
-      write(6,*)ifakegrid(j2st,j2xm,id,itype)
+c      write(6,*)ifakegrid(j1st,j1xm,id,itype)
+c      write(6,*)ifakegrid(j2st,j1xm,id,itype)
+c      write(6,*)ifakegrid(j1st,j2xm,id,itype)
+c      write(6,*)ifakegrid(j2st,j2xm,id,itype)
+c      write(6,*)'ratios to res:'
+c      r1=res/ifakegrid(j1st,j1xm,id,itype)
+c      r2=res/ifakegrid(j2st,j1xm,id,itype)
+c      r3=res/ifakegrid(j1st,j2xm,id,itype)
+c      r4=res/ifakegrid(j2st,j2xm,id,itype)
+
+      st1 = qnodeval(j1st,26,1.0,10.0,alst,q0st)
+      st2 = qnodeval(j2st,26,1.0,10.0,alst,q0st)
+      xm1 = qnodeval(j1xm,20,1.0,10.0,alxm,q0xm)
+      xm2 = qnodeval(j2xm,20,1.0,10.0,alxm,q0xm)
+
+      write(*,*) 'st=', st,'st1=', st1, 'st2=', st2
+      write(*,*) 'xm=', xm,'xm1=', xm1, 'xm2=', xm2
+
+      write(6,*) py_compute_sudakov(st1,xm1,id,itype,
+     #          mcmass,stupp)
+      write(6,*) py_compute_sudakov(st2,xm1,id,itype,
+     #          mcmass,stupp)
+      write(6,*) py_compute_sudakov(st1,xm2,id,itype,
+     #          mcmass,stupp)
+      write(6,*) py_compute_sudakov(st2,xm2,id,itype,
+     #          mcmass,stupp)
       write(6,*)'ratios to res:'
-      r1=res/ifakegrid(j1st,j1xm,id,itype)
-      r2=res/ifakegrid(j2st,j1xm,id,itype)
-      r3=res/ifakegrid(j1st,j2xm,id,itype)
-      r4=res/ifakegrid(j2st,j2xm,id,itype)
+      r1=res/ py_compute_sudakov(st1,xm1,id,itype,
+     #          mcmass,stupp)
+      r2=res/ py_compute_sudakov(st2,xm1,id,itype,
+     #          mcmass,stupp)
+      r3=res/ py_compute_sudakov(st1,xm2,id,itype,
+     #          mcmass,stupp)
+      r4=res/ py_compute_sudakov(st2,xm2,id,itype,
+     #          mcmass,stupp)
+
       write(6,*)r1
       write(6,*)r2
       write(6,*)r3
@@ -165,19 +194,19 @@ c
       FK88RANDOM = SEED*MINV
       END
 
-c      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
-c      implicit none
-c      double precision py_compute_sudakov, stlow, stupp, md
-c      integer id, itype
-c      real*8 mcmass(21)
-c      double precision temp
-c
-c      call dire_get_no_emission_prob(temp, stupp,
-c     #     stlow, md, id, itype)
-c      py_compute_sudakov=temp
-c
-c      return
-c      end
+      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
+      implicit none
+      double precision py_compute_sudakov, stlow, stupp, md
+      integer id, itype
+      real*8 mcmass(21)
+      double precision temp
+
+      call dire_get_no_emission_prob(temp, stupp,
+     #     stlow, md, id, itype)
+      py_compute_sudakov=temp
+
+      return
+      end
 c
 c      function pysudakov(stlo,md,id,itype,mcmass)
 c      implicit none
