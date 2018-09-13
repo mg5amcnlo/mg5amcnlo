@@ -673,6 +673,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.has_model_parameter = True
             if name.lower() in ['pi', 'as', 'mu_r', 'aewm1','g']:
                 return name
+            if name.startswith(aloha.aloha_prefix):
+                return name
             return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:

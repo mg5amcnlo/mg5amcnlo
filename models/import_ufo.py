@@ -698,7 +698,12 @@ class UFOMG5Converter(object):
         # load the associate lorentz expression
         new_struct = ' + '.join([self.lorentz_info[n].get('structure') for n in names])
         spins = self.lorentz_info[names[0]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfactors = sum([ self.lorentz_info[n].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n], 'formfactors') \
+                            and self.lorentz_info[n].get('formfactors') \
+                      ],[])
+                        
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfactors)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
@@ -1370,7 +1375,7 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
-    def add_lorentz(self, name, spins , expr):
+    def add_lorentz(self, name, spins , expr, formfact=None):
         """ Add a Lorentz expression which is not present in the UFO """
 
         logger.debug('MG5 converter defines %s to %s', name, expr)
@@ -1380,6 +1385,9 @@ class UFOMG5Converter(object):
             new = self.model['lorentz'][0].__class__(name = name,
                     spins = spins,
                     structure = expr)
+            if formfact:
+                new.formfactors = formfact
+
         assert name in [l.name for l in self.model['lorentz']]
         assert name not in [l.name for l in self.ufomodel.all_lorentz]
         #self.model['lorentz'].append(new) # already done by above command
@@ -1976,7 +1984,7 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
-        
+
         return null_parameters, one_parameters
     
     def apply_conditional_simplifications(self, modified_params,
@@ -2304,7 +2312,9 @@ class RestrictModel(model_reader.ModelReader):
                 particle['width'] = 'ZERO'
             if particle['width'] in one_parameters:
                 one_parameters.remove(particle['width'])                
-                
+            if particle['mass'] in one_parameters:
+                one_parameters.remove(particle['mass'])                
+
         for pdg, particle in self['particle_dict'].items():
             if particle['mass'] in zero_parameters:
                 particle['mass'] = 'ZERO'
@@ -2343,6 +2353,13 @@ class RestrictModel(model_reader.ModelReader):
                     for coupling in coupling_list:
                         for use in  re_pat.findall(coupling.expr):
                             used.add(use)
+                
+                # check in form-factor
+                for lor in self['lorentz']:
+                    if hasattr(lor, 'formfactors') and lor.formfactors:
+                        for ff in lor.formfactors:
+                            for use in  re_pat.findall(ff.value):
+                                used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         
@@ -2487,16 +2504,26 @@ class RestrictModel(model_reader.ModelReader):
         if any( n.startswith('d') for n in names ):
             new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
         spins = self.lorentz_info[names[0][1:]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfact = sum([ self.lorentz_info[n[1:]].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n[1:]], 'formfactors') \
+                              and self.lorentz_info[n[1:]].get('formfactors') \
+                       ],[])
+
+
+
+ 
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfact)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
     
-    def add_lorentz(self, name, spin, struct):
+    def add_lorentz(self, name, spin, struct, formfact=None):
         """adding lorentz structure to the current model"""
         new = self['lorentz'][0].__class__(name = name,
                                            spins = spin,
                                            structure = struct)
+        if formfact:
+            new.formfactors = formfact
         self['lorentz'].append(new)
         self.create_lorentz_dict()
         

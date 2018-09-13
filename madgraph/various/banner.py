@@ -905,7 +905,10 @@ class ProcCard(list):
             out = []
             for line in self:
                 if line.startswith('define'):
-                    name, content = line[7:].split('=',1)
+                    try:
+                        name, content = line[7:].split('=',1)
+                    except ValueError:
+                        name, content = line[7:].split(None,1)
                     out.append((name, content))
             return out 
         else:
