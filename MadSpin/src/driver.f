@@ -960,7 +960,7 @@ c
       include 'nexternal_prod.inc'
       !include 'run.inc'
 c arguments
-      double precision jac,x(36),p(0:3,nexternal), p_prod(0:3,nexternal)
+      double precision jac,x(36),p(0:3,nexternal), p_prod(0:3,nexternal_prod)
       integer itree(2,-nexternal:-1)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
 c common
