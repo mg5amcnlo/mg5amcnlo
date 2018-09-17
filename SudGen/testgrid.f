@@ -7,6 +7,14 @@ c If changes occur there, they must be done here as well
       real*8 mcmass(21)
       integer ifk88seed
       double precision st1, st2, xm1, xm2, stupp
+
+      double precision res_extra, res_pythia
+      double precision res_mlo_stlo_extra, res_mhi_stlo_extra
+      double precision res_mlo_sthi_extra, res_mhi_sthi_extra
+
+      double precision res_mlo_stlo_pythia, res_mhi_stlo_pythia
+      double precision res_mlo_sthi_pythia, res_mhi_sthi_pythia
+
       common/cifk88seed/ifk88seed
 c
       do i=1,21
@@ -22,12 +30,20 @@ c
       write(6,*)'enter 0 for a manual test'
       write(6,*)'      1 for a random test'
       read(5,*)itest
+
       if(itest.eq.1)goto 200
       write(6,*)'enter id, itype'
       read(5,*)id,itype
+
  1    write(6,*)'enter st,xm'
       read(5,*)st,xm
+
       res=pysudakov(st,xm,id,itype,mcmass)
+
+      res_extra=pysudakov(st,xm,id,itype,mcmass)
+      res_pythia=py_compute_sudakov(st,xm,id,itype,
+     #          mcmass,stupp)
+
       write(6,*)'res=',res
       call invqnodeval(st,26,1.d0,10.d0,alst,q0st,j1st,j2st)
       call invqnodeval(xm,20,1.d0,10.d0,alxm,q0xm,j1xm,j2xm)
@@ -43,37 +59,51 @@ c      r2=res/ifakegrid(j2st,j1xm,id,itype)
 c      r3=res/ifakegrid(j1st,j2xm,id,itype)
 c      r4=res/ifakegrid(j2st,j2xm,id,itype)
 
-      st1 = qnodeval(j1st,26,1.0,10.0,alst,q0st)
-      st2 = qnodeval(j2st,26,1.0,10.0,alst,q0st)
-      xm1 = qnodeval(j1xm,20,1.0,10.0,alxm,q0xm)
-      xm2 = qnodeval(j2xm,20,1.0,10.0,alxm,q0xm)
+      st1 = qnodeval(j1st,26,1.d0,10.d0,alst,q0st)
+      st2 = qnodeval(j2st,26,1.d0,10.d0,alst,q0st)
+      xm1 = qnodeval(j1xm,20,1.d0,10.d0,alxm,q0xm)
+      xm2 = qnodeval(j2xm,20,1.d0,10.d0,alxm,q0xm)
 
       write(*,*) 'st=', st,'st1=', st1, 'st2=', st2
       write(*,*) 'xm=', xm,'xm1=', xm1, 'xm2=', xm2
 
-      write(6,*) py_compute_sudakov(st1,xm1,id,itype,
+      res_mlo_stlo_pythia = py_compute_sudakov(st1,xm1,id,itype,
      #          mcmass,stupp)
-      write(6,*) py_compute_sudakov(st2,xm1,id,itype,
+      res_mlo_sthi_pythia = py_compute_sudakov(st2,xm1,id,itype,
      #          mcmass,stupp)
-      write(6,*) py_compute_sudakov(st1,xm2,id,itype,
+      res_mhi_stlo_pythia = py_compute_sudakov(st1,xm2,id,itype,
      #          mcmass,stupp)
-      write(6,*) py_compute_sudakov(st2,xm2,id,itype,
+      res_mhi_sthi_pythia = py_compute_sudakov(st2,xm2,id,itype,
      #          mcmass,stupp)
-      write(6,*)'ratios to res:'
-      r1=res/ py_compute_sudakov(st1,xm1,id,itype,
-     #          mcmass,stupp)
-      r2=res/ py_compute_sudakov(st2,xm1,id,itype,
-     #          mcmass,stupp)
-      r3=res/ py_compute_sudakov(st1,xm2,id,itype,
-     #          mcmass,stupp)
-      r4=res/ py_compute_sudakov(st2,xm2,id,itype,
-     #          mcmass,stupp)
+      res_mlo_stlo_extra=pysudakov(st1,xm1,id,itype,mcmass)
+      res_mlo_sthi_extra=pysudakov(st2,xm1,id,itype,mcmass)
+      res_mhi_stlo_extra=pysudakov(st1,xm2,id,itype,mcmass)
+      res_mhi_sthi_extra=pysudakov(st2,xm2,id,itype,mcmass)
 
+      r1 = res_extra/res_mlo_stlo_pythia
+      r2 = res_extra/res_mlo_sthi_pythia
+      r3 = res_extra/res_mlo_sthi_pythia
+      r4 = res_extra/res_mhi_sthi_pythia
+
+      write(*,*) 'ratios extrapolated central / pythia edges'
       write(6,*)r1
       write(6,*)r2
       write(6,*)r3
       write(6,*)r4
       write(6,*)'average of ratios:',(r1+r2+r3+r4)/4.d0
+
+      r1 = res_pythia/res_mlo_stlo_extra
+      r2 = res_pythia/res_mlo_sthi_extra
+      r3 = res_pythia/res_mlo_sthi_extra
+      r4 = res_pythia/res_mhi_sthi_extra
+
+      write(*,*) 'ratios pythia central / extrapolated edges'
+      write(6,*)r1
+      write(6,*)r2
+      write(6,*)r3
+      write(6,*)r4
+      write(6,*)'average of ratios:',(r1+r2+r3+r4)/4.d0
+
       goto 1
  200  continue
       write(6,*)'enter stlow'
@@ -97,14 +127,65 @@ c      r4=res/ifakegrid(j2st,j2xm,id,itype)
             rnd=fk88random(ifk88seed)
             xm=rxmlow+rnd*(rxmupp-rstlow)
             res=pysudakov(st,xm,id0,itype,mcmass)
+
+            write(*,*) 'id=', id0, ' scale=',st,' mass=', xm
+            res_extra=pysudakov(st,xm,id0,itype,mcmass)
+            res_pythia=py_compute_sudakov(st,xm,id0,itype,
+     #          mcmass,stupp)
+
             call invqnodeval(st,26,1.d0,10.d0,alst,q0st,j1st,j2st)
             call invqnodeval(xm,20,1.d0,10.d0,alxm,q0xm,j1xm,j2xm)
-            r1=res/ifakegrid(j1st,j1xm,id0,itype)
-            r2=res/ifakegrid(j2st,j1xm,id0,itype)
-            r3=res/ifakegrid(j1st,j2xm,id0,itype)
-            r4=res/ifakegrid(j2st,j2xm,id0,itype)
+
+            st1 = qnodeval(j1st,26,1.d0,10.d0,alst,q0st)
+            st2 = qnodeval(j2st,26,1.d0,10.d0,alst,q0st)
+            xm1 = qnodeval(j1xm,20,1.d0,10.d0,alxm,q0xm)
+            xm2 = qnodeval(j2xm,20,1.d0,10.d0,alxm,q0xm)
+
+c            r1=res/ifakegrid(j1st,j1xm,id0,itype)
+c            r2=res/ifakegrid(j2st,j1xm,id0,itype)
+c            r3=res/ifakegrid(j1st,j2xm,id0,itype)
+c            r4=res/ifakegrid(j2st,j2xm,id0,itype)
+c            rr=(r1+r2+r3+r4)/4.d0
+c            avg=avg+rr
+
+            res_mlo_stlo_pythia = py_compute_sudakov(st1,xm1,id0,itype,
+     #          mcmass,stupp)
+            res_mlo_sthi_pythia = py_compute_sudakov(st2,xm1,id0,itype,
+     #          mcmass,stupp)
+            res_mhi_stlo_pythia = py_compute_sudakov(st1,xm2,id0,itype,
+     #          mcmass,stupp)
+            res_mhi_sthi_pythia = py_compute_sudakov(st2,xm2,id0,itype,
+     #          mcmass,stupp)
+            res_mlo_stlo_extra=pysudakov(st1,xm1,id0,itype,mcmass)
+            res_mlo_sthi_extra=pysudakov(st2,xm1,id0,itype,mcmass)
+            res_mhi_stlo_extra=pysudakov(st1,xm2,id0,itype,mcmass)
+            res_mhi_sthi_extra=pysudakov(st2,xm2,id0,itype,mcmass)
+
+            r1 = res_extra/res_mlo_stlo_pythia
+            r2 = res_extra/res_mlo_sthi_pythia
+            r3 = res_extra/res_mlo_sthi_pythia
+            r4 = res_extra/res_mhi_sthi_pythia
+            write(*,*) 'ratios extrapolated central / pythia edges'
+            write(6,*)r1
+            write(6,*)r2
+            write(6,*)r3
+            write(6,*)r4
+            write(6,*)'average of ratios:',(r1+r2+r3+r4)/4.d0
+
+            r1 = res_pythia/res_mlo_stlo_extra
+            r2 = res_pythia/res_mlo_sthi_extra
+            r3 = res_pythia/res_mlo_sthi_extra
+            r4 = res_pythia/res_mhi_sthi_extra
+            write(*,*) 'ratios pythia central / extrapolated edges'
+            write(6,*)r1
+            write(6,*)r2
+            write(6,*)r3
+            write(6,*)r4
+            write(6,*)'average of ratios:',(r1+r2+r3+r4)/4.d0
+
             rr=(r1+r2+r3+r4)/4.d0
             avg=avg+rr
+
             if(rr.lt.rmin)then
               rmin=rr
               stsv1=st
@@ -164,6 +245,7 @@ c
       tmp=jmax*q0**(-1/xk)*(log(qnode)/log(b)+alpha)**(1/xk)
       j1=int(tmp)
       j2=j1+1
+
       return
       end
 
