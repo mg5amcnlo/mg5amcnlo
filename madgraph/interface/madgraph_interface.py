@@ -5841,7 +5841,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-        
+        misc.sprint(line)
         # Make sure to avoid any border effect on custom_additional_options
         add_options = list(additional_options)
         
@@ -5908,12 +5908,19 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     data = urllib.urlopen(cluster_path)
                 except Exception:
                     continue
+                misc.sprint(data.getcode())
+                if data.getcode() != 200:
+                    continue
                 break
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
-            for line in data:
-                split = line.split()
+            for wwwline in data:
+                split = wwwline.split()
+                if len(split)!=2:
+                    if '--source' not in line:
+                        source = {0:'uiuc',1:'ucl'}[index]
+                        return self.do_install(line+' --source='+source, paths=paths, additional_options=additional_options)
                 path[split[0]] = split[1]
 
 ################################################################################

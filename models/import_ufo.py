@@ -112,6 +112,8 @@ def get_model_db():
             data = urllib.urlopen(cluster_path)
         except Exception:
             continue
+        if data.getcode() != 200:
+            continue
         break
     else:
         raise MadGraph5Error, '''Model not found locally and Impossible to connect any of us servers.
