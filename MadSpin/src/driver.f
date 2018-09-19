@@ -340,10 +340,10 @@ c        initialize the helicity amps
            if (jac.lt.0d0) then
              counter2=counter2+1 
              counter3=counter3+1 
-c             if (counter3.gt.500) then
-c               write(*,*) "500_pts_failed_stop_executation"
-c               stop
-c             endif
+             if (counter3.gt.500*8*100) then
+               write(*,*) "500_pts_failed_stop_executation"
+               stop
+             endif
              if (counter2.ge.8) then ! use another topology to generate PS points
                do k=1,n_max_cg
                  amp2(k)=0d0

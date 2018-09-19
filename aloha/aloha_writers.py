@@ -523,7 +523,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
             if KERNEL.has_pi:
-                out.write(' double*16 PI\n')
+                out.write(' REAL ( KIND = 16 ) PI\n')
         else:
             out.write(' complex*16 CI\n')
             if KERNEL.has_pi:
