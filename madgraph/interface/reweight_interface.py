@@ -233,8 +233,8 @@ class ReweightInterface(extended_cmd.Cmd):
             
             if '=' in order:
                 # get the type NLO QCD/QED/...
-                order = order.split('=',1)[1]
-                
+                order = order.split('=',1)[1].strip()
+
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(model,
                                            pert_order = order)['soft_particles']
