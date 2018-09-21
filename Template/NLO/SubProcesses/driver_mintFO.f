@@ -380,6 +380,9 @@ c timing statistics
       common /for_applgrid/ iappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C dressed initial lepton stuff
+      integer n_ee
+      common /to_dressed_leptons/n_ee
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
@@ -495,6 +498,13 @@ c Importance sampling for FKS configurations
          call get_wgt_no_nbody(sig)
          call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
       endif
+
+      if (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4) then
+         ! this is for the MC over the dressed-electron
+         ! components
+         call fill_MC_integer(2,n_ee,abs(sig))
+      endif
+
 
 c Finalize PS point
       call fill_plots
