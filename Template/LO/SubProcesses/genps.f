@@ -41,7 +41,7 @@ c
       integer mincfig,maxcfig                  !Range of configurations
       integer invar
       double precision wgt                     !(input and output)
-      double precision x(maxdim),p(maxdim)     !x,p (output) [p(0:3,nexternal)]
+      double precision x(*),p(*)     !x,p (output) [p(0:3,nexternal)]
 c
 c     Local
 c
@@ -191,8 +191,6 @@ c     data
 c
       include 'configs.inc'
       data firsttime/.true./
-      integer isym(0:100)
-c      data isym /2,1,5,27,42,47,0,0,0,0,0/
       data jfig/1/
 c-----
 c  Begin Code
@@ -215,11 +213,6 @@ c      write(*,*) 'using iconfig',iconfig
          write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
       endif                          !First_time
 
-      if (.false.) then
-         iconfig = isym(jfig)
-         jfig = jfig+1
-         if (jfig .gt. isym(0)) jfig=1      
-      endif
       this_config = iconfig             !Pass iconfig to amplitude routine
 C
 C     Get fraction of beam energy if pdf's are used
@@ -575,7 +568,7 @@ c        Set stot
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
-            if (mass_ion(2).ge.0d0) m1 = mass_ion(2)
+            if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
             if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
             pi1(0)=ebeam(1)
@@ -597,7 +590,6 @@ c        Start graph mapping
          maxcfig=iconfig
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
          maxwgt=0d0
-c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
          nbranch      = nparticles-2
@@ -616,8 +608,6 @@ c     if we believe they will have identical structure.
 c
 c         do i=1,mapconfig(0)
          do i=mincfig,maxcfig
-c         do k=1,isym(0)
-c            i = isym(k)
             write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
             do j=1,ndim
                ipole = minvar(j,i)

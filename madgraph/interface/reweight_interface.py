@@ -233,8 +233,8 @@ class ReweightInterface(extended_cmd.Cmd):
             
             if '=' in order:
                 # get the type NLO QCD/QED/...
-                order = order.split('=',1)[1]
-                
+                order = order.split('=',1)[1].strip()
+
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(model,
                                            pert_order = order)['soft_particles']
@@ -741,7 +741,8 @@ class ReweightInterface(extended_cmd.Cmd):
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner and self.output_type == 'default': 
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
-                blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
+                blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
+                misc.sprint(blockpat, self.banner['initrwgt'])
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
                 pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
@@ -825,7 +826,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         if self.output_type == 'default':
-            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' weight_name_strategy=\'includeIdInWeightName\'>\n'
         else:
             self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
@@ -1782,7 +1783,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         for i in range(len(pdg)):
                             if pdg[i] == oldpdg[i]:
                                 continue
-                            if not self.model or not getattr(self.model, 'get_mass'):
+                            if not self.model or not hasattr(self.model, 'get_mass'):
                                 continue
                             if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
                                 continue

@@ -1,7 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.1 
-     include 2.6.3 see below
+     include up to 2.6.4
+     MZ: Enable shower for QCD-only splittings
      RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
          cuts and --to a lesser extend-- processes with massive final state particles:
 	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
@@ -17,6 +18,20 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      RF+SF: Resonance-aware phase-space mapping for NLO computations 
      RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
      OM: remove ./bin/mg5 executable
+2.6.4 (//)
+      RF: Fixed a bug when using TopDrawer plots for f(N)LO runs, where the combination of the plots could lead
+          to completely wrong histograms/distributions in case of high-precision runs.
+      OM: Fix some MLM crash for some processes (in particular BSM processes with W'). 
+      OM: Fix a bug in the reweighting due to the new lhe format (the one avoiding some issue with py8)
+      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
+          the first time a loop computation is needed.
+
+2.6.3.2 (22/06/18)
+      OM: Fix a bug in auto-width when mass are below QCD scale.
+      OM: Fix a bug for g b initial state where the mass in the lhe file was not always correctly assigned
+          Note that the momentum was fine (i.e. in the file P^2 was not equal to the mention M but to the correct one)
+      OM: Improvment for madspin in the mode spinmode=none
+      OM: Fix a bug in MadSpin which was making MadSpin to work only in debug mode
 
 2.6.3 (15/06/18)
       OM: When importing model, we now run one additional layer of optimisation:

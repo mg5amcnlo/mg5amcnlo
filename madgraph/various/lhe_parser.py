@@ -808,6 +808,13 @@ class EventFile(object):
     
 class EventFileGzip(EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
+    
+    
+    def tell(self):
+        currpos = super(EventFileGzip, self).tell()
+        if not currpos:
+            currpos = self.size
+        return currpos
         
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""

@@ -1,7 +1,7 @@
 -include ../../Source/make_opts
 
 DEBUG=
-FF=$(FC) $(FFLAGS) $(DEBUG)
+FF=$(FC) $(FFLAGS) $(DEBUG) -std=legacy
 CPP=$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLOPTION)
 CC=$(CXX) $(CFLAGS) $(DEBUG) $(INCLOPTION)
 

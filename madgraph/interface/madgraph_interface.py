@@ -2786,7 +2786,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
+                     'looptools']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -4603,7 +4604,7 @@ This implies that with decay chains:
                     logger.info('the following coupling will be allowed up to the maximal value of %s: %s' % 
                             (self.options['default_unset_couplings'], ', '.join(to_set)), '$MG:BOLD')
                 for name in to_set:
-                    orders[name] = self.options['default_unset_couplings']
+                    orders[name] = int(self.options['default_unset_couplings'])
         
         #only allow amplitue restrctions >/ == for LO/tree level
         if constrained_orders and LoopOption != 'tree':
@@ -5868,7 +5869,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-        
+        misc.sprint(line)
         # Make sure to avoid any border effect on custom_additional_options
         add_options = list(additional_options)
         
@@ -5885,6 +5886,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if args[0] == 'update':
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
+        elif args[0] == 'looptools':
+            self.install_reduction_library(force=True)
+            return
+        
 
         plugin = self.install_plugin
         
@@ -5931,12 +5936,19 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     data = urllib.urlopen(cluster_path)
                 except Exception:
                     continue
+                misc.sprint(data.getcode())
+                if data.getcode() != 200:
+                    continue
                 break
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
-            for line in data:
-                split = line.split()
+            for wwwline in data:
+                split = wwwline.split()
+                if len(split)!=2:
+                    if '--source' not in line:
+                        source = {0:'uiuc',1:'ucl'}[index]
+                        return self.do_install(line+' --source='+source, paths=paths, additional_options=additional_options)
                 path[split[0]] = split[1]
 
 ################################################################################
@@ -8072,6 +8084,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     param_card.write(opts['path'])
 
         data = model.set_parameters_and_couplings(opts['path'])
+        
 
         # find UFO particles linked to the require names.
         if do2body:
@@ -8089,6 +8102,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 data = model.set_parameters_and_couplings(opts['path'], scale= mass)
                 total = 0
     
+                # check if the value of alphas is set to zero and raise warning if appropriate
+                if 'aS' in data and data['aS'] == 0 and particle.get('color') != 1:
+                    logger.warning("aS set to zero for this particle since the running is not defined for such low mass.")
+                        
                 for mode, expr in particle.partial_widths.items():
                     tmp_mass = mass
                     for p in mode:

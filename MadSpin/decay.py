@@ -3963,14 +3963,23 @@ class decay_all_events(object):
                 elif mode=='full':
                     stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
-                    external.stdin.write(stdin_text)
+                    try:
+                        external.stdin.write(stdin_text)
+                    except Exception:
+                        continue
                     ranmar_state=external.stdout.readline()
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)
                     ranmar.close()
-                    external.stdin.close()
-                    external.stdout.close()
+                    try:
+                        external.stdin.close()
+                    except Exception:
+                        continue
+                    try:
+                        external.stdout.close()
+                    except Exception:
+                        continue
                     external.terminate()
                     del external
         else:

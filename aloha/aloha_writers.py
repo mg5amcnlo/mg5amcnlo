@@ -523,7 +523,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
             if KERNEL.has_pi:
-                out.write(' double*16 PI\n')
+                out.write(' REAL ( KIND = 16 ) PI\n')
         else:
             out.write(' complex*16 CI\n')
             if KERNEL.has_pi:
@@ -672,6 +672,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             # external parameter nothing to do but handling model prefix
             self.has_model_parameter = True
             if name.lower() in ['pi', 'as', 'mu_r', 'aewm1','g']:
+                return name
+            if name.startswith(aloha.aloha_prefix):
                 return name
             return '%s%s' % (aloha.aloha_prefix, name)
         

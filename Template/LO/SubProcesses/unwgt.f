@@ -513,6 +513,10 @@ C
 
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
+
+      INTEGER IMIRROR
+      INTEGER IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
 c
 c     Data
 c
@@ -641,6 +645,13 @@ c
             pb(4,isym(j,jsym))=pmass(j)
          enddo
       endif
+
+      if (IMIRROR.eq.2.and.pmass(1).ne.pmass(2)) then
+c        Note that in this context isym(1,jsym) should never be "2" since the mass differ 
+         pb(4,isym(1,jsym))=pmass(2)
+         pb(4,isym(2,jsym))=pmass(1)
+      endif
+
 c
 c     Add info on resonant mothers
 c
