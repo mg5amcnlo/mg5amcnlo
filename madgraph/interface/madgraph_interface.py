@@ -5841,7 +5841,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-        misc.sprint(line)
+
         # Make sure to avoid any border effect on custom_additional_options
         add_options = list(additional_options)
         
@@ -5908,10 +5908,11 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     data = urllib.urlopen(cluster_path)
                 except Exception:
                     continue
-                misc.sprint(data.getcode())
                 if data.getcode() != 200:
                     continue
+                
                 break
+                
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
@@ -7049,7 +7050,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
             
             for (block, lhacode) in put_to_one:
-                misc.sprint(block, lhacode)
                 try:
                     param_card[block].get(lhacode).value = 1
                 except:
