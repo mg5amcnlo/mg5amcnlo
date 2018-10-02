@@ -747,7 +747,24 @@ c Common block with granny information
      &     ,granny_chain_real_final
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
-      
+
+C dressed lepton stuff
+      integer n_ee
+      common /to_dressed_leptons/n_ee
+      integer nmax_ee
+      parameter (nmax_ee=4)
+      double precision q2ref_ee, vol_ee, x1_ee, x2_ee, jac_ee
+      double precision eepdf_fraction
+
+c Les Houches init block (for the <init> info)
+      integer maxpup
+      parameter(maxpup=100)
+      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
+      double precision ebmup,xsecup,xerrup,xmaxup
+      common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
+     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
+     &     xmaxup(maxpup),lprup(maxpup)
+
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -814,13 +831,20 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Generate Bjorken x's if need be and update jacobian c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+      if (abs(lpp(1)).ne.abs(lpp(2))) then
+          write(*,*) 'Different beams not implemented', lpp
+          stop 1
+      endif
+
       if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
+         if (abs(lpp(1)).ne.4) then ! this is for pp collisions
 c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
-         if (one_body) then
+           if (one_body) then
 c tau is fixed by the mass of the final state particle
             call compute_tau_one_body(totmass,stot,tau_born,xjac0)
-         else
+           else
             if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
      $           cBW(-ns_channel-1).ne.2)then
 c Generate tau according to a Breit-Wiger function
@@ -832,9 +856,35 @@ c Generate tau according to a Breit-Wiger function
 c     not a Breit Wigner
                call generate_tau(stot,ndim-4,x(ndim-4),tau_born,xjac0)
             endif
-         endif
+           endif
+         
 c Generate the rapditity of the Born system
-         call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
+           call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
+
+         else  ! this is for dressed ee collisions
+           if (one_body) then
+             write(*,*) 'one body with ee collisions not implemented'
+             stop 1
+           else
+             ! for dressed ee collisions the generation is different
+             ! w.r.t. the pp case. In the pp case, tau and y_cm are
+             ! generated, while in the ee case x1 and x2 are generated
+             ! first
+             Q2ref_ee = 1d0
+             ! montecarlo over a given component
+             call get_MC_integer(2, nmax_ee, n_ee, vol_ee)
+             xjac0 = xjac0 / vol_ee
+             call generate_x_ee(x(ndim-4), x1_ee, jac_ee)
+             xjac0 = xjac0 * jac_ee
+             call generate_x_ee(x(ndim-3), x2_ee, jac_ee)
+             xjac0 = xjac0 * jac_ee
+             ! the following function will generate tau and ycm, also
+             ! checking that tau_born is pysical. Otherwise xjac0 will
+             ! be set to -1000
+             call get_tau_y_from_x12(x1_ee, x2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+             if (xjac0.eq.-1000d0) goto 222
+           endif
+         endif
       elseif (abs(lpp(1)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
          write(*,*)'Option x1 not implemented in one_tree'
@@ -3222,4 +3272,46 @@ c     S=A/(B-x) transformation:
       endif
       return
       end
+
+      subroutine get_tau_y_from_x12(x1, x2, tau, ycm, ycmhat, jac) 
+      implicit none
+      double precision x1, x2, tau, ycm, ycmhat, jac
+      double precision ylim
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
+
+      tau = x1*x2
+      ylim=-0.5d0*log(tau)
+      ycm = 0.5d0 * dlog(x1/x2)
+      ycmhat = ycm / ylim
+
+      if (abs(ycmhat).gt.1d0) then
+          write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
+          stop 1 
+      endif
+
+      if (tau.lt.tau_born_lower_bound) jac = -1000d0
+
+      return 
+      end
+
+      subroutine generate_x_ee(rnd, x, jac)
+      implicit none
+      ! generates the momentum fraction with importance
+      !  sampling suitable for ee collisions
+      ! rnd is generated uniformly in [0,1], 
+      ! x is generated according to (1 -rnd)^-expo
+      ! jac is the corresponding jacobian
+      double precision rnd, x, jac
+      double precision expo
+      parameter (expo=0.75d0) ! should be a number 0< x <1
+
+      x = 1d0 - rnd ** (1d0/(1d0-expo))
+      jac = 1d0/(1d0-expo) * (1d0-x)**(expo)
+
+      return 
+      end
+
 

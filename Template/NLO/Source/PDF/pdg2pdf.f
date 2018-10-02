@@ -47,6 +47,10 @@ C
       data pdlabellast/20*'abcdefg'/
       data ihlast/20*-99/
       data i_replace/20/
+C dressed lepton stuff
+      integer n_ee
+      common /to_dressed_leptons/n_ee
+      double precision eepdf_tilde, eepdf_tilde_power
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -64,6 +68,27 @@ c     instead of stopping the code, as this might accidentally happen.
          write(26,*) 'Error: PDF not supported for Bjorken x ',x
          stop 1
       endif
+
+
+C     dressed leptons
+      if (abs(ih).eq.4) then
+        ! change e/mu/tau = 8/9/10 to 11/13/15 
+        if (abs(ipdg).eq.8) then
+          ipart = sign(1,ipdg) * 11
+        else if (abs(ipdg).eq.9) then
+          ipart = sign(1,ipdg) * 13
+        else if (abs(ipdg).eq.10) then
+          ipart = sign(1,ipdg) * 15
+        else 
+          ipart = ipdg
+        endif
+        pdg2pdf = eepdf_tilde(x,xmu**2,n_ee,ipart,ih) 
+        ! add back the factor (1-x)^(-kappa) which
+        ! is not included in the grids
+        pdg2pdf = pdg2pdf *
+     $           (1d0-x)**(-eepdf_tilde_power(xmu**2,n_ee,ipart,ih))
+      endif
+
 
       ipart=ipdg
       if(iabs(ipart).eq.21) ipart=0

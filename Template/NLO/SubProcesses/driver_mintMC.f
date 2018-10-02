@@ -836,6 +836,9 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C dressed initial lepton stuff
+      integer n_ee
+      common /to_dressed_leptons/n_ee
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -1028,6 +1031,11 @@ c determined which contributions are identical.
          stop 1
       elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f,n1body_wgt)
+      endif
+      if (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4) then
+         ! this is for the MC over the dressed-electron
+         ! components
+         call fill_MC_integer(2,n_ee,n1body_wgt*vol1)
       endif
       return
       end
