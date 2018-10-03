@@ -6425,7 +6425,7 @@ class UFO_model_to_mg4(object):
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
           double precision M,M1,M2,Ga,Ga1,Ga2
           double precision tiny
-          parameter (tiny=-1d-8)
+          parameter (tiny=-1d-14)
           double complex logterms
           double complex log_trajectory
           IF(m12.eq.zero)THEN
@@ -6480,7 +6480,7 @@ c         only needed when p2*m12*m22=\=0
           double complex argim1,argi,p2i
           double complex gamma0i,gamma1i
           double precision tiny
-          parameter (tiny=-1d-8)
+          parameter (tiny=-1d-14)
           integer i
           double precision prefactor
           IF(ABS(p2*m12*m22).EQ.0d0)THEN
@@ -6552,9 +6552,9 @@ c         i=4: (ga_{-}-1)/ga_{-}
           double complex argim1(4),argi(4),p2i,sqrttermi
           double complex gamma0i,gammapi,gammami
           double precision tiny
-          parameter (tiny=-1d-8)
+          parameter (tiny=-1d-14)
           integer i,j
-          double precision addfactor(4)
+          double complex addfactor(4)
           double complex sqrt_trajectory
           IF(ABS(p2*m12*m22).EQ.0d0)THEN
             WRITE(*,*)'ERROR:log_trajectory works when p2*m12*m22/=0'
@@ -6579,7 +6579,7 @@ c         Eq.(5.36-5.38) in arXiv:1804.10017
 c         segments from -DABS(tiny*Ga) to Ga
           Ga_start=-DABS(tiny*Ga)
           dGa=(Ga-Ga_start)/n_seg
-          addfactor(1:4)=0d0
+          addfactor(1:4)=zero
           Gai=Ga_start
           p2i=dcmplx(M**2,-Gai*M)
           sqrttermi=sqrt_trajectory(n_seg,p2i,m12,m22)
@@ -6608,9 +6608,9 @@ c         segments from -DABS(tiny*Ga) to Ga
                    intersection=intersection-DBLE(argim1(j))
                    IF(intersection.GT.0d0)THEN
                       IF(DIMAG(argim1(j)).LT.0)THEN
-                         addfactor(j)=addfactor(j)+TWOPII
-                      ELSE
                          addfactor(j)=addfactor(j)-TWOPII
+                      ELSE
+                         addfactor(j)=addfactor(j)+TWOPII
                       ENDIF
                    ENDIF
                 ENDIF
@@ -6802,7 +6802,7 @@ c         segments from -DABS(tiny*Ga) to Ga
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
               %(real_mp_format)s M,M1,M2,Ga,Ga1,Ga2
               %(real_mp_format)s tiny
-              parameter (tiny=-1.0e-8_16)
+              parameter (tiny=-1.0e-14_16)
               %(complex_mp_format)s logterms
               %(complex_mp_format)s mp_log_trajectory
               IF(m12.eq.zero)THEN
@@ -6852,7 +6852,7 @@ c         segments from -DABS(tiny*Ga) to Ga
               %(complex_mp_format)s argim1,argi,p2i
               %(complex_mp_format)s gamma0i,gamma1i
               %(real_mp_format)s tiny
-              parameter (tiny=-1.0e-8_16)
+              parameter (tiny=-1.0e-14_16)
               integer i
               %(real_mp_format)s prefactor
               IF(ABS(p2*m12*m22).EQ.0.0e0_16)THEN
@@ -6914,9 +6914,9 @@ c         segments from -DABS(tiny*Ga) to Ga
               %(complex_mp_format)s argim1(4),argi(4),p2i,sqrttermi
               %(complex_mp_format)s gamma0i,gammapi,gammami
               %(real_mp_format)s tiny
-              parameter (tiny=-1.0e-8_16)
+              parameter (tiny=-1.0e-14_16)
               integer i,j
-              %(real_mp_format)s addfactor(4)
+              %(complex_mp_format)s addfactor(4)
               %(complex_mp_format)s mp_sqrt_trajectory
               IF(abs(p2*m12*m22).eq.0.0e0_16)THEN
               WRITE(*,*)'ERROR:mp_log_trajectory works when p2*m12*m22/=0'
@@ -6939,7 +6939,7 @@ c         segments from -DABS(tiny*Ga) to Ga
               ENDIF
               Ga_start=-abs(tiny*Ga)
               dGa=(Ga-Ga_start)/n_seg
-              addfactor(1:4)=0.0e0_16
+              addfactor(1:4)=zero
               Gai=Ga_start
               p2i=cmplx(M**2,-Gai*M)
               sqrttermi=mp_sqrt_trajectory(n_seg,p2i,m12,m22)
@@ -6968,9 +6968,9 @@ c         segments from -DABS(tiny*Ga) to Ga
                        intersection=intersection-real(argim1(j),kind=16)
                        IF(intersection.GT.0.0e0_16)THEN
                           IF(imagpart(argim1(j)).LT.0.0e0_16)THEN
-                             addfactor(j)=addfactor(j)+TWOPII
-                          ELSE
                              addfactor(j)=addfactor(j)-TWOPII
+                          ELSE
+                             addfactor(j)=addfactor(j)+TWOPII
                           ENDIF
                        ENDIF
                     ENDIF
