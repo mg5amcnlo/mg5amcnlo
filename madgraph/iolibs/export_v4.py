@@ -6417,17 +6417,128 @@ class UFO_model_to_mg4(object):
           endif
           end
 
+          module b0f_caching
+
+          type b0f_node
+          double complex p2,m12,m22
+          double complex value
+          type(b0f_node),pointer::parent
+          type(b0f_node),pointer::left
+          type(b0f_node),pointer::right
+          end type b0f_node
+
+          contains
+
+          subroutine b0f_search(item, head, find)
+          implicit none
+          type(b0f_node),pointer,intent(inout)::head,item
+          logical,intent(out)::find
+          type(b0f_node),pointer::item1
+          integer::icomp
+          find=.false.
+          nullify(item%parent)
+          nullify(item%left)
+          nullify(item%right)
+          if(.not.associated(head))then
+             head => item
+             return
+          endif
+          item1 => head
+          do
+             icomp=b0f_node_compare(item,item1)
+             if(icomp.lt.0)then
+                if(.not.associated(item1%left))then
+                   item1%left => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%left
+                endif
+             elseif(icomp.gt.0)then
+                if(.not.associated(item1%right))then
+                   item1%right => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%right
+                endif
+             else
+                find=.true.
+                item%value=item1%value
+                exit
+             endif
+          enddo
+          return
+          end
+
+          integer function b0f_node_compare(item1,item2) result(res)
+          implicit none
+          type(b0f_node),pointer,intent(in)::item1,item2
+          res=complex_compare(item1%p2,item2%p2)
+          if(res.ne.0)return
+          res=complex_compare(item1%m22,item2%m22)
+          if(res.ne.0)return
+          res=complex_compare(item1%m12,item2%m12)
+          return
+          end
+
+          integer function real_compare(r1,r2) result(res)
+          implicit none
+          double precision r1,r2
+          double precision maxr,diff
+          double precision tiny
+          parameter (tiny=-1d-14)
+          maxr=max(abs(r1),abs(r2))
+          diff=r1-r2
+          if(maxr.le.1d-99.or.abs(diff)/max(maxr,1d-99).le.abs(tiny))then
+             res=0
+             return
+          endif
+          if(diff.gt.0d0)then
+             res=1
+             return
+          else
+             res=-1
+             return
+          endif
+          end
+
+          integer function complex_compare(c1,c2) result(res)
+          implicit none
+          double complex c1,c2
+          double precision r1,r2
+          r1=dble(c1)
+          r2=dble(c2)
+          res=real_compare(r1,r2)
+          if(res.ne.0)return
+          r1=dimag(c1)
+          r2=dimag(c2)
+          res=real_compare(r1,r2)
+          return
+          end
+
+          end module b0f_caching
+
           double complex function B0F(p2,m12,m22)
+          use b0f_caching
           implicit none
           double complex p2,m12,m22
           double complex zero,TWOPII
           parameter (zero=(0.0d0,0.0d0))
           parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
-          double precision M,M1,M2,Ga,Ga1,Ga2
+          double precision M,M2,Ga,Ga2
           double precision tiny
           parameter (tiny=-1d-14)
           double complex logterms
           double complex log_trajectory
+          logical use_caching
+          parameter (use_caching=.true.)
+          type(b0f_node),pointer::item
+          type(b0f_node),pointer,save::b0f_bt
+          integer init
+          save init
+          data init /0/
+          logical find
           IF(m12.eq.zero)THEN
 c           it is a special case
 c           refer to Eq.(5.48) in arXiv:1804.10017
@@ -6462,8 +6573,31 @@ c           refer to Eq.(5.48) in arXiv:1804.10017
           ENDIF
 c         the general case
 c         trajectory method as advocated in arXiv:1804.10017 (Eq.(E.47))
-          logterms=log_trajectory(100,p2,m12,m22)
-          b0f=-LOG(p2/m22)+logterms
+          if(use_caching)then
+             if(init.eq.0)then
+                nullify(b0f_bt)
+                init=1
+             endif
+             allocate(item)
+             item%p2=p2
+             item%m12=m12
+             item%m22=m22
+             find=.false.
+             call b0f_search(item,b0f_bt,find)
+             if(find)then
+                b0f=item%value
+                deallocate(item)
+                return
+             else
+                logterms=log_trajectory(100,p2,m12,m22)
+                b0f=-LOG(p2/m22)+logterms
+                item%value=b0f
+                return
+             endif
+          else
+             logterms=log_trajectory(100,p2,m12,m22)
+             b0f=-LOG(p2/m22)+logterms
+          endif
           RETURN
           end
 
@@ -6794,17 +6928,128 @@ c         segments from -DABS(tiny*Ga) to Ga
               endif
               end
 
+              module mp_b0f_caching
+
+              type mp_b0f_node
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s value
+              type(mp_b0f_node),pointer::parent
+              type(mp_b0f_node),pointer::left
+              type(mp_b0f_node),pointer::right
+              end type mp_b0f_node
+
+              contains
+
+              subroutine mp_b0f_search(item, head, find)
+              implicit none
+              type(mp_b0f_node),pointer,intent(inout)::head,item
+              logical,intent(out)::find
+              type(mp_b0f_node),pointer::item1
+              integer::icomp
+              find=.false.
+              nullify(item%%parent)
+              nullify(item%%left)
+              nullify(item%%right)
+              if(.not.associated(head))then
+                 head => item
+                 return
+              endif
+              item1 => head
+              do
+                 icomp=mp_b0f_node_compare(item,item1)
+                 if(icomp.lt.0)then
+                    if(.not.associated(item1%%left))then
+                       item1%%left => item
+                       item%%parent => item1
+                       exit
+                    else
+                       item1 => item1%%left
+                    endif
+                 elseif(icomp.gt.0)then
+                    if(.not.associated(item1%%right))then
+                       item1%%right => item
+                       item%%parent => item1
+                       exit
+                     else
+                       item1 => item1%%right
+                     endif
+                 else
+                     find=.true.
+                     item%%value=item1%%value
+                     exit
+                 endif
+              enddo
+              return
+              end
+
+              integer function mp_b0f_node_compare(item1,item2) result(res)
+              implicit none
+              type(mp_b0f_node),pointer,intent(in)::item1,item2
+              res=mp_complex_compare(item1%%p2,item2%%p2)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m22,item2%%m22)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m12,item2%%m12)
+              return
+              end
+
+              integer function mp_real_compare(r1,r2) result(res)
+              implicit none
+              %(real_mp_format)s r1,r2
+              %(real_mp_format)s maxr,diff
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              maxr=max(abs(r1),abs(r2))
+              diff=r1-r2
+              if(maxr.le.1.0e-99_16.or.abs(diff)/max(maxr,1.0e-99_16).le.abs(tiny))then
+                 res=0
+                 return
+              endif
+              if(diff.gt.0.0e0_16)then
+                 res=1
+                 return
+              else
+                 res=-1
+                 return
+              endif
+              end
+
+              integer function mp_complex_compare(c1,c2) result(res)
+              implicit none
+              %(complex_mp_format)s c1,c2
+              %(real_mp_format)s r1,r2
+              r1=real(c1,kind=16)
+              r2=real(c2,kind=16)
+              res=mp_real_compare(r1,r2)
+              if(res.ne.0)return
+              r1=imagpart(c1)
+              r2=imagpart(c2)
+              res=mp_real_compare(r1,r2)
+              return
+              end
+
+              end module mp_b0f_caching
+
               %(complex_mp_format)s function mp_b0f(p2,m12,m22)
+              use mp_b0f_caching
               implicit none
               %(complex_mp_format)s p2,m12,m22
               %(complex_mp_format)s zero,TWOPII
               parameter (zero=(0.0e0_16,0.0e0_16))
               parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
-              %(real_mp_format)s M,M1,M2,Ga,Ga1,Ga2
+              %(real_mp_format)s M,M2,Ga,Ga2
               %(real_mp_format)s tiny
               parameter (tiny=-1.0e-14_16)
               %(complex_mp_format)s logterms
               %(complex_mp_format)s mp_log_trajectory
+              logical use_caching
+              parameter (use_caching=.true.)
+              type(mp_b0f_node),pointer::item
+              type(mp_b0f_node),pointer,save::b0f_bt
+              integer init
+              save init
+              data init /0/
+              logical find
               IF(m12.eq.zero)THEN
                  M=real(p2,kind=16)
                  M2=real(m22,kind=16)
@@ -6835,8 +7080,31 @@ c         segments from -DABS(tiny*Ga) to Ga
                     STOP
                  ENDIF
               ENDIF
-              logterms=mp_log_trajectory(100,p2,m12,m22)
-              mp_b0f=-LOG(p2/m22)+logterms
+              if(use_caching)then
+                 if(init.eq.0)then
+                    nullify(b0f_bt)
+                    init=1
+                 endif
+                 allocate(item)
+                 item%%p2=p2
+                 item%%m12=m12
+                 item%%m22=m22
+                 find=.false.
+                 call mp_b0f_search(item, b0f_bt, find)
+                 if(find)then
+                    mp_b0f=item%%value
+                    deallocate(item)
+                    return
+                 else
+                    logterms=mp_log_trajectory(100,p2,m12,m22)
+                    mp_b0f=-LOG(p2/m22)+logterms
+                    item%%value=mp_b0f
+                    return
+                 endif
+              else
+                 logterms=mp_log_trajectory(100,p2,m12,m22)
+                 mp_b0f=-LOG(p2/m22)+logterms
+              endif
               RETURN
               end
 
