@@ -257,7 +257,7 @@ AAWcft_UV_EW_4FS = {-1:'(0.0 if MB == 0.0 else ((ee**2*(4*epsIR*(27 + 10*Ncol) -
 
 
 eCoup_UV_EW_4FS = {-1:'(0.0 if MB == 0.0 else ((ee**2*epsUV*(cw**2*(-36*MW**2 + MZ**2*(9 + 20*Ncol)) - 36*MW**2*sw**2))/(288.*cw**2*MZ**2*cmath.pi**2)))',
-                    0:'(0.0 if MB == 0.0 else (-(ee**2*(3*(-108*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(18 - 81*reglog(cmath.pi) + 20*Ncol*reglog(cmath.pi) + 162*reglog(2*cmath.pi) - 40*Ncol*reglog(2*cmath.pi) + 27*reglog(4*cmath.pi) + 60*Ncol*reglog(4*cmath.pi) - 4*Ncol*reglog(MU_R**2/MB**2) - 16*Ncol*reglog(MU_R**2/MT**2) + 81*reglog(MU_R**2/MW**2))) + 12*cw**2*MZ**2*Ncol*recms(CMSParam==1.0,reglog((4*cmath.pi*MU_R**2)/MB**2)) - 4*cw**2*MZ**2*recms(CMSParam==1.0,(3*(2*MB**2 + MZ**2)*Ncol*B0F(MZ**2,MB**2,MB**2))/MZ**2 + (12*MB**2*Ncol + MZ**2*(27 + 11*Ncol)*(5 + reglog(64) + 3*reglog(cmath.pi)))/MZ**2 + 3*Ncol*reglog(MU_R**2/MB**2) - 3*(27 + 10*Ncol)*reglogm(-((MZ**2 + vep*complex(0,1))/MU_R**2)))))/(2592.*cw**2*MZ**2*cmath.pi**2)))'}
+                    0:'(0.0 if MB == 0.0 else recms(CMSParam==1.0,-(ee**2*(3*(-108*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(18 - 81*reglog(cmath.pi) + 20*Ncol*reglog(cmath.pi) + 162*reglog(2*cmath.pi) - 40*Ncol*reglog(2*cmath.pi) + 27*reglog(4*cmath.pi) + 60*Ncol*reglog(4*cmath.pi) - 4*Ncol*reglog(MU_R**2/MB**2) - 16*Ncol*reglog(MU_R**2/MT**2) + 81*reglog(MU_R**2/MW**2))) + 12*cw**2*MZ**2*Ncol*recms(CMSParam==1.0,reglog((4*cmath.pi*MU_R**2)/MB**2)) - 4*cw**2*MZ**2*recms(CMSParam==1.0 and WZ != 0.0,(3*(2*MB**2 + MZ**2)*Ncol*B0F(MZ**2,MB**2,MB**2))/MZ**2 + (12*MB**2*Ncol + MZ**2*(27 + 11*Ncol)*(5 + reglog(64) + 3*reglog(cmath.pi)))/MZ**2 + 3*Ncol*reglog(MU_R**2/MB**2) - 3*(27 + 10*Ncol)*reglogm(-((MZ**2 + vep*complex(0,1))/MU_R**2)))))/(2592.*cw**2*MZ**2*cmath.pi**2)))'}
 
 
 
@@ -507,7 +507,7 @@ AAWcft_UV_EW_5FS = {-1:'-(ee**2*(-108*epsIR + 27*epsUV - 44*epsIR*Ncol + 60*epsU
                      0:'(ee**2*(9 + 16*Ncol*reglog(MT/MU_R) - 81*reglog(MW/MU_R)))/(216.*cmath.pi**2)'}
 
 eCoup_UV_EW_5FS = {-1:'epsUV*(ee**2*(cw**2*(-36*MW**2 + MZ**2*(9 + 20*Ncol)) - 36*MW**2*sw**2))/(288.*cw**2*MZ**2*cmath.pi**2)',
-                    0:'recms(CMSParam==1.0,(ee**2*(162*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(243 + 110*Ncol - 48*Ncol*reglog(MT/MU_R) + 243*reglog(MW/MU_R) + 162*reglogp(-(MU_R**2/(MZ**2 + vep*complex(0,1)))) + 66*Ncol*reglogp(-(MU_R**2/(MZ**2 + vep*complex(0,1)))))))/(1296.*cw**2*MZ**2*cmath.pi**2))'}
+                    0:'recms(CMSParam==1.0,(ee**2*(162*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(243 + 110*Ncol - 48*Ncol*reglog(MT/MU_R) + 243*reglog(MW/MU_R) + 162*recms(CMSParam==1.0 and WZ != 0.0,reglogp(-(MU_R**2/(MZ**2 + vep*complex(0,1))))) + 66*Ncol*recms(CMSParam==1.0 and WZ != 0.0,reglogp(-(MU_R**2/(MZ**2 + vep*complex(0,1))))))))/(1296.*cw**2*MZ**2*cmath.pi**2))'}
 
 
 
