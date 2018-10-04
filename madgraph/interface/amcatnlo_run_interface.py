@@ -1098,8 +1098,8 @@ class AskRunNLO(cmd.ControlSwitch):
     def consistency_QED(self, key, value, switch):
         """ temporary way to forbid event generation due to lack of validation"""
         
-        if True:
-        #if 'QED' in self.proc_characteristics['perturbation_order']:
+#        if True:
+        if 'QED' in self.proc_characteristics['perturbation_order']:
             out = {}
             to_check ={'fixed_order': ['ON'],
                        'shower': ['OFF'],
@@ -1114,7 +1114,7 @@ class AskRunNLO(cmd.ControlSwitch):
                             logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
                         self.nb_fo_warning = 1
         else: 
-            return self.check_consistency_with_all(key, value, switch)
+            return self.check_consistency_with_all(key, value)
         return out 
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
