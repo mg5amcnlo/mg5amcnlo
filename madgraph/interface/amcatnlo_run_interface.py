@@ -1213,7 +1213,7 @@ class AskRunNLO(cmd.ControlSwitch):
     def set_default_shower(self): 
         
         if 'QED' in self.proc_characteristics['splitting_types']:
-            self.switch['shower'] = 'Not avail.'
+            self.switch['shower'] = 'Not Avail'
         elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
         elif os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
@@ -1304,7 +1304,7 @@ class AskRunNLO(cmd.ControlSwitch):
             else:
                 self.switch['madspin'] = 'OFF'
         else:
-            self.switch['madspin'] = 'Not Avail.'  
+            self.switch['madspin'] = 'Not Avail'  
             
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
@@ -1346,14 +1346,14 @@ class AskRunNLO(cmd.ControlSwitch):
         """initialise the switch for reweight"""
         
         if 'QED' in self.proc_characteristics['splitting_types']:
-            self.switch['reweight'] = 'Not avail.'
+            self.switch['reweight'] = 'Not Avail'
         elif 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                 self.switch['reweight'] = 'ON'
             else:
                 self.switch['reweight'] = 'OFF'
         else:
-            self.switch['reweight'] = 'Not Avail.'      
+            self.switch['reweight'] = 'Not Avail'      
             
     def get_cardcmd_for_reweight(self, value):
         """ adpat run_card according to this setup. return list of cmd to run"""
@@ -1396,9 +1396,9 @@ class AskRunNLO(cmd.ControlSwitch):
         """initialise the switch for reweight"""
         
         if 'QED' in self.proc_characteristics['splitting_types']:
-            self.switch['madanalysis'] = 'Not avail.'
+            self.switch['madanalysis'] = 'Not Avail'
         elif 'MA5' not in self.available_module: 
-            self.switch['madanalysis'] =  'Not Avail.'
+            self.switch['madanalysis'] =  'Not Avail'
         elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
             self.switch['madanalysis'] = 'ON'
         else:
