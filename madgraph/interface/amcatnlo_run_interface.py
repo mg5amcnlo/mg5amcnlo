@@ -1099,7 +1099,7 @@ class AskRunNLO(cmd.ControlSwitch):
         """ temporary way to forbid event generation due to lack of validation"""
         
 #        if True:
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             out = {}
             to_check ={'fixed_order': ['ON'],
                        'shower': ['OFF'],
