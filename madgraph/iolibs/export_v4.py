@@ -6614,7 +6614,7 @@ c         only needed when p2*m12*m22=\=0
           double complex argim1,argi,p2i
           double complex gamma0i,gamma1i
           double precision tiny
-          parameter (tiny=-1d-14)
+          parameter (tiny=-1d-24)
           integer i
           double precision prefactor
           IF(ABS(p2*m12*m22).EQ.0d0)THEN
@@ -7120,7 +7120,7 @@ c         segments from -DABS(tiny*Ga) to Ga
               %(complex_mp_format)s argim1,argi,p2i
               %(complex_mp_format)s gamma0i,gamma1i
               %(real_mp_format)s tiny
-              parameter (tiny=-1.0e-14_16)
+              parameter (tiny=-1.0e-24_16)
               integer i
               %(real_mp_format)s prefactor
               IF(ABS(p2*m12*m22).EQ.0.0e0_16)THEN
