@@ -3489,9 +3489,10 @@ Parameters              %(params)s\n\
                         if subproc_group:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                    ("if (abs(lpp(ib(%d))).eq.4) call store_ibeam_ee(%d)\n" + \
+                                     "%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
+                                         (ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam)
                             else:
@@ -3503,9 +3504,10 @@ Parameters              %(params)s\n\
                         else:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                    ("if (abs(lpp(%d)).eq.4) call store_ibeam_ee(%d)\n" + \
+                                     "%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
+                                         (ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam)
                             else:

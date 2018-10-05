@@ -7110,3 +7110,33 @@ c     reset the default dynamical_scale_choice
       endif
       return
       end
+
+
+      subroutine store_ibeam_ee(ibeam)
+      implicit none
+      ! just store the identity of beam ibeam 
+      ! in the common to_ee_ibeam using the information
+      ! from initial_states_map
+      integer ibeam
+
+      integer beams(2), idum
+      logical firsttime
+      data firsttime /.true./
+
+      integer ee_ibeam
+      common /to_ee_ibeam/ee_ibeam
+
+      save beams
+
+      if (firsttime) then
+        open (unit=71,status='old',file='initial_states_map.dat')
+        read (71,*)idum,idum,beams(1),beams(2)
+        close (71)
+        firsttime = .false.
+      endif
+
+      ee_ibeam = beams(ibeam)
+
+      return
+      end
+

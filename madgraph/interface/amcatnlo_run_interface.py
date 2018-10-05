@@ -3110,7 +3110,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 4:'l'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:

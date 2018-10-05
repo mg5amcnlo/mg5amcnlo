@@ -753,17 +753,8 @@ C dressed lepton stuff
       common /to_dressed_leptons/n_ee
       integer nmax_ee
       parameter (nmax_ee=4)
-      double precision q2ref_ee, vol_ee, x1_ee, x2_ee, jac_ee
+      double precision vol_ee, x1_ee, x2_ee, jac_ee
       double precision eepdf_fraction
-
-c Les Houches init block (for the <init> info)
-      integer maxpup
-      parameter(maxpup=100)
-      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
-      double precision ebmup,xsecup,xerrup,xmaxup
-      common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
-     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
-     &     xmaxup(maxpup),lprup(maxpup)
 
       pass=.true.
       do i=1,nexternal-1
@@ -870,9 +861,8 @@ c Generate the rapditity of the Born system
              ! w.r.t. the pp case. In the pp case, tau and y_cm are
              ! generated, while in the ee case x1 and x2 are generated
              ! first
-             Q2ref_ee = 1d0
              ! montecarlo over a given component
-             call get_MC_integer(2, nmax_ee, n_ee, vol_ee)
+             call get_MC_integer(6, nmax_ee, n_ee, vol_ee)
              xjac0 = xjac0 / vol_ee
              call generate_x_ee(x(ndim-4), x1_ee, jac_ee)
              xjac0 = xjac0 * jac_ee
@@ -3281,15 +3271,32 @@ c     S=A/(B-x) transformation:
      $     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
      $     ,tau_lower_bound_resonance,tau_lower_bound
+      double precision tolerance
+      parameter (tolerance=1e-3)
+      double precision y_settozero
+      parameter (y_settozero=1e-12)
 
       tau = x1*x2
-      ylim=-0.5d0*log(tau)
+      ylim=-0.5d0*dlog(tau)
       ycm = 0.5d0 * dlog(x1/x2)
       ycmhat = ycm / ylim
 
+      ! this is to prevent numerical inaccuracies
+      ! when botn x->1
+      if (ylim.lt.y_settozero) then
+        ylim = 0d0
+        ycm = 0d0
+        ycmhat = 1d0
+      endif
+
+
       if (abs(ycmhat).gt.1d0) then
+        if (abs(ycmhat).gt.1d0 + tolerance) then
           write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
           stop 1 
+        else
+          ycmhat = sign(1d0, ycmhat)
+        endif
       endif
 
       if (tau.lt.tau_born_lower_bound) jac = -1000d0
@@ -3306,9 +3313,18 @@ c     S=A/(B-x) transformation:
       ! jac is the corresponding jacobian
       double precision rnd, x, jac
       double precision expo
-      parameter (expo=0.75d0) ! should be a number 0< x <1
+      parameter (expo=0.85d0) ! should be a number 0< x <1
+      double precision tolerance
+      parameter (tolerance=1.d-5)
 
       x = 1d0 - rnd ** (1d0/(1d0-expo))
+      if (x.ge.1d0) then
+        if (x.lt.1d0+tolerance) then
+          x=1d0
+        else
+          write(*,*) 'ERROR in generate_x_ee', rnd, x
+        endif
+      endif
       jac = 1d0/(1d0-expo) * (1d0-x)**(expo)
 
       return 

@@ -50,7 +50,11 @@ C
 C dressed lepton stuff
       integer n_ee
       common /to_dressed_leptons/n_ee
-      double precision eepdf_tilde, eepdf_tilde_power
+      integer ee_ibeam
+      common /to_ee_ibeam/ee_ibeam
+      double precision compute_eepdf
+      double precision tolerance
+      parameter (tolerance=1.d-5)
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -63,10 +67,14 @@ c     instead of stopping the code, as this might accidentally happen.
          pdg2pdf=0d0
          return
       elseif (x.lt.0d0 .or. x.gt.1d0) then
+       if (x-1d0.lt.tolerance) then
+         x=1d0
+       else
          write (*,*) 'PDF not supported for Bjorken x ', x
          open(unit=26,file='../../../error',status='unknown')
          write(26,*) 'Error: PDF not supported for Bjorken x ',x
          stop 1
+       endif
       endif
 
 
@@ -82,11 +90,8 @@ C     dressed leptons
         else 
           ipart = ipdg
         endif
-        pdg2pdf = eepdf_tilde(x,xmu**2,n_ee,ipart,ih) 
-        ! add back the factor (1-x)^(-kappa) which
-        ! is not included in the grids
-        pdg2pdf = pdg2pdf *
-     $           (1d0-x)**(-eepdf_tilde_power(xmu**2,n_ee,ipart,ih))
+        pdg2pdf = compute_eepdf(x,xmu,n_ee,ipart,ee_ibeam)
+        return
       endif
 
 
@@ -161,3 +166,37 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       return
       end
 
+
+      double precision function compute_eepdf(x, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu
+      integer n_ee, id, idbeam
+
+      double precision xmu2
+      double precision k_exp
+
+      double precision eps
+      parameter (eps=1e-4)
+
+      double precision eepdf_tilde, eepdf_tilde_power
+
+      xmu2=xmu**2
+
+      compute_eepdf = eepdf_tilde(x,xmu2,n_ee,id,idbeam) 
+      ! this does not include a factor (1-x)^(-kappa)
+      ! where k is given by
+      k_exp = eepdf_tilde_power(xmu2,n_ee,id,idbeam)
+
+      if (1d0-x .gt. eps) then
+      ! if x is not too close to 1,
+      ! add back the factor (1-x)^(-kappa) which
+      ! is not included in the grids
+        compute_eepdf = compute_eepdf * (1d0-x)**(-k_exp)
+      else
+      ! otherwise multiply by the integral of 
+      ! (1d0-x)**(-k_exp) between 1-eps and 1
+        compute_eepdf = compute_eepdf * eps**(-k_exp) / (1d0-k_exp)
+      endif
+
+      return
+      end
