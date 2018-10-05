@@ -109,8 +109,6 @@ class TestAMCatNLOEW(unittest.TestCase):
                         nrealproc_list, nrealdiags_list, split_type_list):
             self.interface.do_generate(cmd)
 
-            self.assertEqual(set(split), self.interface._fks_multi_proc['splitting_types'])
-
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 
             # check that the extra_cnt_amp_list is empty
