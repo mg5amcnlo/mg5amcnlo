@@ -582,7 +582,7 @@ c Importance sampling for FKS configurations
       if (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4) then
          ! this is for the MC over the dressed-electron
          ! components
-         call fill_MC_integer(2,n_ee,abs(sig))
+         call fill_MC_integer(6,n_ee,abs(sig))
       endif
 
 
