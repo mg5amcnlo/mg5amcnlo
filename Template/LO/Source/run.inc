@@ -92,3 +92,6 @@ c
       logical mxxpart_antipart(1:25)
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, Emin4pdg, Emax4pdg, etamin4pdg,
      &etamax4pdg, mxxmin4pdg,mxxpart_antipart
+
+       double precision small_width_treatment
+       common/narrow_width/small_width_treatment

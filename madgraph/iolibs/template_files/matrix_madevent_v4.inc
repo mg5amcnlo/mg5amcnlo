@@ -58,7 +58,7 @@ C
     CHARACTER*101        HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
-    REAL*8 POL(2)
+	REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
     
     INTEGER          ISUM_HEL
@@ -68,6 +68,7 @@ C
     DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
+
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -245,6 +246,9 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
+
+	double precision small_width_treatment
+	common/narrow_width/small_width_treatment
 C  
 C COLOR DATA
 C  

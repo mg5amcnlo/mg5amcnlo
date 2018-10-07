@@ -93,11 +93,21 @@ class VirtualExporter(object):
     #    - None, madgraph do nothing for initialisation
     exporter = 'v4'
     # language of the output 'v4' for Fortran output
-    #                        'cpp' for C++ output 
+    #                        'cpp' for C++ output
+    helas_call_writer_custom = False
+    #
+    # link to a static method to customise the way aloha function  call are written 
+    # for the matrix-element (usefull for changing Complex mass handling/...) 
     
     
     def __init__(self, dir_path = "", opt=None):
-        # cmd_options is a dictionary with all the optional argurment passed at output time 
+        # cmd_options is a dictionary with all the optional argurment passed at output time
+        if self.helas_call_writer_custom is False:
+            helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object =\
+              helas_call_writers.HelasCallWriter.default_customize_argument_for_all_other_helas_object
+        else:
+            helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
+                self.helas_call_writer_custom
         return
 
     def copy_template(self, model):
@@ -159,6 +169,9 @@ class ProcessExporterFortran(VirtualExporter):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
+        
+        # call mother class
+        super(ProcessExporterFortran,self).__init__(dir_path, opt)
         
         
     #===========================================================================
@@ -3411,6 +3424,15 @@ c     channel position
         return s_and_t_channels
 
 
+
+# helper function for customise helas writter
+def custom_helas_call(cls, call, arg):
+    if arg['mass'] == '%(M)s,%(W)s,':
+        arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
+    elif '%(W)s' in arg['mass']:
+        raise Exception
+    return call, arg
+
 #===============================================================================
 # ProcessExporterFortranME
 #===============================================================================
@@ -3419,6 +3441,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
+    helas_call_writer_custom = custom_helas_call 
 
     def copy_template(self, model):
         """Additional actions needed for setup of Template
@@ -3443,6 +3466,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         
 
+    
 
 
     #===========================================================================
@@ -3935,7 +3959,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     matrix_element)
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
-
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()

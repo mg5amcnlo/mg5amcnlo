@@ -3242,7 +3242,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         - Check that no width are too small (raise a warning if this is the case)
         3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
-        return self.static_check_param_card(path, self, run=run, dependent=dependent)
+        self.static_check_param_card(path, self, run=run, dependent=dependent)
+        
+        card = param_card_mod.ParamCard(path)
+        for param in card['decay']:
+            width = param.value
+            if width == 0:
+                continue
+            try:
+                mass = card['mass'].get(param.lhacode).value
+            except Exception:
+                continue
+
+            if mass:
+                if abs(width/mass) < self.run_card['small_width_treatment']:
+                    logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
+                      "Cross-section will be rescaled according to NWA if needed."  +
+                      "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
+                      param.lhacode[0], mass*self.run_card['small_width_treatment'], width)
+                elif abs(width/mass) < 1e-12:
+                    logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if CommonRunCmd.sleep_for_error:
+                    time.sleep(5)
+                    CommonRunCmd.sleep_for_error = False
+        
+        
         
     @staticmethod
     def static_check_param_card(path, interface, run=True, dependent=False, 

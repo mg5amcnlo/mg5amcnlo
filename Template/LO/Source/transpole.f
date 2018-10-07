@@ -28,13 +28,24 @@ c
       double precision z,zmin,zmax,xmin,xmax,ez
       double precision pole1,width1,x,xc
       double precision a,b
+c
+c     small width treatment
+c
+      double precision small_width_treatment
+      common/narrow_width/small_width_treatment
 c-----
 c  Begin Code
 c-----
       pole=pole1
       width=width1
+
       x = x1
       if (pole .gt. 0d0) then
+         if (width.lt.pole*small_width_treatment)then
+            width = pole * small_width_treatment
+            jac = jac * width/width1
+         endif
+
          zmin = atan((-pole)/width)/width
          zmax = atan((1d0-pole)/width)/width
          if (x .gt. del .and. x .lt. 1d0-del) then
@@ -175,7 +186,11 @@ c     Arguments
 c
       double precision pole1,width1,y1,jac
       real*8 x
-
+c
+c     small width treatment
+c
+      double precision small_width_treatment
+      common/narrow_width/small_width_treatment
 c
 c     Local
 c
@@ -191,6 +206,10 @@ c-----
       width=width1
       y = y1
       if (pole .gt. 0d0) then                   !BW 
+         if (width.lt.pole*small_width_treatment)then
+            width = pole * small_width_treatment
+            jac = jac * width/width1
+         endif
          zmin = atan((-pole)/width)/width
          zmax = atan((1d0-pole)/width)/width
          z = atan((y-pole)/width)/width
