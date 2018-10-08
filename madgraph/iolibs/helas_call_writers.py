@@ -27,14 +27,6 @@ class HelasWriterError(Exception):
     """Class for the error of this module """
     pass
 
-#helper function
-
-def fct_customize_argument_for_all_other_helas_object(cls, call, arg):
-    """ Place holder for PLUGIN/...
-            (used by madevent output for small width handling) 
-    """
-    return call, arg
-
 
 #===============================================================================
 # HelasCallWriter
@@ -52,8 +44,20 @@ class HelasCallWriter(base_objects.PhysicsObject):
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
                    99:'P'}
     
-    customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
-    default_customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
+    @staticmethod
+    def customize_argument_for_all_other_helas_object(call, arg):
+        """ Place holder for PLUGIN/...
+            (used by madevent output for small width handling) 
+        """
+        raise Exception
+        return call, arg
+        
+    @staticmethod
+    def default_customize_argument_for_all_other_helas_object(call,arg):
+        raise Exception
+        return call,arg  
+    #customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
+    #default_customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
 
     def default_setup(self):
 

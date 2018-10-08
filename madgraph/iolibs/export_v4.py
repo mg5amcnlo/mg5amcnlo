@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from madgraph.iolibs.helas_call_writers import HelasCallWriter
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -98,6 +99,16 @@ class VirtualExporter(object):
     #
     # link to a static method to customise the way aloha function  call are written 
     # for the matrix-element (usefull for changing Complex mass handling/...) 
+    ## Example
+    ##@staticmethod
+    ##def custom_helas_call(call, arg):
+    ##    if arg['mass'] == '%(M)s,%(W)s,':
+    ##        arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
+    ##    elif '%(W)s' in arg['mass']:
+    ##        raise Exception
+    ##    return call, arg
+    ##helas_call_writer_custom = lambda x,y,z: VirtualExporter.custom_helas_call(y,z) 
+    ##
     
     
     def __init__(self, dir_path = "", opt=None):
@@ -3425,14 +3436,6 @@ c     channel position
 
 
 
-# helper function for customise helas writter
-def custom_helas_call(cls, call, arg):
-    if arg['mass'] == '%(M)s,%(W)s,':
-        arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
-    elif '%(W)s' in arg['mass']:
-        raise Exception
-    return call, arg
-
 #===============================================================================
 # ProcessExporterFortranME
 #===============================================================================
@@ -3441,7 +3444,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
-    helas_call_writer_custom = custom_helas_call 
+    
+    # helper function for customise helas writter
+    @staticmethod
+    def custom_helas_call(call, arg):
+        if arg['mass'] == '%(M)s,%(W)s,':
+            arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
+        elif '%(W)s' in arg['mass']:
+            raise Exception
+        return call, arg
+    
+    
+    helas_call_writer_custom = lambda x,y,z: ProcessExporterFortranME.custom_helas_call(y,z) 
 
     def copy_template(self, model):
         """Additional actions needed for setup of Template
