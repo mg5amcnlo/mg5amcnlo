@@ -107,20 +107,6 @@ extern "C" {
     pythia4dire.next();
   }
 
-  void dire_get_sudakov_stopping_scales_( double scales [1000] ) {
-    vector<double> sca(merging->getStoppingScales());
-    for (int i=0; i < sca.size(); ++i)
-      scales[i] = sca[i];
-    for (int i=sca.size(); i < 1000; ++i)
-      scales[i] = -1.0;
-
-  }
-
-  void dire_get_stopping_info_( double scales [100][100],
-    double mass [100][100] ) {
-    merging->getStoppingInfo(scales, mass);
-  }
-
   void dire_get_no_emission_prob_( double& noemProb, double& startingScale,
     double& stoppingScale, double& mDipole, int& id, int& type ) {
     noemProb = merging->generateSingleSudakov ( startingScale,
