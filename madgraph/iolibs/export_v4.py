@@ -95,31 +95,28 @@ class VirtualExporter(object):
     exporter = 'v4'
     # language of the output 'v4' for Fortran output
     #                        'cpp' for C++ output
-    helas_call_writer_custom = False
-    #
-    # link to a static method to customise the way aloha function  call are written 
-    # for the matrix-element (usefull for changing Complex mass handling/...) 
-    ## Example
-    ##@staticmethod
-    ##def custom_helas_call(call, arg):
-    ##    if arg['mass'] == '%(M)s,%(W)s,':
-    ##        arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
-    ##    elif '%(W)s' in arg['mass']:
-    ##        raise Exception
-    ##    return call, arg
-    ##helas_call_writer_custom = lambda x,y,z: VirtualExporter.custom_helas_call(y,z) 
-    ##
     
     
     def __init__(self, dir_path = "", opt=None):
         # cmd_options is a dictionary with all the optional argurment passed at output time
-        if self.helas_call_writer_custom is False:
-            helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object =\
-              helas_call_writers.HelasCallWriter.default_customize_argument_for_all_other_helas_object
-        else:
-            helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
+        
+        
+        # Activate some monkey patching for the helas call writer.
+        helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
                 self.helas_call_writer_custom
-        return
+        
+
+    # helper function for customise helas writter
+    @staticmethod
+    def custom_helas_call(call, arg):
+        """static method to customise the way aloha function call are written
+        call is the default template for the call
+        arg are the dictionary used for the call
+        """
+        return call, arg
+    
+    helas_call_writer_custom = lambda x,y,z: x.custom_helas_call(y,z)
+
 
     def copy_template(self, model):
         return
@@ -3454,9 +3451,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise Exception
         return call, arg
     
-    
-    helas_call_writer_custom = lambda x,y,z: ProcessExporterFortranME.custom_helas_call(y,z) 
-
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
