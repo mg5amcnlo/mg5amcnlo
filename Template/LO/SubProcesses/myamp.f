@@ -75,9 +75,6 @@ c-----
 
       if (first_time) then
          include 'props.inc'
-         do i = -nexternal,0
-            prwidth_tmp(i,iconfig) = max(prwidth(i,iconfig), prmass(i,iconfig)*small_width_treatment)
-         enddo
          nbw = 0
          do i=-1,-(nexternal-3),-1
             if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0) then
@@ -126,7 +123,9 @@ c            write(*,*) 'Checking BW',nbw
 c            write(*,*) 'xmass',xmass,prmass(i,iconfig)
 c
 c           Here we set if the BW is "on-shell" for LesHouches
-c
+c            
+            prwidth_tmp(i,iconfig) = max(prwidth(i,iconfig), prmass(i,iconfig)*small_width_treatment)
+ 
             onshell = (abs(xmass - prmass(i,iconfig)) .lt.
      $           bwcutoff*prwidth_tmp(i,iconfig).and.
      $           (prwidth_tmp(i,iconfig)/prmass(i,iconfig).lt.0.1d0.or.
