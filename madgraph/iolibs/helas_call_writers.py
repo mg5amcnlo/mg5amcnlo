@@ -1219,7 +1219,6 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
 
         # ALL ARGUMENT FORMATTED ###############################################
-        misc.sprint(call, arg)
         call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
         # Store the result.
         call = call % arg
