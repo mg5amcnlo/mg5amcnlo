@@ -748,14 +748,6 @@ c Common block with granny information
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
 
-C dressed lepton stuff
-      integer n_ee
-      common /to_dressed_leptons/n_ee
-      integer nmax_ee
-      parameter (nmax_ee=4)
-      double precision vol_ee, x1_ee, x2_ee, jac_ee
-      double precision eepdf_fraction
-
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -853,27 +845,13 @@ c Generate the rapditity of the Born system
            call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
 
          else  ! this is for dressed ee collisions
-           if (one_body) then
-             write(*,*) 'one body with ee collisions not implemented'
-             stop 1
-           else
-             ! for dressed ee collisions the generation is different
-             ! w.r.t. the pp case. In the pp case, tau and y_cm are
-             ! generated, while in the ee case x1 and x2 are generated
-             ! first
-             ! montecarlo over a given component
-             call get_MC_integer(6, nmax_ee, n_ee, vol_ee)
-             xjac0 = xjac0 / vol_ee
-             call generate_x_ee(x(ndim-4), x1_ee, jac_ee)
-             xjac0 = xjac0 * jac_ee
-             call generate_x_ee(x(ndim-3), x2_ee, jac_ee)
-             xjac0 = xjac0 * jac_ee
-             ! the following function will generate tau and ycm, also
-             ! checking that tau_born is pysical. Otherwise xjac0 will
-             ! be set to -1000
-             call get_tau_y_from_x12(x1_ee, x2_ee, tau_born, ycm_born, ycmhat, xjac0) 
-             if (xjac0.eq.-1000d0) goto 222
-           endif
+           call generate_ee_tau_y(x(ndim-4), x(ndim-3), one_body,
+     $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
+     $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
+     $        cBW_width(-1,-ns_channel-1),
+     $        tau_born, ycm_born, ycmhat, xjac0)
+           ! for non-physical configurations, xjac=-1000
+           if (xjac0.eq.-1000d0) goto 222
          endif
       elseif (abs(lpp(1)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
@@ -3289,7 +3267,6 @@ c     S=A/(B-x) transformation:
         ycmhat = 1d0
       endif
 
-
       if (abs(ycmhat).gt.1d0) then
         if (abs(ycmhat).gt.1d0 + tolerance) then
           write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
@@ -3304,14 +3281,14 @@ c     S=A/(B-x) transformation:
       return 
       end
 
-      subroutine generate_x_ee(rnd, x, jac)
+      subroutine generate_x_ee(rnd, xmin, x, jac)
       implicit none
       ! generates the momentum fraction with importance
       !  sampling suitable for ee collisions
       ! rnd is generated uniformly in [0,1], 
       ! x is generated according to (1 -rnd)^-expo
       ! jac is the corresponding jacobian
-      double precision rnd, x, jac
+      double precision rnd, x, jac, xmin
       double precision expo
       parameter (expo=0.85d0) ! should be a number 0< x <1
       double precision tolerance
@@ -3325,9 +3302,165 @@ c     S=A/(B-x) transformation:
           write(*,*) 'ERROR in generate_x_ee', rnd, x
         endif
       endif
-      jac = 1d0/(1d0-expo) * (1d0-x)**(expo)
+      jac = 1d0/(1d0-expo) * (1d0-x)**(expo) 
+      ! then rescale it between xmin and 1
+      x = x * (1d0 - xmin) + xmin
+      jac = jac * (1d0 - xmin)
 
       return 
       end
 
 
+      subroutine generate_ee_tau_y(rnd1, rnd2, one_body, stot, nt_channel,
+     $     qmass, qwidth, cBW, cBW_mass, cBW_width,
+     $     tau_born, ycm_born, ycmhat, xjac0)
+      implicit none
+      double precision rnd1, rnd2, stot, qmass, qwidth
+      double precision cBW_mass(-1:1), cBW_width(-1:1)
+      integer nt_channel, cBW
+      logical one_body
+      double precision tau_born, ycm_born, ycmhat, xjac0
+
+      logical bw_exists, generate_with_bw
+      integer idim_dum
+      double precision ran2
+C dressed lepton stuff
+      double precision vol_ee_MCintN
+      integer n_ee, i_ee_bw
+      common /to_dressed_leptons/n_ee
+      common /to_dressed_leptons_MCint/vol_ee_MCintN
+      common /to_dressed_leptons_bw/i_ee_bw, bw_exists
+      integer nmax_ee
+      parameter (nmax_ee=4)
+      double precision vol_ee, x1_ee, x2_ee, jac_ee
+      
+      logical generate_x12
+      parameter (generate_x12 = .true.)
+
+      bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
+      generate_with_bw=.false.
+      ! if there are BWs, decide whether to generate flat or
+      ! to use the BW-specific generation (half and half)
+      ! (this way we also preserve the random-numebr sequence
+      ! for processes without the bw)
+      if (bw_exists) then
+        generate_with_bw = rnd1.lt.0.5d0 
+        if (generate_with_bw) then
+            rnd1 = 2d0 * rnd1
+        else
+            rnd1 = 2d0 * (rnd1 - 0.5d0)
+        endif
+      endif
+
+      ! pick the component of the Luminosity
+      call get_MC_integer(6, nmax_ee, n_ee, vol_ee)
+      xjac0 = xjac0 / vol_ee
+      vol_ee_MCintN = vol_ee
+
+      if (one_body) then
+        write(*,*) 'one body with ee collisions not implemented'
+        stop 1
+      elseif(generate_with_bw) then
+        ! here we treat the case of resonances
+
+        ! first generate tau with the dedicated function
+        idim_dum = 1000 ! this is never used in practice
+        call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
+     $       cBW_width,tau_born,xjac0)
+        ! then pick either x1 or x2 and generate it the usual way
+        ! there is a jacobian for x1 x2 -> tau x1(2)
+        if (rnd2.lt.0.5d0) then
+          call generate_x_ee(rnd2*2d0, tau_born, x1_ee, jac_ee)
+          x2_ee = tau_born / x1_ee
+          xjac0 = xjac0 / x1_ee  
+        else
+          call generate_x_ee(2d0*(rnd2-0.5d0), tau_born, x2_ee, jac_ee)
+          x1_ee = tau_born / x2_ee
+          xjac0 = xjac0 / x2_ee  
+        endif
+        ! the procedure above may lead to unphysical 
+        ! configurations (x>1). Filter them here
+        if (x1_ee.gt.1d0.or.x2_ee.gt.1d0) then
+          xjac0 = -1000d0
+          return
+        endif
+        xjac0 = xjac0 * jac_ee
+      else if (generate_x12.and..not.generate_with_bw) then
+        ! standard (withot resonances) generation:
+        ! for dressed ee collisions the generation is different
+        ! w.r.t. the pp case. In the pp case, tau and y_cm are
+        ! generated, while in the ee case x1 and x2 are generated
+        ! first.
+        call generate_x_ee(rnd1, 0d0, x1_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+        call generate_x_ee(rnd2, 0d0, x2_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+      else if (.not.generate_x12) then 
+        ! Alternate generation. First tau, then either
+        ! x1 or x2
+        call generate_tau_ee(rnd1, tau_born, jac_ee)
+        xjac0 = xjac0 * jac_ee
+        if (rnd2.lt.0.5d0) then
+          call generate_x_ee(2d0*rnd2, 0d0, x1_ee, jac_ee)
+          x2_ee = tau_born / x1_ee
+          xjac0 = xjac0 * jac_ee / x1_ee
+        else
+          call generate_x_ee(2d0*(rnd2-0.5d0), 0d0, x2_ee, jac_ee)
+          x1_ee = tau_born / x2_ee
+          xjac0 = xjac0 * jac_ee / x2_ee
+        endif
+        if (x1_ee.gt.1d0.or.x2_ee.gt.1d0) then
+          xjac0 = -1000d0
+          return
+        endif
+      endif
+      ! the following function will (re-)generate tau and ycm
+      ! from x1 and x2, also
+      ! checking that tau_born is pysical. Otherwise xjac0 will
+      ! be set to -1000
+      call get_tau_y_from_x12(x1_ee, x2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+
+      return
+      end
+
+
+      subroutine generate_tau_ee(rnd, tau_born, xjac0)
+      implicit none
+      ! generates tau with importance
+      !  sampling suitable for ee collisions
+      ! rnd is generated uniformly in [0,1], 
+      ! x is generated according to (1 -rnd)^-expo
+      ! and then rescaled between tau_lower_bound and 1
+      ! jac is the corresponding jacobian
+      double precision rnd, stot, tau_born, xjac0
+
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
+
+      double precision expo
+      parameter (expo=0.85d0) ! should be a number 0< x <1
+      double precision tolerance
+      parameter (tolerance=1.d-5)
+
+      tau_born = 1d0 - rnd ** (1d0/(1d0-expo))
+
+      if (tau_born.ge.1d0) then
+        if (tau_born.lt.1d0+tolerance) then
+          tau_born=1d0
+        else
+          write(*,*) 'ERROR in generate_tau_ee', rnd, tau_born
+        endif
+      endif
+      xjac0 = 1d0/(1d0-expo) * (1d0-tau_born)**(expo) 
+      ! then rescale it between tau_born_lower_bound and 1
+      tau_born = tau_born * (1d0 - tau_Born_lower_bound) + tau_Born_lower_bound
+      if (tau_born.gt.1d0.or.tau_born.lt.tau_born_lower_bound) then 
+          write(*,*) 'TAUBORN', tau_born, tau_born_lower_bound
+          stop 1
+      endif
+      xjac0 = xjac0 * (1d0 - tau_Born_lower_bound)
+
+      return
+      end

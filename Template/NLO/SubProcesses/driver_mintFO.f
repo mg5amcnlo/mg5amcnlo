@@ -433,8 +433,12 @@ c timing statistics
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 C dressed initial lepton stuff
-      integer n_ee
+      double precision vol_ee_MCintN
+      integer n_ee, i_ee_bw
+      logical bw_exists
       common /to_dressed_leptons/n_ee
+      common /to_dressed_leptons_MCint/vol_ee_MCintN
+      common /to_dressed_leptons_bw/i_ee_bw, bw_exists
 C
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
@@ -582,7 +586,8 @@ c Importance sampling for FKS configurations
       if (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4) then
          ! this is for the MC over the dressed-electron
          ! components
-         call fill_MC_integer(6,n_ee,abs(sig))
+         call get_wgt_nbody(sig)
+         call fill_MC_integer(6,n_ee,abs(sig)*vol_ee_MCintN)
       endif
 
 
