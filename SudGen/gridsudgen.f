@@ -50,6 +50,8 @@ c$$$      external SUDAKOV FUNCTION
       double precision py_compute_sudakov
       real*8 mcmass(21)
       logical grid(21)
+
+
 c
       do i=1,21
         mcmass(i)=0.d0
@@ -108,6 +110,7 @@ c st(inst) and stupp
       enddo
 c
       open(unit=10,file='sudakov.f',status='unknown')
+      open(unit=20,file='sudakov.log',status='unknown')
 c
       write(10,'(a)')
      #'      function pysudakov(st,xm,id,itype,xmpart)',
@@ -425,6 +428,9 @@ c
      #'      return',
      #'      end'
 c
+
+      close(20)
+
       end
 
 
@@ -486,7 +492,8 @@ c
      #     stlow, md, id, itype)
       py_compute_sudakov=temp
 
-      write(*,*) 'id=', id, 'md=', md, ' start=', stupp,
+c      write(*,*) 'id=', id, 'md=', md, ' start=', stupp,
+      write(20,'(a)') 'id=', id, 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
 
       return
