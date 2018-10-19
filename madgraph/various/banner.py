@@ -2386,7 +2386,6 @@ class RunCard(ConfigFile):
                 elif len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
-                    print nline[1]
                     name = nline[1].strip().lower()
                     value = self[name]
                     if name in self.list_parameter:
