@@ -283,7 +283,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
-        misc.sprint(model_name)
         if model_name:
             model_name = os.path.expanduser(model_name)
             self.load_model(model_name, mg_names, complex_mass)
@@ -1430,7 +1429,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
             if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
-                print "decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start)
+                logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)

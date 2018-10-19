@@ -2375,9 +2375,9 @@ class RunCard(ConfigFile):
                     else:
                         this_group = this_group[0]
                     if block_name in write_block:
-                        text += this_group.on_template % self
+                        text += this_group.template_on % self
                         for name in this_group.fields:
-                            written.add(f)
+                            written.add(name)
                             if name in to_write:
                                 to_write.remove(name)
                     else:

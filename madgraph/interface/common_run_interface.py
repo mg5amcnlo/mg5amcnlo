@@ -5176,7 +5176,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning(str(e))
             return
 
-        
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
@@ -5253,6 +5252,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
+
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
@@ -5309,6 +5309,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
+
             if args[start] not in self.run_set:
                 if card in self.from_banner or 'run' in self.from_banner:
                     raise Exception, "change not allowed for this card: event already generated!"
@@ -5328,9 +5329,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('remove information %s from the run_card' % args[start],'$MG:BOLD')
                     del self.run_card[args[start]]
             else:
-                if args[0].startswith('sys_') or \
-                   args[0] in self.run_card.list_parameter or \
-                   args[0] in self.run_card.dict_parameter:
+                lower_name = args[0].lower()
+                if lower_name.startswith('sys_') or \
+                   lower_name in self.run_card.list_parameter or \
+                   lower_name in self.run_card.dict_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
