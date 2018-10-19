@@ -3300,6 +3300,7 @@ c     S=A/(B-x) transformation:
           x=1d0
         else
           write(*,*) 'ERROR in generate_x_ee', rnd, x
+          stop 1
         endif
       endif
       jac = 1d0/(1d0-expo) * (1d0-x)**(expo) 
@@ -3311,10 +3312,11 @@ c     S=A/(B-x) transformation:
       end
 
 
-      subroutine generate_ee_tau_y(rnd1, rnd2, one_body, stot, nt_channel,
+      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, stot, nt_channel,
      $     qmass, qwidth, cBW, cBW_mass, cBW_width,
      $     tau_born, ycm_born, ycmhat, xjac0)
       implicit none
+      double precision rnd1_in, rnd2_in
       double precision rnd1, rnd2, stot, qmass, qwidth
       double precision cBW_mass(-1:1), cBW_width(-1:1)
       integer nt_channel, cBW
@@ -3322,8 +3324,9 @@ c     S=A/(B-x) transformation:
       double precision tau_born, ycm_born, ycmhat, xjac0
 
       logical bw_exists, generate_with_bw
+      double precision frac_bw
+      parameter (frac_bw=0.5d0)
       integer idim_dum
-      double precision ran2
 C dressed lepton stuff
       double precision vol_ee_MCintN
       integer n_ee, i_ee_bw
@@ -3336,6 +3339,24 @@ C dressed lepton stuff
       
       logical generate_x12
       parameter (generate_x12 = .true.)
+      double precision s_sep_bw
+      ! these common blocks are never used
+      ! we leave them here for the moment 
+      ! as e.g. one may want to plot random numbers, etc.
+      double precision r1, r2, x1bk, x2bk
+      common /to_random_numbers/r1,r2, x1bk, x2bk
+
+      rnd1=rnd1_in
+      rnd2=rnd2_in
+
+      r1=rnd1
+      r2=rnd2
+
+      ! this parameter separates the s region where
+      ! a BW parameterisation should be used from
+      ! the one where the adaptive eepdf should be used
+      ! it is set to -1. if no BW exists
+      s_sep_bw = -1d0
 
       bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
       generate_with_bw=.false.
@@ -3344,11 +3365,16 @@ C dressed lepton stuff
       ! (this way we also preserve the random-numebr sequence
       ! for processes without the bw)
       if (bw_exists) then
-        generate_with_bw = rnd1.lt.0.5d0 
+        ! do the lower half of the integration with BW
+        ! and the upper half with ee PDFs
+        s_sep_bw = (stot + qmass**2) / 2d0
+        generate_with_bw = rnd1.lt.frac_bw
         if (generate_with_bw) then
-            rnd1 = 2d0 * rnd1
+            rnd1 = rnd1 / frac_bw
+            xjac0 = xjac0 / frac_bw
         else
-            rnd1 = 2d0 * (rnd1 - 0.5d0)
+            rnd1 = (rnd1 - frac_bw) / (1d0 - frac_bw)
+            xjac0 = xjac0 / (1d0 - frac_bw)
         endif
       endif
 
@@ -3367,16 +3393,33 @@ C dressed lepton stuff
         idim_dum = 1000 ! this is never used in practice
         call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
      $       cBW_width,tau_born,xjac0)
+
+        ! throw away if tau_born is too_large, in order
+        ! not to end on the no-rad peak
+        if (tau_born*stot.gt.s_sep_bw) then
+          xjac0=-1000d0
+          return
+        endif
+
         ! then pick either x1 or x2 and generate it the usual way
         ! there is a jacobian for x1 x2 -> tau x1(2)
+
         if (rnd2.lt.0.5d0) then
           call generate_x_ee(rnd2*2d0, tau_born, x1_ee, jac_ee)
           x2_ee = tau_born / x1_ee
-          xjac0 = xjac0 / x1_ee  
+          xjac0 = xjac0 / x1_ee * 2d0 
+          if (x1_ee.lt.x2_ee) then
+            xjac0 = -1000d0
+            return
+          endif
         else
-          call generate_x_ee(2d0*(rnd2-0.5d0), tau_born, x2_ee, jac_ee)
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), tau_born, x2_ee, jac_ee)
           x1_ee = tau_born / x2_ee
-          xjac0 = xjac0 / x2_ee  
+          xjac0 = xjac0 / x2_ee * 2d0 
+          if (x2_ee.lt.x1_ee) then
+            xjac0 = -1000d0
+            return
+          endif
         endif
         ! the procedure above may lead to unphysical 
         ! configurations (x>1). Filter them here
@@ -3391,9 +3434,10 @@ C dressed lepton stuff
         ! w.r.t. the pp case. In the pp case, tau and y_cm are
         ! generated, while in the ee case x1 and x2 are generated
         ! first.
-        call generate_x_ee(rnd1, 0d0, x1_ee, jac_ee)
+
+        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), x1_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, 0d0, x2_ee, jac_ee)
+        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), x2_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
       else if (.not.generate_x12) then 
         ! Alternate generation. First tau, then either
@@ -3419,6 +3463,9 @@ C dressed lepton stuff
       ! checking that tau_born is pysical. Otherwise xjac0 will
       ! be set to -1000
       call get_tau_y_from_x12(x1_ee, x2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+
+      x1bk=x1_ee
+      x2bk=x2_ee
 
       return
       end
@@ -3461,6 +3508,37 @@ C dressed lepton stuff
           stop 1
       endif
       xjac0 = xjac0 * (1d0 - tau_Born_lower_bound)
+
+      return
+      end
+
+
+      subroutine generate_y_ee(rnd, tau_born, ycm_born, jac)
+      ! this function has never been thoroughly tested
+      implicit none
+      double precision rnd, tau_born, ycm_born, jac
+      double precision ylim
+      double precision expo
+      parameter (expo=0.85d0)
+      double precision tolerance
+      parameter (tolerance=1.d-5)
+      ! if the ee PDFs behave as (1-x)^exp, then, given tau,
+      ! the y distribution behaves as (y±ylim)^exp
+      ! so we will do the same importance sampling as for the x's,
+      ! symmetrised around the origin
+
+      ylim=-0.5d0*dlog(tau_born)
+
+      ycm_born = sign(1d0, rnd-0.5d0) * ylim * (1d0 - abs(2d0*(rnd-0.5d0)) ** (1d0/(1d0-expo)))
+      if (abs(ycm_born/ylim).ge.1d0) then
+        if (abs(ycm_born/ylim).lt.1d0+tolerance) then
+          ycm_born = ylim * sign(1d0, ycm_born)
+        else
+          write(*,*) 'ERROR in generate_y_ee', rnd, ycm_born
+          stop 1
+        endif
+      endif
+      jac = 1d0/(1d0-expo) * 2d0 * ylim * (1d0-abs(ycm_born)/ylim)**(expo) 
 
       return
       end
