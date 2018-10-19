@@ -178,7 +178,7 @@ class Block(list):
     
     def rename_keys(self, change_keys):
         
-        misc.sprint(self.param_dict, change_keys, [p.lhacode for p in self])
+
         for old_key, new_key in change_keys.items():
             
             assert old_key in self.param_dict
@@ -644,7 +644,6 @@ class ParamCard(dict):
             if block == 'decay':
                 if self['mass'].get(tuple(lhaid)).value < 0:
                     value = '-%s' % value
-                    misc.sprint(variable, value)
 
             fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
@@ -1042,7 +1041,6 @@ class ParamCardIterator(ParamCard):
                     data.append(info[k])
                 else:
                     data.append(0.)
-            misc.sprint(name, bench, data)
             ff.write(formatting % tuple([name] + bench + data))
                 
         if not path:
