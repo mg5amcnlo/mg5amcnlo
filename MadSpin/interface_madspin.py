@@ -1060,8 +1060,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if len(hepmc_output) == 0:
                         hepmc_output.append(lhe_parser.Particle(event=hepmc_output))
                         hepmc_output[0].color2 = 0
+                        hepmc_output[0].status = -1
+                        hepmc_output.nexternal+=1
                     decayed_particle = lhe_parser.Particle(particle, hepmc_output)
+                    decayed_particle.mother1 = hepmc_output[0]
+                    decayed_particle.mother2 = hepmc_output[0]
                     hepmc_output.append(decayed_particle)
+                    hepmc_output.nexternal+=1
                     decayed_particle.add_decay(decay)
             # change the weight associate to the event
             if self.options['new_wgt'] == 'cross-section':
@@ -1079,7 +1084,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 hepmc_output.wgt = event.wgt
                 hepmc_output.nexternal = len(hepmc_output) # the append does not update nexternal
-                hepmc_output.assign_mother()
                 output_lhe.write(str(hepmc_output))
         else:
             if counter==0:
