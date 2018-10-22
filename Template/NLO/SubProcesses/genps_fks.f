@@ -2015,8 +2015,12 @@ c
          yij_sol=-ycmhat
       endif
       if(abs(yij_sol).gt.1.d0)then
-         write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
-         write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         if (abs(yij_sol).lt.1d0+qtiny) then
+           yij_sol = sign(1d0, yij_sol)
+         else
+           write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
+           write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         endif
       endif
       if(yijdir.ge.yij_sol)then
          xi1=2*(1+yijdir)*x1bar2/(
