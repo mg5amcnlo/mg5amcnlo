@@ -1886,6 +1886,10 @@ c local
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
      $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
+
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx1bar2, omx2bar2
 c external
 c
 c parameters
@@ -1970,7 +1974,7 @@ c
          y_ij_fks_upp=-yij_low
          y_ij_fks_low=-yij_upp
       endif
-      
+
 c
 c set-up y_ij_fks
 c
@@ -2012,13 +2016,13 @@ c cannot be generated
          stop
       endif
 c importance sampling towards collinear singularity
-
-      if (xjac.eq.0d0) then
-        xjac=-33d0
-        pass=.false.
-        return
-      endif
       xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+
+      !if (xjac.eq.0d0) then
+      !  xjac=-33d0
+      !  pass=.false.
+      !  return
+      !endif
 c
 c Compute costh_i_fks
 c
@@ -2027,14 +2031,35 @@ c
 c
 c Compute maximal xi_i_fks
 c
-      x1bar2=xbjrk_born(1)**2
-      x2bar2=xbjrk_born(2)**2
-      if(1-tau_born.gt.1.d-5)then
+      ! these are to prevent numerical inaccuracies
+      ! when x->1 (relevant for ee collisions)
+      if (1d0-xbjrk_born(1).lt.ctiny.and.omx1_ee.gt.0d0) then
+        x1bar2 = 1d0 - 2d0*omx1_ee + omx1_ee**2
+        omx1bar2 = 2d0*omx1_ee - omx1_ee**2
+      else
+        x1bar2 = xbjrk_born(1)**2
+        omx1bar2 = 1d0-x1bar2
+      endif
+
+      if (1d0-xbjrk_born(2).lt.ctiny.and.omx2_ee.gt.0d0) then
+        x2bar2 = 1d0 - 2d0*omx2_ee + omx2_ee**2
+        omx2bar2 = 2d0*omx2_ee - omx2_ee**2
+      else
+        x2bar2 = xbjrk_born(2)**2
+        omx2bar2 = 1d0-x2bar2
+      endif
+      !!!
+
+      if(1-tau_born.gt.1.d-5.and.omx1_ee.eq.0d0.and.omx2_ee.eq.0d0)then
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
      &            ( cosh(ycm_born)*(1-tau_born) )
+      else if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+         yij_sol = (omx1_ee - omx2_ee) * ( 1 + xbjrk_born(1)*xbjrk_born(2)) / 
+     $ (xbjrk_born(1)+xbjrk_born(2)) / (omx1_ee+omx2_ee-omx1_ee*omx2_ee)
       else
          yij_sol=-ycmhat
       endif
+
       if(abs(yij_sol).gt.1.d0)then
          if (abs(yij_sol).lt.1d0+qtiny) then
            yij_sol = sign(1d0, yij_sol)
@@ -2043,16 +2068,23 @@ c
            write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
          endif
       endif
-      if(yijdir.ge.yij_sol)then
+      if(yijdir.gt.yij_sol)then
          xi1=2*(1+yijdir)*x1bar2/(
      &        sqrt( ((1+x1bar2)*(1-yijdir))**2+16*yijdir*x1bar2 ) +
-     &        (1-yijdir)*(1-x1bar2) )
+     &        (1-yijdir)*(omx1bar2) )
          ximaxtmp=1-xi1
       elseif(yijdir.lt.yij_sol)then
          xi2=2*(1-yijdir)*x2bar2/(
      &        sqrt( ((1+x2bar2)*(1+yijdir))**2-16*yijdir*x2bar2 ) +
-     &        (1+yijdir)*(1-x2bar2) )
+     &        (1+yijdir)*(omx2bar2) )
          ximaxtmp=1-xi2
+      elseif(yijdir.eq.yij_sol)then
+         ! this may be relevant only for ee collisions
+         if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+           ximaxtmp=omx1_ee+omx2_ee-omx1_ee*omx2_ee
+         else
+           ximaxtmp=1-xbjrk_born(1)*xbjrk_born(2)
+         endif
       else
          write(*,*)'Fatal error #14 in one_tree: unknown option'
          write(*,*)y_ij_fks,yij_sol,idir
@@ -2083,6 +2115,7 @@ c
      &     abs(ximaxtmp-(1-xbjrk_born(2))).gt.1.d-5) ) )then 
          write(*,*)'Fatal error #15 in one_tree', xjac
          write(*,*)ximaxtmp,xbjrk_born(1),xbjrk_born(2),idir
+         write(*,*) omx1_ee, omx2_ee
          write(*,*) abs(ximaxtmp-(1-xbjrk_born(1))), abs(ximaxtmp-(1-xbjrk_born(2)))
          stop
       endif
@@ -3267,9 +3300,9 @@ c     S=A/(B-x) transformation:
       return
       end
 
-      subroutine get_tau_y_from_x12(x1, x2, tau, ycm, ycmhat, jac) 
+      subroutine get_tau_y_from_x12(x1, x2, omx1, omx2, tau, ycm, ycmhat, jac) 
       implicit none
-      double precision x1, x2, tau, ycm, ycmhat, jac
+      double precision x1, x2, omx1, omx2, tau, ycm, ycmhat, jac
       double precision ylim
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      $     ,tau_lower_bound
@@ -3285,16 +3318,16 @@ c     S=A/(B-x) transformation:
         ylim = -0.5d0*dlog(x1)
         ycm = 0.5d0*dlog(x1)
       else
-        ylim = -0.5d0*(x1-1d0)
-        ycm = 0.5d0*(x1-1d0)
+        ylim = 0.5d0*(omx1 + omx1**2/2d0)
+        ycm = -0.5d0*(omx1 + omx1**2/2d0)
       endif
 
       if (1d0-x2.gt.tolerance) then
         ylim = ylim - 0.5d0*dlog(x2)
         ycm = ycm - 0.5d0*dlog(x2)
       else
-        ylim = ylim - 0.5d0*(x2-1d0)
-        ycm = ycm - 0.5d0*(x2-1d0)
+        ylim = ylim + 0.5d0*(omx2 + omx2**2/2d0)
+        ycm = ycm + 0.5d0*(omx2 + omx2**2/2d0)
       endif
       !ylim=-0.5d0*dlog(tau)
       !ycm = 0.5d0 * dlog(x1/x2)
@@ -3322,20 +3355,22 @@ c     S=A/(B-x) transformation:
       return 
       end
 
-      subroutine generate_x_ee(rnd, xmin, x, jac)
+      subroutine generate_x_ee(rnd, xmin, x, omx, jac)
       implicit none
       ! generates the momentum fraction with importance
       !  sampling suitable for ee collisions
       ! rnd is generated uniformly in [0,1], 
       ! x is generated according to (1 -rnd)^-expo
       ! jac is the corresponding jacobian
-      double precision rnd, x, jac, xmin
+      ! omx is 1-x, stored to improve numerical accuracy
+      double precision rnd, x, omx, jac, xmin
       double precision expo
       parameter (expo=0.85d0) ! should be a number 0< x <1
       double precision tolerance
       parameter (tolerance=1.d-5)
 
       x = 1d0 - rnd ** (1d0/(1d0-expo))
+      omx = rnd ** (1d0/(1d0-expo))
       if (x.ge.1d0) then
         if (x.lt.1d0+tolerance) then
           x=1d0
@@ -3344,7 +3379,7 @@ c     S=A/(B-x) transformation:
           stop 1
         endif
       endif
-      jac = 1d0/(1d0-expo) * (1d0-x)**(expo) 
+      jac = 1d0/(1d0-expo) * rnd ** (expo/(1d0-expo))
       ! then rescale it between xmin and 1
       x = x * (1d0 - xmin) + xmin
       jac = jac * (1d0 - xmin)
@@ -3381,6 +3416,10 @@ C dressed lepton stuff
       logical generate_x12
       parameter (generate_x12 = .true.)
       double precision s_sep_bw
+
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+
       ! these common blocks are never used
       ! we leave them here for the moment 
       ! as e.g. one may want to plot random numbers, etc.
@@ -3446,16 +3485,18 @@ C dressed lepton stuff
         ! there is a jacobian for x1 x2 -> tau x1(2)
 
         if (rnd2.lt.0.5d0) then
-          call generate_x_ee(rnd2*2d0, tau_born, x1_ee, jac_ee)
+          call generate_x_ee(rnd2*2d0, tau_born, x1_ee, omx1_ee, jac_ee)
           x2_ee = tau_born / x1_ee
+          omx2_ee = 1d0 - x2_ee
           xjac0 = xjac0 / x1_ee * 2d0 
           if (x1_ee.lt.x2_ee) then
             xjac0 = -1000d0
             return
           endif
         else
-          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), tau_born, x2_ee, jac_ee)
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), tau_born, x2_ee, omx2_ee, jac_ee)
           x1_ee = tau_born / x2_ee
+          omx1_ee = 1d0 - x1_ee
           xjac0 = xjac0 / x2_ee * 2d0 
           if (x2_ee.lt.x1_ee) then
             xjac0 = -1000d0
@@ -3476,11 +3517,13 @@ C dressed lepton stuff
         ! generated, while in the ee case x1 and x2 are generated
         ! first.
 
-        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), x1_ee, jac_ee)
+        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), x1_ee, omx1_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), x2_ee, jac_ee)
+        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), x2_ee, omx2_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
       else if (.not.generate_x12) then 
+          write(*,*) 'NOT GOOD HERE'
+          stop
         ! Alternate generation. First tau, then either
         ! x1 or x2
         call generate_tau_ee(rnd1, tau_born, jac_ee)
@@ -3503,7 +3546,7 @@ C dressed lepton stuff
       ! from x1 and x2, also
       ! checking that tau_born is pysical. Otherwise xjac0 will
       ! be set to -1000
-      call get_tau_y_from_x12(x1_ee, x2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+      call get_tau_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
 
       x1bk=x1_ee
       x2bk=x2_ee
