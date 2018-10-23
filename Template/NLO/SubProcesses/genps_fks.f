@@ -1898,6 +1898,7 @@ c parameters
       logical fks_as_is
       parameter (fks_as_is=.false.)
       double complex ximag
+      double precision ltau_born,e2ycm_born,em2ycm_born
       parameter (ximag=(0d0,1d0))
       double precision stiny,sstiny,qtiny,zero,ctiny,cctiny
       parameter (stiny=1d-6)
@@ -1929,21 +1930,35 @@ c
 c
 c set-up lower and upper bounds on y_ij_fks
 c
+      ! this is to overcome numerical instabilities in ee collisions
+      if (1d0-tau_born.gt.stiny) then
+        ltau_born = log(tau_born)
+      else
+        ltau_born = tau_born-1d0
+      endif
+      if (abs(ycm_born).gt.stiny) then
+        e2ycm_born = exp(2*ycm_born)
+        em2ycm_born = exp(-2*ycm_born)
+      else
+        e2ycm_born = 1d0 + 2*ycm_born
+        em2ycm_born = 1d0 - 2*ycm_born
+      endif
+
       if( tau_born.le.tau_lower_bound .and.ycm_born.gt.
-     &         (0.5d0*log(tau_born)-log(tau_lower_bound)) )then
+     &         (0.5d0*ltau_born-log(tau_lower_bound)) )then
          yij_upp= (tau_lower_bound+tau_born)*
-     &        ( 1-exp(2*ycm_born)*tau_lower_bound ) /
+     &        ( 1-e2ycm_born*tau_lower_bound ) /
      &                  ( (tau_lower_bound-tau_born)*
-     &                    (1+exp(2*ycm_born)*tau_lower_bound) )
+     &                    (1+e2ycm_born*tau_lower_bound) )
       else
          yij_upp=1.d0
       endif
       if( tau_born.le.tau_lower_bound .and. ycm_born.lt.
-     &        (-0.5d0*log(tau_born)+log(tau_lower_bound)) )then
+     &        (-0.5d0*ltau_born+log(tau_lower_bound)) )then
          yij_low=-(tau_lower_bound+tau_born)*
-     &        ( 1-exp(-2*ycm_born)*tau_lower_bound ) / 
+     &        ( 1-em2ycm_born*tau_lower_bound ) / 
      &                   ( (tau_lower_bound-tau_born)*
-     &                     (1+exp(-2*ycm_born)*tau_lower_bound) )
+     &                     (1+em2ycm_born*tau_lower_bound) )
       else
          yij_low=-1.d0
       endif
@@ -1997,6 +2012,12 @@ c cannot be generated
          stop
       endif
 c importance sampling towards collinear singularity
+
+      if (xjac.eq.0d0) then
+        xjac=-33d0
+        pass=.false.
+        return
+      endif
       xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
 c
 c Compute costh_i_fks
@@ -2046,7 +2067,7 @@ c
       else
          xiimin=0d0
       endif
-      if (xiimax.lt.xiimin) then
+      if (xiimax.le.xiimin) then
          write (*,*) 'WARNING #10 in genps_fks.f',icountevts,xiimax
      $        ,xiimin
          xjac=-342d0
@@ -2055,13 +2076,14 @@ c
       endif
 
       xinorm=xiimax-xiimin
-      if( icountevts.ge.1 .and.
+      if( xjac.gt.0d0.and. icountevts.ge.1 .and.
      &     ( (idir.eq.1.and.
      &     abs(ximaxtmp-(1-xbjrk_born(1))).gt.1.d-5) .or.
      &     (idir.eq.-1.and.
      &     abs(ximaxtmp-(1-xbjrk_born(2))).gt.1.d-5) ) )then 
-         write(*,*)'Fatal error #15 in one_tree'
+         write(*,*)'Fatal error #15 in one_tree', xjac
          write(*,*)ximaxtmp,xbjrk_born(1),xbjrk_born(2),idir
+         write(*,*) abs(ximaxtmp-(1-xbjrk_born(1))), abs(ximaxtmp-(1-xbjrk_born(2)))
          stop
       endif
 c
@@ -3259,8 +3281,23 @@ c     S=A/(B-x) transformation:
       parameter (y_settozero=1e-12)
 
       tau = x1*x2
-      ylim=-0.5d0*dlog(tau)
-      ycm = 0.5d0 * dlog(x1/x2)
+      if (1d0-x1.gt.tolerance) then
+        ylim = -0.5d0*dlog(x1)
+        ycm = 0.5d0*dlog(x1)
+      else
+        ylim = -0.5d0*(x1-1d0)
+        ycm = 0.5d0*(x1-1d0)
+      endif
+
+      if (1d0-x2.gt.tolerance) then
+        ylim = ylim - 0.5d0*dlog(x2)
+        ycm = ycm - 0.5d0*dlog(x2)
+      else
+        ylim = ylim - 0.5d0*(x2-1d0)
+        ycm = ycm - 0.5d0*(x2-1d0)
+      endif
+      !ylim=-0.5d0*dlog(tau)
+      !ycm = 0.5d0 * dlog(x1/x2)
       ycmhat = ycm / ylim
 
       ! this is to prevent numerical inaccuracies

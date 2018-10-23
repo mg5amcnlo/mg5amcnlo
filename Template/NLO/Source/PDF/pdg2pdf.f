@@ -180,6 +180,11 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
 
       double precision eepdf_tilde, eepdf_tilde_power
 
+      if (id.eq.7) then
+        compute_eepdf = 0d0
+        return
+      endif
+
       xmu2=xmu**2
 
       compute_eepdf = eepdf_tilde(x,xmu2,n_ee,id,idbeam) 
