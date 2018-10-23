@@ -1078,8 +1078,14 @@ c Compute the multi-channel enhancement factor 'enhance'.
       endif
       call set_cms_stuff(0)
 c f_* multiplication factors for Born and nbody
-      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+
+      if (min(xiimax_ev,xiBSVcut_used).le.0d0) then
+        write(*,*) 'WARNING, SETTING FNB=0', xiimax_ev,xiBSVcut_used,jac_cnt(0)
+        f_b=0d0
+      else
+        f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
      $     *pi**2))*enhance*fkssymmetryfactorBorn*vegas_wgt
+      endif
       f_nb=f_b
       call cpu_time(tAfter)
       tf_nb=tf_nb+(tAfter-tBefore)
