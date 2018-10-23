@@ -1282,7 +1282,7 @@ class Event(list):
         if all(p.status != -1 for p in self):
             if not self.nexternal:
                 return
-            if #self.warning_order:
+            if self.warning_order:
                 Event.warning_order = False
                 logger.warning("Weird format for lhe format: no incoming particle... adding a fake one")
                 raise Exception
