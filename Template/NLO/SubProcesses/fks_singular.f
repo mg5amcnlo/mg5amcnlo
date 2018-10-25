@@ -2913,9 +2913,9 @@ c
       double precision xm12
       integer ileg
       common/cscaleminmax/xm12,ileg
-      double precision target_scales_S(nexternal,nexternal)
-      double precision target_scales_H(nexternal,nexternal)
-      common/c_target_scales/target_scales_S,target_scales_H
+      double precision SCALUP_tmp_S(nexternal,nexternal)
+      double precision SCALUP_tmp_H(nexternal,nexternal)
+      common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
 c Initialise
       SCALUP(iFKS)=0d0
@@ -2954,7 +2954,7 @@ c S events
             if(.not.Hevents)then
                if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
      &         dampMCsubt.and.emsca_a(i,j).ne.0d0)then
-                  SCALUP_a(iFKS,i,j)=target_scales_S(i,j)
+                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_S(i,j)
                else
                   call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a
      $            ,scalemax_a,ileg,xm12)
@@ -2964,7 +2964,7 @@ c S events
 c H events
             else
                if(dampMCsubt.and.emsca_a(i,j).ne.0d0)then
-                  SCALUP_a(iFKS,i,j)=target_scales_H(i,j)
+                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_H(i,j)
                else
                   call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a(i,j)
      $            ,scalemax_a(i,j),ileg,xm12)

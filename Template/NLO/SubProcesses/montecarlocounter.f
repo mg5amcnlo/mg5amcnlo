@@ -1150,9 +1150,9 @@ C     To access Pythia8 control variables
       common/SHevents/Hevents
       integer nexternal_now
       double precision sumMCsec(max_bcol)
-      double precision target_scales_S(nexternal,nexternal)
-      double precision target_scales_H(nexternal,nexternal)
-      common/c_target_scales/target_scales_S,target_scales_H
+      double precision SCALUP_tmp_S(nexternal,nexternal)
+      double precision SCALUP_tmp_H(nexternal,nexternal)
+      common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
       integer iii,jjj
       double precision xscales(0:99,0:99)
@@ -1160,7 +1160,11 @@ C     To access Pythia8 control variables
 
       integer id, type
       double precision noemProb, startingScale, stoppingScale, mDipole
+      double precision mcmass(21)
+      double precision pysudakov
+      integer nG_S,nQ_S,i_dipole_counter,isudtype
 
+      mcmass=0d0
       do i=1,2
         istup_local(i) = -1
       enddo
@@ -1294,19 +1298,20 @@ c     color configuration read from born_leshouche.inc and jflow
         ICOLUP_S(2,i)=ICOLUP(2,i,jflow)
       enddo
 c
-c     target scales for S events are read from emsca_v_tmp matrix;
-c     stored in target_scales_S for the colour lines beloinging to
+c     LH scales for S events are read from emsca_v_tmp matrix;
+c     they correspond to the starting scales for extra radiation;
+c     stored in SCALUP_tmp_S for the colour lines beloinging to
 c     jflow, to be written to LH file. Set to -1 if lines belonging
 c     to other flows
-      target_scales_S=-1d0
+      SCALUP_tmp_S=-1d0
       do i=1,nexternal-2
          do j=i+1,nexternal-1
             if( (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
      &          (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(2,j)).or.
      &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(1,j)).or.
      &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j)) )then
-               target_scales_S(i,j)=emscav_tmp_a(i,j)
-               target_scales_S(j,i)=emscav_tmp_a(j,i)
+               SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
+               SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
             endif
          enddo
       enddo
@@ -1343,12 +1348,59 @@ c     Calculate suppression factor for H-events.
       endif
       call dire_setevent()
       call dire_next()
-      call dire_get_mergingweight(wgt_sudakov)
+c$$$      call dire_get_mergingweight(wgt_sudakov)
       call dire_get_sudakov_stopping_scales(scales)
 
       xscales=-1d0
       xmasses=-1d0
       call dire_get_stopping_info(xscales,xmasses)
+c
+c     LH scales for H events are computed by Pythia;
+c     they correspond to the target scales for extra radiation;
+c     stored in SCALUP_tmp_H
+      SCALUP_tmp_H=-1d0
+      do i=1,nexternal
+         do j=1,nexternal
+            SCALUP_tmp_H(i,j)=xscales(i,j)
+         enddo
+      enddo
+c
+c     compute wgt_sudakov = Delta as the product of Sudakovs between
+c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
+      wgt_sudakov=1d0
+      i_dipole_counter=0
+      nG_S=0
+      nQ_S=0
+      include 'MCmasses_PYTHIA8.inc' 
+      do i=1,nexternal-1
+         if(idup_s(i).eq.21)nG_S=nG_S+1
+         if(abs(idup_s(i)).le.7)nQ_S=nQ_S+1
+         do j=1,nexternal-1
+            if(i.le.2.and.j.le.2)isudtype=1
+            if(i.gt.2.and.j.gt.2)isudtype=2
+            if(i.le.2.and.j.gt.2)isudtype=3
+            if(i.gt.2.and.j.le.2)isudtype=4
+            if((xscales(i,j).ne.-1d0.and.xmasses(i,j).eq.-1d0).or.
+     &         (xscales(i,j).eq.-1d0.and.xmasses(i,j).ne.-1d0))then
+               write(*,*)'Error in xscales, xmasses',i,j,xscales(i,j),xmasses(i,j)
+               stop
+            endif
+            if(xscales(i,j).eq.-1d0)cycle
+            wgt_sudakov=wgt_sudakov*
+     &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
+     &        pysudakov(SCALUP_tmp_S(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
+            i_dipole_counter=i_dipole_counter+1
+c     check
+c     a) itype assignment?
+c     b) difference between scales and xscales?
+c     c) is test xscales vs xmasses OK?
+         enddo
+      enddo
+      if(i_dipole_counter.ne.nQ_S+2*nG_S)then
+         write(*,*)'Mismatch in number of dipoles and Delta factors'
+         write(*,*)i_dipole_counter,nQ_S,nG_S
+         stop
+      endif
 
 c      startingScale = 1000.0
 c      stoppingScale = 1.0
@@ -1359,14 +1411,6 @@ c      call dire_get_no_emission_prob( noemProb, startingScale, stoppingScale, m
 c      write(*,*) noemProb
 c      call exit(0)
 
-c     target scales for H events are computed by Pythia;
-c     stored in target_scales_H
-      target_scales_H=-1d0
-      do i=1,nexternal
-         do j=1,nexternal
-            target_scales_H(i,j)=xscales(i,j)
-         enddo
-      enddo
 
       probne = wgt_sudakov
       if(probne.lt.0.d0)then
