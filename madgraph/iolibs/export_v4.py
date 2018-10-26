@@ -3458,7 +3458,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     @staticmethod
     def custom_helas_call(call, arg):
         if arg['mass'] == '%(M)s,%(W)s,':
-            arg['mass'] = '%(M)s, SIGN(MAX(ABS(%(W)s), ABS(%(M)s*small_width_treatment)), %(W)s),'
+            arg['mass'] = '%(M)s, fk_%(W)s,'
         elif '%(W)s' in arg['mass']:
             raise Exception
         return call, arg
@@ -3977,8 +3977,25 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+        
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+
+        #adding the support for the fake width (forbidding too small width)
+        mass_width = matrix_element.get_all_mass_widths()
+        width_list = [e[1] for e in mass_width]
+        
+        replace_dict['fake_width_declaration'] = \
+            ('  double precision fk_%s \n' * len(width_list)) % tuple(width_list)
+        replace_dict['fake_width_declaration'] += \
+            ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
+        fk_w_defs = []
+        one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        for m, w in mass_width:
+            fk_w_defs.append(one_def %{'m':m, 'w':w})
+        replace_dict['fake_width_definitions'] = '\n'.join(fk_w_defs)
+        misc.sprint(replace_dict['fake_width_declaration'])
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()

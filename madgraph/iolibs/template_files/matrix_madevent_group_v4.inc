@@ -90,6 +90,7 @@ C  To be able to control when the matrix<i> subroutine can add entries to the gr
 C ----------
 C BEGIN CODE
 C ----------
+
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
     THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1 
     DO I=1,NEXTERNAL
@@ -258,6 +259,11 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+
+	%(fake_width_declaration)s
+	logical first
+	data first /.true./
+	save first
 C
 C FUNCTION
 C
@@ -278,6 +284,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+if (first) then
+	first=.false.
+	%(fake_width_definitions)s
+endif
+
+
 %(helas_calls)s
 %(jamp_lines)s
 
