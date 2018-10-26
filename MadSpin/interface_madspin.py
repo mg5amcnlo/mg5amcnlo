@@ -283,7 +283,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
-        misc.sprint(model_name)
         if model_name:
             model_name = os.path.expanduser(model_name)
             self.load_model(model_name, mg_names, complex_mass)
