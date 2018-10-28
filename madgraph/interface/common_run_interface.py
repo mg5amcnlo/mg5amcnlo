@@ -4396,7 +4396,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if from_banner is None:
             self.from_banner = {}
             return
-        
+        misc.sprint(from_banner)
         self.from_banner = {}
         for card in from_banner:
             self.from_banner[card] = banner.charge_card(card)
