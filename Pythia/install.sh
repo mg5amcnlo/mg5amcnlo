@@ -84,6 +84,7 @@ echo "PYTHIA8LIB=\$(WORK)/Pythia/Pythia/pythia-src/lib" >> makefile.inc
 echo "DIRELIB=\$(WORK)/Pythia/Pythia/pythia-src/../../Dire/dire-src/lib" >> makefile.inc
 echo "PYTHIA8FLAGS=-lstdc++ -lz -ldl -fPIC" >> makefile.inc
 
+rm gridsudgen
 make gridsudgen
 
 ####################################################

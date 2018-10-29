@@ -30,7 +30,8 @@ extern "C" {
     for (int i=0; i < 21; ++i){
       stringstream s;
 
-      if ( i+1 == 7 
+      if ( i+1 == 6
+        || i+1 == 7 
         || i+1 == 8 
         || i+1 == 9 
         || i+1 == 10 

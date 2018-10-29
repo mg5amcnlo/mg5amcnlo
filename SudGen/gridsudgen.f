@@ -492,7 +492,8 @@ c
      #     stlow, md, id, itype)
       py_compute_sudakov=temp
 
-c      write(*,*) 'id=', id, 'md=', md, ' start=', stupp,
+c      write(*,*) 'itype=',itype, ' id=', id, ' md=', md,
+c     #           ' start=', stupp,
       write(20,'(a)') 'id=', id, 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
 

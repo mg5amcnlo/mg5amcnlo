@@ -281,6 +281,13 @@ public:
   virtual double pTnext( Event& event, double pTbegAll, double pTendAll,
     bool = false, bool = false);
 
+  // Select next pT in downwards evolution, based only on dipole mass and
+  // incoming momentum fraction.
+  double pTnext( vector<DireTimesEnd> dipEnds, Event event, double pTbegAll, double pTendAll, double m2dip,
+    int id, int type, double s = -1., double x = -1.);
+  double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
+    int id, int type, double s = -1., double x = -1.);
+
   // Setup branching kinematics.
   virtual bool branch( Event& event, bool = false);
   bool branch_FF( Event& event, bool = false,

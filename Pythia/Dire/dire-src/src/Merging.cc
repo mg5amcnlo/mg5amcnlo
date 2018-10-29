@@ -157,18 +157,39 @@ void MyMerging::getStoppingInfo(double scales [100][100],
 double MyMerging::generateSingleSudakov ( double pTbegAll, 
   double pTendAll, double m2dip, int idA, int type, double s, double x) {
 
+/*
+// For testing.
+cout << "\n\n\n current type " << type << endl;
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1, -1, s, x);
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1, -1, s, x);
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1, -1, s, x);
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1, -1, s, x);
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21, -1, s, x);
+isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21,  1, s, x);
+fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21, -1, s, x);
+abort();*/
+
+  // II
   if (type == 1) {
     return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
       -1, s, x);
+  // FF
   } else if (type == 2) {
-//FF
-    return 1.;
+    return fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  // IF
   } else if (type == 3) {
     return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
       1, s, x);
+  // FI
   } else if (type == 4) {
-//FI
-    return 1.;
+    return fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
   }
 
   return 1.;
@@ -180,7 +201,7 @@ double MyMerging::generateSingleSudakov ( double pTbegAll,
 
 // Function to perform CKKW-L merging on this event.
 
-int MyMerging::genSud( Event& process) {
+/*int MyMerging::genSud( Event& process) {
 
   double startingScale = infoPtr->scalup();
   double s = pow2(infoPtr->eCM());
@@ -242,7 +263,7 @@ if (process[ig].idAbs() < 9 && process[3].id() != 21) w1= 1.;
   // Done
   return 1;
 
-}
+}*/
 
 
 
@@ -252,8 +273,6 @@ if (process[ig].idAbs() < 9 && process[3].id() != 21) w1= 1.;
 
 int MyMerging::mergeProcess(Event& process){
 
-//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
-
     // Clear all previous event-by-event information.
     clearInfos();
 //stoppingScalesSave.clear();
@@ -262,10 +281,10 @@ int MyMerging::mergeProcess(Event& process){
 //stoppingScalesSave.push_back(2.0);
 //stoppingScalesSave.push_back(3.0);
 
-  int ig =0;
-  for (int i = process.size()-1; i > 0; --i)
-    if (process[i].colType() != 0) { ig = i; break; }
-  if (process[ig].id() != 21) return 0;
+//  int ig =0;
+//  for (int i = process.size()-1; i > 0; --i)
+//    if (process[i].colType() != 0) { ig = i; break; }
+//  if (process[ig].id() != 21) return 0;
 
   //process.list(true,true);
   //infoPtr->scales->list(cout);
@@ -328,17 +347,7 @@ int MyMerging::mergeProcess(Event& process){
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
 
 
-
 //return genSud(process);
-
-
-
-
-
-
-//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
-
-
 
 
   // Possibility to apply merging scale to an input event.

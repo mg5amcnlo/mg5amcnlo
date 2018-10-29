@@ -1702,6 +1702,306 @@ double DireTimes::pTnext( Event& event, double pTbegAll, double pTendAll,
 
 //--------------------------------------------------------------------------
 
+// Select next pT in downwards evolution of the existing dipoles.
+
+double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
+  double m2dip, int idA, int type, double s, double x) {
+
+  useSystems = false;
+
+  double x1 = x;
+  double x2 = m2dip/s/x1;
+
+  // Starting values: no radiating dipole found.
+  splittingNowName="";
+  splittingSelName="";
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) it->second->splitInfo.clear();
+
+  // Make dummy event with two entries.
+  Event state;
+  state.init("(dummy event)", particleDataPtr);
+  // Setup two dipole ends for each flavor combination.
+  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip)), pB, pBtmp;
+  double phi   = 2.*M_PI*rndmPtr->flat();
+  double theta = M_PI*rndmPtr->flat();
+  double sign_theta = rndmPtr->flat() > 0.5 ? 1. : -1.;
+  pA.rot(sign_theta*theta,phi);
+  if (type < 0) {
+    pB.p(-pA.px(),-pA.py(),-pA.pz(), 0.5*sqrt(m2dip));
+    pBtmp.p(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+    RotBstMatrix rotate;
+    rotate.bst( pB, pBtmp);
+    // After this, the inactive beam returns to the correct energy fraction.
+    pB.rotbst(rotate);
+    pA.rotbst(rotate);
+  }
+  if (type > 0) pB.p(-pA.px(),-pA.py(),-pA.pz(), 0.5*sqrt(m2dip));
+
+  int colA  = 1;
+  int acolA = 2;
+  if (particleDataPtr->colType(idA) == 1) {colA = 1; acolA = 0;}
+  if (particleDataPtr->colType(idA) ==-1) {colA = 0; acolA = 1;}
+
+  // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
+  double sign = (type>0) ? 1. : -1.;
+  state.append( 90, -11, 0, 0, 0, 0, 0, 0, pA+pB, (pA+pB).mCalc(), (pA+pB).mCalc() );  
+  if (type > 0) state.append( idA, 23, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+
+  // Now loop through possible recoilers.
+  //vector<int> recids(createvector<int>(1)(-1)(2)(-2)(3)(-3)(4)(-4)(5)(-5)
+  //  (6)(-6)(21));
+
+  int idB  = (idA == 21) ? 21
+           : ((type < 0) ? idA : -idA);
+  vector<int> recids; recids.push_back(idB);
+  vector<int> recpos;
+
+  for (unsigned int i = 0; i < recids.size(); ++i) {
+    int colB(acolA), acolB(colA);
+    if (type < 0) swap(colB,acolB);
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 1
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) ==-1
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if (type < 0) state.append( recids[i], -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    if (type > 0) state.append( recids[i],  23, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    recpos.push_back(i+1);
+  }
+
+  if (type < 0) state.append( idA, 23, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+
+//state.list();
+
+  beamAPtr->clear();
+  beamBPtr->clear();
+  beamAPtr->append( 1, idA, x1);
+  beamBPtr->append( 2, idB, x2);
+  beamAPtr->xfISR( 0, idA, x1, pTbegAll*pTbegAll);
+  int vsc1 = beamAPtr->pickValSeaComp();
+  beamBPtr->xfISR( 0, idB, x2, pTbegAll*pTbegAll);
+  int vsc2 = beamBPtr->pickValSeaComp();
+  infoPtr->setValence( (vsc1 == -3), (vsc2 == -3));
+
+  // Store participating partons as first set in list of all systems.
+  partonSystemsPtr->clear();
+  partonSystemsPtr->addSys();
+  partonSystemsPtr->setInA(0, 1);
+  partonSystemsPtr->setInB(0, 2);
+  partonSystemsPtr->setSHat( 0, m2dip);
+  partonSystemsPtr->setPTHat( 0, pTbegAll);
+
+  // Find positions of incoming colliding partons.
+  int in1 = (type > 0) ? 1 : 2;
+  vector<DireTimesEnd> dipEnds;
+  int colTag = state[in1].col();
+  if (colTag > 0)  getQCDdip( in1,  colTag,  1, state, dipEnds);
+  int acolTag = state[in1].acol();
+  if (acolTag > 0) getQCDdip( in1, acolTag, -1, state, dipEnds);
+
+  // Set output.
+  double wt = 0.;
+
+  int nTrials = 100;
+  for (int i=0; i < nTrials; ++i) {
+
+    double startingScale = pTbegAll;
+    double wtnow = 1.;
+    doTrialNow = true;
+
+    while ( true ) {
+
+      // Reset process scale so that shower starting scale is correctly set.
+      state.scale(startingScale);
+
+      // Get pT before reclustering
+      double minScale = pTendAll;
+
+      mergingHooksPtr->setShowerStoppingScale(minScale);
+
+      // If the maximal scale and the minimal scale coincide (as would
+      // be the case for the corrected scales of unordered histories),
+      // do not generate Sudakov
+      if (minScale >= startingScale) break;
+
+      // Get trial shower pT.
+      double pTtrial = pTnext( dipEnds, state, startingScale, minScale, m2dip, idA, type, s, x);
+
+      pair<double,double> wtShower
+        = weights->getWeight( (pTtrial <= 0.) ? pow2(minScale) : pow2(pTtrial));
+
+      double enhancement = 1.; 
+      if ( pTtrial > minScale) enhancement 
+        = weights->getTrialEnhancement( pow2(pTtrial));
+
+      weights->reset();
+      weights->clearTrialEnhancements();
+
+      // Done if evolution scale has fallen below minimum
+      if ( pTtrial < minScale ) { wtnow *= wtShower.second; break;}
+
+      // Reset starting scale.
+      startingScale = pTtrial;
+
+      if ( pTtrial > minScale) wtnow *= wtShower.first*wtShower.second
+                                   * (1.-1./enhancement);
+      if ( wtnow == 0.) break;
+      if ( pTtrial > minScale) continue;
+
+      // Done
+      break;
+
+    }
+
+    wt += wtnow;
+
+  }
+
+  wt /= nTrials;
+
+  beamAPtr->clear();
+  beamBPtr->clear();
+  partonSystemsPtr->clear();
+
+  // Done
+  double res = wt;
+  return res;
+
+}
+
+double DireTimes::pTnext( vector<DireTimesEnd> dipEnds, Event event,
+  double pTbegAll, double pTendAll, double, int, int, double, double) {
+
+  // Starting values: no radiating dipole found.
+  double pT2sel = pow2(pTendAll);
+  iDipSel       = 0;
+  iSysSel       = 0;
+  dipSel        = 0;
+  splittingNowName="";
+  splittingSelName="";
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) it->second->splitInfo.clear();
+  splitSel.clear();
+  kernelSel.clear();
+  kernelNow.clear();
+  auxSel = overSel = auxNow = overNow = 0.;
+
+  // Set splitting library.
+  splits = splittingsPtr->getSplittings();
+  overhead.clear();
+  for ( map<string,Splitting*>::iterator it = splits.begin();
+    it != splits.end(); ++it ) overhead.insert(make_pair(it->first,1.));
+
+  nProposedPT.clear();
+  splittingSelName="";
+  splittingNowName="";
+  dipSel = 0;
+
+  // Clear weighted shower book-keeping.
+  for ( map<string, multimap<double,double> >::iterator
+    it = rejectProbability.begin(); it != rejectProbability.end(); ++it )
+    it->second.clear();
+  for ( map<string, map<double,double> >::iterator
+    it = acceptProbability.begin(); it != acceptProbability.end(); ++it )
+    it->second.clear();
+
+  // Loop over all possible dipole ends.
+  for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
+
+    DireTimesEnd* dipEndNow      = &dipEnds[iDipEnd];
+
+    // Find properties of dipole and radiating dipole end.
+    int iNow      = dipEndNow->iRadiator;
+    int iRec      = dipEndNow->iRecoiler;
+
+    // Note dipole mass correction when recoiler is a rescatter.
+    dipEndNow->m2Rec         = event[iRec].m2();
+    dipEndNow->mRec          = sqrt(dipEndNow->m2Rec);
+    dipEndNow->m2Rad         = event[iNow].m2();
+    dipEndNow->mRad          = sqrt(dipEndNow->m2Rad);
+    dipEndNow->m2Dip         = abs(2.*event[iNow].p()*event[iRec].p());
+    dipEndNow->mDip          = sqrt(dipEndNow->m2Dip);
+    dipEndNow->m2DipCorr     = dipEndNow->m2Dip;
+
+    // Reset emission properties.
+    dipEndNow->pT2         =  0.0;
+    dipEndNow->z           = -1.0;
+    dipEndNow->phi         = -1.0;
+    // Reset properties of 1->3 splittings.
+    dipEndNow->sa1         =  0.0;
+    dipEndNow->xa          = -1.0;
+    dipEndNow->phia1       = -1.0;
+
+    double pT2start = min( dipEndNow->m2Dip, pTbegAll*pTbegAll);
+    //double pT2stop  = max( pT2colCut, pTendAll*pTendAll);
+    double pT2stop  = max( pT2cutMin(dipEndNow), pTendAll*pTendAll);
+    pT2stop         = max( pT2stop, pT2sel);
+
+    // Reset emission properties.
+    // Reset properties of 1->3 splittings.
+    dipEndNow->mass.clear();
+    dipEndNow->idRadAft = 0;
+    dipEndNow->idEmtAft = 0;
+
+    // Evolution.
+    if (pT2start > pT2sel) {
+      // Store start/end scales.
+      dipEndNow->pT2start = pT2start;
+      dipEndNow->pT2stop  = pT2stop;
+      // Do evolution if it makes sense.
+      if ( dipEndNow->canEmit() ) pT2nextQCD(pT2start, pT2stop, *dipEndNow, event);
+      // Update if found pT larger than current maximum.
+      if (dipEndNow->pT2 > pT2sel) {
+        pT2sel  = dipEndNow->pT2;
+        dipSel  = &dipEnds[iDipEnd];
+        iDipSel = iDipEnd;
+        splittingSelName = splittingNowName;
+        splitSel.store(splits[splittingSelName]->splitInfo);
+        kernelSel = kernelNow;
+        auxSel    = auxNow;
+        overSel   = overNow;
+        boostSel  = boostNow;
+      }
+    }
+
+
+
+  // End loop over dipole ends.
+  }
+
+  // Insert additional weights.
+  for ( map<string, multimap<double,double> >::iterator
+    itR = rejectProbability.begin(); itR != rejectProbability.end(); ++itR){
+    weights->insertWeights(acceptProbability[itR->first], itR->second,
+                           itR->first);
+  }
+
+  for ( map<string, multimap<double,double> >::iterator
+    it = rejectProbability.begin(); it != rejectProbability.end(); ++it )
+    it->second.clear();
+  for ( map<string, map<double,double> >::iterator
+    it = acceptProbability.begin(); it != acceptProbability.end(); ++it )
+    it->second.clear();
+
+  resetOverheadFactors();
+
+  // Return nonvanishing value if found pT is bigger than already found.
+  return (dipSel == 0) ? 0. : sqrt(pT2sel);
+
+}
+
+//--------------------------------------------------------------------------
+
 double DireTimes::enhanceOverestimateFurther( string name, int, double) {
 
   double enhance = weights->enhanceOverestimate(name);
@@ -3262,6 +3562,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
   // Lower cut for evolution. Return if no evolution range.
   //double pT2endDip = max( pT2sel, pT2colCut);
   double pT2endDip = max( pT2sel, pT2cutMin(&dip));
+
   if (pT2begDip < pT2endDip) return false;
 
   BeamParticle& beam = (dip.isrType == 1) ? *beamAPtr : *beamBPtr;
@@ -3344,7 +3645,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
     // Finish evolution if PDF vanishes.
     double tnew = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
     bool inNew = beam.insideBounds(xRecoiler, max(tnew, pT2colCut) ); 
-    if (!inNew) { dip.pT2 = 0.0; return false; }
+    if (!inNew) { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
 
     // Bad sign if repeated looping with small daughter PDF, so fail.
     // (Example: if all PDF's = 0 below Q_0, except for c/b companion.)
@@ -3405,8 +3706,8 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
       mustFindRange = false;
     }
 
-    if (emitCoefTot < TINYOVERESTIMATE) { dip.pT2 = 0.0; return false; }
-    if (newOverestimates.empty())        { dip.pT2 = 0.0; return false; }
+    if (emitCoefTot < TINYOVERESTIMATE) { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
+    if (newOverestimates.empty())        { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
 
     // Fixed alpha_strong, reweighted later to PDF running alpha_s.
     if (usePDFalphas || tnow < pT2colCut) {
@@ -3587,6 +3888,9 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
                      : beam.xfISR( iSysRec, idRecoiler, xNew, pdfScale2);
 
     if ( abs(pdfOld) < tinypdf(xRecoiler) ) {
+
+cout << __LINE__ << endl; abort();
+
       mustFindRange = true;
       fullWeightsNow.clear();
       wt = fullWeightNow = overWeightNow = auxWeightNow = 0.;
@@ -3603,6 +3907,9 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
     if ( idRecoiler == 21
       && ( abs(pdfOld/xPDFrecoiler) < 1e-4
         || abs(xPDFrecoilerLow/pdfOld) < 1e-4) ) {
+
+cout << __LINE__ << endl; abort();
+
       hasTinyPDFdau = true;
       mustFindRange = true;
       fullWeightsNow.clear();
@@ -3788,7 +4095,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
   } while (wt < rndmPtr->flat());
 
   // Not possible to find splitting.
-  if ( wt == 0.) return false;
+  if ( wt == 0.) { return false; }
 
   // Update accepted event weight. No weighted shower for first 
   // "pseudo-emission" step in 1->3 splitting.

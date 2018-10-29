@@ -1231,7 +1231,21 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   // Setup two dipole ends for each flavor combination.
   Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip)), pB;
   if (type < 0) pB.p(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
-  if (type > 0) pB.p(0., 0.,0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  if (type > 0) {
+    Vec4 pAtmp(pA);
+    double phi   = 2.*M_PI*rndmPtr->flat();
+    double theta = M_PI*rndmPtr->flat();
+    double sign_theta = rndmPtr->flat() > 0.5 ? 1. : -1.;
+    pAtmp.rot(sign_theta*theta,phi);
+    RotBstMatrix rotate;
+    rotate.bst( pAtmp, pA);
+    pB.p(-pAtmp.px(),-pAtmp.py(),-pAtmp.pz(), 0.5*sqrt(m2dip));
+    // After this, the inactive beam returns to the correct energy fraction.
+    pB.rotbst(rotate);
+//    pA.rotbst(rotate);
+//    pB.p(0., 0.,0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+  }
+
 
   int iSys = 0;
 
@@ -1241,7 +1255,8 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   if (particleDataPtr->colType(idA) ==-1) {colA = 0; acolA = 1;}
 
   // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
-  state.append( 0, 0, 0, 0, 0, 0, 0, 0, pA+pB, 0.0, sqrt(m2dip) );  
+  double sign = (type<0) ? 1. : -1;
+  state.append( 90, -11, 0, 0, 0, 0, 0, 0, pA+sign*pB, (pA+sign*pB).mCalc(), sqrt(m2dip) );  
   state.append( idA, -21, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
 
   // Now loop through possible recoilers.
@@ -1254,7 +1269,8 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   vector<int> recpos;
 
   for (unsigned int i = 0; i < recids.size(); ++i) {
-    int colB(2), acolB(1);
+    int colB(acolA), acolB(colA);
+    if (type > 0) swap(colB,acolB);
     if ( type < 0
       && particleDataPtr->colType(idA) == 1
       && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
@@ -1273,6 +1289,8 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
     if (type > 0) state.append( recids[i],  23, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
     recpos.push_back(i+1);
   }
+
+//state.list();
 
   beamAPtr->clear();
   beamBPtr->clear();
@@ -1371,7 +1389,7 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 }
 
 double DireSpace::pTnext( vector<DireSpaceEnd> dipEnds, Event event,
-  double pTbegAll, double pTendAll, double m2dip, int idA, int type, double s, double x) {
+  double pTbegAll, double pTendAll, double m2dip, int, int type, double s, double x) {
 
   double x1 = x;
   double x2 = m2dip/s/x1;
@@ -1397,11 +1415,7 @@ double DireSpace::pTnext( vector<DireSpaceEnd> dipEnds, Event event,
   for ( map<string,Splitting*>::iterator it = splits.begin();
     it != splits.end(); ++it ) overhead.insert(make_pair(it->first,1.));
 
-  // Counter of proposed emissions.
   nProposedPT.clear();
-  if ( nProposedPT.find(iSys) == nProposedPT.end() )
-    nProposedPT.insert(make_pair(iSys,0));
-
   splittingSelName="";
   splittingNowName="";
   dipEndSel = 0;
@@ -1420,12 +1434,6 @@ double DireSpace::pTnext( vector<DireSpaceEnd> dipEnds, Event event,
     iDipNow        = iDipEnd;
     dipEndNow      = &dipEnds[iDipEnd];
     double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
-
-    // Limit final state multiplicity. For debugging only
-    int nFinal = 0;
-    for (int i=0; i < event.size(); ++i)
-      if (event[i].isFinal()) nFinal++;
-    if (nFinalMax > -10 && nFinal > nFinalMax) continue;
 
     // Check whether dipole end should be allowed to shower.
     double pT2begDip = pow2(pTbegDip);
@@ -1502,7 +1510,6 @@ double DireSpace::pTnext( vector<DireSpaceEnd> dipEnds, Event event,
   return (dipEndSel == 0) ? 0. : sqrt(pT2sel);
 
 }
-
 
 //--------------------------------------------------------------------------
 
@@ -1651,11 +1658,6 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     double wt = it->second->overestimateInt(zMinAbs, zMaxAbs, tOld,
                                            dip->m2Dip, order);
 
-
-//cout << __LINE__ << " " << it->first << " " << wt << " " << xDau << endl;
-//if (xDau == 0.) abort();
-
-
     // Get current PDF value.
     double scale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tOld;
     scale2        = max(scale2, pT2min);
@@ -1677,8 +1679,6 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
       double xPDFthres = getXPDF( idDau, xDau, m2bPhys+0.1, iSysNow, &beam);
       xPDFdaughter     = min(xPDFdaughter, xPDFthres);
     }
-
-//cout << __LINE__ << " " << it->first << " " << xPDFdaughter << endl;
 
     // Calculate numerator of PDF ratio, and construct ratio.
     // PDF factors for Q -> GQ.
@@ -1788,8 +1788,6 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     // Include PDF ratio for Q->GQ or G->QQ.
     wt *= pdfRatio;
 
-//cout << __LINE__ << " " << it->first << " " << wt << " " << pdfRatio << " " << inD << " " << abs(xPDFdaughter) << " " << tinypdf(xDau) << endl;
-
     // Include artificial enhancements.
     double headRoom = overheadFactors(name, idDau, isValence, dip->m2Dip, tOld);
     wt *= headRoom;
@@ -1798,8 +1796,6 @@ void DireSpace::getNewOverestimates( int idDau, DireSpaceEnd* dip,
     //double enhanceFurther = weights->enhanceOverestimate(name);
     double enhanceFurther = enhanceOverestimateFurther(name, idDau, tOld);
     wt *= enhanceFurther;
-
-//cout << __LINE__ << " " << it->first << " " << wt << endl;
 
     // Save this overestimate.
     // Do not include zeros (could lead to trouble with lower_bound?)
@@ -2673,8 +2669,6 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
       }
     }
 
-//cout << scientific << setprecision(4) << " " << __LINE__ << " " << tnow << fullWeightsNow["base"] << endl;
-
     splittingNowName="";
     fullWeightsNow.clear();
     fullWeightNow = overWeightNow = auxWeightNow = 0.;
@@ -2761,14 +2755,8 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
       needNewPDF = false;
     }
 
-//cout << scientific << setprecision(4) << " " << __LINE__ << " " << tnow << fullWeightsNow["base"] << " " << kernelPDF << " " << newOverestimates.size() << endl;
-//cout << __LINE__ << endl; abort();
-
     if ( kernelPDF < TINYKERNELPDF) { dip.pT2 = 0.0; return false; }
     if (newOverestimates.empty()) { dip.pT2 = 0.0; return false; }
-
-//cout << scientific << setprecision(4) << " " << __LINE__ << " " << tnow << fullWeightsNow["base"] << endl;
-//cout << __LINE__ << endl; abort();
 
     // Pick pT2 (in overestimated z range), for one of three different cases.
     // Assume form alphas(pT0^2 + pT^2) * dpT^2/(pT0^2 + pT^2).
@@ -2831,8 +2819,6 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
         zMaxAbs, idDaughter, splittingNowName, idMother, idSister, znow, wt,
         fullWeightsNow, overWeightNow);
     }
-
-//cout << scientific << setprecision(4) << " " << __LINE__ << " " << tnow << fullWeightsNow["base"] << endl;
 
     // Impossible emission (e.g. if outside allowed z range for given pT2).
     if ( wt == 0.) {
@@ -2993,11 +2979,6 @@ if (!usePDF) pdfRatio = xCS/znow;
       it != fullWeightsNow.end(); ++it )
       it->second   *= pdfRatio*jacobian;
 
-    //double jacobianNew = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
-    //if (abs(jacobianNew-jacobian) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << jacobian << " " << jacobianNew << endl; abort();}
-    //map<string,double> psvars = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
-    //if ( abs((xMother-psvars["xInAft"])/xMother) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << xMother << " " << psvars["xInAft"] << endl; abort();}
-
     // Before generating kinematics: Reset sai if the kernel fell on an
     // endpoint contribution.
     if ( splits[splittingNowName]->nEmissions() == 2 )
@@ -3071,13 +3052,6 @@ if (!usePDF) pdfRatio = xCS/znow;
     // Set auxiliary weight and ensure that accept probability is positive.
     auxWeightNow = overWeightNow;
 
-    /*cout << __FILE__ << " " << __func__
-        << " " << __LINE__ << " : Splitting weight="
-        << fullWeightNow/auxWeightNow << " for splitting "
-        << enhanceOverestimateFurther(splittingNowName, idDaughter, teval) << " " 
-        << splittingNowName << " at pT2=" << tnow << " and z="
-        << znow << endl;*/
-
     if (fullWeightNow < 0.) {
       debugPtr->message(0) << __FILE__ << " " << __func__
         << " " << __LINE__ << " : Negative splitting weight="
@@ -3102,8 +3076,6 @@ if (!usePDF) pdfRatio = xCS/znow;
       infoPtr->errorMsg("Info in DireSpace::pT2nextQCD_II: Found large "
                         "acceptance weight for " + splittingNowName);
     }
-
-//cout << scientific << setprecision(4) << " " << __LINE__ << " " << tnow << fullWeightsNow["base"] << endl;
 
   // Iterate until acceptable pT (or have fallen below pTmin).
   } while (wt < rndmPtr->flat()) ;
@@ -3566,11 +3538,6 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
     //// Calculate CS variables.
     //double xCS = znow;
     //xMother = xDaughter/xCS;
-
-    //double jacobianNew = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
-    //if (abs(jacobianNew-jac) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << jac << " " << jacobianNew << endl; abort();}
-    //map<string,double> psvars = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
-    //if ( abs((xMother-psvars["xInAft"])/xMother) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << xMother << " " << psvars["xInAft"] << endl; abort();}
 
     // Evaluation of new daughter and mother PDF's.
     double pdfRatio = 1.;
@@ -6672,9 +6639,6 @@ bool DireSpace::cluster_II( const Event& state,
   if ( !inAllowedPhasespace( 1, z, pT2, Q2, xOld, -2, m2Bef, m2r, m2s, m2e) ) {
     return false;
   }
-
-//state.list();
-//cout << scientific << setprecision(4) << "z=" << z << " xOld= " << xOld << endl;
 
   // Set up kinematics.
   Vec4 q(state[iRad].p() - state[iEmt].p() + state[iRecAft].p());
