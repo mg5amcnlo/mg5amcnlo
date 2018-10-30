@@ -2038,7 +2038,7 @@ double DireTimes::overheadFactors( DireTimesEnd* dip, const Event& state,
     factor *= 2.;
 
   // Additional enhancement if PDFs vary significantly when increasing x.
-  if ( !state[dip->iRecoiler].isFinal() ) {
+  if (usePDF && !state[dip->iRecoiler].isFinal() ) {
 
     BeamParticle* beam = NULL;
     if (beamAPtr != NULL || beamBPtr != NULL) {
@@ -3645,12 +3645,12 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
     // Finish evolution if PDF vanishes.
     double tnew = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
     bool inNew = beam.insideBounds(xRecoiler, max(tnew, pT2colCut) ); 
-    if (!inNew) { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
+    if (usePDF && !inNew) { dip.pT2 = 0.0; return false; }
 
     // Bad sign if repeated looping with small daughter PDF, so fail.
     // (Example: if all PDF's = 0 below Q_0, except for c/b companion.)
     if (hasTinyPDFdau) ++loopTinyPDFdau;
-    if (loopTinyPDFdau > MAXLOOPTINYPDF) {
+    if (usePDF && loopTinyPDFdau > MAXLOOPTINYPDF) {
       infoPtr->errorMsg("Warning in DireTimes::pT2nextQCD_FI: "
       "small daughter PDF");
       dip.pT2 = 0.0;
@@ -3688,7 +3688,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
       xPDFrecoiler = (useSummedPDF)
                    ? beam.xf(idRecoiler, xRecoiler, pdfScale2)
                    : beam.xfISR(iSysRec, idRecoiler, xRecoiler, pdfScale2);
-      if (abs(xPDFrecoiler) < tinypdf(xRecoiler)) {
+      if (usePDF && abs(xPDFrecoiler) < tinypdf(xRecoiler)) {
         int sign      = (xPDFrecoiler > 0.) ? 1 : -1;
         xPDFrecoiler  = sign*tinypdf(xRecoiler);
         hasTinyPDFdau = true;
@@ -3706,8 +3706,8 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
       mustFindRange = false;
     }
 
-    if (emitCoefTot < TINYOVERESTIMATE) { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
-    if (newOverestimates.empty())        { dip.pT2 = 0.0; cout << __LINE__ << endl; abort(); return false; }
+    if (emitCoefTot < TINYOVERESTIMATE) { dip.pT2 = 0.0; return false; }
+    if (newOverestimates.empty())       { dip.pT2 = 0.0; return false; }
 
     // Fixed alpha_strong, reweighted later to PDF running alpha_s.
     if (usePDFalphas || tnow < pT2colCut) {
@@ -3887,10 +3887,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
       (useSummedPDF) ? beam.xf(idRecoiler, xNew, pdfScale2)
                      : beam.xfISR( iSysRec, idRecoiler, xNew, pdfScale2);
 
-    if ( abs(pdfOld) < tinypdf(xRecoiler) ) {
-
-cout << __LINE__ << endl; abort();
-
+    if (usePDF && abs(pdfOld) < tinypdf(xRecoiler)) {
       mustFindRange = true;
       fullWeightsNow.clear();
       wt = fullWeightNow = overWeightNow = auxWeightNow = 0.;
@@ -3904,12 +3901,9 @@ cout << __LINE__ << endl; abort();
     double xPDFrecoilerLow = (useSummedPDF)
       ? beam.xf(idRecoiler, xRecoiler, pdfScale2*pdfScale2/max(teval, pT2colCut) )
       : beam.xfISR(iSysRec, idRecoiler, xRecoiler, pdfScale2*pdfScale2/max(teval,pT2colCut) );
-    if ( idRecoiler == 21
+    if (usePDF && idRecoiler == 21
       && ( abs(pdfOld/xPDFrecoiler) < 1e-4
         || abs(xPDFrecoilerLow/pdfOld) < 1e-4) ) {
-
-cout << __LINE__ << endl; abort();
-
       hasTinyPDFdau = true;
       mustFindRange = true;
       fullWeightsNow.clear();
@@ -3980,17 +3974,15 @@ cout << __LINE__ << endl; abort();
     // More last resort.
     if (idRecoiler == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
 
+    // Remove PDF ratio if necessary.
+    if (!usePDF) pdfRatio = 1.;
+
     wt             *= pdfRatio*jacobian;
     fullWeightNow  *= pdfRatio*jacobian;
 
     for ( map<string,double>::iterator it = fullWeightsNow.begin();
       it != fullWeightsNow.end(); ++it )
       it->second   *= pdfRatio*jacobian;
-
-    //double jacobianNew = splits[splittingNowName]->getJacobian(event,partonSystemsPtr);
-    //if (abs(jacobianNew-jacobian) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << jacobian << " " << jacobianNew << endl; abort(); }
-    //map<string,double> psvars = splits[splittingNowName]->getPhasespaceVars( event, partonSystemsPtr);
-    //if ( abs((xNew-psvars["xInAft"])/xNew) > 1e-6) { cout << __PRETTY_FUNCTION__ << " " << xNew << " " << psvars["xInAft"] << endl; abort();}
 
     // Before generating kinematics: Reset sai if the kernel fell on an
     // endpoint contribution.
@@ -5532,7 +5524,7 @@ bool DireTimes::branch_FI( Event& event, bool trial,
       double xOld = beamRec[iSysSelRec].x();
       beamRec[iSysSelRec].iPos(iRec);
       beamRec[iSysSelRec].x(xm);
-      if (beamRec.xMax(-1) < 0.0) {
+      if (usePDF && beamRec.xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireTimes::branch_FI: "
           "used up beam momentum; discard splitting.");
         physical = false;
@@ -5681,7 +5673,7 @@ bool DireTimes::branch_FI( Event& event, bool trial,
       double xOld = beamRec[iSysSelRec].x();
       beamRec[iSysSelRec].iPos(iRec);
       beamRec[iSysSelRec].x(xm);
-      if (beamRec.xMax(-1) < 0.0) {
+      if (usePDF && beamRec.xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireTimes::branch_FI: "
           "used up beam momentum; discard splitting.");
         physical = false;
@@ -5763,7 +5755,7 @@ bool DireTimes::branch_FI( Event& event, bool trial,
         iRecOld, event[iRecOld].col(), event[iRecOld].acol(), pRec, 0., pTsel));
       beamRec[iSysSelRec].iPos(iNew);
       beamRec[iSysSelRec].x(xNew);
-      if (beamRec.xMax(-1) < 0.0) {
+      if (usePDF && beamRec.xMax(-1) < 0.0) {
         if (!trial) infoPtr->errorMsg("Warning in DireTimes::branch_FI: "
           "used up beam momentum; discard splitting.");
         physical = false;
