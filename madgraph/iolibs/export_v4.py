@@ -3984,7 +3984,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         #adding the support for the fake width (forbidding too small width)
         mass_width = matrix_element.get_all_mass_widths()
-        width_list = [e[1] for e in mass_width]
+        width_list = set([e[1] for e in mass_width])
         
         replace_dict['fake_width_declaration'] = \
             ('  double precision fk_%s \n' * len(width_list)) % tuple(width_list)
@@ -3993,9 +3993,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         fk_w_defs = []
         one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
         for m, w in mass_width:
+            if w == 'zero':
+                if ' fk_zero = 0d0' not in fk_w_defs: 
+                    fk_w_defs.append(' fk_zero = 0d0')
+                continue    
             fk_w_defs.append(one_def %{'m':m, 'w':w})
         replace_dict['fake_width_definitions'] = '\n'.join(fk_w_defs)
-        misc.sprint(replace_dict['fake_width_declaration'])
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
