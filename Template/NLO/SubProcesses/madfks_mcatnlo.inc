@@ -9,8 +9,8 @@ c Define lower and upper veto range (see MC subtraction terms)
 
 c Other control switches on veto (see MC subtraction terms)
       double precision scaleMClow,scaleMCdelta
-      parameter (scaleMClow=10.d0)
-      parameter (scaleMCdelta=20.d0)
+      parameter (scaleMClow=3.d0)
+      parameter (scaleMCdelta=5.d0)
 
 c If .true., writes more in LH event file
       logical AddInfoLHE

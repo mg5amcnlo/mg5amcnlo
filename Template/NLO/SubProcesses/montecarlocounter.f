@@ -1163,8 +1163,10 @@ C     To access Pythia8 control variables
       double precision mcmass(21)
       double precision pysudakov
       integer nG_S,nQ_S,i_dipole_counter,isudtype
-
+c
       mcmass=0d0
+      include 'MCmasses_PYTHIA8.inc'
+c
       do i=1,2
         istup_local(i) = -1
       enddo
@@ -1349,7 +1351,7 @@ c     Calculate suppression factor for H-events.
       call dire_setevent()
       call dire_next()
 c$$$      call dire_get_mergingweight(wgt_sudakov)
-      call dire_get_sudakov_stopping_scales(scales)
+c$$$      call dire_get_sudakov_stopping_scales(scales)
 
       xscales=-1d0
       xmasses=-1d0
@@ -1359,9 +1361,10 @@ c     LH scales for H events are computed by Pythia;
 c     they correspond to the target scales for extra radiation;
 c     stored in SCALUP_tmp_H
       SCALUP_tmp_H=-1d0
-      do i=1,nexternal
-         do j=1,nexternal
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1
             SCALUP_tmp_H(i,j)=xscales(i,j)
+            SCALUP_tmp_H(j,i)=SCALUP_tmp_H(i,j)
          enddo
       enddo
 c
@@ -1371,15 +1374,20 @@ c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
       i_dipole_counter=0
       nG_S=0
       nQ_S=0
-      include 'MCmasses_PYTHIA8.inc' 
       do i=1,nexternal-1
          if(idup_s(i).eq.21)nG_S=nG_S+1
-         if(abs(idup_s(i)).le.7)nQ_S=nQ_S+1
+         if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          do j=1,nexternal-1
-            if(i.le.2.and.j.le.2)isudtype=1
-            if(i.gt.2.and.j.gt.2)isudtype=2
-            if(i.le.2.and.j.gt.2)isudtype=3
-            if(i.gt.2.and.j.le.2)isudtype=4
+            if(j.eq.i)cycle
+            if(i.le.2.and.j.le.2)then
+               isudtype=1
+            elseif(i.gt.2.and.j.gt.2)then
+               isudtype=2
+            elseif(i.le.2.and.j.gt.2)then
+               isudtype=3
+            elseif(i.gt.2.and.j.le.2)then
+               isudtype=4
+            endif
             if((xscales(i,j).ne.-1d0.and.xmasses(i,j).eq.-1d0).or.
      &         (xscales(i,j).eq.-1d0.and.xmasses(i,j).ne.-1d0))then
                write(*,*)'Error in xscales, xmasses',i,j,xscales(i,j),xmasses(i,j)
@@ -1390,10 +1398,6 @@ c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
      &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
      &        pysudakov(SCALUP_tmp_S(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
             i_dipole_counter=i_dipole_counter+1
-c     check
-c     a) itype assignment?
-c     b) difference between scales and xscales?
-c     c) is test xscales vs xmasses OK?
          enddo
       enddo
       if(i_dipole_counter.ne.nQ_S+2*nG_S)then
@@ -3205,13 +3209,17 @@ c Safety threshold for the reference scale
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
-      double precision p(0:3,nexternal-1),xii,sh,dot
+      double precision p(0:3,nexternal-1),xii,sh
       double precision ref_sc_a(nexternal,nexternal)
+      double precision ref_sc
       integer i,j
-
+c
+      call assign_ref_scale(p,xii,sh,ref_sc)
       do i=1,nexternal-2
          do j=i+1,nexternal-1
-            ref_sc_a(i,j)=sqrt(dot(p(0,i),p(0,j)))
+            ref_sc_a(i,j)=sqrt( max(0d0,(p(0,i)+p(0,j))**2-(p(1,i)+p(1,j))**2
+     &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
+            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
             ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
             ref_sc_a(j,i)=ref_sc_a(i,j)
          enddo
