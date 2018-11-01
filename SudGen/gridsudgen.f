@@ -487,9 +487,11 @@ c
       integer id, itype
       real*8 mcmass(21)
       double precision temp
+      integer seed
 
+      seed = -1
       call dire_get_no_emission_prob(temp, stupp,
-     #     stlow, md, id, itype)
+     #     stlow, md, id, itype, seed)
       py_compute_sudakov=temp
 
 c      write(*,*) 'itype=',itype, ' id=', id, ' md=', md,
