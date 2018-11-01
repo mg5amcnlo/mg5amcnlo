@@ -494,7 +494,8 @@ c
 
 c      write(*,*) 'itype=',itype, ' id=', id, ' md=', md,
 c     #           ' start=', stupp,
-      write(20,'(a)') 'id=', id, 'md=', md, ' start=', stupp,
+      write(20,*) 'itype=',itype, 'id=', id, 'md=', md, 
+     #           ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
 
       return

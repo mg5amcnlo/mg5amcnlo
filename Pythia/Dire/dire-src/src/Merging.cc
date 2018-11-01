@@ -113,29 +113,49 @@ void MyMerging::storeInfos() {
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
     //// Get all clustering variables.
-    //map<string,double> stateVars;
-    //int rad = myHistory->children[i]->clusterIn.radPos();
-    //int emt = myHistory->children[i]->clusterIn.emtPos();
-    //int rec = myHistory->children[i]->clusterIn.recPos();
-    //bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rad, emt, rec, "");
-    //if (isFSR)
-    //  stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rad,emt,rec,"");
-    //else
-    //  stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rad,emt,rec,"");
-    //double z = stateVars["z"];
-    //double t = stateVars["t"];
+    map<string,double> stateVars;
+    int rad = myHistory->children[i]->clusterIn.radPos();
+    int emt = myHistory->children[i]->clusterIn.emtPos();
+    int rec = myHistory->children[i]->clusterIn.recPos();
+    bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rad, emt, rec, "");
+    if (isFSR)
+      stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rad,emt,rec,"");
+    else
+      stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rad,emt,rec,"");
+    double t    = stateVars["t"];
+    double mass = myHistory->children[i]->clusterIn.mass();
+
+    // Just store pT for now.
+    stoppingScalesSave.push_back(t);
+    radSave.push_back(rad);
+    emtSave.push_back(emt);
+    recSave.push_back(rec);
+    mDipSave.push_back(mass);
+
+    isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rec, emt, rad, "");
+    if (isFSR)
+      stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rec,emt,rad,"");
+    else
+      stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rec,emt,rad,"");
+    t = stateVars["t"];
+
+    stoppingScalesSave.push_back(t);
+    radSave.push_back(rec);
+    emtSave.push_back(emt);
+    recSave.push_back(rad);
+    mDipSave.push_back(mass);
 
     //cout << "Emission of "
     // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
     // << " at pT "
     // << myHistory->children[i]->clusterIn.pT() << endl;
-
-    // Just store pT for now.
-    stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
-    radSave.push_back(myHistory->children[i]->clusterIn.radPos());
-    emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
-    recSave.push_back(myHistory->children[i]->clusterIn.recPos());
-    mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
+    //
+    //// Just store pT for now.
+    //stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
+    //radSave.push_back(myHistory->children[i]->clusterIn.radPos());
+    //emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
+    //recSave.push_back(myHistory->children[i]->clusterIn.recPos());
+    //mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
 
   }
 

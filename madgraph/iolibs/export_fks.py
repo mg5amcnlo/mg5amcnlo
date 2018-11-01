@@ -671,6 +671,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             ln('../' + file , '.')
         os.system("ln -s ../../Cards/param_card.dat .")
 
+        linksudgenfiles = ['dfint.f',
+                     'kerset.f',
+                     'sudakov.f']
+        for file in linksudgenfiles:
+            ln('../../../SudGen/' + file , '.')
+
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
         if matrix_element.virt_matrix_element:
