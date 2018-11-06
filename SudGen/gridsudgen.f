@@ -1,5 +1,5 @@
       implicit none
-      integer nl,nf,npart,ntype
+      integer nl,nf, npart,ntype
 c Assume five light flavours, the top, and the gluon
       parameter (nl=5)
       parameter (nf=nl+1)
@@ -84,9 +84,9 @@ c
         grid(ipmap(ipart))=.true.
       enddo
       do itype=1,4
-c        if (itype .gt. 1) cycle
+        if (itype .gt. 1) cycle
         do ipart=1,npart
-c          if (ipart .gt. 1) cycle
+          if (ipart .gt. 1) cycle
           do inxm=1,nnxm
 c            if (inxm .lt. nnxm) cycle
             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)

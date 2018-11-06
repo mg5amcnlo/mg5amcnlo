@@ -23,7 +23,7 @@ c fort.67 -> as for fort.66, on a log scale on the x axis
       double precision stval(100),xmval(100)
       double precision rnrat(8),rnmin(8),rnmax(8)
       double precision avgn(8),stsv1n(8),stsv2n(8),xmsv1n(8),xmsv2n(8)
-      double precision plres(0:100,2)
+      double precision plres(0:1000,2)
 
       double precision res_grid, res_pythia
       double precision res_mlo_stlo_grid, res_mhi_stlo_grid
@@ -340,6 +340,15 @@ c Results at nearest nodal values
       write(6,*)'enter 1 to plot as a function of st'
       write(6,*)'      2 to plot as a function of xm'
       read(5,*)iplot
+      iexcl=0
+      write(6,*)'enter 1 to exclude Pythia from plots'
+      write(6,*)'      0 otherwise'
+      read(5,*)iexcl
+      if(iexcl.eq.1)then
+        npoints=500
+      else
+        npoints=100
+      endif
       if(iplot.eq.1)then
         write(6,*)'enter xm'
         read(5,*)fixvar
@@ -351,31 +360,35 @@ c Results at nearest nodal values
         write(6,*)'enter xmlow, xmupp'
         read(5,*)pllow,plupp
       endif
-      do n=0,100
-        pl=pllow+n*(plupp-pllow)/100.d0
+      do n=0,npoints
+        pl=pllow+n*(plupp-pllow)/dfloat(npoints)
         if(iplot.eq.1)then
           plres(n,1)=pysudakov(pl,fixvar,id,itype,mcmass)
-          plres(n,2)=py_compute_sudakov(pl,fixvar,id,itype,
-     #                                  mcmass,stupp)
+          if(iexcl.eq.0)
+     #      plres(n,2)=py_compute_sudakov(pl,fixvar,id,itype,
+     #                                    mcmass,stupp)
         else
           plres(n,1)=pysudakov(fixvar,pl,id,itype,mcmass)
-          plres(n,2)=py_compute_sudakov(fixvar,pl,id,itype,
-     #                                  mcmass,stupp)
+          if(iexcl.eq.0)
+     #      plres(n,2)=py_compute_sudakov(fixvar,pl,id,itype,
+     #                                    mcmass,stupp)
         endif
       enddo
       write(67,*)' set scale x log'
-      do n=0,100
-        pl=pllow+n*(plupp-pllow)/100.d0
+      do n=0,npoints
+        pl=pllow+n*(plupp-pllow)/dfloat(npoints)
         write(66,*)pl,plres(n,1)
         write(67,*)pl,plres(n,1)
       enddo
       write(66,*)' join'
       write(67,*)' join'
-      do n=0,100
-        pl=pllow+n*(plupp-pllow)/100.d0
-        write(66,*)pl,plres(n,2)
-        write(67,*)pl,plres(n,2)
-      enddo
+      if(iexcl.eq.0)then
+        do n=0,npoints
+          pl=pllow+n*(plupp-pllow)/dfloat(npoints)
+          write(66,*)pl,plres(n,2)
+          write(67,*)pl,plres(n,2)
+        enddo
+      endif
       write(66,*)' set pattern .02 .09'
       write(66,*)' join patterned'
       write(67,*)' set pattern .02 .09'
@@ -403,11 +416,12 @@ c Results at nearest nodal values
           write(67,*)' join patterned'
         enddo
       endif
+      if(iexcl.eq.1)goto 400
       write(66,*)' new plot'
       write(67,*)' new plot'
       write(67,*)' set scale x log'
-      do n=0,100
-        pl=pllow+n*(plupp-pllow)/100.d0
+      do n=0,npoints
+        pl=pllow+n*(plupp-pllow)/dfloat(npoints)
         write(66,*)pl,plres(n,1)/plres(n,2)
         write(67,*)pl,plres(n,1)/plres(n,2)
       enddo
