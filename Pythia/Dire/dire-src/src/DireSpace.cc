@@ -1069,13 +1069,7 @@ void DireSpace::update( int iSys, Event& event, bool) {
 double DireSpace::pTnext( Event& event, double pTbegAll, double pTendAll,
   int nRadIn, bool doTrialIn) {
 
-//  pTnext( pTbegAll, pTendAll, pow2(100.), 21, -1, pow2(7000.), 0.001);
-
   debugPtr->message(1) << "Next ISR starting from " << pTbegAll << endl;
-
-  //cout << "Next ISR starting from " << pTbegAll << " " << pow2(pTbegAll)
-  //     << " " << sqrt(pTbegAll) 
-  //     << " " << infoPtr->getScalesAttribute("mups") << endl;
 
   // Current cm energy, in case it varies between events.
   sCM           = m2( beamAPtr->p(), beamBPtr->p());
@@ -1320,8 +1314,7 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 
   // Set output.
   double wt = 0.;
-
-  int nTrials = 100;
+  int nTrials = 1000;
   for (int i=0; i < nTrials; ++i) {
 
     double startingScale = pTbegAll;
@@ -1371,9 +1364,7 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
       break;
 
     }
-
     wt += wtnow;
-
   }
 
   wt /= nTrials;

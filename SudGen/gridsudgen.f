@@ -84,9 +84,9 @@ c
         grid(ipmap(ipart))=.true.
       enddo
       do itype=1,4
-        if (itype .gt. 1) cycle
+c        if (itype .ne. 3) cycle
         do ipart=1,npart
-          if (ipart .gt. 1) cycle
+c          if (ipart .ne. 7) cycle
           do inxm=1,nnxm
 c            if (inxm .lt. nnxm) cycle
             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
@@ -494,8 +494,6 @@ c
      #     stlow, md, id, itype, seed)
       py_compute_sudakov=temp
 
-c      write(*,*) 'itype=',itype, ' id=', id, ' md=', md,
-c     #           ' start=', stupp,
       write(20,*) 'itype=',itype, 'id=', id, 'md=', md, 
      #           ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp

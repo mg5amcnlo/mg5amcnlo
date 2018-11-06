@@ -1233,6 +1233,32 @@ bool fsr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
+
   map<string,double> wts;
   double wt_base_as1 = preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
 
@@ -1508,6 +1534,32 @@ bool fsr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
+
   map<string,double> wts;
   double wt_base_as1 = preFac * ( 2.* (1.-z) / ( pow2(1.-z) + kappa2) );
 
@@ -1772,6 +1824,32 @@ bool fsr_qcd_G2GG1::calc(const Event& state, int orderNow) {
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
+
   // Calculate kernel.
   // Note: We are calculating the z <--> 1-z symmetrised kernel here,
   // and later multiply with z to project out one part.
@@ -2024,6 +2102,32 @@ bool fsr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   int order     = (orderNow > 0) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
+
   // Calculate kernel.
   // Note: We are calculating the z <--> 1-z symmetrised kernel here,
   // and later multiply with 1-z to project out one part.
@@ -2258,6 +2362,32 @@ bool fsr_qcd_G2QQ1::calc(const Event& state, int orderNow) {
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
+
   map<string,double> wts;
   double wt_base_as1 = preFac * ( pow(1.-z,2.) + pow(z,2.) );
 
@@ -2475,6 +2605,32 @@ bool fsr_qcd_G2QQ2::calc(const Event& state, int orderNow) {
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
+
+  // Check phase space limits again.
+  if (splitType < 0) {
+    Vec4 q(state[splitInfo.iRecBef].p()-state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double zCS  = z;
+    double xCS  = 1 - kappa2/(1.-z);
+    double sij  = (1.-1./xCS) * (q2 - m2Rec) + (m2Rad+m2Emt) / xCS;
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                      *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double yCS  = kappa2 / (1.-z);
+    double zCS  = ( 1. - z - kappa2 - pow2(1.-z) ) / ( 1. - z - kappa2);
+    // Calculate derived variables.
+    double sij  = yCS * (q2 - m2Rec) + (1.-yCS)*(m2Rad+m2Emt);
+    double zbar = (q2-sij-m2Rec) / bABC(q2,sij,m2Rec)
+                * (zCS - m2Rec/gABC(q2,sij,m2Rec)
+                        *(sij + m2Rad - m2Emt)/(q2-sij-m2Rec));
+    double kT2  = zbar*(1.-zbar)*sij - (1.-zbar)*m2Rad - zbar*m2Emt; 
+    if (kT2 < 0.) preFac = 0.;
+  }
 
   map<string,double> wts;
   double wt_base_as1 = preFac * ( pow(1.-z,2.) + pow(z,2.) );
@@ -3263,6 +3419,9 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
 
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
     m2dip(splitInfo.kinematics()->m2Dip);
 
   double preFac = symmetryFactor() * gaugeFactor();
@@ -3270,7 +3429,33 @@ bool isr_qcd_Q2QG::calc(const Event& state, int orderNow) {
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
-//kappa2 = 0.;
+  // Check phase space limits again.
+  int splitType(splitInfo.type);
+  if (splitType > 0) {
+    Vec4 q(state[splitInfo.iRadBef].p()-state[splitInfo.iRecBef].p());
+    double q2 = q.m2Calc();
+    double xCS = z;
+    double uCS = kappa2/(1-z);
+    double sjk   = (1. - 1./xCS)*(q2 - m2Rad) + (m2Emt + m2Rec) / xCS;
+    double zbar  = (q2-sjk-m2Rad) / bABC(q2,sjk,m2Rad)
+                   *( uCS - m2Rec / gABC(q2,sjk,m2Rad)
+                          * (sjk + m2Emt - m2Rec) / (q2 - sjk - m2Rad));
+    double kT2   = zbar*(1.-zbar)*sjk - (1-zbar)*m2Emt - zbar*m2Rec;
+    if (kT2 < 0.) preFac = 0.; 
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+    double vCS       = kappa2/(1-z); 
+    // Calculate derived variables.
+    double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2Rec) * (1-1/xCS);
+    double saj  = -vCS*(sab - m2Rad-m2Rec) + m2Rad + m2Emt;
+    double zbar = (sab - m2Rad - m2Rec) / bABC(sab,m2Rad,m2Rec)
+                *( (xCS + vCS)  - m2Rec / gABC(sab,m2Rad,m2Rec)
+                       * (saj + m2Rad - m2Emt) / (sab - m2Rad - m2Rec));
+    double kT2  = zbar*(1.-zbar)*m2Rad - (1-zbar)*saj - zbar*m2Emt;
+    if (kT2 < 0.) preFac = 0.; 
+  }
 
   map<string,double> wts;
   //double wt_base_as1 = preFac * ( 2.*(1.-z)/(pow2(1.-z) + kappa2) - (1.+z) );
@@ -3467,16 +3652,46 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-  int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  int splitType(splitInfo.type);
+  if (splitType > 0) {
+    Vec4 q(state[splitInfo.iRadBef].p()-state[splitInfo.iRecBef].p());
+    double q2 = q.m2Calc();
+    double xCS = z;
+    double uCS = kappa2/(1-z);
+    double sjk   = (1. - 1./xCS)*(q2 - m2Rad) + (m2Emt + m2Rec) / xCS;
+    double zbar  = (q2-sjk-m2Rad) / bABC(q2,sjk,m2Rad)
+                   *( uCS - m2Rec / gABC(q2,sjk,m2Rad)
+                          * (sjk + m2Emt - m2Rec) / (q2 - sjk - m2Rad));
+    double kT2   = zbar*(1.-zbar)*sjk - (1-zbar)*m2Emt - zbar*m2Rec;
+    if (kT2 < 0.) preFac = 0.; 
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+    double vCS       = kappa2/(1-z); 
+    // Calculate derived variables.
+    double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2Rec) * (1-1/xCS);
+    double saj  = -vCS*(sab - m2Rad-m2Rec) + m2Rad + m2Emt;
+    double zbar = (sab - m2Rad - m2Rec) / bABC(sab,m2Rad,m2Rec)
+                *( (xCS + vCS)  - m2Rec / gABC(sab,m2Rad,m2Rec)
+                       * (saj + m2Rad - m2Emt) / (sab - m2Rad - m2Rec));
+    double kT2  = zbar*(1.-zbar)*m2Rad - (1-zbar)*saj - zbar*m2Emt;
+    if (kT2 < 0.) preFac = 0.; 
+  }
+
   map<string,double> wts;
-  double wt_base_as1 = preFac * ( (1.-z) / (pow2(1.-z)+kappa2) );
+  //double wt_base_as1 = preFac * ( (1.-z) / (pow2(1.-z)+kappa2) );
+  double wt_base_as1 = preFac * ( z*(1.-z) / (pow2(1.-z)+kappa2) );
 
   // Calculate argument of alphaS.
   double scale2 = couplingScale2 ( z, pT2, m2dip,
@@ -3499,10 +3714,12 @@ bool isr_qcd_G2GG1::calc(const Event& state, int orderNow) {
   }
 
   if (order >= 0) {
+    //for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
+    //  it->second += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
+    //wt_base_as1 += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
     for ( map<string,double>::iterator it = wts.begin(); it != wts.end(); ++it)
-      it->second += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
-
-    wt_base_as1 += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. ) - preFac;
+      it->second += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. );
+    wt_base_as1 += preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. );
   }
 
   // Correction for massive IF splittings.
@@ -3717,20 +3934,51 @@ bool isr_qcd_G2GG2::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-  int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2/m2dip;
 
+  // Check phase space limits again.
+  int splitType(splitInfo.type);
+  if (splitType > 0) {
+    Vec4 q(state[splitInfo.iRadBef].p()-state[splitInfo.iRecBef].p());
+    double q2 = q.m2Calc();
+    double xCS = z;
+    double uCS = kappa2/(1-z);
+    double sjk   = (1. - 1./xCS)*(q2 - m2Rad) + (m2Emt + m2Rec) / xCS;
+    double zbar  = (q2-sjk-m2Rad) / bABC(q2,sjk,m2Rad)
+                   *( uCS - m2Rec / gABC(q2,sjk,m2Rad)
+                          * (sjk + m2Emt - m2Rec) / (q2 - sjk - m2Rad));
+    double kT2   = zbar*(1.-zbar)*sjk - (1-zbar)*m2Emt - zbar*m2Rec;
+    if (kT2 < 0.) preFac = 0.; 
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+    double vCS       = kappa2/(1-z); 
+    // Calculate derived variables.
+    double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2Rec) * (1-1/xCS);
+    double saj  = -vCS*(sab - m2Rad-m2Rec) + m2Rad + m2Emt;
+    double zbar = (sab - m2Rad - m2Rec) / bABC(sab,m2Rad,m2Rec)
+                *( (xCS + vCS)  - m2Rec / gABC(sab,m2Rad,m2Rec)
+                       * (saj + m2Rad - m2Emt) / (sab - m2Rad - m2Rec));
+    double kT2  = zbar*(1.-zbar)*m2Rad - (1-zbar)*saj - zbar*m2Emt;
+    if (kT2 < 0.) preFac = 0.; 
+  }
+
   map<string,double> wts;
   //double wt_base_as1 = preFac * 0.5 * ( z / ( pow2(z) + kappa2) - 1. )
   //                   + preFac * z*(1.-z);
-  double wt_base_as1 = preFac * 0.5 * z / ( pow2(z) + kappa2);
+  //double wt_base_as1 = preFac * 0.5 * z / ( pow2(z) + kappa2);
+  double wt_base_as1 = preFac * 0.5 * (1.-z)*z / ( pow2(z) + kappa2);
 
-  if (order >= 0) wt_base_as1 += -preFac*0.5 + preFac*z*(1.-z); 
+  //if (order >= 0) wt_base_as1 += -preFac*0.5 + preFac*z*(1.-z); 
+  if (order >= 0) wt_base_as1 += preFac*z*(1.-z); 
 
   // Calculate argument of alphaS.
   double scale2 = couplingScale2 ( z, pT2, m2dip,
@@ -3932,12 +4180,43 @@ bool isr_qcd_G2QQ::calc(const Event& state, int orderNow) {
 
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
+    m2Rec(splitInfo.kinematics()->m2Rec),
     m2dip(splitInfo.kinematics()->m2Dip);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2 / m2dip;
+
+  // Check phase space limits again.
+  int splitType(splitInfo.type);
+  if (splitType > 0) {
+    Vec4 q(state[splitInfo.iRadBef].p()-state[splitInfo.iRecBef].p());
+    double q2 = q.m2Calc();
+    double xCS = z;
+    double uCS = kappa2/(1-z);
+    double sjk   = (1. - 1./xCS)*(q2 - m2Rad) + (m2Emt + m2Rec) / xCS;
+    double zbar  = (q2-sjk-m2Rad) / bABC(q2,sjk,m2Rad)
+                   *( uCS - m2Rec / gABC(q2,sjk,m2Rad)
+                          * (sjk + m2Emt - m2Rec) / (q2 - sjk - m2Rad));
+    double kT2   = zbar*(1.-zbar)*sjk - (1-zbar)*m2Emt - zbar*m2Rec;
+    if (kT2 < 0.) preFac = 0.; 
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+    double vCS       = kappa2/(1-z); 
+    // Calculate derived variables.
+    double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2Rec) * (1-1/xCS);
+    double saj  = -vCS*(sab - m2Rad-m2Rec) + m2Rad + m2Emt;
+    double zbar = (sab - m2Rad - m2Rec) / bABC(sab,m2Rad,m2Rec)
+                *( (xCS + vCS)  - m2Rec / gABC(sab,m2Rad,m2Rec)
+                       * (saj + m2Rad - m2Emt) / (sab - m2Rad - m2Rec));
+    double kT2  = zbar*(1.-zbar)*m2Rad - (1-zbar)*saj - zbar*m2Emt;
+    if (kT2 < 0.) preFac = 0.; 
+  }
 
   map<string,double> wts;
   double wt_base_as1 =  preFac * (pow(1.-z,2.) + pow(z,2.));
@@ -4128,19 +4407,50 @@ bool isr_qcd_Q2GQ::calc(const Event& state, int orderNow) {
   // Read all splitting variables.
   double z(splitInfo.kinematics()->z), pT2(splitInfo.kinematics()->pT2),
     m2dip(splitInfo.kinematics()->m2Dip),
+    m2Rad(splitInfo.kinematics()->m2RadAft),
+    m2Emt(splitInfo.kinematics()->m2EmtAft),
     m2Rec(splitInfo.kinematics()->m2Rec);
-  int splitType(splitInfo.type);
 
   double preFac = symmetryFactor() * gaugeFactor();
   //int order     = (orderNow > 0) ? orderNow : correctionOrder;
   int order     = (orderNow > -1) ? orderNow : correctionOrder;
   double kappa2 = pT2 / m2dip;
 
+  // Check phase space limits again.
+  int splitType(splitInfo.type);
+  if (splitType > 0) {
+    Vec4 q(state[splitInfo.iRadBef].p()-state[splitInfo.iRecBef].p());
+    double q2 = q.m2Calc();
+    double xCS = z;
+    double uCS = kappa2/(1-z);
+    double sjk   = (1. - 1./xCS)*(q2 - m2Rad) + (m2Emt + m2Rec) / xCS;
+    double zbar  = (q2-sjk-m2Rad) / bABC(q2,sjk,m2Rad)
+                   *( uCS - m2Rec / gABC(q2,sjk,m2Rad)
+                          * (sjk + m2Emt - m2Rec) / (q2 - sjk - m2Rad));
+    double kT2   = zbar*(1.-zbar)*sjk - (1-zbar)*m2Emt - zbar*m2Rec;
+    if (kT2 < 0.) preFac = 0.; 
+  } else {
+    Vec4 q(state[splitInfo.iRecBef].p()+state[splitInfo.iRadBef].p());
+    double q2 = q.m2Calc();
+    double xCS       = (z*(1-z)- kappa2)/(1-z);
+    double vCS       = kappa2/(1-z); 
+    // Calculate derived variables.
+    double sab  = (q2 - m2Emt)/xCS + (m2Rad+m2Rec) * (1-1/xCS);
+    double saj  = -vCS*(sab - m2Rad-m2Rec) + m2Rad + m2Emt;
+    double zbar = (sab - m2Rad - m2Rec) / bABC(sab,m2Rad,m2Rec)
+                *( (xCS + vCS)  - m2Rec / gABC(sab,m2Rad,m2Rec)
+                       * (saj + m2Rad - m2Emt) / (sab - m2Rad - m2Rec));
+    double kT2  = zbar*(1.-zbar)*m2Rad - (1-zbar)*saj - zbar*m2Emt;
+    if (kT2 < 0.) preFac = 0.; 
+  }
+
   map<string,double> wts;
   //double wt_base_as1 = preFac*(z + 2.*z/(pow2(z)+kappa2) - 2.);
-  double wt_base_as1 = preFac * 2.*z/(pow2(z)+kappa2);
+  //double wt_base_as1 = preFac * 2.*z/(pow2(z)+kappa2);
+  double wt_base_as1 = preFac * 2.*(1.-z)*z/(pow2(z)+kappa2);
 
-  if (order >= 0) wt_base_as1 += preFac*(z-2.);
+  //if (order >= 0) wt_base_as1 += preFac*(z-2.);
+  if (order >= 0) wt_base_as1 += preFac*z;
 
   // Calculate argument of alphaS.
   double scale2 = couplingScale2 ( z, pT2, m2dip,
@@ -4979,7 +5289,7 @@ bool fsr_qcd_Q2QG_notPartial::calc(const Event& state, int) {
     double pipj = 0., vijkt = 1., vijk = 1.;
 
     // splitType == 2 -> Massive FF
-    if (splitType == 2) {
+    if (splitType > 0) {
 
       // Calculate CS variables.
       double yCS = kappa2 / (1.-z);
