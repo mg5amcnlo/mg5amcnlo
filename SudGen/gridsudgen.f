@@ -1,5 +1,5 @@
       implicit none
-      integer nl,nf, npart,ntype
+      integer nl,nf,npart,ntype
 c Assume five light flavours, the top, and the gluon
       parameter (nl=5)
       parameter (nf=nl+1)
@@ -47,11 +47,21 @@ c
      # qnodeval
 c$$$      external SUDAKOV FUNCTION
       external py_compute_sudakov
-      double precision py_compute_sudakov
+      double precision py_compute_sudakov,restmp
+      double precision tolerance,xlowthrs
+      parameter (tolerance=1.d-2)
+      parameter (xlowthrs=1.d-5)
+      integer iunit1,iunit2,maxseed,iseed,iseedtopy,ifk88seed
+      parameter (iunit1=20)
+      parameter (iunit2=30)
+      parameter (maxseed=100000)
+      common/cifk88seed/ifk88seed
+      integer infHloop,infLloop,maxloop
+      parameter (maxloop=5)
+      integer ieHoob,ieLoob,ieHoob2,ieLoob2,ieHfail,ieLfail
+      real*8 fk88random,rnd
       real*8 mcmass(21)
       logical grid(21)
-
-
 c
       do i=1,21
         mcmass(i)=0.d0
@@ -60,17 +70,20 @@ c
       include 'MCmasses_PYTHIA8.inc'
 c
       call dire_init(mcmass)
+      open(unit=iunit1,file='sudakov.log',status='unknown')
+      open(unit=iunit2,file='sudakov.err',status='unknown')
 
       write(*,*)'enter lower and upper bounds of st range'
       read(*,*)stlow,stupp
       write(*,*)'enter lower and upper bounds of M range'
       read(*,*)xmlow,xmupp
 
-c     just not to have to type things during debugging.
-c      stlow=1.0
-c      stupp=1000.0
-c      xmlow=1.0
-c      xmupp=100.0
+      write(*,*)'enter -1 to use Pythia default seed'
+      write(*,*)'       0 to use Pythia timestamp'
+      write(*,*)'       >=1 to use random seeds'
+      read(5,*)ifk88seed
+c Discard first (tends to be extremely small)
+      if(ifk88seed.ge.1)rnd=fk88random(ifk88seed)
 
       call getalq0(nnst,xkst,stlow,stupp,base,alst,q0st)
       call getalq0(nnxm,xkxm,xmlow,xmupp,base,alxm,q0xm)
@@ -83,34 +96,103 @@ c
         endif
         grid(ipmap(ipart))=.true.
       enddo
+      ieHoob=0
+      ieLoob=0
+      ieHoob2=0
+      ieLoob2=0
+      ieHfail=0
+      ieLfail=0
       do itype=1,4
-c        if (itype .ne. 3) cycle
+c$$$        if (itype .ne. 3) cycle
+        write(*,*)'===>Doing itype=',itype
+        write(iunit1,*)'===>Doing itype=',itype
+        write(iunit2,*)'===>Doing itype=',itype
         do ipart=1,npart
-c          if (ipart .ne. 7) cycle
+c$$$          if (ipart .ne. 7) cycle
+          write(*,*)'   --->Doing ipart=',ipart
+          write(iunit1,*)'   --->Doing ipart=',ipart
+          write(iunit2,*)'   --->Doing ipart=',ipart
           do inxm=1,nnxm
-c            if (inxm .lt. nnxm) cycle
+c$$$            if (inxm .le. 15) cycle
             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
             do inst=1,nnst
-c            if (inst .gt. 10) cycle
+c$$$            if (inst .le. 20) cycle
               st(inst)=qnodeval(inst,nnst,xkst,base,alst,q0st)
-c              grids(inst,inxm,ipart,itype)=
-c     #           ifakegrid(inst,inxm,ipmap(ipart),itype)
-c Replace the call to ifakegrid (which serves to test) with something like:
-c       py_compute_sudakov(st(inst),xm(inxm),ipmap(ipart),itype,
-c                          mcmass,stupp)
-              grids(inst,inxm,ipart,itype)= py_compute_sudakov(
-     #          st(inst),xm(inxm),ipmap(ipart),itype,
-     #          mcmass,stupp)
-c ie compute the Sudakov relevant to parton line ipmap(ipart),
+              infHloop=0
+              infLloop=0
+ 111          continue
+              if(infHloop.eq.maxloop)then
+                write(iunit2,*)'Failure (too large): st, xm=',
+     #                         st(inst),xm(inxm)
+                restmp=1.d0
+                ieHfail=ieHfail+1
+                goto 112
+              endif
+              if(infLloop.eq.maxloop)then
+                write(iunit2,*)'Failure (too small): st, xm=',
+     #                         st(inst),xm(inxm)
+                restmp=0.d0
+                ieLfail=ieLfail+1
+                goto 112
+              endif
+c$$$              restmp = ifakegrid(inst,inxm,ipmap(ipart),itype)
+c Compute the Sudakov relevant to parton line ipmap(ipart),
 c for dipole type itype with mass xm(inxm), between the scales
 c st(inst) and stupp
+              iseed=iseedtopy()
+              restmp = py_compute_sudakov(
+     #          st(inst),xm(inxm),ipmap(ipart),itype,
+     #          mcmass,stupp,iseed,iunit1)
+              if(restmp.gt.1.d0)then
+                if(restmp.le.(1.d0+tolerance))then
+                  write(iunit2,*)'Out of bounds (>1): ',restmp
+                  write(iunit2,*)'  for st, xm=',st(inst),xm(inxm)
+                  write(iunit2,*)'  seed=',iseed
+                  ieHoob=ieHoob+1
+                  restmp=1.d0
+                  goto 112
+                else
+                  write(iunit2,*)'Out of bounds (>>1): ',restmp
+                  write(iunit2,*)'  for st, xm=',st(inst),xm(inxm)
+                  write(iunit2,*)'  seed=',iseed
+                  ieHoob2=ieHoob2+1
+                  infHloop=infHloop+1
+                  goto 111
+                endif
+              endif
+              if(restmp.lt.xlowthrs)then
+                if(restmp.ge.(-tolerance))then
+                  if(restmp.lt.0.d0)then
+                    write(iunit2,*)'Out of bounds (<0): ',restmp
+                    write(iunit2,*)'  for st, xm=',st(inst),xm(inxm)
+                    write(iunit2,*)'  seed=',iseed
+                    ieLoob=ieLoob+1
+                  endif
+                  restmp=0.d0
+                  goto 112
+                else
+                  write(iunit2,*)'Out of bounds (<<0): ',restmp
+                  write(iunit2,*)'  for st, xm=',st(inst),xm(inxm)
+                  write(iunit2,*)'  seed=',iseed
+                  ieLoob2=ieLoob2+1
+                  infLloop=infLloop+1
+                  goto 111
+                endif
+              endif
+ 112          continue
+              grids(inst,inxm,ipart,itype)= restmp
             enddo
           enddo
+          write(*,*)'   <---Done ipart= ',ipart
+          write(iunit1,*)'   <---Done ipart= ',ipart
+          write(iunit2,*)'   <---Done ipart= ',ipart
         enddo
+        write(*,*)'<===Done itype= ',itype
+        write(iunit1,*)'<===Done itype= ',itype
+        write(iunit2,*)'<===Done itype= ',itype
       enddo
 c
       open(unit=10,file='sudakov.f',status='unknown')
-      open(unit=20,file='sudakov.log',status='unknown')
 c
       write(10,'(a)')
      #'      function pysudakov(st,xm,id,itype,xmpart)',
@@ -428,9 +510,16 @@ c
      #'      return',
      #'      end'
 c
-
-      close(20)
-
+      close(10)
+      close(iunit1)
+      write(iunit2,*)'     '
+      write(iunit2,*)'Sudakovs>1 within tolerance: ',ieHoob
+      write(iunit2,*)'Sudakovs<0 within tolerance: ',ieLoob
+      write(iunit2,*)'Sudakovs>1 outside tolerance: ',ieHoob2
+      write(iunit2,*)'Sudakovs<0 outside tolerance: ',ieLoob2
+      write(iunit2,*)'Sudakovs>>1 set to 1: ',ieHfail
+      write(iunit2,*)'Sudakovs<<0 set to 0: ',ieLfail
+      close(iunit2)
       end
 
 
@@ -481,22 +570,58 @@ c
       return
       end
 
-      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
+
+      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp,
+     #                            iseed,iunit)
       implicit none
       double precision py_compute_sudakov, stlow, stupp, md
-      integer id, itype
+      integer id, itype,iseed,iunit
       real*8 mcmass(21)
       double precision temp
-      integer seed
-
-      seed = -1
+c
       call dire_get_no_emission_prob(temp, stupp,
-     #     stlow, md, id, itype, seed)
+     #     stlow, md, id, itype, iseed)
       py_compute_sudakov=temp
-
-      write(20,*) 'itype=',itype, 'id=', id, 'md=', md, 
-     #           ' start=', stupp,
+      write(iunit,*) 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
-
+c
       return
       end
+
+
+      FUNCTION FK88RANDOM(SEED)
+*     -----------------
+* Ref.: K. Park and K.W. Miller, Comm. of the ACM 31 (1988) p.1192
+* Use seed = 1 as first value.
+*
+      IMPLICIT INTEGER(A-Z)
+      REAL*8 MINV,FK88RANDOM
+      SAVE
+      PARAMETER(M=2147483647,A=16807,Q=127773,R=2836)
+      PARAMETER(MINV=0.46566128752458d-09)
+      HI = SEED/Q
+      LO = MOD(SEED,Q)
+      SEED = A*LO - R*HI
+      IF(SEED.LE.0) SEED = SEED + M
+      FK88RANDOM = SEED*MINV
+      END
+
+
+      function iseedtopy()
+      implicit none
+      integer iseedtopy,itmp
+      integer maxseed,iseed,ifk88seed
+      parameter (maxseed=100000)
+      common/cifk88seed/ifk88seed
+      real*8 rnd,fk88random
+c
+      if(ifk88seed.eq.-1.or.ifk88seed.eq.0)then
+        itmp=ifk88seed
+      else
+        rnd=fk88random(ifk88seed)
+        itmp=int(maxseed*rnd)+1
+      endif
+      iseedtopy=itmp
+      return
+      end
+

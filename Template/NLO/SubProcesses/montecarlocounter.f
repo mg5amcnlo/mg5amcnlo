@@ -663,7 +663,6 @@ c G-function parameters
       becl=-(1d0-ymin)
       gfactcl=gfunction(y_ij_fks,alsf,becl,1d0)
       if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
-
 c For processes that have jets at the Born level, we need to include a
 c theta-function: The radiation from the shower should always be softer
 c than the jets at the Born, hence no need to include the MC counter
@@ -705,7 +704,6 @@ c      do npartner=1,ipartners(0)
             write(*,*)E0sq(npartner),ileg,npartner
             stop
          endif
-
          z(npartner)=ztmp
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
@@ -1394,9 +1392,11 @@ c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
                stop
             endif
             if(xscales(i,j).eq.-1d0)cycle
+c            if(xscales(i,j).eq.-1d0.or.is_dzone(i,j))cycle
             wgt_sudakov=wgt_sudakov*
      &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
      &        pysudakov(SCALUP_tmp_S(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
+c     &        pysudakov(scalemax_a(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
