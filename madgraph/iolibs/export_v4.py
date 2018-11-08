@@ -1871,7 +1871,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             else:
                 version = int(version.split('.')[1])
             if version >= 14:
-                for_update['MACFLAG'] = ''
+                for_update['MACFLAG'] = '-mmacosx-version-min=10.8' if is_lc else ''
 
         if not root_dir:
             root_dir = self.dir_path
