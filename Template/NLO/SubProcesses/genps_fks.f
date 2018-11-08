@@ -2233,7 +2233,7 @@ c
          xbjrk(1)=xbjrk_born(1)/(sqrt(1-xi_i_fks)*omega)
          xbjrk(2)=xbjrk_born(2)*omega/sqrt(1-xi_i_fks)
          if (xbjrk(1).gt.1d0.or.xbjrk(2).gt.1d0) then
-            if (xbjrk(1)-1d0.lt.1e-3 .and. xbjrk(1)-2d0.lt.1e-3) then
+            if (xbjrk(1)-1d0.lt.1e-3 .and. xbjrk(2)-1d0.lt.1e-3) then
               xjac=-102
               pass=.false.
               write(*,*) 'WARNING IN GENPS, XBJRK', xbjrk
@@ -3420,7 +3420,7 @@ c     S=A/(B-x) transformation:
       return 
       end
 
-      subroutine generate_x_ee(rnd, xmin, x, omx, jac)
+      subroutine generate_x_ee(rnd, xmin, ibeam, x, omx, jac)
       implicit none
       ! generates the momentum fraction with importance
       !  sampling suitable for ee collisions
@@ -3429,11 +3429,27 @@ c     S=A/(B-x) transformation:
       ! jac is the corresponding jacobian
       ! omx is 1-x, stored to improve numerical accuracy
       double precision rnd, x, omx, jac, xmin
-      double precision expo
-      parameter (expo=0.85d0) ! should be a number 0< x <1
+      integer ibeam
+      double precision expo_values(2), expo
+      ! the first is without beamstrahlung, the second with
+      data expo_values / 0.85d0, 0.5d0/! should be a number 0< x <1
+      integer iexpo
       double precision tolerance
       parameter (tolerance=1.d-5)
+      integer n_ee
+      common /to_dressed_leptons/n_ee
 
+      integer eepdf_tilde_type
+
+      iexpo = eepdf_tilde_type(n_ee, partonid, beamid)
+
+      if (iexpo.le.0.or.iexpo.gt.2) then
+        write(*,*) 'ERROR in generate_x_ee, invalid iexpo', iexpo
+        stop 1
+      endif
+
+      expo = expo_values(iexpo)
+          
       x = 1d0 - rnd ** (1d0/(1d0-expo))
       omx = rnd ** (1d0/(1d0-expo))
       if (x.ge.1d0) then
@@ -3550,7 +3566,7 @@ C dressed lepton stuff
         ! there is a jacobian for x1 x2 -> tau x1(2)
 
         if (rnd2.lt.0.5d0) then
-          call generate_x_ee(rnd2*2d0, tau_born, x1_ee, omx1_ee, jac_ee)
+          call generate_x_ee(rnd2*2d0, tau_born, 1, x1_ee, omx1_ee, jac_ee)
           x2_ee = tau_born / x1_ee
           omx2_ee = 1d0 - x2_ee
           xjac0 = xjac0 / x1_ee * 2d0 
@@ -3559,7 +3575,7 @@ C dressed lepton stuff
             return
           endif
         else
-          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), tau_born, x2_ee, omx2_ee, jac_ee)
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), tau_born, 2, x2_ee, omx2_ee, jac_ee)
           x1_ee = tau_born / x2_ee
           omx1_ee = 1d0 - x1_ee
           xjac0 = xjac0 / x2_ee * 2d0 
@@ -3582,9 +3598,9 @@ C dressed lepton stuff
         ! generated, while in the ee case x1 and x2 are generated
         ! first.
 
-        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), x1_ee, omx1_ee, jac_ee)
+        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), 1, x1_ee, omx1_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), x2_ee, omx2_ee, jac_ee)
+        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), 2, x2_ee, omx2_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
       else if (.not.generate_x12) then 
           write(*,*) 'NOT GOOD HERE'
@@ -3594,11 +3610,11 @@ C dressed lepton stuff
         call generate_tau_ee(rnd1, tau_born, jac_ee)
         xjac0 = xjac0 * jac_ee
         if (rnd2.lt.0.5d0) then
-          call generate_x_ee(2d0*rnd2, 0d0, x1_ee, jac_ee)
+          call generate_x_ee(2d0*rnd2, 0d0, 1, x1_ee, jac_ee)
           x2_ee = tau_born / x1_ee
           xjac0 = xjac0 * jac_ee / x1_ee
         else
-          call generate_x_ee(2d0*(rnd2-0.5d0), 0d0, x2_ee, jac_ee)
+          call generate_x_ee(2d0*(rnd2-0.5d0), 0d0, 2, x2_ee, jac_ee)
           x1_ee = tau_born / x2_ee
           xjac0 = xjac0 * jac_ee / x2_ee
         endif
