@@ -4140,6 +4140,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
                                                               filename.replace('.LHgrid',''), 
                                         lhapdf_version, alternate_path)
+        elif lhapdf_version.startswith('6.'):
+            # try to do a simple wget
+            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
+            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+            misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
+            misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
+                      cwd=pdfsets_dir)
+            if os.path.exists(pjoin(pdfsets_dir, filename)) or \
+               os.path.isdir(pjoin(pdfsets_dir, filename)):
+                logger.info('%s successfully downloaded and stored in %s' \
+                        % (filename, pdfsets_dir))  
+            else:
+                raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)                          
             
         else:
             raise MadGraph5Error, \

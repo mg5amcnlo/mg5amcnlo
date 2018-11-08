@@ -1053,7 +1053,10 @@ class AskRunNLO(cmd.ControlSwitch):
         
         if self.last_mode in ['LO', 'NLO']:
             self.switch['fixed_order'] = 'ON'
-        self.switch['fixed_order'] = 'OFF'
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['fixed_order'] = 'ON'
+        else:
+            self.switch['fixed_order'] = 'OFF'
 
     def color_for_fixed_order(self, switch_value):
          
@@ -1158,6 +1161,11 @@ class AskRunNLO(cmd.ControlSwitch):
         if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'
             return 
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
+            return
+        
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             self.switch['shower'] = self.run_card['parton_shower']  
