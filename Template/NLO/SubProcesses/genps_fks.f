@@ -1890,6 +1890,14 @@ c local
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
       double precision omx1bar2, omx2bar2
+C stuff for the lepton colliders
+      include 'run.inc'
+      double precision a_ee, b_ee, expo_ee, jac_ee
+      parameter (a_ee=0.5d0)
+      parameter (expo_ee=0.85d0)
+      parameter (b_ee=a_ee/(2d0*a_ee*expo_ee - a_ee - 2*expo_ee + 2))
+      logical special_ee_coll
+
 c external
 c
 c parameters
@@ -2122,6 +2130,8 @@ c
 c
 c Define xi_i_fks
 c
+      special_ee_coll = j_fks.le.2.and.abs(lpp(1)).eq.4
+
       if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &     ((.not.colltest) .or. 
      &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
@@ -2129,7 +2139,25 @@ c
          if(icountevts.eq.-100)then
 c importance sampling towards soft singularity
 c insert here further importance sampling towards xi_i_hat->0
-            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
+            if (special_ee_coll) then
+               ! this is specific for ee collisions, where 
+               ! the soft singularity and the no-radiation peak
+               ! of PDFs are competing effects
+               ! So for x(1) < a_ee, do importance sampling for 
+               ! the soft singularity
+               ! Else, do importance sampling for no-radiation
+               ! The transformation functions F are such that
+               ! F(a_ee) = b_ee
+               if (x(1).le.a_ee) then
+                 !!xi_i_hat = sstiny+(1-sstiny)*x(1)**2*b_ee/a_ee**2
+                 xi_i_hat = x(1)**2*b_ee/a_ee**2
+               else
+                 xi_i_hat = 1d0-(1d0-x(1))**(1d0/(1d0-expo_ee)) *
+     &             (1d0-b_ee) / (1d0-a_ee)**(1d0/(1d0-expo_ee))
+               endif 
+            else
+               xi_i_hat=sstiny+(1-sstiny)*x(1)**2
+            endif
          endif
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
@@ -2165,19 +2193,56 @@ c cannot be generated
       endif
 c remove the following if no importance sampling towards soft
 c singularity is performed when integrating over xi_i_hat
-      xjac=xjac*2d0*x(1)
+          
+      if (special_ee_coll) then
+        if (x(1).le.a_ee) then
+          jac_ee = 2d0*x(1)*b_ee/a_ee**2
+        else
+          jac_ee = 1d0/(1d0-expo_ee) * (1d0-x(1))**(expo_ee/(1d0-expo_ee)) *
+     &             ((1d0-b_ee) / (1d0-a_ee)**(1d0/(1d0-expo_ee)))
+        endif
+        xjac=xjac*jac_ee
+      else
+        xjac=xjac*2d0*x(1) 
+      endif
 c
 c Initial state variables are different for events and counterevents. Update them here.
 c
-      omega=sqrt( (2-xi_i_fks*(1+yijdir))/
-     &     (2-xi_i_fks*(1-yijdir)) )
+
       if (icountevts.ne.0) then
+         ! the followiung is a taylor expansion up to second order
+         ! in the relevant variable (the one in the if) in the case of 
+         ! large-x configurations (mostly for ee collisions)
+         if (abs(xi_i_fks*(1+yijdir)).lt.stiny) then
+           omega = 1d0/sqrt(2 - xi_i_fks * (1-yijdir)) / 16d0 / sqrt(2d0) *
+     $      (32d0 - xi_i_fks * (yijdir+1) * (xi_i_fks*(yijdir+1) + 8d0))
+
+         else if (abs(xi_i_fks*(1-yijdir)).lt.stiny) then
+           omega = sqrt(2 - xi_i_fks * (1+yijdir)) / 32d0 / sqrt(2d0) *
+     $      (32d0 + xi_i_fks* ( yijdir-1) * (3d0 * xi_i_fks * (yijdir-1) + 8d0))
+
+         else
+           omega=sqrt( (2-xi_i_fks*(1+yijdir))/
+     &       (2-xi_i_fks*(1-yijdir)) )
+         endif
+
          tau=tau_born/(1-xi_i_fks)
          ycm=ycm_born-log(omega)
          shat=tau*stot
          sqrtshat=sqrt(shat)
          xbjrk(1)=xbjrk_born(1)/(sqrt(1-xi_i_fks)*omega)
          xbjrk(2)=xbjrk_born(2)*omega/sqrt(1-xi_i_fks)
+         if (xbjrk(1).gt.1d0.or.xbjrk(2).gt.1d0) then
+            if (xbjrk(1)-1d0.lt.1e-3 .and. xbjrk(1)-2d0.lt.1e-3) then
+              xjac=-102
+              pass=.false.
+              write(*,*) 'WARNING IN GENPS, XBJRK', xbjrk
+              return
+            else
+              write(*,*) 'ERROR IN GENPS, XBJRK', xbjrk
+              stop 1
+            endif
+         endif
       else
          tau=tau_born
          ycm=ycm_born
