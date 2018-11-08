@@ -49,12 +49,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
         """ Place holder for PLUGIN/...
             (used by madevent output for small width handling) 
         """
-        raise Exception
         return call, arg
         
     @staticmethod
     def default_customize_argument_for_all_other_helas_object(call,arg):
-        raise Exception
         return call,arg  
     #customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
     #default_customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
@@ -1569,7 +1567,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
             call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"
         # Now we have a line correctly formatted, with the proc_prefix
-        misc.sprint(type(wf))
         call_function = lambda wf:\
                         (call%wf.get_helas_call_dict(OptimizedOutput=True, 
                              specifyHel=self.hel_sum)).format('%(proc_prefix)s')

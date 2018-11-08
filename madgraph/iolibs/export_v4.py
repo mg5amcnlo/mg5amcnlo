@@ -100,7 +100,6 @@ class VirtualExporter(object):
     def __init__(self, dir_path = "", opt=None):
         # cmd_options is a dictionary with all the optional argurment passed at output time
         
-        
         # Activate some monkey patching for the helas call writer.
         helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
                 self.helas_call_writer_custom

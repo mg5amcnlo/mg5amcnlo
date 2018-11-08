@@ -75,7 +75,7 @@ class IOExportFKSTest(IOTests.IOTestManager):
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
         misc.deactivate_dependence('samurai', cmd = interface, log='stdout')        
-        misc.activate_dependence('golem', cmd = interface, log='stdout')
+        misc.deactivate_dependence('golem', cmd = interface, log='stdout')
         misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)        
         
         run_cmd('import model %s' % model)
