@@ -5695,13 +5695,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             # check the status of small width status from LO
             for param in self.param_card['decay']:
                 width = param.value
-                if width == 0:
+                if width == 0 or isinstance(width,str):
                     continue
                 try:
                     mass = self.param_card['mass'].get(param.lhacode).value
                 except Exception:
                     continue
-    
+                if isinstance(mass,str):
+                    continue
+                
                 if mass:
                     if abs(width/mass) < self.run_card['small_width_treatment']:
                         logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
