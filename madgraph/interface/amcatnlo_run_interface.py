@@ -1216,6 +1216,8 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['shower'] = 'Not Avail'
         elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
+        elif self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
         elif os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             if self.switch['fixed_order'] == "OFF":
                 self.switch['shower'] = self.run_card['parton_shower']  
