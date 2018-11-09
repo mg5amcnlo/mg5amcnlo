@@ -167,6 +167,13 @@ class TestBanner(unittest.TestCase):
                           'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
                          out.split(';')[:-1])       
 
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [ all= QCD]', 't> w+b', cmd._curr_model)
+         
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])       
+
         #6 case with virt=QCD, technically not valid but I like that the function can do it
         out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [virt=QCD]', 't> w+b', cmd._curr_model)
         self.assertEqual(['add process p p > t t~ QED=1 [virt=QCD], t> w+b  --no_warning=duplicate'],

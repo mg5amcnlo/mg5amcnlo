@@ -199,10 +199,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self.inputfile = inputfile
         if self.options['spinmode'] == 'none' and \
-           (self.options['input_format'] != 'lhe' or (self.options['input_format'] == 'auto' and '.lhe' in inputfile[:-5])):  
+           (self.options['input_format'] not in ['lhe','auto'] or 
+             (self.options['input_format'] == 'auto' and '.lhe'  not in inputfile[-7:])):  
             self.banner = banner.Banner()
             self.setup_for_pure_decay()
-            return   
+            return  
         
         if inputfile.endswith('.gz'):
             misc.gunzip(inputfile)
@@ -984,8 +985,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #misc.sprint(i, particle.pdg, particle.pid)
                 #misc.sprint(self.final_state, evt_decayfile)
                 # check if we need to decay the particle 
-                if not (particle.pdg in self.final_state or particle.pdg in evt_decayfile):
+                if self.final_state and particle.pdg not in self.final_state:
                     continue # nothing to do for this particle
+                if particle.pdg not in evt_decayfile:
+                    continue # nothing to do for this particle
+                
                 # check how the decay need to be done
                 nb_decay = len(evt_decayfile[particle.pdg])
                 if nb_decay == 0:
@@ -1004,11 +1008,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                     cumul = 0
                     for j,events in evt_decayfile[particle.pdg].items():
                         cumul += events.cross
-                        if r < cumul:
+                        if r <= cumul:
+                            decay_file = events
+                            decay_file_nb = j
+                            break
+                    else:
+                        # security for numerical accuracy issue... (unlikely but better safe)
+                        if (cumul-tot)/tot < 1e-5:
                             decay_file = events
                             decay_file_nb = j
                         else:
-                            break
+                            misc.sprint(j,cumul, events.cross, tot, (tot-cumul)/tot)
+                            raise Exception
                 
                 if self.options['new_wgt'] == 'BR':
                     tot_width = float(self.banner.get('param', 'decay', abs(pdg)).value)
@@ -1056,8 +1067,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if len(hepmc_output) == 0:
                         hepmc_output.append(lhe_parser.Particle(event=hepmc_output))
                         hepmc_output[0].color2 = 0
+                        hepmc_output[0].status = -1
+                        hepmc_output.nexternal+=1
                     decayed_particle = lhe_parser.Particle(particle, hepmc_output)
+                    decayed_particle.mother1 = hepmc_output[0]
+                    decayed_particle.mother2 = hepmc_output[0]
                     hepmc_output.append(decayed_particle)
+                    hepmc_output.nexternal+=1
                     decayed_particle.add_decay(decay)
             # change the weight associate to the event
             if self.options['new_wgt'] == 'cross-section':
@@ -1075,7 +1091,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 hepmc_output.wgt = event.wgt
                 hepmc_output.nexternal = len(hepmc_output) # the append does not update nexternal
-                hepmc_output.assign_mother()
                 output_lhe.write(str(hepmc_output))
         else:
             if counter==0:
@@ -1425,7 +1440,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
             if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
-                print "decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start)
+                logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)

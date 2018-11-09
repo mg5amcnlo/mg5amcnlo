@@ -1,5 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.4 (09/11/18)
+      OM: add specific treatement for small width (at LO only and not for loop-induced)
+          if the width is smaller than 1e-6 times the mass, a fake width (at that value) is used for the
+          numerical evaluation of the matrix-element. S-channel resonances are re-scaled according to 
+          narrow-width approximation to return the correct total cross-section (the distribution of events 
+          will on the other hand follow the new width). 
+          The parameter '1e-6' can be changed by adding to (LO) run_card the parameter: "small_width_treatment"
+      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
+          the first time a loop computation is needed.
+      RF: Fixed a bug when using TopDrawer plots for f(N)LO runs, where the combination of the plots could lead
+          to completely wrong histograms/distributions in case of high-precision runs.
+      OM: Fix some MLM crash for some processes (in particular BSM processes with W'). 
+      OM: Fix a bug in the reweighting due to the new lhe format (the one avoiding some issue with py8)
+      OM: Fix a behavior for negative mass, the width was set to negative in the param_card automatically
+          making the Parton-shower (and other code) to crash since this does not follow the convention.
+      OM: Change compiler flag to support Mojave.
+
 2.6.3.2 (22/06/18)
       OM: Fix a bug in auto-width when mass are below QCD scale.
       OM: Fix a bug for g b initial state where the mass in the lhe file was not always correctly assigned

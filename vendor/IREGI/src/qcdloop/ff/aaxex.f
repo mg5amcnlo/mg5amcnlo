@@ -215,7 +215,7 @@
 *
 *	convert ??xj to ??xi
 *
-	call ffeji(cdxi,mcxi,ccxi,mcxi,cbxi,mbxi,caxi,maxi,
+	call ffeji(cdxi,mdxi,ccxi,mcxi,cbxi,mbxi,caxi,maxi,
      +		cdxj,mdxj,ccxj,mcxj,cbxj,mbxj,caxj,maxj,level)
 *
 *	and call the real routine for the rest

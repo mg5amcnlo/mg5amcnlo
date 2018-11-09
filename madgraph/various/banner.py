@@ -483,9 +483,9 @@ class Banner(dict):
     def charge_card(self, tag):
         """Build the python object associated to the card"""
         
-        if tag == 'param_card':
+        if tag in ['param_card', 'param']:
             tag = 'slha'
-        elif tag == 'run_card':
+        elif tag  in ['run_card', 'run']:
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
@@ -905,7 +905,10 @@ class ProcCard(list):
             out = []
             for line in self:
                 if line.startswith('define'):
-                    name, content = line[7:].split('=',1)
+                    try:
+                        name, content = line[7:].split('=',1)
+                    except ValueError:
+                        name, content = line[7:].split(None,1)
                     out.append((name, content))
             return out 
         else:
@@ -2372,9 +2375,9 @@ class RunCard(ConfigFile):
                     else:
                         this_group = this_group[0]
                     if block_name in write_block:
-                        text += this_group.on_template % self
+                        text += this_group.template_on % self
                         for name in this_group.fields:
-                            written.add(f)
+                            written.add(name)
                             if name in to_write:
                                 to_write.remove(name)
                     else:
@@ -2949,6 +2952,7 @@ class RunCardLO(RunCard):
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
+        self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -2970,7 +2974,7 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], system=True)   
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
-            
+                     
              
     def check_validity(self):
         """ """

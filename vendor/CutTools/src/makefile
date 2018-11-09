@@ -90,10 +90,16 @@ qlxpicheck.o
 #ALL = $(MPFUN) $(AVH) $(CTS) $(LT) $(QCDLOOP)
 ALL = $(MPFUN) $(AVH) $(CTS) $(QCDLOOP)
 
-libcts.a: libcts.a($(ALL))
+.f90.o:
+	$(FC) $(FFLAGS) -c $<
+
+.f.o:
+	$(FC) $(FFLAGS) -std=legacy -c $<
+
+
+libcts.a: $(ALL)
+	ar cru libcts.a $(ALL)
+	ranlib libcts.a
 
 .SUFFIXES: .f90
 
-.f90.a:
-	$(FC) $(FFLAGS) -c $<
-	$(AR) $(ARFLAGS) $@ $*.o

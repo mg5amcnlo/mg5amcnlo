@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from madgraph.iolibs.helas_call_writers import HelasCallWriter
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -93,12 +94,28 @@ class VirtualExporter(object):
     #    - None, madgraph do nothing for initialisation
     exporter = 'v4'
     # language of the output 'v4' for Fortran output
-    #                        'cpp' for C++ output 
+    #                        'cpp' for C++ output
     
     
     def __init__(self, dir_path = "", opt=None):
-        # cmd_options is a dictionary with all the optional argurment passed at output time 
-        return
+        # cmd_options is a dictionary with all the optional argurment passed at output time
+        
+        # Activate some monkey patching for the helas call writer.
+        helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
+                self.helas_call_writer_custom
+        
+
+    # helper function for customise helas writter
+    @staticmethod
+    def custom_helas_call(call, arg):
+        """static method to customise the way aloha function call are written
+        call is the default template for the call
+        arg are the dictionary used for the call
+        """
+        return call, arg
+    
+    helas_call_writer_custom = lambda x,y,z: x.custom_helas_call(y,z)
+
 
     def copy_template(self, model):
         return
@@ -159,6 +176,9 @@ class ProcessExporterFortran(VirtualExporter):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
+        
+        # call mother class
+        super(ProcessExporterFortran,self).__init__(dir_path, opt)
         
         
     #===========================================================================
@@ -1834,13 +1854,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         is_clang = misc.detect_if_cpp_compiler_is_clang(compiler)
         is_lc    = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
 
+
         # list of the variable to set in the make_opts file
         for_update= {'DEFAULT_CPP_COMPILER':compiler,
                      'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
                      'STDLIB': '-lc++' if is_lc else '-lstdc++',
                      'STDLIB_FLAG': '-stdlib=libc++' if is_lc and is_clang else ''
                      }
-        
+
+        # for MOJAVE remove the MACFLAG:
+        if is_clang:
+            import platform
+            version, _, _ = platform.mac_ver()
+            if not version:# not linux 
+                version = 14 # set version to remove MACFLAG
+            else:
+                version = int(version.split('.')[1])
+            if version >= 14:
+                for_update['MACFLAG'] = '-mmacosx-version-min=10.8' if is_lc else ''
+
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
@@ -3411,6 +3443,7 @@ c     channel position
         return s_and_t_channels
 
 
+
 #===============================================================================
 # ProcessExporterFortranME
 #===============================================================================
@@ -3419,7 +3452,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
-
+    
+    # helper function for customise helas writter
+    @staticmethod
+    def custom_helas_call(call, arg):
+        if arg['mass'] == '%(M)s,%(W)s,':
+            arg['mass'] = '%(M)s, fk_%(W)s,'
+        elif '%(W)s' in arg['mass']:
+            raise Exception
+        return call, arg
+    
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
@@ -3443,6 +3485,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         
 
+    
 
 
     #===========================================================================
@@ -3933,9 +3976,28 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+        
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+
+        #adding the support for the fake width (forbidding too small width)
+        mass_width = matrix_element.get_all_mass_widths()
+        width_list = set([e[1] for e in mass_width])
+        
+        replace_dict['fake_width_declaration'] = \
+            ('  double precision fk_%s \n' * len(width_list)) % tuple(width_list)
+        replace_dict['fake_width_declaration'] += \
+            ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
+        fk_w_defs = []
+        one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        for m, w in mass_width:
+            if w == 'zero':
+                if ' fk_zero = 0d0' not in fk_w_defs: 
+                    fk_w_defs.append(' fk_zero = 0d0')
+                continue    
+            fk_w_defs.append(one_def %{'m':m, 'w':w})
+        replace_dict['fake_width_definitions'] = '\n'.join(fk_w_defs)
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()

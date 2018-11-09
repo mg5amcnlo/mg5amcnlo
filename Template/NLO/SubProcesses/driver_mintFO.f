@@ -48,7 +48,7 @@ c For MINT:
       include "mint.inc"
       integer nhits_in_grids(maxchannels)
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
-     $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
+     $     ,ndimmax,maxchannels),ymax_virt(0:maxchannels),ans(nintegrals
      $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
      $     ,0:maxchannels),x(ndimmax),itmax_fl
       integer ixi_i,iphi_i,iy_ij,vn

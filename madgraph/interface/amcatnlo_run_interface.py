@@ -1053,7 +1053,10 @@ class AskRunNLO(cmd.ControlSwitch):
         
         if self.last_mode in ['LO', 'NLO']:
             self.switch['fixed_order'] = 'ON'
-        self.switch['fixed_order'] = 'OFF'
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['fixed_order'] = 'ON'
+        else:
+            self.switch['fixed_order'] = 'OFF'
 
     def color_for_fixed_order(self, switch_value):
          
@@ -1158,6 +1161,11 @@ class AskRunNLO(cmd.ControlSwitch):
         if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'
             return 
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
+            return
+        
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             self.switch['shower'] = self.run_card['parton_shower']  
@@ -2603,7 +2611,13 @@ RESTART = %(mint_mode)s
         devnull = open(os.devnull, 'w') 
         
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
-            misc.call(['./combine_plots_FO.sh'] + folder_name, \
+            topfiles = []
+            for job in jobs:
+                if job['dirname'].endswith('.top'):
+                    topfiles.append(job['dirname'])
+                else:
+                    topfiles.append(pjoin(job['dirname'],'MADatNLO.top'))
+            misc.call(['./combine_plots_FO.sh'] + topfiles, \
                       stdout=devnull, 
                       cwd=pjoin(self.me_dir, 'SubProcesses'))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),

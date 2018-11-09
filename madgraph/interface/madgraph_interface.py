@@ -2782,7 +2782,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump']
+                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
+                     'looptools']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -5840,7 +5841,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-        
+
         # Make sure to avoid any border effect on custom_additional_options
         add_options = list(additional_options)
         
@@ -5857,6 +5858,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if args[0] == 'update':
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
+        elif args[0] == 'looptools':
+            self.install_reduction_library(force=True)
+            return
+        
 
         plugin = self.install_plugin
         
@@ -5903,12 +5908,20 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     data = urllib.urlopen(cluster_path)
                 except Exception:
                     continue
+                if data.getcode() != 200:
+                    continue
+                
                 break
+                
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
-            for line in data:
-                split = line.split()
+            for wwwline in data:
+                split = wwwline.split()
+                if len(split)!=2:
+                    if '--source' not in line:
+                        source = {0:'uiuc',1:'ucl'}[index]
+                        return self.do_install(line+' --source='+source, paths=paths, additional_options=additional_options)
                 path[split[0]] = split[1]
 
 ################################################################################
@@ -7037,7 +7050,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
             
             for (block, lhacode) in put_to_one:
-                misc.sprint(block, lhacode)
                 try:
                     param_card[block].get(lhacode).value = 1
                 except:

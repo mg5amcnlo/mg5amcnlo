@@ -6,6 +6,7 @@ c     SM
 c     ----
 c     p p > t t~ (up to 2jet)
 c     p p > w+ (up to 3 jet)
+c     p p > j j w+ (ordering seems important) 
 c     p p > z t t~ j j  (no MLM needed)
 c
 c
@@ -243,13 +244,15 @@ c     the hardest and ipart(2) is the softest.
       integer iddgluon, iddother, idgluon, idother
       logical isqcd
       external isqcd
+      integer get_color
+      external get_color 
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
 
       if (btest(mlevel,4)) then
-        write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
+        write(*,*) 'updating ipart for: ',ida1,ida2,' -> ',imo
       endif
 
       if (btest(mlevel,4)) then
@@ -291,7 +294,6 @@ c           Transmit jet PDG code
      $        ' (',ipdg(imo),')'
          return
       endif        
-
 c     FS clustering
 c     Transmit parton PDG code for parton vertex
       if(isjet(idmo)) then
@@ -370,14 +372,26 @@ c     quark -> quark-gluon or quark-Z or quark-h or quark-W
 c     quark -> gluon-quark or Z-quark or h-quark or W-quark
         ipart(1,imo)=ipart(1,ida2)
         ipart(2,imo)=0
-      else
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda1)).eq.3.and.get_color(idda2).eq.1) then
+c       exotic q > q' Scalar         
+        ipart(1,imo)=ipart(1,ida1)
+        ipart(2,imo)=0
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda2)).eq.3.and.get_color(idda1).eq.1) then
+c       exotic q > Scalar q'
+        ipart(1,imo)=ipart(1,ida2)
+        ipart(2,imo)=0
+      else if (get_color(idmo).eq.1) then
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
          ipart(2,imo)=ipart(1,ida2)
+      else
+         write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
+         write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
+         stop 3
       endif
       
       if (btest(mlevel,4)) then
-        write(*,*) ' -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
+        write(*,*) 'XY -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
       endif
 
       return
@@ -695,6 +709,7 @@ c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
 c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
+c         write(*,*) 'QCD jet status (before n= ',n,'):',(iqjets(i),i=3,nexternal)
         do i=1,2 ! index of the child in the interaction
           do j=1,2 ! j index of the beam
             if(idacl(n,i).eq.ibeam(j))then
@@ -769,7 +784,6 @@ c          The ishft gives the FS particle corresponding to imocl
                  pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
                  pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
                  pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
-
                  if (.not.isqcd(pdgm).and..not.isqcd(pdgid1).and..not.isqcd(pdgid2)) then
                     ! this is to avoid to do weird stuff for w+ w- z (or h h h) 
                     ! this fix an issue for qq_zttxqq G1594.08
@@ -914,8 +928,8 @@ c     Store external jet numbers if first time
             endif
          enddo
          njetstore(iconfig)=njets
-         if (btest(mlevel,4))
-     $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+        if (btest(mlevel,4))
+     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
 c     Recluster without requiring chcluster
          goto 100
       else
