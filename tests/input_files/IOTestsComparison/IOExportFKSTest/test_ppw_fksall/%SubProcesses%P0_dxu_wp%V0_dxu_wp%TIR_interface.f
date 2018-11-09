@@ -96,17 +96,9 @@ C       We changed the TIR library so we must refresh the cache.
       ENDIF
 
       IF (MLREDUCTIONLIB(I_LIB).EQ.4) THEN
-C       Using Golem95
-C       PDEN is dummy for Golem95 so we just initialize it to zero
-C        here so as to use it for the function SWITCHORDER
-        DO I=0,3
-          DO J=1,NLOOPLINE-1
-            PDEN(I,J)=0.0D0
-          ENDDO
-        ENDDO
-        CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
-        CALL GOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
-        RETURN
+C       Golem95 not available
+        WRITE(*,*) 'ERROR:: Golem95 is not interfaced.'
+        STOP
       ENDIF
 
 C     INITIALIZE TIR IF NEEDED

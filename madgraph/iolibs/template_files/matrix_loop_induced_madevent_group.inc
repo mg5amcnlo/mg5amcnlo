@@ -39,6 +39,7 @@ C   This behavior will occur when  Sum_i(|A_i|^2)/Full_ME < MULTICHANNEL_THRES.
 C   When set negative, the security above is removed
 	DOUBLE PRECISION MULTICHANNEL_THRES
 	PARAMETER (MULTICHANNEL_THRES=1.0d-5)
+
 c
 c global (due to reading writting) 
 c

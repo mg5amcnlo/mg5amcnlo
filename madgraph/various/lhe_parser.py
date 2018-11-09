@@ -167,6 +167,7 @@ class Particle(object):
         """associate to this particle the decay in the associate event"""
         
         return self.event.add_decay_to_particle(self.event_id, decay_event)
+
             
     def __repr__(self):
         return 'Particle("%s", event=%s)' % (str(self), self.event)
@@ -1263,26 +1264,28 @@ class Event(list):
                 
             if 'part' == status:
                 part = Particle(line, event=self)
-                if part.E != 0:
+                if part.E != 0 or part.status==-1:
                     self.append(part)
                 elif self.nexternal:
-                        self.nexternal-=1
+                    self.nexternal-=1
             else:
                 if '</event>' in line:
                     line = line.replace('</event>','',1)
                 self.tag += '%s\n' % line
                 
         self.assign_mother()
-        
+    
+    
     def assign_mother(self):
         """convert the number in actual particle"""
-        #Security if not incoming particle. Define a fake particle and set all particle as 
-        # decaying from that fake particle
+        #Security if not incoming particle. Define a fake particle 
         if all(p.status != -1 for p in self):
+            if not self.nexternal:
+                return
             if self.warning_order:
                 Event.warning_order = False
                 logger.warning("Weird format for lhe format: no incoming particle... adding a fake one")
-            
+                raise Exception
             mother = Particle(event=self)
             mother.status = -1
             mother.pid = 0
@@ -1291,8 +1294,10 @@ class Event(list):
             mother.event_id = 0
             self.nexternal += 1
             for p in self[1:]:
-                p.mother1 = 1
-                p.mother2 = 1
+                if isinstance(p.mother1, int) and p.mother1 > 1:
+                    p.mother1 += 1
+                if isinstance(p.mother2, int) and p.mother2 > 1:
+                    p.mother2 += 1
                 p.event_id += 1
             
         
