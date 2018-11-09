@@ -3447,6 +3447,7 @@ c     S=A/(B-x) transformation:
       jac = 1d0/(1d0-expo) * rnd ** (expo/(1d0-expo))
       ! then rescale it between xmin and 1
       x = x * (1d0 - xmin) + xmin
+      omx = omx * (1d0 - xmin)
       jac = jac * (1d0 - xmin)
 
       return 
