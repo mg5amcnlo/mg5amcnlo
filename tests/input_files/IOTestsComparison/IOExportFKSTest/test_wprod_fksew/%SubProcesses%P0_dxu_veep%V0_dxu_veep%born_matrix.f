@@ -127,7 +127,7 @@ C
       DATA (NHEL(I,  14),I=1,4) / 1,-1,-1,-1/
       DATA (NHEL(I,  15),I=1,4) / 1,-1, 1, 1/
       DATA (NHEL(I,  16),I=1,4) / 1,-1, 1,-1/
-      COMMON/BORN_HEL_CONFIGS/NHEL
+      COMMON/PROCESS_NHEL/NHEL
 
       INTEGER USERHEL
       DATA USERHEL/-1/
@@ -332,7 +332,7 @@ C     JAMPs contributing to orders QCD=0 QED=2
 
       END
 
-      SUBROUTINE GET_ME(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE GET_VALUE(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE
 C     
 C     CONSTANT
@@ -365,10 +365,10 @@ C     the include file with the values of the parameters and masses
       RETURN
       END
 
-      SUBROUTINE INITIALISE(PATH)
+      SUBROUTINE INITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.    
       IMPLICIT NONE
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters    
       RETURN
@@ -396,7 +396,7 @@ C
 C     GLOBALS
 C     
       INTEGER HELC(NEXTERNAL,NCOMB)
-      COMMON/BORN_HEL_CONFIGS/HELC
+      COMMON/PROCESS_NHEL/HELC
 
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/BORN_BEAM_POL/POLARIZATIONS

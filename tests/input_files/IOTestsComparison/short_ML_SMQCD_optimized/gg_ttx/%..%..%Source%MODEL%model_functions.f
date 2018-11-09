@@ -34,17 +34,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ENDIF
       END
 
-      DOUBLE COMPLEX FUNCTION CRECMS(CONDITION,EXPR)
-      IMPLICIT NONE
-      LOGICAL CONDITION
-      DOUBLE COMPLEX EXPR
-      IF(CONDITION)THEN
-        CRECMS=DCONJG(EXPR)
-      ELSE
-        CRECMS=DCMPLX(DBLE(EXPR))
-      ENDIF
-      END
-
       DOUBLE COMPLEX FUNCTION REGLOG(ARG_IN)
       IMPLICIT NONE
       DOUBLE COMPLEX TWOPII
@@ -214,16 +203,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ENDIF
       END
 
-      COMPLEX*32 FUNCTION MP_CRECMS(CONDITION,EXPR)
-      IMPLICIT NONE
-      LOGICAL CONDITION
-      COMPLEX*32 EXPR
-      IF(CONDITION)THEN
-        MP_CRECMS=CONJG(EXPR)
-      ELSE
-        MP_CRECMS=CMPLX(REAL(EXPR),KIND=16)
-      ENDIF
-      END
 
       COMPLEX*32 FUNCTION MP_REGLOG(ARG_IN)
       IMPLICIT NONE
