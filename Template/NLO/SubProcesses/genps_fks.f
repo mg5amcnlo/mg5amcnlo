@@ -2233,7 +2233,7 @@ c
          xbjrk(1)=xbjrk_born(1)/(sqrt(1-xi_i_fks)*omega)
          xbjrk(2)=xbjrk_born(2)*omega/sqrt(1-xi_i_fks)
          if (xbjrk(1).gt.1d0.or.xbjrk(2).gt.1d0) then
-            if (xbjrk(1)-1d0.lt.1e-3 .and. xbjrk(2)-1d0.lt.1e-3) then
+            if (xbjrk(1)-1d0.lt.1d-3 .and. xbjrk(2)-1d0.lt.1d-3) then
               xjac=-102
               pass=.false.
               write(*,*) 'WARNING IN GENPS, XBJRK', xbjrk
