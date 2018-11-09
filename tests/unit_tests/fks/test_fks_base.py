@@ -243,7 +243,7 @@ class TestFKSProcess(unittest.TestCase):
         
         self.assertEqual(len(my_multi_process.get('born_processes')),4)
         self.assertEqual(len(my_multi_process_qed.get('born_processes')),4)
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),True)
 #        self.assertEqual(my_multi_process.get('has_fsr'),True)
 #        self.assertEqual(my_multi_process_qed.get('has_isr'),True)
@@ -332,12 +332,12 @@ class TestFKSProcess(unittest.TestCase):
 
         my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions':my_process_definitions})
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),True)
 #        self.assertEqual(my_multi_process.get('has_fsr'),False)
         my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions':my_process_definitions_qed})
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),True)
 #        self.assertEqual(my_multi_process.get('has_fsr'),False)
         
@@ -387,12 +387,12 @@ class TestFKSProcess(unittest.TestCase):
 
         my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions':my_process_definitions})
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),False)
 #        self.assertEqual(my_multi_process.get('has_fsr'),True)
         my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions':my_process_definitions_qed})
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),False)
 #        self.assertEqual(my_multi_process.get('has_fsr'),True)
 
@@ -479,11 +479,11 @@ class TestFKSProcess(unittest.TestCase):
         # mixing QED and QCD ?
         
         self.assertEqual(nborn + nborn1, len(my_multi_process['born_processes']))
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process.get('has_isr'),True)
 #        self.assertEqual(my_multi_process.get('has_fsr'),True)
         self.assertEqual(nborn_qed + nborn1_qed, len(my_multi_process_qed['born_processes']))
-        misc.sprint('Skipping ISR/FSR check')
+#        misc.sprint('Skipping ISR/FSR check')
 #        self.assertEqual(my_multi_process_qed.get('has_isr'),True)
 #        self.assertEqual(my_multi_process_qed.get('has_fsr'),True)
 
@@ -514,7 +514,7 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks = fks_base.FKSProcess(MG.Process(dict))
 
-        misc.sprint('fix rb_links')
+#        misc.sprint('fix rb_links')
 #        target_fks_infos = [ \
 #                # real config 1: g g > g g g
 #                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':True,
@@ -725,7 +725,7 @@ class TestFKSProcess(unittest.TestCase):
                  'need_charge_links':True, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
                     ]
-        misc.sprint('fix rb_links')
+#        misc.sprint('fix rb_links')
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),9)
@@ -943,7 +943,7 @@ class TestFKSProcess(unittest.TestCase):
                 if amp.pdgs == array.array('i', [2, 21, 2, 21, 21])]
         self.assertEqual(len(amp_ugugg), 1)
         self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
-        misc.sprint('fix rb links')
+#        misc.sprint('fix rb links')
         self.assertEqual(amp_ugugg[0].fks_infos,
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
