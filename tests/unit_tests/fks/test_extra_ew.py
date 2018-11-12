@@ -1047,7 +1047,21 @@ class TestAMCatNLOEW(unittest.TestCase):
                         self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
                         self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
 
+    def test_generate_fks_2to1_no_finalstate_confs(self):
+        """check that in the case of a 2->1 process no final state 
+        FKS configurations are generated
+        """
+        self.interface.do_set('include_lepton_initiated_processes False')
+        self.interface.do_generate('u d~ > w+ [QED]')
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 1)
 
+        # there should be 4 configurations, all due to initial-state splitting
+        nconfs = 0
+        for real in self.interface._fks_multi_proc['born_processes'][0].real_amps:
+            for info in real.fks_infos:
+                self.assertTrue(info['j'] in [1,2])
+                nconfs+= 1
+        self.assertEqual(nconfs, 4)
 
 
     def test_combine_equal_processes_qcd_qed(self):
