@@ -4275,6 +4275,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.Pdirs
 
     def get_lhapdf_libdir(self):
+        
+        if 'LHAPATH' in os.environ:
+            for d in os.environ['LHAPATH'].split(':'):
+                if os.path.isdir(d):
+                    return d
+        
+        
         lhapdf_version = self.get_lhapdf_version()
 
         if lhapdf_version.startswith('5.'):
