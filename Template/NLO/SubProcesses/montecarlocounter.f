@@ -474,12 +474,14 @@ c Main routine for MC counterterms
      & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
+      double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner
       logical emscasharp
       double precision emscav_tmp(nexternal)
       double precision emscav_tmp_a(nexternal,nexternal)
+      double precision emscav_tmp_a2(nexternal,nexternal)
       common/cemscav_tmp/emscav_tmp
-      common/cemscav_tmp_a/emscav_tmp_a
+      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
@@ -525,9 +527,10 @@ c Main routine for MC counterterms
 
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal),emsca_bare_a(nexternal,nexternal)
+      double precision emsca_bare_a2(nexternal,nexternal)
       double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
       double precision ptresc_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
 
       double precision ran2,iseed
       external ran2
@@ -1021,30 +1024,38 @@ c Emsca stuff
                     if(qMC.le.scalemax_a(i,j))then
                        emscwgt_a(i,j)=1d0
                        emscav_a(i,j)=emsca_bare_a(i,j)
+                       emscav_a2(i,j)=emsca_bare_a2(i,j)
                     else
                        emscwgt_a(i,j)=0d0
                        emscav_a(i,j)=scalemax_a(i,j)
+                       emscav_a2(i,j)=scalemax_a(i,j)
                     endif
                  else
                     ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
                     if(ptresc_a(i,j).le.0d0)then
                        emscwgt_a(i,j)=1d0
                        emscav_a(i,j)=emsca_bare_a(i,j)
+                       emscav_a2(i,j)=emsca_bare_a2(i,j)
                     elseif(ptresc_a(i,j).lt.1d0)then 
                        emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),one)
                        emscav_a(i,j)=emsca_bare_a(i,j)
+                       emscav_a2(i,j)=emsca_bare_a2(i,j)
                     else
                        emscwgt_a(i,j)=0d0
                        emscav_a(i,j)=scalemax_a(i,j)
+                       emscav_a2(i,j)=scalemax_a(i,j)
                     endif
                  endif
               endif
               emscav_tmp_a(i,j)=emscav_a(i,j)
+              emscav_tmp_a2(i,j)=emscav_a2(i,j)
 c
               ptresc_a(j,i)=ptresc_a(i,j)
               emscwgt_a(j,i)=emscwgt_a(i,j)
               emscav_a(j,i)=emscav_a(i,j)
+              emscav_a2(j,i)=emscav_a2(i,j)
               emscav_tmp_a(j,i)=emscav_tmp_a(i,j)
+              emscav_tmp_a2(j,i)=emscav_tmp_a2(i,j)
            enddo
         enddo
 
@@ -1066,6 +1077,7 @@ c      enddo
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
+      double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner,cflows,jflow
       common/c_colour_flow/jflow
       logical emscasharp
@@ -1074,10 +1086,10 @@ c      enddo
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
       double precision emsca_a(nexternal,nexternal)
-      double precision emsca_bare_a(nexternal,nexternal)
+      double precision emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal,nexternal)
       logical emscasharp_a(nexternal,nexternal)
       double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
 
       common/cqMC/qMC
 
@@ -1106,8 +1118,9 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer npartner
       double precision emscav_tmp(nexternal)
       double precision emscav_tmp_a(nexternal,nexternal)
+      double precision emscav_tmp_a2(nexternal,nexternal)
       common/cemscav_tmp/emscav_tmp
-      common/cemscav_tmp_a/emscav_tmp_a
+      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
       logical lzone(nexternal)
@@ -1149,6 +1162,7 @@ C     To access Pythia8 control variables
       integer nexternal_now
       double precision sumMCsec(max_bcol)
       double precision SCALUP_tmp_S(nexternal,nexternal)
+      double precision SCALUP_tmp_S2(nexternal,nexternal)
       double precision SCALUP_tmp_H(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
@@ -1303,6 +1317,10 @@ c     they correspond to the starting scales for extra radiation;
 c     stored in SCALUP_tmp_S for the colour lines beloinging to
 c     jflow, to be written to LH file. Set to -1 if lines belonging
 c     to other flows
+c     SCALUP_tmp_S and SCALUP_tmp_S2 are chosen in the same way
+c     but with different seeds: the former goes to the LH file as
+c     scale for the S events, the latter is used as starting scale
+c     in the computation of Delta below
       SCALUP_tmp_S=-1d0
       do i=1,nexternal-2
          do j=i+1,nexternal-1
@@ -1312,6 +1330,8 @@ c     to other flows
      &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j)) )then
                SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
                SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
+               SCALUP_tmp_S2(i,j)=emscav_tmp_a2(i,j)
+               SCALUP_tmp_S2(j,i)=emscav_tmp_a2(j,i)
             endif
          enddo
       enddo
@@ -1367,7 +1387,7 @@ c     stored in SCALUP_tmp_H
       enddo
 c
 c     compute wgt_sudakov = Delta as the product of Sudakovs between
-c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
+c     starting scales (SCALUP_tmp_S2) and stopping scales (SCALUP_tmp_H)
       wgt_sudakov=1d0
       i_dipole_counter=0
       nG_S=0
@@ -1392,11 +1412,11 @@ c     starting scales (SCALUP_tmp_S) and stopping scales (SCALUP_tmp_H)
                stop
             endif
             if(xscales(i,j).eq.-1d0)cycle
-c            if(xscales(i,j).eq.-1d0.or.is_dzone(i,j))cycle
+c            if(xscales(i,j).eq.-1d0.or.is_dzone(i,j)
+c              .or.SCALUP_tmp_H(i,j).gt.SCALUP_tmp_S2(i,j))cycle
             wgt_sudakov=wgt_sudakov*
      &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
-     &        pysudakov(SCALUP_tmp_S(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
-c     &        pysudakov(scalemax_a(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
+     &        pysudakov(SCALUP_tmp_S2(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
@@ -3056,9 +3076,9 @@ c Consistency check
       include "run.inc"
       include "born_nhel.inc"
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
-      double precision emsca_bare_a(nexternal,nexternal),ref_scale_a(nexternal,nexternal),
+      double precision emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal,nexternal),
      &scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal),rrnd,ran2,emscainv,
-     &dum(5),xm12,qMC,ptresc_a(nexternal,nexternal)
+     &dum(5),xm12,qMC,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal,nexternal)
       integer ileg,npartner,i,j
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -3067,7 +3087,7 @@ c Consistency check
 
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emscasharp_a,scalemin_a,scalemax_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -3091,11 +3111,15 @@ c Consistency check
                emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.(1d-3*scalemax_a(i,j))
                if(emscasharp_a(i,j))then
                   emsca_bare_a(i,j)=scalemax_a(i,j)
+                  emsca_bare_a2(i,j)=scalemax_a(i,j)
                   emsca_a(i,j)=emsca_bare_a(i,j)
                else
                   rrnd=ran2()
                   rrnd=emscainv(rrnd,1d0)
                   emsca_bare_a(i,j)=scalemin_a(i,j)+rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+                  rrnd=ran2()
+                  rrnd=emscainv(rrnd,1d0)
+                  emsca_bare_a2(i,j)=scalemin_a(i,j)+rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
                   ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
                   if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
                   if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
@@ -3103,6 +3127,7 @@ c Consistency check
             endif
             emsca_a(j,i)=emsca_a(i,j)
             emsca_bare_a(j,i)=emsca_bare_a(i,j)
+            emsca_bare_a2(j,i)=emsca_bare_a2(i,j)
             emscasharp_a(j,i)=emscasharp_a(i,j)
             ptresc_a(j,i)=ptresc_a(i,j)
          enddo
