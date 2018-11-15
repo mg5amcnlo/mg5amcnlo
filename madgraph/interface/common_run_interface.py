@@ -6501,8 +6501,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
-                self.last_editline_pos = posline
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
+                self.last_editline_pos = posline+1
                                                  
             else:
                 ff = open(path,'a')
