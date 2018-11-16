@@ -4093,10 +4093,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not lhapdf_version:
             lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
+                        
+                        
         if not pdfsets_dir:
-            pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+            if 'LHAPATH' in os.environ:
+                for p in os.environ['LHAPATH'].split(':'):
+                    if os.path.exists(p):
+                        pdfsets_dir = p
+                        break
+                else:
+                    del os.environ['LHAPATH'] 
+                    pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()                    
+            else:
+                pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
-                                
+
         if isinstance(filename, int):
             pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
             filename = pdf_info[filename]['filename']
@@ -4107,6 +4119,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
              
         logger.info('Trying to download %s' % filename)
 
+            
         if lhapdf_version.startswith('5.'):
 
             # use the lhapdf-getdata command, which is in the same path as
@@ -4163,12 +4176,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \
                         % (filename, pdfsets_dir))  
-            else:
+            elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
+                misc.sprint(os.environ['LHAPATH'], '-> retry')
+                if pdfsets_dir in os.environ['LHAPATH'].split(':'):
+                    lhapath = os.environ['LHAPATH'].split(':')
+                    lhapath = [p for p in lhapath if os.path.exists(p)]
+                    lhapath.remove(pdfsets_dir)
+                    os.environ['LHAPATH'] = ':'.join(lhapath)
+                    if lhapath:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    else:
+                        raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir) 
+                else:
+                    return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+            else:  
                 raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)                          
             
-        else:
+        else:                    
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
@@ -4245,7 +4277,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
             datadir = os.environ['LHAPDF_DATA_PATH']
-
         elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
@@ -5808,15 +5839,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
                 
                 #3. ensure that those flag are in the shower card
-                for l in libs:
-                    if l not in extralibs:
-                        modify_extralibs = True
-                        extralibs.append(l)
                 for L in paths:
                     if L not in extrapaths:
                         modify_extrapaths = True
                         extrapaths.append(L)
-                        
+                for l in libs:
+                    if l == 'boost_iostreams':
+                        #this one is problematic handles it.
+                        for L in paths + extrapaths:
+                            if misc.glob('*boost_iostreams*', L):
+                                break
+                        else:
+                            continue
+                    if l not in extralibs:
+                        modify_extralibs = True
+                        extralibs.append(l)                        
             # Apply the required modification
             if modify_extralibs:
                 if extralibs:
