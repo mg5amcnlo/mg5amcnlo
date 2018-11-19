@@ -178,7 +178,7 @@ class Block(list):
     
     def rename_keys(self, change_keys):
         
-        misc.sprint(self.param_dict, change_keys, [p.lhacode for p in self])
+
         for old_key, new_key in change_keys.items():
             
             assert old_key in self.param_dict
@@ -509,15 +509,15 @@ class ParamCard(dict):
                     if model_value.imag > 1e-5 * model_value.real:
                         raise Exception, "Width should be real number: particle %s (%s) has mass: %s" 
                     model_value = model_value.real
-                if not misc.equal(model_value, param_value, 4):
+                if not misc.equal(abs(model_value), param_value, 4):
                     modify = True
                     if loglevel == 20:
                         logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
                         logger.log(loglevel,'For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
-                if model_value != param_value:   
-                    self.get('decay').get(abs(particle.get_pdg_code())).value = model_value
+                if abs(model_value) != param_value:   
+                    self.get('decay').get(abs(particle.get_pdg_code())).value = abs(model_value)
 
         return modify
 
@@ -640,6 +640,11 @@ class ParamCard(dict):
                 logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
                                    (block, lhaid, value))
             value = str(value).lower()
+            #special handling for negative mass -> set width negative
+            if block == 'decay':
+                if self['mass'].get(tuple(lhaid)).value < 0:
+                    value = '-%s' % value
+
             fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
@@ -1036,7 +1041,6 @@ class ParamCardIterator(ParamCard):
                     data.append(info[k])
                 else:
                     data.append(0.)
-            misc.sprint(name, bench, data)
             ff.write(formatting % tuple([name] + bench + data))
                 
         if not path:

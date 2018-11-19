@@ -963,13 +963,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return None
 
-    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
+    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None, from_banner=None,
+                       banner=None):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
-                                  self.ask, first_cmd=first_cmd)
+                                  self.ask, first_cmd=first_cmd, from_banner=from_banner,
+                                  banner=banner)
         
         for c in cards:
             if not os.path.isabs(c):
@@ -3240,7 +3242,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         - Check that no width are too small (raise a warning if this is the case)
         3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
-        return self.static_check_param_card(path, self, run=run, dependent=dependent)
+        self.static_check_param_card(path, self, run=run, dependent=dependent)
+        
+        card = param_card_mod.ParamCard(path)
+        for param in card['decay']:
+            width = param.value
+            if width == 0:
+                continue
+            try:
+                mass = card['mass'].get(param.lhacode).value
+            except Exception:
+                continue
+        
+        
         
     @staticmethod
     def static_check_param_card(path, interface, run=True, dependent=False, 
@@ -4138,6 +4152,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
                                                               filename.replace('.LHgrid',''), 
                                         lhapdf_version, alternate_path)
+        elif lhapdf_version.startswith('6.'):
+            # try to do a simple wget
+            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
+            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+            misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
+            misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
+                      cwd=pdfsets_dir)
+            if os.path.exists(pjoin(pdfsets_dir, filename)) or \
+               os.path.isdir(pjoin(pdfsets_dir, filename)):
+                logger.info('%s successfully downloaded and stored in %s' \
+                        % (filename, pdfsets_dir))  
+            else:
+                raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)                          
             
         else:
             raise MadGraph5Error, \
@@ -4342,7 +4371,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
      
     
-    def __init__(self, question, cards=[], mode='auto', *args, **opt):
+    def __init__(self, question, cards=[], from_banner=None, banner=None, mode='auto', *args, **opt):
 
 
         self.load_default()        
@@ -4365,7 +4394,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.all_vars = set()
         self.modified_card = set() #set of cards not in sync with filesystem
                               # need to sync them before editing/leaving
-
+        self.init_from_banner(from_banner, banner)
+        
         #update default path by custom one if specify in cards
         for card in cards:
             if os.path.exists(card) and os.path.sep in cards:
@@ -4379,11 +4409,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
             self.all_vars.union(new_vars)
+            
+
+    def init_from_banner(self, from_banner, banner):
+        """ defined card that need to be initialized from the banner file 
+            from_banner should be a list of card to load from the banner object
+        """
+
+        if from_banner is None:
+            self.from_banner = {}
+            return
+        misc.sprint(from_banner)
+        self.from_banner = {}
+        for card in from_banner:
+            self.from_banner[card] = banner.charge_card(card)
+        return self.from_banner
+    
 
     def get_path(self, name, cards):
         """initialise the path if requested"""
 
         defname = '%s_default' % name
+        
+        if name in self.from_banner:
+            return self.from_banner[name]
+        
         if isinstance(cards, list):
             if name in cards:
                 return True
@@ -4417,7 +4467,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.pname2block = {}
         self.restricted_value = {}
         self.param_card = {}
-        if not self.get_path('param', cards):
+        
+        is_valid_path = self.get_path('param', cards)
+        if not is_valid_path:
+            self.param_consistency = False
+            return []
+        if isinstance(is_valid_path, param_card_mod.ParamCard):
+            self.param_card = is_valid_path
             self.param_consistency = False
             return []
 
@@ -4441,10 +4497,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.pname2block.keys()
         
     def init_run(self, cards):
-        
+      
         self.run_set = []
-        if not self.get_path('run', cards):
+        is_valid_path = self.get_path('run', cards)
+        if not is_valid_path:
             return []
+        if isinstance(is_valid_path, banner_mod.RunCard):
+            self.run_card = is_valid_path
+            return []
+        
         
         try:
             self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
@@ -4454,6 +4515,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             run_card_def = banner_mod.RunCard(self.paths['run_default'])
         except IOError:
             run_card_def = {}
+
 
         if run_card_def:
             if self.run_card:
@@ -5129,7 +5191,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning(str(e))
             return
 
-        
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
@@ -5206,6 +5267,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
+
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
@@ -5262,7 +5324,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
+
             if args[start] not in self.run_set:
+                if card in self.from_banner or 'run' in self.from_banner:
+                    raise Exception, "change not allowed for this card: event already generated!"
                 args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
             if args[start] in self.conflict and card == '':
@@ -5279,9 +5344,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('remove information %s from the run_card' % args[start],'$MG:BOLD')
                     del self.run_card[args[start]]
             else:
-                if args[0].startswith('sys_') or \
-                   args[0] in self.run_card.list_parameter or \
-                   args[0] in self.run_card.dict_parameter:
+                lower_name = args[0].lower()
+                if lower_name.startswith('sys_') or \
+                   lower_name in self.run_card.list_parameter or \
+                   lower_name in self.run_card.dict_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
@@ -5626,6 +5692,30 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception, "Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\"."
             
+            # check the status of small width status from LO
+            for param in self.param_card['decay']:
+                width = param.value
+                if width == 0 or isinstance(width,str):
+                    continue
+                try:
+                    mass = self.param_card['mass'].get(param.lhacode).value
+                except Exception:
+                    continue
+                if isinstance(mass,str):
+                    continue
+                
+                if mass:
+                    if abs(width/mass) < self.run_card['small_width_treatment']:
+                        logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
+                          "Cross-section will be rescaled according to NWA if needed."  +
+                          "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
+                          param.lhacode[0], mass*self.run_card['small_width_treatment'], width)
+                    elif abs(width/mass) < 1e-12:
+                        logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                    if CommonRunCmd.sleep_for_error:
+                        time.sleep(5)
+                        CommonRunCmd.sleep_for_error = False
+
 
         ########################################################################
         #       NLO specific check

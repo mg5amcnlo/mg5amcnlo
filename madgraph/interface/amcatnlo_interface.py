@@ -445,7 +445,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
+        #validate_model will reset self._generate_info; to avoid
+        #this store it
+        geninfo = self._generate_info
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
+        self._generate_info = geninfo
 
         #now generate the amplitudes as usual
         #self.options['group_subprocesses'] = 'False'

@@ -93,7 +93,7 @@ class TestMadSpin(unittest.TestCase):
         subprocess.call([pjoin(MG5DIR, 'MadSpin', 'madspin'),
                          pjoin(self.path, 'test_hepmc')],
                         cwd=pjoin(self.path),
-                        stdout=stdout,stderr=stdout)
+                        stdout=stdout,stderr=stderr)
         self.assertTrue(os.path.exists(pjoin(self.path, 'test_decayed.lhe.gz')))
         lhe = lhe_parser.EventFile(pjoin(self.path, 'test_decayed.lhe.gz'))
         self.assertEqual(10, len(lhe))
@@ -111,4 +111,56 @@ class TestMadSpin(unittest.TestCase):
                     
         self.assertEqual(nb_dec, 116)
         self.assertEqual(nb_photon, 116)
+
+    def test_lhe_none_decay(self):
+        """ """
         
+        cwd = os.getcwd()
+        
+        files.cp(pjoin(MG5DIR, 'tests', 'input_files', 'test_spinmode_none.lhe.gz'), self.path)
+
+
+        fsock = open(pjoin(self.path, 'test_hepmc'),'w')
+        text = """
+        set spinmode none
+        import ./test_spinmode_none.lhe.gz
+        decay z > mu+ mu-
+        launch
+        """
+        
+        fsock.write(text)
+        fsock.close()
+
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        subprocess.call([pjoin(MG5DIR, 'MadSpin', 'madspin'),
+                         pjoin(self.path, 'test_hepmc')],
+                        cwd=pjoin(self.path),
+                        stdout=stdout,stderr=stderr)
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'test_spinmode_none_decayed.lhe.gz')))
+        lhe = lhe_parser.EventFile(pjoin(self.path, 'test_spinmode_none_decayed.lhe.gz'))
+        self.assertEqual(100, len(lhe))
+        
+        nb_dec = 0
+        nb_muon = 0
+        for event in lhe:
+            muon_in = 0
+            self.assertEqual(event.nexternal, len(event))
+            for particle in event:
+                if particle.pdg == 23:
+                    self.assertEqual(particle.status,2)
+                    nb_dec += 1
+                if particle.pdg == 13:
+                    nb_muon += 1
+                    muon_in +=1
+            self.assertEqual(muon_in, 1)
+        self.assertEqual(nb_dec, 189)
+        self.assertEqual(nb_muon, 100)

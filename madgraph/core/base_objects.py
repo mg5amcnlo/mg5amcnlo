@@ -1487,7 +1487,7 @@ class Model(PhysicsObject):
     def change_parameter_name_with_prefix(self, prefix='mdl_'):
         """ Change all model parameter by a given prefix.
         Modify the parameter if some of them are identical up to the case"""
-
+        
         lower_dict={}
         duplicate = set()
         keys = self.get('parameters').keys()
@@ -1568,7 +1568,13 @@ class Model(PhysicsObject):
             for key in self['couplings'].keys():
                 for coup in self['couplings'][key]:
                     coup.expr = rep_pattern.sub(replace, coup.expr)
-                    
+
+            # change form-factor
+            ff = [l.formfactors for l in self['lorentz'] if hasattr(l, 'formfactors')]
+            ff = set(sum(ff,[])) # here we have the list of ff used in the model
+            for f in ff:
+                f.value = rep_pattern.sub(replace, f.value)
+
             # change mass/width
             for part in self['particles']:
                 if str(part.get('mass')) in one_change:

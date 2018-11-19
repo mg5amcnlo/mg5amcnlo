@@ -21,10 +21,12 @@ import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
+import madgraph.various.misc as misc
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
     pass
+
 
 #===============================================================================
 # HelasCallWriter
@@ -41,6 +43,19 @@ class HelasCallWriter(base_objects.PhysicsObject):
     # Dictionaries from spin states to letters in Helas call
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
                    99:'P'}
+    
+    @staticmethod
+    def customize_argument_for_all_other_helas_object(call, arg):
+        """ Place holder for PLUGIN/...
+            (used by madevent output for small width handling) 
+        """
+        return call, arg
+        
+    @staticmethod
+    def default_customize_argument_for_all_other_helas_object(call,arg):
+        return call,arg  
+    #customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
+    #default_customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
 
     def default_setup(self):
 
@@ -84,6 +99,11 @@ class HelasCallWriter(base_objects.PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['model', 'wavefunctions', 'amplitudes']
+
+
+
+    
+     
 
     def get_loop_amp_helas_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -1197,6 +1217,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
 
         # ALL ARGUMENT FORMATTED ###############################################
+        call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
         # Store the result.
         call = call % arg
         # Now we have a line correctly formatted
@@ -1208,6 +1229,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
+
+
 
     def get_loop_amplitude_helas_calls(self, loop_matrix_element):
         """ Returns a list of strings corresponding to the Helas calls for each 

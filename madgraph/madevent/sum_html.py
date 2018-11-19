@@ -699,7 +699,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
         P_comb = Combine_results(Pdir)
         
         if jobs:
-            for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+            for job in filter(lambda j: j['p_dir'] in Pdir, jobs):
                     P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
         elif folder_names:
