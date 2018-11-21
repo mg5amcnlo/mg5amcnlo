@@ -3815,7 +3815,7 @@ c Unphysical kinematics: set matrix elements equal to zero
       if (iextra_cnt.gt.0)
      1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
-      call Qterms_reduced_timelike(j_type,i_type,ch_i,ch_j,t,z,Q)
+      call Qterms_reduced_timelike(j_type,i_type,ch_j,ch_i,t,z,Q)
       wgt=0d0
       do iord = 1, nsplitorders
          if (.not.split_type(iord) .or. (iord.ne.qed_pos .and.
