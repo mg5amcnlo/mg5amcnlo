@@ -96,6 +96,12 @@ class UFOModel(object):
             self.CTvertices = list(model.all_CTvertices)
         else:
             self.CTvertices = []
+        # UFO NLO extension
+        if hasattr(model, 'all_CTparameters'):
+            self.CTparameters = list(model.all_CTparameters)
+        else:
+            self.CTparameters = []
+
         
         #translate for how to write the python file
         if 'self.expr = expression' in open(pjoin(self.modelpath, 'object_library.py')).read():
@@ -132,6 +138,7 @@ class UFOModel(object):
         self.write_functions(outputdir)
         self.write_propagators(outputdir)
         self.write_ctvertices(outputdir)
+        self.write_ctparameters(outputdir)
         
         self.write_external_files(outputdir)
         self.write_restrict_card(outputdir)
@@ -144,10 +151,7 @@ class UFOModel(object):
         to_change = {}
         to_change.update(self.translate)
         to_change.update(self.old_new)
-        for particle in self.particles:
-            if hasattr(particle, 'replace') and particle.replace:
-                misc.sprint(particle.get('name'), particle.replace.get('name'))
-        
+
         pattern = re.compile(r'\b(%s)\b' % ('|'.join(to_change)))
         
         #need to check that all particle are written correctly <- Fix potential issue
@@ -204,19 +208,12 @@ class UFOModel(object):
                 # all added -> write it
                 param_card.write(pjoin(outputdir, p), precision=7)
 
-                        
-                    
-                    
-                    
-                
-        
-
     def format_param(self, param):
         """convert param to string in order to have it written correctly for the 
         UFO file"""
 
         if isinstance(param, basestring): 
-            return "'%s'" % param.replace('\'', '\\\'').replace('\"', '\\\"')
+            return "'%s'" % param.replace("\\", "\\\\").replace('\'', '\\\'').replace('\"', '\\\"')
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
             return "%s" % param
@@ -271,6 +268,9 @@ class UFOModel(object):
                 add_space = len(text)
             else:
                 add_space = 0
+                
+            if ',' in data:
+                continue 
             
             try:
                 expr = getattr(obj, data)
@@ -293,6 +293,10 @@ class UFOModel(object):
                                                   if name not in args]
         else:
             other_attr = obj.__dict__.keys()
+        
+        if str(obj.__class__.__name__) == 'CTParameter' and 'nature' in other_attr:
+            logger.critical('UFO model is outdated (including some bugs). Please update object_library.py to latest version')
+            other_attr.remove('nature')
         
         other_attr.sort()
         if other_attr == ['GhostNumber', 'LeptonNumber', 'Y', 'partial_widths', 'selfconjugate']:
@@ -416,6 +420,26 @@ from object_library import all_parameters, Parameter
         ff.writelines(text)
         ff.close()
         return
+
+    def write_ctparameters(self, outputdir):
+        """ """
+        if not self.CTparameters:
+            return
+        
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_CTparameters, CTParameter
+
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
+"""
+
+        text += self.create_file_content(self.CTparameters)
+        ff = open(os.path.join(outputdir, 'CT_parameters.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
 
     def write_orders(self, outputdir):
         """ """
@@ -588,6 +612,9 @@ from object_library import all_propagators, Propagator
             elif  p_plugin.mass.name.lower() == 'zero':
                 pass
             else:
+                misc.sprint(p_base.mass.value, p_plugin.mass.value, dir(p_base.mass))
+                misc.sprint(p_base.mass.nature, p_plugin.mass.nature)
+                misc.sprint(self.old_new)
                 raise USRMODERROR, 'Some inconsistency in the mass assignment in the model\n' + \
              '     Mass: %s and %s\n' %(p_base.mass.name, p_plugin.mass.name) + \
              '     conflict name %s\n' % self.old_new + \
@@ -657,6 +684,29 @@ from object_library import all_propagators, Propagator
                 self.old_new[parameter.name] = old_param.name
             #            self.add_internal_parameter(iden_param)
         
+        elif parameter.lhablock.lower() in ['mass', 'decay'] and int(parameter.lhacode[0]) in identify_pid:
+            # this means that the parameter is an internal parameter in the original model...
+            #find it via the particle name
+            orig_particle = self.particle_dict[lhacode[0]]
+            if parameter.lhablock.lower() == 'mass':
+                old_param = orig_particle.mass
+            else:
+                old_param = orig_particle.width
+            if old_param.name.lower() == 'zero':
+                #Just add the new parameter to the current list
+                self.parameters.append(parameter) 
+                self.new_external.append(parameter)                
+            else:
+                logger.info('The two model defines the parameter for  block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\'\n'\
+                      %  (parameter.lhablock.lower(), lhacode[0], parameter.name, old_param.name) + \
+                '     We will merge those two parameters in a single one')
+                if parameter.name in self.old_new.values():
+                    key = [k for k in self.old_new if self.old_new[k] == parameter.name][0]
+                    self.old_new[key] = old_param.name
+                    self.old_new[parameter.name] = old_param.name
+                else:
+                    self.old_new[parameter.name] = old_param.name
+                    #            self.add_internal_parameter(iden_param)                            
         else:
             #Just add the new parameter to the current list
             self.parameters.append(parameter) 

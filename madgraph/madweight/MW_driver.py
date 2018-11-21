@@ -48,6 +48,21 @@ class RunningMW(object):
         else:
             self.allow_event = lambda x: True
     
+    class output_handler(object):
+        
+        def __init__(self, card_nb, sample_nb):
+            self.fsock = open('output_%s_%s.xml' % (card_nb, sample_nb), 'w')
+            self.fsock.write('<card id=\'%s\'>\n' % card_nb)
+
+        def  __enter__(self):
+            return self.fsock
+            
+        def __exit__(self, type, value, traceback):
+            if type is None:
+                self.fsock.write('</card>\n')
+            else:
+                self.fsock.write('<failmsg>%s\n%s\n%s</failmsg></card>\n' % (type, value, traceback))
+
     def run(self):
         """Run the computation"""
 
@@ -56,18 +71,16 @@ class RunningMW(object):
         fsock.writelines(str(self.mw_int_points)+'\n')
         fsock.close()
 
-        self.fsock = open('output_%s_%s.xml' % (self.card_nb, self.sample_nb), 'w')
-        self.fsock.write('<card id=\'%s\'>\n' % self.card_nb)
-        while self.get_next_event(create=True):
-            if not self.debug:
-                subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
-            else:
-                print 'submit in debug mode'
+        with self.output_handler(self.card_nb, self.sample_nb) as self.fsock:
+            while self.get_next_event(create=True):
+                if not self.debug:
+                    subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
+                else:
+                    print 'submit in debug mode'
                 
-                os.system('echo "./comp_madweight" > log.txt')
-                os.system('bash log.txt')
-            self.get_one_job_result()
-        self.fsock.write('</card>')
+                    os.system('echo "./comp_madweight" > log.txt')
+                    os.system('bash log.txt')
+                self.get_one_job_result()
     
     def get_next_event(self, create=True, update_event_nb=True):
         """prepare the verif.lhco"""

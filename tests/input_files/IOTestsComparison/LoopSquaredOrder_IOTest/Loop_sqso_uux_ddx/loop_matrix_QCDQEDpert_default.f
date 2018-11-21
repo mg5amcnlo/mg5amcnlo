@@ -53,9 +53,9 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=7)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=70, NLOOPGROUPS=37, NCTAMPS=51)
+      PARAMETER (NLOOPS=70, NLOOPGROUPS=37, NCTAMPS=58)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=121)
+      PARAMETER (NLOOPAMPS=128)
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
@@ -966,7 +966,7 @@ C         In general, only wavefunction renormalization counterterms
 C         (if needed by the loop UFO model) are of this type.
 C         Quite often and in principle for all loop UFO models from 
 C         FeynRules, there are none of these type of counterterms.
-
+          CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
@@ -2150,7 +2150,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=121)
+      PARAMETER (NLOOPAMPS=128)
 C     
 C     ARGUMENTS
 C     
@@ -2169,11 +2169,11 @@ C
       DATA (LOOPAMPORDERS(I),I= 36, 40) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 41, 45) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 46, 50) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I= 51, 55) /    4,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 56, 60) /    3,    3,    3,    3,    3/
+      DATA (LOOPAMPORDERS(I),I= 51, 55) /    4,    3,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 56, 60) /    4,    4,    4,    3,    3/
       DATA (LOOPAMPORDERS(I),I= 61, 65) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 66, 70) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I= 71, 75) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 66, 70) /    3,    3,    3,    3,    3/
+      DATA (LOOPAMPORDERS(I),I= 71, 75) /    3,    3,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 76, 80) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 81, 85) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 86, 90) /    4,    4,    4,    4,    4/
@@ -2183,7 +2183,8 @@ C
       DATA (LOOPAMPORDERS(I),I=106,110) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=111,115) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=116,120) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I=121,121) /    4/
+      DATA (LOOPAMPORDERS(I),I=121,125) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=126,128) /    4,    4,    4/
 C     -----------
 C     BEGIN CODE
 C     -----------

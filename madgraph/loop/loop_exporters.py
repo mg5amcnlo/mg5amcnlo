@@ -38,6 +38,7 @@ import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
+import madgraph.various.banner as banner_mod
 import madgraph.various.misc as misc
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.iolibs.file_writers as writers
@@ -55,7 +56,7 @@ import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
-import madgraph.various.banner as banner_mod
+
 
 pjoin = os.path.join
 
@@ -155,7 +156,7 @@ class LoopExporterFortran(object):
         elif self.dependencies=='external':
             if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
                 logger.info('Compiling CutTools. This has to be done only once and'+\
-                                  ' can take a couple of minutes.','$MG:color:BLACK')
+                                  ' can take a couple of minutes.','$MG:BOLD')
                 current = misc.detect_current_compiler(os.path.join(\
                                                   self.cuttools_dir,'makefile'))
                 new = 'gfortran' if self.fortran_compiler is None else \
@@ -235,14 +236,38 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def __init__(self, *args, **opts):
         super(LoopProcessExporterFortranSA,self).__init__(*args,**opts)
         self.unique_id=0 # to allow collier to distinguish the various loop subprocesses
-
+        self.has_loop_induced = False
+        
     def copy_template(self, model):
         """Additional actions needed to setup the Template.
         """
         super(LoopProcessExporterFortranSA, self).copy_template(model)
 
         self.loop_additional_template_setup()
-    
+        
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        """create the global information for loops"""
+        
+        super(LoopProcessExporterFortranSA,self).finalize(matrix_element,
+                                             cmdhistory, MG5options, outputflag)
+        
+
+        MLCard = banner_mod.MadLoopParam(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
+        # For loop-induced processes and *only* when summing over all helicity configurations
+        # (which is the default for standalone usage), COLLIER is faster than Ninja.
+        if self.has_loop_induced:
+            MLCard['MLReductionLib'] = "7|6|1"
+            # Computing the poles with COLLIER also unnecessarily slows down the code
+            # It should only be set to True for checks and it's acceptable to remove them
+            # here because for loop-induced processes they should be zero anyway.
+            # We keep it active for non-loop induced processes because COLLIER is not the
+            # main reduction tool in that case, and the poles wouldn't be zero then
+            MLCard['COLLIERComputeUVpoles'] = False
+            MLCard['COLLIERComputeIRpoles'] = False
+
+        MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
+        MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
+            
     def write_f2py_makefile(self):
         return
     
@@ -255,6 +280,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         open(output_path,'w').writelines(file)
         # Make it executable
         os.chmod(output_path, os.stat(output_path).st_mode | stat.S_IEXEC)
+       
     
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
@@ -384,18 +410,13 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
-        
-        # Also put a copy of MadLoopParams.dat into MadLoopParams_default.dat
-        shutil.copy(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'),
-                      pjoin(self.dir_path, 'Cards','MadLoopParams_default.dat'))
 
-        self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.loop_dir,'StandAlone',
-                                                  'Cards', 'MadLoopParams.dat'))
-        # write the output file
-        self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
-                                                           "MadLoopParams.dat"))
+        cp(pjoin(self.loop_dir,'StandAlone/Cards/MadLoopParams.dat'),
+           pjoin(self.dir_path, 'Cards/MadLoopParams_default.dat'))
 
-        # We might need to give a different name to the MadLoop makefile\
+        ln(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'), pjoin(self.dir_path,'SubProcesses'))
+
+        # We might need to give a different name to the MadLoop makefile
         shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
                 pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
 
@@ -804,7 +825,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             n_squared_split_orders = 1
 
         LoopInduced = not matrix_element.get('processes')[0].get('has_born')
-        
+        self.has_loop_induced = max(LoopInduced, self.has_loop_induced)
         # Force the computation of loop color flows for loop_induced processes
         ComputeColorFlows = self.compute_color_flows or LoopInduced
         # The variable AmplitudeReduction is just to make the contextual
@@ -814,12 +835,12 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         # is useful when there is more than one squared split order config.
         TIRCaching = AmplitudeReduction or n_squared_split_orders>1
         MadEventOutput = False
-
         return {'LoopInduced': LoopInduced,
                 'ComputeColorFlows': ComputeColorFlows,
                 'AmplitudeReduction': AmplitudeReduction,
                 'TIRCaching': TIRCaching,
                 'MadEventOutput': MadEventOutput}
+
 
     #===========================================================================
     # generate_subprocess_directory
@@ -1978,7 +1999,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 
                 
                 logger.info('Compiling IREGI. This has to be done only once and'+\
-                             ' can take a couple of minutes.','$MG:color:BLACK')
+                             ' can take a couple of minutes.','$MG:BOLD')
                 
                 current = misc.detect_current_compiler(os.path.join(\
                                                     libpath,'makefile_ML5_lib'))
@@ -2042,6 +2063,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                              cmdhistory, MG5options, outputflag)
         self.write_global_specs(matrix_element)
     
+
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):
@@ -3022,7 +3044,18 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         context['MadEventOutput'] = True
         return context
         
-    
+    #===========================================================================
+    # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
+    #===========================================================================
+    def write_procdef_mg5(self, file_pos, modelname, process_str):
+        """ write an equivalent of the MG4 proc_card in order that all the Madevent
+        Perl script of MadEvent4 are still working properly for pure MG5 run.
+        Not needed for StandAlone so we need to call the correct one 
+        """
+        
+        return export_v4.ProcessExporterFortranMEGroup.write_procdef_mg5(
+            self, file_pos, modelname, process_str)
+
     def get_source_libraries_list(self):
         """ Returns the list of libraries to be compiling when compiling the
         SOURCE directory. It is different for loop_induced processes and 

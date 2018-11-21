@@ -108,7 +108,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
 #   ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
-    def test_long_mssm_vs_stored_HCR_gg_gogo_QCD(self):
+    def test_short_mssm_vs_stored_HCR_gg_gogo_QCD(self):
         proc = 'gg_gogo_mssm_QCD'
         compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",

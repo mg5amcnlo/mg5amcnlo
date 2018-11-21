@@ -275,7 +275,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if not self.options['cluster_temp_path']:
             if self.options['run_mode'] == 2:
                 logger.info('Options cluster_temp_path is required for MW run. Trying to run with /tmp',
-                                '$MG:color:BLACK')
+                                '$MG:BOLD')
                 self.exec_cmd('set cluster_temp_path /tmp --no_save')
             elif self.options['cluster_type'] != 'condor':
                 raise Exception, 'cluster_temp_path needs to be define for MW. Please retry.'

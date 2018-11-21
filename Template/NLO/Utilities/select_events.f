@@ -142,6 +142,7 @@ c
      &               (itype.eq.4.and.XWGTUP.lt.0.d0) )
      &             ievts_ok=ievts_ok+1
                endif
+               if(itype.eq.(1+npart-nBorn))ievts_ok=ievts_ok+1
             endif
             i=i+1
          enddo
@@ -228,6 +229,9 @@ c
       enddo
       write(ofile,*)'</LesHouchesEvents>'
       if(itype.ge.3)write(*,*)'The sum of the weights is:',sum_wgt
+
+      write(*,*)'  '
+      write(*,*)'Number of events kept:',ievts_ok
 
       write(*,*)'  '
       write(*,*)'Number of events kept:',ievts_ok

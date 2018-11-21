@@ -221,13 +221,13 @@ class TestMadWeight(unittest.TestCase):
                  set mw_parameter 13 80 90
                  set mw_run MW_int_points 100
                  set mw_run MW_int_refine 100
+                 set ebeam1 7000
+                 set ebeam2 7000
+                 set pdlabel cteq6l1
                  launch -i
                  refine 0.01
                  set mw_run MW_int_points 1000
                  set mw_run MW_int_refine 10000
-                 set ebeam1 7000
-                 set ebeam2 7000
-                 set pdlabel cteq6l1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
@@ -262,7 +262,6 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)

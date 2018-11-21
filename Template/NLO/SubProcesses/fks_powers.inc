@@ -1,8 +1,3 @@
-      double precision a_f_damp, c_f_damp, one_f_damp
-      parameter (a_f_damp=1d0)
-      parameter (c_f_damp=1d0)
-      parameter (one_f_damp=2d0)
-
       double precision fks_a, fks_b
       parameter (fks_a=1.5d0)
       parameter (fks_b=1.5d0)

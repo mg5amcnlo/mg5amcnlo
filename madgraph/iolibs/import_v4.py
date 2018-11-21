@@ -48,9 +48,9 @@ def import_model(model_path, mgme_dir = MG4DIR, absolute=True, web=True):
             raise
         import models.import_ufo as import_ufo
         if model_path_old.endswith('_v4'):
-            found = import_ufo.import_model_from_db(model_path_old)
+            found = import_ufo.import_model_from_db(model_path_old, local_dir=True)
         else:
-            found = import_ufo.import_model_from_db(model_path_old+'_v4')
+            found = import_ufo.import_model_from_db(model_path_old+'_v4', local_dir=True)
              
         if found and absolute:
             return import_model(model_path_old, mgme_dir, absolute, web=False)

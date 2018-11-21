@@ -1,3 +1,44 @@
+      logical FUNCTION dummy_cuts(P)
+C**************************************************************************
+C     INPUT:
+C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            COMMON/JETCUTS/   CUTS ON JETS
+C     OUTPUT:
+C            TRUE IF EVENTS PASSES ALL CUTS LISTED
+C**************************************************************************
+      IMPLICIT NONE
+c
+c     Constants
+c
+      include 'genps.inc'
+      include 'nexternal.inc'
+C
+C     ARGUMENTS
+C
+      REAL*8 P(0:3,nexternal)
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+c
+c     particle identification
+c
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL),IS_A_ONIUM(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      logical  do_cuts(nexternal)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
+     . IS_A_ONIUM, do_cuts
+
+      dummy_cuts=.true.
+
+      return
+      end
+
       subroutine get_dummy_x1(sjac, X1, R, pbeam1, pbeam2, stot, shat)
       implicit none
       include 'maxparticles.inc'

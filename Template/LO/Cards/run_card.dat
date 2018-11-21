@@ -10,6 +10,9 @@
 #   Lines starting with a '# ' are info or comments                  *
 #                                                                    *
 #   mind the format:   value    = variable     ! comment             *
+#                                                                    *
+#   To display more options, you can type the command:               *
+#      update full_run_card                                          *
 #*********************************************************************
 #
 #*******************                                                 
@@ -36,16 +39,13 @@
      %(lpp2)s        = lpp2    ! beam 2 type
      %(ebeam1)s     = ebeam1  ! beam 1 total energy in GeV
      %(ebeam2)s     = ebeam2  ! beam 2 total energy in GeV
-#*********************************************************************
-# Beam polarization from -100 (left-handed) to 100 (right-handed)    *
-#*********************************************************************
-     %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
-     %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
+$beam_pol
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
      %(pdlabel)s    = pdlabel     ! PDF set                                     
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+$ion_pdf
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
@@ -96,7 +96,7 @@
 #                                                                    
 #
 #*********************************************************************
-# BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$" and decay  
+# BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$$" and decay  
 #*********************************************************************
   %(bwcutoff)s  = bwcutoff      ! (M+/-bwcutoff*Gamma)
 #*********************************************************************
@@ -276,15 +276,6 @@
 #*********************************************************************
    %(use_syst)s  = use_syst      ! Enable systematics studies
 #
-#**************************************
-# Parameter of the systematics study
-#  will be used by SysCalc (if installed)
-#**************************************                                  
-#
-%(sys_scalefact)s = sys_scalefact  # factorization/renormalization scale factor
-%(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
-%(sys_matchscale)s = sys_matchscale # variation of merging scale
-# PDF sets and number of members (0 or none for all members).
-%(sys_pdf)s = sys_pdf # list of pdf sets
-# MSTW2008nlo68cl.LHgrid 1  = sys_pdf
-#
+%(systematics_program)s = systematics_program ! none, systematics [python], SysCalc [depreceted, C++]
+%(systematics_arguments)s = systematics_arguments ! see: https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Systematics#Systematicspythonmodule
+$syscalc

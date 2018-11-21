@@ -13,6 +13,9 @@
 #                                                                      *
 #   Some of the values of variables can be list. These can either be   *
 #   comma or space separated.                                          *
+#                                                                      *
+#   To display additional parameter, you can use the command:          *
+#      update to_full                                                  *
 #***********************************************************************
 #
 #*******************                                                 

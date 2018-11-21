@@ -16,7 +16,7 @@
 """Unit test library for the UFO parsing"""
 
 import tests.unit_tests as unittest
-
+import madgraph.interface.master_interface as Cmd
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 #===============================================================================
@@ -26,10 +26,15 @@ class UFOParserTest(unittest.TestCase):
     """Test class for ufo_expression_parsers.py"""
 
     def setUp(self):
+        if not hasattr(UFOParserTest, 'model'):
+            self.cmd = Cmd.MasterCmd()
+            self.cmd.exec_cmd("import model loop_qcd_qed_sm")
+            UFOParserTest.model = self.cmd._curr_model
+            
         if not hasattr(self, 'calc'):
-            self.calc = parsers.UFOExpressionParserFortran()
+            self.calc = parsers.UFOExpressionParserFortran(UFOParserTest.model)
         if not hasattr(self, 'mp_calc'):
-            self.mp_calc = parsers.UFOExpressionParserMPFortran()
+            self.mp_calc = parsers.UFOExpressionParserMPFortran(UFOParserTest.model)
 
     def tearDown(self):
         pass
@@ -57,7 +62,11 @@ class UFOParserTest(unittest.TestCase):
                   ('1+3*5 if a else 8*3+6',
     'CONDIF(DCMPLX(a).NE.(0d0,0d0),DCMPLX(1.000000d+00+3.000000d+00*5.000000d+00),DCMPLX(8.000000d+00*3.000000d+00+6.000000d+00))'),
                 ('( (complex(0,1)*G**3)/(48.*cmath.pi**2) if MT else 0 )',
-                  '(CONDIF(DCMPLX(mt).NE.(0d0,0d0),DCMPLX((DCMPLX(0.000000d+00,1.000000d+00)*g**3)/(4.800000d+01*pi**2)),DCMPLX(0.000000d+00)))')
+                  '(CONDIF(DCMPLX(mt).NE.(0d0,0d0),DCMPLX((DCMPLX(0.000000d+00,1.000000d+00)*g**3)/(4.800000d+01*pi**2)),DCMPLX(0.000000d+00)))'),
+                ('(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) + 2*cmath.pi*1j if (z.real < 0.0 and z.imag < 0.0) else cmath.log(z) ) )',
+                 '(CONDIF(dimag(z).EQ.0.000000d+00.AND.dble(z).EQ.0.000000d+00,DCMPLX(0.000000d+00),DCMPLX((CONDIF((dble(z).LT.0.000000d+00.AND.dimag(z).LT.0.000000d+00),DCMPLX(log(z)+2.000000d+00*pi*DCMPLX(0d0, 1.000000d+00)),DCMPLX(log(z)))))))'),
+                 ('recms(CMSParam==1.0 and WT != 0.0,4 + reglog(64) + 3*reglog(cmath.pi) + 3*reglog(MU_R**2/MT**2))',
+                  'RECMS(cmsparam.EQ.1.000000d+00.AND.wt.NE.0.000000d+00,DCMPLX(4.000000d+00+reglog(DCMPLX(6.400000d+01))+3.000000d+00*reglog(DCMPLX(pi))+3.000000d+00*reglog(DCMPLX(mu_r**2/mt**2))))')
 #       Bah, we don't aim at supporting precedence for entangled if statements.
 #                 ,('1 if a else 2 if b else 3',
 #                  '')
@@ -187,7 +196,9 @@ class UFOParserTest(unittest.TestCase):
                  ('(cmath.log(x)/x).imag', 'dimag(log(x)/x)'),
                  ('3*x.imag', '3.000000d+00*dimag(x)'),
                  ('x*y.imag', 'x*dimag(y)'),
-                  ('(x*y.imag)', '(x*dimag(y))')
+                  ('(x*y.imag)', '(x*dimag(y))'),
+                  ('complexconjugate(z)', 'conjg(DCMPLX(z))'),
+                  ('z.conjugate()', 'conjg(DCMPLX(z))')
                  ]
         
         for toParse, sol in tests:
@@ -211,3 +222,48 @@ class UFOParserTest(unittest.TestCase):
         
         for toParse, sol in tests:
             self.assertEqual(self.mp_calc.parse(toParse), sol)  
+
+    def test_parse_special_fortran_fct(self):
+        """Test that we parse a few special functions defined in ufo parsers"""
+
+        tests = [('cond(a,b,c)','COND(DCMPLX(a),DCMPLX(b),DCMPLX(c))'),
+                 ('reglog(z)','reglog(DCMPLX(z))'),
+                 ('reglogp(z)','reglogp(DCMPLX(z))'),
+                 ('reglogm(z)','reglogm(DCMPLX(z))'),
+                 ('arg(z)','arg(DCMPLX(z))'),
+                 ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))'),
+                 ('grreglog(logswitch,z1,z2)','grreglog(DBLE(logswitch),DCMPLX(z1) , DCMPLX(z2))'),
+                 ('regsqrt(z)','regsqrt(DCMPLX(z))'),
+                 ('crecms(cms==1.0,z)','crecms(cms.EQ.1.000000d+00,DCMPLX(z))'),
+                 ('abs(1.0)', 'ABS(1.000000d+00)'),
+                 ('abs(float(1))' , 'ABS(REAL(1.000000d+00))'),
+                 ('abs(int(1))' , 'ABS(INTEGER(1.000000d+00))')
+                 ]
+        
+
+        for toParse, sol in tests:
+            self.assertEqual(self.calc.parse(toParse), sol)
+        
+        # same for MP
+        tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),
+                 ('reglog(z)','mp_reglog(CMPLX((mp__z),KIND=16))'),
+                 ('reglogp(z)','mp_reglogp(CMPLX((mp__z),KIND=16))'),
+                 ('reglogm(z)','mp_reglogm(CMPLX((mp__z),KIND=16))'),
+                 ('arg(z)','mp_arg(CMPLX((mp__z),KIND=16))'),
+                 ('recms(cms==1.0,z)','MP_RECMS(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z,KIND=16))'),
+                 ('grreglog(logswitch,z1,z2)','MP_grreglog(mp__logswitch,CMPLX(mp__z1, KIND=16) , CMPLX(mp__z2, KIND=16))'),
+                 ('regsqrt(z)','MP_regsqrt(CMPLX(mp__z, KIND=16))'),
+                 ('crecms(cms==1.0,z)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z, KIND=16))'),
+                 ('crecms(cms==1.0,z*y)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z*mp__y, KIND=16))'),
+                 ('crecms(cms==1.0,z+y)','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(mp__z+mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, (x*y) )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX((mp__x*mp__y), KIND=16))'),
+                 ('crecms(cms==1.0, 2*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(2.000000e+00_16*mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, -y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-mp__y, KIND=16))'),
+                 ('crecms(cms==1.0, -1*y )','MP_crecms(mp__cms.EQ.1.000000e+00_16,CMPLX(-1.000000e+00_16*mp__y, KIND=16))'),
+                 ('abs(1.0)', 'ABS(1.000000e+00_16)'),
+                 ('abs(float(x))' , 'ABS(REAL((mp__x), KIND=16))')
+                 ]
+
+
+        for toParse, sol in tests:
+            self.assertEqual(self.mp_calc.parse(toParse), sol)

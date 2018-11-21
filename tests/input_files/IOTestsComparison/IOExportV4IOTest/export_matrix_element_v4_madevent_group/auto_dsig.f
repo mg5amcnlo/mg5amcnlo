@@ -103,11 +103,12 @@ C     Continue only if IMODE is 0, 4 or 5
 
       IF (ABS(LPP(IB(1))).GE.1) THEN
         LP=SIGN(1,LPP(IB(1)))
-        U1=PDG2PDF(ABS(LPP(IB(1))),2*LP,XBK(IB(1)),DSQRT(Q2FACT(1)))
+        U1=PDG2PDF(ABS(LPP(IB(1))),2*LP, 1,XBK(IB(1)),DSQRT(Q2FACT(1)))
       ENDIF
       IF (ABS(LPP(IB(2))).GE.1) THEN
         LP=SIGN(1,LPP(IB(2)))
-        UX2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(2)))
+        UX2=PDG2PDF(ABS(LPP(IB(2))),-2*LP, 1,XBK(IB(2)),DSQRT(Q2FACT(2)
+     $   ))
       ENDIF
       PD(0) = 0D0
       IPROC = 0

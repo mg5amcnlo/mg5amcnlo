@@ -1487,7 +1487,7 @@ class Model(PhysicsObject):
     def change_parameter_name_with_prefix(self, prefix='mdl_'):
         """ Change all model parameter by a given prefix.
         Modify the parameter if some of them are identical up to the case"""
-
+        
         lower_dict={}
         duplicate = set()
         keys = self.get('parameters').keys()
@@ -1568,7 +1568,13 @@ class Model(PhysicsObject):
             for key in self['couplings'].keys():
                 for coup in self['couplings'][key]:
                     coup.expr = rep_pattern.sub(replace, coup.expr)
-                    
+
+            # change form-factor
+            ff = [l.formfactors for l in self['lorentz'] if hasattr(l, 'formfactors')]
+            ff = set(sum(ff,[])) # here we have the list of ff used in the model
+            for f in ff:
+                f.value = rep_pattern.sub(replace, f.value)
+
             # change mass/width
             for part in self['particles']:
                 if str(part.get('mass')) in one_change:
@@ -2972,8 +2978,10 @@ class Process(PhysicsObject):
         the user-defined list of orders, it can be ommitted for some info
         displays."""
 
-        if prefix:
+        if isinstance(prefix, bool) and prefix:
             mystr = " " * indent + "Process: "
+        elif isinstance(prefix, str):
+            mystr = prefix
         else:
             mystr = ""
         prevleg = None
@@ -3124,6 +3132,11 @@ class Process(PhysicsObject):
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in self['orders']]) + ' '
 
+        # Add squared orders
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2=' + repr(self['squared_orders'][key]) \
+                       for key in self['squared_orders']]) + ' '
+
         # Add perturbation orders
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
@@ -3137,10 +3150,6 @@ class Process(PhysicsObject):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
-        # Add squared orders
-        if self['perturbation_couplings'] and self['squared_orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['squared_orders'][key]) \
-                       for key in self['squared_orders']]) + ' '
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:
@@ -3353,10 +3362,14 @@ class Process(PhysicsObject):
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
 
-        return filter(lambda leg: leg.get('state') == False and\
+        legs = filter(lambda leg: leg.get('state') == False and\
                        leg.get('number') == number,
-                       self.get('legs'))[0].get('id')
-
+                       self.get('legs'))
+        if not legs:
+            return None
+        else:
+            return legs[0].get('id')
+        
     def get_initial_final_ids(self):
         """return a tuple of two tuple containing the id of the initial/final
            state particles. Each list is ordered"""

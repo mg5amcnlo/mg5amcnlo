@@ -463,7 +463,7 @@ class ML5Test(unittest.TestCase):
 #   MadLoop goes to quadruple precision. The agreement is then fine (10e-14!)
 #   but it takes several hours for the non-optimized evaluation. So better skip
 #   it unless you explicitly want to try out quad prec behaviors.
-    def notest_long_sm_vs_stored_ML5_gg_ggg(self):
+    def test_long_sm_vs_stored_ML5_gg_ggg(self):
         proc = "gg_ggg"
         self.compare_processes([ML5_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,

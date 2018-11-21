@@ -361,6 +361,8 @@ class gensym(object):
         #    return self.submit_to_cluster_no_splitting(job_list)
 
         for Pdir, jobs in job_list.items():
+            if not jobs:
+                continue
             if self.splitted_for_dir(Pdir, jobs[0]) <= 1:
                 return self.submit_to_cluster_no_splitting({Pdir:jobs})
 
@@ -1601,6 +1603,10 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_event_in_iter = 5000
     min_event_in_iter = 1000
     combining_job = sys.maxint
+
+    def __new__(cls, *args, **opts):
+        
+        return super(gen_ximprove, cls).__new__(cls, *args, **opts)
 
     def __init__(self, *args, **opts):
         

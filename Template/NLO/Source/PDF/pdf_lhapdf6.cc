@@ -11,6 +11,10 @@
 #include "LHAPDF/Paths.h"
 #include "LHAPDF/Version.h"
 #include "LHAPDF/LHAGlue.h"
+#include <boost/shared_ptr.hpp>
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
+#include <string.h>
 
 using namespace std;
 

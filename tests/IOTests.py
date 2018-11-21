@@ -296,20 +296,26 @@ class CustomIOTest(IOTest):
         """Clean up the file created. Called at the end of the test run."""
         
         pathsToClean = [self.temporary_folder]
-        
+
         if not self.clean_function is None:
             paths, prevent_cleanUp = self.clean_function(*args, **kwargs)
-            pathsToClean.extend(paths)
+            if isinstance(paths, str):
+                pathsToClean.append(paths)
+            else:
+                pathsToClean.extend(paths)
             if prevent_cleanUp:
                 print colored%(31,
                     "Clean up of the following of temporary folders prevented:")
                 for path in pathsToClean:
                     print colored%(31,"  > %s"%str(path))
-
+       
         try:
             for path in pathsToClean:
-                shutil.rmtree(path)
-        except OSError:
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+        except OSError,error:
             pass               
 
 #===============================================================================

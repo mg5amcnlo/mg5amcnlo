@@ -95,12 +95,8 @@ else:
 
 
 
-class MadEventError(Exception):
-    pass
-
-class ZeroResult(MadEventError):
-    pass
-
+class MadEventError(Exception): pass
+ZeroResult = common_run.ZeroResult
 class SysCalcError(InvalidCmd): pass
 
 MadEventAlreadyRunning = common_run.MadEventAlreadyRunning
@@ -260,13 +256,13 @@ class CmdExtended(common_run.CommonRunCmd):
         """If a ME run is currently running add a link in the html output"""
 
         self.add_error_log_in_html()
-        cmd.Cmd.nice_user_error(self, error, line)            
+        return cmd.Cmd.nice_user_error(self, error, line)            
         
     def nice_config_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
         self.add_error_log_in_html()
-        cmd.Cmd.nice_config_error(self, error, line)
+        stop = cmd.Cmd.nice_config_error(self, error, line)
         
         
         try:
@@ -275,6 +271,7 @@ class CmdExtended(common_run.CommonRunCmd):
             debug_file.close()
         except:
             pass 
+        return stop
             
 
     def nice_error_handling(self, error, line):
@@ -309,13 +306,14 @@ class CmdExtended(common_run.CommonRunCmd):
                     pass
         else:
             self.add_error_log_in_html()            
-            cmd.Cmd.nice_error_handling(self, error, line)
+            stop = cmd.Cmd.nice_error_handling(self, error, line)
             try:
                 debug_file = open(self.debug_output, 'a')
                 debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
                 debug_file.close()
             except:
                 pass
+            return stop
         
         
 #===============================================================================
@@ -532,6 +530,8 @@ class AskRun(cmd.ControlSwitch):
         if options['delphes_path']:
             if 'PY6' in self.available_module or 'PY8' in self.available_module:
                 self.available_module.add('Delphes')
+            else:
+                logger.warning("Delphes program installed but no parton shower module detected.\n    Please install pythia8")
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
@@ -652,13 +652,15 @@ class AskRun(cmd.ControlSwitch):
         
         self.set_default_shower() #ensure that this one is called first!
         
-        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6':
+        if 'PGS' in self.available_module and self.switch['shower'] == 'Pythia6'\
+                  and os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
             self.switch['detector'] = 'PGS'
-        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF':
+        elif 'Delphes' in self.available_module and self.switch['shower'] != 'OFF'\
+              and os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
             self.switch['detector'] = 'Delphes'
         elif self.get_allowed_detector():
             self.switch['detector'] = 'OFF'
-        else: 
+        else:
             self.switch['detector'] =  'Not Avail.'
                 
 #   old mode to activate pgs            
@@ -850,7 +852,7 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return
-        self.allowed_reweight = ['ON', 'OFF']
+        self.allowed_reweight = ['OFF', 'ON']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path
@@ -2452,6 +2454,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         """Main Commands: launch the full chain """
         
         self.banner = None
+        self.Gdirs = None
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2462,6 +2465,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
+            
+        self.run_generate_events(switch_mode, args)
+        
+        
+        
+    # this decorator handle the loop related to scan.
+    @common_run.scanparamcardhandling()
+    def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
             # Also the single core mode is not supported for loop-induced.
@@ -2562,33 +2573,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
                 self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
                 self.store_result()
-            
-            if self.param_card_iterator:
-                param_card_iterator = self.param_card_iterator
-                self.param_card_iterator = []
-                with misc.TMP_variable(self, 'allow_notification_center', False):
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
-                    #check if the param_card defines a scan.
-                    orig_name = self.run_name
-                    for card in param_card_iterator:
-                        path = pjoin(self.me_dir,'Cards','param_card.dat')
-                        card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                        self.check_param_card(path, dependent=True)
-                        next_name = param_card_iterator.get_next_name(self.run_name)
-                        try:
-                            self.exec_cmd("generate_events -f %s" % next_name,
-                                      precmd=True, postcmd=True,errorhandling=False)
-                        except ZeroResult:
-                            param_card_iterator.store_entry(self.run_name, 0)
-                        else:
-                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
-                    param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                    name = misc.get_scan_name(orig_name, self.run_name)
-                    path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-                    logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
-                    param_card_iterator.write_summary(path)
-
-            
+                        
             if self.allow_notification_center:    
                 misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
@@ -2760,6 +2745,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         accuracy = self.check_calculate_decay_widths(args)
         self.ask_run_configuration('parton')
         self.banner = None
+        self.Gdirs = None
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2969,19 +2955,20 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        cpath = pjoin(self.me_dir,'Cards','param_card.dat')
         if param_card_iterator:
 
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],param_card_path=cpath)
             #check if the param_card defines a scan.
             orig_name=self.run_name
             for card in param_card_iterator:
-                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                card.write(cpath)
                 self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
-                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'], param_card_path=cpath)
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             scan_name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
-            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
     
 
@@ -4155,9 +4142,14 @@ already exists and is not a fifo file."""%fifo_path)
             self.configure_directory(html_opening =False)
             self.check_pythia8(args)        
 
+        # Update the banner with the pythia card
+        if not self.banner or len(self.banner) <=1:
+            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+
         # the args are modify and the last arg is always the mode 
         if not no_default:
-            self.ask_pythia_run_configuration(args[-1], pythia_version=8)
+            self.ask_pythia_run_configuration(args[-1], pythia_version=8, banner=self.banner)
 
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -4170,10 +4162,7 @@ already exists and is not a fifo file."""%fifo_path)
              #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
              #"Please use 'event_norm = average' in the run_card to avoid this problem.")
 
-        # Update the banner with the pythia card
-        if not self.banner or len(self.banner) <=1:
-            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
-            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+
         
         if not self.options['mg5amc_py8_interface_path'] or not \
              os.path.exists(pjoin(self.options['mg5amc_py8_interface_path'],
@@ -5225,7 +5214,7 @@ tar -czf split_$1.tar.gz split_$1
     
         logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['run_card'], args)
+        self.ask_edit_cards(['run_card.dat'], args, plot=False)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -5267,9 +5256,8 @@ tar -czf split_$1.tar.gz split_$1
         if not self.run_name:
             return
         
-        self.results.save()
-        
-        
+
+            
         if not self.to_store:
             return 
         
@@ -5286,7 +5274,6 @@ tar -czf split_$1.tar.gz split_$1
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
-            
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
@@ -5304,8 +5291,9 @@ tar -czf split_$1.tar.gz split_$1
                 self.update_status('Storing Pythia8 files of previous run', 
                                                      level='pythia', error=True)
                 misc.gzip(file_path,stdout=file_path)
-            
+    
         self.update_status('Done', level='pythia',makehtml=False,error=True)
+        self.results.save()        
         
         self.to_store = []
 
@@ -5589,6 +5577,14 @@ tar -czf split_$1.tar.gz split_$1
                 break
         else:
             self.random = random.randint(1, 30107)
+        
+        #set random seed for python part of the code
+        if self.run_card['python_seed'] == -2: #-2 means same as run_card
+            import random
+            random.seed(self.random)
+        elif self.run_card['python_seed'] >= 0:
+            import random
+            random.seed(self.run_card['python_seed'])
                                                                
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
@@ -5596,6 +5592,8 @@ tar -czf split_$1.tar.gz split_$1
 
         # add the make_opts_var to make_opts
         self.update_make_opts()
+        # reset list of Gdirectory
+        self.Gdirs = None
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -5670,7 +5668,7 @@ tar -czf split_$1.tar.gz split_$1
     def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
-        if hasattr(self, "Gdirs"):
+        if hasattr(self, "Gdirs") and self.Gdirs:
             if self.me_dir in self.Gdirs[0]:
                 if Pdir is None:
                     if not symfact:
@@ -5826,7 +5824,10 @@ tar -czf split_$1.tar.gz split_$1
         if self.random > 30081*30081: # can't use too big random number
             raise MadGraph5Error,\
                   'Random seed too large ' + str(self.random) + ' > 30081*30081'
-
+        if self.run_card['python_seed'] == -2: 
+            import random
+            random.seed(self.random)
+            
     ############################################################################
     def save_random(self):
         """save random number in appropirate file"""
@@ -5836,8 +5837,8 @@ tar -czf split_$1.tar.gz split_$1
 
     def do_quit(self, *args, **opts):
         
-        common_run.CommonRunCmd.do_quit(self, *args, **opts)
-        return CmdExtended.do_quit(self, *args, **opts)
+        return common_run.CommonRunCmd.do_quit(self, *args, **opts)
+        #return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
     def treat_CKKW_matching(self):
@@ -6127,7 +6128,7 @@ tar -czf split_$1.tar.gz split_$1
         return switch
     
     ############################################################################
-    def ask_pythia_run_configuration(self, mode=None, pythia_version=6):
+    def ask_pythia_run_configuration(self, mode=None, pythia_version=6, banner=None):
         """Ask the question when launching pythia"""
         
         pythia_suffix = '' if pythia_version==6 else '%d'%pythia_version
@@ -6188,10 +6189,16 @@ tar -czf split_$1.tar.gz split_$1
         if self.force:
             return mode
         
+        if not banner:
+            banner = self.banner
+        
         if auto:
-            self.ask_edit_cards(cards, mode='auto', plot=(pythia_version==6))
+            self.ask_edit_cards(cards, from_banner=['param', 'run'], 
+                                mode='auto', plot=(pythia_version==6), banner=banner
+                                )
         else:
-            self.ask_edit_cards(cards, plot=(pythia_version==6))
+            self.ask_edit_cards(cards, from_banner=['param', 'run'],
+                                 plot=(pythia_version==6), banner=banner)
 
         return mode
                 
@@ -6447,6 +6454,7 @@ class GridPackCmd(MadEventCmd):
         #print 'run combine!!!'
         #combine_runs.CombineRuns(self.me_dir)
         
+        return
         #update html output
         Presults = sum_html.collect_result(self)
         cross, error = Presults.xsec, Presults.xerru

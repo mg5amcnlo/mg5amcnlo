@@ -384,7 +384,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
-                        self.draw(' '.join(args[1:]), type=diag_type)
+                        self.draw(' '.join(args[1:]), Dtype=diag_type)
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -402,7 +402,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     text += '\n\nReal diagrams:'
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
                     text += '\n\nLoop diagrams:\n'
-                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['virt']())
+                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['loop']())
                 pydoc.pager(text)
 
                 # set _curr_amps back to empty
@@ -445,7 +445,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
+        #validate_model will reset self._generate_info; to avoid
+        #this store it
+        geninfo = self._generate_info
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
+        self._generate_info = geninfo
 
         #now generate the amplitudes as usual
         #self.options['group_subprocesses'] = 'False'

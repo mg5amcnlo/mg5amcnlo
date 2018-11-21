@@ -74,7 +74,7 @@ class TestCmdLoop(unittest.TestCase):
     
     def do(self, line):
         """ exec a line in the interface """        
-        self.interface.onecmd(line)
+        self.interface.exec_cmd(line)
     
     @classmethod
     def setup_logFile_for_logger(cls,full_logname,restore=False,level=logging.DEBUG):
@@ -380,6 +380,10 @@ class TestCmdLoop(unittest.TestCase):
                  'acceptance_test_aem_emvevex.log',
                  'acceptance_test_aem_emvevex_widths_increased.pkl',
                  'acceptance_test_aem_emvevex_widths_increased.log']
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
+                
         output_name = 'SAVEDTMP_CHECK_acceptance_test_aem_emvevex__%s__'
         
         try:
@@ -488,7 +492,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
         misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
-        misc.activate_dependence('golem', cmd = self.interface, log='stdout')
+        misc.deactivate_dependence('golem', cmd = self.interface, log='stdout')
         misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
         misc.activate_dependence('collier', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
@@ -529,7 +533,7 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
         misc.deactivate_dependence('samurai', cmd = interface, log='stdout')        
-        misc.activate_dependence('golem', cmd = interface, log='stdout')
+        misc.deactivate_dependence('golem', cmd = interface, log='stdout')
         misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)
 
         run_cmd('generate g g > t t~ [virt=QCD]')

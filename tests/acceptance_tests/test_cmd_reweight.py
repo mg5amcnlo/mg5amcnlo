@@ -292,8 +292,8 @@ class TestMECmdRWGT(unittest.TestCase):
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['MYNLO_tree'])
             if i < len(solutions):
-                self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], solutions[i]))
-            self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], event2.wgt))
+                self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], solutions[i],3), '(event %s) %s != %s ' % (i, rwgt_data['MYNLO_tree'], solutions[i]))
+            self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], event2.wgt, 3), '(event %s) %s != %s ' % (i, rwgt_data['MYNLO_tree'], event2.wgt))
         #misc.sprint(solutions)
             
     def test_scan_reweighting(self):
@@ -375,7 +375,17 @@ class TestMECmdRWGT(unittest.TestCase):
         with misc.chdir(pjoin(self.path)):
             if self.path not in sys.path:
                 sys.path.insert(0, self.path)
-            mymod = __import__('rw_mevirt.Source.rwgt2py', globals(), locals(), [],-1)
+            mod_name = 'rw_mevirt.Source.rwgt2py'
+            if mod_name in sys.modules.keys():
+                del sys.modules[mod_name]
+                tmp_mod_name = mod_name
+                while '.' in tmp_mod_name:
+                    tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
+                    del sys.modules[tmp_mod_name]
+                mymod = __import__(mod_name, globals(), locals(), [],-1)  
+            else:
+                mymod = __import__(mod_name, globals(), locals(), [],-1) 
+                
             mymod =  mymod.Source.rwgt2py
             #mymod.initialise([1,1], 244600)
        

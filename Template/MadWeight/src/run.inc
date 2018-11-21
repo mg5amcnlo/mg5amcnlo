@@ -54,3 +54,9 @@ c     Include <clustering> tag for Pythia 8 CKKW-L matching
 c
       logical clusinfo
       COMMON/TO_CINFO/clusinfo
+
+C
+C     block for heavy ion beam
+C
+      integer nb_proton(2), nb_neutron(2)
+      common/to_heavyion_pdg/ nb_proton, nb_neutron

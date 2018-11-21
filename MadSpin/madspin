@@ -49,6 +49,7 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 if len(args) == 0:
     args = ''
 
+
 import subprocess
 
 # Check if optimize mode is (and should be) activated
@@ -114,23 +115,6 @@ except:
     pass
 import MadSpin.interface_madspin as interface
 
-try:
-    cmd_line = interface.MadSpinInterface()
-    cmd_line.use_rawinput = True
-    cmd_line.cmdloop()
-except:
-    pass
-try:
-    cmd_line.exec_cmd('quit all', printcmd=False)
-    readline.set_history_length(100)
-    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
-        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
-    readline.write_history_file(history_file)
-except Exception, error:
-    pass
-
-sys.exit(0)
-
 # Call the cmd interface main loop
 try:
     if options.file or args:
@@ -143,12 +127,14 @@ try:
             cmd_line = interface.MasterCmdWeb()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
-            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.import_command_file(input_file)
             cmd_line.run_cmd('quit')
         else:
+            print "using input+file", input_file
             cmd_line = interface.MadSpinInterface()
             cmd_line.use_rawinput = False
-            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.haspiping = False
+            cmd_line.import_command_file(input_file)
             cmd_line.run_cmd('quit')
     else:
         # Interactive mode
@@ -160,8 +146,20 @@ try:
             cmd_line = interface.MasterCmdWeb()
             cmd_line.cmdloop()
         else:
-            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
-            cmd_line.cmdloop()
+            try:
+                cmd_line = interface.MadSpinInterface()
+                cmd_line.use_rawinput = True
+                cmd_line.cmdloop()
+            except:
+                pass
+        try:
+            cmd_line.exec_cmd('quit all', printcmd=False)
+            readline.set_history_length(100)
+            if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
+                os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+            readline.write_history_file(history_file)
+        except Exception, error:
+            pass
 except KeyboardInterrupt:
     print 'writting history and quit on KeyboardInterrupt' 
     pass

@@ -12,23 +12,23 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       call HwU_book(l+1,'Higgs pT ' ,100,0.d0,200.d0)
       call HwU_book(l+2,'Higgs pT ' ,100,0.d0,500.d0)
       call HwU_book(l+3,'Higgs log[pT] ' ,98,0.1d0,5.d0)
-      call HwU_book(l+4,'Higgs pT,|y_H|<2 ' ,100,0.d0,200.d0)
-      call HwU_book(l+5,'Higgs pT,|y_H|<2 ' ,100,0.d0,500.d0)
-      call HwU_book(l+6,'Higgs log[pT],|y_H|<2 ' ,98,0.1d0,5.d0)
+      call HwU_book(l+4,'Higgs pT,abs(y_H)<2 ' ,100,0.d0,200.d0)
+      call HwU_book(l+5,'Higgs pT,abs(y_H)<2 ' ,100,0.d0,500.d0)
+      call HwU_book(l+6,'Higgs log[pT],abs(y_H)<2 ' ,98,0.1d0,5.d0)
 
       call HwU_book(l+7,'j1 pT ' ,100,0.d0,200.d0)
       call HwU_book(l+8,'j1 pT ' ,100,0.d0,500.d0)
       call HwU_book(l+9,'j1 log[pT] ' ,98,0.1d0,5.d0)
-      call HwU_book(l+10,'j1 pT,|y_j1|<2 ' ,100,0.d0,200.d0)
-      call HwU_book(l+11,'j1 pT,|y_j1|<2 ' ,100,0.d0,500.d0)
-      call HwU_book(l+12,'j1 log[pT],|y_j1|<2 ' ,98,0.1d0,5.d0)
+      call HwU_book(l+10,'j1 pT,abs(y_j1)<2 ' ,100,0.d0,200.d0)
+      call HwU_book(l+11,'j1 pT,abs(y_j1)<2 ' ,100,0.d0,500.d0)
+      call HwU_book(l+12,'j1 log[pT],abs(y_j1)<2 ' ,98,0.1d0,5.d0)
 
       call HwU_book(l+13,'Inc j pT ' ,100,0.d0,200.d0)
       call HwU_book(l+14,'Inc j pT ' ,100,0.d0,500.d0)
       call HwU_book(l+15,'Inc j log[pT] ' ,98,0.1d0,5.d0)
-      call HwU_book(l+16,'Inc j pT,|y_Ij|<2 ' ,100,0.d0,2.d2)
-      call HwU_book(l+17,'Inc j pT,|y_Ij|<2 ' ,100,0.d0,5.d2)
-      call HwU_book(l+18,'Inc j log[pT],|y_Ij|<2' ,98,0.1d0,5.d0)
+      call HwU_book(l+16,'Inc j pT,abs(y_Ij)<2 ' ,100,0.d0,2.d2)
+      call HwU_book(l+17,'Inc j pT,abs(y_Ij)<2 ' ,100,0.d0,5.d2)
+      call HwU_book(l+18,'Inc j log[pT],abs(y_Ij)<2' ,98,0.1d0,5.d0)
 
       call HwU_book(l+19,'Higgs y ' ,60,-6.d0,6.d0)
       call HwU_book(l+20,'Higgs y,pT_H>10GeV ' ,100,-6.d0,6.d0)
@@ -52,7 +52,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       call HwU_book(l+36,'H-j1 y,pT_j1>90GeV ' ,100,-6.d0,6.d0)
       
       call HwU_book(l+37,'njets ' ,11,-0.5d0,10.5d0)
-      call HwU_book(l+38,'njets,|y_j|<2.5 ' ,11,-0.5d0,10.5d0)
+      call HwU_book(l+38,'njets,abs(y_j)<2.5 ' ,11,-0.5d0,10.5d0)
       call HwU_book(l+39,'xsec ' ,3,-0.5d0,2.5d0)
       return
       end

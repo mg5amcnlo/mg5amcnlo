@@ -41,7 +41,7 @@ c
       integer mincfig,maxcfig                  !Range of configurations
       integer invar
       double precision wgt                     !(input and output)
-      double precision x(maxdim),p(maxdim)     !x,p (output) [p(0:3,nexternal)]
+      double precision x(*),p(*)     !x,p (output) [p(0:3,nexternal)]
 c
 c     Local
 c
@@ -104,7 +104,7 @@ c     Arguments
 c
       integer iconfig,mincfig,maxcfig,invar
       double precision p1(0:3,nexternal+1)
-      double precision x(maxinvar)
+      double precision x(*)
       double precision wgt
 c
 c     Local
@@ -191,8 +191,6 @@ c     data
 c
       include 'configs.inc'
       data firsttime/.true./
-      integer isym(0:100)
-c      data isym /2,1,5,27,42,47,0,0,0,0,0/
       data jfig/1/
 c-----
 c  Begin Code
@@ -215,11 +213,6 @@ c      write(*,*) 'using iconfig',iconfig
          write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
       endif                          !First_time
 
-      if (.false.) then
-         iconfig = isym(jfig)
-         jfig = jfig+1
-         if (jfig .gt. isym(0)) jfig=1      
-      endif
       this_config = iconfig             !Pass iconfig to amplitude routine
 C
 C     Get fraction of beam energy if pdf's are used
@@ -279,19 +272,18 @@ c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m2**2+2*xbk(1)*ebeam(1) *
-     $                 (ebeam(2)+sqrt(ebeam(2)**2-m2**2))
+         s(-nbranch) = x(ndim)*stot         
       elseif (abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(2) = x(ndim)
+
 c        Set CM rapidity for use in the rap() function
          p0=ebeam(1)+xbk(2)*ebeam(2)
          p3=sqrt(ebeam(1)**2-m1**2)-xbk(2)*ebeam(2)
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m1**2+2*(ebeam(1)+sqrt(ebeam(1)**2-m1**2))
-     $                 * xbk(2)*ebeam(2)
+         s(-nbranch) =  x(ndim)*stot         
       else
 c        Set CM rapidity for use in the rap() function
          p0=ebeam(1) + ebeam(2)
@@ -575,6 +567,8 @@ c        Set stot
             if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
+            if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
             if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
             pi1(0)=ebeam(1)
@@ -596,7 +590,6 @@ c        Start graph mapping
          maxcfig=iconfig
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
          maxwgt=0d0
-c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
          nbranch      = nparticles-2
@@ -615,8 +608,6 @@ c     if we believe they will have identical structure.
 c
 c         do i=1,mapconfig(0)
          do i=mincfig,maxcfig
-c         do k=1,isym(0)
-c            i = isym(k)
             write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
             do j=1,ndim
                ipole = minvar(j,i)
@@ -661,7 +652,7 @@ c
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
       double precision jac,pswgt
       integer nbranch
-      double precision x(40) ! ja 3/2/11 21->40 after strange segfault
+      double precision x(*) ! ja 3/2/11 21->40 after strange segfault
 c
 c     Local
 c
@@ -863,21 +854,20 @@ c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
 
-         tmax = max(tmax,0d0) !This line if want really t freedom
+      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         tmax = max(tmax,0d0) !This line if want really t freedom
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0, -tmin/stot)
+         t = stot*(-x(-ibranch))
 
+      else
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
          t = stot*(-x(-ibranch))
-c
-c     now reset tmax if messed it up for t freedom 3 lines above
-c
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax) 
+      endif
 
-c         write(*,*) tmin,t,tmax
-c         if (t .eq. 0d0) then
-c            jac = -3
-c            return
-c         endif
          if (t .lt. tmin .or. t .gt. tmax) then
             jac=-3d0
             return

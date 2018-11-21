@@ -1,3 +1,21 @@
+c     for cross-checking change in this file. 
+c     here is a minimal list of process that we have to 
+c     test
+c    
+c     SM
+c     ----
+c     p p > t t~ (up to 2jet)
+c     p p > w+ (up to 3 jet)
+c     p p > j j w+ (ordering seems important) 
+c     p p > z t t~ j j  (no MLM needed)
+c
+c
+c     HEFT
+c     ----
+c     p p > h j b b~
+c     q q > a a g q q
+c     g g > h g q q
+
       double precision function gamma(q0)
 c**************************************************
 c   calculates the branching probability
@@ -145,6 +163,19 @@ c**************************************************
       return
       end
 
+      logical function is_octet(ipdg)
+c**************************************************
+c   determines whether particle is a QCD octet
+c**************************************************
+      implicit none
+      integer ipdg, irfl
+      integer get_color
+
+      is_octet=(iabs(get_color(ipdg)).eq.8)
+
+      return
+      end
+
       logical function isjet(ipdg)
 c**************************************************
 c   determines whether particle is qcd jet particle
@@ -213,13 +244,15 @@ c     the hardest and ipart(2) is the softest.
       integer iddgluon, iddother, idgluon, idother
       logical isqcd
       external isqcd
+      integer get_color
+      external get_color 
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
 
       if (btest(mlevel,4)) then
-        write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
+        write(*,*) 'updating ipart for: ',ida1,ida2,' -> ',imo
       endif
 
       if (btest(mlevel,4)) then
@@ -261,7 +294,6 @@ c           Transmit jet PDG code
      $        ' (',ipdg(imo),')'
          return
       endif        
-
 c     FS clustering
 c     Transmit parton PDG code for parton vertex
       if(isjet(idmo)) then
@@ -340,14 +372,26 @@ c     quark -> quark-gluon or quark-Z or quark-h or quark-W
 c     quark -> gluon-quark or Z-quark or h-quark or W-quark
         ipart(1,imo)=ipart(1,ida2)
         ipart(2,imo)=0
-      else
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda1)).eq.3.and.get_color(idda2).eq.1) then
+c       exotic q > q' Scalar         
+        ipart(1,imo)=ipart(1,ida1)
+        ipart(2,imo)=0
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda2)).eq.3.and.get_color(idda1).eq.1) then
+c       exotic q > Scalar q'
+        ipart(1,imo)=ipart(1,ida2)
+        ipart(2,imo)=0
+      else if (get_color(idmo).eq.1) then
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
          ipart(2,imo)=ipart(1,ida2)
+      else
+         write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
+         write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
+         stop 3
       endif
       
       if (btest(mlevel,4)) then
-        write(*,*) ' -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
+        write(*,*) 'XY -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
       endif
 
       return
@@ -509,7 +553,8 @@ c     q2bck holds the central q2fact scales
       common/to_stot/stot,m1,m2
 
 C   local variables
-      integer i, j, idi, idj, k
+      integer i, j, idi, idj, k,m
+      integer get_color
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -532,11 +577,13 @@ c     Variables for keeping track of jets
       logical chclusold,fail,increasecode
       save chclusold
       integer tmpindex
+      integer pdgm, pdgid1, pdgid2
 
-      logical isqcd,isjet,isparton,cluster,isjetvx
+      logical isqcd,isjet,isparton,cluster,isjetvx,is_octet
       integer ifsno
       double precision alphas
       external isqcd, isjet, isparton, cluster, isjetvx, alphas, ifsno
+      external is_octet
       setclscales=.true.
 
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) then
@@ -662,6 +709,7 @@ c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
 c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
+c         write(*,*) 'QCD jet status (before n= ',n,'):',(iqjets(i),i=3,nexternal)
         do i=1,2 ! index of the child in the interaction
           do j=1,2 ! j index of the beam
             if(idacl(n,i).eq.ibeam(j))then
@@ -730,19 +778,37 @@ c          Check QCD jet, take care so not a decay
 c          Remove non-gluon jets that lead up to non-jet vertices
            if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c          The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)then
-                 iqjets(ipart(1,imocl(n)))=0
-              else if (ipdgcl(imocl(n),igraphs(1),iproc).eq.21)then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc)))then
+                 ! split case for q a > q and for g > g h (with the gluon splitting into quark)
+                 ! also check for case of three scalar interaction (then do nothing)
+                 pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
+                 pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
+                 pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
+                 if (.not.isqcd(pdgm).and..not.isqcd(pdgid1).and..not.isqcd(pdgid2)) then
+                    ! this is to avoid to do weird stuff for w+ w- z (or h h h) 
+                    ! this fix an issue for qq_zttxqq G1594.08
+                     continue
+                 elseif (ipart(2,imocl(n)).eq.0) then ! q a > q case
+                       iqjets(ipart(1,imocl(n)))=0
+                 else ! octet. want to be sure that both are tagged as jet before removing one
+                    ! this prevent that both are removed in case of g > g h , g > q1 q2, q1 > a q1.
+                    ! at least one of the two should be kept as jet
+                    ! introduce for q q > a a g q q in heft
+                    if (iqjets(ipart(1,imocl(n))).gt.0.and.iqjets(ipart(2,imocl(n))).gt.0)then
+                       iqjets(ipart(1,imocl(n)))=0
+                    endif
+                 endif
+              else if (is_octet(ipdgcl(imocl(n),igraphs(1),iproc)))then
 c                special case for g > g h remove also the hardest gluon
                  iqjets(ipart(1,imocl(n)))=0
               endif
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.or.
-     $                                   ipdgcl(imocl(n),igraphs(1),iproc).ne.21) then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc)).and.
+     $                                   .not.is_octet(ipdgcl(imocl(n),igraphs(1),iproc))) then
 c                 The second condition is to prevent the case of ggh where the gluon split in quark later.
-c                 The first quark is already remove so we shouldn't remove this one.      
+c                 The first quark is already remove so we shouldn't remove this one. introduce for gg_hgqq (in heft)      
               iqjets(ipart(2,imocl(n)))=0
               endif
            endif
@@ -767,7 +833,57 @@ c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
-        endif
+            
+c       check case with g > g g
+c       where the hardest gluon is not goodjet but the other is.
+c       in that case change ipart(1,) of the mother gluon
+c             pure QCD jet
+c             need to take care of the following case:
+c                                      tttttttttt
+c                      gggggggggggggggg  
+c             ggggggggg                tttttttttt 
+c                      gggggggg
+c                        
+c             in that case the up gluon can be tag as the hardest one
+c             but this one is also lead to no QCD one.
+c             so in that case we have to change ipart(1) to the sofest gluon
+           pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
+           pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
+           pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
+           if (is_octet(pdgm).and.is_octet(pdgid1).and.is_octet(pdgid2))then
+c              write(*,*) 'pure QCD vertex (2)'
+c              write(*,*) pdgm , '>', pdgid1,' ', pdgid2
+c              write(*,*) 'ipart', ipart(1,imocl(n)), ipart(2,imocl(n))
+c              write(*,*) 'id', imocl(n), idacl(n,1),idacl(n,2)
+c              write(*,*) 'ipart',ipart(1,imocl(n)),'/', ipart(2,imocl(n)), ipart(1,idacl(n,1)),'/', ipart(2,idacl(n,1)),
+c     $             ipart(1,idacl(n,2)),'/', ipart(2,idacl(n,2))
+c              write(*,*) 'googjet', goodjet(idacl(n,1)),goodjet(idacl(n,2))
+              if (ipart(1,imocl(n)).eq.ipart(1, idacl(n,1))) then
+                  if (.not.goodjet(idacl(n,1)).and.goodjet(idacl(n,2))) then
+c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,2)), ipart(2,idacl(n,2))
+                     do m =n_max_cl,n,-1
+                        if(ipart(1,m).eq.ipart(1,imocl(n)).and.ipart(2,m).eq.ipart(2,imocl(n)))then
+                           ipart(1,m) = ipart(1,idacl(n,2))
+                           ipart(2,m) = ipart(2,idacl(n,2))
+                        endif
+                     enddo
+                  endif
+               else
+                  if (.not.goodjet(idacl(n,2)).and.goodjet(idacl(n,1))) then
+c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,1)), ipart(2,idacl(n,1))
+                     do m =n_max_cl,n,-1
+                        if(ipart(1,m).eq.ipart(1,imocl(n)).and.ipart(2,m).eq.ipart(2,imocl(n)))then
+                           ipart(1,m) = ipart(1,idacl(n,1))
+                           ipart(2,m) = ipart(2,idacl(n,1))
+                        endif
+                     enddo
+                  endif
+               endif
+            endif
+
+
+
+       endif
       enddo
 
       if (btest(mlevel,4))then
@@ -812,8 +928,8 @@ c     Store external jet numbers if first time
             endif
          enddo
          njetstore(iconfig)=njets
-         if (btest(mlevel,4))
-     $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+        if (btest(mlevel,4))
+     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
 c     Recluster without requiring chcluster
          goto 100
       else
@@ -1487,10 +1603,10 @@ c                    if non-radiating vertex or last 2->2
                      else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                       n.le.jlast(j))then
                         pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i), 
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
@@ -1519,12 +1635,12 @@ c     Store information for systematics studies
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
                            write(*,*)'        -> rewgt: ',rewgt
 c                           write(*,*)'  (compare for glue: ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       = ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       -> ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
+c     $                          pdg2pdf(lpp(j),21,1,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
                         endif
 c                       Set scale for mother as this scale
                         pt2pdf(imocl(n))=q2now                           
@@ -1598,7 +1714,7 @@ c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
                 s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
      $           s_xpdf(1,i),s_qpdf(1,i))
             endif
          enddo

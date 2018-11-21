@@ -485,32 +485,6 @@ c
 
 
 
-      double precision function f_damp(x)
-      implicit none
-      double precision x,y
-
-      include "fks_powers.inc"
-
-      if (x.lt.0d0 .or. x.gt.1d0)then
-         write (*,*) 'ERROR in f_damp',x
-         stop
-      endif
-
-      if(x.le.one_f_damp)then
-         f_damp=1.d0
-      else
-         y=(x-one_f_damp)/(1.d0-one_f_damp)
-         if ( y.lt.0d0 .or. y.gt.1d0 )then
-            write (*,*) 'ERROR in f_damp',x,y,one_f_damp
-            stop
-         endif
-         f_damp=(1-y)**(2d0*a_f_damp)/
-     &      ( (1-y)**(2d0*a_f_damp)+c_f_damp*y**(2d0*a_f_damp) )
-      endif
-
-      return
-      end
-
 
 
       double precision function h_damp(x)
