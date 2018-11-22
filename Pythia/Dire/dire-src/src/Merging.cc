@@ -109,6 +109,8 @@ void MyMerging::storeInfos() {
   // Clear previous information.
   clearInfos();
 
+  //myHistory->state.list();
+
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -117,33 +119,60 @@ void MyMerging::storeInfos() {
     int rad = myHistory->children[i]->clusterIn.radPos();
     int emt = myHistory->children[i]->clusterIn.emtPos();
     int rec = myHistory->children[i]->clusterIn.recPos();
+
+    // Only consider last event entry as allowed emission.
+    if (emt != myHistory->state.size()-1) {
+      /*stoppingScalesSave.push_back(-1.);
+      radSave.push_back(-1);
+      emtSave.push_back(-1);
+      recSave.push_back(-1);
+      mDipSave.push_back(-1.);
+      isInDeadzone.push_back(true);*/
+      continue;
+    }
+
+    // Already covered clustering.
+    if ( find(radSave.begin(), radSave.end(), rad) != radSave.end()
+      && find(recSave.begin(), recSave.end(), rec) != recSave.end() )
+      continue;
+
     bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rad, emt, rec, "");
-    if (isFSR)
+    if (isFSR) {
       stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rad,emt,rec,"");
-    else
+    } else {
       stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rad,emt,rec,"");
+    }
     double t    = stateVars["t"];
     double mass = myHistory->children[i]->clusterIn.mass();
-
     // Just store pT for now.
     stoppingScalesSave.push_back(t);
     radSave.push_back(rad);
     emtSave.push_back(emt);
     recSave.push_back(rec);
     mDipSave.push_back(mass);
+    bool dead = (t<=0.);
+    map<string, double>::iterator it = stateVars.find("isAllowed");
+    if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
+    isInDeadzone.push_back(dead);
+    //if (dead) {myHistory->state.list(); cout << "found dead zone! " << rad << " " << emt << " " << rec << " " << t << endl;}
 
+    // Now swap radiator and recoiler and repeat everything.
     isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rec, emt, rad, "");
     if (isFSR)
       stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rec,emt,rad,"");
     else
       stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rec,emt,rad,"");
     t = stateVars["t"];
-
     stoppingScalesSave.push_back(t);
     radSave.push_back(rec);
     emtSave.push_back(emt);
     recSave.push_back(rad);
     mDipSave.push_back(mass);
+    dead = (t<=0.);
+    it = stateVars.find("isAllowed");
+    if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
+    isInDeadzone.push_back(dead);
+    //if (dead) {myHistory->state.list(); cout << "found dead zone! " << rec << " " << emt << " " << rad << " " << t << endl;}
 
     //cout << "Emission of "
     // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
@@ -173,6 +202,19 @@ void MyMerging::getStoppingInfo(double scales [100][100],
   }
 
 }
+
+//--------------------------------------------------------------------------
+
+void MyMerging::getDeadzones(bool dzone [100][100]) {
+
+  int posOffest=2;
+  for (unsigned int i=0; i < radSave.size(); ++i){
+    dzone[radSave[i]-posOffest][recSave[i]-posOffest] = isInDeadzone[i];
+  }
+
+}
+
+//--------------------------------------------------------------------------
 
 double MyMerging::generateSingleSudakov ( double pTbegAll, 
   double pTendAll, double m2dip, int idA, int type, double s, double x) {

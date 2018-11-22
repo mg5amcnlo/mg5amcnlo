@@ -1164,6 +1164,7 @@ C     To access Pythia8 control variables
       integer iii,jjj
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
+      logical*1 dzones(0:99,0:99)
 
       integer id, type
       double precision noemProb, startingScale, stoppingScale, mDipole
@@ -1368,7 +1369,9 @@ c$$$      call dire_get_sudakov_stopping_scales(scales)
 
       xscales=-1d0
       xmasses=-1d0
+      dzones=.true.
       call dire_get_stopping_info(xscales,xmasses)
+      call dire_get_deadzones(dzones)
 c
 c     LH scales for H events are computed by Pythia;
 c     they correspond to the target scales for extra radiation;
@@ -1406,12 +1409,17 @@ c     starting scales (SCALUP_tmp_S2) and stopping scales (SCALUP_tmp_H)
                write(*,*)'Error in xscales, xmasses',i,j,xscales(i,j),xmasses(i,j)
                stop
             endif
-            if(xscales(i,j).eq.-1d0)cycle
+            if(xscales(i,j).eq.-1d0) then
+              write(*,*)'Error in xscales',i,j,xscales(i,j),dzones(i,j)
+              cycle
+            else
+              write(*,*)'correct xscales',i,j,xscales(i,j),dzones(i,j)
+            endif
 c            if(xscales(i,j).eq.-1d0.or.is_dzone(i,j)
 c              .or.SCALUP_tmp_H(i,j).gt.SCALUP_tmp_S2(i,j))cycle
-            wgt_sudakov=wgt_sudakov*
-     &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
-     &        pysudakov(SCALUP_tmp_S2(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
+            wgt_sudakov=wgt_sudakov*1.0
+c     &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
+c     &        pysudakov(SCALUP_tmp_S2(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo

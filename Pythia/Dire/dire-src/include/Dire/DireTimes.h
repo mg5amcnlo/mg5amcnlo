@@ -341,6 +341,18 @@ public:
     const Particle& rec);
   double z_FF_fromVec ( const Vec4& rad, const Vec4& emt, const Vec4& rec);
 
+  // From Pythia version 8.215 onwards no longer virtual.
+  double m2dipTimes ( const Particle& rad, const Particle& emt,
+    const Particle& rec) {
+    if (rec.isFinal()) return m2dip_FF(rad,emt,rec);
+    return m2dip_FI(rad,emt,rec);
+  }
+
+  double m2dip_FF ( const Particle& rad, const Particle& emt,
+    const Particle& rec);
+  double m2dip_FI ( const Particle& rad, const Particle& emt,
+    const Particle& rec);
+
   // From Pythia version 8.218 onwards.
   // Return the evolution variable.
   // Usage: getStateVariables( const Event& event,  int iRad, int iEmt, 

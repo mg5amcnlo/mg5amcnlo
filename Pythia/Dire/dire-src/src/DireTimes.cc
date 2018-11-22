@@ -6871,6 +6871,26 @@ double DireTimes::z_FI ( const Particle& rad, const Particle& emt,
 
 //--------------------------------------------------------------------------
 
+double DireTimes::m2dip_FF ( const Particle& rad, const Particle& emt,
+  const Particle& rec) {
+  double sij = 2.*rad.p()*emt.p();
+  double sik = 2.*rad.p()*rec.p();
+  double sjk = 2.*rec.p()*emt.p();
+  return (sij+sik+sjk);
+}
+
+//--------------------------------------------------------------------------
+
+double DireTimes::m2dip_FI ( const Particle& rad, const Particle& emt,
+  const Particle& rec) {
+  double sij =  2.*rad.p()*emt.p();
+  double sai = -2.*rec.p()*rad.p();
+  double saj = -2.*rec.p()*emt.p();
+  return -1.*(sij+saj+sai);
+}
+
+//--------------------------------------------------------------------------
+
 // From Pythia version 8.218 onwards.
 // Return the evolution variable and splitting information. More comments
 // in the header.
@@ -6917,6 +6937,37 @@ map<string, double> DireTimes::getStateVariables (const Event& state,
     ret.insert(make_pair("scaleForCoupling "+STRING(couplingType),pT2));
     ret.insert(make_pair("couplingType",couplingType));
     ret.insert(make_pair("couplingValue",couplingValue));
+
+    // Sum of invariants 2pi*pj
+    double m2dip = m2dipTimes ( state[rad], state[emt], state[rec]);
+    int sign     = (state[rec].isFinal()) ? 1 : -1;
+    // Total dipole invariant mass.
+    double q2    = (state[rec].p() + sign*state[rad].p() + sign*state[emt].p()).m2Calc();
+    int kinType  = 1;
+    int type     = (state[rec].isFinal()) ? 1 : -1;
+    //int idRadBef = splits[name]->radBefID(state[iRad].id(), state[iEmt].id());
+    //double m2Bef = ( abs(idRadBef) < 6 || idRadBef == 21 || idRadBef == 22)
+    //             ? getMass(idRadBef,2)
+    //             : (idRadBef == state[iRad].id())
+    //                ? getMass(idRadBef,3,state[iRad].mCalc())
+    //                : getMass(idRadBef,2);
+    double m2Bef = 0.;
+    double m2r   = state[rad].p().m2Calc();
+    double m2e   = state[emt].p().m2Calc();
+    double m2s   = state[rec].p().m2Calc();
+    // Upate type if this is a massive splitting.
+    if (  type != 0
+      && (m2Bef > TINYMASS || m2r > TINYMASS || m2s > TINYMASS || m2e > TINYMASS)) 
+      type = type/abs(type)*2;
+    double xCS    = 1 - pT2/m2dip/(1.-z);
+    double xOld   = (type > 0) ? 0.0 : xCS*2.*state[rec].e()/state[0].m();
+
+//cout << scientific << setprecision(6) << "FSR: kinType=" << kinType << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " q2=" << q2 << " xOld=" << xOld << " type=" << type<< " m2Bef=" << m2Bef << " m2r=" << m2r << " m2s=" << m2s << " m2e=" << m2e << endl;  
+
+
+    bool allowed = inAllowedPhasespace( kinType, z, pT2, m2dip, q2, xOld, type,
+      m2Bef, m2r, m2s, m2e);
+    ret.insert(make_pair("isAllowed", ((allowed) ? 1. : -1.) ));
 
   // Variables defining the PS starting scales.
   } else {

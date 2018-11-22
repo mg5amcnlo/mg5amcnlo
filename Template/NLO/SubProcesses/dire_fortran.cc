@@ -615,6 +615,9 @@ extern "C" {
       stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
   }
 
+  void dire_get_deadzones_( bool dzone [100][100] ) {
+    merging->getDeadzones( dzone);
+  }
 
 }
 

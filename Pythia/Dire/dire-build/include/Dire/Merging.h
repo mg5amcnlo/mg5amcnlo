@@ -115,6 +115,7 @@ public:
     radSave.clear();
     emtSave.clear();
     recSave.clear();
+    isInDeadzone.clear();
   }
   void storeInfos();
 
@@ -128,6 +129,9 @@ public:
   vector<double> stoppingScalesSave, mDipSave;
   vector<int> radSave, emtSave, recSave;
   vector<double> startingScalesSave;
+
+  void getDeadzones(bool dzone [100][100]);
+  vector<bool> isInDeadzone;
 
   double generateSingleSudakov ( double pTbegAll, 
    double pTendAll, double m2dip, int idA, int type, double s = -1.,

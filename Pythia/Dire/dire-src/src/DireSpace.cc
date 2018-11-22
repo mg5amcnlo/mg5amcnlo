@@ -6868,6 +6868,26 @@ double DireSpace::z_IF ( const Particle& rad, const Particle& emt,
   return 1. + sik / (sai+sak);
 }
 
+//--------------------------------------------------------------------------
+
+double DireSpace::m2dip_II ( const Particle& rad, const Particle& emt,
+  const Particle& rec) {
+  double sai = -2.*rad.p()*emt.p();
+  double sbi = -2.*rec.p()*emt.p();
+  double sab =  2.*rad.p()*rec.p();
+  return (sab + sai + sbi);
+}
+
+//--------------------------------------------------------------------------
+
+double DireSpace::m2dip_IF ( const Particle& rad, const Particle& emt,
+  const Particle& rec) {
+  double sai = -2.*rad.p()*emt.p();
+  double sik =  2.*rec.p()*emt.p();
+  double sak = -2.*rad.p()*rec.p();
+  return -1.*(sai+sik+sak);
+}
+
 //-------------------------------------------------------------------------
 
 // From Pythia version 8.218 onwards.
@@ -6916,6 +6936,32 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
     ret.insert(make_pair("scaleForCoupling "+STRING(couplingType),pT2));
     ret.insert(make_pair("couplingType",couplingType));
     ret.insert(make_pair("couplingValue",couplingValue));
+
+    // Sum of invariants 2pi*pj
+    double m2dip = m2dipSpace ( state[rad], state[emt], state[rec]);
+    int kinType  = 1;
+    double m2Bef = 0.;
+    double m2r   = state[rad].p().m2Calc();
+    double m2e   = state[emt].p().m2Calc();
+    double m2s   = state[rec].p().m2Calc();
+    int type     = (state[rec].isFinal()) ? 1 : -1;
+    // Upate type if this is a massive splitting.
+    if (type == 1 && (m2Bef > TINYMASS || m2r > TINYMASS || m2e > TINYMASS
+      || m2s > TINYMASS)) type = 2;
+    if (type ==-1 && (m2Bef > TINYMASS || m2r > TINYMASS || m2e > TINYMASS
+      || m2s > TINYMASS)) type =-2;
+    double xCS        = (state[rec].isFinal()
+                      ? z : (z*(1-z) - pT2/m2dip) / (1 -z));
+    double xDau = xCS * 2.*state[rad].e()/state[0].m();
+
+//cout << scientific << setprecision(6) << "ISR: kinType=" << kinType << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " xDau=" << xDau << " type=" << type<< " m2Bef=" << m2Bef << " m2r=" << m2r << " m2s=" << m2s << " m2e=" << m2e << endl;  
+
+
+    bool allowed = inAllowedPhasespace( kinType, z, pT2, m2dip, xDau, type,
+      m2Bef, m2r, m2s, m2e);
+    ret.insert(make_pair("isAllowed", ((allowed) ? 1. : -1.) ));
+
+
 
   // Variables defining the PS starting scales.
   } else {

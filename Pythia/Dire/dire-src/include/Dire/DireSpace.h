@@ -353,6 +353,18 @@ public:
   double z_IF ( const Particle& rad, const Particle& emt,
     const Particle& rec);
 
+  // Return ordering variable.
+  // From Pythia version 8.215 onwards no longer virtual.
+  double m2dipSpace ( const Particle& rad, const Particle& emt,
+    const Particle& rec) {
+    if (rec.isFinal()) return m2dip_IF(rad,emt,rec);
+    return m2dip_II(rad,emt,rec);
+  }
+  double m2dip_II ( const Particle& rad, const Particle& emt,
+    const Particle& rec);
+  double m2dip_IF ( const Particle& rad, const Particle& emt,
+    const Particle& rec);
+
   // From Pythia version 8.218 onwards.
   // Return the evolution variable.
   // Usage: getStateVariables( const Event& event,  int iRad, int iEmt, 
