@@ -41,6 +41,7 @@ extern "C" {
     double xwgtup_in, scalup_in, aqedup_in, aqcdup_in;
     int idup_in[500], istup_in[500], mothup_in[500][2], icolup_in[500][2];
     double pup_in[500][5], vtimup_in[500],spinup_in[500], scales_in[500][2];
+    int ifks_in, jfks_in;
   } hepeup_in_;
 
 }
@@ -61,7 +62,9 @@ extern "C" {
     int nup_out, idprup_out;
     double xwgtup_out, scalup_out, aqedup_out, aqcdup_out;
     int idup_out[500], istup_out[500], mothup_out[500][2], icolup_out[500][2];
-    double pup_out[500][5], vtimup_out[500],spinup_out[500], scales_out[500][2];
+    double pup_out[500][5], vtimup_out[500],spinup_out[500],
+           scales_out[500][2], scales_out_a[500][500];
+    int ifks_out, jfks_out;
   } hepeup_out_;
 
 }
@@ -179,6 +182,16 @@ public:
 
     infoPtr->scales = &scalesNow;
 
+    evAttributes.clear();
+
+    stringstream ss;
+    ss << hepeup_out_.ifks_out;
+    evAttributes.insert(make_pair("ifks",ss.str()));
+    ss.str("");
+   ss << hepeup_out_.jfks_out;
+    evAttributes.insert(make_pair("jfks",ss.str()));
+    infoPtr->eventAttributes = &evAttributes;
+
     // Done.
     return true;
   }
@@ -199,6 +212,7 @@ private:
   // Save beam energies to calculate x values.
   double eBeamA, eBeamB;
   LHAscales scalesNow;
+  map<string,string> evAttributes;
 
 };
 

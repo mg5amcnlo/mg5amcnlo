@@ -40,7 +40,7 @@ configStr+=" --enable-debug --with-gzip=/home/prestel/work/2018/ZLIB"
 configStr+=" --with-boost=/home/prestep/work/2018/BOOST"
 
 echo "$configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'"
-$configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'
+#$configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'
 
 make
 make install
@@ -68,7 +68,7 @@ configStr+=" --prefix=$workd/Dire/dire-build"
 configStr+=" --with-pythia8=$workd/Pythia/pythia-src"
 
 echo "$configStr"
-$configStr
+#$configStr
 
 make
 make install

@@ -109,7 +109,7 @@ void MyMerging::storeInfos() {
   // Clear previous information.
   clearInfos();
 
-  //myHistory->state.list();
+  int posOffset=2;
 
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
@@ -120,8 +120,11 @@ void MyMerging::storeInfos() {
     int emt = myHistory->children[i]->clusterIn.emtPos();
     int rec = myHistory->children[i]->clusterIn.recPos();
 
+    int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
+
     // Only consider last event entry as allowed emission.
-    if (emt != myHistory->state.size()-1) {
+//    if (emt != myHistory->state.size()-1) {
+    if (emt != iemtReq+posOffset) {
       /*stoppingScalesSave.push_back(-1.);
       radSave.push_back(-1);
       emtSave.push_back(-1);
@@ -154,7 +157,6 @@ void MyMerging::storeInfos() {
     map<string, double>::iterator it = stateVars.find("isAllowed");
     if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
     isInDeadzone.push_back(dead);
-    //if (dead) {myHistory->state.list(); cout << "found dead zone! " << rad << " " << emt << " " << rec << " " << t << endl;}
 
     // Now swap radiator and recoiler and repeat everything.
     isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rec, emt, rad, "");
@@ -172,7 +174,6 @@ void MyMerging::storeInfos() {
     it = stateVars.find("isAllowed");
     if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
     isInDeadzone.push_back(dead);
-    //if (dead) {myHistory->state.list(); cout << "found dead zone! " << rec << " " << emt << " " << rad << " " << t << endl;}
 
     //cout << "Emission of "
     // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
@@ -236,7 +237,7 @@ fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21,  1, s, x);
 fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21, -1, s, x);
 abort();*/
 
-  // II
+  /*// II
   if (type == 1) {
     return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
       -1, s, x);
@@ -254,7 +255,28 @@ abort();*/
       -1, s, x);
   }
 
-  return 1.;
+  return 1.;*/
+
+  // II
+  double prob = 1.;
+  if (type == 1) {
+    prob = isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
+  // FF
+  } else if (type == 2) {
+    prob = fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  // IF
+  } else if (type == 3) {
+    prob = isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  // FI
+  } else if (type == 4) {
+    prob = fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
+  }
+
+  return prob;
 
 }
 
@@ -347,9 +369,6 @@ int MyMerging::mergeProcess(Event& process){
 //  for (int i = process.size()-1; i > 0; --i)
 //    if (process[i].colType() != 0) { ig = i; break; }
 //  if (process[ig].id() != 21) return 0;
-
-  //process.list(true,true);
-  //infoPtr->scales->list(cout);
 
   int vetoCode = 1;
 
@@ -1497,6 +1516,8 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
 // Function to set up all histories for an event.
 
 bool MyMerging::generateHistories( const Event& process) {
+
+  process.list();
 
   // Input not valid.
   if (!validEvent(process)) {

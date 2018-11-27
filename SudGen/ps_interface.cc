@@ -77,7 +77,7 @@ extern "C" {
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
 
-    double boost = 1.;
+    double boost = 10.;
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->21&1_CS",    boost);
@@ -110,11 +110,12 @@ extern "C" {
 
   void dire_get_no_emission_prob_( double& noemProb, double& startingScale,
     double& stoppingScale, double& mDipole, int& id, int& type, int& seed ) {
-    pythia4dire.readString("Random:setSeed = on");
-    pythia4dire.settings.mode("Random:seed", seed);
-    pythia4dire.rndm.init(seed);
+    //pythia4dire.readString("Random:setSeed = on");
+    //pythia4dire.settings.mode("Random:seed", seed);
+    //pythia4dire.rndm.init(seed);
     noemProb = merging->generateSingleSudakov ( startingScale,
       stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
+
   }
 
 

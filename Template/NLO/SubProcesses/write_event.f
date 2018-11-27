@@ -459,6 +459,10 @@ c      include "pmass.inc"
       double precision scales(nexternal)
       double precision scales_a(nexternal,nexternal)
       double precision pmass(nexternal)
+
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
 
@@ -506,6 +510,23 @@ c********************************************************************
       AQEDUP_out=aqed
       AQCDUP_out=aqcd
       iscale=1
+
+      do i=1,maxpup_out
+        IDUP_out(i)=0
+        ISTUP_out(i)=0
+        MOTHUP_out(1,i)=0
+        MOTHUP_out(2,i)=0
+        ICOLUP_out(1,i)=0
+        ICOLUP_out(2,i)=0
+        PUP_out(1,i)=0.0
+        PUP_out(2,i)=0.0
+        PUP_out(3,i)=0.0
+        PUP_out(4,i)=0.0
+        PUP_out(5,i)=0.0
+        VTIMUP_out(i)=0.0
+        SPINUP_out(i)=0.0
+      enddo
+
       do i=1,NUP_out
         IDUP_out(i)=id(i)
         ISTUP_out(i)=status(i)
@@ -523,6 +544,9 @@ c********************************************************************
         SCALES_out(1,i)=scales(i)
         SCALES_out(2,i)=scales(i+NUP_out)
       enddo
+
+      ifks_out = i_fks
+      jfks_out = j_fks
 
       return
       end
