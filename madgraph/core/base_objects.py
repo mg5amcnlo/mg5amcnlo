@@ -1367,12 +1367,13 @@ class Model(PhysicsObject):
             orders.append([ k for (k, v) in \
                             self.get('order_hierarchy').items() if \
                             v == value ])
-
+        misc.sprint(orders)
         # Extract the interaction that correspond to the different
         # coupling hierarchies, and the corresponding particles
         interactions = []
         particles = []
         for iorder, order in enumerate(orders):
+            misc.sprint(iorder, order)
             sum_orders = sum(orders[:iorder+1], [])
             sum_interactions = sum(interactions[:iorder], [])
             sum_particles = sum([list(p) for p in particles[:iorder]], [])
@@ -1388,6 +1389,7 @@ class Model(PhysicsObject):
                                       inter.get('particles') if \
                                        p.get_pdg_code() not in sum_particles] \
                                       for inter in interactions[-1]], [])))
+            misc.sprint(particles)
 
         return particles, hierarchy
 
@@ -3650,11 +3652,11 @@ class ProcessDefinition(Process):
         # Extract hierarchy and particles corresponding to the
         # different hierarchy levels from the model
         particles, hierarchy = model.get_particles_hierarchy()
-
         # Find legs corresponding to the different orders
         # making sure we look at lowest hierarchy first for each leg
         max_order_now = []
         new_legs =  copy.copy(self.get('legs'))
+        import madgraph.core.base_objects as base_objects
         for parts, value in zip(particles, hierarchy):
             ileg = 0
             while ileg < len(new_legs):

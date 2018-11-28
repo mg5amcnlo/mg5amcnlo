@@ -3160,7 +3160,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('Not a valid value for notification_center')
         # True/False formatting
         elif args[0] in ['crash_on_error']:
-            tmp = banner_mod.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            try:
+                tmp = banner_mod.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            except:
+                if args[1].lower() in ['never']:
+                    tmp = args[1].lower()
+                else:
+                    raise
             self.options[args[0]] = tmp  
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
