@@ -802,7 +802,6 @@ c
       double precision probne_bog
       common/cprobne_bog/probne_bog
       integer kk,kk0,kkunit
-      kkunit=90+imode
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer               ifold_energy,ifold_phi,ifold_yij
@@ -811,6 +810,7 @@ c
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
 c
+      kkunit=90+imode
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
