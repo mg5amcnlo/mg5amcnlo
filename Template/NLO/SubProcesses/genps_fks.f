@@ -1897,6 +1897,8 @@ C stuff for the lepton colliders
       parameter (expo_ee=0.85d0)
       parameter (b_ee=a_ee/(2d0*a_ee*expo_ee - a_ee - 2*expo_ee + 2))
       logical special_ee_coll
+      logical generate_with_bw
+      common /to_ee_generatebw/ generate_with_bw
 
 c external
 c
@@ -2049,6 +2051,7 @@ c
         omx1bar2 = 1d0-x1bar2
       endif
 
+
       if (1d0-xbjrk_born(2).lt.ctiny.and.omx2_ee.gt.0d0) then
         x2bar2 = 1d0 - 2d0*omx2_ee + omx2_ee**2
         omx2bar2 = 2d0*omx2_ee - omx2_ee**2
@@ -2076,16 +2079,35 @@ c
            write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
          endif
       endif
+
       if(yijdir.gt.yij_sol)then
-         xi1=2*(1+yijdir)*x1bar2/(
+         !this is an expansion when both yij->-1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+           xi1=(4*x1bar2 + yijdir + 11*x1bar2*yijdir - 5*x1bar2**2*yijdir +
+     &          x1bar2**3*yijdir+4*yijdir**2)/(2*(1 + yijdir)**2)
+         else
+           xi1=2*(1+yijdir)*x1bar2/(
      &        sqrt( ((1+x1bar2)*(1-yijdir))**2+16*yijdir*x1bar2 ) +
      &        (1-yijdir)*(omx1bar2) )
+         endif
          ximaxtmp=1-xi1
+
       elseif(yijdir.lt.yij_sol)then
-         xi2=2*(1-yijdir)*x2bar2/(
+         !this is an expansion when both yij->+1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+           xi2=(4*x2bar2 - yijdir - 11*x2bar2*yijdir + 5*x2bar2**2*yijdir -
+     &          x2bar2**3*yijdir +4*yijdir**2)/(4*(-1 + yijdir)**2)
+         else
+           xi2=2*(1-yijdir)*x2bar2/(
      &        sqrt( ((1+x2bar2)*(1+yijdir))**2-16*yijdir*x2bar2 ) +
      &        (1+yijdir)*(omx2bar2) )
+         endif
          ximaxtmp=1-xi2
+
       elseif(yijdir.eq.yij_sol)then
          ! this may be relevant only for ee collisions
          if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
@@ -2130,7 +2152,7 @@ c
 c
 c Define xi_i_fks
 c
-      special_ee_coll = j_fks.le.2.and.abs(lpp(1)).eq.4
+      special_ee_coll = j_fks.le.2.and.abs(lpp(1)).eq.4.and..not.generate_with_bw
 
       if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &     ((.not.colltest) .or. 
@@ -2236,11 +2258,21 @@ c
             if (xbjrk(1)-1d0.lt.1d-3 .and. xbjrk(2)-1d0.lt.1d-3) then
               xjac=-102
               pass=.false.
-              write(*,*) 'WARNING IN GENPS, XBJRK', xbjrk
+              !write(*,*) 'WARNING IN GENPS, XBJRK', xbjrk
               return
             else
               write(*,*) 'ERROR IN GENPS, XBJRK', xbjrk
-              stop 1
+              write(*,*) '          X BORN', xbjrk_born
+              write(*,*) '          Y BORN', ycm_born
+              write(*,*) '          OMEGA XI YIJDIR', omega, xi_i_fks, yijdir
+              write(*,*) '          TAU', tau_born, tau
+              write(*,*) '          BW', generate_with_bw
+              write(*,*) '          JFKS', j_fks
+              write(*,*) '          RND XI', x(1), xi_i_hat, xiimax
+              write(*,*) '          run will continue'
+              xjac=-102
+              pass=.false.
+              return
             endif
          endif
       else
@@ -3466,6 +3498,7 @@ c     S=A/(B-x) transformation:
       double precision tau_born, ycm_born, ycmhat, xjac0
 
       logical bw_exists, generate_with_bw
+      common /to_ee_generatebw/ generate_with_bw
       double precision frac_bw
       parameter (frac_bw=0.5d0)
       integer idim_dum
@@ -3479,11 +3512,13 @@ C dressed lepton stuff
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
 
+
       ! these common blocks are never used
       ! we leave them here for the moment 
       ! as e.g. one may want to plot random numbers, etc.
       double precision r1, r2, x1bk, x2bk
       common /to_random_numbers/r1,r2, x1bk, x2bk
+
 
       rnd1=rnd1_in
       rnd2=rnd2_in
