@@ -3470,14 +3470,7 @@ c     S=A/(B-x) transformation:
       parameter (frac_bw=0.5d0)
       integer idim_dum
 C dressed lepton stuff
-      double precision vol_ee_MCintN
-      integer n_ee, i_ee_bw
-      common /to_dressed_leptons/n_ee
-      common /to_dressed_leptons_MCint/vol_ee_MCintN
-      common /to_dressed_leptons_bw/i_ee_bw, bw_exists
-      integer nmax_ee
-      parameter (nmax_ee=4)
-      double precision vol_ee, x1_ee, x2_ee, jac_ee
+      double precision x1_ee, x2_ee, jac_ee
       
       logical generate_x12
       parameter (generate_x12 = .true.)
@@ -3523,11 +3516,6 @@ C dressed lepton stuff
             xjac0 = xjac0 / (1d0 - frac_bw)
         endif
       endif
-
-      ! pick the component of the Luminosity
-      call get_MC_integer(6, nmax_ee, n_ee, vol_ee)
-      xjac0 = xjac0 / vol_ee
-      vol_ee_MCintN = vol_ee
 
       if (one_body) then
         write(*,*) 'one body with ee collisions not implemented'

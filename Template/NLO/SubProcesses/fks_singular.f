@@ -7146,3 +7146,20 @@ c     reset the default dynamical_scale_choice
       return
       end
 
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      include 'eepdf.inc'
+      double precision comp1(n_ee), comp2(n_ee)
+      integer i
+
+      ee_comp_prod = 0d0
+      do i = 1, n_ee
+        ee_comp_prod = ee_comp_prod + comp1(i) * comp2(i)
+      enddo
+      return
+      end
+
+

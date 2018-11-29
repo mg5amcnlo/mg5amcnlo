@@ -48,13 +48,13 @@ C
       data ihlast/20*-99/
       data i_replace/20/
 C dressed lepton stuff
-      integer n_ee
-      common /to_dressed_leptons/n_ee
+      include '../eepdf.inc'
+      integer i_ee
       integer ee_ibeam
       common /to_ee_ibeam/ee_ibeam
       double precision compute_eepdf
       double precision tolerance
-      parameter (tolerance=1.d-5)
+      parameter (tolerance=1.d-2)
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -90,7 +90,10 @@ C     dressed leptons
         else 
           ipart = ipdg
         endif
-        pdg2pdf = compute_eepdf(x,xmu,n_ee,ipart,ee_ibeam)
+        pdg2pdf = 0d0
+        do i_ee = 1, n_ee 
+          ee_components(i_ee) = compute_eepdf(x,xmu,i_ee,ipart,ee_ibeam)
+        enddo
         return
       endif
 

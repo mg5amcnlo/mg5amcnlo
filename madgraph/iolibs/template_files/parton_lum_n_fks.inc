@@ -37,6 +37,13 @@ C
       include "run.inc"                                               
       integer imirror
       common/cmirror/imirror
+C
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      include 'eepdf.inc'
+      double precision ee_comp_prod
+%(ee_comp_vars)s
+      integer i_ee
 C                                                                     
 C DATA                                                                
 C                                                                     
