@@ -380,10 +380,13 @@ c timing statistics
       common /for_applgrid/ iappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
       endif
+      fold=ifl
       if (iappl.ne.0 .and. sum) then
          write (*,*) 'WARNING: applgrid only possible '/
      &        /'with MC over FKS directories',iappl,sum

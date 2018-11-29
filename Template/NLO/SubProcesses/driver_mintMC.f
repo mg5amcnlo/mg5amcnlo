@@ -99,7 +99,10 @@ c general MadFKS parameters
       include "FKSParams.inc"
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
-
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+      
 C-----
 C  BEGIN CODE
 C-----  
@@ -401,14 +404,15 @@ c fill the information for the write_header_init common block
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
-            call pick_unweight_contr(iFKS_picked)
+            call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
             endif
-            call finalize_event(x,weight,lunlhe,putonshell)
+            call finalize_event(x_save(1,ifold_picked),weight,lunlhe
+     $           ,putonshell)
          enddo
          call deallocate_weight_lines
          vn=-1
@@ -765,13 +769,14 @@ c
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      save vol1,proc_map
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer     fold
-      common /cfl/fold
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
@@ -798,6 +803,14 @@ c
       common/cprobne_bog/probne_bog
       integer kk,kk0,kkunit
       kkunit=90+imode
+      integer ifold(ndimmax) 
+      common /cifold/ifold
+      integer               ifold_energy,ifold_phi,ifold_yij
+      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+c
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -817,18 +830,30 @@ c "npNLO".
          call setup_event_attributes
       endif
 
-      fold=ifl
       if (ifl.eq.0) then
-         icontr=0
-         virt_wgt_mint=0d0
-         born_wgt_mint=0d0
-         virtual_over_born=0d0
+         ifold_counter=1
+      elseif(ifl.eq.1) then
+         ifold_counter=ifold_counter+1
+      endif
+
+      fold=ifl
+      if (ifl.eq.0 .or. ifl.eq.1) then
+         if (ifl.eq.0) then
+            icontr=0
+            virt_wgt_mint=0d0
+            born_wgt_mint=0d0
+            virtual_over_born=0d0
+         endif
          MCcntcalled=.false.
          wgt_me_real=0d0
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+         do i=1,ndim
+            x_save(i,ifold_counter)=x(i)
+         enddo
+         if (ifl.eq.0)
+     &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -979,7 +1004,14 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
-         
+      elseif(ifl.eq.2) then
+         if (ifold_counter .ne.
+     $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then
+            write (*,*) "ERROR in folding parameters (driver_mintMC.f)"
+     $           ,ifold_counter,ifold_energy,ifold_phi,ifold_yij
+            write (*,*) ifold(:)
+            stop 1
+         endif
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
@@ -988,13 +1020,8 @@ c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents
-         call fill_mint_function_NLOPS(f,n1body_wgt)
+         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-      elseif(ifl.eq.1) then
-         write (*,*) 'Folding not implemented'
-         stop 1
-      elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return
