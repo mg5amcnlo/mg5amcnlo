@@ -2098,7 +2098,7 @@ c
          !this is an expansion when both yij->+1 and x1->1
          ! in this case there may be precision loosses
          ! from the argument in the sqrt
-         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+         if (abs(yijdir-1d0).lt.ctiny.and.omx2bar2.lt.ctiny) then
            xi2=(4*x2bar2 - yijdir - 11*x2bar2*yijdir + 5*x2bar2**2*yijdir -
      &          x2bar2**3*yijdir +4*yijdir**2)/(4*(-1 + yijdir)**2)
          else
