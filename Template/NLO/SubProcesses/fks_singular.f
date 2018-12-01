@@ -2394,18 +2394,25 @@ c contributions to the picked fold, use the weights of those instead).
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict,ifl,ifold_counter,iFKS,ifold_picked
+      integer i,j,k,l,ict,ifl,ifold_counter,iFKS,ifold_picked
       double precision wgt_fold_fks(fks_configs,ifold_counter),ran2
      $     ,target,tmp_scale(fks_configs,ifold_counter),showerscale
+     $     ,tmp_scale_a(fks_configs,ifold_counter,nexternal,nexternal)
      $     ,wgt_fold_fks_born(fks_configs,ifold_counter)
      $     ,wgt_fold(ifold_counter),wgt_sum,wgt_accum
      $     ,showerscale_a(nexternal,nexternal)
       external ran2
+c
       do ifl=1,ifold_counter
          do iFKS=1,fks_configs
             wgt_fold_fks(iFKS,ifl)=0d0
             wgt_fold_fks_born(iFKS,ifl)=0d0
             tmp_scale(iFKS,ifl)=-1d0
+            do j=1,nexternal
+               do k=1,nexternal
+                  tmp_scale_a(iFKS,ifl,j,k)=-1d0
+               enddo
+            enddo
          enddo
          wgt_fold(ifl)=0d0
       enddo
@@ -2439,6 +2446,21 @@ c contribution to a given FKS configuration and fold.
      $              ,tmp_scale(nFKS(ict),ifl),shower_scale(ict)
                stop 1
             endif
+            do l=1,nexternal
+               do k=1,nexternal
+                  if (tmp_scale_a(nFKS(ict),ifl,l,k).eq.-1d0) then
+                     tmp_scale_a(nFKS(ict),ifl,l,k)=shower_scale_a(ict,l,k)
+c check that all the shower starting scales are identical for all the
+c contribution to a given FKS configuration and fold.
+                  elseif ( abs((tmp_scale_a(nFKS(ict),ifl,l,k)-shower_scale_a(ict,l,k))
+     $               /(tmp_scale_a(nFKS(ict),ifl,l,k)+shower_scale_a(ict,l,k)))
+     $               .gt. 1d-6 ) then
+                     write (*,*) 'ERR 2 in update_shower_scale_Sevents2'
+     $               ,tmp_scale_a(nFKS(ict),ifl,l,k),shower_scale_a(ict,l,k)
+                     stop 1
+                  endif
+               enddo
+            enddo
          enddo
       enddo
 c pick the fold at random, weighted by their relative contributions
@@ -2499,6 +2521,11 @@ c instead.
          endif
       endif
       showerscale=tmp_scale(iFKS,ifl)
+      do j=1,nexternal
+         do k=1,nexternal
+            showerscale_a(j,k)=tmp_scale_a(iFKS,ifl,j,k)
+         enddo
+      enddo
       ifold_picked=ifl
       return
       end
