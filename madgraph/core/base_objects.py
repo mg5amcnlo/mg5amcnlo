@@ -1367,13 +1367,12 @@ class Model(PhysicsObject):
             orders.append([ k for (k, v) in \
                             self.get('order_hierarchy').items() if \
                             v == value ])
-        misc.sprint(orders)
+
         # Extract the interaction that correspond to the different
         # coupling hierarchies, and the corresponding particles
         interactions = []
         particles = []
         for iorder, order in enumerate(orders):
-            misc.sprint(iorder, order)
             sum_orders = sum(orders[:iorder+1], [])
             sum_interactions = sum(interactions[:iorder], [])
             sum_particles = sum([list(p) for p in particles[:iorder]], [])
@@ -1389,7 +1388,6 @@ class Model(PhysicsObject):
                                       inter.get('particles') if \
                                        p.get_pdg_code() not in sum_particles] \
                                       for inter in interactions[-1]], [])))
-            misc.sprint(particles)
 
         return particles, hierarchy
 
