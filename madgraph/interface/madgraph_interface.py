@@ -4672,6 +4672,25 @@ This implies that with decay chains:
                 continue
 
             mylegids = []
+            polarization = []
+            if '{' in part_name:
+                part_name, pol = part_name.split('{',1)
+                pol, rest = pol.split('}',1)
+                if rest:
+                    raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
+                for p in pol:
+                    if p in ['t','T']:
+                        polarization += [1,-1]
+                    elif p in ['l', 'L']:
+                        polarization += [0]
+                    elif p in ['R','r']:
+                        polarization += [-1]
+                    elif p in ["A",'a']:
+                        polarization += [99]
+                        raise Exception("Not yet supported")
+                    else:
+                        raise self.InvalidCmd('Invalid Polarization')
+
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd,\
@@ -4691,7 +4710,8 @@ This implies that with decay chains:
 
             if mylegids:
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state}))
+                                                        'state':state,
+                                                        'polarization': polarization}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 

@@ -638,6 +638,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # conjugate_indices is a list [1,2,...] with fermion lines
         # that need conjugates. Default is "None"
         self['conjugate_indices'] = None
+        #
+        #
+        self['polarization'] = []
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -677,6 +680,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # antiparticle are incoming, and vice versa for
                 # outgoing
                 if self.is_fermion():
+                    # L is interpreted as longitudinal -> correct here for fermion
+                    if leg.get('polarization'):
+                        pol = list(leg.get('polarization'))
+                        if 0 in leg.get('polarization'):
+                            pol.remove(0)
+                            pol.append(1)
+                        self.set('polarization', pol) 
+                    
                     if leg.get('state') == False and \
                            self.get('is_part') or \
                            leg.get('state') == True and \
@@ -684,6 +695,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('state', 'incoming')
                     else:
                         self.set('state', 'outgoing')
+                else:
+                    self.set('polarization', leg.get('polarization'))
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
@@ -838,6 +851,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid int" % str(value) + \
                         " for the lcut_size"
+                        
+        if name == 'polarization':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for i in value:
+                if i not in [-1, 1, 0, 99]:
+                    raise self.PhysicsObjectError, \
+                      "%s is not a valid polarization" % str(value)
 
         return True
 
@@ -4643,11 +4665,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             return None
 
         model = self.get('processes')[0].get('model')
+        hel_per_part = [ len(wf.get('polarization')) if wf.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states())
+            for wf in self.get_external_wavefunctions()]
 
         return reduce(lambda x, y: x * y,
-                      [ len(model.get('particle_dict')[wf.get('pdg_code')].\
-                            get_helicity_states())\
-                        for wf in self.get_external_wavefunctions() ], 1)
+                      hel_per_part)
 
     def get_helicity_matrix(self, allow_reverse=True):
         """Gives the helicity matrix for external wavefunctions"""
@@ -4658,9 +4682,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         process = self.get('processes')[0]
         model = process.get('model')
 
-        return apply(itertools.product, [ model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)\
-                                  for wf in self.get_external_wavefunctions()])
+        hel_per_part = [ wf.get('polarization') if wf.get('polarization') 
+                        else model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)
+            for wf in self.get_external_wavefunctions()]
+
+        return apply(itertools.product, hel_per_part)
 
     def get_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
@@ -4669,11 +4696,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = self.get('processes')[0].get('model')
         initial_legs = filter(lambda leg: leg.get('state') == False, \
                               self.get('processes')[0].get('legs'))
+        hel_per_part = [ len(wf.get('polarization')) if wf.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states())
+            for wf in initial_legs]
         
-        return reduce(lambda x, y: x * y,
-                      [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
-                        for leg in initial_legs ])
+        return reduce(lambda x, y: x * y, hel_per_part, 1)
 
     def get_beams_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
