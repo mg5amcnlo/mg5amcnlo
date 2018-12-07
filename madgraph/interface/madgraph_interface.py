@@ -3127,12 +3127,17 @@ This implies that with decay chains:
         
         model_path = args[0]
         recreate = ('--recreate' in args)
+        if recreate:
+            args.remove('--recreate')
         keep_decay = ('--keep_decay' in args)
+        if keep_decay:
+            args.remove('--keep_decay')
         output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
         if output_dir:
             output_dir = output_dir[0]
             recreate = True
             restrict_name = ''
+            args.remove('--output=%s' % output_dir)
         else:
             name = os.path.basename(self._curr_model.get('modelpath'))
             restrict_name = self._curr_model.get('restrict_name')
