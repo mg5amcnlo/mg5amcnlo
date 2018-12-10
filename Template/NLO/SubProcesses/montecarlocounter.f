@@ -377,7 +377,8 @@ c
             xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,
+     #                                         xmcxsec2,MCsec,probne)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 
@@ -445,8 +446,8 @@ c
       end
 
 
-
-c Main routine for MC counterterms
+c Main routine for MC counterterms. Now to be called inside a loop
+c over colour partners
 
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
@@ -473,7 +474,8 @@ c Main routine for MC counterterms
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
-      double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
+      double precision emscwgt_a(nexternal,nexternal),
+     # emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -526,11 +528,14 @@ c Main routine for MC counterterms
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
       logical emscasharp_a(nexternal,nexternal)
-      double precision emsca_a(nexternal,nexternal),emsca_bare_a(nexternal,nexternal)
+      double precision emsca_a(nexternal,nexternal),
+     #  emsca_bare_a(nexternal,nexternal)
       double precision emsca_bare_a2(nexternal,nexternal)
-      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
+      double precision scalemin_a(nexternal,nexternal),
+     #  scalemax_a(nexternal,nexternal)
       double precision ptresc_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
+     #                emscasharp_a,scalemin_a,scalemax_a
 
       double precision ran2,iseed
       external ran2
@@ -1068,6 +1073,9 @@ c      enddo
       include 'nexternal.inc'
       include 'madfks_mcatnlo.inc'
 
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
@@ -1143,7 +1151,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       double precision wgt_sudakov
       double precision scales(0:999)
 
-C     To access Pythia8 control variables
+c To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
@@ -1156,21 +1164,29 @@ C     To access Pythia8 control variables
       common/SHevents/Hevents
       integer nexternal_now
       double precision sumMCsec(max_bcol)
+c SCALUP_tmp_S = m_ij scales that determine S-event scales written onto LHE
       double precision SCALUP_tmp_S(nexternal,nexternal)
+c SCALUP_tmp_S2 = m_ij starting scales for Delta
       double precision SCALUP_tmp_S2(nexternal,nexternal)
+c SCALUP_tmp_H = t_ij scales that determine H-event scales written onto LHE
       double precision SCALUP_tmp_H(nexternal,nexternal)
+c SCALUP_tmp_H2 = t_ij target scales for Delta
+      double precision SCALUP_tmp_H2(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
       integer iii,jjj
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
+      double precision xscales2(0:99,0:99)
+      double precision xmasses2(0:99,0:99)
       logical*1 dzones(0:99,0:99)
+      logical*1 dzones2(0:99,0:99)
 
-      integer id, type
+      integer id, type, icount, ic, jc
       double precision noemProb, startingScale, stoppingScale, mDipole
       double precision mcmass(21)
-      double precision pysudakov
-      integer nG_S,nQ_S,i_dipole_counter,isudtype
+      double precision pysudakov,scalefunH,deltanum,deltaden
+      integer nG_S,nQ_S,i_dipole_counter,isudtype,relabel(nexternal)
 c
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
@@ -1253,7 +1269,7 @@ c     Assign flow on statistical basis
          stop
       endif
 
-c     Assign emsca (scalar) on statistical basis
+c Assign emsca (scalar) on statistical basis -- insure backward compatibility
       if(dampMCsubt.and.wgt.gt.1d-30)then
         rrnd=ran2()
         wgt11=0d0
@@ -1283,7 +1299,8 @@ c Additional information for LHE
             ipartner_lhe(nFKSprocess)=jpartner
          else
 c min() avoids troubles if ran2()=1
-            ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+            ipartner_lhe(nFKSprocess)=min(int(ran2()*ipartners(0))+1,
+     #                                    ipartners(0) )
             ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
          endif
          scale1_lhe(nFKSprocess)=qMC
@@ -1297,9 +1314,9 @@ c min() avoids troubles if ran2()=1
          endif
       endif
 
-c     S-event information.
-c     ids, mothers read from born_leshouche.inc
-c     color configuration read from born_leshouche.inc and jflow 
+c S-event information:
+c id's and mothers read from born_leshouche.inc;
+c colour configuration read from born_leshouche.inc and jflow 
       do i=1,nexternal-1
         IDUP_S(i)=IDUP(i,1)
         MOTHUP_S(1,i)=MOTHUP(1,i,1)
@@ -1307,17 +1324,17 @@ c     color configuration read from born_leshouche.inc and jflow
         ICOLUP_S(1,i)=ICOLUP(1,i,jflow)
         ICOLUP_S(2,i)=ICOLUP(2,i,jflow)
       enddo
-c
-c     LH scales for S events are read from emsca_v_tmp matrix;
-c     they correspond to the starting scales for extra radiation;
-c     stored in SCALUP_tmp_S for the colour lines beloinging to
-c     jflow, to be written to LH file. Set to -1 if lines belonging
-c     to other flows
-c     SCALUP_tmp_S and SCALUP_tmp_S2 are chosen in the same way
-c     but with different seeds: the former goes to the LH file as
-c     scale for the S events, the latter is used as starting scale
-c     in the computation of Delta below
+c SCALUP_tmp_S* are the m_ij scales, ie the starting scales (as determined
+c by the D(mu) function) for extra radiation; they are copies of the
+c emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
+c entries associated with a colour line that belongs to jflow have
+c meaningful values; the others are set equal to -1.
+c SCALUP_tmp_S and SCALUP_tmp_S2 are chosen in exactly the same way, except
+c for the random numbers that enter their definitions. The former will
+c help determine the S-event shower scales written onto the LHE file, 
+c the latter is employed in the computation of Delta
       SCALUP_tmp_S=-1d0
+      SCALUP_tmp_S2=-1d0
       do i=1,nexternal-2
          do j=i+1,nexternal-1
             if( (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
@@ -1331,10 +1348,14 @@ c     in the computation of Delta below
             endif
          enddo
       enddo
+
 c
-c
-c     H-event information.
-c     First write ids, mothers and all colours.
+c H-event information.
+c First write ids, mothers and all colours.
+cSF NOTE: reconsider how much H-event information is actually needed
+cSF by Pythia. For example, the colour flow is used only to reconstruc
+cSF the underlying S-event flow, which is already available here, and
+cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
         call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
         firsttime1=.false.
@@ -1346,14 +1367,14 @@ c     First write ids, mothers and all colours.
           MOTHUP_H(2,i,j)=MOTHUP_D(nFKSprocess,2,i,j)
         enddo
       enddo
-c     Fill selected color configuration into jpart array. 
+c Fill selected color configuration into jpart array. 
       call fill_icolor_H(jflow,jpart)
       do i=1,nexternal
         ICOLUP_H(1,i)=jpart(4,i)
         ICOLUP_H(2,i)=jpart(5,i)
       enddo
-
-c     Calculate suppression factor for H-events.
+cSF DONT UNDERSTAND THE COMMENT
+c Calculate suppression factor for H-events.
       nexternal_now=nexternal
       call clear_HEPEUP_event()
       call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
@@ -1364,37 +1385,111 @@ c     Calculate suppression factor for H-events.
       endif
       call dire_setevent()
       call dire_next()
-c$$$      call dire_get_mergingweight(wgt_sudakov)
-c$$$      call dire_get_sudakov_stopping_scales(scales)
 
       xscales=-1d0
       xmasses=-1d0
       dzones=.true.
+      xscales2=-1d0
+      xmasses2=-1d0
+      dzones2=.true.
       call dire_get_stopping_info(xscales,xmasses)
       call dire_get_deadzones(dzones)
+c After the calls above, we have
+c   xscales(i,j)=t_ij
+c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
+c emitted equal to the FKS parton. Therefore, 1<=i,j<=nexternal, with
+c sensible values returned only if i#i_fks and/or j#i_fks.
+c The same labeling conventions apply to xmasses(i,j) (which is the
+c dipole mass associated with the colour line that connects i and j)
+c and dzones(i,j) (which is the dead zone relevant to the emission
+c from parton i colour-connected with recoiler j).
 c
-c     LH scales for H events are computed by Pythia;
-c     they correspond to the target scales for extra radiation;
-c     stored in SCALUP_tmp_H
-      SCALUP_tmp_H=-1d0
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1
-            SCALUP_tmp_H(i,j)=xscales(i,j)
-            SCALUP_tmp_H(j,i)=SCALUP_tmp_H(i,j)
+c Therefore, since any the pair of indices (i,j) associated with sensible
+c entries in the arrays returned by Pythia is in one-to-one correspondence
+c with Born-level quantities, it is convenient to define relabelled
+c copies of such arrays (which we call xscales2, xmasses2, and dzones2),
+c for which 1<=i,j<=nexternal-1
+c
+c By construction, t_ij are the target scales. For notational consistency
+c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
+c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
+      do i=1,nexternal
+         if(i.lt.i_fks)then
+            relabel(i)=i
+         elseif(i.eq.i_fks)then
+            relabel(i)=-1
+         elseif(i.gt.i_fks)then
+            relabel(i)=i-1
+         endif
+      enddo
+c
+      SCALUP_tmp_H2=-1d0
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         do j=1,nexternal
+            if(j.eq.i_fks)cycle
+            xscales2(relabel(i),relabel(j))=xscales(i,j)
+            xmasses2(relabel(i),relabel(j))=xmasses(i,j)
+            dzones2(relabel(i),relabel(j))=dzones(i,j)
+            scalup_tmp_H2(relabel(i),relabel(j))=
+     #        xscales2(relabel(i),relabel(j))
          enddo
       enddo
 c
-c     compute wgt_sudakov = Delta as the product of Sudakovs between
-c     starting scales (SCALUP_tmp_S2) and stopping scales (SCALUP_tmp_H)
+c The target scales will also be written onto the LHE file for H events.
+c For consistency with the case of SCALUP_tmp_S, a copy of xscales is 
+c created and called SCALUP_tmp_H, that will help determine the H-event 
+c shower scales written onto the LHE file. At this point of the code, the
+c latter array is correctly labelled with 1<=i,j<=nexternal, but lacks
+c the entries relevant to i and/or j equal to i_fks, to be provided later
+cSF I DONT THINK THE ENTRIES J=I_FKS ARE EVER NEEDED. DONT WE USE
+cSF SHOWERSCALES(PARTICLE #i)=XSCALES(i,whatevercolourlinked)?
+      SCALUP_tmp_H=-1d0
+      do i=1,nexternal
+         do j=1,nexternal
+            SCALUP_tmp_H(i,j)=xscales(i,j)
+         enddo
+      enddo
+
+cSF Assignment of shower scale to the extra leg
+cSF SOMETHING FISHY HERE. MUST DEPEND ON H COLOUR CONFIGURATION,
+cSF AND HERE WE HAVE ONLY ONE. WHAT IS DONE WHEN WRITING LHE FILE?
+cSF WHAT BELOW WORKS (?) FOR A SINGLE H COLOUR. ITERATE IF NECESSARY
+      icount=0
+      ic=-1
+      jc=-1
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         if(ICOLUP_H(1,i).eq.i_fks)then
+            icount=icount+1
+            ic=i
+         endif
+         if(ICOLUP_H(2,i).eq.i_fks)then
+            icount=icount+1
+            jc=i
+         endif
+      enddo
+cSF CHECK ICOUNT=2 IF GLUON ICOUNT=1 IF QUARK
+      if(ic.ne.-1)SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
+      if(jc.ne.-1)SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
+c
+c Computation of wgt_sudakov = Delta as the product of Sudakovs between
+c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2)
       wgt_sudakov=1d0
       i_dipole_counter=0
       nG_S=0
       nQ_S=0
+c
+cSF WHY NOT do i=1,nexternal-2?
       do i=1,nexternal-1
+
          if(idup_s(i).eq.21)nG_S=nG_S+1
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
+
          do j=1,nexternal-1
+
             if(j.eq.i)cycle
+
             if(i.le.2.and.j.le.2)then
                isudtype=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -1404,22 +1499,26 @@ c     starting scales (SCALUP_tmp_S2) and stopping scales (SCALUP_tmp_H)
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-            if((xscales(i,j).ne.-1d0.and.xmasses(i,j).eq.-1d0).or.
-     &         (xscales(i,j).eq.-1d0.and.xmasses(i,j).ne.-1d0))then
-               write(*,*)'Error in xscales, xmasses',i,j,xscales(i,j),xmasses(i,j)
+            if((xscales2(i,j).ne.-1d0.and.xmasses2(i,j).eq.-1d0).or.
+     &         (xscales2(i,j).eq.-1d0.and.xmasses2(i,j).ne.-1d0))then
+               write(*,*)'Error in xscales, xmasses',
+     &                   i,j,xscales2(i,j),xmasses2(i,j)
                stop
             endif
-            if(xscales(i,j).eq.-1d0) then
-              write(*,*)'Error in xscales',i,j,xscales(i,j),dzones(i,j)
+            if(xscales2(i,j).eq.-1d0) then
+c              write(*,*)'Error in xscales',i,j,xscales2(i,j),dzones2(i,j)
               cycle
-            else
-              write(*,*)'correct xscales',i,j,xscales(i,j),dzones(i,j)
+c            else
+c              write(*,*)'correct xscales',i,j,xscales2(i,j),dzones2(i,j)
             endif
-c            if(xscales(i,j).eq.-1d0.or.is_dzone(i,j)
-c              .or.SCALUP_tmp_H(i,j).gt.SCALUP_tmp_S2(i,j))cycle
-            wgt_sudakov=wgt_sudakov*1.0
-c     &        pysudakov(SCALUP_tmp_H(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)/
-c     &        pysudakov(SCALUP_tmp_S2(i,j),xmasses(i,j),idup_s(i),isudtype,mcmass)
+cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
+c            deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
+c     &                         idup_s(i),isudtype,mcmass)
+c            deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
+c     &                         idup_s(i),isudtype,mcmass)
+            deltanum=1.0
+            deltaden=1.0
+            wgt_sudakov=wgt_sudakov*deltanum/deltaden
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
@@ -1429,17 +1528,11 @@ c     &        pysudakov(SCALUP_tmp_S2(i,j),xmasses(i,j),idup_s(i),isudtype,mcma
          stop
       endif
 
-c      startingScale = 1000.0
-c      stoppingScale = 1.0
-c      mDipole = 100.0
-c      id = 1
-c      type = -2
-c      call dire_get_no_emission_prob( noemProb, startingScale, stoppingScale, mDipole, id, type);
-c      write(*,*) noemProb
-c      call exit(0)
-
-
+cSF THE FOLLOWING MIGHT READ
+c        if(UseDelta)probne = wgt_sudakov
+cSF IF A UseDelta parameter is introduced
       probne = wgt_sudakov
+cSF ELIMINATE WHAT FOLLOWS AFTER CHECKS
       if(probne.lt.0.d0)then
         write(*,*)'SFWARNING1',probne
         probne=0.d0
@@ -3086,7 +3179,8 @@ c Consistency check
 
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
+     #                emscasharp_a,scalemin_a,scalemax_a
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -3102,7 +3196,7 @@ c Consistency check
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
-      emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
+      emsca_a=-1d0
 
       do i=1,nexternal-2
          do j=i+1,nexternal-1
@@ -3512,5 +3606,15 @@ c bosons
 c
       charge=tmp
 
+      return
+      end
+
+      function scalefunH(q)
+c     Functional form for shower scale relevant to an emission
+c     from the colour line of the FKS parton
+      implicit none
+      double precision scalefunH,q
+      scalefunH=max(q,3d0)
+c
       return
       end

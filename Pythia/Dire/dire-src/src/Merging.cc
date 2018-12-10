@@ -111,6 +111,8 @@ void MyMerging::storeInfos() {
 
   int posOffset=2;
 
+//myHistory->state.list();
+
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -134,7 +136,84 @@ void MyMerging::storeInfos() {
       continue;
     }
 
-    // Already covered clustering.
+//cout << "next s-event state " << endl;
+//myHistory->children[i]->state.list();
+
+    vector<pair<int,int> > dipEnds;
+    // Loop through final state of system to find possible dipole ends.
+    for (int ip = 0; ip < myHistory->children[i]->state.size(); ++ip) {
+      if ( myHistory->children[i]->state[ip].isFinal()
+        || myHistory->children[i]->state[ip].mother1()== 1
+        || myHistory->children[i]->state[ip].mother1()== 2 ) {
+        // Find dipole end formed by colour index.
+        int colTag = myHistory->children[i]->state[ip].col();
+        if (colTag > 0) getDipoles( ip,  colTag,  1, myHistory->children[i]->state, dipEnds);
+        // Find dipole end formed by anticolour index.
+        int acolTag = myHistory->children[i]->state[ip].acol();
+        if (acolTag > 0) getDipoles( ip, acolTag, -1, myHistory->children[i]->state, dipEnds);
+      }
+    }
+
+    for (int id = 0; id < dipEnds.size(); ++id) {
+
+//      if (myHistory->children[i]->clusterIn.iPosInMother.size() == 0) {
+//        myHistory->children[i]->state.list();
+//        abort();
+//      }
+
+      int iRad(0), iRec(0);
+      map<int,int>::iterator it
+      = myHistory->children[i]->clusterIn.iPosInMother.find(dipEnds[id].first);
+      if ( it == myHistory->children[i]->clusterIn.iPosInMother.end() ) continue;
+      iRad = it->second;
+
+      map<int,int>::iterator it2
+      = myHistory->children[i]->clusterIn.iPosInMother.find(dipEnds[id].second);
+      if ( it2 == myHistory->children[i]->clusterIn.iPosInMother.end() ) continue;
+      iRec = it2->second;
+
+      //cout << myHistory->state[rad].isFinal() << endl;
+      //cout << "i=" << id << " rad=" << rad << " " << dipEnds[id].first << " " << iRad << " rec=" << rec << " " << dipEnds[id].second << " " << iRec << endl;
+
+      // Already covered clustering.
+      if ( find(radSave.begin(), radSave.end(), iRad) != radSave.end()
+        && find(recSave.begin(), recSave.end(), iRec) != recSave.end() )
+        continue;
+
+      bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state,
+        iRad, iemtReq+posOffset, iRec, "");
+      if (isFSR) stateVars = myHistory->showers->timesPtr->getStateVariables(
+        myHistory->state, iRad, iemtReq+posOffset, iRec, "");
+      else       stateVars = myHistory->showers->spacePtr->getStateVariables(
+        myHistory->state, iRad, iemtReq+posOffset, iRec, "");
+      double t    = stateVars["t"];
+//      double mass = myHistory->children[i]->clusterIn.mass();
+      double mass = sqrt(stateVars["m2dip"]);
+      // Just store pT for now.
+      stoppingScalesSave.push_back(t);
+      radSave.push_back(iRad);
+      emtSave.push_back(iemtReq+posOffset);
+      recSave.push_back(iRec);
+      mDipSave.push_back(mass);
+      bool dead = (t<=0.);
+      map<string, double>::iterator it3 = stateVars.find("isAllowed");
+      if (it3 != stateVars.end()) dead = (it3->second>0.) ? false : true;
+      isInDeadzone.push_back(dead);
+
+
+//      cout << "i=" << id << " rad=" << iRad << " rec=" << iRec << " scale=" << t << endl;
+
+
+    }
+
+
+//  for ( map<int, int>::iterator it = myHistory->children[i]->clusterIn.iPosInMother.begin();
+//    it != myHistory->children[i]->clusterIn.iPosInMother.end(); ++it ) {
+//    cout << "s-event " << it->first << " --> h-event " << it->second << endl;
+//  }
+
+
+/*    // Already covered clustering.
     if ( find(radSave.begin(), radSave.end(), rad) != radSave.end()
       && find(recSave.begin(), recSave.end(), rec) != recSave.end() )
       continue;
@@ -158,6 +237,8 @@ void MyMerging::storeInfos() {
     if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
     isInDeadzone.push_back(dead);
 
+cout << "Clustering in Pythia: rad=" << rad << " emt=" << emt << " rec=" << rec << endl; 
+
     // Now swap radiator and recoiler and repeat everything.
     isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rec, emt, rad, "");
     if (isFSR)
@@ -175,6 +256,8 @@ void MyMerging::storeInfos() {
     if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
     isInDeadzone.push_back(dead);
 
+cout << "Clustering in Pythia: rad=" << rec << " emt=" << emt << " rec=" << rad << endl; 
+
     //cout << "Emission of "
     // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
     // << " at pT "
@@ -185,11 +268,79 @@ void MyMerging::storeInfos() {
     //radSave.push_back(myHistory->children[i]->clusterIn.radPos());
     //emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
     //recSave.push_back(myHistory->children[i]->clusterIn.recPos());
-    //mDipSave.push_back(myHistory->children[i]->clusterIn.mass());
+    //mDipSave.push_back(myHistory->children[i]->clusterIn.mass());*/
 
   }
 
+//abort();
+
 }
+
+//--------------------------------------------------------------------------
+
+// Setup a dipole end for a QCD colour charge.
+
+void MyMerging::getDipoles( int iRad, int colTag, int colSign,
+  const Event& event, vector<pair<int,int> >& dipEnds) {
+
+  vector<int> recPos;
+
+  // Colour: other end by same index in final state or opposite in beam.
+  if (colSign > 0 && !event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].col()  == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].acol() == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Anticolour: other end by same index in final state or opposite in beam.
+  if (colSign < 0 && !event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].acol() == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].col()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Colour: other end by same index in final state or opposite in beam.
+  if (colSign > 0 && event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].acol() == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].col()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Anticolour: other end by same index in final state or opposite in beam.
+  if (colSign < 0 && event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].col()   == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].acol()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Store dipole colour end(s).
+  for (unsigned int i = 0; i < recPos.size(); ++i) {
+    int iRecNow = recPos[i];
+    dipEnds.push_back(make_pair(iRad,iRecNow));
+  }
+
+}
+
 
 //--------------------------------------------------------------------------
 
@@ -200,6 +351,8 @@ void MyMerging::getStoppingInfo(double scales [100][100],
   for (unsigned int i=0; i < radSave.size(); ++i){
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
+//    cout << radSave[i] << " " << recSave[i] << " "
+//      << mDipSave[i] << " " << stoppingScalesSave[i] << endl;
   }
 
 }
@@ -427,9 +580,7 @@ int MyMerging::mergeProcess(Event& process){
   // Ensure that merging weight is not counted twice.
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
 
-
 //return genSud(process);
-
 
   // Possibility to apply merging scale to an input event.
   bool applyTMSCut = settingsPtr->flag("Merging:doXSectionEstimate");
@@ -472,10 +623,6 @@ int MyMerging::mergeProcess(Event& process){
 
 
     settingsPtr->mode("Merging:nRequested", nPartons);
-
-
-
-
 
 
     mergingHooksPtr->hasJetMaxLocal  = false;
@@ -1517,7 +1664,7 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
 
 bool MyMerging::generateHistories( const Event& process) {
 
-  process.list();
+//  process.list();
 
   // Input not valid.
   if (!validEvent(process)) {

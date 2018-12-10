@@ -307,10 +307,15 @@ public:
 
   // Setup clustering kinematics.
   virtual Event clustered( const Event& state, int iRad, int iEmt, int iRec,
-    string name) {
-    return  clustered_internal(state, iRad, iEmt, iRec, name).first; }
+    string name, map<int,int>& iPosMoth) {
+    //return  clustered_internal(state, iRad, iEmt, iRec, name).first;
+    pair <Event, pair<int,int> > reclus
+      = clustered_internal(state,iRad, iEmt, iRec, name, iPosMoth);
+    reclus.first[0].mothers(reclus.second.first,reclus.second.second);
+    return reclus.first;
+  }
   pair <Event, pair<int,int> > clustered_internal( const Event& state,
-    int iRad, int iEmt, int iRec, string name);
+    int iRad, int iEmt, int iRec, string name, map<int,int>& iPosMoth);
   bool cluster_FF( const Event& state, int iRad,
     int iEmt, int iRec, int idRadBef, Particle& radBef, Particle& recBef);
   bool cluster_FI( const Event& state, int iRad,

@@ -68,6 +68,10 @@ public:
   string splitName;
   string name() const { return splitName;}
 
+  // Map between particle positions in the clustered states -> particle
+  // positions in unclustered real-emission state.
+  map<int,int> iPosInMother;
+
   // Default constructor
   MyClustering(){
     emitted    = 0;
@@ -103,6 +107,7 @@ public:
     emtSave    = inSystem.emtSave;
     recSave    = inSystem.recSave;
     splitName  = inSystem.splitName;
+    iPosInMother = inSystem.iPosInMother;
   }
 
   // Constructor with input
@@ -110,11 +115,12 @@ public:
     double pTscaleIn, const Particle* radIn, const Particle* emtIn, 
     const Particle* recIn, string splitNameIn,
     int flavRadBefIn = 0, int spinRadBefIn = 9,
-    int radBefIn = 0, int recBefIn = 0)
+    int radBefIn = 0, int recBefIn = 0, map<int,int> posIn = map<int,int>())
     : emitted(emtPosIn), emittor(radPosIn), recoiler(recPosIn),
       partner(partnerIn), pTscale(pTscaleIn), radSave(radIn), emtSave(emtIn),
       recSave(recIn), flavRadBef(flavRadBefIn), spinRadBef(spinRadBefIn),
-      radBef(radBefIn), recBef(recBefIn), splitName(splitNameIn) {}
+      radBef(radBefIn), recBef(recBefIn), splitName(splitNameIn),
+      iPosInMother(posIn) {}
 
   // Function to return pythia pT scale of clustering
   double pT() const { return pTscale; }

@@ -119,6 +119,9 @@ public:
   }
   void storeInfos();
 
+  void getDipoles( int iRad, int colTag, int colSign,
+    const Event& event, vector<pair<int,int> >& dipEnds);
+
   vector<double> getStoppingScales() { 
     return stoppingScalesSave;
   }

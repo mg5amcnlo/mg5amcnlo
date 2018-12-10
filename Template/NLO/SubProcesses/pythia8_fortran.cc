@@ -462,6 +462,11 @@ extern "C" {
     pythia.readString("merging:includeWeightInXSection = off");
     pythia.readString("merging:njetmax = 1000");
     pythia.readString("merging:applyveto = off");
+    // Disallow Pythia to overwrite parts of Les Houches input.
+    pythia.readString("LesHouches:setQuarkMass = 0");
+    pythia.readString("LesHouches:setLeptonMass = 0");
+    pythia.readString("LesHouches:mRecalculate = -1.0");
+    pythia.readString("LesHouches:matchInOut = off");
 
     pythia.setLHAupPtr(& lhareader);
     pythia.init();

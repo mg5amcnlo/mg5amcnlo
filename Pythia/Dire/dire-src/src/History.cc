@@ -4300,21 +4300,32 @@ Event MyHistory::cluster( MyClustering & inSystem ) {
             : newEvent);
     }*/
 
-    if (isFSR) {
+    map<int,int> iPosInMother;
+
+/*    if (isFSR) {
       newEvent = (hasPartonLevel
-            ? showers->timesPtr->clustered( state, rad, emt, rec, name)
-            : hasShowers ? fsr->clustered( state, rad, emt, rec, name)
+            ? showers->timesPtr->clustered( state, rad, emt, rec, name,iPosInMother)
+            : hasShowers ? fsr->clustered( state, rad, emt, rec, name,iPosInMother)
             : newEvent);
     } else {
       newEvent = (hasPartonLevel
-            ? showers->spacePtr->clustered( state, rad, emt, rec, name)
-            : hasShowers ? isr->clustered( state, rad, emt, rec, name)
+            ? showers->spacePtr->clustered( state, rad, emt, rec, name,iPosInMother)
+            : hasShowers ? isr->clustered( state, rad, emt, rec, name,iPosInMother)
             : newEvent);
+    }*/
+
+    if (isFSR) {
+      newEvent = hasShowers ? fsr->clustered( state, rad, emt, rec, name,iPosInMother)
+            : newEvent;
+    } else {
+      newEvent = hasShowers ? isr->clustered( state, rad, emt, rec, name,iPosInMother)
+            : newEvent;
     }
 
     // Store radiator and recoiler positions.
     inSystem.recBef = newEvent[0].mother2();
     inSystem.radBef = newEvent[0].mother1();
+    inSystem.iPosInMother = iPosInMother;
     newEvent[0].mothers(0,0);
 
   }

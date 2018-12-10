@@ -508,6 +508,12 @@ extern "C" {
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
 
+    // Disallow Pythia to overwrite parts of Les Houches input.
+    pythia4dire.readString("LesHouches:setQuarkMass = 0");
+    pythia4dire.readString("LesHouches:setLeptonMass = 0");
+    pythia4dire.readString("LesHouches:mRecalculate = -1.0");
+    pythia4dire.readString("LesHouches:matchInOut = off");
+
     double boost = 1.5;
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);

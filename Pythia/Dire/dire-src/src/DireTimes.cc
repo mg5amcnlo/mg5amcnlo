@@ -6251,7 +6251,7 @@ pair <Vec4, Vec4> DireTimes::decayWithOffshellRec( double zCS, double yCS,
 //Event DireTimes::clustered( const Event& state, int iRad, int iEmt, int iRec,
 //  string name ) {
 pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
-  int iRad, int iEmt, int iRec, string name ) {
+  int iRad, int iEmt, int iRec, string name, map<int,int>& iPosMoth) {
 
   if (name.compare("fsr_qcd_1->21&1_CS") == 0 && state[iRad].id() == 21)
     swap(iRad,iEmt);
@@ -6264,10 +6264,14 @@ pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
   Event NewEvent = Event();
   NewEvent.init("(hard process-modified)", particleDataPtr);
   NewEvent.clear();
+  map<int,int> iPosMothTmp;
   // Copy all unchanged particles to NewEvent
   for (int i = 0; i < state.size(); ++i)
-    if ( i != iRad && i != iRec && i != iEmt )
-      NewEvent.append( state[i] );
+    if ( i != iRad && i != iRec && i != iEmt ) {
+      //NewEvent.append( state[i] );
+      int iNext = NewEvent.append( state[i] );
+      iPosMothTmp[iNext] = i; 
+    }
 
   // Copy all the junctions one by one
   for (int i = 0; i < state.sizeJunction(); ++i)
@@ -6341,8 +6345,11 @@ pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
   if (!validState) return make_pair(outState, make_pair(0,0));
 
   // Copy system and incoming beam particles to outState
-  for (int i = 0; i < 3; ++i)
-    outState.append( NewEvent[i] );
+  for (int i = 0; i < 3; ++i) {
+    //outState.append( NewEvent[i] );
+    int iNext = outState.append( NewEvent[i] );
+    iPosMoth[iNext] = iPosMothTmp[i]; 
+  }
   // Copy all the junctions one by one
   for (int i = 0; i < state.sizeJunction(); ++i)
     outState.appendJunction( state.getJunction(i) );
@@ -6360,32 +6367,39 @@ pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
   // Append first incoming particle
   if ( RecBefore.mother1() == 1) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = iRec; 
     recAppended = true;
   } else if ( RadBefore.mother1() == 1 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = iRad; 
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in1 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 1) in1 =i;
-    outState.append( state[in1] );
+    //outState.append( state[in1] );
+    int iNext = outState.append( state[in1] );
+    iPosMoth[iNext] = in1;
     size++;
   }
   // Append second incoming particle
   if ( RecBefore.mother1() == 2) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = iRec;
     recAppended = true;
   } else if ( RadBefore.mother1() == 2 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = iRad; 
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in2 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 2) in2 =i;
-
-    outState.append( state[in2] );
+    //outState.append( state[in2] );
+    int iNext = outState.append( state[in2] );
+    iPosMoth[iNext] = in2;
     size++;
   }
 
@@ -6393,11 +6407,13 @@ pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
   if (!recAppended && !RecBefore.isFinal()) {
     recAppended = true;
     recPos = outState.append( RecBefore);
+    iPosMoth[recPos] = iRec;
   }
   // Append new radiator if not done already
   if (!radAppended && !RadBefore.isFinal()) {
     radAppended = true;
     radPos = outState.append( RadBefore);
+    iPosMoth[radPos] = iRad;
   }
 
   // Append intermediate particle
@@ -6406,33 +6422,45 @@ pair <Event, pair<int,int> > DireTimes::clustered_internal( const Event& state,
     if (NewEvent[i].status() != -22) continue;
     if ( NewEvent[i].daughter1() == NewEvent[i].daughter2()
       && NewEvent[i].daughter1() > 0) continue;
-    outState.append( NewEvent[i] );
+    int iNext = outState.append( NewEvent[i] );
+    iPosMoth[iNext] = iPosMothTmp[i]; 
   }
 
   // Append final state particles, resonances first
   for (int i = 0; i < int(NewEvent.size()-1); ++i)
     if (NewEvent[i].status() == 22) {
-      outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i];
     }
   // Then start appending partons
-  if (!radAppended && RadBefore.statusAbs() == 22)
+  if (!radAppended && RadBefore.statusAbs() == 22) {
     radPos = outState.append(RadBefore);
-  if (!recAppended)
+    iPosMoth[radPos] = iRad;
+  }
+  if (!recAppended) {
     recPos= outState.append(RecBefore);
-  if (!radAppended && RadBefore.statusAbs() != 22)
+    iPosMoth[recPos] = iRec;
+  }
+  if (!radAppended && RadBefore.statusAbs() != 22) {
     radPos = outState.append(RadBefore);
+    iPosMoth[radPos] = iRad;
+  }
   // Then partons (not reclustered recoiler)
   for(int i = 0; i < int(NewEvent.size()-1); ++i)
     if ( NewEvent[i].status()  != 22
       && NewEvent[i].colType() != 0
-      && NewEvent[i].isFinal())
-      outState.append( NewEvent[i] );
+      && NewEvent[i].isFinal()) {
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i];
+    }
   // Then the rest
   for(int i = 0; i < int(NewEvent.size()-1); ++i)
     if ( NewEvent[i].status() != 22
       && NewEvent[i].colType() == 0
-      && NewEvent[i].isFinal() )
-      outState.append( NewEvent[i]);
+      && NewEvent[i].isFinal() ) {
+      int iNext = outState.append( NewEvent[i]);
+      iPosMoth[iNext] = iPosMothTmp[i];
+    }
 
   // Find intermediate and respective daughters
   vector<int> PosIntermediate;
@@ -6940,6 +6968,7 @@ map<string, double> DireTimes::getStateVariables (const Event& state,
 
     // Sum of invariants 2pi*pj
     double m2dip = m2dipTimes ( state[rad], state[emt], state[rec]);
+    ret.insert(make_pair("m2dip", m2dip));
     int sign     = (state[rec].isFinal()) ? 1 : -1;
     // Total dipole invariant mass.
     double q2    = (state[rec].p() + sign*state[rad].p() + sign*state[emt].p()).m2Calc();
@@ -7121,7 +7150,8 @@ double DireTimes::getSplittingProb( const Event& state, int iRad,
   double phi1 = atan2(px/sqrt(kT2), py/sqrt(kT2));
   if (phi1 < 0.) phi1 = 2.*M_PI+phi1;
 
-  pair <Event, pair<int,int> > born(clustered_internal( state, iRad, iEmt, iRec, name ));
+  map<int,int> dummy;
+  pair <Event, pair<int,int> > born(clustered_internal( state, iRad, iEmt, iRec, name, dummy));
 
   int nEmissions = splittingsPtr->nEmissions(name);
   double m2dipBef = abs(2.*born.first[born.second.first].p()*born.first[born.second.second].p());

@@ -6244,7 +6244,7 @@ void DireSpace::updateAfterIF( int iSysSelNow, int sideNow, int iDipSelNow,
 //--------------------------------------------------------------------------
 
 pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
-  int iRad, int iEmt, int iRecAft, string name ) {
+  int iRad, int iEmt, int iRecAft, string name, map<int,int>& iPosMoth) {
 
   // Flags for type of radiation
   int radType = state[iRad].isFinal() ? 1 : -1;
@@ -6254,10 +6254,12 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   Event NewEvent = Event();
   NewEvent.init("(hard process-modified)", particleDataPtr);
   NewEvent.clear();
+  map<int,int> iPosMothTmp;
   // Copy all unchanged particles to NewEvent
   for (int i = 0; i < state.size(); ++i) {
     if ( i == iRad || i == iRecAft || i == iEmt ) continue;
-    NewEvent.append( state[i] );
+    int iNext = NewEvent.append( state[i] );
+    iPosMothTmp[iNext] = i; 
   }
 
   // Copy all the junctions one by one
@@ -6326,8 +6328,10 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   outState.clear();
 
   // Copy system and incoming beam particles to outState
-  for (int i = 0; i < 3; ++i)
-    outState.append( NewEvent[i] );
+  for (int i = 0; i < 3; ++i) {
+    int iNext = outState.append( NewEvent[i] );
+    iPosMoth[iNext] = iPosMothTmp[i]; 
+  }
   // Copy all the junctions one by one
   for (int i = 0; i < state.sizeJunction(); ++i)
     outState.appendJunction( state.getJunction(i) );
@@ -6345,32 +6349,37 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   // Append first incoming particle
   if ( RecBefore.mother1() == 1) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = iRecAft; 
     recAppended = true;
   } else if ( RadBefore.mother1() == 1 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = iRad;
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in1 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 1) in1 =i;
-    outState.append( state[in1] );
+    int iNext = outState.append( state[in1] );
+    iPosMoth[iNext] = in1;
     size++;
   }
   // Append second incoming particle
   if ( RecBefore.mother1() == 2) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = iRecAft;
     recAppended = true;
   } else if ( RadBefore.mother1() == 2 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = iRad;
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in2 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 2) in2 =i;
-
-    outState.append( state[in2] );
+    int iNext = outState.append( state[in2] );
+    iPosMoth[iNext] = in2;
     size++;
   }
 
@@ -6378,11 +6387,13 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   if (!recAppended && !RecBefore.isFinal()) {
     recAppended = true;
     recPos = outState.append( RecBefore);
+    iPosMoth[recPos] = iRecAft;
   }
   // Append new radiator if not done already
   if (!radAppended && !RadBefore.isFinal()) {
     radAppended = true;
     radPos = outState.append( RadBefore);
+    iPosMoth[radPos] = iRad;
   }
 
   // Force incoming partons to have "hard event" status
@@ -6395,24 +6406,38 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
     if (NewEvent[i].status() != -22) continue;
     if ( NewEvent[i].daughter1() == NewEvent[i].daughter2()
       && NewEvent[i].daughter1() > 0) continue;
-    outState.append( NewEvent[i] );
+    //outState.append( NewEvent[i] );
+    int iNext = outState.append( NewEvent[i] );
+    iPosMoth[iNext] = iPosMothTmp[i]; 
   }
   // Append final state particles, resonances first
   for (int i = 0; i < int(NewEvent.size()-1); ++i)
-    if (NewEvent[i].status() == 22) outState.append( NewEvent[i] );
+    if (NewEvent[i].status() == 22) {
+      //outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
+  }
   // Then start appending partons
-  if (!radAppended && RadBefore.statusAbs() == 22)
+  if (!radAppended && RadBefore.statusAbs() == 22) {
     radPos = outState.append(RadBefore);
-  if (!recAppended)
+    iPosMoth[radPos] = iRad;
+  }
+  if (!recAppended) {
     recPos = outState.append(RecBefore);
-  if (!radAppended && RadBefore.statusAbs() != 22)
+    iPosMoth[recPos] = iRecAft;
+  }
+  if (!radAppended && RadBefore.statusAbs() != 22) {
     radPos = outState.append(RadBefore);
+    iPosMoth[radPos] = iRad;
+  }
   // Then partons (not reclustered recoiler)
   for(int i = 0; i < int(NewEvent.size()-1); ++i)
     if ( NewEvent[i].status()  != 22
       && NewEvent[i].colType() != 0
       && NewEvent[i].isFinal()) {
-      outState.append( NewEvent[i] );
+      //outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
       // Force partons to have "hard event" status
       int status = particleDataPtr->isResonance(NewEvent[i].id()) ? 22 : 23;
       outState.back().status(status);
@@ -6424,7 +6449,9 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
     if ( NewEvent[i].status() != 22
       && NewEvent[i].colType() == 0
       && NewEvent[i].isFinal() ) {
-      outState.append( NewEvent[i]);
+      //outState.append( NewEvent[i]);
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
       int status = particleDataPtr->isResonance(NewEvent[i].id()) ? 22 : 23;
       outState.back().status(status);
       outState.back().mother1(3);
@@ -6939,6 +6966,7 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
 
     // Sum of invariants 2pi*pj
     double m2dip = m2dipSpace ( state[rad], state[emt], state[rec]);
+    ret.insert(make_pair("m2dip", m2dip));
     int kinType  = 1;
     double m2Bef = 0.;
     double m2r   = state[rad].p().m2Calc();
@@ -6956,12 +6984,9 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
 
 //cout << scientific << setprecision(6) << "ISR: kinType=" << kinType << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " xDau=" << xDau << " type=" << type<< " m2Bef=" << m2Bef << " m2r=" << m2r << " m2s=" << m2s << " m2e=" << m2e << endl;  
 
-
     bool allowed = inAllowedPhasespace( kinType, z, pT2, m2dip, xDau, type,
       m2Bef, m2r, m2s, m2e);
     ret.insert(make_pair("isAllowed", ((allowed) ? 1. : -1.) ));
-
-
 
   // Variables defining the PS starting scales.
   } else {
@@ -7090,7 +7115,8 @@ double DireSpace::getSplittingProb( const Event& state, int iRad,
   if (phi1 < 0.) phi1 = 2.*M_PI+phi1;
 
   // Setup splitting information.
-  pair <Event, pair<int,int> > born(clustered_internal( state, iRad, iEmt, iRecAft, name ));
+  map<int,int> dummy;
+  pair <Event, pair<int,int> > born(clustered_internal( state, iRad, iEmt, iRecAft, name, dummy));
   int nEmissions = splits[name]->nEmissions();
   double m2dipBef = abs(2.*born.first[born.second.first].p()*born.first[born.second.second].p());
   splits[name]->splitInfo.clear();

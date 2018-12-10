@@ -311,14 +311,14 @@ public:
     SplitInfo* split = NULL);
 
   // Setup clustering kinematics.
-  pair <Event, pair<int,int> > clustered_internal( const Event& state,
-    int iRad, int iEmt, int iRecAft, string name);
   virtual Event clustered( const Event& state, int iRad, int iEmt, int iRecAft,
-    string name) {
+    string name, map<int,int>& iPosMoth) {
     pair <Event, pair<int,int> > reclus
-      = clustered_internal(state,iRad, iEmt, iRecAft, name);
+      = clustered_internal(state,iRad, iEmt, iRecAft, name, iPosMoth);
     reclus.first[0].mothers(reclus.second.first,reclus.second.second);
     return reclus.first;}
+  pair <Event, pair<int,int> > clustered_internal( const Event& state,
+    int iRad, int iEmt, int iRecAft, string name, map<int,int>& iPosMoth);
 //    return clustered_internal(state,iRad, iEmt, iRecAft, name).first; }
   bool cluster_II( const Event& state, int iRad,
     int iEmt, int iRecAft, int idRadBef, Particle& radBef, Particle& recBef,
