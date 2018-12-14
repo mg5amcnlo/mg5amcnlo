@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.5 ()
+      OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
+
 2.6.4 (09/11/18)
       OM: add specific treatement for small width (at LO only and not for loop-induced)
           if the width is smaller than 1e-6 times the mass, a fake width (at that value) is used for the
