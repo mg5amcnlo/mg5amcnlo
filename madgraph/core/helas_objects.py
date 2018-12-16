@@ -4696,10 +4696,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = self.get('processes')[0].get('model')
         initial_legs = filter(lambda leg: leg.get('state') == False, \
                               self.get('processes')[0].get('legs'))
-        hel_per_part = [ len(wf.get('polarization')) if wf.get('polarization') 
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
                         else len(model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states())
-            for wf in initial_legs]
+                                  leg.get('id')].get_helicity_states())
+            for leg in initial_legs]
         
         return reduce(lambda x, y: x * y, hel_per_part, 1)
 
