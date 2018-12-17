@@ -46,6 +46,7 @@ c
       real*8 stlow,stupp,xmlow,xmupp,alst,q0st,alxm,q0xm,
      # qnodeval
 c$$$      external SUDAKOV FUNCTION
+      double precision min_sudakov
       external py_compute_sudakov
       double precision py_compute_sudakov,restmp
       double precision tolerance,xlowthrs
@@ -70,6 +71,8 @@ c
       include 'MCmasses_PYTHIA8.inc'
 c
       call dire_init(mcmass)
+      min_sudakov=0.00001
+
       open(unit=iunit1,file='sudakov.log',status='unknown')
       open(unit=iunit2,file='sudakov.err',status='unknown')
 
@@ -142,7 +145,7 @@ c st(inst) and stupp
               iseed=iseedtopy()
               restmp = py_compute_sudakov(
      #          st(inst),xm(inxm),ipmap(ipart),itype,
-     #          mcmass,stupp,iseed,iunit1)
+     #          mcmass,stupp,iseed,min_sudakov,iunit1)
               if(restmp.gt.1.d0)then
                 if(restmp.le.(1.d0+tolerance))then
                   write(iunit2,*)'Out of bounds (>1): ',restmp
@@ -572,15 +575,17 @@ c
 
 
       function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp,
-     #                            iseed,iunit)
+     #                            iseed,min_py_sudakov,iunit)
       implicit none
       double precision py_compute_sudakov, stlow, stupp, md
+      double precision min_py_sudakov
       integer id, itype,iseed,iunit
       real*8 mcmass(21)
       double precision temp
 c
+      min_py_sudakov=0.00001
       call dire_get_no_emission_prob(temp, stupp,
-     #     stlow, md, id, itype, iseed)
+     #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
       write(iunit,*) 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp

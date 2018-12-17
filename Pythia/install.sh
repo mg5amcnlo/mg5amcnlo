@@ -31,7 +31,7 @@ workd=$(pwd)
 #mv pythia8 Pythia/pythia-src
 cd Pythia/pythia-src
 
-make distclean
+#make distclean
 
 configStr="./configure"
 configStr+=" --prefix=$workd/Pythia/pythia-build"
@@ -61,7 +61,7 @@ cd $workd
 #mv DIRE-2.001alpha Dire/dire-src
 cd Dire/dire-src
 
-make distclean
+#make distclean
 
 configStr="./configure"
 configStr+=" --prefix=$workd/Dire/dire-build"

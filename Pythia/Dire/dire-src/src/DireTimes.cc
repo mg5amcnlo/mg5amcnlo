@@ -1864,9 +1864,8 @@ double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
     }
 
     wt += wtnow;
-
-    if (i%10==0 && i>0 && wt/double(i) < 1e-6) {wt = 0.; break; }
-
+    double minwt = settingsPtr->parm("Dire:Sudakov:Min");
+    if (i%10==0 && i>0 && wt/double(i) < minwt) {wt = 0.; break; }
   }
 
   wt /= nTrials;

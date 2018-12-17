@@ -59,6 +59,8 @@ extern "C" {
     pythia4dire.readString("Merging:nRequested = 0");
     pythia4dire.readString("Beams:setProductionScalesFromLHEF = off");
 
+    pythia4dire.settings.addParm("Dire:Sudakov:Min",0.0,false,false,0.0,1e0);
+
     dire.initSettings(pythia4dire);
 
     //pythia4dire.readString("Dire:doMECs                     = on");
@@ -109,10 +111,12 @@ extern "C" {
   }
 
   void dire_get_no_emission_prob_( double& noemProb, double& startingScale,
-    double& stoppingScale, double& mDipole, int& id, int& type, int& seed ) {
-    //pythia4dire.readString("Random:setSeed = on");
-    //pythia4dire.settings.mode("Random:seed", seed);
-    //pythia4dire.rndm.init(seed);
+    double& stoppingScale, double& mDipole, int& id, int& type, int& seed,
+    double min_sudakov) {
+    pythia4dire.readString("Random:setSeed = on");
+    pythia4dire.settings.mode("Random:seed", seed);
+    pythia4dire.settings.parm("Dire:Sudakov:Min", min_sudakov);
+    pythia4dire.rndm.init(seed);
     noemProb = merging->generateSingleSudakov ( startingScale,
       stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
 
