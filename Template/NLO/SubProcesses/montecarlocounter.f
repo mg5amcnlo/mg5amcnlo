@@ -1548,8 +1548,10 @@ c initial-state (anti)quark with the same flavour do.
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          do j=1,nexternal-1
             if(j.eq.i)cycle
-c only colour-connected partons contribute to Delta
-            if(xscales2(i,j).eq.-1d0)cycle
+c only colour-connected partons livezone and sensible scales
+c contribute to Delta
+            if(xscales2(i,j).eq.-1d0.or.dzones2(i,j).or.
+     &         SCALUP_tmp_H2(i,j).gt.SCALUP_tmp_S2(i,j))cycle
             if(i.le.2.and.j.le.2)then
                isudtype=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -1559,7 +1561,6 @@ c only colour-connected partons contribute to Delta
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-cPT INSERT CHECK ON DEADZONES
 cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
             deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
