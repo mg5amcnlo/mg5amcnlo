@@ -1314,7 +1314,7 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 
   // Set output.
   double wt = 0.;
-  int nTrials = 1000;
+  int nTrials = 100;
   for (int i=0; i < nTrials; ++i) {
 
     double startingScale = pTbegAll;
@@ -1365,6 +1365,7 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 
     }
     wt += wtnow;
+    if (i%10==0 && i>0 && wt/double(i) < 1e-6) {wt = 0.; break; }
   }
 
   wt /= nTrials;
