@@ -446,9 +446,9 @@ c
       end
 
 
+
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
-
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &     bornbars,bornbarstilde,npartner)
@@ -703,369 +703,368 @@ c Shower variables
       
       first_MCcnt_call=.false.
  222  continue
-c Main loop over colour partners
-c      do npartner=1,ipartners(0)
-
-         E0sq(npartner)=dot(p_born(0,fksfather),p_born(0,ipartners(npartner)))
-         if(E0sq(npartner).lt.0d0)then
-            write(*,*)'Error in xmcsubt: negative E0sq'
-            write(*,*)E0sq(npartner),ileg,npartner
-            stop
-         endif
-         z(npartner)=ztmp
-         xi(npartner)=xitmp
-         xjac(npartner)=xjactmp
-         if(shower_mc.eq.'HERWIG6')then
-            z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-            xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-            xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,shat,x,yi,yj,
-     &                                                                  tk,uk,q1q,q2q)
-         endif
-
+c Main loop over colour partners used to begin here
+      E0sq(npartner)=dot(p_born(0,fksfather),p_born(0,ipartners(npartner)))
+      if(E0sq(npartner).lt.0d0)then
+         write(*,*)'Error in xmcsubt: negative E0sq'
+         write(*,*)E0sq(npartner),ileg,npartner
+         stop
+      endif
+      z(npartner)=ztmp
+      xi(npartner)=xitmp
+      xjac(npartner)=xjactmp
+      if(shower_mc.eq.'HERWIG6')then
+         z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat,
+     &                    x,yi,yj,tk,uk,q1q,q2q)
+         xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat,
+     &                      x,yi,yj,tk,uk,q1q,q2q)
+         xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,
+     &                                  shat,x,yi,yj,tk,uk,q1q,q2q)
+      endif
 c Compute dead zones
-         call get_dead_zone(ileg,z(npartner),xi(npartner),s,x,yi,xm12,xm22,w1,w2,qMC,
-     &                      scalemax,ipartners(npartner),fksfather,lzone(npartner),wcc)
-
+      call get_dead_zone(ileg,z(npartner),xi(npartner),s,x,yi,
+     &  xm12,xm22,w1,w2,qMC,scalemax,ipartners(npartner),fksfather,
+     &  lzone(npartner),wcc)
 c Compute MC subtraction terms
-         if(lzone(npartner))then
-            if(.not.flagmc)flagmc=.true.
-            if( (ileg.ge.3 .and. (m_type.eq.8.or.m_type.eq.0)) .or.
-     &          (ileg.le.2 .and. (j_type.eq.8.or.j_type.eq.0)) )then
-               if(i_type.eq.8)then
+      if(lzone(npartner))then
+         if(.not.flagmc)flagmc=.true.
+         if( (ileg.ge.3 .and. (m_type.eq.8.or.m_type.eq.0)) .or.
+     &       (ileg.le.2 .and. (j_type.eq.8.or.j_type.eq.0)) )then
+            if(i_type.eq.8)then
 c g  --> g  g ( icode = 1 )
 c go --> go g
-                  if(ileg.le.2)then
-                     N_p=2
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                        xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
-                     elseif(non_limit)then
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                     endif
-c
-                  elseif(ileg.eq.3)then
-                     N_p=2
-                     if(non_limit)then
-                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=2
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*( 8*vca*
-     &                       (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
-     &                       ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                        xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
-                     elseif(non_limit)then
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                     endif
+               if(ileg.le.2)then
+                  N_p=2
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                     xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                  elseif(non_limit)then
+                     xfact=(1-yi)*(1-x)/x
+                     prefact=4/(s*N_p)
+                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
+                     Q=Q/(1-z(npartner))
+                     xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
                   endif
-               elseif(abs(i_type).eq.3)then
+c
+               elseif(ileg.eq.3)then
+                  N_p=2
+                  if(non_limit)then
+                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  endif
+c
+               elseif(ileg.eq.4)then
+                  N_p=2
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*( 8*vca*
+     &                    (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
+     &                    ( s*(s-xm12)**2*(s*x-xm12)**2 )
+                     xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  elseif(non_limit)then
+                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
+                     Q=Q/(1-z(npartner))
+                     xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  endif
+               endif
+            elseif(abs(i_type).eq.3)then
 c g --> q q~ ( icode = 2 )
 c a --> q q~
-                  if(ileg.le.2)then
-                     N_p=1
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                     elseif(non_limit)then
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=2
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
-     &                        (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
-     &                        ( (s-xm12)**2*(s*x-xm12) )
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                        xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                     elseif(non_limit)then
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                        call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                     endif
+               if(ileg.le.2)then
+                  N_p=1
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  elseif(non_limit)then
+                     xfact=(1-yi)*(1-x)/x
+                     prefact=4/(s*N_p)
+                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   endif
-               else
-                  write(*,*)'Error 1 in xmcsubt: unknown particle type'
-                  write(*,*)i_type
-                  stop
-               endif
-            elseif( (ileg.ge.3 .and. abs(m_type).eq.3) .or.
-     &              (ileg.le.2 .and. abs(j_type).eq.3) )then
-               if(abs(i_type).eq.3)then
-c q --> g q ( icode = 3 )
-c a --> a q
-                  if(ileg.le.2)then
-                     N_p=2
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                        xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
-                     elseif(non_limit)then
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                        call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
-                     endif
 c
-                  elseif(ileg.eq.3)then
-                     N_p=1
-                     if(non_limit)then
-                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=1
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*
-     &                       ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
-     &                       ( (s-xm12)*(s*x-xm12)**2 )
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                     elseif(non_limit)then
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                     endif
+               elseif(ileg.eq.4)then
+                  N_p=2
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
+     &                     (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
+     &                     ( (s-xm12)**2*(s*x-xm12) )
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                     xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                     xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  elseif(non_limit)then
+                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                     call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
+                     Q=Q/(1-z(npartner))
+                     xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                     xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   endif
-               elseif(i_type.eq.8)then
-c q  --> q  g ( icode = 4 )
-c sq --> sq g
-                  if(ileg.le.2)then
-                     N_p=1
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                     elseif(non_limit)then
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                     endif
-c
-                  elseif(ileg.eq.3)then
-                     N_p=1
-                     if(non_limit)then
-                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        if(abs(PDG_type(j_fks)).le.6)then
-                           if(shower_mc.ne.'HERWIGPP')
-     &                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                           if(shower_mc.eq.'HERWIGPP')
-     &                     call AP_reduced_massive(j_type,i_type,one,z(npartner),
-     &                                                 xi(npartner),xm12,ap)
-                        else
-                           call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
-                        endif
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=1
-                     if(limit)then
-                        xkern(1)=(g**2/N_p)*4*vcf*
-     &                        ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-     &                        ( s*(s-xm12)*(s*x-xm12) )
-                     elseif(non_limit)then
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                     endif
-                  endif
-               elseif(i_type.eq.0)then
-c q  --> q  a ( icode = 4 )
-c sq --> sq a
-                  if(ileg.le.2)then
-                     N_p=1
-                     if(limit)then
-                        xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
-                     else
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
-                     endif
-c
-                  elseif(ileg.eq.3)then
-                     N_p=1
-                     if(non_limit)then
-                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        if(abs(PDG_type(j_fks)).le.6)then
-                           if(shower_mc.ne.'HERWIGPP')
-     &                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                           if(shower_mc.eq.'HERWIGPP')
-     &                     call AP_reduced_massive(j_type,i_type,one,z(npartner),
-     &                                                 xi(npartner),xm12,ap)
-                        else
-                           call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
-                        endif
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=1
-                     if(limit)then
-                        xkern(2)=(g_ew**2/N_p)*4*qj2*
-     &                       ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-     &                       ( s*(s-xm12)*(s*x-xm12) )
-                     else
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
-                     endif
-                  endif
-               else
-                  write(*,*)'Error 2 in xmcsubt: unknown particle type'
-                  write(*,*)i_type
-                  stop
                endif
             else
-               write(*,*)'Error 3 in xmcsubt: unknown particle type'
-               write(*,*)j_type,i_type
+               write(*,*)'Error 1 in xmcsubt: unknown particle type'
+               write(*,*)i_type
                stop
             endif
-
+         elseif( (ileg.ge.3 .and. abs(m_type).eq.3) .or.
+     &           (ileg.le.2 .and. abs(j_type).eq.3) )then
+            if(abs(i_type).eq.3)then
+c q --> g q ( icode = 3 )
+c a --> a q
+               if(ileg.le.2)then
+                  N_p=2
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                     xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                     xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  elseif(non_limit)then
+                     xfact=(1-yi)*(1-x)/x
+                     prefact=4/(s*N_p)
+                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                     call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
+                     Q=Q/(1-z(npartner))
+                     xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                     xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  endif
+c
+               elseif(ileg.eq.3)then
+                  N_p=1
+                  if(non_limit)then
+                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  endif
+c
+               elseif(ileg.eq.4)then
+                  N_p=1
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*
+     &                    ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
+     &                    ( (s-xm12)*(s*x-xm12)**2 )
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  elseif(non_limit)then
+                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  endif
+               endif
+            elseif(i_type.eq.8)then
+c q  --> q  g ( icode = 4 )
+c sq --> sq g
+               if(ileg.le.2)then
+                  N_p=1
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                  elseif(non_limit)then
+                     xfact=(1-yi)*(1-x)/x
+                     prefact=4/(s*N_p)
+                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  endif
+c
+               elseif(ileg.eq.3)then
+                  N_p=1
+                  if(non_limit)then
+                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     if(abs(PDG_type(j_fks)).le.6)then
+                        if(shower_mc.ne.'HERWIGPP')
+     &                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                        if(shower_mc.eq.'HERWIGPP')
+     &                  call AP_reduced_massive(j_type,i_type,one,z(npartner),
+     &                                              xi(npartner),xm12,ap)
+                     else
+                        call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                     endif
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  endif
+c
+               elseif(ileg.eq.4)then
+                  N_p=1
+                  if(limit)then
+                     xkern(1)=(g**2/N_p)*4*vcf*
+     &                     ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                     ( s*(s-xm12)*(s*x-xm12) )
+                  elseif(non_limit)then
+                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  endif
+               endif
+            elseif(i_type.eq.0)then
+c q  --> q  a ( icode = 4 )
+c sq --> sq a
+               if(ileg.le.2)then
+                  N_p=1
+                  if(limit)then
+                     xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                  else
+                     xfact=(1-yi)*(1-x)/x
+                     prefact=4/(s*N_p)
+                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  endif
+c
+               elseif(ileg.eq.3)then
+                  N_p=1
+                  if(non_limit)then
+                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     if(abs(PDG_type(j_fks)).le.6)then
+                        if(shower_mc.ne.'HERWIGPP')
+     &                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                        if(shower_mc.eq.'HERWIGPP')
+     &                    call AP_reduced_massive(j_type,i_type,one,
+     &                      z(npartner),xi(npartner),xm12,ap)
+                     else
+                        call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                     endif
+                     ap=ap/(1-z(npartner))
+                     xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  endif
+c
+               elseif(ileg.eq.4)then
+                  N_p=1
+                  if(limit)then
+                     xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                    ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                    ( s*(s-xm12)*(s*x-xm12) )
+                  else
+                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                     prefact=2/(s*N_p)
+                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                     ap=ap/(1-z(npartner))
+                     xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  endif
+               endif
+            else
+               write(*,*)'Error 2 in xmcsubt: unknown particle type'
+               write(*,*)i_type
+               stop
+            endif
          else
+            write(*,*)'Error 3 in xmcsubt: unknown particle type'
+            write(*,*)j_type,i_type
+            stop
+         endif
+
+      else
 c Dead zone
-          xkern=0d0
-          xkernazi=0d0
-        endif
+        xkern=0d0
+        xkernazi=0d0
+      endif
 c
-        xkern=xkern*gfactsf*wcc
-        xkernazi=xkernazi*gfactazi*gfactsf*wcc
+      xkern=xkern*gfactsf*wcc
+      xkernazi=xkernazi*gfactazi*gfactsf*wcc
 
 c Emsca stuff
-        if(dampMCsubt)then
-           if(emscasharp)then
-              if(qMC.le.scalemax)then
-                 emscwgt(npartner)=1d0
-                 emscav(npartner)=emsca_bare
-              else
-                 emscwgt(npartner)=0d0
-                 emscav(npartner)=scalemax
-              endif
-           else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
-              if(ptresc.le.0d0)then
-                 emscwgt(npartner)=1d0
-                 emscav(npartner)=emsca_bare
-              elseif(ptresc.lt.1d0)then 
-                 emscwgt(npartner)=1-emscafun(ptresc,one)
-                 emscav(npartner)=emsca_bare
-              else
-                 emscwgt(npartner)=0d0
-                 emscav(npartner)=scalemax
-              endif
-           endif
-        endif
-        emscav_tmp(npartner)=emscav(npartner)
+      if(dampMCsubt)then
+         if(emscasharp)then
+            if(qMC.le.scalemax)then
+               emscwgt(npartner)=1d0
+               emscav(npartner)=emsca_bare
+            else
+               emscwgt(npartner)=0d0
+               emscav(npartner)=scalemax
+            endif
+         else
+            ptresc=(qMC-scalemin)/(scalemax-scalemin)
+            if(ptresc.le.0d0)then
+               emscwgt(npartner)=1d0
+               emscav(npartner)=emsca_bare
+            elseif(ptresc.lt.1d0)then 
+               emscwgt(npartner)=1-emscafun(ptresc,one)
+               emscav(npartner)=emsca_bare
+            else
+               emscwgt(npartner)=0d0
+               emscav(npartner)=scalemax
+            endif
+         endif
+      endif
+      emscav_tmp(npartner)=emscav(npartner)
 c Emsca stuff
-        do i=1,nexternal-2
-           do j=i+1,nexternal-1 
-              if(dampMCsubt)then
-                 if(emscasharp_a(i,j))then
-                    if(qMC.le.scalemax_a(i,j))then
-                       emscwgt_a(i,j)=1d0
-                       emscav_a(i,j)=emsca_bare_a(i,j)
-                       emscav_a2(i,j)=emsca_bare_a2(i,j)
-                    else
-                       emscwgt_a(i,j)=0d0
-                       emscav_a(i,j)=scalemax_a(i,j)
-                       emscav_a2(i,j)=scalemax_a(i,j)
-                    endif
-                 else
-                    ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
-                    if(ptresc_a(i,j).le.0d0)then
-                       emscwgt_a(i,j)=1d0
-                       emscav_a(i,j)=emsca_bare_a(i,j)
-                       emscav_a2(i,j)=emsca_bare_a2(i,j)
-                    elseif(ptresc_a(i,j).lt.1d0)then 
-                       emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),one)
-                       emscav_a(i,j)=emsca_bare_a(i,j)
-                       emscav_a2(i,j)=emsca_bare_a2(i,j)
-                    else
-                       emscwgt_a(i,j)=0d0
-                       emscav_a(i,j)=scalemax_a(i,j)
-                       emscav_a2(i,j)=scalemax_a(i,j)
-                    endif
-                 endif
-              endif
-              emscav_tmp_a(i,j)=emscav_a(i,j)
-              emscav_tmp_a2(i,j)=emscav_a2(i,j)
+      do i=1,nexternal-2
+         do j=i+1,nexternal-1 
+            if(dampMCsubt)then
+               if(emscasharp_a(i,j))then
+                  if(qMC.le.scalemax_a(i,j))then
+                     emscwgt_a(i,j)=1d0
+                     emscav_a(i,j)=emsca_bare_a(i,j)
+                     emscav_a2(i,j)=emsca_bare_a2(i,j)
+                  else
+                     emscwgt_a(i,j)=0d0
+                     emscav_a(i,j)=scalemax_a(i,j)
+                     emscav_a2(i,j)=scalemax_a(i,j)
+                  endif
+               else
+                  ptresc_a(i,j)=(qMC-scalemin_a(i,j))/
+     &                          (scalemax_a(i,j)-scalemin_a(i,j))
+                  if(ptresc_a(i,j).le.0d0)then
+                     emscwgt_a(i,j)=1d0
+                     emscav_a(i,j)=emsca_bare_a(i,j)
+                     emscav_a2(i,j)=emsca_bare_a2(i,j)
+                  elseif(ptresc_a(i,j).lt.1d0)then 
+                     emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),one)
+                     emscav_a(i,j)=emsca_bare_a(i,j)
+                     emscav_a2(i,j)=emsca_bare_a2(i,j)
+                  else
+                     emscwgt_a(i,j)=0d0
+                     emscav_a(i,j)=scalemax_a(i,j)
+                     emscav_a2(i,j)=scalemax_a(i,j)
+                  endif
+               endif
+            endif
+            emscav_tmp_a(i,j)=emscav_a(i,j)
+            emscav_tmp_a2(i,j)=emscav_a2(i,j)
 c
-              ptresc_a(j,i)=ptresc_a(i,j)
-              emscwgt_a(j,i)=emscwgt_a(i,j)
-              emscav_a(j,i)=emscav_a(i,j)
-              emscav_a2(j,i)=emscav_a2(i,j)
-              emscav_tmp_a(j,i)=emscav_tmp_a(i,j)
-              emscav_tmp_a2(j,i)=emscav_tmp_a2(i,j)
-           enddo
-        enddo
-
-c     End of loop over colour partners
-c      enddo
-
+            ptresc_a(j,i)=ptresc_a(i,j)
+            emscwgt_a(j,i)=emscwgt_a(i,j)
+            emscav_a(j,i)=emscav_a(i,j)
+            emscav_a2(j,i)=emscav_a2(i,j)
+            emscav_tmp_a(j,i)=emscav_tmp_a(i,j)
+            emscav_tmp_a2(j,i)=emscav_tmp_a2(i,j)
+         enddo
+      enddo
+c Main loop over colour partners used to end here
       return
       end
 
 
+c Finalises the MC counterterm computations performed in xmcsubt(),
+c fills arrays relevant to shower scales, and computes Delta
       subroutine complete_xmcsubt(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
       implicit none
       include "born_nhel.inc"
@@ -1079,7 +1078,8 @@ c      enddo
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
-      double precision emscwgt_a(nexternal,nexternal),emscav_a(nexternal,nexternal)
+      double precision emscwgt_a(nexternal,nexternal),
+     & emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner,cflows,jflow
       common/c_colour_flow/jflow
@@ -1089,17 +1089,17 @@ c      enddo
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
       double precision emsca_a(nexternal,nexternal)
-      double precision emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal,nexternal)
+      double precision emsca_bare_a(nexternal,nexternal),
+     & emsca_bare_a2(nexternal,nexternal)
       logical emscasharp_a(nexternal,nexternal)
-      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
-
+      double precision scalemin_a(nexternal,nexternal),
+     & scalemax_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
+     #                emscasharp_a,scalemin_a,scalemax_a
       common/cqMC/qMC
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
-      logical isspecial
-      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -1182,11 +1182,15 @@ c SCALUP_tmp_H2 = t_ij target scales for Delta
       logical*1 dzones(0:99,0:99)
       logical*1 dzones2(0:99,0:99)
 
-      integer id, type, icount, ic, jc
+      integer id,type,icount,icount_i,icount_j,ic,jc
       double precision noemProb, startingScale, stoppingScale, mDipole
       double precision mcmass(21)
       double precision pysudakov,scalefunH,deltanum,deltaden
       integer nG_S,nQ_S,i_dipole_counter,isudtype,relabel(nexternal)
+c
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 c
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
@@ -1202,7 +1206,7 @@ c
       enddo
       pythia_cmd_file=''
 
-c     Input check
+c Input check
       do npartner=1,ipartners(0)
          if(xmcxsec(npartner).lt.0d0)then
             write(*,*)'Fatal error 1 in complete_xmcsubt'
@@ -1218,7 +1222,7 @@ c     Input check
          endif
       enddo
 
-c     Compute MC cross section
+c Compute MC cross section
       wgt=0d0
       wgt2=0d0
       do i=1,max_bcol
@@ -1254,7 +1258,7 @@ c
          endif
       enddo
 
-c     Assign flow on statistical basis
+c Assign flow on statistical basis
       rrnd=ran2()
       wgt11=0d0
       jflow=0
@@ -1269,7 +1273,7 @@ c     Assign flow on statistical basis
          stop
       endif
 
-c Assign emsca (scalar) on statistical basis -- insure backward compatibility
+c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
       if(dampMCsubt.and.wgt.gt.1d-30)then
         rrnd=ran2()
         wgt11=0d0
@@ -1348,12 +1352,11 @@ c the latter is employed in the computation of Delta
             endif
          enddo
       enddo
-
 c
 c H-event information.
 c First write ids, mothers and all colours.
 cSF NOTE: reconsider how much H-event information is actually needed
-cSF by Pythia. For example, the colour flow is used only to reconstruc
+cSF by Pythia. For example, the colour flow is used only to reconstruct
 cSF the underlying S-event flow, which is already available here, and
 cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
@@ -1373,8 +1376,7 @@ c Fill selected color configuration into jpart array.
         ICOLUP_H(1,i)=jpart(4,i)
         ICOLUP_H(2,i)=jpart(5,i)
       enddo
-cSF DONT UNDERSTAND THE COMMENT
-c Calculate suppression factor for H-events.
+c
       nexternal_now=nexternal
       call clear_HEPEUP_event()
       call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
@@ -1398,7 +1400,7 @@ c After the calls above, we have
 c   xscales(i,j)=t_ij
 c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
 c emitted equal to the FKS parton. Therefore, 1<=i,j<=nexternal, with
-c sensible values returned only if i#i_fks and/or j#i_fks.
+c sensible values returned only if i != i_fks and/or j != i_fks.
 c The same labeling conventions apply to xmasses(i,j) (which is the
 c dipole mass associated with the colour line that connects i and j)
 c and dzones(i,j) (which is the dead zone relevant to the emission
@@ -1432,7 +1434,18 @@ c
             xmasses2(relabel(i),relabel(j))=xmasses(i,j)
             dzones2(relabel(i),relabel(j))=dzones(i,j)
             scalup_tmp_H2(relabel(i),relabel(j))=
-     #        xscales2(relabel(i),relabel(j))
+     &        xscales2(relabel(i),relabel(j))
+         enddo
+      enddo
+c Checks
+      do i=1,nexternal-1
+         do j=1,nexternal-1
+            if((xscales2(i,j).ne.-1d0.and.xmasses2(i,j).eq.-1d0).or.
+     &         (xscales2(i,j).eq.-1d0.and.xmasses2(i,j).ne.-1d0))then
+               write(*,*)'Error in xscales, xmasses',
+     &                   i,j,xscales2(i,j),xmasses2(i,j)
+               stop
+            endif
          enddo
       enddo
 c
@@ -1442,54 +1455,101 @@ c created and called SCALUP_tmp_H, that will help determine the H-event
 c shower scales written onto the LHE file. At this point of the code, the
 c latter array is correctly labelled with 1<=i,j<=nexternal, but lacks
 c the entries relevant to i and/or j equal to i_fks, to be provided later
-cSF I DONT THINK THE ENTRIES J=I_FKS ARE EVER NEEDED. DONT WE USE
-cSF SHOWERSCALES(PARTICLE #i)=XSCALES(i,whatevercolourlinked)?
       SCALUP_tmp_H=-1d0
       do i=1,nexternal
          do j=1,nexternal
             SCALUP_tmp_H(i,j)=xscales(i,j)
          enddo
       enddo
-
-cSF Assignment of shower scale to the extra leg
-cSF SOMETHING FISHY HERE. MUST DEPEND ON H COLOUR CONFIGURATION,
-cSF AND HERE WE HAVE ONLY ONE. WHAT IS DONE WHEN WRITING LHE FILE?
-cSF WHAT BELOW WORKS (?) FOR A SINGLE H COLOUR. ITERATE IF NECESSARY
+c
+c Assignment of shower scale for i_fks and j_fks. Scale for i_fks is not
+c present in xscales, while that for j_fks gets overwritten below, so to
+c have it identical to the scale for i_fks.
+      icount_i=0
+      icount_j=0
       icount=0
       ic=-1
       jc=-1
       do i=1,nexternal
          if(i.eq.i_fks)cycle
-         if(ICOLUP_H(1,i).eq.i_fks)then
-            icount=icount+1
+         if(ICOLUP_H(1,i_fks).ne.0d0.and.
+     &      (ICOLUP_H(1,i).eq.ICOLUP_H(1,i_fks).or.
+     &       ICOLUP_H(2,i).eq.ICOLUP_H(1,i_fks)))then
+            icount_i=icount_i+1
             ic=i
+c ic is the parton connected to the colour of i_fks
          endif
-         if(ICOLUP_H(2,i).eq.i_fks)then
-            icount=icount+1
+         if(ICOLUP_H(2,i_fks).ne.0d0.and.
+     &      (ICOLUP_H(1,i).eq.ICOLUP_H(2,i_fks).or.
+     &       ICOLUP_H(2,i).eq.ICOLUP_H(2,i_fks)))then
+            icount_j=icount_j+1
             jc=i
+c jc is the parton connected to the anti-colour of i_fks
          endif
       enddo
-cSF CHECK ICOUNT=2 IF GLUON ICOUNT=1 IF QUARK
-      if(ic.ne.-1)SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
-      if(jc.ne.-1)SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
+      icount=icount_i+icount_j
+c Checks
+      if(pdg_type(i_fks).eq.21.and.ic.ne.j_fks.and.jc.ne.j_fks)then
+         write(*,*)'Incorrect colour information 1 in complete_xmcsubt'
+         write(*,*)i_fks,j_fks,ic,jc
+         stop
+      endif
+      if(pdg_type(i_fks).eq.21.and.(ic.eq.-1.or.jc.eq.-1))then
+         write(*,*)'Incorrect colour information 2 in complete_xmcsubt'
+         write(*,*)i_fks,ic,jc
+         stop
+      endif
+      if(abs(pdg_type(i_fks)).le.6.and.
+     &   ((ic.ne.-1.and.jc.ne.-1).or.(ic.eq.-1.and.jc.eq.-1)))then
+         write(*,*)'Incorrect colour information 3 in complete_xmcsubt'
+         write(*,*)i_fks,ic,jc
+         stop
+      endif
+      if(pdg_type(i_fks).eq.21.and.
+     &   (xscales(ic,jc).eq.-1d0.or.xscales(jc,ic).eq.-1d0))then
+         write(*,*)'Incorrect colour information 4 in complete_xmcsubt'
+         write(*,*)i_fks,ic,jc,xscales(ic,jc),xscales(jc,ic)
+      endif
+c Assign identical shower scale to i_fks and to j_fks.
+c The coded scale is the t_ij value of the colour line that emitted i_fks,
+c taken from j_fks to its partner. Alternatives to this choice can be
+c envisaged, for example involving dipole masses. The coding of these
+c alternatives is left for future work
+      if(pdg_type(i_fks).eq.21)then
+         SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
+         SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
+      elseif(abs(pdg_type(i_fks)).le.6)then
+         do i=1,nexternal
+            if(i.eq.i_fks)cycle
+            if(ic.ne.-1.and.xscales(ic,i).ne.-1d0)SCALUP_tmp_H(i_fks,ic)=xscales(ic,i)
+            if(jc.ne.-1.and.xscales(jc,i).ne.-1d0)SCALUP_tmp_H(i_fks,jc)=xscales(jc,i)
+         enddo
+      endif
+      SCALUP_tmp_H(j_fks,ic)=SCALUP_tmp_H(i_fks,ic)
+      SCALUP_tmp_H(j_fks,jc)=SCALUP_tmp_H(i_fks,jc)
 c
-c Computation of wgt_sudakov = Delta as the product of Sudakovs between
-c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2)
+c Computation of Delta = wgt_sudakov as the product of Sudakovs between
+c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
       wgt_sudakov=1d0
       i_dipole_counter=0
       nG_S=0
       nQ_S=0
 c
-cSF WHY NOT do i=1,nexternal-2?
       do i=1,nexternal-1
-
+c Flavour constraints are enforced by setting the contributing Sudakovs
+c equal to 1 for all colour lines that could not have generated the extra
+c radiation. If i_fks = gluon, all colour lines contribute; if i_fks =
+c (anti)quark, only colour lines starting from a gluon, or from an
+c initial-state (anti)quark with the same flavour do.
+         if(abs(pdg_type(i_fks)).le.6.and..not.
+     &      (idup_s(i).eq.21.or.
+     &      (i.le.2.and.pdg_type(i_fks).eq.idup_s(i))))cycle
          if(idup_s(i).eq.21)nG_S=nG_S+1
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
-
          do j=1,nexternal-1
-
             if(j.eq.i)cycle
-
+c only colour-connected partons contribute to Delta
+            if(xscales2(i,j).eq.-1d0)cycle
             if(i.le.2.and.j.le.2)then
                isudtype=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -1499,25 +1559,12 @@ cSF WHY NOT do i=1,nexternal-2?
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-            if((xscales2(i,j).ne.-1d0.and.xmasses2(i,j).eq.-1d0).or.
-     &         (xscales2(i,j).eq.-1d0.and.xmasses2(i,j).ne.-1d0))then
-               write(*,*)'Error in xscales, xmasses',
-     &                   i,j,xscales2(i,j),xmasses2(i,j)
-               stop
-            endif
-            if(xscales2(i,j).eq.-1d0) then
-c              write(*,*)'Error in xscales',i,j,xscales2(i,j),dzones2(i,j)
-              cycle
-c            else
-c              write(*,*)'correct xscales',i,j,xscales2(i,j),dzones2(i,j)
-            endif
+cPT INSERT CHECK ON DEADZONES
 cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
-c            deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
-c     &                         idup_s(i),isudtype,mcmass)
-c            deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
-c     &                         idup_s(i),isudtype,mcmass)
-            deltanum=1.0
-            deltaden=1.0
+            deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
+     &                         idup_s(i),isudtype,mcmass)
+            deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
+     &                         idup_s(i),isudtype,mcmass)
             wgt_sudakov=wgt_sudakov*deltanum/deltaden
             i_dipole_counter=i_dipole_counter+1
          enddo
@@ -1541,7 +1588,7 @@ cSF ELIMINATE WHAT FOLLOWS AFTER CHECKS
         write(*,*)'SFWARNING2',probne
         probne=1.d0
       endif
-
+c
       do i=1,nexternal
          if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne
          if(i.gt.ipartners(0))xmcxsec(i)=0d0
@@ -3608,6 +3655,7 @@ c
 
       return
       end
+
 
       function scalefunH(q)
 c     Functional form for shower scale relevant to an emission
