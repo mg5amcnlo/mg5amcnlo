@@ -77,7 +77,7 @@ extern "C" {
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
 
-    double boost = 10.;
+    double boost = 2.;
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->1&21_CS",    boost);
     pythia4dire.settings.parm("Enhance:fsr_qcd_1->21&1_CS",    boost);
