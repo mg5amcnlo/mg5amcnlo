@@ -1143,8 +1143,8 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer idup_s(nexternal-1)
       integer mothup_s(2,nexternal-1)
       integer icolup_s(2,nexternal-1)
-      integer idup_h(nexternal,maxproc)
-      integer mothup_h(2,nexternal,maxproc)
+      integer idup_h(nexternal)
+      integer mothup_h(2,nexternal)
       integer icolup_h(2,nexternal)
       integer spinup_local(nexternal)
       integer istup_local(nexternal)
@@ -1363,12 +1363,10 @@ cSF thus can be directly passed rather than reconstructed
         call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
         firsttime1=.false.
       endif
-      do j=1,niprocs_d(nFKSprocess)
-        do i=1,nexternal
-          IDUP_H(i,j)=IDUP_D(nFKSprocess,i,j)
-          MOTHUP_H(1,i,j)=MOTHUP_D(nFKSprocess,1,i,j)
-          MOTHUP_H(2,i,j)=MOTHUP_D(nFKSprocess,2,i,j)
-        enddo
+      do i=1,nexternal
+         IDUP_H(i)=IDUP_D(nFKSprocess,i,1)
+         MOTHUP_H(1,i)=MOTHUP_D(nFKSprocess,1,i,1)
+         MOTHUP_H(2,i)=MOTHUP_D(nFKSprocess,2,i,1)
       enddo
 c Fill selected color configuration into jpart array. 
       call fill_icolor_H(jflow,jpart)
