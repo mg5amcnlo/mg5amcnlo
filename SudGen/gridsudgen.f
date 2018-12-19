@@ -25,10 +25,12 @@ c In any case, it is sensible to choose k of order one.
 c
 c nodes of the st grid (jmax for st)
       integer nnst
-      parameter (nnst=26)
+c$$$      parameter (nnst=26)
+      parameter (nnst=100)
 c nodes of the xm grid (jmax for xm)
       integer nnxm
-      parameter (nnxm=20)
+c$$$      parameter (nnxm=20)
+      parameter (nnxm=50)
 c b of the formulae above
       real*8 base
       parameter (base=10.d0)
@@ -46,12 +48,10 @@ c
       real*8 stlow,stupp,xmlow,xmupp,alst,q0st,alxm,q0xm,
      # qnodeval
 c$$$      external SUDAKOV FUNCTION
-      double precision min_sudakov
       external py_compute_sudakov
       double precision py_compute_sudakov,restmp
       double precision tolerance,xlowthrs
       parameter (tolerance=1.d-2)
-      parameter (xlowthrs=1.d-5)
       integer iunit1,iunit2,maxseed,iseed,iseedtopy,ifk88seed
       parameter (iunit1=20)
       parameter (iunit2=30)
@@ -71,8 +71,6 @@ c
       include 'MCmasses_PYTHIA8.inc'
 c
       call dire_init(mcmass)
-      min_sudakov=0.00001
-
       open(unit=iunit1,file='sudakov.log',status='unknown')
       open(unit=iunit2,file='sudakov.err',status='unknown')
 
@@ -80,6 +78,9 @@ c
       read(*,*)stlow,stupp
       write(*,*)'enter lower and upper bounds of M range'
       read(*,*)xmlow,xmupp
+      write(*,*)'enter Sudakov lower threshold'
+      write(*,*)' Sudakov will be set to zero if below threshold'
+      read(*,*)xlowthrs
 
       write(*,*)'enter -1 to use Pythia default seed'
       write(*,*)'       0 to use Pythia timestamp'
@@ -145,7 +146,7 @@ c st(inst) and stupp
               iseed=iseedtopy()
               restmp = py_compute_sudakov(
      #          st(inst),xm(inxm),ipmap(ipart),itype,
-     #          mcmass,stupp,iseed,min_sudakov,iunit1)
+     #          mcmass,stupp,iseed,xlowthrs,iunit1)
               if(restmp.gt.1.d0)then
                 if(restmp.le.(1.d0+tolerance))then
                   write(iunit2,*)'Out of bounds (>1): ',restmp
@@ -214,6 +215,9 @@ c
      #'      parameter (stlow=',stlow,',stupp=',stupp,')'
       write(10,'(a,d15.8,a,d15.8,a)')
      #'      parameter (xmlow=',xmlow,',xmupp=',xmupp,')'
+      write(10,'(a)')
+     #'      real*8 cstlow,cstupp,cxmlow,cxmupp',
+     #'      common/cstxmbds/cstlow,cstupp,cxmlow,cxmupp'
       do itype=1,4
         do ipart=1,npart
           id=abs(ipmap(ipart))
@@ -257,6 +261,10 @@ c
      #'     #              //'' with grid setup''',
      #'          stop',
      #'        endif',
+     #'        cstlow=stlow',
+     #'        cstupp=stupp',
+     #'        cxmlow=xmlow',
+     #'        cxmupp=xmupp',
      #'        listmin=0',
      #'        lixmmin=0',
      #'        lixmmax=0',
@@ -583,7 +591,6 @@ c
       real*8 mcmass(21)
       double precision temp
 c
-      min_py_sudakov=0.00001
       call dire_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
