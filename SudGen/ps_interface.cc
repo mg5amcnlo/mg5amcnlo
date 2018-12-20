@@ -112,7 +112,7 @@ extern "C" {
 
   void dire_get_no_emission_prob_( double& noemProb, double& startingScale,
     double& stoppingScale, double& mDipole, int& id, int& type, int& seed,
-    double min_sudakov) {
+    double& min_sudakov) {
     // Set random seed.`
     pythia4dire.readString("Random:setSeed = on");
     pythia4dire.settings.mode("Random:seed", seed);
