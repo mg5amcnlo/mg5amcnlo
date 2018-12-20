@@ -1584,6 +1584,18 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['propa'] = self.get('particle').get('propagator')
         if output['propa'] not in ['', None]:
             output['propa'] = 'P%s' % output['propa']
+            if self.get('polarization'):
+                raise InvalidCmd, 'particle with custom propagator can not have polarization'
+        elif self.get('polarization'):
+            if self.get('polarization') == [0]:
+                output['propa'] = 'PL' 
+            elif self.get('polarization') == [1,-1]:
+                output['propa'] = 'PT'
+            elif self.get('polarization') == [99]:
+                output['propa'] = 'PA'
+            else:
+                raise InvalidCmd, 'polarization not handle for decay particle'
+            
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
@@ -1658,16 +1670,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Sort according to spin and flow direction
         res.sort()
         res.append(self.get_spin_state_number())
-        res.append(self.find_outgoing_number())
+        outgoing =self.find_outgoing_number()
+        res.append(outgoing)
 
         if self['is_loop']:
             res.append(self.get_loop_index())
             if not self.get('mothers'):
                 res.append(self.get('is_part'))
 
+        res.append(tuple(self.get('polarization')) )
+
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
             res.append(self.get('conjugate_indices'))
+            
+
+        
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -3828,7 +3846,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                           filter(lambda wf: not wf.get('mothers') and \
                                  wf.get('number_external') == number,
                                  self.get_all_wavefunctions())]
-
+        
         # Keep track of wavefunction and amplitude numbers, to ensure
         # unique numbers for all new wfs and amps during manipulations
         numbers = [self.get_all_wavefunctions()[-1].get('number'),
@@ -3988,6 +4006,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            amplitudes which have this wavefunction as mother.
         """
 
+        #check that decay does not specify polarization
+        wfs = filter(lambda w: w.get('state') == 'initial' , decay.get('diagrams')[0].get('wavefunctions'))
+        if any(wf.get('polarization') for wf in wfs):
+            raise InvalidCmd, 'In decay-chain polarization can only be specified in production not in decay. Please Retry'
+
+        
         len_decay = len(decay.get('diagrams'))
 
         number_external = old_wfs[0].get('number_external')
@@ -4235,6 +4259,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                     old_wf_index = [wf.get('number') for wf in \
                                     diagram_wfs].index(old_wf.get('number'))
+                                    
+                    old_wf_pol = diagram_wfs[old_wf_index].get('polarization')
+                    for w in final_decay_wfs:
+                        w.set('polarization', old_wf_pol)
+                    
 
                     diagram_wfs = diagram_wfs[0:old_wf_index] + \
                                   decay_diag_wfs + diagram_wfs[old_wf_index:]
@@ -4441,6 +4470,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def replace_single_wavefunction(self, old_wf, new_wf):
         """Insert decay chain by simply modifying wavefunction. This
         is possible only if there is only one diagram in the decay."""
+
 
         for key in old_wf.keys():
             old_wf.set(key, new_wf[key])

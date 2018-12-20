@@ -1145,6 +1145,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             outgoing = 0
 
 
+
         # Check if we need to append a charge conjugation flag
         l = [str(l) for l in argument.get('lorentz')]
         flag = []
@@ -1223,7 +1224,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
           OptimizedOutput=False, specifyHel=self.hel_sum)
-
+        
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(), call_function)
@@ -1510,7 +1511,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
 
         # Creating line formatting:
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
-
         arg = {'routine_name': aloha_writers.combine_name(\
                                         '%s' % l[0], l[1:], outgoing, flag, True),
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
