@@ -1809,6 +1809,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if self.get('particle').get('propagator') not in ['', None]:
             tags.append('P%s' % str(self.get('particle').get('propagator')))
+        elif self.get('polarization'):
+            if self.get('polarization') == [0]:
+                tags.append('PL') 
+            elif self.get('polarization') == [1,-1]:
+                tags.append('PT')
+            elif self.get('polarization') == [99]:
+                tags.append('PA')
+            else:
+                raise InvalidCmd, 'polarization not handle for decay particle'
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
