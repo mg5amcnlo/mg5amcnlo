@@ -829,7 +829,7 @@ c Double the number of intervals in the grids if not yet reach the maximum
          do kchan=1,nchans
             do kdim=1,ndim
                call double_grid(xgrid(0,kdim,kchan),nhits(1,kdim,kchan)
-     $              ,nint_used)
+     $              ,xacc(0,kdim,kchan),nint_used)
             enddo
          enddo
          nint_used=2*nint_used
@@ -854,17 +854,24 @@ c Do next iteration
      $     ,e10.4)
       end
 
-      subroutine double_grid(xgrid,nhits,ninter)
+      subroutine double_grid(xgrid,nhits,xacc,ninter)
       implicit none
       include "mint.inc"
       integer  ninter,nhits(nintervals)
-      real * 8 xgrid(0:nintervals)
+      real * 8 xgrid(0:nintervals),xacc(0:nintervals)
       integer i
       do i=ninter,1,-1
          xgrid(i*2)=xgrid(i)
          xgrid(i*2-1)=(xgrid(i)+xgrid(i-1))/2d0
          nhits(i*2)=nhits(i)/2
          nhits(i*2-1)=nhits(i)-nhits(i*2)
+         if (nhits(i).ne.0) then
+            xacc(i*2)=xacc(i)*nhits(i*2)/dble(nhits(i))
+            xacc(i*2-1)=xacc(i)*nhits(i*2-1)/dble(nhits(i))
+         else
+            xacc(i*2)=0d0
+            xacc(i*2-1)=0d0
+         endif
       enddo
       return
       end
