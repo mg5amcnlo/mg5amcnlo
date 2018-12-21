@@ -95,8 +95,8 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      integer ndim
-      common/tosigint/ndim
+      integer nndim
+      common/tosigint/nndim
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
@@ -110,7 +110,7 @@ c
          virtgranny=0d0
          return
       endif
-      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
+      call generate_momenta_conf(.true.,nndim,jac,xvar,granny_m2_red
      &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=0,3
@@ -152,8 +152,8 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      integer ndim
-      common/tosigint/ndim
+      integer nndim
+      common/tosigint/nndim
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
@@ -177,7 +177,7 @@ c
          virtgranny_red=0d0
          return
       endif
-      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
+      call generate_momenta_conf(.true.,nndim,jac,xvar,granny_m2_red
      &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=1,3
@@ -282,13 +282,14 @@ c
 
 
       
-      subroutine generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass
+      subroutine generate_momenta_conf_wrapper(nndim,jac,x,itree,qmass
      $     ,qwidth,p)
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      integer ndim
+      integer nndim
       double precision jac,x(99),p(0:3,nexternal)
       integer itree(2,-max_branch:-1),i,j
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),del1
@@ -367,8 +368,6 @@ c possible resonance.
       common /to_abrv/ abrv
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
 c
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=0
@@ -405,7 +404,7 @@ c physical range of the invariant mass in the event!)
             only_event_phsp=.true.
             skip_event_phsp=.false.
             input_granny_m2=.false.
-            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+            call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
             if (nint(jac).eq.-222) return ! numerical inaccuracy: not
                                           ! even Born momenta generated.
@@ -540,7 +539,7 @@ c need to set it to .false. to fill shat_ev (et al) to be able to assign
 c a shower scale. The kinematics won't be used, because below jac=-222
 c and p(0,1)=-99d0.
             skip_event_phsp=.false. 
-            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+            call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
             jac=-222
             p(0,1)=-99d0
@@ -554,7 +553,7 @@ c integrate as normal
             do i=-1,1
                granny_m2_red(i)=-99d99
             enddo
-            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+            call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
 c In this case, we should not write the grandmother in the event file,
 c because the shower should not keep its inv. mass fixed.
@@ -592,7 +591,7 @@ c the event).
             skip_event_phsp=.false.
             only_event_phsp=.true.
             granny_m2_red(0)=xmbe2inv
-            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+            call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $           ,granny_m2_red,rat_xi_orig,itree,qmass,qwidth,p)
 c multiply event jacobian by the numerically computed jacobian for the
 c derivative
@@ -602,7 +601,7 @@ c better compute it again to set all the common blocks correctly.
             input_granny_m2=.false.
             only_event_phsp=.false.
             skip_event_phsp=.true.
-            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+            call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
          endif
          jac=jac*MC_sum_factor
@@ -610,7 +609,7 @@ c better compute it again to set all the common blocks correctly.
          skip_event_phsp=.false.
          only_event_phsp =.false.
          input_granny_m2=.false.
-         call generate_momenta_conf(input_granny_m2,ndim,jac,x
+         call generate_momenta_conf(input_granny_m2,nndim,jac,x
      $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
       endif
       end
@@ -701,9 +700,6 @@ c     2 soft-collinear
 c Masses of particles. Should be filled in setcuts.f
       double precision pmass(nexternal)
       common /to_mass/pmass
-c     For MINT:
-      integer ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
 c local
       integer i,j,nbranch,ns_channel,nt_channel,ionebody
      &     ,fksconfiguration,icountevts,imother,ixEi,ixyij,ixpi,isolsign
@@ -1000,14 +996,10 @@ c quantity will stay zero
       if (.not.only_event_phsp) xij_aor=(0.d0,0.d0)
 c
 c These will correspond to the vegas x's for the FKS variables xi_i,
-c y_ij and phi_i
+c y_ij and phi_i (changing this also requires changing folding parameters)
       ixEi=ndim-2
       ixyij=ndim-1
       ixpi=ndim
-c Set up the MINT folding:
-      ifold_energy=ixEi
-      ifold_phi=ixpi
-      ifold_yij=ixyij
 c
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)

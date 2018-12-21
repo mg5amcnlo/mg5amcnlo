@@ -5,7 +5,6 @@
       include "unlops.inc"
       include "run.inc"
       include 'timing_variables.inc'
-      include 'mint.inc'
       integer ndim
       common/tosigint/ndim
       logical Hevents

@@ -2359,37 +2359,41 @@ RESTART = %(mint_mode)s
                     linesoffiles.append(fi.readlines())
             to_write=[]
             for rowgrp in zip(*linesoffiles):
-                try:
-                    # check that last element on the line is an
-                    # integer (will raise ValueError if not the
-                    # case). If integer, this is the line that
-                    # contains information that needs to be
-                    # summed. All other lines can be averaged.
-                    is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
-                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
-                    special=[]
+                action=list(set([row.strip().split()[0] for row in rowgrp])) # list(set()) structure to remove duplicants
+                floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
+                floatgrps = zip(*floatsbyfile)
+                if len(action) != 1:
+                    raise aMCatNLOError('"mint_grids" files not in correct format. '+\
+                                        'Cannot combine them.')
+                if 'AVE' in action:
+                    # average
+                    write_string = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
+                elif 'SUM' in action:
+                    # sum
+                    write_string = [sum(floatgrp) for floatgrp in floatgrps]
+                elif 'MAX' in action:
+                    # take maximum
+                    write_string = [max(floatgrp) for floatgrp in floatgrps]
+                elif 'QSM' in action:
+                    # sum in quadrature
+                    write_string = [math.sqrt(sum([err**2 for err in floatgrp])) for floatgrp in floatgrps]
+                elif 'IDE' in action:
+                    # they should all be identical (INTEGERS)
+                    write_string = [int(round(floatgrp[0])) for floatgrp in floatgrps]
+                elif 'SPE' in action:
+                    # special: average first; sum second; average third (ALL INTEGERS)
+                    write_string=[]
                     for i,floatgrp in enumerate(floatgrps):
-                        if i==0: # sum X-sec
-                            special.append(sum(floatgrp))
-                        elif i==1: # sum unc in quadrature
-                            special.append(math.sqrt(sum([err**2 for err in floatgrp])))
-                        elif i==2: # average number of PS per iteration
-                            special.append(int(sum(floatgrp)/len(floatgrp)))
-                        elif i==3: # sum the number of iterations
-                            special.append(int(sum(floatgrp)))
-                        elif i==4: # average the nhits_in_grids
-                            special.append(int(sum(floatgrp)/len(floatgrp)))
-                        else:
-                            raise aMCatNLOError('"mint_grids" files not in correct format. '+\
-                                                'Cannot combine them.')
-                    to_write.append(" ".join(str(s) for s in special) + "\n")
-                except ValueError:
-                    # just average all
-                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
-                    averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
-                    to_write.append(" ".join(str(a) for a in averages) + "\n")
+                        if i==0: # average number of PS points per iterations
+                            write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                        elif i==1: # sum te number of iterations
+                            write_string.append(int(sum(floatgrp)))
+                        elif i==2: # average the nhits_in_grids
+                            write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                else:
+                    raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
+                    
+                to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
             # write the data over the master location
             if j==0:
                 with open(pjoin(location,'mint_grids'),'w') as f:

@@ -176,13 +176,13 @@ C      gluon in the initial state
 c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
-      include 'mint.inc'
       integer orders(nsplitorders)
       integer iamp, i
       double precision amp_split_virt(amp_split_size),
@@ -203,9 +203,6 @@ c value to the list of weights using the add_wgt subroutine
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision   xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
       double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
@@ -976,6 +973,7 @@ c Compute all the relevant prefactors for the Born and the soft-virtual,
 c i.e. all the nbody contributions. Also initialises the plots and
 c bpower.
       use extra_weights
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1009,8 +1007,8 @@ c bpower.
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig,                this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
@@ -1025,8 +1023,6 @@ c bpower.
       external ran2
       real*8 rndec(10)
       common/crndec/rndec
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
       include "appl_common.inc" 
       !!!include "orders.inc"
       call cpu_time(tBefore)
@@ -1070,7 +1066,7 @@ c Compute the multi-channel enhancement factor 'enhance'.
             xtot=xtot+amp2(mapconfig(i))
          enddo
          if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=amp2(mapconfig(this_config))/xtot
             enhance=enhance*diagramsymmetryfactor
          else
             enhance=0d0
@@ -1633,6 +1629,7 @@ c this array are now correctly normalised to compute the cross section
 c or to fill histograms.
       use weight_lines
       use extra_weights
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1640,7 +1637,6 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
-      include 'mint.inc'
       include 'FKSParams.inc'
       integer orders(nsplitorders)
       integer i,j,k,iamp
@@ -1652,9 +1648,6 @@ c or to fill histograms.
       external dlum
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
@@ -1733,18 +1726,15 @@ c 'virt_wgt_mint' and 'born_wgt_mint' are updated. Furthermore, to
 c include the weight also in the 'wgt' array that contain the
 c coefficients for PDF and scale computations. 
       use weight_lines
+      use mint_module
       implicit none
       include 'orders.inc'
-      include 'mint.inc'
       integer orders(nsplitorders)
       integer i,j,iamp
       logical virt_found
       double precision bias
       character*7 event_norm
       common /event_normalisation/event_norm
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
 c Set the bias_wgt to 1 in case we do not have to do any biassing
       if (event_norm(1:4).ne.'bias') then
          do i=1,icontr
@@ -2569,15 +2559,12 @@ c call the analysis/histogramming routines
       subroutine fill_mint_function(f)
 c Fills the function that is returned to the MINT integrator
       use weight_lines
+      use mint_module
       implicit none
       include 'nexternal.inc'
-      include 'mint.inc'
       include 'orders.inc'
       integer i,iamp,ithree,isix
       double precision f(nintegrals),sigint
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       sigint=0d0
@@ -2674,6 +2661,7 @@ c the MC counter terms for the H-events FKS configuration by FKS
 c configuration, while for the S-events also contributions from the
 c various FKS configurations can be summed together.
       use weight_lines
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
@@ -2686,9 +2674,6 @@ c various FKS configurations can be summed together.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-      logical               only_virt
-      integer         imode
-      common /c_imode/imode,only_virt
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
@@ -2835,21 +2820,15 @@ c Overwrite the shower scale for the S-events
 c Fills the function that is returned to the MINT integrator. Depending
 c on the imode we should or should not include the virtual corrections.
       use weight_lines
+      use mint_module
       implicit none
       include 'nexternal.inc'
-      include 'mint.inc'
       include 'orders.inc'
       integer i,j,ict,iamp,ithree,isix
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
-      logical               only_virt
-      integer         imode
-      common /c_imode/imode,only_virt
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -5470,6 +5449,7 @@ c
 
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
       use extra_weights
+      use mint_module
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -5483,7 +5463,6 @@ c      include "fks.inc"
       common /c_charges/particle_charge
       include "run.inc"
       include "fks_powers.inc"
-      include "mint.inc"
       double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
       
@@ -5542,9 +5521,6 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual(0:n_ave_virt,maxchannels)
-     $     ,virtual_fraction(maxchannels)
-      common/c_avg_virt/average_virtual,virtual_fraction
       double precision virtual_over_born
       common/c_vob/virtual_over_born
 
@@ -6512,9 +6488,8 @@ c
       subroutine setfksfactor(match_to_shower)
       use weight_lines
       use extra_weights
+      use mint_module
       implicit none
-
-      include 'mint.inc'
       
       double precision CA,CF, PI
       parameter (CA=3d0,CF=4d0/3d0)
@@ -6529,7 +6504,7 @@ c
       logical softtest,colltest
       common/sctests/softtest,colltest
 
-      integer config_fks,i,j,fac1,fac2
+      integer config_fks,i,j,fac1,fac2,kchan
       logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -6917,11 +6892,11 @@ c so, set granny_is_res=.true. and also set to which internal propagator
 c the grandmother corresponds (igranny) as well as the aunt (iaunt).
 c This information can be used to improve the phase-space
 c parametrisation.
+      use mint_module
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      include 'mint.inc'
 c arguments
       integer nFKSprocess,iconf
       double precision mass_min(-nexternal:nexternal)
@@ -7110,3 +7085,21 @@ c     reset the default dynamical_scale_choice
       endif
       return
       end
+
+
+      function ran2()
+!     Wrapper for the random numbers; needed for the NLO stuff
+      use mint_module
+      implicit none
+      double precision ran2,x,a,b
+      integer ii,jconfig
+      a=0d0                     ! min allowed value for x
+      b=1d0                     ! max allowed value for x
+      ii=0                      ! dummy argument of ntuple
+      jconfig=iconfig           ! integration channel (for off-set)
+      call ntuple(x,a,b,ii,jconfig)
+      ran2=x
+      return
+      end
+
+      

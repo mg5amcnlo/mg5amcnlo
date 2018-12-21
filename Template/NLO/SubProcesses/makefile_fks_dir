@@ -25,42 +25,37 @@ LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
 # Files for all executables
-FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
-	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
-	 real_me_chooser.o chooser_functions.o				\
-	 genps_fks.o setcuts.o setscales.o veto_xsec.o		 	\
-	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
-	 born.o sborn_sf.o extra_cnt_wrapper.o				\
-	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
-	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
-	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 initcluster.o cluster.o splitorders_stuff.o 			\
-	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
-	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
-	 $(applgrid_interface) weight_lines.o
+FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
+	%.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
+	chooser_functions.o genps_fks.o setcuts.o setscales.o		\
+	veto_xsec.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f))		\
+	born.o sborn_sf.o extra_cnt_wrapper.o $(patsubst		\
+	%.f,%.o,$(wildcard born_cnt_*.f)) fks_Sij.o			\
+	$(fastjetfortran_madfks) fks_singular.o montecarlocounter.o	\
+	reweight_xsec.o boostwdir2.o initcluster.o cluster.o		\
+	splitorders_stuff.o reweight.o get_color.o FKSParamReader.o	\
+	iproc_map.o MC_integer.o $(reweight_xsec_events_pdf_dummy)	\
+	$(applgrid_interface) weight_lines.o mint_module.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
 	fill_MC_mshell.o born_hel.o open_output_files.o			\
-	add_write_info.o BinothLHA.o madfks_plot.o
+	add_write_info.o madfks_plot.o
 
 # Files for mintFO
-MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
+MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o BinothLHA.o
 
 # Files for mintMC
-MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
-	handling_lhe_events.o
+MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
-       BinothLHA.o born_hel.o
+POLES= $(RUN) check_poles.o BinothLHA.o
 
 # Files for tests
-TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
-      pythia_unlops.o recluster.o
+TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o
 
 # Files for gensym
-SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
+SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
@@ -72,6 +67,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
 	weight_lines.o
 
 %.o: %.f
+	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
+%.o: %.f90
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
 %.o: $(ANADIR)/%.f
 	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
@@ -121,9 +118,13 @@ libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
 reweight_xsec_events.o: weight_lines.o
-fks_singular.o: weight_lines.o
-driver_mintMC.o: weight_lines.o
-driver_mintFO.o: weight_lines.o
+fks_singular.o: weight_lines.o mint_module.o
+driver_mintMC.o: weight_lines.o mint_module.o
+driver_mintFO.o: weight_lines.o mint_module.o
+setcuts.o: mint_module.o
+genps_fks.o: mint_module.o
+symmetry_fks_v3.o: mint_module.o
+test_soft_col_limits.o: mint_module.o
 
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
