@@ -216,7 +216,6 @@ class CmdExtended(cmd.Cmd):
             info_line = info_line.replace("#*","*")
             
 
-
         logger.info(self.intro_banner % info_line)
 
         cmd.Cmd.__init__(self, *arg, **opt)
@@ -460,6 +459,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
+        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -2371,7 +2371,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
-                        possible_options_full = ['-f', '-noclean', '-nojpeg']):
+                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -7489,6 +7489,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         noclean = '-noclean' in args
         force = '-f' in args
         nojpeg = '-nojpeg' in args
+        if '--noeps=True' in args:
+            nojpeg = True
         flaglist = []
                     
         if '--postpone_model' in args:
