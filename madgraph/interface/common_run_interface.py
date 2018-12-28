@@ -664,15 +664,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.banner = None
         # Load the configuration file
         self.set_configuration()
-        self.configure_run_mode(self.options['run_mode'])
 
-        # update the path to the PLUGIN directory of MG%
-        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
-            mg5dir = self.options['mg5_path']
-            if mg5dir not in sys.path:
-                sys.path.append(mg5dir)
-            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
-                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
 
         # Define self.proc_characteristics
         self.get_characteristics()
@@ -3227,17 +3219,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cluster_name = opt['cluster_type']
             if cluster_name in cluster.from_name:
                 self.cluster = cluster.from_name[cluster_name](**opt)
+                print "using cluster:", cluster_name
             else:
+                print "cluster_class", cluster_name
+                print self.plugin_path
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
                                             info = 'cluster handling will be done with PLUGIN: %(plug)s' )
+                print type(cluster_class)
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
                 else:
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name              
-                
     def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
@@ -3609,6 +3604,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
+
+        # update the path to the PLUGIN directory of MG%
+        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
+            mg5dir = self.options['mg5_path']
+            if mg5dir not in sys.path:
+                sys.path.append(mg5dir)
+            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
+
         self.configure_run_mode(self.options['run_mode'])
         return self.options
 
