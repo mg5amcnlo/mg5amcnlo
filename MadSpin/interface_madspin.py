@@ -283,7 +283,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
-        misc.sprint(model_name)
         if model_name:
             model_name = os.path.expanduser(model_name)
             self.load_model(model_name, mg_names, complex_mass)
@@ -1009,11 +1008,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                     cumul = 0
                     for j,events in evt_decayfile[particle.pdg].items():
                         cumul += events.cross
-                        if r < cumul:
+                        if r <= cumul:
+                            decay_file = events
+                            decay_file_nb = j
+                            break
+                    else:
+                        # security for numerical accuracy issue... (unlikely but better safe)
+                        if (cumul-tot)/tot < 1e-5:
                             decay_file = events
                             decay_file_nb = j
                         else:
-                            break
+                            misc.sprint(j,cumul, events.cross, tot, (tot-cumul)/tot)
+                            raise Exception
                 
                 if self.options['new_wgt'] == 'BR':
                     tot_width = float(self.banner.get('param', 'decay', abs(pdg)).value)

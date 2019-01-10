@@ -6189,6 +6189,9 @@ tar -czf split_$1.tar.gz split_$1
         if self.force:
             return mode
         
+        if not banner:
+            banner = self.banner
+        
         if auto:
             self.ask_edit_cards(cards, from_banner=['param', 'run'], 
                                 mode='auto', plot=(pythia_version==6), banner=banner

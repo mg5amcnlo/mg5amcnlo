@@ -827,6 +827,12 @@ class FKSProcess(object):
         for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
+
+            # for 2->1 processes, map only the initial-state singularities
+            # this is because final-state mapping preserves shat, which
+            # is not possible in 2->1
+            if len(leglist) == 3 and not decay_process and i['state']: 
+                continue
             for pert_order in pert_orders:
                 # no splittings for initial states in decay processes
                 if decay_process and not i['state']:

@@ -290,7 +290,7 @@ C     ----------
       CALL FFV2P0_3(W(1,4),W(1,3),GC_67,DCMPLX(CMASS_MDL_MW),W(1,7))
 C     Amplitude(s) for diagram number 1
       CALL FFV2_0(W(1,5),W(1,6),W(1,7),GC_67,AMP(1))
-      CALL FFV1_2(W(1,4),W(1,1),GC_3,DCMPLX(ZERO),W(1,6))
+      CALL FFV1_2(W(1,4),W(1,1),-GC_4,DCMPLX(ZERO),W(1,6))
       CALL FFV2P0_3(W(1,5),W(1,2),GC_67,DCMPLX(CMASS_MDL_MW),W(1,4))
 C     Amplitude(s) for diagram number 2
       CALL FFV2_0(W(1,6),W(1,3),W(1,4),GC_67,AMP(2))

@@ -943,8 +943,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         continue
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
-                                    % part.name,'$MG:BOLD')
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.''',
+                                     part.name,'$MG:BOLD')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
@@ -4144,6 +4144,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
                                                               filename.replace('.LHgrid',''), 
                                         lhapdf_version, alternate_path)
+        elif lhapdf_version.startswith('6.'):
+            # try to do a simple wget
+            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
+            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+            misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
+            misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
+                      cwd=pdfsets_dir)
+            if os.path.exists(pjoin(pdfsets_dir, filename)) or \
+               os.path.isdir(pjoin(pdfsets_dir, filename)):
+                logger.info('%s successfully downloaded and stored in %s' \
+                        % (filename, pdfsets_dir))  
+            else:
+                raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)                          
             
         else:
             raise MadGraph5Error, \
@@ -4396,7 +4411,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if from_banner is None:
             self.from_banner = {}
             return
-        
+        misc.sprint(from_banner)
         self.from_banner = {}
         for card in from_banner:
             self.from_banner[card] = banner.charge_card(card)
@@ -5168,7 +5183,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning(str(e))
             return
 
-        
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
@@ -5245,6 +5259,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
+
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
@@ -5301,6 +5316,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
+
             if args[start] not in self.run_set:
                 if card in self.from_banner or 'run' in self.from_banner:
                     raise Exception, "change not allowed for this card: event already generated!"
@@ -5320,9 +5336,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('remove information %s from the run_card' % args[start],'$MG:BOLD')
                     del self.run_card[args[start]]
             else:
-                if args[0].startswith('sys_') or \
-                   args[0] in self.run_card.list_parameter or \
-                   args[0] in self.run_card.dict_parameter:
+                lower_name = args[0].lower()
+                if lower_name.startswith('sys_') or \
+                   lower_name in self.run_card.list_parameter or \
+                   lower_name in self.run_card.dict_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:

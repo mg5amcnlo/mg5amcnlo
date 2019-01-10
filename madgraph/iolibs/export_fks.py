@@ -2802,11 +2802,17 @@ Parameters              %(params)s\n\
                 if col != 1:
                     fks_j = cpos+1
             # if no colored leg exist, look for a charged leg
-            for cpos, chg in enumerate(charges[:-1]):
-                if chg != 0.:
-                    fks_j = cpos+1
+            if fks_j == 0:
+                for cpos, chg in enumerate(charges[:-1]):
+                    if chg != 0.:
+                        fks_j = cpos+1
             # no coloured or charged particle found. Pick the final particle in the (Born) process
             if fks_j==0: fks_j=len(colors)-1    
+
+            # this is special for 2->1 processes: j must be picked initial
+            # keep in mind that colors include the fake extra particle
+            if len(colors) == 4:
+                fks_j = 2
 
             replace_dict['fks_i_values'] = str(fks_i)
             replace_dict['fks_j_values'] = str(fks_j)

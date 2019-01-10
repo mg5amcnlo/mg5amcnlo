@@ -928,7 +928,7 @@ class AskRunNLO(cmd.ControlSwitch):
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
 
         hide_line = []
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
         
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
@@ -1055,21 +1055,18 @@ class AskRunNLO(cmd.ControlSwitch):
         """ """
         
         if self.proc_characteristics['ninitial'] == 1 or \
-           'QED' in self.proc_characteristics['perturbation_order']:
+           'QED' in self.proc_characteristics['splitting_types']:
             return ['ON']
         else:
             return ['ON', 'OFF']
         
     def set_default_fixed_order(self):
           
-        self.switch['fixed_order'] = 'ON'
-        return
-
         if self.last_mode in ['LO', 'NLO']:
             self.switch['fixed_order'] = 'ON'
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['fixed_order'] = 'ON'
-        elif 'QED' in self.proc_characteristics['perturbation_order']:
+        elif 'QED' in self.proc_characteristics['splitting_types']:
              self.switch['fixed_order'] = 'ON'
         else:
             self.switch['fixed_order'] = 'OFF'
@@ -1083,7 +1080,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def print_options_fixed_order(self):
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             return "No NLO+PS available for EW correction"
         else:
             return self.print_options('fixed_order', keep_default=True)
@@ -1101,8 +1098,8 @@ class AskRunNLO(cmd.ControlSwitch):
     def consistency_QED(self, key, value, switch):
         """ temporary way to forbid event generation due to lack of validation"""
         
-        if True:
-        #if 'QED' in self.proc_characteristics['perturbation_order']:
+#        if True:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             out = {}
             to_check ={'fixed_order': ['ON'],
                        'shower': ['OFF'],
@@ -1113,13 +1110,11 @@ class AskRunNLO(cmd.ControlSwitch):
                 if switch[key] not in allowed:
                     out[key] = allowed[0]
                     if not self.nb_fo_warning:
-                        if 'QED' in self.proc_characteristics['perturbation_order']:
+                        if 'QED' in self.proc_characteristics['splitting_types']:
                             logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
-                        else:  
-                            logger.warning("NLO+PS mode is not allowed in this version of MG5_aMC. Please use the official release of MG5_aMC for event generation at NLO accuracy.")
                         self.nb_fo_warning = 1
         else: 
-            return self.check_consistency_with_all(key, value, switch)
+            return self.check_consistency_with_all(key, value)
         return out 
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
@@ -1175,7 +1170,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             self.allowed_shower = ['OFF']
             return self.allowed_shower
         
@@ -1217,10 +1212,12 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def set_default_shower(self): 
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
-            self.switch['shower'] = 'Not avail.'
+        if 'QED' in self.proc_characteristics['splitting_types']:
+            self.switch['shower'] = 'Not Avail'
         elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
+        elif self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
         elif os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             if self.switch['fixed_order'] == "OFF":
                 self.switch['shower'] = self.run_card['parton_shower']  
@@ -1271,7 +1268,7 @@ class AskRunNLO(cmd.ControlSwitch):
             self.allowed_madspin = ['OFF']
             return self.allowed_madspin
         else:        
-            if 'QED' in self.proc_characteristics['perturbation_order']:
+            if 'QED' in self.proc_characteristics['splitting_types']:
                 self.allowed_madspin = ['OFF', 'onshell']
             else:
                 self.allowed_madspin = ['OFF', 'ON', 'onshell']
@@ -1309,7 +1306,7 @@ class AskRunNLO(cmd.ControlSwitch):
             else:
                 self.switch['madspin'] = 'OFF'
         else:
-            self.switch['madspin'] = 'Not Avail.'  
+            self.switch['madspin'] = 'Not Avail'  
             
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
@@ -1335,7 +1332,7 @@ class AskRunNLO(cmd.ControlSwitch):
 
 
         self.allowed_reweight = []
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             return self.allowed_reweight 
         if 'reweight' not in self.available_module:
             return self.allowed_reweight
@@ -1350,15 +1347,15 @@ class AskRunNLO(cmd.ControlSwitch):
     def set_default_reweight(self):
         """initialise the switch for reweight"""
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
-            self.switch['reweight'] = 'Not avail.'
+        if 'QED' in self.proc_characteristics['splitting_types']:
+            self.switch['reweight'] = 'Not Avail'
         elif 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                 self.switch['reweight'] = 'ON'
             else:
                 self.switch['reweight'] = 'OFF'
         else:
-            self.switch['reweight'] = 'Not Avail.'      
+            self.switch['reweight'] = 'Not Avail'      
             
     def get_cardcmd_for_reweight(self, value):
         """ adpat run_card according to this setup. return list of cmd to run"""
@@ -1383,7 +1380,7 @@ class AskRunNLO(cmd.ControlSwitch):
         
         self.allowed_madanalysis = []
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
+        if 'QED' in self.proc_characteristics['splitting_types']:
             return self.allowed_madanalysis
         
         if 'MA5' not in self.available_module:
@@ -1400,10 +1397,10 @@ class AskRunNLO(cmd.ControlSwitch):
     def set_default_madanalysis(self):
         """initialise the switch for reweight"""
         
-        if 'QED' in self.proc_characteristics['perturbation_order']:
-            self.switch['madanalysis'] = 'Not avail.'
+        if 'QED' in self.proc_characteristics['splitting_types']:
+            self.switch['madanalysis'] = 'Not Avail'
         elif 'MA5' not in self.available_module: 
-            self.switch['madanalysis'] =  'Not Avail.'
+            self.switch['madanalysis'] =  'Not Avail'
         elif os.path.exists(pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')):
             self.switch['madanalysis'] = 'ON'
         else:
@@ -5395,7 +5392,7 @@ RESTART = %(mint_mode)s
             force = True
         elif mode:
             passing_cmd.append(mode)
-        mode = None # allow to overwrite it due to EW
+        ####mode = None # allow to overwrite it due to EW
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=force,

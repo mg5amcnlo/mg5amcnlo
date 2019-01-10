@@ -995,13 +995,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for sqsos in squared_orders:
             is_a_match = True
             for user_sqso, value in user_squared_orders.items():
-                if user_sqso != 'WEIGHTED' and \
-                   ((process.get_squared_order_type(user_sqso) =='==' and \
+                if user_sqso == 'WEIGHTED' :
+                    logger.debug('WEIGHTED^2%s%s encoutered. Please check behavior for' + \
+                            'https://bazaar.launchpad.net/~maddevelopers/mg5amcnlo/3.0.1/revision/613', \
+                            (process.get_squared_order_type(user_sqso), sqsos[split_orders.index(user_sqso)]))
+
+                if (process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) == '>' and \
-                                value>=sqsos[split_orders.index(user_sqso)])):
+                                value>=sqsos[split_orders.index(user_sqso)]):
                     is_a_match = False
                     break
             res.append('.true.' if is_a_match else '.false.')
@@ -1835,13 +1839,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         is_clang = misc.detect_if_cpp_compiler_is_clang(compiler)
         is_lc    = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
 
+
         # list of the variable to set in the make_opts file
         for_update= {'DEFAULT_CPP_COMPILER':compiler,
                      'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
                      'STDLIB': '-lc++' if is_lc else '-lstdc++',
                      'STDLIB_FLAG': '-stdlib=libc++' if is_lc and is_clang else ''
                      }
-        
+
+        # for MOJAVE remove the MACFLAG:
+        if is_clang:
+            import platform
+            version, _, _ = platform.mac_ver()
+            if not version:# not linux 
+                version = 14 # set version to remove MACFLAG
+            else:
+                version = int(version.split('.')[1])
+            if version >= 14:
+                for_update['MACFLAG'] = '-mmacosx-version-min=10.8' if is_lc else ''
+
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')

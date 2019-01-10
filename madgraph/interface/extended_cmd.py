@@ -3083,7 +3083,6 @@ class ControlSwitch(SmartQuestion):
                           lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
         
-        
         return upper, lower, f1, f2
                 
     def create_question(self, help_text=True):
@@ -3130,12 +3129,13 @@ class ControlSwitch(SmartQuestion):
         upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
                                          max_len_name, max_len_add_info, 
                                          max_len_potential_switch, max_nb_key)
+        f3 = 0 #formatting for hidden line
         
         text = \
         ["The following switches determine which programs are run:",
          upper_line
         ]                     
-        
+
 
         
         for i,(key, descrip) in enumerate(self.to_control):
@@ -3152,10 +3152,12 @@ class ControlSwitch(SmartQuestion):
                            'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }
             
+            hidden_line = False
             if __debug__ and key in self.hide_line:
-                data_to_format['descrip'] = '\x1b[34m%s\x1b[0m' % data_to_format['descrip']
-                data_to_format['add_info'] = '\x1b[34m%s\x1b[0m' % data_to_format['add_info']
-                data_to_format['name'] = '\x1b[34m%s\x1b[0m' % data_to_format['name']
+                data_to_format['descrip'] = '\x1b[32m%s\x1b[0m' % data_to_format['descrip']
+                data_to_format['add_info'] = '\x1b[32m%s\x1b[0m' % data_to_format['add_info']
+                data_to_format['name'] = '\x1b[32m%s\x1b[0m' % data_to_format['name']
+                hidden_line=True
                 
             if key in self.inconsistent_keys:
                 # redefine the formatting here, due to the need to know the conflict size
@@ -3166,7 +3168,18 @@ class ControlSwitch(SmartQuestion):
                 
                 data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
+                
+                if hidden_line: 
+                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                                lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
+                                 f2)
                 text.append(f2 % data_to_format)
+            elif hidden_line:
+                if not f3:
+                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                                lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
+                                 f1)
+                text.append(f3 % data_to_format)
             else:
                 text.append(f1 % data_to_format)
 
