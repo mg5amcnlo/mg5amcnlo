@@ -2,6 +2,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.6.5 ()
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
+      MZ: Applgrid+aMCFast was broken for some processes (since 2.6.0), due to wrong 
+          information written into initial_states_map.dat. This has been fixed now
 
 2.6.4 (09/11/18)
       OM: add specific treatement for small width (at LO only and not for loop-induced)
