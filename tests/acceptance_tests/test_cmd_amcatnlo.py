@@ -663,7 +663,7 @@ class MECmdShell(IOTests.IOTestManager):
             stderr=devnull
 
             
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
                          cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
