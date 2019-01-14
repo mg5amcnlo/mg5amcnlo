@@ -2614,7 +2614,24 @@ class TestSomeObjectProperty(unittest.TestCase):
         zero = zero.expand().simplify()
         for ind in zero.listindices():
             self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (zero.get_rep(ind),ind ))        
+                             % (zero.get_rep(ind),ind ))    
+            
+            
+        # 4i epsilon()  = Tr(GGGG Gamma5
+        part1 = 4j* aloha_obj.Epsilon('mu','nu','rho', 'sigma')
+        gamma = aloha_obj.Gamma
+        gamma5 = aloha_obj.Gamma5
+        part2 = gamma('mu','i',1)*gamma('nu',1,2)*gamma('rho',2,3)*gamma('sigma',3,4)*gamma5(4,'i')
+        
+        zero = part1 - part2 
+        zero = zero.expand().simplify()
+        for ind in zero.listindices():
+
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))
+        
+            
+                
   
     def testCAlgebraDefinition(self):
         Gamma = aloha_obj.Gamma

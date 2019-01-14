@@ -4569,6 +4569,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([d.get('wavefunctions') for d in \
                        self.get('diagrams')], [])
 
+
+    def get_all_mass_widths(self):
+        """Gives a list of all widths used by this ME (from propagator)"""
+
+        return set([(d.get('mass'),d.get('width')) for d in self.get_all_wavefunctions()])
+
+
     def get_all_amplitudes(self):
         """Gives a list of all amplitudes for this ME"""
 

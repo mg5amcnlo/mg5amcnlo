@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.0.2
+     include up to 2.6.5
+
 3.0.1 
      include up to 2.6.4
      MZ: Enable shower for QCD-only splittings
@@ -8,7 +11,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
 
 3.0.0 (01/05/18):
-
      RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
          [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
 	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
@@ -18,13 +20,25 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      RF+SF: Resonance-aware phase-space mapping for NLO computations 
      RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
      OM: remove ./bin/mg5 executable
-2.6.4 (//)
+
+2.6.5 ()
+      OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
+      MZ: Applgrid+aMCFast was broken for some processes (since 2.6.0), due to wrong 
+          information written into initial_states_map.dat. This has been fixed now
+
+2.6.4 (09/11/18)
+      OM: add specific treatement for small width (at LO only and not for loop-induced)
+          if the width is smaller than 1e-6 times the mass, a fake width (at that value) is used for the
+          numerical evaluation of the matrix-element. S-channel resonances are re-scaled according to 
+          narrow-width approximation to return the correct total cross-section (the distribution of events 
+          will on the other hand follow the new width). 
+          The parameter '1e-6' can be changed by adding to (LO) run_card the parameter: "small_width_treatment"
+      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
+          the first time a loop computation is needed.
       RF: Fixed a bug when using TopDrawer plots for f(N)LO runs, where the combination of the plots could lead
           to completely wrong histograms/distributions in case of high-precision runs.
       OM: Fix some MLM crash for some processes (in particular BSM processes with W'). 
       OM: Fix a bug in the reweighting due to the new lhe format (the one avoiding some issue with py8)
-      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
-          the first time a loop computation is needed.
       OM: Fix a behavior for negative mass, the width was set to negative in the param_card automatically
           making the Parton-shower (and other code) to crash since this does not follow the convention.
       OM: Change compiler flag to support Mojave.

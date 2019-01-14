@@ -72,7 +72,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print( "For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -103,7 +103,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print( 'Running MG5 in debug mode')
 
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
@@ -125,11 +125,11 @@ except:
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
-    print 'WARNING: loading of madgraph too slow!!!', time.time() - start
+    print( 'WARNING: loading of madgraph too slow!!!', time.time() - start)
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
-        print "ERROR: %s is not present in the PLUGIN directory. Please install it first"
+        print( "ERROR: %s is not present in the PLUGIN directory. Please install it first")
     __import__('PLUGIN.%s' % options.plugin)
     plugin = sys.modules['PLUGIN.%s' % options.plugin]
     if not plugin.new_interface:

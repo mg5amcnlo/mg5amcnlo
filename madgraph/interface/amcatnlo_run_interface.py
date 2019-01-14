@@ -1173,6 +1173,9 @@ class AskRunNLO(cmd.ControlSwitch):
         if 'QED' in self.proc_characteristics['splitting_types']:
             self.allowed_shower = ['OFF']
             return self.allowed_shower
+
+        if not misc.which('bc'):
+            return ['OFF']
         
         if self.proc_characteristics['ninitial'] == 1:
             self.allowed_shower = ['OFF']
@@ -1228,6 +1231,25 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.switch['shower'] = 'OFF'
             else:
                 self.switch['shower'] = 'OFF (%s)' % self.run_card['parton_shower']
+
+        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+            self.switch['shower'] = 'OFF'
+            return 
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
+            return
+        
+        if not misc.which('bc'):
+            logger.warning('bc command not available. Forbids to run the shower. please install it if you want to run the shower. (sudo apt-get install bc)')
+            self.switch['shower'] = 'OFF'
+            return
+         
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            self.switch['shower'] = self.run_card['parton_shower']  
+            #self.switch['shower'] = 'ON'
+            self.switch['fixed_order'] = "OFF"
+
 
     def consistency_shower_madanalysis(self, vshower, vma5):
         """ MA5 only possible with (N)LO+PS if shower is run"""
