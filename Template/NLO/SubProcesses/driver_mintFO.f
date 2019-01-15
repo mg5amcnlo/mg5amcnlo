@@ -644,9 +644,9 @@ c     if there are no soft singularities at all, just do something trivial
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer nndim
+      integer         nndim
       common/tosigint/nndim
-      character*4 abrv
+      character*4      abrv
       common /to_abrv/ abrv
       do i=1,99
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then

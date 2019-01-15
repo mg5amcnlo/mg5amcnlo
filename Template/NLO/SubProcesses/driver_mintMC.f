@@ -54,7 +54,7 @@ c Vegas stuff
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision ran2
+      double precision ran2,x(ndimmax)
       external ran2
       
       integer ifile,ievents
@@ -137,7 +137,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncalls0,nitmax,imode,
+      call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
@@ -162,8 +162,6 @@ c Only do the reweighting when actually generating the events
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
       nndim=ndim
-      itmax=nitmax
-      ncall0=ncalls0
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -174,7 +172,7 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-      write(*,*) "about to integrate ", ndim,ncalls0,nitmax,iconfig
+      write(*,*) "about to integrate ", ndim,ncalls0,itmax,iconfig
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
@@ -200,6 +198,9 @@ c*************************************************************
          write (*,*) 'imode is ',imode
          call mint(sigintF)
          call deallocate_weight_lines
+         open(unit=58,file='results.dat',status='unknown')
+         write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
+         close(58)
 c*************************************************************
 c     computation of upper bounding envelope
 c*************************************************************
@@ -207,6 +208,10 @@ c*************************************************************
          write (*,*) 'imode is ',imode
          call mint(sigintF)
          call deallocate_weight_lines
+         open(unit=58,file='results.dat',status='unknown')
+         write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
+     $        ,ans(2,1) 
+         close(58)
 c*************************************************************
 c     event generation
 c*************************************************************
@@ -265,25 +270,25 @@ c fill the information for the write_header_init common block
 
          write (*,*) 'imode is ',imode
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
+         call gen(sigintF,0,vn,x)
          do j=1,ncalls0
             if (abrv(1:4).eq.'born') then
                vn=3
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               call gen(sigintF,1,vn,x)
             else
                if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   else
                      vn=1
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   endif
                else
                   abrv='novi'
                   vn=2
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  call gen(sigintF,1,vn,x)
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
@@ -298,14 +303,7 @@ c Randomly pick the contribution that will be written in the event file
          enddo
          call deallocate_weight_lines
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
-         write (*,*) 'Generation efficiencies:',x(1),x(4)
-c Uncomment the next to lines to print the integral from the PS points
-c trown during event generation. This corresponds only to the cross
-c section if these points are thrown flat, so not using the xmmm() stuff
-c in mint.
-c         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c         write (*,*) 'Integral from virt points computed',x(5),x(6)
+         call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
@@ -388,10 +386,10 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),nitmax,ncalls0,tTot
+         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
       else
          write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
-     $        ,unc(2,1),nitmax,ncalls0,tTot
+     $        ,unc(2,1),itmax,ncalls0,tTot
       endif
       close(12)
 
@@ -426,24 +424,24 @@ c timing statistics
 
 
       subroutine get_user_params(ncall,nitmax,
-     &     imode,ixi_i,iphi_i,iy_ij,SHsep)
+     &     ixi_i,iphi_i,iy_ij,SHsep)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
 c
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
 c
 c     Arguments
 c
-      integer ncall,nitmax,jconfig
+      integer ncall,nitmax
 c
 c     Local
 c
@@ -493,7 +491,7 @@ c alazi and beazi are the parameters that control gfunazi
 c
 c MINT stuff
 c
-      integer imode,ixi_i,iphi_i,iy_ij
+      integer ixi_i,iphi_i,iy_ij
 
 c-----
 c  Begin Code
@@ -647,7 +645,6 @@ c
       use weight_lines
       use mint_module
       implicit none
-      include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
@@ -684,9 +681,6 @@ c
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      logical               only_virt
-      integer         imode
-      common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       sigintF=0d0
@@ -1133,14 +1127,14 @@ c     include all quarks (except top quark) and the gluon.
       end
 
       subroutine update_vegas_x(xx,x)
+      use mint_module
       implicit none
-      include 'mint.inc'
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
       integer         nndim
       common/tosigint/nndim
-      character*4 abrv
+      character*4      abrv
       common /to_abrv/ abrv
       do i=1,99
          if (abrv.eq.'born') then

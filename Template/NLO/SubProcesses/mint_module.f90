@@ -86,7 +86,7 @@ module mint_module
   double precision, dimension(0:n_ave_virt) :: virt_wgt_mint,born_wgt_mint
   double precision, dimension(maxchannels) :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels) :: ans,unc
-  logical :: fixed_order,nlo_ps,only_virt,new_point
+  logical :: only_virt,new_point
   
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
@@ -96,7 +96,7 @@ module mint_module
   ! The number of intergrals should be equal to
   !     nintegrals=6+2*n_ave_virt
   !
-  character*13, parameter, dimension(nintegrals), private :: title=(/ &
+  character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
                                                    'ABS integral ', & !  1
                                                    'Integral     ', & !  2
                                                    'Virtual      ', & !  3
@@ -131,18 +131,21 @@ module mint_module
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
   integer, dimension(maxchannels), private :: nhits_in_grids
   integer, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: nvirt,nvirt_acc
+  integer, dimension(13), private :: gen_counters
 
   logical, private :: double_events,reset,even_rn
   logical, dimension(maxchannels), private :: regridded
 
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
-  double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax
+  double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
   double precision, dimension(nintegrals,3), private :: ans3,unc3
   double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
   double precision, dimension(0:maxchannels), private :: ymax_virt,ans_chan
   double precision, dimension(2), private :: HwU_values
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
+  double precision, private :: upper_bound,vol_chan
+  double precision, dimension(ndimmax), private :: rand
 
   integer, private :: ng,npg,k
   logical, private :: firsttime
@@ -150,15 +153,17 @@ module mint_module
   integer                                   npoints
   double precision            cross_section
   common /for_FixedOrder_lhe/ cross_section,npoints
+  logical              fixed_order,nlo_ps
+  common /c_fnlo_nlops/fixed_order,nlo_ps
   
 contains
 
   subroutine mint(fun)
     implicit none
     integer kpoint
-    integer, dimension(ndimmax) :: kfold
     double precision :: vol
     double precision, dimension(ndimmax) :: x
+    integer, dimension(ndimmax) :: kfold
     double precision, external :: fun
     logical :: enough_points,channel_loop_done
     call initialise_mint
@@ -168,7 +173,7 @@ contains
        do kpoint=1,ncalls
           new_point=.true.
           call get_random_x(x,vol,kfold)
-          call compute_integrand(fun,x,vol,kfold)
+          call compute_integrand(fun,x,vol)
           call accumulate_the_point(x)
        enddo
        call get_amount_of_points(enough_points)
@@ -688,7 +693,7 @@ contains
   end subroutine accumulate_the_point
 
   
-  subroutine compute_integrand(fun,x,vol,kfold)
+  subroutine compute_integrand(fun,x,vol)
     implicit none
     integer :: ifirst,iret
     integer, dimension(ndimmax) :: kfold
@@ -703,6 +708,7 @@ contains
        f(1:nintegrals)=f1(1:nintegrals)
     else
        f(1:nintegrals)=0d0
+       kfold(1:ndim)=1
 1      continue
        ! this accumulated value will not be used
        dummy=fun(x,vol,ifirst,f1)
@@ -725,24 +731,22 @@ contains
     integer :: kdim,k_ord_virt,nintcurr
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
-    double precision, save :: vol_chan
-!    double precision, external :: ran3
     double precision, dimension(ndimmax) :: x
-    double precision, dimension(ndimmax), save :: rand
-    call get_channel(vol_chan)
+    logical :: cell_only
+    call get_channel
 ! find random x, and its random cell
     do kdim=1,ndim
-       kfold(kdim)=1
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
        if (even_rn) then
           rand(kdim)=ran3(even_rn)
           ncell(kdim)= min(int(rand(kdim)*nint_used)+1,nint_used)
           rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
        else
-          ncell(kdim)=min(int(nint_used/ifold(kdim)*ran3(even_rn))+1,nint_used)
+          ncell(kdim)=min(int(nint_used/ifold(kdim)*ran3(even_rn))+1,nint_used/ifold(kdim))
           rand(kdim)=ran3(even_rn)
        endif
     enddo
+    kfold(1:ndim)=1
     entry get_random_x_next_fold(x,vol,kfold)
     vol=1d0/vol_chan * wgt_mult
 ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
@@ -1006,7 +1010,7 @@ contains
 ! Read the MINT integration grids from file
     implicit none
     integer :: i,j,k,kchan,idum
-    character*3 :: dummy
+    character(len=3) :: dummy
     open (unit=12, file='mint_grids',status='old')
     ans(1,0)=0d0
     unc(1,0)=0d0
@@ -1014,7 +1018,7 @@ contains
        do j=0,nintervals
           read (12,*) dummy,(xgrid(j,i,kchan),i=1,ndim)
        enddo
-       if (imode.ge.1) then
+       if (imode.ge.2) then
           do j=1,nintervals
              read (12,*) dummy,(ymax(j,i,kchan),i=1,ndim)
           enddo
@@ -1024,7 +1028,7 @@ contains
              read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
           enddo
        enddo
-       if (imode.ge.1) then
+       if (imode.ge.2) then
           read (12,*) dummy,ymax_virt(kchan)
        endif
        read (12,*) dummy,(ans(i,kchan),i=1,nintegrals)
@@ -1204,10 +1208,6 @@ contains
        goto 1
     endif
   end subroutine nextlexi
-  
-! Dummy subroutine (normally used with vegas when resuming plots)
-  subroutine resume()
-  end subroutine resume
 
   subroutine init_ave_virt
     implicit none
@@ -1312,12 +1312,11 @@ contains
   end subroutine double_ave_virt
 
 
-  subroutine get_channel(vol_chan)
+  subroutine get_channel
 ! Picks one random 'ichan' among the 'nchans' integration channels and
 ! fills the channels common block in mint.inc.
     implicit none
-    double precision :: vol_chan,trgt,total
-!    double precision, external :: ran3
+    double precision :: trgt,total
     if (nchans.eq.1) then
        ichan=1
        iconfig=iconfigs(ichan)
@@ -1368,9 +1367,6 @@ contains
     call write_results
   end subroutine close_run_zero_res
 
-
-
-  
   function ran3(even)
     implicit none
     double precision :: ran3
@@ -1428,5 +1424,187 @@ contains
     endif
   end function get_ran
 
+
+
+
+
+  subroutine gen(fun,gen_mode,vn,x)
+    implicit none
+    integer :: vn,gen_mode
+    logical :: found_point
+    double precision, external :: fun
+    double precision, dimension(ndimmax) :: x
+    double precision :: vol
+    if (gen_mode.eq.0) then
+       call initialise_mint_gen
+    elseif(gen_mode.eq.3) then
+       call print_gen_counters
+    elseif(gen_mode.eq.1) then
+       call increase_gen_counters_before(vn)
+10     continue
+       new_point=.true.
+       if (vn.eq.1) then
+          call get_random_cell_flat(x,vol)
+       else
+          call get_weighted_cell(x,vol)
+       endif
+       call compute_integrand(fun,x,vol)
+       call increase_gen_counters_middle(vn)
+       call check_upper_bound(vn,found_point)
+       if (.not.found_point) goto 10
+       call increase_gen_counters_end(vn)
+    else
+       write (*,*) "Unknown gen_mode in gen (from mint_module)",gen_mode
+       stop 1
+    endif
+  end subroutine gen
+
+  subroutine increase_gen_counters_middle(vn)
+    implicit none
+    integer :: vn
+    gen_counters(3)=gen_counters(3)+1
+    if (vn.eq.1) then
+       gen_counters(5)=gen_counters(5)+1
+    else
+       gen_counters(6)=gen_counters(6)+1
+    endif
+    if (f(1).eq.0d0) then
+       gen_counters(4)=gen_counters(4)+1
+    endif
+  end subroutine increase_gen_counters_middle
+  
+  subroutine increase_gen_counters_before(vn)
+    implicit none
+    integer :: vn
+    if (vn.eq.1) then
+       gen_counters(1)=gen_counters(1)+1
+    else
+       gen_counters(2)=gen_counters(2)+1
+    endif
+  end subroutine increase_gen_counters_before
+
+  subroutine increase_gen_counters_end(vn)
+    implicit none
+    integer :: vn
+    if (vn.eq.2) then
+       gen_counters(11)=gen_counters(11)+1
+    elseif (vn.eq.1) then
+       gen_counters(12)=gen_counters(12)+1
+    elseif (vn.eq.3) then
+       gen_counters(13)=gen_counters(13)+1
+    endif
+  end subroutine increase_gen_counters_end
+
+  subroutine check_upper_bound(vn,found_point)
+    implicit none
+    logical :: found_point
+    integer :: vn
+    if (f(1).gt.upper_bound) then
+       if (vn.eq.2) then
+          gen_counters(7)=gen_counters(7)+1
+       elseif (vn.eq.1) then
+          gen_counters(8)=gen_counters(8)+1
+       elseif(vn.eq.3) then
+          gen_counters(9)=gen_counters(9)+1
+       endif
+    endif
+    upper_bound=upper_bound*ran3(.false.)
+    if (upper_bound.gt.f(1)) then
+       gen_counters(10)=gen_counters(10)+1
+       found_point=.false.
+    else
+       found_point=.true.
+    endif
+  end subroutine check_upper_bound
+  
+  subroutine get_random_cell_flat(x,vol)
+    implicit none
+    double precision :: vol
+    double precision, dimension(ndimmax) :: x
+    integer, dimension(ndimmax) :: kfold
+    call get_random_x(x,vol,kfold)
+    upper_bound=ymax_virt(ichan)
+  end subroutine get_random_cell_flat
+
+  subroutine get_weighted_cell(x,vol)
+    implicit none
+    integer :: kdim,nintcurr,kint
+    integer, dimension(ndimmax) :: kfold
+    double precision :: vol,r
+    double precision, dimension(ndimmax) :: x
+    call get_channel
+    do kdim=1,ndim
+       nintcurr=nintervals/ifold(kdim)
+       r=ran3(.false.)
+       do kint=1,nintcurr
+          if(r.lt.xmmm(kint,kdim,ichan)) then
+             ncell(kdim)=kint
+             exit
+          endif
+       enddo
+       rand(kdim)=ran3(.false.)
+    enddo
+    kfold(1:ndim)=1
+    call get_random_x_next_fold(x,vol,kfold)
+    upper_bound=1d0
+    do kdim=1,ndim
+       upper_bound=upper_bound*ymax(ncell(kdim),kdim,ichan)
+    enddo
+  end subroutine get_weighted_cell
+  
+
+  subroutine initialise_mint_gen
+    implicit none
+    integer :: kdim,kint
+    integer :: nintcurr
+    if (nchans.ne.1) then
+       write (*,*) 'ERROR in mint_module: for event generation, can do only 1 channel at a time',nchans
+       stop 1
+    endif
+    even_rn=.false.
+    nint_used=nintervals
+    nint_used_virt=nintervals_virt
+    do kdim=1,ndim
+       nintcurr=nintervals/ifold(kdim)
+       xmmm(1,kdim,1:nchans)=ymax(1,kdim,1:nchans)
+       do kint=2,nintcurr
+          xmmm(kint,kdim,1:nchans)=xmmm(kint-1,kdim,1:nchans)+ymax(kint,kdim,1:nchans)
+       enddo
+       do kint=1,nintcurr
+          xmmm(kint,kdim,1:nchans)=xmmm(kint,kdim,1:nchans)/xmmm(nintcurr,kdim,1:nchans)
+       enddo
+    enddo
+    gen_counters(1:13)=0
+  end subroutine initialise_mint_gen
+
+  subroutine print_gen_counters
+    implicit none
+    double precision :: unwgt_eff, unwgt_eff_virt
+    if (gen_counters( 3).ne.0) write (*,*) 'another call to the function:',gen_counters(3)
+    if (gen_counters(11).ne.0) write (*,*) 'events generated, novi:',gen_counters(11)
+    if (gen_counters(12).ne.0) write (*,*) 'events generated, virt:',gen_counters(12)
+    if (gen_counters(13).ne.0) write (*,*) 'events generated, born:',gen_counters(13)
+    if (gen_counters( 7).ne.0) write (*,*) 'upper bound failure, novi:',gen_counters(7)
+    if (gen_counters( 8).ne.0) write (*,*) 'upper bound failure, virt:',gen_counters(8)
+    if (gen_counters( 9).ne.0) write (*,*) 'upper bound failure, born:',gen_counters(9)
+    if (gen_counters(10).ne.0) write (*,*) 'vetoed calls in inclusive cross section:',gen_counters(10)
+    if (gen_counters( 4).ne.0) write (*,*) 'failed generation cuts:',gen_counters(4)
+    if(gen_counters(6).ne.0) then
+       unwgt_eff=dble(gen_counters(2))/dble(gen_counters(6))
+    else
+       unwgt_eff=-1d0
+    endif
+    if(gen_counters(5).ne.0) then
+       unwgt_eff_virt=dble(gen_counters(1))/dble(gen_counters(5))
+    else
+       unwgt_eff_virt=-1d0
+    endif
+    write (*,*) 'Generation efficiencies:',unwgt_eff,unwgt_eff_virt
+  end subroutine print_gen_counters
+
   
 end module mint_module
+  
+! Dummy subroutine (normally used with vegas when resuming plots)
+subroutine resume()
+end subroutine resume
