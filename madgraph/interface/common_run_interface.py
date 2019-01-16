@@ -1737,7 +1737,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             opts.append('--from_card=internal')
             
             # Check that all pdfset are correctly installed
-            if 'sys_pdf' in self.run_card:
+            if 'systematics_arguments' in self.run_card.user_set:
+                pdf = [a[6:] for a in self.run_card['systematics_arguments']
+                         if a.startswith('--pdf=')]
+                lhaid += [t.split('@')[0] for p in pdf for t in p.split(',') 
+                                            if t not in ['errorset', 'central']]                
+            elif 'sys_pdf' in self.run_card.user_set:
                 if '&&' in self.run_card['sys_pdf']:
                     if isinstance(self.run_card['sys_pdf'], list):
                         line = ' '.join(self.run_card['sys_pdf'])
@@ -1756,7 +1761,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
         except Exception, error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
@@ -4000,9 +4005,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.proc_characteristics
 
 
-    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
+    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
-        into lib/PDFsets"""
+        into lib/PDFsets.
+        if require_local is False, just ensure that the pdf is in pdfsets_dir 
+        """
 
         if not hasattr(self, 'lhapdf_pdfsets'):
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
@@ -4074,7 +4081,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             os.remove(pjoin(pdfsets_dir, name))
                     except Exception, error:
                         logger.debug('%s', error)
-        
+            if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
+                                    os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                continue
             #check that the pdfset is not already there
             elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):

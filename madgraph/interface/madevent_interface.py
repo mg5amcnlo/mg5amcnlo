@@ -6421,8 +6421,15 @@ class GridPackCmd(MadEventCmd):
         if not self.readonly:
             self.exec_cmd('store_events')
             self.print_results_in_shell(self.results.current)
-        else:
+            if self.run_card['systematics_program'] == 'systematics':
+                self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                               postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
+        else:
+            self.exec_cmd('systematics %s --from_card' % 
+                          pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
+                                               postcmd=False,printcmd=False)
+            
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""
