@@ -1080,6 +1080,7 @@ c imode=3 store generation efficiency in x(1)
       if (vn.eq.1) then
 c Choose cell flat
          do kdim=1,ndim
+            nintcurr=nintervals/ifold(kdim)
             ncell(kdim)=min(int(ran3(.false.)*nintcurr)+1,nintcurr)
             rand(kdim)=ran3(.false.)
          enddo
@@ -1113,14 +1114,13 @@ c Choose cell flat
       vol=1d0/vol_chan
       do kdim=1,ndim
          nintcurr=nintervals/ifold(kdim)
-         nintcurr_virt=nintervals_virt/ifold(kdim)
          icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
          dx(kdim)=xgrid(icell(kdim),kdim,ichan)-xgrid(icell(kdim)-1,kdim
      $        ,ichan)
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
          x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx(kdim)
       enddo
-      call get_ave_virt(x,nintcurr_virt,ndim-3,average_virtual)
+      call get_ave_virt(x,nintervals_virt,ndim-3,average_virtual)
       if (vn.eq.1) then
          ubound=ymax_virt(ichan)
       endif
