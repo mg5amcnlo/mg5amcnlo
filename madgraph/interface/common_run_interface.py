@@ -1785,6 +1785,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
+            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
+                if input.endswith('.gz'):
+                    misc.gunzip(input)
+                    input = input[:-3]
+                    
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
@@ -5757,7 +5762,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
                           "Cross-section will be rescaled according to NWA if needed."  +
                           "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
-                          param.lhacode[0], mass*self.run_card['small_width_treatment'], width)
+                          param.lhacode[0], abs(mass*self.run_card['small_width_treatment']), width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                     if CommonRunCmd.sleep_for_error:
