@@ -172,6 +172,12 @@ contains
     call initialise_mint
     do while (nit.lt.itmax)
        call start_iteration
+       if (nit.eq.5 .and. fixed_order) then
+          include_2Dcorrelations=.true.
+          nhits2D(1:nintervals,1:nintervals,1:ndim,1:ndim,1:nchans)=0
+          xacc2D(0:nintervals,0:nintervals,1:ndim,1:ndim,1:nchans)=0d0
+          xgrid2D(0:nintervals,0:nintervals,1:ndim,1:ndim,1:nchans)=1d0
+       endif
 2      kpoint_iter=kpoint_iter+1
        do kpoint=1,ncalls
           new_point=.true.
@@ -195,7 +201,11 @@ contains
 
   subroutine initialise_mint
     implicit none
-    include_2Dcorrelations=.false.
+    if (imode.eq.-1) then
+       include_2Dcorrelations=.true.
+    else
+       include_2Dcorrelations=.false.
+    endif
     if (imode.ne.0) call read_grids_from_file
     call setup_basic_mint
     if (imode.eq.0) then
@@ -316,7 +326,7 @@ contains
        enddo
        if (regridded(kchan) .and. include_2Dcorrelations) call regrid_2D(kchan)
        ! overwrite xgrid with the new xgrid
-       xgrid(1:nint_used,1:ndim,kchan)=xgrid_new(1:nint_used,1:ndim)
+       if (regridded(kchan)) xgrid(1:nint_used,1:ndim,kchan)=xgrid_new(1:nint_used,1:ndim)
     enddo
     do k_ord_virt=0,n_ord_virt
        call regrid_ave_virt(k_ord_virt)
@@ -1008,7 +1018,7 @@ contains
   subroutine write_grids_to_file
 ! Write the MINT integration grids to file
     implicit none
-    integer :: i,j,k,kchan
+    integer :: i,j,k,kchan,l
     open (unit=12,file='mint_grids',status='unknown')
     do kchan=1,nchans
        do j=0,nintervals
@@ -1031,6 +1041,13 @@ contains
        write (12,*) 'QSM',(unc(i,kchan),i=1,nintegrals)
        write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan)
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
+       if (include_2Dcorrelations) then
+          do j=0,nintervals
+             do k=0,nintervals
+                write (12,*) 'AVE',((xgrid2D(j,k,i,l,kchan),i=l+1,ndim),l=1,ndim)
+             enddo
+          enddo
+       endif
     enddo
     write (12,*) 'IDE',(ifold(i),i=1,ndim)
     close (12)
@@ -1039,7 +1056,7 @@ contains
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum
+    integer :: i,j,k,kchan,idum,l
     character(len=3) :: dummy
     open (unit=12, file='mint_grids',status='old')
     ans(1,0)=0d0
@@ -1067,6 +1084,13 @@ contains
        read (12,*) dummy,virtual_fraction(kchan),average_virtual(0,kchan)
        ans(1,0)=ans(1,0)+ans(1,kchan)
        unc(1,0)=unc(1,0)+unc(1,kchan)**2
+       if (include_2Dcorrelations) then
+          do j=0,nintervals
+             do k=0,nintervals
+                read (12,*) dummy,((xgrid2D(j,k,i,l,kchan),i=l+1,ndim),l=1,ndim)
+             enddo
+          enddo
+       endif
     enddo
     read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
@@ -1107,7 +1131,7 @@ contains
     double precision, parameter :: tiny=1d-8
 ! compute total number of points and update grids if large
     regridded(kchan)=.false.
-    if (sum(nhits(1:nint_used,kdim,kchan),dim=1).lt.nhits_in_grids(kchan)) return
+    if (sum(nhits(1:nint_used,kdim,kchan),dim=1).lt.nint(0.9*nhits_in_grids(kchan))) return
     regridded(kchan)=.true.
 ! Use the same smoothing as in VEGAS uses for the grids, i.e. use the
 ! average of the central and the two neighbouring grid points: (Only do
@@ -1160,6 +1184,7 @@ contains
        endif
     enddo
 ! adjust 'xgrid_new' (temporary grid) so that each element contains identical cross section    
+    xgrid_new(0,kdim)=0d0
     do kint=1,nint_used
        r=dble(kint)/dble(nint_used)
        do jint=1,nint_used
@@ -1174,9 +1199,9 @@ contains
           write(*,*) 'ERROR',jint,nint_used
           stop 1
        endif
-       xgrid_new(nint_used,kdim)=1
 11     continue
     enddo
+    xgrid_new(nint_used,kdim)=1d0
   end subroutine regrid
 
   subroutine smooth_xacc(kdim,kchan)
@@ -1598,7 +1623,7 @@ contains
              kint=kint+1
           enddo
           ncell(kdim)=kint
-          rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
+          rand(kdim)=(target_tot-tot(kint-1))/(tot(kint)-tot(kint-1))
           icell(kdim)=ncell(kdim)
           vol2=vol2*tot(nint_used)/(tot(kint)-tot(kint-1))/nint_used
        else
