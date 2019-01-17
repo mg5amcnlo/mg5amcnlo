@@ -68,7 +68,7 @@
 module mint_module
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
-  integer, parameter          :: ndimmax=60       ! max number of dimensions of the integral
+  integer, parameter          :: ndimmax=22       ! max number of dimensions of the integral
   integer, parameter          :: n_ave_virt=10    ! max number of grids to set up to approx virtual
   integer, parameter          :: nintegrals=26    ! number of integrals to keep track of
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
@@ -77,7 +77,7 @@ module mint_module
   integer, parameter, private :: min_it1=5        ! minimal number of iterations in the mint step 1 phase
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter          :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
-
+  
   integer :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi
   integer, dimension(ndimmax) :: ifold
   integer, dimension(maxchannels) :: iconfigs
@@ -129,11 +129,12 @@ module mint_module
   integer, dimension(ndimmax), private :: icell,ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
+  integer, dimension(nintervals,nintervals,ndimmax,ndimmax,maxchannels), private :: nhits2D
   integer, dimension(maxchannels), private :: nhits_in_grids
   integer, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: nvirt,nvirt_acc
   integer, dimension(13), private :: gen_counters
 
-  logical, private :: double_events,reset,even_rn
+  logical, private :: double_events,reset,even_rn,include_2Dcorrelations
   logical, dimension(maxchannels), private :: regridded
 
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
@@ -146,6 +147,8 @@ module mint_module
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
   double precision, private :: upper_bound,vol_chan
   double precision, dimension(ndimmax), private :: rand
+  double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
+  double precision, dimension(0:nintervals,0:nintervals,ndimmax,ndimmax,maxchannels), private :: xgrid2D,xacc2D,xacc2D_save
 
   integer, private :: ng,npg,k
   logical, private :: firsttime
@@ -192,6 +195,7 @@ contains
 
   subroutine initialise_mint
     implicit none
+    include_2Dcorrelations=.false.
     if (imode.ne.0) call read_grids_from_file
     call setup_basic_mint
     if (imode.eq.0) then
@@ -310,6 +314,9 @@ contains
        do kdim=1,ndim
           call regrid(kdim,kchan)
        enddo
+       if (regridded(kchan) .and. include_2Dcorrelations) call regrid_2D(kchan)
+       ! overwrite xgrid with the new xgrid
+       xgrid(1:nint_used,1:ndim,kchan)=xgrid_new(1:nint_used,1:ndim)
     enddo
     do k_ord_virt=0,n_ord_virt
        call regrid_ave_virt(k_ord_virt)
@@ -602,12 +609,20 @@ contains
 
   subroutine add_point_to_grids(x)
     implicit none
-    integer :: kdim,k_ord_virt,ithree,isix
+    integer :: kdim,k_ord_virt,ithree,isix,jdim
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
        xacc(icell(kdim),kdim,ichan) = xacc(icell(kdim),kdim,ichan) + f(1)
+       if (include_2Dcorrelations) then
+          do jdim=kdim+1,ndim
+             xacc2D(icell(jdim),icell(kdim),jdim,kdim,ichan)= &
+                  xacc2D(icell(jdim),icell(kdim),jdim,kdim,ichan)+f(1)
+             nhits2D(icell(jdim),icell(kdim),jdim,kdim,ichan)= &
+                  nhits2D(icell(jdim),icell(kdim),jdim,kdim,ichan)+1
+          enddo
+       endif
     enddo
 ! Set the Born contribution (to compute the average_virtual) to zero if
 ! the virtual was not computed for this phase-space point. Compensate by
@@ -724,7 +739,6 @@ contains
        f(1:nintegrals)=f1(1:nintegrals)
     endif
   end subroutine compute_integrand
-
   
   subroutine get_random_x(x,vol,kfold)
     implicit none
@@ -732,8 +746,11 @@ contains
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
     double precision, dimension(ndimmax) :: x
-    logical :: cell_only
     call get_channel
+    if (include_2Dcorrelations) then
+       call get_random_x_2Dcorrelations(x,vol)
+       return
+    endif
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -748,6 +765,10 @@ contains
     enddo
     kfold(1:ndim)=1
     entry get_random_x_next_fold(x,vol,kfold)
+    if (include_2Dcorrelations) then
+       write (*,*) 'Cannot do folding with 2D correlations in mint_module'
+       stop 1
+    endif
     vol=1d0/vol_chan * wgt_mult
 ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
     do kdim=1,ndim
@@ -793,6 +814,10 @@ contains
           endif
           xacc(0:nint_used,1:ndim,kchan)=0d0
           nhits(1:nint_used,1:ndim,kchan)=0
+          if (include_2Dcorrelations) then
+             xacc2D(0:nint_used,0:nint_used,1:ndim,1:ndim,kchan)=0d0
+             nhits2D(1:nint_used,1:nint_used,1:ndim,1:ndim,kchan)=0
+          endif
        endif
     enddo
     reset=.false.
@@ -952,6 +977,11 @@ contains
     nhits(1:nint_used,1:ndim,1:nchans)=0
     regridded(1:nchans)=.true.
     nhits_in_grids(1:nchans)=0
+    if (include_2Dcorrelations) then
+       nhits2D(1:nintervals,1:nintervals,1:ndim,1:ndim,1:nchans)=0
+       xacc2D(0:nintervals,0:nintervals,1:ndim,1:ndim,1:nchans)=0d0
+       xgrid2D(0:nintervals,0:nintervals,1:ndim,1:ndim,1:nchans)=1d0
+    endif
     call init_ave_virt
     ans_chan(0:nchans)=0d0
     if (double_events) then
@@ -1069,12 +1099,11 @@ contains
        endif
     enddo
   end subroutine double_grid
-
+  
   subroutine regrid(kdim,kchan)
     implicit none
-    integer :: kdim,kchan,nl,nu,kint,jint
-    double precision :: r,xl,xu,total
-    double precision,dimension(0:nintervals) :: xn
+    integer :: kdim,kchan,kint,jint
+    double precision :: r,total
     double precision, parameter :: tiny=1d-8
 ! compute total number of points and update grids if large
     regridded(kchan)=.false.
@@ -1085,24 +1114,7 @@ contains
 ! this if we are already at the maximum intervals, because the doubling
 ! of the grids also includes a smoothing).
     if (nint_used.eq.nintervals) then
-       xl=xacc(1,kdim,kchan)
-       xu=xacc(2,kdim,kchan)
-       xacc(1,kdim,kchan)=(xl+xu)/2d0
-       nl=nhits(1,kdim,kchan)
-       nu=nhits(2,kdim,kchan)
-       nhits(1,kdim,kchan)=nint((nl+nu)/2d0)
-       do kint=2,nint_used-1
-          xacc(kint,kdim,kchan)=xl+xu
-          xl=xu
-          xu=xacc(kint+1,kdim,kchan)
-          xacc(kint,kdim,kchan)=(xacc(kint,kdim,kchan)+xu)/3d0
-          nhits(kint,kdim,kchan)=nl+nu
-          nl=nu
-          nu=nhits(kint+1,kdim,kchan)
-          nhits(kint,kdim,kchan)=nint((nhits(kint,kdim,kchan)+nu)/3d0)
-       enddo
-       xacc(nint_used,kdim,kchan)=(xu+xl)/2d0
-       nhits(nint_used,kdim,kchan)=nint((nu+nl)/2d0)
+       call smooth_xacc(kdim,kchan)
     endif
     do kint=1,nint_used
        if (nhits(kint,kdim,kchan).ne.0) then
@@ -1147,12 +1159,12 @@ contains
           exit
        endif
     enddo
-! adjust 'xn' (temporary grid) so that each element contains identical cross section    
+! adjust 'xgrid_new' (temporary grid) so that each element contains identical cross section    
     do kint=1,nint_used
        r=dble(kint)/dble(nint_used)
        do jint=1,nint_used
           if(r.lt.xacc(jint,kdim,kchan)) then
-             xn(kint)=xgrid(jint-1,kdim,kchan)+(r-xacc(jint-1,kdim,kchan))/ &
+             xgrid_new(kint,kdim)=xgrid(jint-1,kdim,kchan)+(r-xacc(jint-1,kdim,kchan))/ &
                   (xacc(jint,kdim,kchan)-xacc(jint-1,kdim,kchan))* &
                   (xgrid(jint,kdim,kchan)-xgrid(jint-1,kdim,kchan))
              goto 11
@@ -1162,14 +1174,35 @@ contains
           write(*,*) 'ERROR',jint,nint_used
           stop 1
        endif
-       xn(nint_used)=1
+       xgrid_new(nint_used,kdim)=1
 11     continue
     enddo
-! overwrite grid with 'xn'
-    xgrid(1:nint_used,kdim,kchan)=xn(1:nint_used)
   end subroutine regrid
 
-  
+  subroutine smooth_xacc(kdim,kchan)
+    implicit none
+    integer :: kdim,kchan,kint,kk,itot,kkint
+    double precision :: tot
+    integer, parameter :: isize=1
+    integer, dimension(1:nintervals) :: local_nhits
+    double precision, dimension(1:nintervals) :: local_xacc
+    do kint=1,nint_used
+       tot=0d0
+       itot=0
+       do kk=-isize,isize
+          kkint=kint+kk
+          if (kkint.le. 0) kkint=1
+          if (kkint.ge.nint_used+1) kkint=nint_used
+          tot=tot+xacc(kkint,kdim,kchan)
+          itot=itot+nhits(kkint,kdim,kchan)
+       enddo
+       local_xacc(kint)=tot/dble(2*isize+1)
+       local_nhits(kint)=nint(itot/dble(2*isize+1))
+    enddo
+    xacc(1:nint_used,kdim,kchan)=local_xacc(1:nint_used)
+    nhits(1:nint_used,kdim,kchan)=local_nhits(1:nint_used)
+  end subroutine smooth_xacc
+    
   subroutine nextlexi(iii,kkk,iret)
 ! kkk: array of integers 1 <= kkk(j) <= iii(j), j=1,ndim
 ! at each call iii is increased lexicographycally.
@@ -1426,8 +1459,168 @@ contains
 
 
 
+  subroutine regrid_2D(kchan)
+    implicit none
+    integer :: kchan,idim,jdim,kint,jint,lint
+    double precision :: tot,tot_save,xn_low,xn_upp
+    double precision,dimension(0:nintervals,0:nintervals,ndimmax,ndimmax) :: xn2,xn2_save,xgrid2D_temp
+    if (nint_used.ne.nintervals) then
+       write (*,*) 'doubling of grids not compatible with regrid_2D'
+       stop 1
+    endif
+    do idim=1,ndim
+       do jdim=idim+1,ndim
+          call smooth_xacc_2D(kchan,idim,jdim)
+          tot=0d0
+          do kint=1,nint_used
+             do jint=1,nint_used
+                if (nhits2D(jint,kint,jdim,idim,kchan).ne.0) then
+                   xacc2D(jint,kint,jdim,idim,kchan)= xacc2D(jint,kint,jdim,idim,kchan)* &
+                        xgrid2D(jint,kint,jdim,idim,kchan)/nhits2D(jint,kint,jdim,idim,kchan)
+!!$                   if (nhits2D(jint,kint,jdim,idim).le.10 .and.xacc2D_save(jint,kint,jdim,idim).ne.0d0 ) then
+!!$                      xacc2D(jint,kint,jdim,idim)= (xacc2D(jint,kint,jdim,idim)+3d0*xacc2D_save(jint,kint,jdim,idim))/4d0
+!!$                   endif
+                else
+                   xacc2D(jint,kint,jdim,idim,kchan)=xacc2D_save(jint,kint,jdim,idim,kchan)
+                endif
+             enddo
+          enddo
+          xacc2D_save(0:nint_used,0:nint_used,idim,jdim,kchan)=xacc2D(0:nint_used,0:nint_used,idim,jdim,kchan)
+          tot=sum(xacc2D(1:nint_used,1:nint_used,jdim,idim,kchan))
+          xacc2D(1:nint_used,1:nint_used,jdim,idim,kchan)=xacc2D(1:nint_used,1:nint_used,jdim,idim,kchan)/tot*nint_used**2
+       enddo
+    enddo
+    do idim=1,ndim ! updating dimension 'idim'
+       do jdim=1,ndim
+          if (jdim.gt.idim) then
+             do jint=1,nint_used
+                do kint=1,nint_used
+                   xn_low=xgrid_new(kint-1,idim)
+                   xn_upp=xgrid_new(kint  ,idim)
+                   tot=0d0
+                   tot_save=0d0
+                   do lint=1,nint_used
+                      if (xgrid(lint,idim,kchan).lt.xn_low) cycle
+                      tot=tot+ &
+                           (min(xgrid(lint,idim,kchan),xn_upp)-max(xgrid(lint-1,idim,kchan),xn_low))/ &
+                           (xgrid(lint,idim,kchan)-xgrid(lint-1,idim,kchan))*xacc2D(jint,lint,jdim,idim,kchan)
+                      tot_save=tot_save+ &
+                           (min(xgrid(lint,idim,kchan),xn_upp)-max(xgrid(lint-1,idim,kchan),xn_low))/ &
+                           (xgrid(lint,idim,kchan)-xgrid(lint-1,idim,kchan))*xacc2D_save(jint,lint,jdim,idim,kchan)
+                      if (xgrid(lint,idim,kchan).gt.xn_upp) exit
+                   enddo
+                   xn2(jint,kint,jdim,idim)=tot
+                   xn2_save(jint,kint,jdim,idim)=tot_save
+                enddo
+             enddo
+          elseif (idim.gt.jdim) then
+             do jint=1,nint_used
+                do kint=1,nint_used
+                   xn_low=xgrid_new(kint-1,idim)
+                   xn_upp=xgrid_new(kint  ,idim)
+                   tot=0d0
+                   tot_save=0d0
+                   do lint=1,nint_used
+                      if (xgrid(lint,idim,kchan).lt.xn_low) cycle
+                      tot=tot+ &
+                           (min(xgrid(lint,idim,kchan),xn_upp)-max(xgrid(lint-1,idim,kchan),xn_low))/ &
+                           (xgrid(lint,idim,kchan)-xgrid(lint-1,idim,kchan))*xn2(lint,jint,idim,jdim)
+                      tot_save=tot_save+ &
+                           (min(xgrid(lint,idim,kchan),xn_upp)-max(xgrid(lint-1,idim,kchan),xn_low))/ &
+                           (xgrid(lint,idim,kchan)-xgrid(lint-1,idim,kchan))*xn2_save(lint,jint,idim,jdim)
+                      if (xgrid(lint,idim,kchan).gt.xn_upp) exit
+                   enddo
+                   xgrid2D(kint,jint,idim,jdim,kchan)=tot**0.25d0
+                   xgrid2D_temp(kint,jint,idim,jdim)=tot_save
+                enddo
+             enddo
+          elseif (idim.eq.jdim) then
+             cycle
+          endif
+       enddo
+    enddo
+    xacc2D_save(0:nint_used,0:nint_used,1:ndim,1:ndim,kchan)=xgrid2D_temp(0:nint_used,0:nint_used,1:ndim,1:ndim)
+  end subroutine regrid_2D
+  
+  subroutine smooth_xacc_2D(kchan,idim,jdim)
+    implicit none
+    integer :: kchan,idim,jdim,kint,jint,kk,kkint,jj,jjint,itot
+    double precision :: tot
+    integer, parameter :: isize=1
+    integer, dimension(nintervals,nintervals) :: local_nhits2D
+    double precision, dimension(nintervals,nintervals) :: local_xacc2D
+    do kint=1,nint_used
+       do jint=1,nint_used
+          tot=0d0
+          itot=0
+          do kk=-isize,isize
+             kkint=kint+kk
+             if (kkint.le. 0) kkint=1
+             if (kkint.ge.nint_used+1) kkint=nint_used
+             do jj=-isize,isize
+                jjint=jint+jj
+                if (jjint.le. 0) jjint=1
+                if (jjint.ge.nint_used+1) jjint=nint_used
+                tot=tot+xacc2D(jjint,kkint,jdim,idim,kchan)
+                itot=itot+nhits2D(jjint,kkint,jdim,idim,kchan)
+             enddo
+          enddo
+          local_xacc2D(jint,kint)=tot/dble((2*isize+1)**2)
+          local_nhits2D(jint,kint)=nint(itot/dble((2*isize+1)**2))
+       enddo
+    enddo
+    xacc2D(1:nint_used,1:nint_used,jdim,idim,kchan)=local_xacc2D(1:nint_used,1:nint_used)
+    nhits2D(1:nint_used,1:nint_used,jdim,idim,kchan)=local_nhits2D(1:nint_used,1:nint_used)
+  end subroutine smooth_xacc_2D
+  
+  subroutine get_random_x_2Dcorrelations(x,vol)
+    implicit none
+    integer :: kdim,k_ord_virt,kint,jdim
+    double precision :: vol,vol1,vol2,dx,target_tot
+    double precision, dimension(ndimmax) :: x
+    double precision, dimension(0:nintervals) :: tot
+    vol1=1d0
+    vol2=1d0
+    do kdim=1,ndim
+       rand(kdim)=ran3(even_rn)
+       if (kdim.gt.1) then
+          tot(0)=0d0
+          do kint=1,nint_used   
+             tot(kint)=1d0
+             do jdim=1,kdim-1
+                tot(kint)=tot(kint)*xgrid2D(kint,icell(jdim),kdim,jdim,ichan)
+             enddo
+             tot(kint)=tot(kint-1)+tot(kint)
+          enddo
+          target_tot=rand(kdim)*tot(nint_used)
+          kint=1
+          do while (target_tot.gt.tot(kint))
+             kint=kint+1
+          enddo
+          ncell(kdim)=kint
+          rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
+          icell(kdim)=ncell(kdim)
+          vol2=vol2*tot(nint_used)/(tot(kint)-tot(kint-1))/nint_used
+       else
+          ncell(kdim)= min(int(rand(kdim)*nint_used)+1,nint_used)
+          rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
+          icell(kdim)=ncell(kdim)
+       endif
+       dx=xgrid(icell(kdim),kdim,ichan)-xgrid(icell(kdim)-1,kdim,ichan)
+       x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx
+       vol1=vol1*dx*nint_used
+       if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=nhits(icell(kdim),kdim,ichan)+1
+    enddo
+    vol=vol1*vol2/vol_chan*wgt_mult
+    do k_ord_virt=0,n_ord_virt
+       call get_ave_virt(x,k_ord_virt)
+    enddo
+  end subroutine get_random_x_2Dcorrelations
 
 
+
+
+  
   subroutine gen(fun,gen_mode,vn,x)
     implicit none
     integer :: vn,gen_mode
