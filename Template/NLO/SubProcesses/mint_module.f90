@@ -73,7 +73,7 @@ module mint_module
   integer, parameter          :: nintegrals=26    ! number of integrals to keep track of
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
-  integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
+  integer, parameter, private :: min_it0=5        ! minimal number of iterations in the mint step 0 phase
   integer, parameter, private :: min_it1=5        ! minimal number of iterations in the mint step 1 phase
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter          :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
@@ -148,7 +148,7 @@ module mint_module
   double precision, private :: upper_bound,vol_chan
   double precision, dimension(ndimmax), private :: rand
   double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
-  double precision, dimension(0:nintervals,0:nintervals,ndimmax,ndimmax,maxchannels), private :: xgrid2D,xacc2D,xacc2D_save
+  double precision, dimension(0:nintervals,0:nintervals,ndimmax,ndimmax,maxchannels), private :: xgrid2D,xacc2D
 
   integer, private :: ng,npg,k
   logical, private :: firsttime
@@ -1488,10 +1488,16 @@ contains
     implicit none
     integer :: kchan,idim,jdim,kint,jint,lint
     double precision :: tot,tot_save,xn_low,xn_upp
-    double precision,dimension(0:nintervals,0:nintervals,ndimmax,ndimmax) :: xn2,xn2_save,xgrid2D_temp
+    double precision, dimension(0:nintervals,0:nintervals,ndimmax,ndimmax) :: xn2,xn2_save,xgrid2D_temp
+    double precision, dimension(0:nintervals,0:nintervals,ndimmax,ndimmax,maxchannels), save :: xacc2D_save
+    logical, dimension(maxchannels), save :: firsttime=.true.
     if (nint_used.ne.nintervals) then
        write (*,*) 'doubling of grids not compatible with regrid_2D'
        stop 1
+    endif
+    if (firsttime(kchan)) then
+       xacc2D_save(0:nint_used,0:nint_used,1:ndim,1:ndim,kchan)=0d0
+       firsttime(kchan)=.false.
     endif
     do idim=1,ndim
        do jdim=idim+1,ndim
@@ -1502,9 +1508,11 @@ contains
                 if (nhits2D(jint,kint,jdim,idim,kchan).ne.0) then
                    xacc2D(jint,kint,jdim,idim,kchan)= xacc2D(jint,kint,jdim,idim,kchan)* &
                         xgrid2D(jint,kint,jdim,idim,kchan)/nhits2D(jint,kint,jdim,idim,kchan)
-!!$                   if (nhits2D(jint,kint,jdim,idim).le.10 .and.xacc2D_save(jint,kint,jdim,idim).ne.0d0 ) then
-!!$                      xacc2D(jint,kint,jdim,idim)= (xacc2D(jint,kint,jdim,idim)+3d0*xacc2D_save(jint,kint,jdim,idim))/4d0
-!!$                   endif
+                   if (nhits2D(jint,kint,jdim,idim,kchan).le.10 .and. &
+                        xacc2D_save(jint,kint,jdim,idim,kchan).ne.0d0 ) then
+                      xacc2D(jint,kint,jdim,idim,kchan)= &
+                           (xacc2D(jint,kint,jdim,idim,kchan)+3d0*xacc2D_save(jint,kint,jdim,idim,kchan))/4d0
+                   endif
                 else
                    xacc2D(jint,kint,jdim,idim,kchan)=xacc2D_save(jint,kint,jdim,idim,kchan)
                 endif
