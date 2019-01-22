@@ -1175,7 +1175,7 @@ c SCALUP_tmp_H2 = t_ij target scales for Delta
       double precision SCALUP_tmp_H2(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
-      integer iii,jjj
+      integer iii,jjj,LP
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
       double precision xscales2(0:99,0:99)
@@ -1561,15 +1561,23 @@ c contribute to Delta
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
+c     SF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
             deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
             deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
             if(i.le.nincoming)then
-               deltanum=deltanum*pdg2pdf(abs(lpp(i)),idup_s(i),
+               LP=SIGN(1,LPP(i))
+               if (idup_s(i).le.6) then ! (anti-)quark 
+                  id=LP*idup_s(i)
+               elseif (idup_s(i).eq.21) then ! gluon
+                  id=0
+               elseif (idup_s(i).eq.22) then ! photon
+                  id=7
+               endif
+               deltanum=deltanum*pdg2pdf(abs(lpp(i)),id,
      &                           xbjrk_cnt(i,0),SCALUP_tmp_H2(i,j))
-               deltaden=deltaden*pdg2pdf(abs(lpp(i)),idup_s(i),
+               deltaden=deltaden*pdg2pdf(abs(lpp(i)),id,
      &                           xbjrk_cnt(i,0),SCALUP_tmp_S2(i,j))
             endif
             wgt_sudakov=wgt_sudakov*deltanum/deltaden
