@@ -596,6 +596,8 @@ c
       py_compute_sudakov=temp
       write(iunit,*) 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
+c      write(*,*) 'md=', md, ' start=', stupp,
+c     #           ' stop=', stlow, ' --> sud=', temp
 c
       return
       end

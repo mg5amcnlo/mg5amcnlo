@@ -116,6 +116,24 @@ double bABC(double a, double b, double c) {
   return ret; }
 double gABC(double a, double b, double c) { return 0.5*(a-b-c+bABC(a,b,c));}
 
+// Function for calculating mean 
+double findMean(vector<double> a) { 
+  double sum = 0.;
+  int n = a.size();
+  for (int i = 0; i < n; i++) sum += a[i]; 
+  return (double)sum/(double)n; 
+} 
+  
+// Function for calculating median 
+double findMedian(vector<double> a) { 
+  int n = a.size();
+  // First we sort the array 
+  sort(a.begin(), a.end()); 
+  // check for even case 
+  if (n % 2 != 0) return (double)a[n/2]; 
+  return (double)(a[(n-1)/2] + a[n/2])/2.0; 
+} 
+
 int puppybort( string input, int iPuppy) {
   srand (time(NULL));
   if (iPuppy == 0) iPuppy = rand() % 7 + 1;

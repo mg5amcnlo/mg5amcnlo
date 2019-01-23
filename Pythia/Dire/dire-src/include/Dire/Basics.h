@@ -80,6 +80,11 @@ double lABC(double a, double b, double c);
 double bABC(double a, double b, double c);
 double gABC(double a, double b, double c);
 
+// Function for calculating mean 
+double findMean(vector<double> a); 
+// Function for calculating median 
+double findMedian(vector<double> a);
+
 //==========================================================================
 
 class Function {

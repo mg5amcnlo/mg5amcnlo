@@ -1812,8 +1812,10 @@ double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
   // Set output.
   double wt = 0.;
 
-  int nTrials = 100;
-  for (int i=0; i < nTrials; ++i) {
+  int nTrialsMax(5000), nTrials(0);
+  vector<double> means;
+
+  for (int i=0; i < nTrialsMax; ++i) {
 
     double startingScale = pTbegAll;
     double wtnow = 1.;
@@ -1864,8 +1866,25 @@ double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
     }
 
     wt += wtnow;
+    nTrials++;
+
+    // Stop if the median of the Sudakov is stable.
+    double mean = wt/double(nTrials);
+    means.push_back(mean);
+    if (nTrials%10==0) {
+      double medianNow = findMedian(means);
+      // Calculate the input for the median absolute deviation.
+      vector<double> diff2median;
+      for (size_t im=0; im< means.size(); ++im)
+       diff2median.push_back(abs(means[im]-medianNow));
+      // Calculate the median absolute deviation and stop if it's very small.
+      double MAD = findMedian(diff2median);
+      if (MAD/medianNow < 1e-4)  break;
+    }
+
     double minwt = settingsPtr->parm("Dire:Sudakov:Min");
     if (i%10==0 && i>0 && wt/double(i) < minwt) {wt = 0.; break; }
+    if (nTrials%100==0 && wt/double(nTrials) < minwt) {wt = 0.; break; }
   }
 
   wt /= nTrials;
@@ -6991,9 +7010,6 @@ map<string, double> DireTimes::getStateVariables (const Event& state,
       type = type/abs(type)*2;
     double xCS    = 1 - pT2/m2dip/(1.-z);
     double xOld   = (type > 0) ? 0.0 : xCS*2.*state[rec].e()/state[0].m();
-
-//cout << scientific << setprecision(6) << "FSR: kinType=" << kinType << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " q2=" << q2 << " xOld=" << xOld << " type=" << type<< " m2Bef=" << m2Bef << " m2r=" << m2r << " m2s=" << m2s << " m2e=" << m2e << endl;  
-
 
     bool allowed = inAllowedPhasespace( kinType, z, pT2, m2dip, q2, xOld, type,
       m2Bef, m2r, m2s, m2e);

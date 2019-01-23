@@ -1313,10 +1313,10 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   if (acolTag > 0) getQCDdip( in1, acolTag, -1, state, dipEnds);
 
   // Set output.
-  double wt(0.), wtsq(0.), varVmeanOld(0.);
-  int nStable(0);
+  double wt(0.);
   int nTrialsMax(5000), nTrials(0);
-  double nunity(0);
+  vector<double> means;
+
   for (int i=0; i < nTrialsMax; ++i) {
 
     double startingScale = pTbegAll;
@@ -1369,25 +1369,24 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 
     nTrials++;
     wt += wtnow;
-    wtsq += pow2(wtnow);
 
-    // Stop when Sudakov has remained unity for long time.
-    if (abs(wt/double(nTrials) - 1.0) < 1e-8) nunity++;
-    if ( nTrials%100 == 0 && double(nunity)/double(nTrials) > 0.9 ) break;
-
-    // Stop if variance appears stable.
-    double varsq = 1./double(nTrials)*(wtsq - pow2(wt)/double(nTrials));
-    if (i>0 && wt != 0. && varsq>0.) {
-      double varVmeanNew = sqrt(varsq);
-      if (abs(varVmeanOld-varVmeanNew)/varVmeanOld < 1e-4) nStable++;
-      else nStable=0;
-      varVmeanOld=varVmeanNew;
+    // Stop if the median of the Sudakov is stable.
+    double mean = wt/double(nTrials);
+    means.push_back(mean);
+    if (nTrials%10==0) {
+      double medianNow = findMedian(means);
+      // Calculate the input for the median absolute deviation.
+      vector<double> diff2median;
+      for (size_t im=0; im< means.size(); ++im)
+       diff2median.push_back(abs(means[im]-medianNow));
+      // Calculate the median absolute deviation and stop if it's very small.
+      double MAD = findMedian(diff2median);
+      if (MAD/medianNow < 1e-4) { cout << "stable at " << nTrials << endl; break; }
     }
-    if (nStable>10) break;
 
     // Stop if Sudakov is very likely vanishing.
     double minwt = settingsPtr->parm("Dire:Sudakov:Min");
-    if (nTrials%10==0 && wt/double(nTrials) < minwt) {wt = 0.; break; }
+    if (nTrials%100==0 && wt/double(nTrials) < minwt) {wt = 0.; break; }
   }
 
   wt /= nTrials;
