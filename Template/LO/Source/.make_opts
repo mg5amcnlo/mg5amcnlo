@@ -49,7 +49,7 @@ endif
 ifeq ($(FC), ftn)
 FFLAGS+= -extend-source # for ifort type of compiler
 else
-    VERS="$($FC --version | grep ifort -i)"
+    VERS="$(shell $(FC) --version | grep ifort -i)"
     ifeq ($(VERS), "")
         FFLAGS+= -ffixed-line-length-132
     else	     
