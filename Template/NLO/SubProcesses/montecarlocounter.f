@@ -1071,6 +1071,7 @@ c fills arrays relevant to shower scales, and computes Delta
       include 'nFKSconfigs.inc'
       include 'nexternal.inc'
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1174,7 +1175,7 @@ c SCALUP_tmp_H2 = t_ij target scales for Delta
       double precision SCALUP_tmp_H2(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
-      integer iii,jjj
+      integer iii,jjj,LP
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
       double precision xscales2(0:99,0:99)
@@ -1191,6 +1192,12 @@ c
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+      double precision pdg2pdf
+      external pdg2pdf
 c
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
@@ -1528,20 +1535,15 @@ c alternatives is left for future work
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
 c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
+c For initial-state legs, Delta contains a PDF ratio with S-event Bjorken
+c fraction and SCALUP_tmp_S2, SCALUP_tmp_H2 scales, see also formula (5.62)
+c in Ellis-Stirling-Webber
       wgt_sudakov=1d0
       i_dipole_counter=0
       nG_S=0
       nQ_S=0
 c
       do i=1,nexternal-1
-c Flavour constraints are enforced by setting the contributing Sudakovs
-c equal to 1 for all colour lines that could not have generated the extra
-c radiation. If i_fks = gluon, all colour lines contribute; if i_fks =
-c (anti)quark, only colour lines starting from a gluon, or from an
-c initial-state (anti)quark with the same flavour do.
-         if(abs(pdg_type(i_fks)).le.6.and..not.
-     &      (idup_s(i).eq.21.or.
-     &      (i.le.2.and.pdg_type(i_fks).eq.idup_s(i))))cycle
          if(idup_s(i).eq.21)nG_S=nG_S+1
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          do j=1,nexternal-1
@@ -1559,11 +1561,25 @@ c contribute to Delta
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
+c     SF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
             deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
             deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
+            if(i.le.nincoming)then
+               LP=SIGN(1,LPP(i))
+               if (idup_s(i).le.6) then ! (anti-)quark 
+                  id=LP*idup_s(i)
+               elseif (idup_s(i).eq.21) then ! gluon
+                  id=0
+               elseif (idup_s(i).eq.22) then ! photon
+                  id=7
+               endif
+               deltanum=deltanum*pdg2pdf(abs(lpp(i)),id,
+     &                           xbjrk_cnt(i,0),SCALUP_tmp_H2(i,j))
+               deltaden=deltaden*pdg2pdf(abs(lpp(i)),id,
+     &                           xbjrk_cnt(i,0),SCALUP_tmp_S2(i,j))
+            endif
             wgt_sudakov=wgt_sudakov*deltanum/deltaden
             i_dipole_counter=i_dipole_counter+1
          enddo
