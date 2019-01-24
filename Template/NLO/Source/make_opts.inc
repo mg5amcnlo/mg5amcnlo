@@ -113,7 +113,8 @@ endif
 
 # Option APPLGrid
 ifneq ($(applgrid),)
-  APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcfast-config --ldflags)
+  APPLLIBS=$(shell applgrid-config --ldcflags)
+  CXXFLAGS+=$(shell applgrid-config --cxxflags)
   applgrid_interface=appl_interface.o
 else
   APPLLIBS=

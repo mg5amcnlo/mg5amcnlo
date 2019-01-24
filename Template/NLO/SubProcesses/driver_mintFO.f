@@ -160,7 +160,7 @@ c at the NLO)
 c APPLgrid
       if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
       if(iappl.ne.0) then
-         write(6,*) "Initializing aMCfast ..."
+         write(6,*) "Initializing amcblast ..."
 c     Set flavor map, starting from all possible
 c     parton lumi configurations defined in initial_states_map.dat
          call setup_flavourmap
