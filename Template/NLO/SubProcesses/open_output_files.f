@@ -32,6 +32,19 @@
       subroutine HwU_write_file
       implicit none
       double precision xnorm
+c     APPLgrid commons (this may not be the best place to put it)
+      include "reweight_appl.inc"
+      include "appl_common.inc"
+      integer iappl
+      common /for_applgrid/ iappl
+      integer j
+      if(iappl.ne.0)then
+         do j=1,nh_obs
+           appl_obs_num = j
+           call APPL_fill_ref_out
+           call APPL_term
+         enddo
+      endif
       open (unit=99,file='MADatNLO.HwU',status='unknown')
       xnorm=1d0
       call HwU_output(99,xnorm)

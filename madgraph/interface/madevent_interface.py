@@ -3573,8 +3573,10 @@ Beware that this can be dangerous for local multicore runs.""")
         
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
-            
-        nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+        if len(AllEvent) == 0:
+            nb_event = 0 
+        else:
+            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
@@ -3686,7 +3688,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
         # 2) Treat the files present in the P directory
         # Ensure that the number of events is different of 0 
-        if self.results.current['nb_event'] == 0:
+        if self.results.current['nb_event'] == 0 and not self.run_card['gridpack']:
             logger.warning("No event detected. No cleaning performed! This should allow to run:\n" +
                            "    cd Subprocesses; ../bin/internal/combine_events\n"+
                            "  to have your events if those one are missing.")
