@@ -984,7 +984,7 @@ c bpower.
       double precision pi,vegas_wgt,enhance,xnoborn_cnt,xtot
      $     ,bpower,cpower,tiny
       data xnoborn_cnt /0d0/
-      integer inoborn_cnt,i
+      integer inoborn_cnt,i,j
       data inoborn_cnt /0/
       double precision wgt_c
       logical firsttime
@@ -1028,7 +1028,8 @@ c bpower.
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
       include "appl_common.inc" 
-      !!!include "orders.inc"
+      integer orders(nsplitorders)
+C
       call cpu_time(tBefore)
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
@@ -1038,7 +1039,14 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
-         if (iappl.ne.0) appl_amp_split_size = amp_split_size
+         if (iappl.ne.0) then 
+         ! applgrid stuff
+         appl_amp_split_size = amp_split_size
+           do j=1,amp_split_size
+             call amp_split_pos_to_orders(j, orders)
+             appl_qcdpower(j) = orders(qcd_pos)
+           enddo
+         endif
 c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
          firsttime=.false.
@@ -2257,6 +2265,7 @@ c must do MC over FKS directories.
       include 'appl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
+      integer orders(nsplitorders)
       integer i,j 
       double precision final_state_rescaling,vegas_wgt
       integer              flavour_map(fks_configs)
@@ -2271,19 +2280,18 @@ c must do MC over FKS directories.
      &        /'Should have at most one of each itype.',icontr
          stop 1
       endif
-      do j=1,amp_split_size
-        do i=1,4
+      do i=1,4
+        do j=1,amp_split_size
           appl_w0(i,j)=0d0
           appl_wR(i,j)=0d0
           appl_wF(i,j)=0d0
           appl_wB(i,j)=0d0
-          appl_x1(i,j)=0d0
-          appl_x2(i,j)=0d0
-          appl_QES2(i,j)=0d0
-          appl_muR2(i,j)=0d0
-          appl_muF2(i,j)=0d0
-          appl_qcdpower(i,j) = -1
         enddo
+        appl_x1(i)=0d0
+        appl_x2(i)=0d0
+        appl_QES2(i)=0d0
+        appl_muR2(i)=0d0
+        appl_muF2(i)=0d0
         appl_flavmap(i)=0
       enddo
       appl_event_weight = 0d0
@@ -2298,62 +2306,63 @@ c must do MC over FKS directories.
          else
             pos = nlo_qcd_to_amp_pos(qcdpower(i))
          endif
+         ! consistency check
+         if (appl_qcdpower(pos).ne.qcdpower(i)) then
+           write(*,*) 'ERROR in fill_applgrid_weights, QCDpower',
+     %        appl_qcdpower(pos), qcdpower(i)  
+           stop 1
+         endif
 
          if (itype(i).eq.1) then
 c     real
             appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(1,pos)=qcdpower(i)
-            appl_x1(1,pos)=bjx(1,i)
-            appl_x2(1,pos)=bjx(2,i)
+            appl_x1(1)=bjx(1,i)
+            appl_x2(1)=bjx(2,i)
             appl_flavmap(1) = flavour_map(nFKS(i))
-            appl_QES2(1,pos)=scales2(1,i)
-            appl_muR2(1,pos)=scales2(2,i)
-            appl_muF2(1,pos)=scales2(3,i)
+            appl_QES2(1)=scales2(1,i)
+            appl_muR2(1)=scales2(2,i)
+            appl_muF2(1)=scales2(3,i)
          elseif (itype(i).eq.2) then
 c     born
             appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
      &           .or. itype(i).eq.15)then
 c     virtual, soft-virtual or soft-counter
             appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)*final_state_rescaling
             appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)*final_state_rescaling
             appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.5) then
 c     collinear counter            
             appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(3,pos)=qcdpower(i)
-            appl_x1(3,pos)=bjx(1,i)
-            appl_x2(3,pos)=bjx(2,i)
+            appl_x1(3)=bjx(1,i)
+            appl_x2(3)=bjx(2,i)
             appl_flavmap(3) = flavour_map(nFKS(i))
-            appl_QES2(3,pos)=scales2(1,i)
-            appl_muR2(3,pos)=scales2(2,i)
-            appl_muF2(3,pos)=scales2(3,i)
+            appl_QES2(3)=scales2(1,i)
+            appl_muR2(3)=scales2(2,i)
+            appl_muF2(3)=scales2(3,i)
          elseif (itype(i).eq.6) then
 c     soft-collinear counter            
             appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(4,pos)=qcdpower(i)
-            appl_x1(4,pos)=bjx(1,i)
-            appl_x2(4,pos)=bjx(2,i)
+            appl_x1(4)=bjx(1,i)
+            appl_x2(4)=bjx(2,i)
             appl_flavmap(4) = flavour_map(nFKS(i))
-            appl_QES2(4,pos)=scales2(1,i)
-            appl_muR2(4,pos)=scales2(2,i)
-            appl_muF2(4,pos)=scales2(3,i)
+            appl_QES2(4)=scales2(1,i)
+            appl_muR2(4)=scales2(2,i)
+            appl_muF2(4)=scales2(3,i)
          endif
       enddo
       return

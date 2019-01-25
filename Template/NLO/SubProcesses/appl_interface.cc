@@ -29,8 +29,12 @@ const int __max_nproc__ = 121;
 // Information defined at the generation (configuration) step, that does 
 // not vary event by event
 typedef struct {
-  int bpower; // Born level alphas order
+  int amp_split_size; // Maximum number of coupling-combinations
+  //std::vector<int> qcdpower; // Power of alpha_s for each amp_split
+  int * qcdpower; // Power of alpha_s for each amp_split
 } __amcatnlo_common_fixed__;
+
+int const __amp_split_size = 2;//MZ: VERY dirty solution, to be removed
 
 // Map of the PDF combinations from aMC@NLO - structure for each 
 // "subprocess" i, has some number nproc[i] pairs of parton
@@ -45,7 +49,9 @@ typedef struct {
 typedef struct {
   double  x1[4],x2[4]; 
   double  muF2[4],muR2[4],muQES2[4];
-  double  W0[4],WR[4],WF[4],WB[4];
+  double  W0[4][__amp_split_size],WR[4][__amp_split_size];
+  double  WF[4][__amp_split_size],WB[4][__amp_split_size];
+ //MZ:W0/R/F/B should be declared in a better way... pointers/array of pointers?
   int     flavmap[4];
 } __amcatnlo_common_weights__;
 
@@ -127,7 +133,8 @@ extern "C" void appl_init_() {
     std::cout << "amcblast INFO: Booking grid from scratch with name " << grid_filename_in << " ..." << std::endl;
 
     // leading_order: power of alphas of Born events
-    int const leading_order = appl_common_fixed_.bpower;
+    int const leading_order = -1; /////MZ keep this at the moment beacuse applgrid needs it; eventually to be dropped 
+	//appl_common_fixed_.bpower;
     //std::cout << "amcblast INFO: bpower = " << leading_order << std::endl;
 
     // Number of loops in the APPLgrid formalism.
@@ -479,8 +486,11 @@ extern "C" void appl_reco_() {
   double xsec12 = 0;
   double xsec20 = 0;
 
-  // Set the Born alphas power
-  int const bpow = appl_common_fixed_.bpower;
+  // the number of coupling combinations
+  // and the QCD power of each of them
+  int const amp_split_size = appl_common_fixed_.amp_split_size;
+  int * qcdpow = appl_common_fixed_.qcdpower;
+  int iamp;
 
   // Bjorken x's
   double x1bj = appl_common_weights_.x1[0];
@@ -503,7 +513,9 @@ extern "C" void appl_reco_() {
   else                                   pdflumi = 0;
 
   // Compute the (n+1)-body NLO contribution to the xsec (xsec11)
-  xsec11 = pdflumi * appl_common_weights_.W0[0] * std::pow(g,2*bpow+2);
+  for (iamp=0; iamp<amp_split_size; iamp++){
+    xsec11 = pdflumi * appl_common_weights_.W0[0][iamp] * std::pow(g,qcdpow[iamp]);
+  }
 
   // Counter Events.
   // Soft (k=1), Collinear (k=2) and Soft-Collinear (k=3)    
@@ -532,12 +544,15 @@ extern "C" void appl_reco_() {
     else                                   pdflumi = 0;
 
     // Compute the n-body NLO contribution to the xsec (xsec12)
-    xsec12 += pdflumi * ( appl_common_weights_.W0[k] + appl_common_weights_.WF[k] * xlgmuf + appl_common_weights_.WR[k] * xlgmur ) * std::pow(g,2*bpow+2);
+    for (iamp=0; iamp<amp_split_size; iamp++){
+      xsec12 += pdflumi * ( appl_common_weights_.W0[k][iamp] + appl_common_weights_.WF[k][iamp] * xlgmuf + appl_common_weights_.WR[k][iamp] * xlgmur ) * std::pow(g,qcdpow[iamp]);
+    }
 
     // Compute the Born contribution to the xsec (xsec20)
     if(k == 1) {
-      if(bpow > 0) xsec20 += pdflumi * appl_common_weights_.WB[k] * std::pow(g,2*bpow);
-      else         xsec20 += pdflumi * appl_common_weights_.WB[k];
+      for (iamp=0; iamp<amp_split_size; iamp++){
+        xsec20 += pdflumi * appl_common_weights_.WB[k][iamp] * std::pow(g,qcdpow[iamp]);
+      }
     }
   }
 
