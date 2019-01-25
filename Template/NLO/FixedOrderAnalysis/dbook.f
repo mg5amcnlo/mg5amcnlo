@@ -139,7 +139,7 @@ C
       NHIST=0
       DO 1, I=1,NPLOTS             
    1  BOOK(I)=' NO'
-C     Initialize the number of bins of the aMCfast grids
+C     Initialize the number of bins of the amcblast grids
       if(iappl.ne.0) appl_obs_nbins = 0
       END  
  

@@ -2939,12 +2939,12 @@ RESTART = %(mint_mode)s
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == 1:
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
-            "aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
+            "amcblast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
             elif self.run_card["iappl"] == 2:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
-                        self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',
+                        self.run_name,"amcblast_obs_"+str(obs)+".root"),'-s',
                                   str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
                 for job in all_jobs:
                     os.remove(pjoin(job,"grid_obs_"+str(obs)+"_in.root"))
@@ -2960,7 +2960,7 @@ RESTART = %(mint_mode)s
         # if no appl_start_grid argument given, guess it from the time stamps 
         # of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles = misc.glob(pjoin('*', 'aMCfast_obs_0_starting_grid.root'),
+            gfiles = misc.glob(pjoin('*', 'amcblast_obs_0_starting_grid.root'),
                                pjoin(self.me_dir,'Events')) 
             
             time_stamps={}
@@ -2978,9 +2978,9 @@ RESTART = %(mint_mode)s
             start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
             # check that this dir exists and at least one grid file is there
             if not os.path.exists(pjoin(start_grid_dir,
-                                           'aMCfast_obs_0_starting_grid.root')):
+                                           'amcblast_obs_0_starting_grid.root')):
                 raise self.InvalidCmd('APPLgrid file not found: %s' % \
-                       pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
+                       pjoin(start_grid_dir,'amcblast_obs_0_starting_grid.root'))
             else:
                 all_grids=[pjoin(start_grid_dir,name) for name in os.listdir( \
                         start_grid_dir) if name.endswith("_starting_grid.root")]
@@ -5134,8 +5134,8 @@ RESTART = %(mint_mode)s
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
             self.make_opts_var['applgrid'] = 'True'
-            # check versions of applgrid and amcfast
-            for code in ['applgrid','amcfast']:
+            # check versions of applgrid
+            for code in ['applgrid']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -5148,13 +5148,10 @@ RESTART = %(mint_mode)s
                     if code is 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
                                              +' You are using %s',output)
-                    if code is 'amcfast' and output < '1.1.1':
-                        raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
-                                             +' You are using %s',output)
 
             # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldflags) $(shell %s --ldcflags) \n" \
-                             % (self.options['amcfast'],self.options['applgrid'])
+            appllibs="  APPLLIBS=$(shell %s --ldcflags) \n  CXXFLAGS+=$(shell %s --cxxflags)\n" \
+                             % (self.options['applgrid'],self.options['applgrid'])
             text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
             text_out=[]
             for line in text:

@@ -218,6 +218,5 @@
 
 #! Absolute paths to config scripts in the bin directories for APPLgrid and aMCFast.
 # applgrid = applgrid-config
-# amcfast = amcfast-config
 
 
