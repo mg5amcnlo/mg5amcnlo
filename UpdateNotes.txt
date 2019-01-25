@@ -8,6 +8,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       MZ: Applgrid+aMCFast was broken for some processes (since 2.6.0), due to wrong 
           information written into initial_states_map.dat. This has been fixed now
       OM: change in the gridpack. It automatically runs the systematics.py (if configure in the run_card)
+      OM: Fix  a MLM crash occuring for p p > go go (0,1,2 j)
+      OM: Fix issue for BSM model with additional colored particle where the default dynamical scale choice 
+          was crashing
 
 2.6.4 (09/11/18)
       OM: add specific treatement for small width (at LO only and not for loop-induced)
