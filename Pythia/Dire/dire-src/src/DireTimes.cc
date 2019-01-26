@@ -1880,14 +1880,17 @@ double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
       // Calculate the median absolute deviation and stop if it's very small.
       double MAD = findMedian(diff2median);
       if (MAD/medianNow < 1e-4)  break;
+
+      // Stop if Sudakov is very likely vanishing.
+      if ( medianNow < settingsPtr->parm("Dire:Sudakov:Min")) break;
+
     }
 
-    double minwt = settingsPtr->parm("Dire:Sudakov:Min");
-    if (i%10==0 && i>0 && wt/double(i) < minwt) {wt = 0.; break; }
-    if (nTrials%100==0 && wt/double(nTrials) < minwt) {wt = 0.; break; }
   }
 
-  wt /= nTrials;
+  //wt /= nTrials;
+  wt = findMedian(means);
+  if (wt < settingsPtr->parm("Dire:Sudakov:Min")) wt = 0.;
 
   beamAPtr->clear();
   beamBPtr->clear();

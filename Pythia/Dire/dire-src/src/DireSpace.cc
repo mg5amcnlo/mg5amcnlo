@@ -1381,15 +1381,20 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
        diff2median.push_back(abs(means[im]-medianNow));
       // Calculate the median absolute deviation and stop if it's very small.
       double MAD = findMedian(diff2median);
-      if (MAD/medianNow < 1e-4) { cout << "stable at " << nTrials << endl; break; }
+      if (MAD/medianNow < 1e-4) break;
+
+      // Stop if Sudakov is very likely vanishing.
+      if ( medianNow < settingsPtr->parm("Dire:Sudakov:Min")) break;
+
     }
 
-    // Stop if Sudakov is very likely vanishing.
-    double minwt = settingsPtr->parm("Dire:Sudakov:Min");
-    if (nTrials%100==0 && wt/double(nTrials) < minwt) {wt = 0.; break; }
   }
 
-  wt /= nTrials;
+  //cout << scientific << setprecision(6) << nTrials << " " << wt/nTrials << " " << findMedian(means) << endl;
+
+  //wt /= nTrials;
+  wt = findMedian(means);
+  if (wt < settingsPtr->parm("Dire:Sudakov:Min")) wt = 0.;
 
   beamAPtr->clear();
   beamBPtr->clear();

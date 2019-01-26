@@ -86,6 +86,7 @@ c
       write(*,*)'       0 to use Pythia timestamp'
       write(*,*)'       >=1 to use random seeds'
       read(5,*)ifk88seed
+
 c Discard first (tends to be extremely small)
       if(ifk88seed.ge.1)rnd=fk88random(ifk88seed)
 
@@ -107,12 +108,12 @@ c
       ieHfail=0
       ieLfail=0
       do itype=1,4
-c$$$        if (itype .ne. 3) cycle
+c        if (itype .ne. 3) cycle
         write(*,*)'===>Doing itype=',itype
         write(iunit1,*)'===>Doing itype=',itype
         write(iunit2,*)'===>Doing itype=',itype
         do ipart=1,npart
-c$$$          if (ipart .ne. 7) cycle
+c          if (ipart .ne. 7) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart
