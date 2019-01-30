@@ -1175,6 +1175,20 @@ c SCALUP_tmp_H2 = t_ij target scales for Delta
       double precision SCALUP_tmp_H2(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
 
+c Lower and upper limits of fitted st and xm ranges.
+c Require one prior call to pysudakov() to be set,
+c here done in the firsttime1 clause
+      real*8 cstlow,cstupp,cxmlow,cxmupp
+      common/cstxmbds/cstlow,cstupp,cxmlow,cxmupp
+
+c Set Delta(pt,..)=0 for pt<smallptlow, and interpolate
+c between 0 and Delta(smallptupp,..) for smallptlow<pt<smallptupp
+c For things to work properly, one must have:
+c               cstlow < smallptupp
+      real*8 smallptlow,smallptupp,get_to_zero
+      parameter (smallptlow=0.5d0)
+      parameter (smallptupp=1.0d0)
+
       integer iii,jjj,LP
       double precision xscales(0:99,0:99)
       double precision xmasses(0:99,0:99)
@@ -1184,9 +1198,10 @@ c SCALUP_tmp_H2 = t_ij target scales for Delta
       logical*1 dzones2(0:99,0:99)
 
       integer id,type,icount,icount_i,icount_j,ic,jc
+cSF ARE noemProb AND mDipole USEFUL?
       double precision noemProb, startingScale, stoppingScale, mDipole
       double precision mcmass(21)
-      double precision pysudakov,scalefunH,deltanum,deltaden
+      double precision pysudakov,scalefunH,deltanum,deltaden,deltarat
       integer nG_S,nQ_S,i_dipole_counter,isudtype,relabel(nexternal)
 c
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -1367,8 +1382,15 @@ cSF by Pythia. For example, the colour flow is used only to reconstruct
 cSF the underlying S-event flow, which is already available here, and
 cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
-        call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
         firsttime1=.false.
+        call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
+c Fake call for initialisation
+        deltanum=pysudakov(1.d2,2.d2,1,1,mcmass)
+        if(cstlow.gt.smallptupp)then
+          write(*,*)'Error in xmcsubt: cstlow,smallptupp',
+     &               cstlow,smallptupp
+          stop
+        endif
       endif
       do i=1,nexternal
          IDUP_H(i)=IDUP_D(nFKSprocess,i,1)
@@ -1447,7 +1469,7 @@ c Checks
          do j=1,nexternal-1
             if((xscales2(i,j).ne.-1d0.and.xmasses2(i,j).eq.-1d0).or.
      &         (xscales2(i,j).eq.-1d0.and.xmasses2(i,j).ne.-1d0))then
-               write(*,*)'Error in xscales, xmasses',
+               write(*,*)'Error in xmcsubt: xscales, xmasses',
      &                   i,j,xscales2(i,j),xmasses2(i,j)
                stop
             endif
@@ -1548,10 +1570,15 @@ c
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          do j=1,nexternal-1
             if(j.eq.i)cycle
+cSF The following definition of startingScale is unprotected:
+cSF cstupp must be sufficiently large
+            startingScale = min(SCALUP_tmp_S2(i,j),cstupp)
+            stoppingScale = SCALUP_tmp_H2(i,j)
+
 c only colour-connected partons livezone and sensible scales
 c contribute to Delta
             if(xscales2(i,j).eq.-1d0.or.dzones2(i,j).or.
-     &         SCALUP_tmp_H2(i,j).gt.SCALUP_tmp_S2(i,j))cycle
+     &         stoppingScale.gt.startingScale)cycle
             if(i.le.2.and.j.le.2)then
                isudtype=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -1561,10 +1588,26 @@ c contribute to Delta
             elseif(i.gt.2.and.j.le.2)then
                isudtype=4
             endif
-c     SF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
-            deltanum=pysudakov(SCALUP_tmp_H2(i,j),xmasses2(i,j),
-     &                         idup_s(i),isudtype,mcmass)
-            deltaden=pysudakov(SCALUP_tmp_S2(i,j),xmasses2(i,j),
+c
+cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
+            if(stoppingScale.le.smallptlow)then
+              deltanum=0.d0
+            elseif( stoppingScale.gt.smallptlow .and.
+     #              stoppingScale.le.smallptupp )then
+              deltanum=pysudakov(smallptupp,xmasses2(i,j),
+     &                           idup_s(i),isudtype,mcmass)
+              deltanum=deltanum*
+     #                 get_to_zero(stoppingScale,smallptlow,smallptupp)
+            else
+              deltanum=pysudakov(stoppingScale,xmasses2(i,j),
+     &                           idup_s(i),isudtype,mcmass)
+            endif
+            if(startingScale.le.smallptupp)then
+              write(*,*)'Error in xmcsubt: startingScale, smallptupp'
+              write(*,*)startingScale,smallptupp
+              stop
+            endif
+            deltaden=pysudakov(startingScale,xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
             if(i.le.nincoming)then
                LP=SIGN(1,LPP(i))
@@ -1576,11 +1619,18 @@ c     SF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
                   id=7
                endif
                deltanum=deltanum*pdg2pdf(abs(lpp(i)),id,
-     &                           xbjrk_cnt(i,0),SCALUP_tmp_H2(i,j))
+     &                           xbjrk_cnt(i,0),stoppingScale)
                deltaden=deltaden*pdg2pdf(abs(lpp(i)),id,
-     &                           xbjrk_cnt(i,0),SCALUP_tmp_S2(i,j))
+     &                           xbjrk_cnt(i,0),startingScale)
             endif
-            wgt_sudakov=wgt_sudakov*deltanum/deltaden
+            if(deltaden.eq.0.d0)then
+              deltarat=1.d0
+            else
+              deltarat=deltanum/deltaden
+            endif
+            if(deltarat.ge.1.d0)deltarat=1.d0
+            if(deltarat.le.0.d0)deltarat=0.d0
+            wgt_sudakov=wgt_sudakov*deltarat
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
@@ -1614,9 +1664,22 @@ c
 
 
 
-
-
-
+      function get_to_zero(sc,xlow,xupp)
+      implicit none
+      double precision get_to_zero,sc,xlow,xupp
+      double precision x,tmp,emscafun
+c
+      if(sc.le.xlow)then
+        tmp=0d0
+      elseif(sc.le.xupp)then
+        x=(xupp-sc)/(xupp-xlow)
+        tmp=1-emscafun(x,2d0)
+      else
+        tmp=1d0
+      endif
+      get_to_zero=tmp
+      return
+      end
 
 
       subroutine get_mbar(p,y_ij_fks,ileg,bornbars,bornbarstilde)
