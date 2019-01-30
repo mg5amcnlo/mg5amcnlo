@@ -515,7 +515,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             # require that at least one particle be soft and of even spin for the interaction to be IR singular
             found_soft_even_spin_particle = False
             for p in ii['particles']:
-                if p.get('mass')=='zero':
+                if p.get('mass').lower()=='zero':
                     if p.get('spin')%2==0:
                         found_soft_even_spin_particle = True
                         break
