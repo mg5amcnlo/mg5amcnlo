@@ -5899,11 +5899,16 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 elif source == 'ucl':
                     r = [0]
                 else:
+                    if source[-1].isdigit() or source[-1] == '/':
+                        source += '/package_info.dat'
                     data_path.append(source)
                     r = [2]
             else: 
                 r = random.randint(0,1)
                 r = [r, (1-r)]
+                if 'MG5aMC_WWW' in os.environ['MG5aMC_WWW'] and os.environ['MG5aMC_WWW']:
+                    data_path.append(os.environ['MG5aMC_WWW']+'/package_info.dat')
+                    r.insert(0, 2)
 
 
 
@@ -5911,7 +5916,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 cluster_path = data_path[index]
                 try:
                     data = urllib.urlopen(cluster_path)
-                except Exception:
+                except Exception, error:
+                    misc.sprint(str(error), cluster_path)
                     continue
                 if data.getcode() != 200:
                     continue

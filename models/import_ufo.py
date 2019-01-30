@@ -106,6 +106,11 @@ def get_model_db():
     r = random.randint(0,1)
     r = [r, (1-r)]
 
+    if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+        data_path.append(os.environ['MG5aMC_WWW']+'/models_db.dat')
+        r.insert(0, 2)
+
+
     for index in r:
         cluster_path = data_path[index]
         try:
