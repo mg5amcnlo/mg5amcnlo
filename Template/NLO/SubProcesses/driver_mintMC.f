@@ -836,6 +836,11 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      logical new_point
+      common /c_new_point/ new_point
+      if (new_point) then
+         pass_cuts_check=.false.
+      endif
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -894,6 +899,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
+            pass_cuts_check=.true.
             if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             if (abrv(1:2).ne.'vi') then
@@ -970,6 +976,7 @@ c
                endif
             endif               
             if (passcuts_nbody .and. abrv.ne.'real') then
+               pass_cuts_check=.true.
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
@@ -1000,6 +1007,7 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
+               pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)

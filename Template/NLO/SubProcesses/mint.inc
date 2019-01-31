@@ -69,3 +69,6 @@ c
      $     ,ndimmax,0:n_ave_virt,maxchannels)
       common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
      $     ,nvirt_acc
+
+      logical pass_cuts_check
+      common /c_cuts_mint/ pass_cuts_check
