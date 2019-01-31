@@ -18,7 +18,8 @@ c            and their ratios. Vertical lines correspond to nodal values
 c fort.67 -> as for fort.66, on a log scale on the x axis
       implicit real*8(a-h,o-z)
       real*8 mcmass(21)
-      integer ifk88seed
+      integer ifk88seed,iunit1,iseedpy
+      parameter (iunit1=20)
       double precision st1, st2, xm1, xm2, stupp
       double precision stval(100),xmval(100)
       double precision rnrat(8),rnmin(8),rnmax(8)
@@ -32,6 +33,8 @@ c fort.67 -> as for fort.66, on a log scale on the x axis
       double precision res_mlo_stlo_pythia, res_mhi_stlo_pythia
       double precision res_mlo_sthi_pythia, res_mhi_sthi_pythia
 
+      double precision xlowthrs
+
       common/cifk88seed/ifk88seed
 c
       do i=1,21
@@ -40,21 +43,24 @@ c
       include 'MCmasses_PYTHIA8.inc'
 
       call dire_init(mcmass)
+      open(unit=iunit1,file='testgrid.log',status='unknown')
 
-      nnst=26
+c$$$      nnst=26
+      nnst=100
       xkst=1.d0
       base=10.d0
-      nnxm=20
+c$$$      nnxm=20
+      nnxm=50
       xkxm=1.d0
 
       write(*,*)'  '
       write(*,*)'This codes assumes sudakov.f to have been'
       write(*,*)' created with the following parameters:'
-      write(*,*)' nnst=26'
-      write(*,*)' xkst=1.d0'
-      write(*,*)' base=10.d0'
-      write(*,*)' nnxm=20'
-      write(*,*)' xkxm=1.d0'
+      write(*,*)' nnst=',nnst
+      write(*,*)' xkst=',xkst
+      write(*,*)' base=',base
+      write(*,*)' nnxm=',nnxm
+      write(*,*)' xkxm',xkxm
       write(*,*)'  '
 
       write(*,*)'enter lower and upper bounds of fitted st range'
@@ -113,6 +119,12 @@ c
       write(6,*)'enter id, itype'
       read(5,*)id,itype
 
+c Use Pythia internal seed. Call rnd generator before each
+c call to py_compute_sudakov otherwise
+      iseedpy=-1
+c set cutoff to zero for Pythia to always compute Sudakovs
+      xlowthrs=0.d0
+
  1    write(6,*)'enter st,xm'
       read(5,*)st,xm
 
@@ -136,8 +148,9 @@ c
 c Results at selected scales
       res_grid=pysudakov(st,xm,id,itype,mcmass)
       res_pythia=py_compute_sudakov(st,xm,id,itype,
-     #                              mcmass,stupp)
-
+     #                              mcmass,stupp,
+     #                              iseedpy,xlowthrs,
+     #                              iunit1)
       write(6,*)'    '
       write(6,*)'Results at the selected scales'
       write(6,*)'res(grid)=  ',res_grid
@@ -150,13 +163,21 @@ c Results at nearest nodal values
       res_mhi_stlo_grid=pysudakov(st1,xm2,id,itype,mcmass)
       res_mhi_sthi_grid=pysudakov(st2,xm2,id,itype,mcmass)
       res_mlo_stlo_pythia = py_compute_sudakov(st1,xm1,id,itype,
-     #                                         mcmass,stupp)
+     #                                         mcmass,stupp,
+     #                                         iseedpy,xlowthrs,
+     #                                         iunit1)
       res_mlo_sthi_pythia = py_compute_sudakov(st2,xm1,id,itype,
-     #                                         mcmass,stupp)
+     #                                         mcmass,stupp,
+     #                                         iseedpy,xlowthrs,
+     #                                         iunit1)
       res_mhi_stlo_pythia = py_compute_sudakov(st1,xm2,id,itype,
-     #                                         mcmass,stupp)
+     #                                         mcmass,stupp,
+     #                                         iseedpy,xlowthrs,
+     #                                         iunit1)
       res_mhi_sthi_pythia = py_compute_sudakov(st2,xm2,id,itype,
-     #                                         mcmass,stupp)
+     #                                         mcmass,stupp,
+     #                                         iseedpy,xlowthrs,
+     #                                         iunit1)
 
       r1 = res_mlo_stlo_grid/res_mlo_stlo_pythia
       r2 = res_mlo_sthi_grid/res_mlo_sthi_pythia
@@ -238,7 +259,9 @@ c Results at nearest nodal values
 
             res_grid=pysudakov(st,xm,id0,itype,mcmass)
             res_pythia=py_compute_sudakov(st,xm,id0,itype,
-     #                                    mcmass,stupp)
+     #                                    mcmass,stupp,
+     #                                    iseedpy,xlowthrs,
+     #                                    iunit1)
             rat=res_grid/res_pythia
             avg=avg+rat
             if(rat.lt.rmin)then
@@ -264,13 +287,21 @@ c Results at nearest nodal values
             res_mhi_stlo_grid=pysudakov(st1,xm2,id0,itype,mcmass)
             res_mhi_sthi_grid=pysudakov(st2,xm2,id0,itype,mcmass)
             res_mlo_stlo_pythia = py_compute_sudakov(st1,xm1,id0,itype,
-     #                                               mcmass,stupp)
+     #                                               mcmass,stupp,
+     #                                               iseedpy,xlowthrs,
+     #                                               iunit1)
             res_mlo_sthi_pythia = py_compute_sudakov(st2,xm1,id0,itype,
-     #                                               mcmass,stupp)
+     #                                               mcmass,stupp,
+     #                                               iseedpy,xlowthrs,
+     #                                               iunit1)
             res_mhi_stlo_pythia = py_compute_sudakov(st1,xm2,id0,itype,
-     #                                               mcmass,stupp)
+     #                                               mcmass,stupp,
+     #                                               iseedpy,xlowthrs,
+     #                                               iunit1)
             res_mhi_sthi_pythia = py_compute_sudakov(st2,xm2,id0,itype,
-     #                                               mcmass,stupp)
+     #                                               mcmass,stupp,
+     #                                               iseedpy,xlowthrs,
+     #                                               iunit1)
 
             rnrat(1) = res_mlo_stlo_grid/res_mlo_stlo_pythia
             rnrat(2) = res_mlo_sthi_grid/res_mlo_sthi_pythia
@@ -366,12 +397,16 @@ c Results at nearest nodal values
           plres(n,1)=pysudakov(pl,fixvar,id,itype,mcmass)
           if(iexcl.eq.0)
      #      plres(n,2)=py_compute_sudakov(pl,fixvar,id,itype,
-     #                                    mcmass,stupp)
+     #                                    mcmass,stupp,
+     #                                    iseedpy,xlowthrs,
+     #                                    iunit1)
         else
           plres(n,1)=pysudakov(fixvar,pl,id,itype,mcmass)
           if(iexcl.eq.0)
      #      plres(n,2)=py_compute_sudakov(fixvar,pl,id,itype,
-     #                                    mcmass,stupp)
+     #                                    mcmass,stupp,
+     #                                    iseedpy,xlowthrs,
+     #                                    iunit1)
         endif
       enddo
       write(67,*)' set scale x log'
@@ -416,6 +451,54 @@ c Results at nearest nodal values
           write(67,*)' join patterned'
         enddo
       endif
+c
+      write(66,*)' new plot'
+      write(67,*)' new plot'
+      write(66,*)' set scale y log'
+      write(67,*)' set scale x log'
+      write(67,*)' set scale y log'
+      do n=0,npoints
+        pl=pllow+n*(plupp-pllow)/dfloat(npoints)
+        write(66,*)pl,plres(n,1)
+        write(67,*)pl,plres(n,1)
+      enddo
+      write(66,*)' join'
+      write(67,*)' join'
+      if(iexcl.eq.0)then
+        do n=0,npoints
+          pl=pllow+n*(plupp-pllow)/dfloat(npoints)
+          write(66,*)pl,plres(n,2)
+          write(67,*)pl,plres(n,2)
+        enddo
+      endif
+      write(66,*)' set pattern .02 .09'
+      write(66,*)' join patterned'
+      write(67,*)' set pattern .02 .09'
+      write(67,*)' join patterned'
+      if(iplot.eq.1)then
+        do inst=1,nnst
+          write(66,*)stval(inst),-10.d0
+          write(66,*)stval(inst),10.d0
+          write(66,*)' set pattern .09 .09'
+          write(66,*)' join patterned'
+          write(67,*)stval(inst),-10.d0
+          write(67,*)stval(inst),10.d0
+          write(67,*)' set pattern .09 .09'
+          write(67,*)' join patterned'
+        enddo
+      else
+        do inxm=1,nnxm
+          write(66,*)xmval(inxm),-10.d0
+          write(66,*)xmval(inxm),10.d0
+          write(66,*)' set pattern .09 .09'
+          write(66,*)' join patterned'
+          write(67,*)xmval(inxm),-10.d0
+          write(67,*)xmval(inxm),10.d0
+          write(67,*)' set pattern .09 .09'
+          write(67,*)' join patterned'
+        enddo
+      endif
+c
       if(iexcl.eq.1)goto 400
       write(66,*)' new plot'
       write(67,*)' new plot'
@@ -451,6 +534,7 @@ c Results at nearest nodal values
         enddo
       endif
  400  continue
+      close(iunit1)
       end
 
 
@@ -520,20 +604,26 @@ c
       FK88RANDOM = SEED*MINV
       END
 
-      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp)
+
+      function py_compute_sudakov(stlow,md,id,itype,mcmass,stupp,
+     #                            iseed,min_py_sudakov,iunit)
       implicit none
       double precision py_compute_sudakov, stlow, stupp, md
-      integer id, itype
+      double precision min_py_sudakov
+      integer id, itype,iseed,iunit
       real*8 mcmass(21)
       double precision temp
-
+c
       call dire_get_no_emission_prob(temp, stupp,
-     #     stlow, md, id, itype)
+     #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
-
+      write(iunit,*) 'md=', md, ' start=', stupp,
+     #           ' stop=', stlow, ' --> sud=', temp
+c
       return
       end
 c
+
 c      function pysudakov(stlo,md,id,itype,mcmass)
 c      implicit none
 c      double precision pysudakov, stlo, sthi, md

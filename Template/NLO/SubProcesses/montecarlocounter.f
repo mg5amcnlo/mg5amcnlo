@@ -1184,10 +1184,10 @@ c here done in the firsttime1 clause
 c Set Delta(pt,..)=0 for pt<smallptlow, and interpolate
 c between 0 and Delta(smallptupp,..) for smallptlow<pt<smallptupp
 c For things to work properly, one must have:
-c               cstlow < smallptupp
+c               cstlow <= smallptupp
       real*8 smallptlow,smallptupp,get_to_zero
       parameter (smallptlow=0.5d0)
-      parameter (smallptupp=1.0d0)
+      parameter (smallptupp=1.01d0)
 
       integer iii,jjj,LP
       double precision xscales(0:99,0:99)
@@ -1574,7 +1574,13 @@ cSF The following definition of startingScale is unprotected:
 cSF cstupp must be sufficiently large
             startingScale = min(SCALUP_tmp_S2(i,j),cstupp)
             stoppingScale = SCALUP_tmp_H2(i,j)
-
+c Passing the following if clause must be exceedingly rare
+            if(startingScale.le.smallptupp)then
+              write(*,*)'Warning in xmcsubt: startingScale, smallptupp'
+              startingScale=smallptupp
+c$$$              write(*,*)startingScale,smallptupp
+c$$$              stop
+            endif
 c only colour-connected partons livezone and sensible scales
 c contribute to Delta
             if(xscales2(i,j).eq.-1d0.or.dzones2(i,j).or.
@@ -1589,7 +1595,6 @@ c contribute to Delta
                isudtype=4
             endif
 c
-cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
             if(stoppingScale.le.smallptlow)then
               deltanum=0.d0
             elseif( stoppingScale.gt.smallptlow .and.
@@ -1601,11 +1606,6 @@ cSF INSERT HERE CHECKS ON DELTANUM AND DELTADEN
             else
               deltanum=pysudakov(stoppingScale,xmasses2(i,j),
      &                           idup_s(i),isudtype,mcmass)
-            endif
-            if(startingScale.le.smallptupp)then
-              write(*,*)'Error in xmcsubt: startingScale, smallptupp'
-              write(*,*)startingScale,smallptupp
-              stop
             endif
             deltaden=pysudakov(startingScale,xmasses2(i,j),
      &                         idup_s(i),isudtype,mcmass)
