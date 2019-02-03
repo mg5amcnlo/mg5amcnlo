@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.6.5 ()
+2.6.5 (03/02/19)
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
       OM: Fix a bug in the computation of systematics when running with Python 2.6.
       OM: import model PATH, where PATH does not exists yet, will now connect to the online db
