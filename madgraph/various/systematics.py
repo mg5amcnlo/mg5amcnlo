@@ -941,7 +941,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     input, output = args[0:2]
     
     start_opts = 2
-    if output.startswith('-'):
+    if output and output.startswith('-'):
         start_opts = 1
         output = input
     

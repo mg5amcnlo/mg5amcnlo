@@ -5906,7 +5906,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             else: 
                 r = random.randint(0,1)
                 r = [r, (1-r)]
-                if 'MG5aMC_WWW' in os.environ['MG5aMC_WWW'] and os.environ['MG5aMC_WWW']:
+                if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
                     data_path.append(os.environ['MG5aMC_WWW']+'/package_info.dat')
                     r.insert(0, 2)
 
