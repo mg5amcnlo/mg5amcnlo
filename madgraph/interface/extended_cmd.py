@@ -1321,11 +1321,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             except Exception:
                 pass
             
-
-        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
-                                                self.options['crash_on_error']:
-            logger.info('stop computation due to crash_on_error=True')
-            sys.exit(str(error))
+        if hasattr(self, 'options') and 'crash_on_error' in self.options:
+            if self.options['crash_on_error'] is True:
+                logger.info('stop computation due to crash_on_error=True')
+                sys.exit(str(error))
+            elif self.options['crash_on_error'] == 'never':
+                return False
             
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False or self.inputfile:
@@ -1345,6 +1346,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def nice_user_error(self, error, line):
         if self.child:
             return self.child.nice_user_error(error, line)
+
         # Make sure that we are at the initial position
         os.chdir(self.__initpos)
         if not self.history or line == self.history[-1]:
@@ -1356,10 +1358,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
         
-        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
-                                                self.options['crash_on_error']:
-            logger.info('stop computation due to crash_on_error=True')
-            sys.exit(str(error))
+        if hasattr(self, 'options') and 'crash_on_error' in self.options:
+            if self.options['crash_on_error'] is True:
+                logger.info('stop computation due to crash_on_error=True')
+                sys.exit(str(error))
+            elif self.options['crash_on_error'] == 'never':
+                self.history.pop()
+                return False
 
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False or self.inputfile:
@@ -1378,6 +1383,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def nice_config_error(self, error, line):
         if self.child:
             return self.child.nice_user_error(error, line)
+
         # Make sure that we are at the initial position                                 
         os.chdir(self.__initpos)
         if not self.history or line == self.history[-1]:
@@ -1399,10 +1405,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
-        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
-                                                self.options['crash_on_error']:
-            logger.info('stop computation due to crash_on_error=True')
-            sys.exit(str(error))
+            
+        if hasattr(self, 'options') and 'crash_on_error' in self.options:
+            if self.options['crash_on_error'] is True:
+                logger.info('stop computation due to crash_on_error=True')
+                sys.exit(str(error))
+            elif self.options['crash_on_error'] == 'never':
+                if self.history:
+                    self.history.pop()
+                return False
+            
+
         
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False or self.inputfile:
@@ -1488,9 +1501,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
 
-        
         if stop:
             self.do_quit('all')
+        return stop
         
 
 
@@ -1500,7 +1513,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         try:
             return self.onecmd_orig(line, **opt)
         except BaseException, error: 
-            self.error_handling(error, line)
+            return self.error_handling(error, line)
             
     
     def stop_on_keyboard_stop(self):
@@ -1522,7 +1535,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             current_interface = self
         if precmd:
             line = current_interface.precmd(line)
-        if errorhandling:
+        if errorhandling or \
+            (hasattr(self, 'options') and 'crash_on_error' in self.options and 
+             self.options['crash_on_error']=='never'):
             stop = current_interface.onecmd(line, **opt)
         else:
             stop = Cmd.onecmd_orig(current_interface, line, **opt)
@@ -1620,6 +1635,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.history:
             self.history.pop()
         
+
         #avoid that command of other file interfere with this one.
         previous_store_line = self.get_stored_line()
         
@@ -1636,6 +1652,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # filepath can be overwritten during the run (leading to weird results)
         # Note also that we need a generator and not a list.
         for line in self.inputfile:
+            
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line

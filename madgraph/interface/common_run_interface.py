@@ -664,15 +664,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.banner = None
         # Load the configuration file
         self.set_configuration()
-        self.configure_run_mode(self.options['run_mode'])
 
-        # update the path to the PLUGIN directory of MG%
-        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
-            mg5dir = self.options['mg5_path']
-            if mg5dir not in sys.path:
-                sys.path.append(mg5dir)
-            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
-                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
 
         # Define self.proc_characteristics
         self.get_characteristics()
@@ -1745,7 +1737,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             opts.append('--from_card=internal')
             
             # Check that all pdfset are correctly installed
-            if 'sys_pdf' in self.run_card:
+            if 'systematics_arguments' in self.run_card.user_set:
+                pdf = [a[6:] for a in self.run_card['systematics_arguments']
+                         if a.startswith('--pdf=')]
+                lhaid += [t.split('@')[0] for p in pdf for t in p.split(',') 
+                                            if t not in ['errorset', 'central']]                
+            elif 'sys_pdf' in self.run_card.user_set:
                 if '&&' in self.run_card['sys_pdf']:
                     if isinstance(self.run_card['sys_pdf'], list):
                         line = ' '.join(self.run_card['sys_pdf'])
@@ -1764,7 +1761,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
         except Exception, error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
@@ -1793,6 +1790,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
+            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
+                if input.endswith('.gz'):
+                    misc.gunzip(input)
+                    input = input[:-3]
+                    
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
@@ -3160,7 +3162,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('Not a valid value for notification_center')
         # True/False formatting
         elif args[0] in ['crash_on_error']:
-            tmp = banner_mod.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            try:
+                tmp = banner_mod.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            except:
+                if args[1].lower() in ['never']:
+                    tmp = args[1].lower()
+                else:
+                    raise
             self.options[args[0]] = tmp  
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
@@ -3221,17 +3229,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cluster_name = opt['cluster_type']
             if cluster_name in cluster.from_name:
                 self.cluster = cluster.from_name[cluster_name](**opt)
+                print "using cluster:", cluster_name
             else:
+                print "cluster_class", cluster_name
+                print self.plugin_path
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
-                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                                            info = 'cluster handling will be done with PLUGIN: %(plug)s' )
+                print type(cluster_class)
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
                 else:
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name              
-                
     def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
@@ -3603,6 +3614,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
+
+        # update the path to the PLUGIN directory of MG%
+        if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
+            mg5dir = self.options['mg5_path']
+            if mg5dir not in sys.path:
+                sys.path.append(mg5dir)
+            if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                self.plugin_path.append(pjoin(mg5dir,'PLUGIN'))
+
         self.configure_run_mode(self.options['run_mode'])
         return self.options
 
@@ -3985,9 +4005,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.proc_characteristics
 
 
-    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
+    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
-        into lib/PDFsets"""
+        into lib/PDFsets.
+        if require_local is False, just ensure that the pdf is in pdfsets_dir 
+        """
 
         if not hasattr(self, 'lhapdf_pdfsets'):
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
@@ -4059,7 +4081,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             os.remove(pjoin(pdfsets_dir, name))
                     except Exception, error:
                         logger.debug('%s', error)
-        
+            if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
+                                    os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                continue
             #check that the pdfset is not already there
             elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
@@ -4093,10 +4117,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not lhapdf_version:
             lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
+                        
+                        
         if not pdfsets_dir:
-            pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+            if 'LHAPATH' in os.environ:
+                for p in os.environ['LHAPATH'].split(':'):
+                    if os.path.exists(p):
+                        pdfsets_dir = p
+                        break
+                else:
+                    del os.environ['LHAPATH'] 
+                    pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()                    
+            else:
+                pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
-                                
+
         if isinstance(filename, int):
             pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
             filename = pdf_info[filename]['filename']
@@ -4107,6 +4143,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
              
         logger.info('Trying to download %s' % filename)
 
+            
         if lhapdf_version.startswith('5.'):
 
             # use the lhapdf-getdata command, which is in the same path as
@@ -4163,12 +4200,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \
                         % (filename, pdfsets_dir))  
-            else:
+            elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
+                misc.sprint(os.environ['LHAPATH'], '-> retry')
+                if pdfsets_dir in os.environ['LHAPATH'].split(':'):
+                    lhapath = os.environ['LHAPATH'].split(':')
+                    lhapath = [p for p in lhapath if os.path.exists(p)]
+                    lhapath.remove(pdfsets_dir)
+                    os.environ['LHAPATH'] = ':'.join(lhapath)
+                    if lhapath:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    else:
+                        raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir) 
+                else:
+                    return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+            else:  
                 raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)                          
             
-        else:
+        else:                    
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
@@ -4245,7 +4301,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
             datadir = os.environ['LHAPDF_DATA_PATH']
-
         elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
@@ -4275,6 +4330,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.Pdirs
 
     def get_lhapdf_libdir(self):
+        
+        if 'LHAPATH' in os.environ:
+            for d in os.environ['LHAPATH'].split(':'):
+                if os.path.isdir(d):
+                    return d
+        
+        
         lhapdf_version = self.get_lhapdf_version()
 
         if lhapdf_version.startswith('5.'):
@@ -5709,7 +5771,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
                           "Cross-section will be rescaled according to NWA if needed."  +
                           "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
-                          param.lhacode[0], mass*self.run_card['small_width_treatment'], width)
+                          param.lhacode[0], abs(mass*self.run_card['small_width_treatment']), width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                     if CommonRunCmd.sleep_for_error:
@@ -5801,15 +5863,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
                 
                 #3. ensure that those flag are in the shower card
-                for l in libs:
-                    if l not in extralibs:
-                        modify_extralibs = True
-                        extralibs.append(l)
                 for L in paths:
                     if L not in extrapaths:
                         modify_extrapaths = True
                         extrapaths.append(L)
-                        
+                for l in libs:
+                    if l == 'boost_iostreams':
+                        #this one is problematic handles it.
+                        for L in paths + extrapaths:
+                            if misc.glob('*boost_iostreams*', L):
+                                break
+                        else:
+                            continue
+                    if l not in extralibs:
+                        modify_extralibs = True
+                        extralibs.append(l)                        
             # Apply the required modification
             if modify_extralibs:
                 if extralibs:
@@ -6494,8 +6562,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
-                self.last_editline_pos = posline
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
+                self.last_editline_pos = posline+1
                                                  
             else:
                 ff = open(path,'a')

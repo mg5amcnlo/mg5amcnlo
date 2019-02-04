@@ -1230,7 +1230,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                         pass                 
                     self.me_int[decay_dir] = me5_cmd
                 if self.options["run_card"]:
-                    run_card = self.run_card
+                    if hasattr(self, 'run_card'):
+                        run_card = self.run_card
+                    else:
+                        self.run_card = banner.RunCard(self.options["run_card"])
+                        run_card = self.run_card 
                 else:
                     run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
                 run_card["nevents"] = int(1.2*nb_event)

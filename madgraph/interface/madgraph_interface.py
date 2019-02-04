@@ -216,7 +216,6 @@ class CmdExtended(cmd.Cmd):
             info_line = info_line.replace("#*","*")
             
 
-
         logger.info(self.intro_banner % info_line)
 
         cmd.Cmd.__init__(self, *arg, **opt)
@@ -460,6 +459,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
+        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -2371,7 +2371,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
-                        possible_options_full = ['-f', '-noclean', '-nojpeg']):
+                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -3127,12 +3127,17 @@ This implies that with decay chains:
         
         model_path = args[0]
         recreate = ('--recreate' in args)
+        if recreate:
+            args.remove('--recreate')
         keep_decay = ('--keep_decay' in args)
+        if keep_decay:
+            args.remove('--keep_decay')
         output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
         if output_dir:
             output_dir = output_dir[0]
             recreate = True
             restrict_name = ''
+            args.remove('--output=%s' % output_dir)
         else:
             name = os.path.basename(self._curr_model.get('modelpath'))
             restrict_name = self._curr_model.get('restrict_name')
@@ -5894,11 +5899,16 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 elif source == 'ucl':
                     r = [0]
                 else:
+                    if source[-1].isdigit() or source[-1] == '/':
+                        source += '/package_info.dat'
                     data_path.append(source)
                     r = [2]
             else: 
                 r = random.randint(0,1)
                 r = [r, (1-r)]
+                if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+                    data_path.append(os.environ['MG5aMC_WWW']+'/package_info.dat')
+                    r.insert(0, 2)
 
 
 
@@ -5906,7 +5916,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 cluster_path = data_path[index]
                 try:
                     data = urllib.urlopen(cluster_path)
-                except Exception:
+                except Exception, error:
+                    misc.sprint(str(error), cluster_path)
                     continue
                 if data.getcode() != 200:
                     continue
@@ -7425,7 +7436,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.InvalidCmd('expected bool for notification_center')
         # True/False formatting
         elif args[0] in ['crash_on_error']:
-            tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            try:
+                tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            except Exception:
+                if args[1].lower() in ['never']:
+                    tmp = args[1].lower()
+                else: 
+                    raise
             self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
@@ -7478,6 +7495,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         noclean = '-noclean' in args
         force = '-f' in args
         nojpeg = '-nojpeg' in args
+        if '--noeps=True' in args:
+            nojpeg = True
         flaglist = []
                     
         if '--postpone_model' in args:

@@ -1,5 +1,17 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.5 (03/02/19)
+      OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
+      OM: Fix a bug in the computation of systematics when running with Python 2.6.
+      OM: import model PATH, where PATH does not exists yet, will now connect to the online db
+          if the model_name is present in the online db, then the model will be installed in the specified path.
+      MZ: Applgrid+aMCFast was broken for some processes (since 2.6.0), due to wrong 
+          information written into initial_states_map.dat. This has been fixed now
+      OM: change in the gridpack. It automatically runs the systematics.py (if configure in the run_card)
+      OM: Fix  a MLM crash occuring for p p > go go (0,1,2 j)
+      OM: Fix issue for BSM model with additional colored particle where the default dynamical scale choice 
+          was crashing
+
 2.6.4 (09/11/18)
       OM: add specific treatement for small width (at LO only and not for loop-induced)
           if the width is smaller than 1e-6 times the mass, a fake width (at that value) is used for the

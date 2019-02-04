@@ -1923,7 +1923,6 @@ class MultiProcess(base_objects.PhysicsObject):
 
         max_WEIGHTED_order = \
                         (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
-
         # get the definition of the WEIGHTED
         hierarchydef = process_definition['model'].get('order_hierarchy')
         tmp = []
@@ -1946,7 +1945,6 @@ class MultiProcess(base_objects.PhysicsObject):
             # failed_procs are processes that have already failed
             # based on crossing symmetry
             failed_procs = []
-            
             # Generate all combinations for the initial state        
             for prod in apply(itertools.product, isids):
                 islegs = [ base_objects.Leg({'id':id, 'state': False}) \
@@ -2020,13 +2018,13 @@ class MultiProcess(base_objects.PhysicsObject):
                     sorted_legs = sorted(legs.get_outgoing_id_list(model))
                     # Check if crossed process has already failed
                     # In that case don't check process
-                    if tuple(sorted_legs) in failed_procs:
+                    if tuple(sorted_legs) in failed_procs and not process_definition.get('forbidden_s_channels'):
                         continue
 
                     amplitude = Amplitude({'process': process})
                     try:
                         amplitude.generate_diagrams(diagram_filter=diagram_filter)
-                    except InvalidCmd:
+                    except InvalidCmd, error:
                         failed_procs.append(tuple(sorted_legs))
                     else:
                         if amplitude.get('diagrams'):
@@ -2035,7 +2033,6 @@ class MultiProcess(base_objects.PhysicsObject):
                             return {coupling: max_order_now}
                         else:
                             failed_procs.append(tuple(sorted_legs))
-
             # No processes found, increase max_order_now
             max_order_now += 1
             logger.setLevel(oldloglevel)

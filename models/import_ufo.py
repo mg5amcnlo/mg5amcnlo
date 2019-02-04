@@ -106,6 +106,11 @@ def get_model_db():
     r = random.randint(0,1)
     r = [r, (1-r)]
 
+    if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+        data_path.append(os.environ['MG5aMC_WWW']+'/models_db.dat')
+        r.insert(0, 2)
+
+
     for index in r:
         cluster_path = data_path[index]
         try:
@@ -123,6 +128,11 @@ def get_model_db():
 def import_model_from_db(model_name, local_dir=False):
     """ import the model with a given name """
 
+    if os.path.sep in model_name and os.path.exists(os.path.dirname(model_name)):
+        target = os.path.dirname(model_name)
+        model_name = os.path.basename(model_name)
+    else:
+        target = None
     data =get_model_db()
     link = None
     for line in data:
@@ -131,18 +141,29 @@ def import_model_from_db(model_name, local_dir=False):
             link = split[1]
             break
     else:
-        logger.debug('no model with that name found online')
+        logger.debug('no model with that name (%s) found online', model_name)
         return False
     
     #get target directory
-    # 1. PYTHONPATH containing UFO
+    # 1. PYTHONPATH containing UFO --only for omattelaer user
     # 2. models directory
-    target = None 
-    if 'PYTHONPATH' in os.environ and not local_dir:
+    
+    username = ''
+    if not target:
+        try:
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ]  
+        except Exception, error:
+            misc.sprint(str(error))
+            username = ''
+    if username in ['omatt', 'mattelaer', 'olivier'] and target is None and \
+                                    'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
-            if 'UFO' in os.path.basename(directory) and os.path.exists(directory) and\
-                    misc.glob('*/couplings.py', path=directory):
-                target= directory 
+            #condition only for my setup --ATLAS did not like it
+            if 'UFOMODEL' == os.path.basename(directory) and os.path.exists(directory) and\
+                misc.glob('*/couplings.py', path=directory) and 'matt' in directory:
+                target= directory
+                   
     if target is None:
         target = pjoin(MG5DIR, 'models')    
     try:

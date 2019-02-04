@@ -52,6 +52,8 @@ class ParamCardWriter(object):
             self.model = model_reader.ModelReader(model)
             self.model.set_parameters_and_couplings()
 
+        
+        assert self.model['parameter_dict']
 
         # Organize the data
         self.external = self.model['parameters'][('external',)]

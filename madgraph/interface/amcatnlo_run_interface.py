@@ -1120,6 +1120,9 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
+        if not misc.which('bc'):
+            return ['OFF']
+        
         if self.proc_characteristics['ninitial'] == 1:
             self.allowed_shower = ['OFF']
             return ['OFF']
@@ -1166,6 +1169,10 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['shower'] = 'OFF'
             return
         
+        if not misc.which('bc'):
+            logger.warning('bc command not available. Forbids to run the shower. please install it if you want to run the shower. (sudo apt-get install bc)')
+            self.switch['shower'] = 'OFF'
+            return
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
             self.switch['shower'] = self.run_card['parton_shower']  
