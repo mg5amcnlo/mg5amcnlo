@@ -54,12 +54,14 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
       ipart=ipdg
-      if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22) ipart=7
-      iporg=ipart
-
+      if(iabs(ipart).eq.21) then
+         ipart=0
+      else if(iabs(ipart).eq.22) then 
+         ipart=7
+      else if (iabs(ipart).eq.7) then
+         ipart=7
 c     This will be called for any PDG code, but we only support up to 7
-      if(iabs(ipart).gt.7)then
+      else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
      $    'variables to 0 in the run_card'  
@@ -68,6 +70,7 @@ c     This will be called for any PDG code, but we only support up to 7
          stop 1
       endif
 
+      iporg=ipart
 c     Determine the iset used in lhapdf
       call getnset(iset)
       if (iset.ne.1) then
