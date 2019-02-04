@@ -2234,8 +2234,10 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 arg = 'width'
             change_name = [p.name for (p,f) in parameters[1:]]
+            factor_for_name = [f for (p,f)  in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
-                                                       if p[arg] in change_name]
+                                                       if p[arg] in change_name and 
+                                                       factor_for_name[change_name.index(p[arg])]==1]
             
     def remove_interactions(self, zero_couplings):
         """ remove the interactions and particle counterterms 
