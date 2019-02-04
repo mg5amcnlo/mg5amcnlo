@@ -516,12 +516,11 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             found_soft_even_spin_particle = False
             for p in ii['particles']:
                 if p.get('mass').lower()=='zero':
-                    if p.get('spin')%2==0:
+                    if p.get('spin')%2==1:
                         found_soft_even_spin_particle = True
                         break
             if not found_soft_even_spin_particle:
                 continue
-
             
             # check that there is at least a massless particle, and that the 
             # remaining ones have the same mass 
