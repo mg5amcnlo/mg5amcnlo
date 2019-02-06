@@ -18,10 +18,15 @@ cd $rundir
 
 cp $basedir/gridsudgen_sep .
 
+# lower and upper bounds in st range:
 echo '1 7000' > in
+# lower and upper bounds in M range:
 echo '1 7000' >> in
+# Sudakov threshold:
 echo '0.001' >> in
+# Seed:
 echo '12' >> in
+# type, part and mass of this run:
 echo $itype $ipart $inxm >> in
 
 ./gridsudgen_sep <in
