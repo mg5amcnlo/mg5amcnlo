@@ -1422,7 +1422,7 @@ c
       xmasses2=-1d0
       dzones2=.true.
       call dire_get_stopping_info(xscales,xmasses)
-      call dire_get_deadzones(dzones)
+      call dire_get_dead_zones(dzones)
 c After the calls above, we have
 c   xscales(i,j)=t_ij
 c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
