@@ -1,0 +1,31 @@
+###########################################################################
+#$ -S /bin/bash
+#$ -q fermi,eulers,longrun
+#$ -t 1-1400
+#$ -V
+#$ -cwd
+###########################################################################
+# Set some important variables internal to this script.
+#
+
+inxm=$(((( SGE_TASK_ID - 1 ) % 50) + 1 ))
+ipart=$((((( SGE_TASK_ID - 1 ) / 50 ) % 7 )+ 1 ))
+itype=$(((( SGE_TASK_ID - 1 ) / 350) +1))
+
+basedir=$SGE_O_WORKDIR
+rundir=$TMPDIR/
+cd $rundir
+
+cp $basedir/gridsudgen_sep .
+
+echo '1 7000' > in
+echo '1 7000' >> in
+echo '0.001' >> in
+echo '12' >> in
+echo $itype $ipart $inxm >> in
+
+./gridsudgen_sep <in
+cp sudakov*.err $basedir/
+cp sudakov*.log $basedir/
+
+exit

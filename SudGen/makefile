@@ -11,6 +11,12 @@ testgrid: testgrid.f dfint.f kerset.f ps_interface.cc sudakov.f
 gridsudgen: gridsudgen.f dfint.f kerset.f ps_interface.cc 
 	gfortran -o gridsudgen gridsudgen.f dfint.f kerset.f ps_interface.cc -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8  -L$(DIRELIB) -Wl,-rpath $(DIRELIB) -ldire $(PYTHIA8FLAGS)
 
+gridsudgen_sep: gridsudgen_sep.f dfint.f kerset.f ps_interface.cc 
+	gfortran -o gridsudgen_sep gridsudgen_sep.f dfint.f kerset.f ps_interface.cc -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8  -L$(DIRELIB) -Wl,-rpath $(DIRELIB) -ldire $(PYTHIA8FLAGS)
+
+gridsudgen_fromlog: gridsudgen_fromlog.f dfint.f kerset.f ps_interface.cc 
+	gfortran -o gridsudgen_fromlog gridsudgen_fromlog.f dfint.f kerset.f ps_interface.cc -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8  -L$(DIRELIB) -Wl,-rpath $(DIRELIB) -ldire $(PYTHIA8FLAGS)
+
 gridsudgen_MPI: gridsudgen_MPI.f dfint.f kerset.f ps_interface.cc 
 	mpif77 -o gridsudgen_MPI gridsudgen_MPI.f dfint.f kerset.f ps_interface.cc  -L$(MPI_PATH)/lib/ -lmpi -I$(MPI_PATH)/include/ -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8  -L$(DIRELIB) -Wl,-rpath $(DIRELIB) -ldire $(PYTHIA8FLAGS)
 
