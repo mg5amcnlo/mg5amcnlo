@@ -1203,6 +1203,7 @@ cSF ARE noemProb AND mDipole USEFUL?
       double precision mcmass(21)
       double precision pysudakov,scalefunH,deltanum,deltaden,deltarat
       integer nG_S,nQ_S,i_dipole_counter,isudtype,relabel(nexternal)
+      integer i_dipole_dead_counter
 c
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -1562,6 +1563,7 @@ c fraction and SCALUP_tmp_S2, SCALUP_tmp_H2 scales, see also formula (5.62)
 c in Ellis-Stirling-Webber
       wgt_sudakov=1d0
       i_dipole_counter=0
+      i_dipole_dead_counter=0
       nG_S=0
       nQ_S=0
 c
@@ -1570,6 +1572,7 @@ c
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          do j=1,nexternal-1
             if(j.eq.i)cycle
+            if(xscales2(i,j).eq.-1d0)cycle
 cSF The following definition of startingScale is unprotected:
 cSF cstupp must be sufficiently large
             startingScale = min(SCALUP_tmp_S2(i,j),cstupp)
@@ -1577,14 +1580,17 @@ cSF cstupp must be sufficiently large
 c Passing the following if clause must be exceedingly rare
             if(startingScale.le.smallptupp)then
               write(*,*)'Warning in xmcsubt: startingScale, smallptupp'
-              startingScale=smallptupp
-c$$$              write(*,*)startingScale,smallptupp
+              write(*,*)startingScale,smallptupp
 c$$$              stop
+              startingScale=smallptupp
             endif
 c only colour-connected partons livezone and sensible scales
 c contribute to Delta
             if(xscales2(i,j).eq.-1d0.or.dzones2(i,j).or.
-     &         stoppingScale.gt.startingScale)cycle
+     &         stoppingScale.gt.startingScale)then
+               i_dipole_dead_counter=i_dipole_dead_counter+1
+               cycle
+            endif
             if(i.le.2.and.j.le.2)then
                isudtype=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -1634,9 +1640,9 @@ c
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
-      if(i_dipole_counter.ne.nQ_S+2*nG_S)then
-         write(*,*)'Mismatch in number of dipoles and Delta factors'
-         write(*,*)i_dipole_counter,nQ_S,nG_S
+      if(i_dipole_counter+i_dipole_dead_counter.ne.nQ_S+2*nG_S)then
+         write(*,*)'Mismatch in number of dipole ends and Delta factors'
+         write(*,*)i_dipole_counter+i_dipole_dead_counter,nQ_S,nG_S
          stop
       endif
 
