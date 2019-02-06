@@ -118,7 +118,7 @@ c$$$            if (inxm .le. 15) cycle
                write (cdum3,*) inxm
                filelog='sudakov_'//trim(adjustl(cdum1))//'_'
      $              //trim(adjustl(cdum2))//'_'//trim(adjustl(cdum3))
-     $              //'_.log'
+     $              //'.log'
 
                open(unit=iunit3,file=filelog,status='unknown')
                read(iunit3,'(a)') buff
