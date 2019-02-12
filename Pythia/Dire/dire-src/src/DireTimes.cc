@@ -1881,7 +1881,8 @@ double DireTimes::noEmissionProbability( double pTbegAll, double pTendAll,
       wt2=0.;
       wts.clear();
     }
-    if (nTrials%10==0) {
+    //if (nTrials%10==0) {
+    if (nTrials%10==0 && nTrials >= 100) {
       //double medianNow = findMedian(means);
       double medianNow = findMedian(medians);
       // Calculate the input for the median absolute deviation.
