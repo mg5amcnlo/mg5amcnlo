@@ -14,7 +14,7 @@
 
 using namespace std;
 
-namespace Pythia8 {
+using namespace pythia8;
 
 class Parameters_%(model_name)s
 {
@@ -32,7 +32,11 @@ void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches
 // Set couplings that are unchanged during the run
 void setIndependentCouplings();
 // Set parameters that are changed event by event
-void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
+//void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
+// TMP: hardcoded bogus implementation with no arguments since this
+// is being called from within the matrix elements.
+void setDependentParameters() {};
+
 // Set couplings that are changed event by event
 void setDependentCouplings();
 
@@ -45,10 +49,8 @@ void printDependentParameters();
 // Print couplings that are changed event by event
 void printDependentCouplings();
 
-
   private:
 static Parameters_%(model_name)s* instance;
 };
 
-} // end namespace Pythia8
 #endif // Pythia8_parameters_%(model_name)s_H
