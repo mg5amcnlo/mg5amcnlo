@@ -1313,9 +1313,11 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   if (acolTag > 0) getQCDdip( in1, acolTag, -1, state, dipEnds);
 
   // Set output.
-  double wt(0.);
+  double wt(0.), wt2(0.);
   int nTrialsMax(5000), nTrials(0);
   vector<double> means;
+  vector<double> wts;
+  vector<double> medians;
 
   for (int i=0; i < nTrialsMax; ++i) {
 
@@ -1369,19 +1371,35 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
 
     nTrials++;
     wt += wtnow;
+    wt2 += wtnow;
+    wts.push_back(wtnow);
 
     // Stop if the median of the Sudakov is stable.
-    double mean = wt/double(nTrials);
-    means.push_back(mean);
-    if (nTrials%10==0) {
-      double medianNow = findMedian(means);
+    //double mean = wt/double(nTrials);
+    //means.push_back(mean);
+    if (nTrials%20==0 && nTrials > 0) { 
+      double mean = wt2/20.;
+      means.push_back(mean);
+      medians.push_back(findMedian(wts));
+      wt2=0.;
+      wts.clear();
+    }
+    if (nTrials%10==0 && nTrials >= 100) {
+      //double medianNow = findMedian(means);
+      double medianNow = findMedian(medians);
       // Calculate the input for the median absolute deviation.
       vector<double> diff2median;
-      for (size_t im=0; im< means.size(); ++im)
-       diff2median.push_back(abs(means[im]-medianNow));
+      //for (size_t im=0; im< means.size(); ++im)
+      // diff2median.push_back(abs(means[im]-medianNow));
+      for (size_t im=0; im< medians.size(); ++im)
+       diff2median.push_back(abs(medians[im]-medianNow));
       // Calculate the median absolute deviation and stop if it's very small.
       double MAD = findMedian(diff2median);
-      if (MAD/medianNow < 1e-4) break;
+
+cout << scientific << setprecision(6) << nTrials << " median=" << medianNow << " MAD=" << MAD << endl; 
+
+      //if (MAD/medianNow < 1e-4) break;
+      if (MAD/medianNow < 0.2) break;
 
       // Stop if Sudakov is very likely vanishing.
       if ( medianNow < settingsPtr->parm("Dire:Sudakov:Min")) break;
@@ -1393,7 +1411,8 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
   //cout << scientific << setprecision(6) << nTrials << " " << wt/nTrials << " " << findMedian(means) << endl;
 
   //wt /= nTrials;
-  wt = findMedian(means);
+  //wt = findMedian(means);
+  wt = findMedian(medians);
   if (wt < settingsPtr->parm("Dire:Sudakov:Min")) wt = 0.;
 
   beamAPtr->clear();

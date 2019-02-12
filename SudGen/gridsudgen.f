@@ -75,17 +75,23 @@ c
       open(unit=iunit2,file='sudakov.err',status='unknown')
 
       write(*,*)'enter lower and upper bounds of st range'
-      read(*,*)stlow,stupp
+c      read(*,*)stlow,stupp
+      stlow=5.0
+      stupp=1000.0
       write(*,*)'enter lower and upper bounds of M range'
-      read(*,*)xmlow,xmupp
+c      read(*,*)xmlow,xmupp
+      xmlow=1000.0
+      xmupp=1001.0
       write(*,*)'enter Sudakov lower threshold'
       write(*,*)' Sudakov will be set to zero if below threshold'
-      read(*,*)xlowthrs
+c      read(*,*)xlowthrs
+      xlowthrs=0.0001
 
       write(*,*)'enter -1 to use Pythia default seed'
       write(*,*)'       0 to use Pythia timestamp'
       write(*,*)'       >=1 to use random seeds'
-      read(5,*)ifk88seed
+c      read(5,*)ifk88seed
+      ifk88seed=-1
 
 c Discard first (tends to be extremely small)
       if(ifk88seed.ge.1)rnd=fk88random(ifk88seed)
@@ -113,7 +119,7 @@ c        if (itype .ne. 3) cycle
         write(iunit1,*)'===>Doing itype=',itype
         write(iunit2,*)'===>Doing itype=',itype
         do ipart=1,npart
-c          if (ipart .ne. 7) cycle
+          if (ipart .ne. 7) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart
@@ -595,10 +601,10 @@ c
       call dire_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
-      write(iunit,*) 'md=', md, ' start=', stupp,
-     #           ' stop=', stlow, ' --> sud=', temp
-c      write(*,*) 'md=', md, ' start=', stupp,
+c      write(iunit,*) 'md=', md, ' start=', stupp,
 c     #           ' stop=', stlow, ' --> sud=', temp
+      write(*,*) 'md=', md, ' start=', stupp,
+     #           ' stop=', stlow, ' --> sud=', temp
 c
       return
       end
