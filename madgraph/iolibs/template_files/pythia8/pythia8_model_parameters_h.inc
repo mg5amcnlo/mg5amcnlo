@@ -14,7 +14,7 @@
 
 using namespace std;
 
-using namespace pythia8;
+using namespace Pythia8;
 
 class Parameters_%(model_name)s
 {
