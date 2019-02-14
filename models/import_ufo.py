@@ -1940,6 +1940,7 @@ class RestrictModel(model_reader.ModelReader):
                 logger.debug('coupling with small value %s: %s treated as zero' %
                              (name, value))
                 zero_coupling.append(name)
+                continue
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 

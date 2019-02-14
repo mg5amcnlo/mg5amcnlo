@@ -3081,6 +3081,14 @@ This implies that with decay chains:
                   " can only be given on one type of coupling and either on"+\
                                " squared orders or amplitude orders, not both.")
 
+            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                logger.warning('''Computation of interference term with decay is not 100% validated.  
+                Please check carefully your result.
+                One suggestion is also to compare the generation of your process with and without
+                set group_subprocesses True
+                (to write Before the generate command)
+                ''')
+
             cpu_time1 = time.time()
 
             # Generate processes
