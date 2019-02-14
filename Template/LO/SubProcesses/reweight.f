@@ -399,7 +399,7 @@ c       exotic q >  q' gluon
 c       exotic q > gluon q'
         ipart(1,imo)=ipart(1,ida1)
         ipart(2,imo)=0
-      else if (get_color(idmo).eq.1.or.get_color(idmo).eq.2) then
+      else if (get_color(idmo).eq.1.or.get_color(idmo).eq.2.or.get_color(idda1).eq.2.or.get_color(idda2).eq.2) then
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
          ipart(2,imo)=ipart(1,ida2)
