@@ -5834,7 +5834,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
                           'maddm':['arXiv:1505.04190'],
-                          'maddump':['arXiv:1806.xxxxx']}
+                          'maddump':['arXiv:1812.06771']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -8169,6 +8169,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd('output %s -f' % decay_dir,child=False)
+                
+                #modify some parameter of the default run_card
+                run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))
+                if run_card['ickkw']:
+                    run_card['ickkw'] = 0
+                    run_card['xqcut'] = 0
+                    run_card.remove_all_cut()
+                    run_card.write(pjoin(decay_dir,'Cards','run_card.dat'))
+                
                 # Need to write the correct param_card in the correct place !!!
                 if os.path.exists(opts['output']):
                     files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
