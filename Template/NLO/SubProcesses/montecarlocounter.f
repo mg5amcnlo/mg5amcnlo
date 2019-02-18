@@ -1517,26 +1517,31 @@ c jc is the parton connected to the anti-colour of i_fks
       enddo
       icount=icount_i+icount_j
 c Checks
-      if(pdg_type(i_fks).eq.21.and.ic.ne.j_fks.and.jc.ne.j_fks)then
-         write(*,*)'Incorrect colour information 1 in complete_xmcsubt'
-         write(*,*)i_fks,j_fks,ic,jc
-         stop
-      endif
-      if(pdg_type(i_fks).eq.21.and.(ic.eq.-1.or.jc.eq.-1))then
-         write(*,*)'Incorrect colour information 2 in complete_xmcsubt'
-         write(*,*)i_fks,ic,jc
-         stop
-      endif
-      if(abs(pdg_type(i_fks)).le.6.and.
-     &   ((ic.ne.-1.and.jc.ne.-1).or.(ic.eq.-1.and.jc.eq.-1)))then
-         write(*,*)'Incorrect colour information 3 in complete_xmcsubt'
-         write(*,*)i_fks,ic,jc
-         stop
-      endif
-      if(pdg_type(i_fks).eq.21.and.
-     &   (xscales(ic,jc).eq.-1d0.or.xscales(jc,ic).eq.-1d0))then
-         write(*,*)'Incorrect colour information 4 in complete_xmcsubt'
-         write(*,*)i_fks,ic,jc,xscales(ic,jc),xscales(jc,ic)
+      if(pdg_type(i_fks).eq.21) then
+         if (ic.ne.j_fks .and. jc.ne.j_fks) then
+            write(*,*)'Incorrect colour information 1 in '/
+     $           /'complete_xmcsubt'
+            write(*,*)i_fks,j_fks,ic,jc
+            stop
+         endif
+         if(ic.eq.-1.or.jc.eq.-1)then
+            write(*,*)'Incorrect colour information 2 in '/
+     $           /'complete_xmcsubt'
+            write(*,*)i_fks,ic,jc
+            stop
+         endif
+         if(xscales(ic,jc).eq.-1d0.or.xscales(jc,ic).eq.-1d0)then
+            write(*,*)'Incorrect colour information 4 in '/
+     $           /'complete_xmcsubt'
+            write(*,*)i_fks,ic,jc,xscales(ic,jc),xscales(jc,ic)
+         endif
+      elseif(abs(pdg_type(i_fks)).le.6) then
+         if ((ic.ne.-1.and.jc.ne.-1).or.(ic.eq.-1.and.jc.eq.-1))then
+            write(*,*)'Incorrect colour information 3 in '/
+     $           /'complete_xmcsubt'
+            write(*,*)i_fks,ic,jc
+            stop
+         endif
       endif
 c Assign identical shower scale to i_fks and to j_fks.
 c The coded scale is the t_ij value of the colour line that emitted i_fks,
@@ -1547,14 +1552,25 @@ c alternatives is left for future work
          SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
          SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
       elseif(abs(pdg_type(i_fks)).le.6)then
-         do i=1,nexternal
-            if(i.eq.i_fks)cycle
-            if(ic.ne.-1.and.xscales(ic,i).ne.-1d0)SCALUP_tmp_H(i_fks,ic)=xscales(ic,i)
-            if(jc.ne.-1.and.xscales(jc,i).ne.-1d0)SCALUP_tmp_H(i_fks,jc)=xscales(jc,i)
-         enddo
+         if(ic.ne.-1) then
+            do i=1,nexternal
+               if(i.eq.i_fks)cycle
+               if (xscales(ic,i).ne.-1d0) then
+                  SCALUP_tmp_H(i_fks,ic)=xscales(ic,i)
+                  SCALUP_tmp_H(j_fks,ic)=SCALUP_tmp_H(i_fks,ic)
+               endif
+            enddo
+         endif
+         if(jc.ne.-1) then
+            do i=1,nexternal
+               if(i.eq.i_fks)cycle
+               if (xscales(jc,i).ne.-1d0) then
+                  SCALUP_tmp_H(i_fks,jc)=xscales(jc,i)
+                  SCALUP_tmp_H(j_fks,jc)=SCALUP_tmp_H(i_fks,jc)
+               endif
+            enddo
+         endif
       endif
-      SCALUP_tmp_H(j_fks,ic)=SCALUP_tmp_H(i_fks,ic)
-      SCALUP_tmp_H(j_fks,jc)=SCALUP_tmp_H(i_fks,jc)
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
 c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
