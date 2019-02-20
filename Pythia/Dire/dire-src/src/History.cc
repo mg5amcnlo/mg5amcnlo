@@ -5,6 +5,7 @@
 
 #include "Dire/DireSpace.h"
 #include "Dire/DireTimes.h"
+#include <ctime>
 
 namespace Pythia8 {
 
@@ -142,7 +143,8 @@ MyHistory::MyHistory( int depth,
       isr(isrIn),
       coupSMPtr(coupSMPtrIn),
       psweights(psweightsIn),
-      doSingleLegSudakovs(mergingHooksPtr->settingsPtr->flag("Dire:doSingleLegSudakovs"))
+      doSingleLegSudakovs(mergingHooksPtr->settingsPtr->flag("Dire:doSingleLegSudakovs")),
+      doAuxInfo(mergingHooksPtr->settingsPtr->flag("Dire:doAuxMergingInfo"))
     {
 
   // Initialize.
@@ -164,10 +166,10 @@ MyHistory::MyHistory( int depth,
   if (false) cout << isAllowedOrdering;
 
   // Initialise beam particles
-  setupBeams();
+  if (doAuxInfo) setupBeams();
 
   // Update probability with PDF ratio
-  if (mother && mergingHooksPtr->includeRedundant()) {
+  if (mother && doAuxInfo && mergingHooksPtr->includeRedundant()) {
     double pdfFac    = pdfForSudakov();
     clusterProb     *= pdfFac;
     prodOfProbs     *= pdfFac;
@@ -201,11 +203,11 @@ MyHistory::MyHistory( int depth,
   vector<MyClustering> clusterings;
   if ( depth > 0 ) clusterings = getAllClusterings(state);
 
-  if ( clusterings.empty() ) {
+  if ( clusterings.empty() && doAuxInfo) {
     hasMEweight = psweights->hasME(state);
     if (hasMEweight) MECnum = psweights->getME(state);
     else MECnum    = hardProcessME(state);
-  } else {
+  } else if (doAuxInfo) {
     // Check if fixed-order ME calculation for this state exists.
     hasMEweight = psweights->hasME(state);
     // Calculate ME
@@ -246,7 +248,7 @@ MyHistory::MyHistory( int depth,
     // Additional ordering requirement between shower starting scale and
     // scale of first emission.
     //if ( mergingHooksPtr->orderHistories() ) 
-      isOrdered = isOrdered && (scale < hardStartScale(state) );
+    //  isOrdered = isOrdered && (scale < hardStartScale(state) );
 
     if ( mergingHooksPtr->orderHistories()
       || ( mergingHooksPtr->settingsPtr->flag("Dire:doMOPS")
@@ -254,6 +256,7 @@ MyHistory::MyHistory( int depth,
       isOrdered = isOrdered && (scale < hardStartScale(state) );
 
     registerPath( *this, isOrdered, isAllowed, depth == 0 );
+
     return;
   }
 
@@ -294,7 +297,7 @@ MyHistory::MyHistory( int depth,
       allowed = false;
     }
 
-    pair <double,double> probs = getProb(*it->second);
+    pair <double,double> probs = (doAuxInfo) ? getProb(*it->second) : make_pair(1.,1.);
 
     // Perform the clustering and recurse and construct the next
     // history node.
@@ -303,6 +306,7 @@ MyHistory::MyHistory( int depth,
            infoPtr, showers, fsr, isr, psweights, coupSMPtr, ordered, allowed,
            true, true, probs.second, probs.first*abs(probs.second)*prodOfProbs,
            probs.first*probs.second*prodOfProbsFull, this ));
+
   }
 }
 
@@ -3021,6 +3025,8 @@ double MyHistory::hardRenScale(const Event& event) {
 
 double MyHistory::hardStartScale(const Event& event) {
 
+  if (!doAuxInfo) return 1e15;
+
   // Starting scale of initial state showers.
   map<string,double> stateVarsISR;
 
@@ -3659,6 +3665,9 @@ vector<MyClustering> MyHistory::getAllClusterings( const Event& event) {
 
 void MyHistory::attachClusterings (vector<MyClustering>& clus, int iEmt, int iRad,
     int iRec, int iPartner, double pT, string name, const Event& event) {
+
+  //Do nothing for unphysical clustering.
+  if (pT <= 0.) return;
 
   if ( !mergingHooksPtr->doWeakClustering() ) {
 

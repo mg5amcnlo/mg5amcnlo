@@ -7050,6 +7050,16 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
     ret.insert(make_pair("couplingType",-1));
     ret.insert(make_pair("couplingValue",-1.));
 
+    int nFinalCol(0);
+    for (int i=0; i<state.size(); ++i) if (state[i].isFinal() && state[i].colType() != 0) nFinalCol++;
+    if (nFinalCol ==0) {
+      stringstream oss;
+      oss << "scalePDF-" << 3
+           << "-"        << 4;
+      ret.insert(make_pair(oss.str(), abs(2.*state[3].p()
+                                            *state[4].p())));
+    } else {
+
     // Find the shower starting scale.
     // Find positions of incoming colliding partons.
     int in1(3), in2(4);
@@ -7089,6 +7099,9 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
            << "-"        << dipEnds[iDip].iRecoiler;
       ret.insert(make_pair(oss.str(),m2));
     }
+
+    }
+
   }
 
   return ret; 

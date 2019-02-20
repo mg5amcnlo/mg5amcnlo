@@ -97,6 +97,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doMerging",false);
   pythia.settings.addFlag("Dire:doGenerateSubtractions",false);
   pythia.settings.addFlag("Dire:doGenerateMergingWeights",false);
+  pythia.settings.addFlag("Dire:doAuxMergingInfo",true);
   pythia.settings.addFlag("Dire:doMECs",false);
   pythia.settings.addFlag("Dire:doMOPS",false);
   pythia.settings.addFlag("Dire:doMcAtNloDelta",false);
@@ -104,6 +105,7 @@ void Dire::initSettings( Pythia& pythia ) {
   pythia.settings.addFlag("Dire:doExitAfterMerging",false);
   pythia.settings.addParm("Dire:pTminMECs",1.0,false,false,0.0,1e10);
   pythia.settings.addMode("Dire:nFinalMaxMECs",-1,true,false,-1,100000000);
+  pythia.settings.addMode("Dire:maxClusteringSteps",-1,true,false,-1,100000000);
 
   // Teach Pythia MG5 inputs for external MEs
   pythia.settings.addWord("Dire:MG5card", "");

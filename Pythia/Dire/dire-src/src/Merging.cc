@@ -5,6 +5,8 @@
 #include "Dire/DireSpace.h"
 #include "Dire/DireTimes.h"
 
+#include <ctime>
+
 namespace Pythia8 {
 
 //==========================================================================
@@ -510,18 +512,8 @@ if (process[ig].idAbs() < 9 && process[3].id() != 21) w1= 1.;
 
 int MyMerging::mergeProcess(Event& process){
 
-    // Clear all previous event-by-event information.
-    clearInfos();
-//stoppingScalesSave.clear();
-//stoppingScalesSave.push_back(-1.0);
-//stoppingScalesSave.push_back(1.0);
-//stoppingScalesSave.push_back(2.0);
-//stoppingScalesSave.push_back(3.0);
-
-//  int ig =0;
-//  for (int i = process.size()-1; i > 0; --i)
-//    if (process[i].colType() != 0) { ig = i; break; }
-//  if (process[ig].id() != 21) return 0;
+  // Clear all previous event-by-event information.
+  clearInfos();
 
   int vetoCode = 1;
 
@@ -615,16 +607,7 @@ int MyMerging::mergeProcess(Event& process){
     // Set number of requested partons.
     if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
       settingsPtr->mode("Merging:nRequested", nPartons);
-
-
-
-
-
-
-
     settingsPtr->mode("Merging:nRequested", nPartons);
-
-
     mergingHooksPtr->hasJetMaxLocal  = false;
     mergingHooksPtr->nJetMaxLocal
       = mergingHooksPtr->nJetMaxSave;
@@ -652,14 +635,10 @@ int MyMerging::mergeProcess(Event& process){
     //double RNpath(rndmPtr->flat());
     bool useAll = settingsPtr->flag("Dire:doMOPS");
 
-//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
-
     double RNpath = getPathIndex(useAll);
     if ( (settingsPtr->flag("Dire:doMOPS") && returnCode > 0)
       || settingsPtr->flag("Dire:doGenerateMergingWeights") )
       returnCode = calculateWeights(RNpath, useAll);
-
-//cout << __PRETTY_FUNCTION__ << " " << __LINE__ << endl;
 
     //if (!generateHistories(process) ) return -1;
     //return calculateWeights(rndmPtr->flat());
@@ -1664,8 +1643,6 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
 
 bool MyMerging::generateHistories( const Event& process) {
 
-//  process.list();
-
   // Input not valid.
   if (!validEvent(process)) {
     cout << "Warning in MyMerging::generateHistories: Input event "
@@ -1697,10 +1674,13 @@ bool MyMerging::generateHistories( const Event& process) {
   // Calculate number of clustering steps
   int nSteps = mergingHooksPtr->getNumberOfClusteringSteps( newProcess, true);
 
+  int nmax = settingsPtr->mode("Dire:maxClusteringSteps");
+  int depth = (nmax> 0) ? min(nSteps,nmax) : nSteps;
+
   // Set dummy process scale.
   newProcess.scale(0.0);
   // Generate all histories
-  myHistory = new MyHistory( nSteps, 0.0, newProcess, MyClustering(), mergingHooksPtr,
+  myHistory = new MyHistory( depth, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
             trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
@@ -1979,7 +1959,6 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
 
   if (settingsPtr->flag("Dire:doMcAtNloDelta"))
     depth = (nSteps>0) ? 1 : 0;
-
 
   if (!useAll) {
 

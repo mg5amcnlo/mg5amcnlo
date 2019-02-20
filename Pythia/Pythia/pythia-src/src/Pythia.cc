@@ -1802,9 +1802,11 @@ bool Pythia::next() {
     // Possibility to perform matrix element merging for this event.
     if (doMerging) {
       int veto = mergingPtr->mergeProcess( process );
+
       // Apply possible merging scale cut.
       if (veto == -1) {
         hasVetoed = true;
+
         if (abortIfVeto) return false;
         continue;
       // Exit because of vanishing no-emission probability.

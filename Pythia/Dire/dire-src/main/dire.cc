@@ -394,6 +394,7 @@ int main( int argc, char* argv[] ){
   bool had = pythiaPtr.front()->flag("HadronLevel:all");
   bool rem = pythiaPtr.front()->flag("PartonLevel:Remnants");
   bool chk = pythiaPtr.front()->flag("Check:Event");
+  bool abt = pythiaPtr.front()->flag("Check:abortIfVeto");
   if (!visualize_event) {
     for (int i = 0; i < int(pythiaPtr.size()); ++i) {
       pythiaPtr[i]->settings.flag("PartonLevel:FSR",false);
@@ -402,6 +403,7 @@ int main( int argc, char* argv[] ){
       pythiaPtr[i]->settings.flag("HadronLevel:all",false);
       pythiaPtr[i]->settings.flag("PartonLevel:Remnants",false);
       pythiaPtr[i]->settings.flag("Check:Event",false);
+      pythiaPtr[i]->settings.flag("Check:abortIfVeto",false);
     }
   }
 
@@ -413,7 +415,7 @@ int main( int argc, char* argv[] ){
     pythiaPtr[i]->init();
 
   // Cross section estimate run.
-  int nAcceptedEst(0);
+  int nAcceptedEst(0), nAbortedEst(0);
   vector<double> nash, sumsh;
   for (int i = 0; i < int(pythiaPtr.size()); ++i) {
     nash.push_back(0.);
@@ -425,6 +427,10 @@ int main( int argc, char* argv[] ){
     int intRN = int(RN*pythiaPtr.size());
     if (intRN == int(pythiaPtr.size())) continue;
     if ( !pythiaPtr[intRN]->next() ) {
+      nAbortedEst++;
+      cout << "Warning: Aborted event in cross section estimation."
+           << " Number of rejected events so far: " << nAbortedEst << endl;
+      if (nAbortedEst >= nEventEst) break;
       if ( pythiaPtr[intRN]->info.atEndOfFile() ) break;
         else continue;
     }
@@ -523,6 +529,7 @@ int main( int argc, char* argv[] ){
     pythiaPtr[i]->settings.flag("PartonLevel:MPI",mpi);
     pythiaPtr[i]->settings.flag("PartonLevel:Remnants",rem);
     pythiaPtr[i]->settings.flag("Check:Event",chk);
+    pythiaPtr[i]->settings.flag("Check:abortIfVeto",abt);
   }
 
   // Reinitialize Pythia for event generation runs.
@@ -533,12 +540,16 @@ int main( int argc, char* argv[] ){
   double wmin = 1e15;
 
   // Event generation run.
-  int nAccepted(0);
+  int nAccepted(0), nAborted(0);
   while( nAccepted < nEvent ){
     double RN = pythiaPtr.front()->rndm.flat();
     int intRN = int(RN*pythiaPtr.size());
     if (intRN == int(pythiaPtr.size())) continue;
     if ( !pythiaPtr[intRN]->next() ) {
+      nAborted++;
+      cout << "Warning: Aborted event in event generation."
+           << " Number of rejected events so far: " << nAborted << endl;
+      if (nAborted >= nEvent) break;
       if ( pythiaPtr[intRN]->info.atEndOfFile() ) break;
       else continue;
     }

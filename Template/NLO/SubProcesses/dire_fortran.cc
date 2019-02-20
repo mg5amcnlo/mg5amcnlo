@@ -2,6 +2,7 @@
 #include "Pythia8/Pythia.h"
 #include "Dire/Dire.h"
 #include "fstream"
+#include <ctime>
 
 using namespace std;
 using namespace Pythia8;
@@ -502,6 +503,7 @@ extern "C" {
     //pythia4dire.readString("Dire:doGenerateMergingWeights   = on");
     //pythia4dire.readString("Dire:doGenerateSubtractions     = on");
     pythia4dire.readString("Dire:doMcAtNloDelta             = on");
+    pythia4dire.readString("Dire:doAuxMergingInfo           = off");
     //pythia4dire.readString("Dire:doSingleLegSudakovs        = on");
     pythia4dire.readString("1:m0 = 0.0");
     pythia4dire.readString("2:m0 = 0.0");
@@ -577,7 +579,6 @@ extern "C" {
       pythia4dire.init();
     }
     pythia4dire.next();
-	
     ++iEvent4dire;
   }
 
