@@ -781,10 +781,13 @@ class UFOMG5Converter(object):
                         particle.set('line', value)
                 elif key == 'propagator':
                     if value:
-                        if aloha.unitary_gauge:
-                            particle.set(key, str(value[0]))
-                        else: 
-                            particle.set(key, str(value[1]))
+                        if isinstance(value, list):
+                            if aloha.unitary_gauge:
+                                particle.set(key, str(value[0]))
+                            else: 
+                                particle.set(key, str(value[1]))
+                        else:
+                            particle.set(key, str(value))
                     else:
                         particle.set(key, '')
                 else:

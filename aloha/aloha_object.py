@@ -1037,7 +1037,7 @@ class EPSL(aloha_lib.FactoryLorentz):
 # EPSTR (transverse part of the epsilon normmalized to avoid denominator -- one of the eigenstate)
 #        Real part
 #===============================================================================
-class L_EPSPLUSR(aloha_lib.LorentzObject):
+class L_EPSTR(aloha_lib.LorentzObject):
     """ eps^mu_+ (polarization vector) 
         (0, -kx kz + i ky k_T , -ky kz, -i kx k_T, k_T^2)
         real part:
@@ -1060,13 +1060,12 @@ class L_EPSPLUSR(aloha_lib.LorentzObject):
 
     
         kT = (p1**2+p2**2)
-        a = 1/cmath.sqrt(2)
 
         eps = {
             (0,): 0,
-            (1,): -a*p1*p3,
-            (2,):  -a*p2*p3,
-            (3,):  kT ,
+            (1,): p1*p3,
+            (2,): p2*p3,
+            (3,):  -kT ,
             }
 #        eps = {
 #            (0,): norm-E*E,
@@ -1080,7 +1079,7 @@ class L_EPSPLUSR(aloha_lib.LorentzObject):
 
 class EPSTR(aloha_lib.FactoryLorentz):
 
-    object_class = L_EPSPLUSR
+    object_class = L_EPSTR
     
     @classmethod
     def get_unique_name(self, lor1, particle):
@@ -1113,13 +1112,11 @@ class L_EPSTI(aloha_lib.LorentzObject):
         p2 = aloha_lib.DVariable('P%s_2' % self.particle)
  #       p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
 
-        a = 1/cmath.sqrt(2)
-#        kT = (p1**2+p2**2)
 
         eps = {
             (0,): 0,
-            (1,): complex(0,a)*p2,
-            (2,):  complex(0,-a)*p1,
+            (1,): -p2,
+            (2,): p1,
             (3,):  0 ,
             }
 #        eps = {
