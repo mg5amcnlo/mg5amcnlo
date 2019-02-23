@@ -917,7 +917,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
+        if any([any([tag.startswith('L') for tag in d[1]]) for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False

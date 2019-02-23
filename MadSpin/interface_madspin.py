@@ -1443,8 +1443,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event,production in enumerate(orig_lhe):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
-            if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
+            if curr_event and self.efficiency:# and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+            else:
+                logger.info("next event [%s]", time.time()-start)
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
@@ -1577,6 +1579,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
+            misc.sprint(ave_weight, std_weight)
             base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                 
             if all_maxwgt[1] > base_max_weight:

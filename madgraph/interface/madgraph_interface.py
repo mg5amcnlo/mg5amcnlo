@@ -4687,7 +4687,6 @@ This implies that with decay chains:
                         polarization += [-1]
                     elif p in ["A",'a']:
                         polarization += [99]
-                        raise Exception("Not yet supported")
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
 

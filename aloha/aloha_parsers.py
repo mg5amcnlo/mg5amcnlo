@@ -205,7 +205,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
     aloha_object = ['P','Gamma','Gamma5','Sigma','Mass','PSlash',
                     'OverMass2','Width','Scalar','Spinor','Vector',
                     'Spin2','Spin32','C','Epsilon','Metric','Identity',
-                    'ProjM','ProjP','Coup']
+                    'ProjM','ProjP','Coup','Norm', 'EPSL', 'EPSTR', 'EPSTI', 'PT']
 
     def p_expression_pi(self, p):
         '''expression : PI'''

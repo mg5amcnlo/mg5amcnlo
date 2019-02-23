@@ -308,6 +308,10 @@ in presence of majorana particle/flow violation"""
                 elif propa == []:
                     massless = False
                     self.denominator = None
+                #elif propa == ['L']:
+                #    lorentz *= VectorPropagatorL(id, 'I2', id)
+                #    self.denominator = None
+                #    continue
                 else:
                     lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
@@ -431,10 +435,23 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        propagator = getattr(self.model.propagators, propa)
-        numerator = propagator.numerator
-        denominator = propagator.denominator      
+        misc.sprint(propa)
+        if propa not in  ["L", "T", "A"]:
+            propagator = getattr(self.model.propagators, propa)
+            numerator = propagator.numerator
+            denominator = propagator.denominator      
+        elif propa == "L":
+            numerator = "EPSL(1,id) * EPSL(2,id)"
+            denominator = "Norm(id) *Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "T":
+            numerator = "Norm(id) * EPSTI(1,id)*EPSTI(2,id) - EPSTR(1,id)*EPSTR(2,id)"
+            denominator = "Norm(id) * PT(id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "A":
+            numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
+            denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
 
+        misc.sprint(numerator)
+        misc.sprint(denominator)
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
         if spin in [1,-1]:
@@ -475,7 +492,10 @@ in presence of majorana particle/flow violation"""
         
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
-            denominator = self.mod_propagator_expression(tag, denominator)      
+            denominator = self.mod_propagator_expression(tag, denominator)  
+            
+        misc.sprint(numerator)
+        misc.sprint(denominator)     
         numerator = self.parse_expression(numerator, needPflipping)
         
         if denominator:
@@ -483,7 +503,9 @@ in presence of majorana particle/flow violation"""
             self.denominator = eval(self.denominator)
             if not isinstance(self.denominator, numbers.Number):
                 self.denominator = self.denominator.simplify().expand().simplify().get((0,))
-                
+              
+        misc.sprint(numerator)
+        misc.sprint(denominator)  
         if spin ==4:
             return eval(numerator) * propaR
         else:

@@ -220,6 +220,61 @@ class OverMass2(aloha_lib.FactoryLorentz):
         return '_OM2_%s' % particle
 
 #===============================================================================
+# Norm
+#===============================================================================
+class L_Norm(aloha_lib.LorentzObject):
+    """ Helas Object for 1/M**2 """
+      
+    def __init__(self, name, particle):
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self, name, [], [] )
+    
+    def create_representation(self):
+        #p0 = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        p3 = aloha_lib.DVariable('P%s_3' % self.particle) 
+
+        self.representation = aloha_lib.LorentzObjectRepresentation(
+                                p1*p1+p2*p2+p3*p3, self.lorentz_ind, self.spin_ind)
+
+class Norm(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Norm
+    
+    @classmethod
+    def get_unique_name(self, particle):
+        return '_NORM_%s' % particle
+
+#===============================================================================
+# PT
+#===============================================================================
+class L_PT(aloha_lib.LorentzObject):
+    """ Helas Object for PT**2 """
+      
+    def __init__(self, name, particle):
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self, name, [], [] )
+    
+    def create_representation(self):
+        #p0 = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+
+        self.representation = aloha_lib.LorentzObjectRepresentation(
+                                p1*p1+p2*p2, self.lorentz_ind, self.spin_ind)
+
+class PT(aloha_lib.FactoryLorentz):
+    
+    object_class = L_PT
+    
+    @classmethod
+    def get_unique_name(self, particle):
+        return '_PT_%s' % particle
+
+
+
+#===============================================================================
 # Width
 #===============================================================================
 class L_Width(aloha_lib.LorentzObject):
@@ -928,7 +983,162 @@ class ProjP(aloha_lib.FactoryLorentz):
     def get_unique_name(self, spin1, spin2):
         
         return 'PROJP_%s_%s' % (spin1, spin2)
+
+#===============================================================================
+# EPSL (longitudinal part of the epsilon normmaized to avoid denominator)
+#===============================================================================
+class L_EPSL(aloha_lib.LorentzObject):
+    """ eps^mu_L (polarization vector) 
+        (kx**2+ky**2+kz**2, E*kz, E*ky, E*kz)
+        the normalization 1/m *|\vec{k} is NOT include
+    
+    """
+    
+    def __init__(self, name, lor1, particle):
         
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [lor1], [])
+    
+    def create_representation(self):
+        """create representation"""
+        E = aloha_lib.DVariable('P%s_0' % self.particle)
+        m = aloha_lib.DVariable('M%s' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+
+    
+        norm = (p1**2+p2**2+p3**2)
+        eps = {
+            (0,): norm,
+            (1,): p1*E,
+            (2,): p2*E ,
+            (3,): p3*E ,
+            }
+#        eps = {
+#            (0,): norm-E*E,
+#            (1,): 0,
+#            (2,): 0 ,
+#            (3,): 0 ,
+#            }
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(eps,
+                                self.lorentz_ind,self.spin_ind)
+
+class EPSL(aloha_lib.FactoryLorentz):
+
+    object_class = L_EPSL
+    
+    @classmethod
+    def get_unique_name(self, lor1, particle):
+        return '_EPSL%s_%s_' % (particle, lor1)
+
+#===============================================================================
+# EPSTR (transverse part of the epsilon normmalized to avoid denominator -- one of the eigenstate)
+#        Real part
+#===============================================================================
+class L_EPSPLUSR(aloha_lib.LorentzObject):
+    """ eps^mu_+ (polarization vector) 
+        (0, -kx kz + i ky k_T , -ky kz, -i kx k_T, k_T^2)
+        real part:
+        1/sqrt(2) * (0, -kx kz , -ky kz, k_T^2)
+        the normalization 1/k_T / norm(k) is NOT include
+    
+    """
+    
+    def __init__(self, name, lor1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [lor1], [])
+    
+    def create_representation(self):
+        """create representation"""
+#        E = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+
+    
+        kT = (p1**2+p2**2)
+        a = 1/cmath.sqrt(2)
+
+        eps = {
+            (0,): 0,
+            (1,): -a*p1*p3,
+            (2,):  -a*p2*p3,
+            (3,):  kT ,
+            }
+#        eps = {
+#            (0,): norm-E*E,
+#            (1,): 0,
+#            (2,): 0 ,
+#            (3,): 0 ,
+#            }
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(eps,
+                                self.lorentz_ind,self.spin_ind)
+
+class EPSTR(aloha_lib.FactoryLorentz):
+
+    object_class = L_EPSPLUSR
+    
+    @classmethod
+    def get_unique_name(self, lor1, particle):
+        return '_EPSTR%s_%s_' % (particle, lor1)
+
+#===============================================================================
+# EPSTI (transverse part of the epsilon normmalized to avoid denominator -- one of the eigenstate)
+#        Imaginary part
+#===============================================================================
+
+class L_EPSTI(aloha_lib.LorentzObject):
+    """ eps^mu_+ (polarization vector) 
+        (0, -kx kz + i ky k_T , -ky kz, -i kx k_T, k_T^2)
+        imaginary part:
+                (0, + i ky , -i kx, 0)
+        the normalization 1/ norm(k)/sqrt(2) is NOT include (note not same norm as real part)
+    
+    """
+    
+    def __init__(self, name, lor1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [lor1], [])
+    
+    def create_representation(self):
+        """create representation"""
+ #       E = aloha_lib.DVariable('P%s_0' % self.particle)
+ #       m = aloha_lib.DVariable('M%s' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+ #       p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+
+        a = 1/cmath.sqrt(2)
+#        kT = (p1**2+p2**2)
+
+        eps = {
+            (0,): 0,
+            (1,): complex(0,a)*p2,
+            (2,):  complex(0,-a)*p1,
+            (3,):  0 ,
+            }
+#        eps = {
+#            (0,): norm-E*E,
+#            (1,): 0,
+#            (2,): 0 ,
+#            (3,): 0 ,
+#            }
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(eps,
+                                self.lorentz_ind,self.spin_ind)
+
+class EPSTI(aloha_lib.FactoryLorentz):
+
+    object_class = L_EPSTI
+    
+    @classmethod
+    def get_unique_name(self, lor1, particle):
+        return '_EPSTI%s_%s_' % (particle, lor1)
 
 #===============================================================================
 # Denominator Propagator 
@@ -983,7 +1193,7 @@ VectorPropagator = lambda l1, l2, part: complex(0,1)*(-1 * Metric(l1, l2) + Over
                                     Metric(l1,'I3')* P('I3', part) * P(l2, part))
 
 VectorPropagatorMassless= lambda l1, l2, part: complex(0,-1) * Metric(l1, l2)
-
+    
 
 Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part: (\
     -1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
