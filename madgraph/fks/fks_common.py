@@ -454,6 +454,9 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     for i, ii in model.get('interaction_dict').items():
         # i want interections of pert_order: 1 (from LO to NLO), 
         # without any other orders
+        # and of "base" type
+        if ii.get('type') != 'base': continue
+
         if ii.get('orders') == {pert_order:1} and len(ii['particles']) == 3 :
             masslist = [p.get('mass').lower() for p in ii['particles']]
             
