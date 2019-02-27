@@ -1215,6 +1215,10 @@ c
       double precision pdg2pdf
       external pdg2pdf
 c
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+c
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
 c
