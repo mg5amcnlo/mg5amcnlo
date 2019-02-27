@@ -1150,7 +1150,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer spinup_local(nexternal)
       integer istup_local(nexternal)
       double precision wgt_sudakov
-      double precision scales(0:999)
+      double precision scales(0:99)
 
 c To access Pythia8 control variables
       include 'pythia8_control.inc'

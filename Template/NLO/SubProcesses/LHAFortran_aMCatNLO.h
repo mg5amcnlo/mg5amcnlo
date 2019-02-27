@@ -32,15 +32,15 @@ extern "C" {
     int idbmup_in[2];
     double ebmup_in[2];
     int pdfgup_in[2], pdfsup_in[2], idwtup_in, nprup_in;
-    double xsecup_in[100], xerrup_in[100], xmaxup_in[100];
-    int lprup_in[100];
+    double xsecup_in[10], xerrup_in[10], xmaxup_in[10];
+    int lprup_in[10];
   } heprup_in_;
 
   extern struct {
     int nup_in, idprup_in;
     double xwgtup_in, scalup_in, aqedup_in, aqcdup_in;
-    int idup_in[500], istup_in[500], mothup_in[500][2], icolup_in[500][2];
-    double pup_in[500][5], vtimup_in[500],spinup_in[500], scales_in[500][2];
+    int idup_in[50], istup_in[50], mothup_in[50][2], icolup_in[50][2];
+    double pup_in[50][5], vtimup_in[50],spinup_in[50], scales_in[50][2];
     int ifks_in, jfks_in;
   } hepeup_in_;
 
@@ -54,16 +54,16 @@ extern "C" {
     int idbmup_out[2];
     double ebmup_out[2];
     int pdfgup_out[2], pdfsup_out[2], idwtup_out, nprup_out;
-    double xsecup_out[100], xerrup_out[100], xmaxup_out[100];
-    int lprup_out[100];
+    double xsecup_out[10], xerrup_out[10], xmaxup_out[10];
+    int lprup_out[10];
   } heprup_out_;
 
   extern struct {
     int nup_out, idprup_out;
     double xwgtup_out, scalup_out, aqedup_out, aqcdup_out;
-    int idup_out[500], istup_out[500], mothup_out[500][2], icolup_out[500][2];
-    double pup_out[500][5], vtimup_out[500],spinup_out[500],
-           scales_out[500][2], scales_out_a[500][500];
+    int idup_out[50], istup_out[50], mothup_out[50][2], icolup_out[50][2];
+    double pup_out[50][5], vtimup_out[50],spinup_out[50],
+           scales_out[50][2], scales_out_a[50][50];
     int ifks_out, jfks_out;
   } hepeup_out_;
 

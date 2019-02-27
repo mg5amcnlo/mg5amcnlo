@@ -3,7 +3,7 @@ C     ------------------------------
 C     First the header HEPRUP
 C     ------------------------------
       integer maxpup_in
-      parameter(maxpup_in=100)
+      parameter(maxpup_in=10)
       integer idbmup_in,pdfgup_in,pdfsup_in,idwtup_in,nprup_in,lprup_in
       double precision ebmup_in,xsecup_in,xerrup_in,xmaxup_in
       common /heprup_in/ idbmup_in(2),ebmup_in(2),pdfgup_in(2),pdfsup_in(2),
@@ -14,7 +14,7 @@ C     ------------------------------
 C     Then an event itself in HEPEUP
 C     ------------------------------
       INTEGER MAXNUP_IN
-      PARAMETER (MAXNUP_IN=500)
+      PARAMETER (MAXNUP_IN=50)
       INTEGER NUP_IN,IDPRUP_IN,IDUP_IN(MAXNUP_IN),ISTUP_IN(MAXNUP_IN),
      &        MOTHUP_IN(2,MAXNUP_IN),ICOLUP_IN(2,MAXNUP_IN)
       INTEGER IFKS_IN, JFKS_IN
@@ -34,7 +34,7 @@ C     -----------------------
 C     First the header HEPRUP
 C     -----------------------
       integer maxpup_out
-      parameter(maxpup_out=100)
+      parameter(maxpup_out=10)
       integer idbmup_out,pdfgup_out,pdfsup_out,idwtup_out,nprup_out,lprup_out
       double precision ebmup_out,xsecup_out,xerrup_out,xmaxup_out
       common /heprup_out/ idbmup_out(2),ebmup_out(2),pdfgup_out(2),pdfsup_out(2),
@@ -44,7 +44,7 @@ C     ------------------------------
 C     Then an event itself in HEPEUP
 C     ------------------------------
       INTEGER MAXNUP_out
-      PARAMETER (MAXNUP_out=500)
+      PARAMETER (MAXNUP_out=50)
       INTEGER NUP_out,IDPRUP_out,IDUP_out(MAXNUP_out),ISTUP_out(MAXNUP_out),
      &        MOTHUP_out(2,MAXNUP_out),ICOLUP_out(2,MAXNUP_out)
       INTEGER IFKS_OUT, JFKS_OUT
