@@ -238,6 +238,7 @@ in presence of majorana particle/flow violation"""
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
         
+
         output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('FCT')])
@@ -435,23 +436,20 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        misc.sprint(propa)
         if propa not in  ["L", "T", "A"]:
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
             denominator = propagator.denominator      
         elif propa == "L":
             numerator = "EPSL(1,id) * EPSL(2,id)"
-            denominator = "Norm(id) *Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         elif propa == "T":
-            numerator = "Norm(id) * EPSTI(1,id)*EPSTI(2,id) - EPSTR(1,id)*EPSTR(2,id)"
-            denominator = "Norm(id) * PT(id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         elif propa == "A":
             numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
 
-        misc.sprint(numerator)
-        misc.sprint(denominator)
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
         if spin in [1,-1]:
@@ -493,9 +491,7 @@ in presence of majorana particle/flow violation"""
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
             denominator = self.mod_propagator_expression(tag, denominator)  
-            
-        misc.sprint(numerator)
-        misc.sprint(denominator)     
+                
         numerator = self.parse_expression(numerator, needPflipping)
         
         if denominator:
@@ -503,9 +499,7 @@ in presence of majorana particle/flow violation"""
             self.denominator = eval(self.denominator)
             if not isinstance(self.denominator, numbers.Number):
                 self.denominator = self.denominator.simplify().expand().simplify().get((0,))
-              
-        misc.sprint(numerator)
-        misc.sprint(denominator)  
+ 
         if spin ==4:
             return eval(numerator) * propaR
         else:

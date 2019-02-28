@@ -774,7 +774,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
-            if 'L' not in self.tag:
+            is_loop = False
+            if 'L' in self.tag:
+                if self.tag.count('L') == 1 and 'PL' in self.tag:
+                    is_loop = False
+                else:
+                    is_loop = True
+                    
+            if not is_loop:
                 coeff = 'denom*'    
                 if not aloha.complex_mass:
                     if self.routine.denominator:
