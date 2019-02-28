@@ -309,10 +309,6 @@ in presence of majorana particle/flow violation"""
                 elif propa == []:
                     massless = False
                     self.denominator = None
-                #elif propa == ['L']:
-                #    lorentz *= VectorPropagatorL(id, 'I2', id)
-                #    self.denominator = None
-                #    continue
                 else:
                     lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
@@ -436,17 +432,17 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        if propa not in  ["L", "T", "A"]:
+        if propa not in  ["1L", "1T", "1A"]:
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
             denominator = propagator.denominator      
-        elif propa == "L":
+        elif propa == "1L":
             numerator = "EPSL(1,id) * EPSL(2,id)"
             denominator = "-1*PVec(-2,id)*PVec(-2,id)*Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "T":
+        elif propa == "1T":
             numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
             denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "A":
+        elif propa == "1A":
             numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
 

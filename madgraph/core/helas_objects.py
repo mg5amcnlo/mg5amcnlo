@@ -1588,11 +1588,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise InvalidCmd, 'particle with custom propagator can not have polarization'
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
-                output['propa'] = 'PL' 
+                output['propa'] = 'P1L' 
             elif self.get('polarization') == [1,-1]:
-                output['propa'] = 'PT'
+                output['propa'] = 'P1T'
             elif self.get('polarization') == [99]:
-                output['propa'] = 'PA'
+                output['propa'] = 'P1A'
             else:
                 raise InvalidCmd, 'polarization not handle for decay particle'
             
@@ -1811,11 +1811,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             tags.append('P%s' % str(self.get('particle').get('propagator')))
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
-                tags.append('PL') 
+                tags.append('P1L') 
             elif self.get('polarization') == [1,-1]:
-                tags.append('PT')
+                tags.append('P1T')
             elif self.get('polarization') == [99]:
-                tags.append('PA')
+                tags.append('P1A')
             else:
                 raise InvalidCmd, 'polarization not handle for decay particle'
 
