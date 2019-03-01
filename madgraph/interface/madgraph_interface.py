@@ -4703,6 +4703,12 @@ This implies that with decay chains:
                         polarization += [-1]
                     elif p in ["A",'a']:
                         polarization += [99]
+                    elif p in ['+']:
+                        polarization += [1]
+                    elif p in ['-']:
+                        polarization += [-1]
+                    elif p in [0]:
+                        polarization += [0]
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
 
