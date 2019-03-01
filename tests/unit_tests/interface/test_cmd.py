@@ -211,7 +211,9 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_process_format('e+ e- > mu+ ta- / x $y @1')
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y @1')
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y, (e+ > e-, e-> ta) @1')
-        
+        cmd.check_process_format('e+ e- > Z{L}, Z > mu+ mu- @1')
+        cmd.check_process_format('e+{L} e- > mu+{L} mu-{R} @1')
+        cmd.check_process_format('g g > Z Z [ noborn=QCD] @1')
         # unvalid syntax
         self.wrong(cmd.check_process_format, ' e+ e-')
         self.wrong(cmd.check_process_format, ' e+ e- > e+ e-,')
@@ -223,6 +225,11 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, ' e+ > e+, (e+ > e- / z, e- > top')   
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z{L} > mu+ mu-')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z > mu+ mu- / W+{L}')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z > mu+ mu- $ W+{L}')
+        self.wrong(cmd.check_process_format, 'u u~ > W+{L} [QCD]')
+        self.wrong(cmd.check_process_format, 'u u~ > e+{L} vl [QCD]')
         
     @test_aloha.set_global()
     def test_output_default(self):

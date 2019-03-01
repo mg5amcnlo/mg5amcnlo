@@ -1062,6 +1062,22 @@ class CheckValidForCmd(cmd.CheckCmd):
             if re.search('\D\$', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
+                
+        # '{}' should only be used for onshell particle (including initial/final state)
+        #  and not for NLO!
+        # check first that polarization are not include between > >
+        if nbsep == 2:
+            if '{' in particles_parts[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used as required s-channel')
+        split = re.split('\D[$|/]',particles_parts[-1],1)
+        if len(split)==2:
+            if '{' in split[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
+            
+        if '[' in process and '{' in process:
+            if 'noborn' not in process:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO process')
+        
 
 
     def check_tutorial(self, args):
