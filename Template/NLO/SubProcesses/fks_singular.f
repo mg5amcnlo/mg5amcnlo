@@ -110,7 +110,7 @@ C in the LO cross section
       double precision wgtborn, alphas
       ! switch on/off here
       logical include_6to5_cnt 
-      data include_6to5_cnt /.false./ 
+      data include_6to5_cnt /.true./ 
 
 CMZMZ REMEMBER!!!!
 c     wgt1 : weight of the contribution not multiplying a scale log
@@ -124,7 +124,7 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
       ! skip if we don't want this piece or if the scale is
       ! below mt
-      if (.not.include_6to5_cnt.or.scale.lt.mdl_mt) return
+      if (.not.include_6to5_cnt.or.scale.lt.mdl_mb) return
 
 C the contribution is the following (if mu > mt):
 C      Add a term -alphas n TF/3pi log (muR^2/mt^2) sigma(0) 
@@ -150,8 +150,10 @@ C      gluon in the initial state
         alphasbpow = orders(qcd_pos)/2
         if (niglu.ne.0 .or. alphasbpow.ne.0) then
           ! this contribution will end up with one extra power
-          ! of alpha_s
+          ! of alpha_s. Check that we are including the corresponding
+          ! order in the computation, otherwise skip the contribution
           orders(qcd_pos) = orders(qcd_pos) + 2
+          if (orders(qcd_pos).gt.nlo_orders(qcd_pos)) cycle
 
           amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
      &     alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
@@ -160,7 +162,7 @@ C      gluon in the initial state
      &    - alphas / 3d0 / pi * TF * dble(alphasbpow) * amp_split(iamp) 
         
           amp_split_6to5f(orders_to_amp_split_pos(orders)) = 
-     &    dlog(qes2/mdl_mt**2) * 
+     &    dlog(qes2/mdl_mb**2) * 
      &     (alphas / 3d0 / pi * TF * dble(niglu)   
      &    - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)
         endif
