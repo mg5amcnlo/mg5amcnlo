@@ -1074,9 +1074,9 @@ class CheckValidForCmd(cmd.CheckCmd):
             if '{' in split[1]:
                 raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
             
-        if '[' in process and '{' in process:
-            if 'noborn' not in process:
-                raise self.InvalidCmd('Polarization restriction can not be used for NLO process')
+        #if '[' in process and '{' in process:
+        #    if 'noborn' not in process:
+        #        raise self.InvalidCmd('Polarization restriction can not be used for NLO process')
         
 
 

@@ -655,6 +655,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 leg = arguments[0]
                 interaction_id = arguments[1]
                 model = arguments[2]
+                
                 # decay_ids is the pdg codes for particles with decay
                 # chains defined
                 decay_ids = []
@@ -702,6 +703,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             super(HelasWavefunction, self).__init__(arguments[0])
         else:
             super(HelasWavefunction, self).__init__()
+
+
 
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
