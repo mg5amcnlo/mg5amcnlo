@@ -454,12 +454,26 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     for i, ii in model.get('interaction_dict').items():
         # i want interections of pert_order: 1 (from LO to NLO), 
         # without any other orders
+        # and of "base" type
+        if ii.get('type') != 'base': continue
+
         if ii.get('orders') == {pert_order:1} and len(ii['particles']) == 3 :
             masslist = [p.get('mass').lower() for p in ii['particles']]
-                # check that there is at least a massless particle, and that the 
-                # remaining ones have the same mass 
-                # (otherwise the real emission final state will not be degenerate
-                # with the born one
+            
+            # require that at least one particle be soft and of even spin for the interaction to be IR singular
+            found_soft_even_spin_particle = False
+            for p in ii['particles']:
+                if p.get('mass').lower()=='zero':
+                    if p.get('spin')%2==1:
+                        found_soft_even_spin_particle = True
+                        break
+            if not found_soft_even_spin_particle:
+                continue
+            
+            # check that there is at least a massless particle, and that the 
+            # remaining ones have the same mass 
+            # (otherwise the real emission final state will not be degenerate
+            # with the born one
             try:
                 masslist.remove('zero')
             except ValueError:

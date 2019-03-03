@@ -1029,7 +1029,7 @@ c************************************************************************
 
       integer i,j
 
-      open(26, file='ftn26',status='unknown')
+      open(26, file=name, status='unknown')
       write(26,fmt='(4f21.17)') ((grid(2,i,j),i=1,ng),j=1,invar)
       write(26,*) twgt, force_max_wgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)

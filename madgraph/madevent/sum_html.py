@@ -301,9 +301,22 @@ class OneResult(object):
                         return 
 
                 data = [secure_float(d) for d in line.split()]
-                self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
+                try:
+                    self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
                          self.xsec = data[:10]
+                except ValueError:
+                    log = pjoin(os.path.dirname(filepath), 'log.txt')
+                    if os.path.exists(log):
+                        if 'end code not correct' in line:
+                            error_code = data[4]
+                            log = pjoin(os.path.dirname(filepath), 'log.txt')
+                            raise Exception, "Reported error: End code %s \n Full associated log: \n%s"\
+                                  % (error_code, open(log).read())
+                        else:
+                            log = pjoin(os.path.dirname(filepath), 'log.txt')
+                            raise Exception, "Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
+                                %  (line, open(log).read())                        
                 if len(data) > 10:
                     self.maxwgt = data[10]
                 if len(data) >12:

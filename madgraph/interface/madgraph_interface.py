@@ -216,7 +216,6 @@ class CmdExtended(cmd.Cmd):
             info_line = info_line.replace("#*","*")
             
 
-
         logger.info(self.intro_banner % info_line)
 
         cmd.Cmd.__init__(self, *arg, **opt)
@@ -460,6 +459,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
+        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -2387,7 +2387,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
-                        possible_options_full = ['-f', '-noclean', '-nojpeg']):
+                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -3097,6 +3097,14 @@ This implies that with decay chains:
                   " can only be given on one type of coupling and either on"+\
                                " squared orders or amplitude orders, not both.")
 
+            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                logger.warning('''Computation of interference term with decay is not 100% validated.  
+                Please check carefully your result.
+                One suggestion is also to compare the generation of your process with and without
+                set group_subprocesses True
+                (to write Before the generate command)
+                ''')
+
             cpu_time1 = time.time()
 
             # Generate processes
@@ -3143,12 +3151,17 @@ This implies that with decay chains:
         
         model_path = args[0]
         recreate = ('--recreate' in args)
+        if recreate:
+            args.remove('--recreate')
         keep_decay = ('--keep_decay' in args)
+        if keep_decay:
+            args.remove('--keep_decay')
         output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
         if output_dir:
             output_dir = output_dir[0]
             recreate = True
             restrict_name = ''
+            args.remove('--output=%s' % output_dir)
         else:
             name = os.path.basename(self._curr_model.get('modelpath'))
             restrict_name = self._curr_model.get('restrict_name')
@@ -5861,8 +5874,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190'],
-                          'maddump':['arXiv:1806.xxxxx']}
+                          'maddm':['arXiv:1804.00444'],
+                          'maddump':['arXiv:1812.06771']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -5935,11 +5948,16 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 elif source == 'ucl':
                     r = [0]
                 else:
+                    if source[-1].isdigit() or source[-1] == '/':
+                        source += '/package_info.dat'
                     data_path.append(source)
                     r = [2]
             else: 
                 r = random.randint(0,1)
                 r = [r, (1-r)]
+                if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+                    data_path.append(os.environ['MG5aMC_WWW']+'/package_info.dat')
+                    r.insert(0, 2)
 
 
 
@@ -5947,7 +5965,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 cluster_path = data_path[index]
                 try:
                     data = urllib.urlopen(cluster_path)
-                except Exception:
+                except Exception, error:
+                    misc.sprint(str(error), cluster_path)
                     continue
                 if data.getcode() != 200:
                     continue
@@ -7525,6 +7544,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         noclean = '-noclean' in args
         force = '-f' in args
         nojpeg = '-nojpeg' in args
+        if '--noeps=True' in args:
+            nojpeg = True
         flaglist = []
                     
         if '--postpone_model' in args:
@@ -8189,6 +8210,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd('output %s -f' % decay_dir,child=False)
+                
+                #modify some parameter of the default run_card
+                run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))
+                if run_card['ickkw']:
+                    run_card['ickkw'] = 0
+                    run_card['xqcut'] = 0
+                    run_card.remove_all_cut()
+                    run_card.write(pjoin(decay_dir,'Cards','run_card.dat'))
+                
                 # Need to write the correct param_card in the correct place !!!
                 if os.path.exists(opts['output']):
                     files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))

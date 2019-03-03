@@ -1333,7 +1333,7 @@ class DecayChainAmplitude(Amplitude):
     def __init__(self, argument = None, collect_mirror_procs = False,
                  ignore_six_quark_processes = False, loop_filter=None, diagram_filter=False):
         """Allow initialization with Process and with ProcessDefinition"""
-
+ 
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
             from madgraph.loop.loop_diagram_generation import LoopMultiProcess
@@ -1372,7 +1372,8 @@ class DecayChainAmplitude(Amplitude):
                           " incoming particle"
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
-                                        ignore_six_quark_processes))
+                                        ignore_six_quark_processes,
+                                        diagram_filter=diagram_filter))
 
             # Flag decaying legs in the core diagrams by onshell = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
