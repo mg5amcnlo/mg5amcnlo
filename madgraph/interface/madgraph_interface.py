@@ -5833,7 +5833,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190'],
+                          'maddm':['arXiv:1804.00444'],
                           'maddump':['arXiv:1812.06771']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
