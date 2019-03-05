@@ -38,3 +38,8 @@ C     matrix<i>.f
       double precision hel_jacobian
 	  INTEGER HEL_PICKED
 	  COMMON/HEL_PICKED/HEL_PICKED,hel_jacobian
+c**********************************************************************************
+c       parameters to control is zero-cross section is due to PS or matrix-element
+c**********************************************************************************
+      integer nb_pass_cuts
+      common/cut_efficiency/nb_pass_cuts
