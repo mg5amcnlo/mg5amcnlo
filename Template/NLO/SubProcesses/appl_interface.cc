@@ -6,6 +6,7 @@
 #include "appl_grid/appl_grid.h"
 #include "appl_grid/lumi_pdf.h"
 #include "LHAPDF/LHAPDF.h"
+#include "orders.h"
 
 /*
   fNLO mode of aMCatNLO
@@ -34,8 +35,6 @@ typedef struct {
   int * qcdpower; // Power of alpha_s for each amp_split
 } __amcatnlo_common_fixed__;
 
-int const __amp_split_size = 2;//MZ: VERY dirty solution, to be removed
-
 // Map of the PDF combinations from aMC@NLO - structure for each 
 // "subprocess" i, has some number nproc[i] pairs of parton
 // combinations. To be used together with the info in appl_flavmap.
@@ -49,9 +48,8 @@ typedef struct {
 typedef struct {
   double  x1[4],x2[4]; 
   double  muF2[4],muR2[4],muQES2[4];
-  double  W0[4][__amp_split_size],WR[4][__amp_split_size];
-  double  WF[4][__amp_split_size],WB[4][__amp_split_size];
- //MZ:W0/R/F/B should be declared in a better way... pointers/array of pointers?
+  double  W0[__amp_split_size][4],WR[__amp_split_size][4];
+  double  WF[__amp_split_size][4],WB[__amp_split_size][4];
   int     flavmap[4];
 } __amcatnlo_common_weights__;
 
@@ -268,11 +266,13 @@ extern "C" void appl_fill_() {
     exit(-10);
   }
 
+  for (int index = 0; index != __amp_split_size; ++index)
+  {
   // aMC@NLO weights. Four grids, ordered as {W0,WR,WF,WB}.
-  double* W0 = appl_common_weights_.W0;
-  double* WR = appl_common_weights_.WR;
-  double* WF = appl_common_weights_.WF;
-  double* WB = appl_common_weights_.WB;
+  double (& W0) [4] = appl_common_weights_.W0[index];
+  double (& WR) [4] = appl_common_weights_.WR[index];
+  double (& WF) [4] = appl_common_weights_.WF[index];
+  double (& WB) [4] = appl_common_weights_.WB[index];
 
   int ilumi;
   int nlumi = appl_common_lumi_.nlumi;
@@ -396,6 +396,7 @@ extern "C" void appl_fill_() {
     grid_obs[nh]->fill_grid(x1,x2,scale2,obs,&weight[0],3);
     weight.at(ilumi) = 0;
   }
+  }
 }
 
 extern "C" void appl_fill_ref_() {
@@ -490,7 +491,6 @@ extern "C" void appl_reco_() {
   // and the QCD power of each of them
   int const amp_split_size = appl_common_fixed_.amp_split_size;
   int * qcdpow = appl_common_fixed_.qcdpower;
-  int iamp;
 
   // Bjorken x's
   double x1bj = appl_common_weights_.x1[0];
@@ -513,8 +513,8 @@ extern "C" void appl_reco_() {
   else                                   pdflumi = 0;
 
   // Compute the (n+1)-body NLO contribution to the xsec (xsec11)
-  for (iamp=0; iamp<amp_split_size; iamp++){
-    xsec11 = pdflumi * appl_common_weights_.W0[0][iamp] * std::pow(g,qcdpow[iamp]);
+  for (int iamp=0; iamp<amp_split_size; iamp++){
+    xsec11 += pdflumi * appl_common_weights_.W0[iamp][0] * std::pow(g,qcdpow[iamp]);
   }
 
   // Counter Events.
@@ -544,14 +544,14 @@ extern "C" void appl_reco_() {
     else                                   pdflumi = 0;
 
     // Compute the n-body NLO contribution to the xsec (xsec12)
-    for (iamp=0; iamp<amp_split_size; iamp++){
-      xsec12 += pdflumi * ( appl_common_weights_.W0[k][iamp] + appl_common_weights_.WF[k][iamp] * xlgmuf + appl_common_weights_.WR[k][iamp] * xlgmur ) * std::pow(g,qcdpow[iamp]);
+    for (int iamp=0; iamp<amp_split_size; iamp++){
+      xsec12 += pdflumi * ( appl_common_weights_.W0[iamp][k] + appl_common_weights_.WF[iamp][k] * xlgmuf + appl_common_weights_.WR[iamp][k] * xlgmur ) * std::pow(g,qcdpow[iamp]);
     }
 
     // Compute the Born contribution to the xsec (xsec20)
     if(k == 1) {
-      for (iamp=0; iamp<amp_split_size; iamp++){
-        xsec20 += pdflumi * appl_common_weights_.WB[k][iamp] * std::pow(g,qcdpow[iamp]);
+      for (int iamp=0; iamp<amp_split_size; iamp++){
+        xsec20 += pdflumi * appl_common_weights_.WB[iamp][k] * std::pow(g,qcdpow[iamp]);
       }
     }
   }
