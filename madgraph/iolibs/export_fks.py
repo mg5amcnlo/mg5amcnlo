@@ -589,9 +589,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                              nexternal, ninitial)
 
         filename = 'orders.inc'
-        amp_split_orders = self.write_orders_file(
+        amp_split_orders, amp_split_size, amp_split_size_born = \
+			   self.write_orders_file(
                             writers.FortranWriter(filename),
                             matrix_element)
+
+        filename = 'orders.h'
+        self.write_orders_c_header_file(
+                            writers.CPPWriter(filename),
+                            amp_split_size, amp_split_size_born)
 
         filename = 'amp_split_orders.inc'
         self.write_amp_split_orders_file(
@@ -1042,6 +1048,16 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
+    def write_orders_c_header_file(self, writer, amp_split_size, amp_split_size_born):
+        """writes the header file including the amp_split_size declaration for amcblast
+	"""
+	text = "#define __amp_split_size %d\n" % amp_split_size
+	text+= "#define __amp_split_size_born %d" % amp_split_size_born
+
+        writer.writelines(text)
+
+
+
     def write_orders_file(self, writer, matrix_element):
         """writes the include file with the informations about coupling orders.
         In particular this file should contain the constraints requested by the user
@@ -1173,7 +1189,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         writer.writelines(text)
 
-        return amp_split_orders
+        return amp_split_orders, amp_split_size, amp_split_size_born
 
 
     #===============================================================================
