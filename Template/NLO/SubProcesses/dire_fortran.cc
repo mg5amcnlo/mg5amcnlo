@@ -564,22 +564,45 @@ extern "C" {
 
   // a function to shower and analyse events
   void dire_setevent_() {
+
+  std::clock_t begin = std::clock();
+  std::clock_t end = std::clock();
+  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+       << " " << __func__ << " : Enter at time " << setw(10) << begin
+       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+
     if (!lhareader4dire.is_initialised()) {
       lhareader4dire.setInit();
       pythia4dire.init();
     }
     // This should set the LHA event using fortran common blocks
     lhareader4dire.setEvent();
+  end = std::clock();
+  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+
   }
 
   // a function to shower and analyse events
   void dire_next_() {
+  std::clock_t begin = std::clock();
+  std::clock_t end = std::clock();
+  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+       << " " << __func__ << " : Enter at time " << setw(10) << begin
+       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
     if (!lhareader4dire.is_initialised()) {
       lhareader4dire.setInit();
       pythia4dire.init();
     }
     pythia4dire.next();
     ++iEvent4dire;
+  end = std::clock();
+  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
   }
 
   void dire_get_mergingweight_( double& w ) {
