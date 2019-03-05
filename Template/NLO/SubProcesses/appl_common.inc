@@ -5,6 +5,7 @@
       include 'orders.inc'
 *     Amp split size
       integer appl_amp_split_size 
+      integer appl_qcdpower(amp_split_size)
       common / appl_common_fixed / appl_amp_split_size, appl_qcdpower
 
 *     Initial state map to be used together with the info in appl_flavmap
@@ -26,7 +27,6 @@
      1                 appl_wR(4, amp_split_size),
      2                 appl_wF(4, amp_split_size),
      3                 appl_wB(4, amp_split_size)
-      integer appl_qcdpower(amp_split_size)
       integer appl_flavmap(4)
       common / appl_common_weights / appl_x1,appl_x2,
      1                               appl_muF2,appl_muR2,appl_QES2,
