@@ -129,8 +129,20 @@ extern "C" void appl_init_() {
   else {
     std::cout << "amcblast INFO: Booking grid from scratch with name " << grid_filename_in << " ..." << std::endl;
 
-    // leading_order: power of alphas of Born events
-    int const leading_order = -1; /////MZ keep this at the moment beacuse applgrid needs it; eventually to be dropped 
+    int min_alphas_p = 9999; // any large value will do
+
+    // TODO: the following assumes that 'the' LO is the matrix element with the lowest power in
+    // alphas; in general there will be many LOs with different alphas powers, but APPLgrid doesn't
+    // understand that (yet)
+    for (int i = 0; i != __amp_split_size; ++i)
+    {
+        if (appl_common_fixed_.qcdpower[i] < min_alphas_p)
+        {
+            min_alphas_p = appl_common_fixed_.qcdpower[i];
+        }
+    }
+
+    int leading_order = min_alphas_p; /////MZ keep this at the moment beacuse applgrid needs it; eventually to be dropped 
 	//appl_common_fixed_.bpower;
     //std::cout << "amcblast INFO: bpower = " << leading_order << std::endl;
 
