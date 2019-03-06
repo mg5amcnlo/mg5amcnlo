@@ -1223,9 +1223,18 @@ c
       double precision tBefore,tAfter
       logical do_time_profiling
       parameter (do_time_profiling=.false.)
+      double precision masses_to_MC(25)
+      double precision pi
+      parameter(pi=3.1415926535897932384626433d0)
 c
+      include '../Source/MODEL/coupl.inc'
+      include '../Source/MODEL/mp_coupl.inc'
+      include '../Source/MODEL/input.inc'
+      include '../Source/MODEL/mp_input.inc'
       mcmass=0d0
+      masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
+      include '../Source/param_card.inc'
 c
       do i=1,2
         istup_local(i) = -1
@@ -1427,6 +1436,18 @@ c
       dzones2=.true.
       if(do_time_profiling)then
          if (is_pythia_active.eq.0) then
+c     fill masses
+            do i=7,20
+               if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
+            enddo
+            masses_to_MC(5) =MDL_MB
+            masses_to_MC(6) =MDL_MT
+            masses_to_MC(15)=MDL_MTA
+            masses_to_MC(23)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
+     &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
+            masses_to_MC(24)=MDL_MZ
+            masses_to_MC(25)=MDL_MH
+c
             call cpu_time(tBefore)
             idOut=0
             do i=3,nexternal-1
@@ -1460,6 +1481,18 @@ c
          write(*,*)
       else
          if (is_pythia_active.eq.0) then
+c     fill masses
+            do i=7,20
+               if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
+            enddo
+            masses_to_MC(5) =MDL_MB
+            masses_to_MC(6) =MDL_MT
+            masses_to_MC(15)=MDL_MTA
+            masses_to_MC(23)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
+     &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
+            masses_to_MC(24)=MDL_MZ
+            masses_to_MC(25)=MDL_MH
+c
             idOut=0
             do i=3,nexternal-1
               idOut(i-3) = IDUP_S(i)
