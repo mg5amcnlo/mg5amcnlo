@@ -43,7 +43,7 @@ class PrintFirstEmission4dire : public UserHooks {
 public:
 
   PrintFirstEmission4dire(LHA3FromPythia8* lhawriterPtrIn)
-    : lhawriterPtr(lhawriterPtrIn), inputEvent(50000) {
+    : lhawriterPtr(lhawriterPtrIn) {
     doRemoveDecayProducts=true;
     inputEvent.init("(hard process-modified)", particleDataPtr);
     resonances.resize(0);
@@ -465,7 +465,7 @@ extern "C" {
   }
 
   // an initialisation function
-  void dire_init_default_() {
+  void dire_init_default_(int& idIn1, int& idIn2, int outIDs [10]) {
 
     lhareader4dire.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
@@ -475,11 +475,35 @@ extern "C" {
     pythia4dire.setMergingHooksPtr(mergingHooks);
     pythia4dire.setMergingPtr(merging);
 
+    // Reconstruct the process string.
+    string processString = "";
+    // Set incoming particles.
+    if (idIn1 == 2212) processString += "p";
+    if (idIn1 == 11)   processString += "e-";
+    if (idIn1 ==-11)   processString += "e+";
+    if (idIn2 == 2212) processString += "p";
+    if (idIn2 == 11)   processString += "e-";
+    if (idIn2 ==-11)   processString += "e+";
+    processString += ">";
+    // Set outgoing particles.
+    bool foundOutgoing = false;
+    for (int i=0; i < 10; ++i) {
+      if (outIDs[i]==0) continue;
+      if (outIDs[i]==2212) {
+        processString += "j";
+      } else {
+        ostringstream proc;
+        proc << "{" << pythia.particleData.name(outIDs[i]) << "," << outIDs[i] << "}";
+        processString += proc.str();
+      }
+    } 
+
     cout<<"Using default initialization of Pythia8."<<endl;
     pythia4dire.readString("Beams:frameType                 = 5");
     pythia4dire.readString("Check:epTolErr                  = 1.000000e-02");
     pythia4dire.readString("merging:doptlundmerging         = on");
-    pythia4dire.readString("merging:process                 = pp>LEPTONS,NEUTRINOS");
+    //pythia4dire.readString("merging:process                 = pp>LEPTONS,NEUTRINOS");
+    pythia4dire.settings.word("Merging:Process", processString);
     pythia4dire.readString("merging:tms                     = -1.0");
     pythia4dire.readString("merging:includeWeightInXSection = off");
     pythia4dire.readString("merging:njetmax                 = 1000");
@@ -509,6 +533,8 @@ extern "C" {
     pythia4dire.readString("2:m0 = 0.0");
     pythia4dire.readString("3:m0 = 0.0");
     pythia4dire.readString("4:m0 = 0.0");
+    pythia4dire.readString("11:m0 = 0.0");
+    pythia4dire.readString("13:m0 = 0.0");
 
     // Disallow Pythia to overwrite parts of Les Houches input.
     pythia4dire.readString("LesHouches:setQuarkMass = 0");

@@ -2574,9 +2574,6 @@ bool Pythia::check() {
         "not-a-number energy/momentum/mass");
       physical = false;
       iErrNan.push_back(i);
-event.list();
-cout << i << endl;
-abort();
     }
 
     // Look for particles with not-a-number vertex/lifetime.

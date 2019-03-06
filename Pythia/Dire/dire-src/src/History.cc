@@ -285,7 +285,7 @@ MyHistory::MyHistory( int depth,
     if ( !ordered || ( mother && (it->first < scale) ) ) ordered = false;
 
     Event newState(cluster(*it->second));
-    if ( newState.size() == 0) { continue;}
+    if ( newState.size() == 0) continue;
 
     // Check if reclustered state should be disallowed.
     bool doCut = mergingHooksPtr->canCutOnRecState()
@@ -293,7 +293,7 @@ MyHistory::MyHistory( int depth,
     bool allowed = isAllowed;
     if (  doCut
       && mergingHooksPtr->doCutOnRecState(newState) ) {
-      if ( onlyAllowedPaths()  ) continue;
+      if ( onlyAllowedPaths() ) continue;
       allowed = false;
     }
 
@@ -616,12 +616,6 @@ double MyHistory::weightTREE(PartonLevel* trial, AlphaStrong * asFSR,
                   * (*aemFSR).alphaEM(newQ2Ren) / aemME;
     }
   }
-
-//selected->state.list();
-//state.list();
-//cout << scientific << setprecision(6) << sudakov << " " << asWeight << " " << pdfWeight << endl;
-//if (sudakov > 1. || sudakov < 0.) cout << "warning " << endl;
-//if (sudakov < 0.) cout << "negative!!! " << endl;
 
   // Done
   return (sudakov*asWeight*aemWeight*pdfWeight*mpiwt);
@@ -1041,8 +1035,6 @@ double MyHistory::weight_UNLOPS_CORRECTION( int order, PartonLevel* trial,
 double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
   AlphaStrong *, AlphaEM *, AlphaEM *, double RN, int depth) {
 
-//cout << __PRETTY_FUNCTION__ << endl;
-
   // Read alpha_S in ME calculation and maximal scale (eCM)
   //double asME     = infoPtr->alphaS();
   //double aemME    = infoPtr->alphaEM();
@@ -1060,13 +1052,9 @@ double MyHistory::weightMcAtNloDelta(PartonLevel* trial, AlphaStrong *,
 
   double nSteps = mergingHooksPtr->getNumberOfClusteringSteps(state);
 
-//state.list();
-
   // Do trial shower, calculation of alpha_S ratios, PDF ratios
   double wt = 1.;
   if (!doSingleLegSudakovs && depth > 0) {
-
-//cout << "aaaaaaaaaaaaaaa" << endl;
 
     wt   = selected->weightTreeEmissions( trial, 1, nSteps-1, nSteps, maxScale );
 // no alphas or pdf ratios
@@ -1135,30 +1123,10 @@ if (selNow->state[selNow->clusterIn.radBef].pz() < 0.) continue;
     }
   }
 
-//cout << wt << endl;
-
 //  if (depth > 0 && wt != 0.) pdfWeight = selected->weightTreePDFs( maxScale,
 //    selected->clusterIn.pT(), nSteps-1, nSteps);
 
 //pdfWeight = 1.;
-
-//  cout << "No-emission probability="
-//  << scientific << setprecision(5) << setw(14) << wt
-//  << " at pT="
-//  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-//  << endl;
-
-//  if (wt > 1. || wt < 0.)
-//  cout << "Warning: Unusual no-emission probability="
-//  << scientific << setprecision(5) << setw(14) << wt
-//  << " at pT="
-//  << scientific << setprecision(5) << setw(14) << selected->clusterIn.pT()
-//  << endl;
-
-//cout << __PRETTY_FUNCTION__ << wt << endl;
-//cout << depth << " " << nSteps-1 << " " << nSteps << " " << maxScale << endl;
-
-//abort();
 
   return wt*pdfWeight;
 
@@ -1452,8 +1420,6 @@ double MyHistory::getPDFratio( int side, bool forSudakov, bool useHardPDFs,
   if ( forSudakov && abs(flavNum) ==4 && abs(flavDen) == 4 && muDen == muNum
     && muNum < particleDataPtr->m0(4))
     pdfDen = pdfNum = 1.0;
-
-//cout << scientific << setprecision(4) << flavNum << " " << flavDen << "\t\t " << xNum << " " << xDen << "\t\t " << muNum << " " << muDen << "\t\t " << pdfNum << " " << pdfDen << endl;
 
   // Return ratio of pdfs
   if ( pdfNum > 1e-15 && pdfDen > 1e-10 ) {
@@ -2565,8 +2531,6 @@ double MyHistory::weightTreePDFs( double maxscale, double pdfScale,
 double MyHistory::weightTreeEmissions( PartonLevel* trial, int type,
   int njetMin, int njetMax, double maxscale ) {
 
-//cout << __PRETTY_FUNCTION__ << maxscale << endl;
-
   // Use correct scale
   double newScale = scale;
   // For ME state, just multiply by PDF ratios
@@ -2580,8 +2544,6 @@ double MyHistory::weightTreeEmissions( PartonLevel* trial, int type,
   if ( w < 1e-12 ) return 0.0;
   // If this node has too many jets, no not calculate no-emission probability.
   int njetNow = mergingHooksPtr->getNumberOfClusteringSteps( state) ;
-
-//cout << __PRETTY_FUNCTION__ << " " << njetMin << " " << njetNow << " " << njetMax << endl;
 
   if (njetNow >= njetMax) return 1.0;
   if (njetNow < njetMin ) w *= 1.0;
@@ -3104,10 +3066,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
 
   while ( true ) {
 
-//    cout << "enter trial shower"  << endl;
-    //process.list();
-    //infoPtr->scales->list(cout);
-
     // Reset trialShower object
     trial->resetTrial();
     // Construct event to be showered
@@ -3119,14 +3077,8 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     process.scale(startingScale);
     //doVeto = false;
 
-//mother->state.list();
-//process.list();
-//cout << rad << endl;
-
     // Get pT before reclustering
     double minScale = (minscaleIn > 0.) ? minscaleIn : scale;
-
-//    cout << "enter trial shower with ptmax=" << startingScale << " and ptmin=" << minScale << endl;
 
     mergingHooksPtr->setShowerStoppingScale(minScale);
 
@@ -3166,8 +3118,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     // Clear parton systems.
     trial->resetTrial();
 
-//    cout << "found trial response code=" << typeTrial << " at pt=" << pTtrial << endl;
-
     // Get enhanced trial emission weight.
     /*double pTEnhanced = (canEnhanceTrial)
                       ? trial->userHooksPtr->getEnhancedTrialPT() : 0.;
@@ -3182,8 +3132,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     double enhancement = 1.; 
     if ( pTtrial > minScale) enhancement
       = psweights->getTrialEnhancement( pow2(pTtrial));
-
-//cout << "start at pt=" << startingScale << "\t\t finish at pt=" << minScale << "\t\t emission at pt=" << pTtrial << " with weights=" << wtShower.first << " " << wtShower.second << " boost=" << enhancement << endl;
 
     psweights->reset();
     psweights->clearTrialEnhancements();
@@ -3223,10 +3171,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     int iRadBef = (typeTrial == 1) ? -1 : (typeTrial == 2) ? event[iRadAft].daughter2() : event[iRadAft].mother1();
 
     if (doSingleLegSudakovs && iRadBef != rad) continue;
-
-//event.list();
-//cout << rad << " " << iRadBef << endl;
-//abort();
 
     // Check if the splitting occured in a small window around a flavour
     // threshold.
@@ -3303,8 +3247,6 @@ double MyHistory::doTrialShower( PartonLevel* trial, int type,
     break;
 
   }
-
-//cout << wt << endl;
 
   // Done
   //double res = (canEnhanceTrial) ? wt : ( (doVeto) ? 0. : 1. );
@@ -3652,9 +3594,6 @@ vector<MyClustering> MyHistory::getAllClusterings( const Event& event) {
       }
     }
   }
-
-//  for (int i=0; i < ret.size(); ++i) { fsr->debugPtr->eatCout(); ret[i].list();
-//    fsr->debugPtr->freeCout(); }
 
   return ret;
 }

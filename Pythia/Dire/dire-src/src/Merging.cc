@@ -113,8 +113,6 @@ void MyMerging::storeInfos() {
 
   int posOffset=2;
 
-//myHistory->state.list();
-
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -138,9 +136,6 @@ void MyMerging::storeInfos() {
       continue;
     }
 
-//cout << "next s-event state " << endl;
-//myHistory->children[i]->state.list();
-
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
     for (int ip = 0; ip < myHistory->children[i]->state.size(); ++ip) {
@@ -158,11 +153,6 @@ void MyMerging::storeInfos() {
 
     for (int id = 0; id < dipEnds.size(); ++id) {
 
-//      if (myHistory->children[i]->clusterIn.iPosInMother.size() == 0) {
-//        myHistory->children[i]->state.list();
-//        abort();
-//      }
-
       int iRad(0), iRec(0);
       map<int,int>::iterator it
       = myHistory->children[i]->clusterIn.iPosInMother.find(dipEnds[id].first);
@@ -173,9 +163,6 @@ void MyMerging::storeInfos() {
       = myHistory->children[i]->clusterIn.iPosInMother.find(dipEnds[id].second);
       if ( it2 == myHistory->children[i]->clusterIn.iPosInMother.end() ) continue;
       iRec = it2->second;
-
-      //cout << myHistory->state[rad].isFinal() << endl;
-      //cout << "i=" << id << " rad=" << rad << " " << dipEnds[id].first << " " << iRad << " rec=" << rec << " " << dipEnds[id].second << " " << iRec << endl;
 
       // Already covered clustering.
       if ( find(radSave.begin(), radSave.end(), iRad) != radSave.end()
@@ -202,79 +189,9 @@ void MyMerging::storeInfos() {
       if (it3 != stateVars.end()) dead = (it3->second>0.) ? false : true;
       isInDeadzone.push_back(dead);
 
-
-//      cout << "i=" << id << " rad=" << iRad << " rec=" << iRec << " scale=" << t << endl;
-
-
     }
-
-
-//  for ( map<int, int>::iterator it = myHistory->children[i]->clusterIn.iPosInMother.begin();
-//    it != myHistory->children[i]->clusterIn.iPosInMother.end(); ++it ) {
-//    cout << "s-event " << it->first << " --> h-event " << it->second << endl;
-//  }
-
-
-/*    // Already covered clustering.
-    if ( find(radSave.begin(), radSave.end(), rad) != radSave.end()
-      && find(recSave.begin(), recSave.end(), rec) != recSave.end() )
-      continue;
-
-    bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rad, emt, rec, "");
-    if (isFSR) {
-      stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rad,emt,rec,"");
-    } else {
-      stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rad,emt,rec,"");
-    }
-    double t    = stateVars["t"];
-    double mass = myHistory->children[i]->clusterIn.mass();
-    // Just store pT for now.
-    stoppingScalesSave.push_back(t);
-    radSave.push_back(rad);
-    emtSave.push_back(emt);
-    recSave.push_back(rec);
-    mDipSave.push_back(mass);
-    bool dead = (t<=0.);
-    map<string, double>::iterator it = stateVars.find("isAllowed");
-    if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
-    isInDeadzone.push_back(dead);
-
-cout << "Clustering in Pythia: rad=" << rad << " emt=" << emt << " rec=" << rec << endl; 
-
-    // Now swap radiator and recoiler and repeat everything.
-    isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state, rec, emt, rad, "");
-    if (isFSR)
-      stateVars = myHistory->showers->timesPtr->getStateVariables(myHistory->state,rec,emt,rad,"");
-    else
-      stateVars = myHistory->showers->spacePtr->getStateVariables(myHistory->state,rec,emt,rad,"");
-    t = stateVars["t"];
-    stoppingScalesSave.push_back(t);
-    radSave.push_back(rec);
-    emtSave.push_back(emt);
-    recSave.push_back(rad);
-    mDipSave.push_back(mass);
-    dead = (t<=0.);
-    it = stateVars.find("isAllowed");
-    if (it != stateVars.end()) dead = (it->second>0.) ? false : true;
-    isInDeadzone.push_back(dead);
-
-cout << "Clustering in Pythia: rad=" << rec << " emt=" << emt << " rec=" << rad << endl; 
-
-    //cout << "Emission of "
-    // <<  myHistory->state[myHistory->children[i]->clusterIn.emtPos()].id()
-    // << " at pT "
-    // << myHistory->children[i]->clusterIn.pT() << endl;
-    //
-    //// Just store pT for now.
-    //stoppingScalesSave.push_back(myHistory->children[i]->clusterIn.pT());
-    //radSave.push_back(myHistory->children[i]->clusterIn.radPos());
-    //emtSave.push_back(myHistory->children[i]->clusterIn.emtPos());
-    //recSave.push_back(myHistory->children[i]->clusterIn.recPos());
-    //mDipSave.push_back(myHistory->children[i]->clusterIn.mass());*/
 
   }
-
-//abort();
 
 }
 
@@ -353,8 +270,6 @@ void MyMerging::getStoppingInfo(double scales [100][100],
   for (unsigned int i=0; i < radSave.size(); ++i){
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
-//    cout << radSave[i] << " " << recSave[i] << " "
-//      << mDipSave[i] << " " << stoppingScalesSave[i] << endl;
   }
 
 }
@@ -374,43 +289,6 @@ void MyMerging::getDeadzones(bool dzone [100][100]) {
 
 double MyMerging::generateSingleSudakov ( double pTbegAll, 
   double pTendAll, double m2dip, int idA, int type, double s, double x) {
-
-/*
-// For testing.
-cout << "\n\n\n current type " << type << endl;
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1, -1, s, x);
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, 1, -1, s, x);
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1, -1, s, x);
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,-1, -1, s, x);
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21, -1, s, x);
-isr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21,  1, s, x);
-fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip,21, -1, s, x);
-abort();*/
-
-  /*// II
-  if (type == 1) {
-    return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
-      -1, s, x);
-  // FF
-  } else if (type == 2) {
-    return fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
-      1, s, x);
-  // IF
-  } else if (type == 3) {
-    return isr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
-      1, s, x);
-  // FI
-  } else if (type == 4) {
-    return fsr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
-      -1, s, x);
-  }
-
-  return 1.;*/
 
   // II
   double prob = 1.;
@@ -434,77 +312,6 @@ abort();*/
   return prob;
 
 }
-
-
-//--------------------------------------------------------------------------
-
-// Function to perform CKKW-L merging on this event.
-
-/*int MyMerging::genSud( Event& process) {
-
-  double startingScale = infoPtr->scalup();
-  double s = pow2(infoPtr->eCM());
-
-  int iz=0, ig = 0;
-  for (int i = process.size()-1; i > 0; --i)
-    if (process[i].idAbs() == 23) { iz = i; break; }
-  for (int i = process.size()-1; i > 0; --i)
-    if (process[i].colType() != 0) { ig = i; break; }
-  double stoppingScale = process[iz].pT();
-
-  double m2dip = process[iz].m2Calc();
-
-  int idA = process[3].id();
-  int idB = process[4].id();
-  int type = -1;
-  double xA = 2.*process[3].e()/infoPtr->eCM();
-  double xB = 2.*process[4].e()/infoPtr->eCM();
-
-  double sbi = -2.*process[3].p()*process[ig].p();
-  double sai = -2.*process[4].p()*process[ig].p();
-  double sab =  2.*process[3].p()*process[4].p();
-  double zA = 1 + sbi/sab;
-  double zB = 1 + sai/sab;
-
-zA = isr->z_II(process[3], process[ig], process[4]);
-
-  // Calculate CS variables.
-double pT2    = isr->pT2_II(process[3], process[ig], process[4]);
-double Q2     = 2.*process[3].p()*process[4].p()
-                - 2.*process[3].p()*process[ig].p()
-                - 2.*process[ig].p()*process[4].p();
-double kappa2 = pT2 / Q2;
-double xCS    = (zA*(1-zA)- kappa2)/(1-zA);
-
-stoppingScale = sqrt(pT2);
-
-//process.list();
-//cout << scientific << setprecision(4) << "z=" << zA << " xOld= " << xCS*xA << endl;
-
-  double w1 = isr->noEmissionProbability( startingScale, stoppingScale, m2dip, idA,
-    type, s, xCS*xA);
-
-//cout << scientific << setprecision(4) << " x= " << zA*xA << " " << zB*xA << "\t\t" << zB*xB << endl;
-
-//  double w2 = isr->noEmissionProbability( startingScale, stoppingScale, m2dip, idB,
-//    type, s, zB*xB);
-
-  double w2 = 1.;
-if (process[ig].idAbs() < 9 && process[3].id() != 21) w1= 1.;
-
-  bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
-  // Save the weight of the event for histogramming.
-  if (!includeWGT) mergingHooksPtr->setWeightCKKWL(w1*w2);
-  // Update the event weight.
-  double norm = (abs(infoPtr->lhaStrategy()) == 4) ? 1/1e9 : 1.;
-  if ( includeWGT) infoPtr->updateWeight(infoPtr->weight()*w1*w2*norm);
-
-  // Done
-  return 1;
-
-}*/
-
-
 
 //--------------------------------------------------------------------------
 
@@ -1889,8 +1696,6 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
     //return -1;
   }
 
-//cout << nRequested << " " << nSteps << endl;
-
   // Potentially recluster real emission jets for powheg input containing
   // "too many" jets, i.e. real-emission kinematics.
   bool containsRealKin = nSteps > nRequested && nSteps > 0;
@@ -2050,8 +1855,6 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
   }
 
   mergingHooksPtr->setWeightCKKWL(wgt);
-
-//cout << wgt << endl;
 
   // Check if we need to subtract the O(\alpha_s)-term. If the number
   // of additional partons is larger than the number of jets for

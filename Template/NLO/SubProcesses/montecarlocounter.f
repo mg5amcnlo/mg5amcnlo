@@ -1218,6 +1218,8 @@ c
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      integer idIn1, idIn2
+      integer idOut(0:9)
       double precision tBefore,tAfter
       logical do_time_profiling
       parameter (do_time_profiling=.false.)
@@ -1426,7 +1428,16 @@ c
       if(do_time_profiling)then
          if (is_pythia_active.eq.0) then
             call cpu_time(tBefore)
-            call dire_init_default()
+            idOut=0
+            do i=3,nexternal-1
+              idOut(i-3) = IDUP_S(i)
+              if ( is_a_j(i) ) idOut(i-3)=2212
+            enddo
+            idIn1 = idup_s(1)
+            idIn2 = idup_s(2)
+            if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
+            if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
+            call dire_init_default(idIn1, idIn2, idOut)
             call cpu_time(tAfter)
             write(*,*)'time elapsed in dire_init_default',tAfter-tBefore
          endif
@@ -1449,7 +1460,16 @@ c
          write(*,*)
       else
          if (is_pythia_active.eq.0) then
-            call dire_init_default()
+            idOut=0
+            do i=3,nexternal-1
+              idOut(i-3) = IDUP_S(i)
+              if ( is_a_j(i) ) idOut(i-3)=2212
+            enddo
+            idIn1 = idup_s(1)
+            idIn2 = idup_s(2)
+            if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
+            if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
+            call dire_init_default(idIn1, idIn2, idOut)
          endif
          call dire_setevent()
          call dire_next()

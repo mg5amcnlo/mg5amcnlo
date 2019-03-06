@@ -1284,8 +1284,6 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
     recpos.push_back(i+1);
   }
 
-//state.list();
-
   beamAPtr->clear();
   beamBPtr->clear();
   beamAPtr->append( 1, idA, x1);
@@ -6667,7 +6665,7 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   }
 
   // Check if the state is valid. If not, return empty state.
-  if (!validEvent( outState, true )) { outState.clear(); }
+  if (!validEvent( outState, true )) outState.clear();
 
   // Done
   return make_pair(outState, make_pair(radPos, recPos));
@@ -6701,7 +6699,7 @@ bool DireSpace::cluster_II( const Event& state,
   double xNew = 2.*state[iRad].e()/state[0].m();
   double xOld = xNew*xCS;
   if ( !inAllowedPhasespace( 1, z, pT2, Q2, xOld, -2, m2Bef, m2r, m2s, m2e) ) {
-    return false;
+   return false;
   }
 
   // Set up kinematics.
@@ -7027,8 +7025,6 @@ map<string, double> DireSpace::getStateVariables (const Event& state,
     double xCS        = (state[rec].isFinal()
                       ? z : (z*(1-z) - pT2/m2dip) / (1 -z));
     double xDau = xCS * 2.*state[rad].e()/state[0].m();
-
-//cout << scientific << setprecision(6) << "ISR: kinType=" << kinType << " z=" << z << " pT2=" << pT2 << " m2dip=" << m2dip << " xDau=" << xDau << " type=" << type<< " m2Bef=" << m2Bef << " m2r=" << m2r << " m2s=" << m2s << " m2e=" << m2e << endl;  
 
     bool allowed = inAllowedPhasespace( kinType, z, pT2, m2dip, xDau, type,
       m2Bef, m2r, m2s, m2e);
