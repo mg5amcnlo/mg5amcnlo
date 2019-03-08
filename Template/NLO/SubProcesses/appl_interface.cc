@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
@@ -142,6 +143,10 @@ extern "C" void appl_init_() {
             min_alphas_p = appl_common_fixed_.qcdpower[i];
         }
     }
+
+    // `appl_common_fixed_.qcdpower` has the power of `gs`, but we need powers of `alphas`
+    assert( (min_alphas_p % 2) == 0 );
+    min_alphas_p /= 2;
 
     int leading_order = min_alphas_p; /////MZ keep this at the moment beacuse applgrid needs it; eventually to be dropped 
 	//appl_common_fixed_.bpower;
