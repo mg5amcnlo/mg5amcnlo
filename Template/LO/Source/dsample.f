@@ -1759,8 +1759,10 @@ c         if (kn .eq. events) then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
-         if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
-            call none_pass(1000)
+         if (iteration.eq.1) then
+           if (nb_pass_cuts.eq.1000 .and. non_zero.eq.0) then
+              call none_pass(1000)
+           endif
          endif
          if (non_zero .ge. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
