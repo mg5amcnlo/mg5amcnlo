@@ -251,6 +251,8 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
+      integer amp_pos_plot
+      common /campposplot/ amp_pos_plot
       integer iappl
       common /for_applgrid/ iappl
       include "appl_common.inc"
@@ -286,6 +288,7 @@ c Fill the arrays (momenta, status and PDG):
       enddo
       if(iappl.ne.0)then
          appl_itype     = ibody
+         appl_amp_pos   = amp_pos_plot
          appl_www_histo = www(1)
       endif
       call analysis_fill(p,istatus,ipdg,www,ibody)

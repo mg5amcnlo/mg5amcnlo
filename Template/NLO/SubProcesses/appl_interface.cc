@@ -70,6 +70,7 @@ typedef struct {
   double obs_bins[101];
   int    obs_nbins;
   int    itype_histo;
+  int    amp_pos;
   int    obs_num;
 } __amcatnlo_common_histokin__;
 
@@ -277,8 +278,9 @@ extern "C" void appl_fill_() {
     exit(-10);
   }
 
-  for (int index = 0; index != __amp_split_size; ++index)
-  {
+  //this is the second index of the WB/R/F/0 arrays
+  int index = appl_common_histokin_.amp_pos;
+
   // aMC@NLO weights. Four grids, ordered as {W0,WR,WF,WB}.
   double (& W0) [4] = appl_common_weights_.W0[index];
   double (& WR) [4] = appl_common_weights_.WR[index];
@@ -407,7 +409,7 @@ extern "C" void appl_fill_() {
     grid_obs[nh]->fill_grid(x1,x2,scale2,obs,&weight[0],3);
     weight.at(ilumi) = 0;
   }
-  }
+
 }
 
 extern "C" void appl_fill_ref_() {

@@ -8,7 +8,7 @@
          integer :: iwgtnumpartn,jwgtinfo,mexternal
      $        ,lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
      $        ,dyn_scale(0:maxdynscales),n_ctr_found,n_mom_conf
-     $        ,QCD_power,orders_tag
+     $        ,QCD_power,orders_tag,amp_pos
          double precision :: wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
      $        ,wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtnstmp_avgvirt
      $        ,wgtref,scalevarR(0:maxscales),scalevarF(0:maxscales)

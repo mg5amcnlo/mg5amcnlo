@@ -43,6 +43,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
@@ -62,6 +63,7 @@ C in the LO cross section
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
@@ -257,6 +259,7 @@ C to make sure that it cannot be incorrectly understood.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
@@ -281,6 +284,7 @@ c and not be part of the plots nor computation of the cross section.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
@@ -325,6 +329,7 @@ c its value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
@@ -388,6 +393,7 @@ c the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
@@ -481,6 +487,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
@@ -590,6 +597,7 @@ c value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
@@ -695,6 +703,7 @@ c respectively.
                 wgtcpower=0d0
                 if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 orders_tag=get_orders_tag(orders)
+                amp_pos=iamp
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
@@ -1556,6 +1565,7 @@ C Secondly, the more advanced filter
       qcdpower(icontr)=QCD_power
       cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
+      amppos(icontr)=amp_pos
       ipr(icontr)=0
       call set_pdg(icontr,nFKSprocess)
 
@@ -2507,6 +2517,8 @@ c to greatly reduce the calls to the analysis routines.
       ! stuff for plotting the different splitorders
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+      integer amp_pos_plot
+      common /campposplot/ amp_pos_plot
       save max_weight
       call cpu_time(tBefore)
       if (icontr.eq.0) return
@@ -2567,6 +2579,7 @@ c contribution makes sure that it is added as a new element.
             enddo
 c call the analysis/histogramming routines
             orders_tag_plot=orderstag(i)
+            amp_pos_plot=amppos(i)
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
