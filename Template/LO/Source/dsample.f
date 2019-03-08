@@ -2273,7 +2273,7 @@ c
 c----
 c  Begin Code
 c----
-      if (nb_pass_cuts.eq.max_events) then
+      if (1000.eq.max_events) then
          write(*,*) nb_pass_cuts, 
      &    ' points passed the cut but all returned zero'
          write(*,*) 'therefore considering this contribution as zero'
