@@ -2285,11 +2285,6 @@ c must do MC over FKS directories.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       integer lo_qcd_to_amp_pos, nlo_qcd_to_amp_pos
       integer pos
-      if (icontr.gt.8) then
-         write (*,*) 'ERROR: too many applgrid weights. '/
-     &        /'Should have at most one of each itype.',icontr
-         stop 1
-      endif
       do i=1,4
         do j=1,amp_split_size
           appl_w0(i,j)=0d0
