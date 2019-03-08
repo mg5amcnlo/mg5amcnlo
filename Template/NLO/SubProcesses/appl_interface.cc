@@ -279,7 +279,7 @@ extern "C" void appl_fill_() {
   }
 
   //this is the second index of the WB/R/F/0 arrays
-  int index = appl_common_histokin_.amp_pos;
+  int index = appl_common_histokin_.amp_pos - 1;
 
   // aMC@NLO weights. Four grids, ordered as {W0,WR,WF,WB}.
   double (& W0) [4] = appl_common_weights_.W0[index];
