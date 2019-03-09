@@ -3520,13 +3520,14 @@ class Process(PhysicsObject):
         final_legs = filter(lambda leg: leg.get('state') == True, \
                               self.get_legs_with_decays())
 
-        identical_indices = {}
         for leg in final_legs:
-            if leg.get('id') in identical_indices:
-                identical_indices[leg.get('id')] = \
-                                    identical_indices[leg.get('id')] + 1
+            key = (leg.get('id'), tuple(leg.get('polarization')))
+            misc.sprint(key)
+            if key in identical_indices:
+                identical_indices[key] += 1
             else:
-                identical_indices[leg.get('id')] = 1
+                identical_indices[key] = 1
+
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
 
