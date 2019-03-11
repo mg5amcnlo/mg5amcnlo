@@ -503,11 +503,8 @@ extern "C" {
       if (masses[i]<0.) continue;
       stringstream s;
       s << i << ":m0 =" << masses[i];
-      cout << s.str() << endl;
       pythia4dire.readString(s.str());
     }
-
-abort();
 
     cout<<"Using default initialization of Pythia8."<<endl;
     pythia4dire.readString("Beams:frameType                 = 5");
