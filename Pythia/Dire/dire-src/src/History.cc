@@ -4270,11 +4270,13 @@ Event MyHistory::cluster( MyClustering & inSystem ) {
             : newEvent;
     }
 
-    // Store radiator and recoiler positions.
-    inSystem.recBef = newEvent[0].mother2();
-    inSystem.radBef = newEvent[0].mother1();
-    inSystem.iPosInMother = iPosInMother;
-    newEvent[0].mothers(0,0);
+    if (newEvent.size()>0) {
+      // Store radiator and recoiler positions.
+      inSystem.recBef = newEvent[0].mother2();
+      inSystem.radBef = newEvent[0].mother1();
+      inSystem.iPosInMother = iPosInMother;
+      newEvent[0].mothers(0,0);
+    }
 
   }
 

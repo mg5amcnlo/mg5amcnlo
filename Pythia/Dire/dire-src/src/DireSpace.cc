@@ -6298,6 +6298,9 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   Event NewEvent = Event();
   NewEvent.init("(hard process-modified)", particleDataPtr);
   NewEvent.clear();
+
+//return make_pair(NewEvent, make_pair(0,0));
+
   map<int,int> iPosMothTmp;
   // Copy all unchanged particles to NewEvent
   for (int i = 0; i < state.size(); ++i) {

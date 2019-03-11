@@ -311,7 +311,8 @@ public:
     //return  clustered_internal(state, iRad, iEmt, iRec, name).first;
     pair <Event, pair<int,int> > reclus
       = clustered_internal(state,iRad, iEmt, iRec, name, iPosMoth);
-    reclus.first[0].mothers(reclus.second.first,reclus.second.second);
+    if (reclus.first.size()>0)
+      reclus.first[0].mothers(reclus.second.first,reclus.second.second);
     return reclus.first;
   }
   pair <Event, pair<int,int> > clustered_internal( const Event& state,

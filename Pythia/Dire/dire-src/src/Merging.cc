@@ -113,6 +113,8 @@ void MyMerging::storeInfos() {
 
   int posOffset=2;
 
+//  myHistory->state.list();
+
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -277,6 +279,9 @@ void MyMerging::getStoppingInfo(double scales [100][100],
 
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
+
+//    cout << radSave[i] << " " << recSave[i] << " " << isInDeadzone[i] << " " << stoppingScalesSave[i] << endl;
+
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
@@ -387,8 +392,6 @@ int MyMerging::mergeProcess(Event& process){
 
   // Ensure that merging weight is not counted twice.
   bool includeWGT = mergingHooksPtr->includeWGTinXSEC();
-
-//return genSud(process);
 
   // Possibility to apply merging scale to an input event.
   bool applyTMSCut = settingsPtr->flag("Merging:doXSectionEstimate");

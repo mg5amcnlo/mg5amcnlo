@@ -61,7 +61,7 @@ cd $workd
 #mv DIRE-2.001alpha Dire/dire-src
 cd Dire/dire-src
 
-#make distclean
+#make clean
 
 configStr="./configure"
 configStr+=" --prefix=$workd/Dire/dire-build"
