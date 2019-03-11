@@ -166,8 +166,17 @@ void MyMerging::storeInfos() {
 
       // Already covered clustering.
       if ( find(radSave.begin(), radSave.end(), iRad) != radSave.end()
-        && find(recSave.begin(), recSave.end(), iRec) != recSave.end() )
-        continue;
+        && find(recSave.begin(), recSave.end(), iRec) != recSave.end() ) {
+        if (myHistory->children[i]->state[iRad].id() != 21 ||
+            myHistory->children[i]->state[iRec].id() != 21) continue;
+        else {
+          // Only continue of gluon was already counted as part of two dipoles.
+          int ir(0), is(0);
+          ir = count(radSave.begin(), radSave.end(), iRad);
+          is = count(recSave.begin(), recSave.end(), iRec);
+           if (ir==2 && is==2) continue;
+        }
+      }
 
       bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state,
         iRad, iemtReq+posOffset, iRec, "");

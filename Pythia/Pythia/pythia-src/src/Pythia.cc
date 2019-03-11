@@ -1763,9 +1763,9 @@ bool Pythia::next() {
   std::clock_t begin = std::clock();
   std::clock_t end = std::clock();
   double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : After init, at time " << setw(10) << begin
-       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : After init, at time " << setw(10) << begin
+//       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
 
   // Outer loop over hard processes; only relevant for user-set vetoes.
   for ( ; ; ) {
@@ -1808,9 +1808,9 @@ bool Pythia::next() {
 
   end = std::clock();
   elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : After process construction, "
-       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : After process construction, "
+//       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
 
     // Possibility to perform matrix element merging for this event.
     if (doMerging) {
@@ -1818,15 +1818,15 @@ bool Pythia::next() {
 
   end = std::clock();
   elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : After process processing, "
-       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : After process processing, "
+//       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
 
       // Apply possible merging scale cut.
       if (veto == -1) {
         hasVetoed = true;
 
-        if (abortIfVeto) { cout << " exit pythia::next()" << endl; return false; }
+        if (abortIfVeto) { /*cout << " exit pythia::next()" << endl;*/ return false; }
         continue;
       // Exit because of vanishing no-emission probability.
       } else if (veto == 0) {

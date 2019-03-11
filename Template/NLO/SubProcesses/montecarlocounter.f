@@ -1223,7 +1223,7 @@ c
       double precision tBefore,tAfter
       logical do_time_profiling
       parameter (do_time_profiling=.false.)
-      double precision masses_to_MC(25)
+      double precision masses_to_MC(0:25)
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
 c
@@ -1443,9 +1443,9 @@ c     fill masses
             masses_to_MC(5) =MDL_MB
             masses_to_MC(6) =MDL_MT
             masses_to_MC(15)=MDL_MTA
-            masses_to_MC(23)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
+            masses_to_MC(23)=MDL_MZ
+            masses_to_MC(24)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
      &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
-            masses_to_MC(24)=MDL_MZ
             masses_to_MC(25)=MDL_MH
 c
             call cpu_time(tBefore)
@@ -1458,7 +1458,7 @@ c
             idIn2 = idup_s(2)
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            call dire_init_default(idIn1, idIn2, idOut)
+            call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
             call cpu_time(tAfter)
             write(*,*)'time elapsed in dire_init_default',tAfter-tBefore
          endif
@@ -1488,9 +1488,9 @@ c     fill masses
             masses_to_MC(5) =MDL_MB
             masses_to_MC(6) =MDL_MT
             masses_to_MC(15)=MDL_MTA
-            masses_to_MC(23)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
+            masses_to_MC(23)=MDL_MZ
+            masses_to_MC(24)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
      &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
-            masses_to_MC(24)=MDL_MZ
             masses_to_MC(25)=MDL_MH
 c
             idOut=0
@@ -1502,7 +1502,7 @@ c
             idIn2 = idup_s(2)
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            call dire_init_default(idIn1, idIn2, idOut)
+            call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
          endif
          call dire_setevent()
          call dire_next()

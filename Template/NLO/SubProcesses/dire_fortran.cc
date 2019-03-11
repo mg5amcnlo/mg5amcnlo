@@ -465,7 +465,7 @@ extern "C" {
   }
 
   // an initialisation function
-  void dire_init_default_(int& idIn1, int& idIn2, int outIDs [10]) {
+  void dire_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26] ) {
 
     lhareader4dire.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
@@ -497,6 +497,17 @@ extern "C" {
         processString += proc.str();
       }
     } 
+
+    // Initialize masses.
+    for (int i=1; i <= 25; ++i){
+      if (masses[i]<0.) continue;
+      stringstream s;
+      s << i << ":m0 =" << masses[i];
+      cout << s.str() << endl;
+      pythia4dire.readString(s.str());
+    }
+
+abort();
 
     cout<<"Using default initialization of Pythia8."<<endl;
     pythia4dire.readString("Beams:frameType                 = 5");
@@ -591,12 +602,12 @@ extern "C" {
   // a function to shower and analyse events
   void dire_setevent_() {
 
-  std::clock_t begin = std::clock();
-  std::clock_t end = std::clock();
-  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : Enter at time " << setw(10) << begin
-       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  std::clock_t begin = std::clock();
+//  std::clock_t end = std::clock();
+//  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : Enter at time " << setw(10) << begin
+//       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
 
     if (!lhareader4dire.is_initialised()) {
       lhareader4dire.setInit();
@@ -604,31 +615,31 @@ extern "C" {
     }
     // This should set the LHA event using fortran common blocks
     lhareader4dire.setEvent();
-  end = std::clock();
-  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  end = std::clock();
+//  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
 
   }
 
   // a function to shower and analyse events
   void dire_next_() {
-  std::clock_t begin = std::clock();
-  std::clock_t end = std::clock();
-  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : Enter at time " << setw(10) << begin
-       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  std::clock_t begin = std::clock();
+//  std::clock_t end = std::clock();
+//  double elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : Enter at time " << setw(10) << begin
+//       << " elapsed secs " << setw(10) << elapsed_secs_1 << endl;
     if (!lhareader4dire.is_initialised()) {
       lhareader4dire.setInit();
       pythia4dire.init();
     }
     pythia4dire.next();
     ++iEvent4dire;
-  end = std::clock();
-  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
-  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
-       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
+//  end = std::clock();
+//  elapsed_secs_1 = double(end - begin) / CLOCKS_PER_SEC;
+//  cout << __FILE__ << " " << __LINE__ << scientific << setprecision(5)
+//       << " " << __func__ << " : Exit after elapsed secs " << setw(10) << elapsed_secs_1 << endl;
   }
 
   void dire_get_mergingweight_( double& w ) {
