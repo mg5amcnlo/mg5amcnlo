@@ -715,7 +715,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
             if not abs(tmp - number) / abs(tmp + number) < 1e-8:
-                out = '%s%s' % (number, self.format)
+                if 'e' in str(number):
+                    out = str(number).replace('e','d')
+                else:
+                    out = '%s%s' % (number, self.format)
             else:
                 out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out
@@ -923,6 +926,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             writer.write_comments(commentstring)
             writer.writelines(text)
         return text
+
 
 class QP(object): 
     """routines for writing out Fortran"""

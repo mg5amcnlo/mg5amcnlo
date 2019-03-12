@@ -24,6 +24,7 @@ import os
 import re
 import StringIO
 import madgraph.core.color_algebra as color
+import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
 
@@ -3520,13 +3521,10 @@ class Process(PhysicsObject):
         final_legs = filter(lambda leg: leg.get('state') == True, \
                               self.get_legs_with_decays())
 
+        identical_indices = collections.defaultdict(int)
         for leg in final_legs:
             key = (leg.get('id'), tuple(leg.get('polarization')))
-            misc.sprint(key)
-            if key in identical_indices:
-                identical_indices[key] += 1
-            else:
-                identical_indices[key] = 1
+            identical_indices[key] += 1
 
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
