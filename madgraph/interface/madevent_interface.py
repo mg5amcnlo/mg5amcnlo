@@ -2557,7 +2557,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 
                     
                 self.create_plot('parton')            
-                self.exec_cmd('store_events', postcmd=False)            
+                self.exec_cmd('store_events', postcmd=False) 
+                if self.run_card['boost_event']:
+                    self.boost_events()
+                            
+                                       
                 self.exec_cmd('reweight -from_cards', postcmd=False)            
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
@@ -2579,6 +2583,49 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
+    
+    def boost_events(self):
+        
+        if not self.run_card['boost_event']:
+            return
+        
+        if self.run_card['boost_event'].startswith('lambda'):
+            if not isinstance(self, cmd.CmdShell):
+                raise Exception, "boost not allowed online"
+            filter = eval(self.run_card['boost_event'])
+        else:
+            raise Exception
+            
+        path = [pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')]
+            
+        for p in path:
+            if os.path.exists(p):
+                event_path = p
+                break
+        else:
+            raise Exception, "fail to find event file for the boost"
+            
+            
+        lhe = lhe_parser.EventFile(event_path)
+        with misc.TMP_directory() as tmp_dir:
+            output =  lhe_parser.EventFile(pjoin(tmp_dir, os.path.basename(event_path)), 'w')
+            #write the banner to the output file
+            output.write(lhe.banner)
+            # Loop over all events
+            for event in lhe:
+                event.boost(filter)
+                #write this modify event
+                output.write(str(event))
+            output.write('</LesHouchesEvent>\n') 
+            lhe.close()
+            files.mv(pjoin(tmp_dir, os.path.basename(event_path)), event_path) 
+         
+            
+            
+            
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
