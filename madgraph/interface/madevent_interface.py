@@ -2558,7 +2558,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     
                 self.create_plot('parton')            
                 self.exec_cmd('store_events', postcmd=False) 
-                if self.run_card['boost_event']:
+                if self.run_card['boost_event'].strip()  and self.run_card['boost_event'] != 'False':
                     self.boost_events()
                             
                                        
