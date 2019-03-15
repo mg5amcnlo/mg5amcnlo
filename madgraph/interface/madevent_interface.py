@@ -5650,7 +5650,7 @@ tar -czf split_$1.tar.gz split_$1
         logger.info("compile Source Directory")
         
         # Compile
-        for name in [ 'all', '../bin/internal/combine_events']:
+        for name in [ 'all']:#, '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         bias_name = os.path.basename(self.run_card['bias_module'])
@@ -6663,71 +6663,6 @@ class GridPackCmd(MadEventCmd):
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
-
-    def do_combine_events_v4(self, line):
-        """Advanced commands: Launch combine events"""    
-        
-        args = self.split_arg(line)
-    
-        # Check argument's validity
-        self.check_combine_events(args)
-
-        self.update_status('Combining Events', level='parton')
-
-        try:
-            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except Exception:
-            pass
-        
-        if not self.readonly:        
-            run_dir = pjoin(self.me_dir,'SubProcesses')
-            stdout_file = pjoin(self.me_dir,'SubProcesses', 'combine.log')
-        else:
-            run_dir = pjoin('SubProcesses')
-            stdout_file = pjoin('SubProcesses', 'combine.log')
-
-        cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
-                                       args=[self.run_name],
-                                       cwd=run_dir,
-                                       stdout=stdout_file,
-                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-            
-        output = misc.mult_try_open(stdout_file).read()
-        # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-        try:      
-            nb_event = pat.search(output).groups()[0]
-        except AttributeError:
-            time.sleep(10)
-            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            try:
-                nb_event = pat.search(output).groups()[0]
-            except AttributeError:
-                logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                nb_event = 0
-        self.results.add_detail('nb_event', nb_event)
-        
-        # Define The Banner
-        tag = self.run_card['run_tag']
-        
-        # Update the banner with the pythia card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'parton')
-        self.banner.load_basic(self.me_dir)
-        # Add cross-section/event information
-        self.banner.add_generation_info(self.results.current['cross'], nb_event)
-        if not hasattr(self, 'random_orig'): self.random_orig = 0
-        self.banner.change_seed(self.random_orig)
-        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                     '%s_%s_banner.txt' % (self.run_name, tag)))
-        
-        
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
-                                out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
-                                out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
 
 class MadLoopInitializer(object):

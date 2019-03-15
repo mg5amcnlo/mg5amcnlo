@@ -976,13 +976,13 @@ class MultiEventFile(EventFile):
             self.seek(0)
         else:
             # check special case without PDF for one (or both) beam
-            if init_information["idbmup1"] == 0:
+            if init_information["idbmup1"] in [0,9]:
                 event = self.next()
                 init_information["idbmup1"]= event[0].pdg
                 if init_information["idbmup2"] == 0:
                     init_information["idbmup2"]= event[1].pdg
                 self.seek(0)
-            if init_information["idbmup2"] == 0:
+            if init_information["idbmup2"] in [0,9]:
                 event = self.next()
                 init_information["idbmup2"] = event[1].pdg
                 self.seek(0)

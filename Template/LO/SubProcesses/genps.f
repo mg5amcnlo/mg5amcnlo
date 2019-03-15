@@ -185,7 +185,8 @@ c
 c     External function
       double precision SumDot
       external SumDot
-
+      logical dummy_boostframe
+      external dummy_boostframe
 c
 c     data
 c
@@ -304,8 +305,12 @@ c
 c     First Generate Momentum for initial state particles
 c
       if (lpp(1).eq.9.or.lpp(2).eq.9)then
-         p(:,1) = pi1(:)
-         p(:,2) = pi2(:)
+         if (dummy_boostframe())then
+            call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
+         else
+            p(:,1) = pi1(:)
+            p(:,2) = pi2(:)
+         endif
       else if(nincoming.eq.2) then
         call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
       else
