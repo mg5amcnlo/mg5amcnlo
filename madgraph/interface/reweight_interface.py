@@ -1180,11 +1180,11 @@ class ReweightInterface(extended_cmd.Cmd):
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
         if (hypp_id == 1 and self.boost_event):
-            import copy
-            new_event = copy.deepcopy(event)
-            misc.sprint(type(new_event))
-            new_event.boost(self.boost_event)
-            p = new_event.get_momenta(orig_order)        
+            if self.boost_event is not True:
+                import copy
+                new_event = copy.deepcopy(event)
+                new_event.boost(self.boost_event)
+                p = new_event.get_momenta(orig_order)        
         elif (hasattr(event[1], 'status') and event[1].status == -1) or \
            (event[1].px == event[1].py == 0.):
             pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
