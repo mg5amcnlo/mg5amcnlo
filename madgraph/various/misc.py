@@ -867,10 +867,10 @@ def check_system_error(value=1):
                 return f(arg, *args, **opt)
             except OSError, error:
                 logger.debug('try to recover from %s' % error)
-                if isinstance(arg, list):
+                if isinstance(arg, (list,tuple)):
                     prog =  arg[0]
                 else:
-                    prog = arg[0]
+                    prog = arg
                 
                 # Permission denied
                 if error.errno == 13:     

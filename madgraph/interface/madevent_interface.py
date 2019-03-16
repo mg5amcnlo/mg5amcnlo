@@ -2557,7 +2557,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 
                     
                 self.create_plot('parton')            
-                self.exec_cmd('store_events', postcmd=False)            
+                self.exec_cmd('store_events', postcmd=False) 
+                if self.run_card['boost_event'].strip()  and self.run_card['boost_event'] != 'False':
+                    self.boost_events()
+                            
+                                       
                 self.exec_cmd('reweight -from_cards', postcmd=False)            
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
@@ -2579,6 +2583,49 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
+    
+    def boost_events(self):
+        
+        if not self.run_card['boost_event']:
+            return
+        
+        if self.run_card['boost_event'].startswith('lambda'):
+            if not isinstance(self, cmd.CmdShell):
+                raise Exception, "boost not allowed online"
+            filter = eval(self.run_card['boost_event'])
+        else:
+            raise Exception
+            
+        path = [pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')]
+            
+        for p in path:
+            if os.path.exists(p):
+                event_path = p
+                break
+        else:
+            raise Exception, "fail to find event file for the boost"
+            
+            
+        lhe = lhe_parser.EventFile(event_path)
+        with misc.TMP_directory() as tmp_dir:
+            output =  lhe_parser.EventFile(pjoin(tmp_dir, os.path.basename(event_path)), 'w')
+            #write the banner to the output file
+            output.write(lhe.banner)
+            # Loop over all events
+            for event in lhe:
+                event.boost(filter)
+                #write this modify event
+                output.write(str(event))
+            output.write('</LesHouchesEvent>\n') 
+            lhe.close()
+            files.mv(pjoin(tmp_dir, os.path.basename(event_path)), event_path) 
+         
+            
+            
+            
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
@@ -5603,7 +5650,7 @@ tar -czf split_$1.tar.gz split_$1
         logger.info("compile Source Directory")
         
         # Compile
-        for name in [ 'all', '../bin/internal/combine_events']:
+        for name in [ 'all']:#, '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         bias_name = os.path.basename(self.run_card['bias_module'])
@@ -6616,71 +6663,6 @@ class GridPackCmd(MadEventCmd):
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
-
-    def do_combine_events_v4(self, line):
-        """Advanced commands: Launch combine events"""    
-        
-        args = self.split_arg(line)
-    
-        # Check argument's validity
-        self.check_combine_events(args)
-
-        self.update_status('Combining Events', level='parton')
-
-        try:
-            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except Exception:
-            pass
-        
-        if not self.readonly:        
-            run_dir = pjoin(self.me_dir,'SubProcesses')
-            stdout_file = pjoin(self.me_dir,'SubProcesses', 'combine.log')
-        else:
-            run_dir = pjoin('SubProcesses')
-            stdout_file = pjoin('SubProcesses', 'combine.log')
-
-        cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
-                                       args=[self.run_name],
-                                       cwd=run_dir,
-                                       stdout=stdout_file,
-                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-            
-        output = misc.mult_try_open(stdout_file).read()
-        # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-        try:      
-            nb_event = pat.search(output).groups()[0]
-        except AttributeError:
-            time.sleep(10)
-            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            try:
-                nb_event = pat.search(output).groups()[0]
-            except AttributeError:
-                logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                nb_event = 0
-        self.results.add_detail('nb_event', nb_event)
-        
-        # Define The Banner
-        tag = self.run_card['run_tag']
-        
-        # Update the banner with the pythia card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'parton')
-        self.banner.load_basic(self.me_dir)
-        # Add cross-section/event information
-        self.banner.add_generation_info(self.results.current['cross'], nb_event)
-        if not hasattr(self, 'random_orig'): self.random_orig = 0
-        self.banner.change_seed(self.random_orig)
-        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                     '%s_%s_banner.txt' % (self.run_name, tag)))
-        
-        
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
-                                out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
-                                out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
 
 class MadLoopInitializer(object):

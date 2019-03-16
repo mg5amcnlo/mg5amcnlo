@@ -1787,7 +1787,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not process.get('required_s_channels') and \
                    not process.get('forbidden_onsh_s_channels') and \
                    not process.get('forbidden_s_channels') and \
-                   not process.get('is_decay_chain'):
+                   not process.get('is_decay_chain') and not diagram_filter:
                     try:
                         crossed_index = success_procs.index(sorted_legs)
                         # The relabeling of legs for loop amplitudes is cumbersome
