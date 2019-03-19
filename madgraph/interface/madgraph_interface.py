@@ -1447,11 +1447,17 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
+        if args[0] in ['low_mem_multicore_nlo_generation']:
+            if sys.version_info[0] == 2 and sys.version_info[1] == 6:
+                raise self.InvalidCmd('python2.6 does not support such functionalities please use python2.7')
+        
+
         if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
+
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
