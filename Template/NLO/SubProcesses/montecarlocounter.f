@@ -1152,6 +1152,10 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       double precision wgt_sudakov
       double precision scales(0:99)
 
+      integer itmp,jtmp
+      double precision scltarget,sclstart,sudpdffact
+      common/cscalprob/scltarget,sclstart,sudpdffact
+
 c To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
@@ -1212,7 +1216,7 @@ c
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
-      double precision pdg2pdf
+      double precision pdg2pdf,pdffnum,pdffden
       external pdg2pdf
 c
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -1667,6 +1671,10 @@ c in Ellis-Stirling-Webber
       i_dipole_dead_counter=0
       nG_S=0
       nQ_S=0
+      scltarget=1.d10
+      sudpdffact=1.d0
+      itmp=-1
+      jtmp=-1
 c
       do i=1,nexternal-1
          if(idup_s(i).eq.21)nG_S=nG_S+1
@@ -1702,6 +1710,12 @@ c contribute to Delta
                isudtype=4
             endif
 c
+            if(stoppingScale.lt.scltarget)then
+              scltarget=stoppingScale
+              sclstart=startingScale
+              itmp=i
+              jtmp=j
+            endif
             if(stoppingScale.le.smallptlow)then
               deltanum=0.d0
             elseif( stoppingScale.gt.smallptlow .and.
@@ -1725,10 +1739,13 @@ c
                elseif (idup_s(i).eq.22) then ! photon
                   id=7
                endif
-               deltanum=deltanum*pdg2pdf(abs(lpp(i)),id,
-     &                           xbjrk_cnt(i,0),stoppingScale)
-               deltaden=deltaden*pdg2pdf(abs(lpp(i)),id,
-     &                           xbjrk_cnt(i,0),startingScale)
+               pdffnum=pdg2pdf(abs(lpp(i)),id,
+     &                         xbjrk_cnt(i,0),stoppingScale)
+               deltanum=deltanum*pdffnum
+               pdffden=pdg2pdf(abs(lpp(i)),id,
+     &                         xbjrk_cnt(i,0),startingScale)
+               deltaden=deltaden*pdffden
+               sudpdffactt=pdffnum/pdffden
             endif
             if(deltaden.eq.0.d0)then
               deltarat=1.d0
@@ -1745,6 +1762,10 @@ c
          write(*,*)'Mismatch in number of dipole ends and Delta factors'
          write(*,*)i_dipole_counter+i_dipole_dead_counter,nQ_S,nG_S
          stop
+      endif
+      if(itmp.eq.-1.or.jtmp.eq.-1)then
+        scltarget=-1.d8
+        sclstart=-1.d8
       endif
 
 cSF THE FOLLOWING MIGHT READ

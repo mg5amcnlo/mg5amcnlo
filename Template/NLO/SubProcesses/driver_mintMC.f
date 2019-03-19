@@ -799,9 +799,13 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      double precision scltarget,sclstart,sudpdffact
+      common/cscalprob/scltarget,sclstart,sudpdffact
       double precision probne_bog
       common/cprobne_bog/probne_bog
-      integer kk,kk0,kkunit
+      common/cprobne_true/probne
+      integer kk,kk0,kk1,kkunit
+      logical done
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer               ifold_energy,ifold_phi,ifold_yij
@@ -838,6 +842,8 @@ c "npNLO".
 
       fold=ifl
       if (ifl.eq.0 .or. ifl.eq.1) then
+         kk0=0
+         done=.false.
          if (ifl.eq.0) then
             icontr=0
             virt_wgt_mint=0d0
@@ -876,6 +882,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
+            kk0=1
             if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             if (abrv(1:2).ne.'vi') then
@@ -899,6 +906,7 @@ c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
          do i=1,proc_map(proc_map(0,1),0)
+            kk1=0
             wgt_me_real=0d0
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
@@ -917,6 +925,10 @@ c check if event or counter-event passes cuts
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
+            if(passcuts_n1body.and.(.not.passcuts_nbody))then
+              write(*,*)'SFWARNING4',passcuts_n1body,passcuts_nbody
+              stop
+            endif
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
@@ -959,9 +971,11 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
-                  kk0=1
-                  write(kkunit,554)'SDK',probne,probne_bog
-c                  write(*,*)'at the end',probne,probne_bog
+                  kk1=2
+                  write(kkunit,554)'SDK',probne,probne_bog,scltarget,sclstart,sudpdffact
+                  do kk=1,nexternal
+                    write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+                  enddo
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
@@ -973,8 +987,6 @@ c events are called, so this will remain 0.
                  write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
                enddo
                endif
- 554           format(1x,a,2(1x,e14.8))
- 555           format(1x,i2,5(1x,e14.8))
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
@@ -993,6 +1005,13 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
+               if(kk1.eq.0)then
+                 kk1=3
+                 write(kkunit,554)'SD3',probne,probne_bog,scltarget,sclstart,sudpdffact
+                 do kk=1,nexternal
+                   write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+                 enddo
+               endif
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
@@ -1002,8 +1021,17 @@ c Include the real-emission contribution.
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
+            done=done.or.(kk1.ne.0)
          enddo
  12      continue
+         if(kk0.ne.0.and.(.not.done))then
+           write(kkunit,554)'SD1',probne,probne_bog,scltarget,sclstart,sudpdffact
+           do kk=1,nexternal
+             write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+           enddo
+         endif
+ 554     format(1x,a,5(1x,e14.8))
+ 555     format(1x,i2,5(1x,e14.8))
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
      $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then

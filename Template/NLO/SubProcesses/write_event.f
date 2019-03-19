@@ -41,6 +41,16 @@ c missing???
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
+      double precision scltarget,sclstart,sudpdffact
+      common/cscalprob/scltarget,sclstart,sudpdffact
+      double precision probne_bog
+      common/cprobne_bog/probne_bog
+      double precision probne
+      common/cprobne_true/probne
+      integer kk,izero,ione
+      parameter (izero=0)
+      parameter (ione=1)
+
       call cpu_time(tBefore)
 
       do i=1,99
@@ -54,6 +64,20 @@ c missing???
       wgt=1d0
       evnt_wgt=evtsgn*weight
       call generate_momenta(ndim,iconfig,wgt,x,p)
+
+      write(92,554)'EVT',probne,probne_bog,scltarget,sclstart,sudpdffact
+      if(Hevents)then
+        write(92,556)ione,evtsgn
+      else
+        write(92,556)izero,evtsgn
+      endif
+      do kk=1,nexternal
+        write(92,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+      enddo
+ 554  format(1x,a,5(1x,e14.8))
+ 555  format(1x,i2,5(1x,e14.8))
+ 556  format(1x,i2,1x,e14.8)
+
 c
 c Get all the info we need for writing the events.
 c      
