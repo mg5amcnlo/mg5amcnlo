@@ -4713,7 +4713,7 @@ This implies that with decay chains:
                     elif p in ['l', 'L']:
                         polarization += [0]
                     elif p in ['R','r']:
-                        polarization += [-1]
+                        polarization += [1]
                     elif p in ["A",'a']:
                         polarization += [99]
                     elif p in ['+']:

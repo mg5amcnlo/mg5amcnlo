@@ -686,7 +686,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         pol = list(leg.get('polarization'))
                         if 0 in leg.get('polarization'):
                             pol.remove(0)
-                            pol.append(1)
+                            pol.append(-1)
                         self.set('polarization', pol) 
                     
                     if leg.get('state') == False and \
@@ -4779,7 +4779,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             
         spin_factor = reduce(lambda x, y: x * y,
                              [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
+                                   get_helicity_states()) 
+                              if not leg.get('polarization') else 
+                              len(leg.get('polarization'))
                                for leg in initial_legs ])
 
         return spin_factor * color_factor * self['identical_particle_factor']
