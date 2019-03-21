@@ -436,7 +436,7 @@ c timing statistics
       save ini_fin_fks_map
       logical new_point
       common /c_new_point/ new_point
-      if (new_point) then
+      if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
       if (firsttime) then
