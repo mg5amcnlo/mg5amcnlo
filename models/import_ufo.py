@@ -1614,7 +1614,8 @@ class OrganizeModelExpression:
         for param in self.model.all_parameters+additional_params:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
-                                               param.lhablock, param.lhacode)
+                                               param.lhablock, param.lhacode, 
+                                               param.scale if hasattr(param,'scale') else None)
                 
             else:
                 expr = self.shorten_expr(param.value)

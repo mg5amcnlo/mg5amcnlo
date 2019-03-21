@@ -188,7 +188,7 @@ class ParamCardWriter(object):
                 if cur_lhablock in todo_block:
                     todo_block.remove(cur_lhablock)
                 # write the header of the new block
-                self.write_block(cur_lhablock)
+                self.write_block(cur_lhablock, param.scale)
             #write the parameter
             self.write_param(param, cur_lhablock)
         self.write_dep_param_block(cur_lhablock)
@@ -197,7 +197,7 @@ class ParamCardWriter(object):
             self.write_dep_param_block(cur_lhablock)
         self.write_qnumber()
         
-    def write_block(self, name):
+    def write_block(self, name, scale=None):
         """ write a comment for a block"""
         
         self.fsock.writelines(
@@ -206,7 +206,10 @@ class ParamCardWriter(object):
         """\n###################################\n"""
          )
         if name!='DECAY':
-            self.fsock.write("""Block %s \n""" % name.lower())
+            if scale:
+                self.fsock.write("""Block %s @ %s \n""" % (name.lower(), scale))
+            else:
+                self.fsock.write("""Block %s \n""" % name.lower())
             
     def write_param(self, param, lhablock):
         """ write the line corresponding to a given parameter """

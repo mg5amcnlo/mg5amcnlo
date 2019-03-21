@@ -1914,7 +1914,7 @@ class ParamCardVariable(ModelVariable):
     depend = ('external',)
     type = 'real'
     
-    def __init__(self, name, value, lhablock, lhacode):
+    def __init__(self, name, value, lhablock, lhacode, scale=None):
         """Initialize a new ParamCardVariable
         name: name of the variable
         value: default numerical value
@@ -1925,6 +1925,7 @@ class ParamCardVariable(ModelVariable):
         self.value = value 
         self.lhablock = lhablock
         self.lhacode = lhacode
+        self.scale = scale
 
 
 #===============================================================================
