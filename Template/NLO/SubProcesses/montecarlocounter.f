@@ -1745,7 +1745,7 @@ c
                pdffden=pdg2pdf(abs(lpp(i)),id,
      &                         xbjrk_cnt(i,0),startingScale)
                deltaden=deltaden*pdffden
-               sudpdffactt=pdffnum/pdffden
+               sudpdffact=sudpdffact*pdffnum/pdffden
             endif
             if(deltaden.eq.0.d0)then
               deltarat=1.d0
