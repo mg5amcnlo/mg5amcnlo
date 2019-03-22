@@ -3253,12 +3253,16 @@ class RunCardLO(RunCard):
             self['systematics_program'] = 'none'
         
         # if polarization is used, set the choice of the frame in the run_card
+        # But only if polarization is used for massive particles
         for plist in proc_def:
             for proc in plist:
-                for l in proc.get('legs'):
+                for l in proc.get('legs') + proc.get('legs_with_decays'):
                     if l.get('polarization'):
-                        self.display_block.append('frame') 
-                        break
+                        model = proc.get('model')
+                        particle = model.get_particle(l.get('id'))
+                        if particle.get('mass').lower() != 'zero':
+                            self.display_block.append('frame') 
+                            break
                 else:
                     continue
                 break
