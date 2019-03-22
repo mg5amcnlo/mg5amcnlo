@@ -2763,8 +2763,21 @@ class RunCardLO(RunCard):
  %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50})
 """, 
     template_off= '#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#'),
-    ]    
-    
+
+
+#    Frame for polarization
+    runblock(name='frame', fields=('me_frame'),
+              template_on=\
+"""#*********************************************************************
+# Frame where to evaluate the matrix-element (not the cut!) for polarization   
+#*********************************************************************
+  %(me_frame)s  = me_frame     ! 0: partonic center of mass
+                               ! 1: Multi boson frame
+                               ! 2: (Multi) scalar frame
+                               ! 3: custom -> dummy_functions.f 
+""", 
+    template_off= ''),
+    ]        
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -2826,6 +2839,7 @@ class RunCardLO(RunCard):
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
+        self.add_param("me_frame", 0, hidden=True, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum')
         #cut
@@ -3237,6 +3251,20 @@ class RunCardLO(RunCard):
         if no_systematics:
             self['use_syst'] = False
             self['systematics_program'] = 'none'
+        
+        # if polarization is used, set the choice of the frame in the run_card
+        for plist in proc_def:
+            for proc in plist:
+                for l in proc.get('legs'):
+                    if l.get('polarization'):
+                        self.display_block.append('frame') 
+                        break
+                else:
+                    continue
+                break
+            else:
+                continue
+            break
             
     def write(self, output_file, template=None, python_template=False,
               **opt):
