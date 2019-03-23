@@ -451,7 +451,6 @@ C       Flip back local momenta P1 if cached
 
       END
 
-
 C     -----------------------------------------
 C     Subroutine to map three positive integers
 C     I, J and K with upper bounds J_bound and

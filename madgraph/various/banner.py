@@ -2595,7 +2595,7 @@ class RunCard(ConfigFile):
                 continue
             else:
                 pathinc = incname
-                
+
             fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
             for key in self.includepath[incname]:                
                 #define the fortran name
@@ -2771,10 +2771,9 @@ class RunCardLO(RunCard):
 """#*********************************************************************
 # Frame where to evaluate the matrix-element (not the cut!) for polarization   
 #*********************************************************************
-  %(me_frame)s  = me_frame     ! 0: partonic center of mass
-                               ! 1: Multi boson frame
-                               ! 2: (Multi) scalar frame
-                               ! 3: custom -> dummy_functions.f 
+  %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
+                               ! in which to evaluate the matrix-element
+                               ! [1,2] means the partonic center of mass 
 """, 
     template_off= ''),
     ]        
@@ -2839,7 +2838,8 @@ class RunCardLO(RunCard):
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
-        self.add_param("me_frame", 0, hidden=True, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
+        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
+        self.add_param('frame_id', 3,  system=True)
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum')
         #cut
@@ -3092,6 +3092,9 @@ class RunCardLO(RunCard):
             self.get_default('lhaid', log_level=20)
    
     def update_system_parameter_for_include(self):
+        
+        # polarization
+        self['frame_id'] = sum(2**(n) for n in self['me_frame'])
         
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys() + 
