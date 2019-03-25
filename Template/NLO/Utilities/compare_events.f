@@ -13,11 +13,13 @@ c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
       INTEGER NUP2,IDPRUP2,IDUP2(MAXNUP),ISTUP2(MAXNUP),
      # MOTHUP2(2,MAXNUP),ICOLUP2(2,MAXNUP)
       DOUBLE PRECISION XWGTUP2,SCALUP2,AQEDUP2,AQCDUP2,
-     # PUP2(5,MAXNUP),VTIMUP2(MAXNUP),SPINUP2(MAXNUP)
+     # PUP2(5,MAXNUP),VTIMUP2(MAXNUP),SPINUP2(MAXNUP),
+     # SCALUP_a2(MAXNUP,MAXNUP)
       double precision sum_wgt,sum_wgt2,xtmp,ytmp,xmomshifts(4)
       character*80 event_file,event_file2
       character*10 MonteCarlo,MonteCarlo2
@@ -68,7 +70,8 @@ c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
       do i=1,maxevt
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &        buff,SCALUP_a)
          sum_wgt=sum_wgt+XWGTUP
 
          do k=1,nup
@@ -81,7 +84,8 @@ c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
 
          call read_lhef_event(ifile2,
      &        NUP2,IDPRUP2,XWGTUP2,SCALUP2,AQEDUP2,AQCDUP2,
-     &        IDUP2,ISTUP2,MOTHUP2,ICOLUP2,PUP2,VTIMUP2,SPINUP2,buff)
+     &        IDUP2,ISTUP2,MOTHUP2,ICOLUP2,PUP2,VTIMUP2,SPINUP2,
+     &        buff,SCALUP_a2)
          sum_wgt2=sum_wgt2+XWGTUP2
 
          if(nup.ne.nup2)then

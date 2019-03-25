@@ -12,7 +12,8 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
       double precision sum_wgt
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe,percentage
@@ -112,7 +113,8 @@ c
          do while(i.le.maxevt)
             call read_lhef_event(ifile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &           buff,SCALUP_a)
             extra=buff(1:1).eq.'#'
             if(extra)then
                read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
@@ -179,7 +181,8 @@ c
       do while(i.le.numev)
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &        buff,SCALUP_a)
          sum_wgt=sum_wgt+XWGTUP
          if(extra)then
             read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
@@ -208,7 +211,8 @@ c
             ievts_ok=ievts_ok+1
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &           buff,SCALUP_a)
          else
             if(itype.eq.3.or.itype.eq.4)sum_wgt=sum_wgt-XWGTUP
          endif
@@ -229,9 +233,6 @@ c
       enddo
       write(ofile,*)'</LesHouchesEvents>'
       if(itype.ge.3)write(*,*)'The sum of the weights is:',sum_wgt
-
-      write(*,*)'  '
-      write(*,*)'Number of events kept:',ievts_ok
 
       write(*,*)'  '
       write(*,*)'Number of events kept:',ievts_ok

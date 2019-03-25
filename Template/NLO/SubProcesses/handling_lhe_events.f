@@ -717,6 +717,19 @@ c
          write(ifile,'(a)') '  <event>'
       endif
       write(ifile,503)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
+c Write the <scales> block
+      scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+      do i=1,NUP-1
+         do j=i+1,NUP
+            if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
+               write(str_tmp,701)
+     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+               scale_str=trim(scale_str)//trim(str_tmp)
+            endif
+         enddo
+      enddo
+      write(ifile,'(a)')"  "//trim(scale_str)//">"
+      write(ifile,'(a)') "  </scales>"
       do i=1,nup
         write(ifile,504)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -797,21 +810,6 @@ c
             endif
          endif
       endif
-c
-c     write the 'scales' block
-      scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
-      do i=1,NUP-1
-         do j=i+1,NUP
-            if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
-               write(str_tmp,701)
-     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
-               scale_str=trim(scale_str)//trim(str_tmp)
-            endif
-         enddo
-      enddo
-      write(ifile,'(a)')"  "//trim(scale_str)//">"
-      write(ifile,'(a)') "  </scales>"
-c
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -869,6 +867,22 @@ c
          read(string(index(string,'npNLO')+7:),*) npNLO
       endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
+c Read the <scales> block
+      read(ifile,'(a)')string
+      do i=1,len(trim(string))-6
+         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
+            read(string(i+7:i+7),*)ii
+            read(string(i+9:i+9),*)jj
+            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+         endif
+      enddo
+      read(ifile,'(a)')string
+      if(index(string,'</scales').eq.0)then
+         write(*,*)'In read_lhef_event:'
+         write(*,*)'Could not find the end of scales block:'
+         write(*,*)string(1:len_trim(string))
+         stop
+      endif
       do i=1,nup
         read(ifile,*)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -962,18 +976,6 @@ c
          string=buff(1:len_trim(buff))
          buff=' '
       endif
-c
-c     read the 'scales' block
-      do i=1,len(trim(string))-6
-         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
-            read(string(i+7:i+7),*)ii
-            read(string(i+9:i+9),*)jj
-            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-         endif
-      enddo
-      read(ifile,'(a)')string
-      read(ifile,'(a)')string
-c
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -1039,6 +1041,22 @@ c
          read(string(index(string,'npNLO')+7:),*) npNLO
       endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
+c Read the <scales> block
+      read(ifile,'(a)')string
+      do i=1,len(trim(string))-6
+         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
+            read(string(i+7:i+7),*)ii
+            read(string(i+9:i+9),*)jj
+            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+         endif
+      enddo
+      read(ifile,'(a)')string
+      if(index(string,'</scales').eq.0)then
+         write(*,*)'In read_lhef_event_catch:'
+         write(*,*)'Could not find the end of scales block:'
+         write(*,*)string(1:len_trim(string))
+         stop
+      endif
       do i=1,nup
         read(ifile,*)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -1131,19 +1149,6 @@ c
          string=buff(1:len_trim(buff))
          buff=' '
       endif
-c
-c     read the 'scales' block
-      read(ifile,'(a)')string
-      do i=1,len(trim(string))-6
-         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
-            read(string(i+7:i+7),*)ii
-            read(string(i+9:i+9),*)jj
-            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-         endif
-      enddo
-      read(ifile,'(a)')string
-      read(ifile,'(a)')string
-c
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
