@@ -1512,6 +1512,7 @@ c
          call dire_next()
          call dire_get_stopping_info(xscales,xmasses)
          call dire_get_dead_zones(dzones)
+         call dire_clear()
       endif
 c After the calls above, we have
 c   xscales(i,j)=t_ij

@@ -466,7 +466,6 @@ extern "C" {
 
   // an initialisation function
   void dire_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26] ) {
-
     lhareader4dire.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
     pythia4dire.setUserHooksPtr(&printFirstEmission4dire);
@@ -682,6 +681,8 @@ extern "C" {
   void dire_get_dead_zones_( bool dzone [100][100] ) {
     merging->getDeadzones( dzone);
   }
+
+  void dire_clear_() { merging->clear(); }
 
 }
 
