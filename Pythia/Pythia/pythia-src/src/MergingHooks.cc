@@ -2606,7 +2606,8 @@ Event MergingHooks::bareEvent(const Event& inputEventIn,
   bool storeInputEvent ) {
 
   // Find and detach decay products.
-  Event newProcess = Event();
+  //Event newProcess = Event();
+  Event newProcess(20);
   newProcess.init("(hard process-modified)", particleDataPtr);
 
   // If desired, store input event.

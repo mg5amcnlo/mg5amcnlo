@@ -35,9 +35,9 @@ cd Pythia/pythia-src
 
 configStr="./configure"
 configStr+=" --prefix=$workd/Pythia/pythia-build"
-configStr+=" --with-hepmc2=/home/prestel/work/2018/HEPMC2"
-configStr+=" --enable-debug --with-gzip=/home/prestel/work/2018/ZLIB"
-configStr+=" --with-boost=/home/prestep/work/2018/BOOST"
+configStr+=" --with-hepmc2=/nfs/"
+configStr+=" --enable-debug --with-gzip=/usr/local"
+configStr+=" --with-boost=/usr/local"
 
 echo "$configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'"
 $configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'

@@ -393,6 +393,9 @@ public:
   void clear() {entry.resize(0); maxColTag = startColTag;
     savedPartonLevelSize = 0; scaleSave = 0.; scaleSecondSave = 0.;
     clearJunctions();}
+  void free() { vector<Particle>().swap(entry); maxColTag = startColTag;
+    savedPartonLevelSize = 0; scaleSave = 0.; scaleSecondSave = 0.;
+    clearJunctions();}
 
   // Clear event record, and set first particle empty.
   void reset() {clear(); append(90, -11, 0, 0, 0., 0., 0., 0., 0.);}

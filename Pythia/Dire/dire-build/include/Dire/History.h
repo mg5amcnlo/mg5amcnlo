@@ -199,7 +199,15 @@ public:
 
   // The destructor deletes each child.
   ~MyHistory()
-    { for ( int i = 0, N = children.size(); i < N; ++i ) delete children[i]; }
+    {
+      for ( int i = 0, N = children.size(); i < N; ++i ) { 
+        children[i]->state.free();
+        delete children[i];
+      }
+      map<double,MyHistory*>().swap(paths);
+      vector<MyHistory*>().swap(children);
+      state.free();
+    }
 
   // Function to project paths onto desired paths.
   bool projectOntoDesiredHistories();

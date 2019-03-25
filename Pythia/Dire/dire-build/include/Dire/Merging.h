@@ -136,6 +136,8 @@ public:
   void getDeadzones(bool dzone [100][100]);
   vector<bool> isInDeadzone;
 
+  void clear();
+
   double generateSingleSudakov ( double pTbegAll, 
    double pTendAll, double m2dip, int idA, int type, double s = -1.,
    double x = -1.);

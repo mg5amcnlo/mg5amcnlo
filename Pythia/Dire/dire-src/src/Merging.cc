@@ -299,6 +299,11 @@ void MyMerging::getDeadzones(bool dzone [100][100]) {
 
 }
 
+void MyMerging::clear() {
+  fsr->debugPtr->clear(); 
+}
+
+
 //--------------------------------------------------------------------------
 
 double MyMerging::generateSingleSudakov ( double pTbegAll, 
@@ -423,6 +428,8 @@ int MyMerging::mergeProcess(Event& process){
     if (settingsPtr->word("Merging:process").compare("pp>jj") == 0)
       nPartons -= 2;
 
+    newp.free();
+
     // Set number of requested partons.
     if (!settingsPtr->flag("Dire:doMcAtNloDelta"))
       settingsPtr->mode("Merging:nRequested", nPartons);
@@ -464,6 +471,7 @@ int MyMerging::mergeProcess(Event& process){
 
     //if (returnCode > 0) returnCode = getStartingConditions( RNpath, process);
     int tmp_code = getStartingConditions( RNpath, process);
+
     if (returnCode > 0) returnCode = tmp_code;
 
     if (returnCode == 0) mergingHooksPtr->setWeightCKKWL(0.);
@@ -1499,11 +1507,15 @@ bool MyMerging::generateHistories( const Event& process) {
   // Set dummy process scale.
   newProcess.scale(0.0);
   // Generate all histories
+
   myHistory = new MyHistory( depth, 0.0, newProcess, MyClustering(), mergingHooksPtr,
             (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
             trialPartonLevelPtr, fsr, isr, psweights, coupSMPtr, true, true, true, true, 1.0, 1.0, 1.0, 0);
   // Project histories onto desired branches, e.g. only ordered paths.
+
   bool foundHistories = myHistory->projectOntoDesiredHistories();
+
+  newProcess.free();
 
   // Done
   return (settingsPtr->flag("Dire:doMOPS") ? foundHistories : true);

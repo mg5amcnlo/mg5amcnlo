@@ -148,9 +148,15 @@ MyHistory::MyHistory( int depth,
     {
 
   // Initialize.
-  goodBranches.clear();
-  badBranches.clear();
-  paths.clear();
+  //goodBranches.clear();
+  //badBranches.clear();
+  //paths.clear();
+
+
+  map<double,MyHistory*>().swap(paths);
+  map<double,MyHistory*>().swap(goodBranches);
+  map<double,MyHistory*>().swap(badBranches);
+  vector<MyHistory*>().swap(children);
 
   fsr->debugPtr->eatCout(); 
   cout << "Next reclustered state" << endl;
@@ -295,7 +301,7 @@ MyHistory::MyHistory( int depth,
       && mergingHooksPtr->doCutOnRecState(newState) ) {
       if ( onlyAllowedPaths() ) continue;
       allowed = false;
-    }
+     }
 
     pair <double,double> probs = (doAuxInfo) ? getProb(*it->second) : make_pair(1.,1.);
 
