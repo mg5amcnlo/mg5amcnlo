@@ -1,8 +1,8 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c gfortran -I../SubProcesses/P0_<anydir> -ffixed-line-length-132 
-c   -o check_events check_events.f handling_lhe_events.f 
-c                   fill_MC_mshell.f dbook.f
+c gfortran -I../SubProcesses/P0_<anydir> -I../Source -ffixed-line-length-132 
+c   -o check_events check_events.f handling_lhe_events.f appl_interface_dummy.f
+c                   fill_MC_mshell.f dbook.f extra_weights.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
