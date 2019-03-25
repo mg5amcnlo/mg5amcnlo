@@ -255,9 +255,10 @@ c
 
       subroutine initplot
       implicit real*4(a-h,o-z)
-      character*4 cc(2),dd(2)
+      character*4 cc(2),dd(2),ee(1)
       data cc/' sdk',' prb'/
       data dd/' sc0',' sc1'/
+      data ee/' PDF'/
 c 
       pi=acos(-1.d0)
       call inihist 
@@ -325,6 +326,31 @@ c
       enddo
       enddo
 c
+      do i=1,3
+      do j=1,1
+      k=608+(j-1)*8+(i-1)*16
+      call mbook(k+ 1,'pt'//ee(j),2.e0,0.e0,200.e0)
+      call mbook(k+ 2,'energy'//ee(j),2.e0,0.e0,200.e0)
+      call mbook(k+ 3,'theta1'//ee(j),pi/50.e0,0.e0,pi)
+      call mbook(k+ 4,'theta2'//ee(j),pi/50.e0,0.e0,pi)
+      k=612+(j-1)*8+(i-1)*16
+      call mbook(k+ 1,'log10[pt]'//ee(j),0.05e0,-3.e0,2.e0)
+      call mbook(k+ 2,'log10[energy]'//ee(j),0.05e0,-3.e0,2.e0)
+      call mbook(k+ 3,'log10[theta1]'//ee(j),0.05e0,-3.e0,0.2e0)
+      call mbook(k+ 4,'log10[theta2]'//ee(j),0.05e0,-3.e0,0.2e0)
+      enddo
+      enddo
+c
+      do i=1,3
+      do j=1,1
+      k=708+(j-1)*8+(i-1)*16
+      call mbook(k+ 1,'start'//ee(j),0.8e0,0.e0,80.e0)
+      call mbook(k+ 2,'target'//ee(j),0.8e0,0.e0,80.e0)
+      call mbook(k+ 3,'start-target'//ee(j),2.e0,-50.e0,150.e0)
+      call mbook(k+ 4,'start-target'//ee(j),1.e0,-10.e0,90.e0)
+      enddo
+      enddo
+c
       return
       end
 
@@ -370,6 +396,25 @@ c
       k=308+(j-1)*8+(i-1)*16
       call mopera(k+ 1,'M',k+17,k+33,szero,szero)
       call mopera(k+ 2,'M',k+18,k+34,szero,szero)
+      enddo
+      do j=1,1
+      k=608+(j-1)*8+(i-1)*16
+      call mopera(k+ 1,'M',k+17,k+33,szero,szero)
+      call mopera(k+ 2,'M',k+18,k+34,szero,szero)
+      call mopera(k+ 3,'M',k+19,k+35,szero,szero)
+      call mopera(k+ 4,'M',k+20,k+36,szero,szero)
+      k=612+(j-1)*8+(i-1)*16
+      call mopera(k+ 1,'M',k+17,k+33,szero,szero)
+      call mopera(k+ 2,'M',k+18,k+34,szero,szero)
+      call mopera(k+ 3,'M',k+19,k+35,szero,szero)
+      call mopera(k+ 4,'M',k+20,k+36,szero,szero)
+      enddo
+      do j=1,1
+      k=708+(j-1)*8+(i-1)*16
+      call mopera(k+ 1,'M',k+17,k+33,szero,szero)
+      call mopera(k+ 2,'M',k+18,k+34,szero,szero)
+      call mopera(k+ 3,'M',k+19,k+35,szero,szero)
+      call mopera(k+ 4,'M',k+20,k+36,szero,szero)
       enddo
       do i=1,1000
         call mfinal(i)
@@ -448,6 +493,31 @@ c
       call multitop(k+ 2,99,2,2,'mu',' ','LIN')
       enddo
 c
+      i=2
+      do j=1,1
+      k=608+(j-1)*8+(i-1)*16
+      call multitop(k+ 1,99,2,2,'pt',' ','LOG')
+      call multitop(k+ 2,99,2,2,'energy',' ','LOG')
+      call multitop(k+ 3,99,2,2,'theta1',' ','LOG')
+      call multitop(k+ 4,99,2,2,'theta2',' ','LOG')
+      enddo
+c
+      do j=1,2
+      k=612+(j-1)*8+(i-1)*16
+      call multitop(k+ 1,99,2,2,'log10[pt]',' ','LOG')
+      call multitop(k+ 2,99,2,2,'log10[energy]',' ','LOG')
+      call multitop(k+ 3,99,2,2,'log10[theta1]',' ','LOG')
+      call multitop(k+ 4,99,2,2,'log10[theta2]',' ','LOG')
+      enddo                
+c
+      do j=1,1
+      k=708+(j-1)*8+(i-1)*16
+      call multitop(k+ 1,99,2,2,'mu',' ','LOG')
+      call multitop(k+ 2,99,2,2,'tij',' ','LOG')
+      call multitop(k+ 3,99,2,2,'mu-tij',' ','LOG')
+      call multitop(k+ 4,99,2,2,'mu-tij',' ','LOG')
+      enddo
+c
       end
 
 
@@ -460,10 +530,21 @@ c
       parameter (ione=1)
       parameter (itwo=2)
       real*8 p(0:3,nexternal)
-      logical dead
+      logical pscales,dead
       common/cdead/dead
 c
       if(sc1.gt.sc0.and.dead)return
+      if(sc0.lt.0.d0)then
+        if( sc1.gt.0.d0 .or.
+     #      (sc1.lt.0.d0 .and. sud.ne.1.d0) )then
+          write(*,*)'scales are negative while sud#1'
+          write(*,*)sud,sc0,sc1
+          stop
+        endif
+        pscales=.false.
+      else
+        pscales=.true.
+      endif
       pt=xpt(p(0,nexternal),p(1,nexternal),
      #       p(2,nexternal),p(3,nexternal))
       th1=angle(p(0,nexternal),p(1,nexternal),
@@ -500,12 +581,14 @@ c
       call mfill(kk+4,sngl(xth2),one)
 c
       kk=500
+      if(pscales)then
       call mfill(kk+1,sngl(sc0),one)
       call mfill(kk+2,sngl(sc1),one)
       call mfill(kk+3,sngl(sc0),one)
       call mfill(kk+4,sngl(sc1),one)
       call mfill(kk+5,sngl(sc0-sc1),one)
       call mfill(kk+6,sngl(sc0-sc1),one)
+      endif
 c
       do i=1,3
         ipow=i-1
@@ -524,6 +607,20 @@ c
         call mfill(kk+3,sngl(xth1),one*sngl(sud**ipow))
         call mfill(kk+4,sngl(xth2),one*sngl(sud**ipow))
 c
+        kk=608+(i-1)*16
+        call mfill(kk+1,sngl(pt),one*sngl(pdf**ipow))
+        call mfill(kk+2,sngl(energy),one*sngl(pdf**ipow))
+        call mfill(kk+3,sngl(th1),one*sngl(pdf**ipow))
+        call mfill(kk+4,sngl(th2),one*sngl(pdf**ipow))
+c
+        kk=612+(i-1)*16
+        if(pt.gt.0.d0)
+     #    call mfill(kk+1,sngl(log10(pt)),one*sngl(pdf**ipow))
+        if(energy.gt.0.d0)
+     #    call mfill(kk+2,sngl(log10(energy)),one*sngl(pdf**ipow))
+        call mfill(kk+3,sngl(xth1),one*sngl(pdf**ipow))
+        call mfill(kk+4,sngl(xth2),one*sngl(pdf**ipow))
+c
         kk=16+(i-1)*16
         call mfill(kk+1,sngl(pt),one*sngl(bogus**ipow))
         call mfill(kk+2,sngl(energy),one*sngl(bogus**ipow))
@@ -538,6 +635,7 @@ c
         call mfill(kk+3,sngl(xth1),one*sngl(bogus**ipow))
         call mfill(kk+4,sngl(xth2),one*sngl(bogus**ipow))
 c
+        if(pscales)then
         kk=208+(i-1)*16
         call mfill(kk+1,sngl(pt),one*sngl(sc0**ipow))
         call mfill(kk+2,sngl(energy),one*sngl(sc0**ipow))
@@ -572,9 +670,16 @@ c
         call mfill(kk+3,sngl(sc0-sc1),one*sngl(sud**ipow))
         call mfill(kk+4,sngl(sc0-sc1),one*sngl(sud**ipow))
 c
+        kk=708+(i-1)*16
+        call mfill(kk+1,sngl(sc0),one*sngl(pdf**ipow))
+        call mfill(kk+2,sngl(sc1),one*sngl(pdf**ipow))
+        call mfill(kk+3,sngl(sc0-sc1),one*sngl(pdf**ipow))
+        call mfill(kk+4,sngl(sc0-sc1),one*sngl(pdf**ipow))
+c
         kk=316+(i-1)*16
         call mfill(kk+1,sngl(sc0),one*sngl(sc1**ipow))
         call mfill(kk+2,sngl(sc0),one*sngl(sc1**ipow))
+        endif
 c
       enddo
 c
