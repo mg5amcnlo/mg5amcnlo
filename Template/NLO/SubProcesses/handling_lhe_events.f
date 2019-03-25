@@ -665,6 +665,8 @@ c
       include './run.inc'
       include 'unlops.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      logical do_many_scalup
+      parameter (do_many_scalup=.true.)
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -717,19 +719,6 @@ c
          write(ifile,'(a)') '  <event>'
       endif
       write(ifile,503)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
-c Write the <scales> block
-      scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
-      do i=1,NUP-1
-         do j=i+1,NUP
-            if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
-               write(str_tmp,701)
-     &         " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
-               scale_str=trim(scale_str)//trim(str_tmp)
-            endif
-         enddo
-      enddo
-      write(ifile,'(a)')"  "//trim(scale_str)//">"
-      write(ifile,'(a)') "  </scales>"
       do i=1,nup
         write(ifile,504)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -737,7 +726,7 @@ c Write the <scales> block
      #                  VTIMUP(I),SPINUP(I)
       enddo
       if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf .or.
-     &     jwgtinfo.lt.0)) then
+     &     jwgtinfo.lt.0 .or. do_many_scalup)) then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -809,6 +798,21 @@ c Write the <scales> block
                write(ifile,'(a)') '  </rwgt>'
             endif
          endif
+         if (do_many_scalup) then
+c Write the <scales> block
+            scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+            do i=1,NUP-1
+               do j=i+1,NUP
+                  if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
+                     write(str_tmp,701)
+     &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+                     scale_str=trim(scale_str)//trim(str_tmp)
+                  endif
+               enddo
+            enddo
+            write(ifile,'(a)')"  "//trim(scale_str)//">"
+            write(ifile,'(a)') "  </scales>"
+         endif
       endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
@@ -853,6 +857,8 @@ c
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      logical do_many_scalup
+      parameter (do_many_scalup=.true.)
 c
       read(ifile,'(a)')string
       nattr=0
@@ -867,22 +873,6 @@ c
          read(string(index(string,'npNLO')+7:),*) npNLO
       endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
-c Read the <scales> block
-      read(ifile,'(a)')string
-      do i=1,len(trim(string))-6
-         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
-            read(string(i+7:i+7),*)ii
-            read(string(i+9:i+9),*)jj
-            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-         endif
-      enddo
-      read(ifile,'(a)')string
-      if(index(string,'</scales').eq.0)then
-         write(*,*)'In read_lhef_event:'
-         write(*,*)'Could not find the end of scales block:'
-         write(*,*)string(1:len_trim(string))
-         stop
-      endif
       do i=1,nup
         read(ifile,*)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -971,6 +961,25 @@ c Read the <scales> block
                read(ifile,'(a)')string
             endif
          endif
+         if (do_many_scalup) then
+c Read the <scales> block
+            read(ifile,'(a)')string
+            do i=1,len(trim(string))-6
+               if(string(i:i+5).eq.'scalup' .or.
+     &              string(i:i+5).eq.'SCALUP')then
+                  read(string(i+7:i+7),*)ii
+                  read(string(i+9:i+9),*)jj
+                  read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+               endif
+            enddo
+            read(ifile,'(a)')string
+            if(index(string,'</scales').eq.0)then
+               write(*,*)'In read_lhef_event:'
+               write(*,*)'Could not find the end of scales block:'
+               write(*,*)string(1:len_trim(string))
+               stop
+            endif
+         endif
          read(ifile,'(a)')string
       else
          string=buff(1:len_trim(buff))
@@ -1017,6 +1026,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      logical do_many_scalup
+      parameter (do_many_scalup=.true.)
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -1041,22 +1052,6 @@ c
          read(string(index(string,'npNLO')+7:),*) npNLO
       endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
-c Read the <scales> block
-      read(ifile,'(a)')string
-      do i=1,len(trim(string))-6
-         if(string(i:i+5).eq.'scalup'.or.string(i:i+5).eq.'SCALUP')then
-            read(string(i+7:i+7),*)ii
-            read(string(i+9:i+9),*)jj
-            read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-         endif
-      enddo
-      read(ifile,'(a)')string
-      if(index(string,'</scales').eq.0)then
-         write(*,*)'In read_lhef_event_catch:'
-         write(*,*)'Could not find the end of scales block:'
-         write(*,*)string(1:len_trim(string))
-         stop
-      endif
       do i=1,nup
         read(ifile,*)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
      #                  ICOLUP(1,I),ICOLUP(2,I),
@@ -1142,6 +1137,25 @@ c Read the <scales> block
                   enddo
                endif
                read(ifile,'(a)')string
+            endif
+         endif
+         if (do_many_scalup) then
+c Read the <scales> block
+            read(ifile,'(a)')string
+            do i=1,len(trim(string))-6
+               if(string(i:i+5).eq.'scalup' .or.
+     &              string(i:i+5).eq.'SCALUP')then
+                  read(string(i+7:i+7),*)ii
+                  read(string(i+9:i+9),*)jj
+                  read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+               endif
+            enddo
+            read(ifile,'(a)')string
+            if(index(string,'</scales').eq.0)then
+               write(*,*)'In read_lhef_event:'
+               write(*,*)'Could not find the end of scales block:'
+               write(*,*)string(1:len_trim(string))
+               stop
             endif
          endif
          read(ifile,'(a)')string
