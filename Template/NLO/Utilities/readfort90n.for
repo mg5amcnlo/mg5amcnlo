@@ -33,6 +33,9 @@ c
         read(5,*)ipl4
         if(ipl4.eq.0)dead=.true.
       endif
+      write(6,*)'enter 0 for events generated without folding'
+      write(6,*)'      1 otherwise'
+      read(5,*)ifold
       ch2='  '
       call fk88strnum(ch2,iunit)
       open(unit=99,file='sudakov'//ch2//'.top',status='unknown')
@@ -181,7 +184,7 @@ c
           if(ch1.ne.'EVT')then
             psave(kk)=p(0,kk)
           else
-            check=check.or.abs(psave(kk)-p(0,kk)).gt.1.d-6
+            if(ifold.eq.0)check=check.or.abs(psave(kk)-p(0,kk)).gt.1.d-6
           endif
         enddo
         if(check)then

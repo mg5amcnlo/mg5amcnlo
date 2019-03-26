@@ -144,7 +144,6 @@ c
      &               (itype.eq.4.and.XWGTUP.lt.0.d0) )
      &             ievts_ok=ievts_ok+1
                endif
-               if(itype.eq.(1+npart-nBorn))ievts_ok=ievts_ok+1
             endif
             i=i+1
          enddo
