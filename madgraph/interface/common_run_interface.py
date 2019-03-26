@@ -3677,7 +3677,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         madspin_cmd.mg5cmd.options.update(self.options)
         for key, value in self.options.items():
             if isinstance(value, str):
-                madspin_cmd.mg5cmd.exec_cmd( 'set %s %s' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
+                madspin_cmd.mg5cmd.exec_cmd( 'set %s %s --no_save' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
         madspin_cmd.cluster = self.cluster
         
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
