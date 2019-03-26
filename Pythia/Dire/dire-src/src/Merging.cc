@@ -190,7 +190,7 @@ void MyMerging::storeInfos() {
 //      double mass = myHistory->children[i]->clusterIn.mass();
       double mass = sqrt(stateVars["m2dip"]);
       // Just store pT for now.
-      stoppingScalesSave.push_back(t);
+      stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
       radSave.push_back(iRad);
       emtSave.push_back(iemtReq+posOffset);
       recSave.push_back(iRec);
@@ -279,9 +279,6 @@ void MyMerging::getStoppingInfo(double scales [100][100],
 
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-
-//    cout << radSave[i] << " " << recSave[i] << " " << isInDeadzone[i] << " " << stoppingScalesSave[i] << endl;
-
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
