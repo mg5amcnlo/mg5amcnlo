@@ -42,7 +42,7 @@ configStr+=" --with-boost=/usr/local"
 echo "$configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'"
 $configStr --cxx-common='-ldl -fPIC -lstdc++ -DHEPMC2HACK'
 
-./configure --with-hepmc2=/home/prestel/work/2018/HEPMC2 --with-lhapdf6=/home/prestel/work/2018/LHAPDF6 --with-gzip=/home/prestel/work/2018/ZLIB --with-boost=/home/prestel/work/2018/BOOST --with-fastjet3=/home/prestel/work/2018/RIVET --cxx-common="-ldl -fPIC -lstdc++ --std=c++14"
+#./configure --with-hepmc2=/home/prestel/work/2018/HEPMC2 --with-lhapdf6=/home/prestel/work/2018/LHAPDF6 --with-gzip=/home/prestel/work/2018/ZLIB --with-boost=/home/prestel/work/2018/BOOST --with-fastjet3=/home/prestel/work/2018/RIVET --cxx-common="-ldl -fPIC -lstdc++ --std=c++14"
 
 make
 make install
