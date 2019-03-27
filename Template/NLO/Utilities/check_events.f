@@ -46,7 +46,7 @@ c negative number of events
       double precision wgt4a,wgt4s
       double precision wgt5a,wgt5s
       double precision saved_weight,tmp,wmin,wmax,wlim
-      integer ipos,ineg
+      integer ipos,ineg,ipos_S,ineg_S,ipos_H,ineg_H
       character*80 event_file
       character*140 buff
       character*6 ch6
@@ -347,6 +347,10 @@ c
       i=0
       ipos=0
       ineg=0
+      ipos_S=0
+      ineg_S=0
+      ipos_H=0
+      ineg_H=0
       call inihist
       call bookup(1,'scalup',2d0,0d0,200d0)
       call bookup(2,'scalup',8d0,0d0,800d0)
@@ -387,11 +391,6 @@ c
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
          sum_abs_wgt=sum_abs_wgt+abs(XWGTUP)
-         if(sign(1.d0,XWGTUP).gt.0.d0)then
-           ipos=ipos+1
-         else
-           ineg=ineg+1
-         endif
 
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
@@ -517,6 +516,21 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
            endif
          endif
 
+         if(sign(1.d0,XWGTUP).gt.0.d0)then
+           ipos=ipos+1
+           if (AddInfoLHE .and. iSorH_lhe.eq.1) then
+              ipos_S=ipos_S+1
+           elseif (AddInfoLHE .and. iSorH_lhe.eq.2) then
+              ipos_H=ipos_H+1
+           endif
+         else
+           ineg=ineg+1
+           if (AddInfoLHE .and. iSorH_lhe.eq.1) then
+              ineg_S=ineg_S+1
+           elseif (AddInfoLHE .and. iSorH_lhe.eq.2) then
+              ineg_H=ineg_H+1
+           endif
+         endif
 
          if(rwgtinfo)then
            if(unweighted)then
@@ -595,6 +609,17 @@ c Don't check momentum conservation in that case
       write (*,*) ' of which:',ipos,' w>0',ineg,' w<0'
       write (*,500) '   ==> ',100*ipos/dfloat(i),'% w>0   ',
      #               100*ineg/dfloat(i),'% w<0'
+      if (AddinfoLHE) then
+         write (*,*) 'The total number of S-events is:',ipos_S+ineg_S
+         write (*,*) ' of which:',ipos_S,' w>0',ineg_S,' w<0'
+         write (*,500) '   ==> ',100*ipos_S/dfloat(ipos_S+ineg_S)
+     $        ,'% w>0   ',100*ineg/dfloat(i),'% w<0'
+         write (*,*) 'The total number of H-events is:',ipos_H+ineg_H
+         write (*,*) ' of which:',ipos_H,' w>0',ineg_H,' w<0'
+         write (*,500) '   ==> ',100*ipos_H/dfloat(ipos_H+ineg_H)
+     $        ,'% w>0   ',100*ineg/dfloat(i),'% w<0'
+         write (*,*) ''
+      endif
       write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
       write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
