@@ -613,11 +613,11 @@ c Don't check momentum conservation in that case
          write (*,*) 'The total number of S-events is:',ipos_S+ineg_S
          write (*,*) ' of which:',ipos_S,' w>0',ineg_S,' w<0'
          write (*,500) '   ==> ',100*ipos_S/dfloat(ipos_S+ineg_S)
-     $        ,'% w>0   ',100*ineg/dfloat(i),'% w<0'
+     $        ,'% w>0   ',100*ineg_S/dfloat(ipos_S+ineg_S),'% w<0'
          write (*,*) 'The total number of H-events is:',ipos_H+ineg_H
          write (*,*) ' of which:',ipos_H,' w>0',ineg_H,' w<0'
          write (*,500) '   ==> ',100*ipos_H/dfloat(ipos_H+ineg_H)
-     $        ,'% w>0   ',100*ineg/dfloat(i),'% w<0'
+     $        ,'% w>0   ',100*ineg_H/dfloat(ipos_H+ineg_H),'% w<0'
          write (*,*) ''
       endif
       write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
