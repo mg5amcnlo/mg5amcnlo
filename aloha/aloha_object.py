@@ -89,8 +89,8 @@ class L_PVec(aloha_lib.LorentzObject):
         self.sub3 = aloha_lib.DVariable('P%s_3' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
-                                    {(0,): 0, (1,): self.sub1, \
-                                     (2,): self.sub2, (3,): self.sub3},                              
+                                    {(0,): 0, (1,): self.sub1+1e-49, \
+                                     (2,): self.sub2, (3,): self.sub3+1e-39},                              
                                     self.lorentz_ind, [])
 
 
@@ -274,7 +274,7 @@ class L_PT(aloha_lib.LorentzObject):
         #self.sub3 = aloha_lib.DVariable('P%s_3' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
-                                    {(0,): 0, (1,): self.sub1, \
+                                    {(0,): 0, (1,): self.sub1 + 1e-49, \
                                      (2,): self.sub2, (3,): 0},                              
                                     self.lorentz_ind, [])
 
@@ -1079,8 +1079,8 @@ class L_EPST1(aloha_lib.LorentzObject):
 
         eps = {
             (0,): 0,
-            (1,): p1*p3,
-            (2,): p2*p3,
+            (1,): (p1+1e-49)*(p3+1e-39),
+            (2,): p2*(p3+1e-39),
             (3,):  -kT ,
             }
 #        eps = {
@@ -1132,7 +1132,7 @@ class L_EPST2(aloha_lib.LorentzObject):
         eps = {
             (0,): 0,
             (1,): -p2,
-            (2,): p1,
+            (2,): (p1+1e-49),
             (3,):  0 ,
             }
 #        eps = {
