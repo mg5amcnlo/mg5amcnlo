@@ -75,7 +75,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('cross_section', {'__type__':0.}, comment="forcing normalization of cross-section after MS (for none/onshell)" )
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
-        
+        self.add_param('frame_id', 6)
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -211,7 +211,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Read the banner of the inputfile
         self.events_file = open(os.path.realpath(inputfile))
         self.banner = banner.Banner(self.events_file)
-        
+
 
         # Check the validity of the banner:
         if 'slha' not in self.banner:
@@ -226,14 +226,21 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd('This event file was already decayed by MS. This is not possible to add to it a second decay')
         
         if 'mgruncard' in self.banner:
+            run_card = self.banner.charge_card('run_card')
             if not self.options['Nevents_for_max_weigth']:
-                nevents = int(self.banner.get_detail('run_card', 'nevents'))
+                nevents = run_card['nevents']
                 N_weight = max([75, int(3*nevents**(1/3))])
                 self.options['Nevents_for_max_weigth'] = N_weight
                 N_sigma = max(4.5, math.log(nevents,7.7))
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+            
+            if isinstance(run_card, banner.RunCardLO):
+                run_card.update_system_parameter_for_include()
+                self.options['frame_id'] = run_card['frame_id']
+            else:
+                self.options['frame_id'] = 6
         else:
             if not self.options['Nevents_for_max_weigth']:
                 self.options['Nevents_for_max_weigth'] = 75

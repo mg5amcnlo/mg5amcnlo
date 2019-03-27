@@ -54,6 +54,9 @@ c      integer mapconfig(0:lmaxconfigs)
        double precision BWcut, maxBW
        common /to_BWcut/BWcut, maxBW
 
+       integer frame_id
+       common /to_me_frame/frame_id
+
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-nexternal:-1,-1:1),
@@ -112,7 +115,7 @@ c      enddo
  
 1     continue
       maxBW=0d0
-      read(*,*) mode,  BWcut, Ecollider, temp
+      read(*,*) mode,  BWcut, Ecollider, temp, frame_id
  
 
       if (mode.eq.1) then    ! calculate the maximum weight
