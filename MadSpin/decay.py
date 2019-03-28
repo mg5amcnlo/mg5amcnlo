@@ -3277,8 +3277,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-
-        std_in=" %s  %s %s %s  \n" % ("1",BWcut, self.Ecollider, nbpoints)
+        std_in=" %s  %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)
@@ -3347,7 +3346,7 @@ class decay_all_events(object):
                 if nb < cut:
                     if key[0]=='full':
                         path=key[1]
-                        end_signal="5 0 0 0 \n"  # before closing, write down the seed 
+                        end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal)
                         ranmar_state=external.stdout.readline()
                         ranmar_file=pjoin(path,'ranmar_state.dat')
@@ -3961,7 +3960,7 @@ class decay_all_events(object):
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0 0\n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     try:
                         external.stdin.write(stdin_text)
@@ -3988,7 +3987,7 @@ class decay_all_events(object):
             except Exception:
                 pass
             else:
-                stdin_text="5 0 0 0"
+                stdin_text="5 0 0 0 0"
                 external.stdin.write(stdin_text)
                 external.stdin.close()
                 external.stdout.close()
