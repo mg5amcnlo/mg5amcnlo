@@ -263,10 +263,32 @@ c           enddo
            !do j=1,nexternal
            !   write (*,*) (pfull(k,j), k=0,3)  
            !enddo
-           call SMATRIX(pfull,M_full)
-           call SMATRIX_PROD(pprod,M_prod)
-c           write(*,*) 'M_full ', M_full
-c           write(*,*) 'jac',jac
+
+c=======================Modified part=================================
+
+          
+           call  boost_to_frame(pfull, frame_id, P2)
+           call SMATRIX(P2,M_full)
+
+
+c           call SMATRIX_PROD(pprod,M_prod)
+c           write(999,*) (M_prod)
+c           write(999,*) "---------after-boost------"
+           call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
+           call SMATRIX_PROD(P2,M_prod)
+
+
+
+c          do j=1,nexternal
+c              write (999,*) (P2(k,j), k=0,3)
+c           enddo
+c              write(999,*) (M_prod)
+c           do j=1,nexternal_prod
+c              write (999,*) (pprod(k,j), k=0,3)
+c           enddo
+           close(999)
+
+c==========================================================================
 
            weight=M_full*jac/M_prod
            if (weight.gt.maxweight) then
@@ -341,28 +363,6 @@ c        initialize the helicity amps
               call  ntuple(x(i),0d0,1d0,i,1)
            enddo
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
-
-         call  boost_to_frame(pfull, frame_id, P2)
-
-c============================================== 
-
-
-
-c           write(999,*) "-------------p-------------------------"
-c           do j=1,nexternal
-c              write (999,*) (p(k,j), k=0,3)
-c           enddo
-            write(999,*) "-------------pfull-------------------------"
-          do j=1,nexternal
-              write (999,*) (P2(k,j), k=0,3)
-           enddo
-c              write(999,*) "-----------pprod-------------------------"
-c           do j=1,nexternal_prod
-c              write (999,*) (pprod(k,j), k=0,3)
-c           enddo
-           close(999)
-c==============================================
-
            if (jac.lt.0d0) then
              counter2=counter2+1 
              counter3=counter3+1 
@@ -392,9 +392,32 @@ c==============================================
 
              cycle
            endif
-           call SMATRIX(pfull,M_full)
-           call SMATRIX_PROD(pprod,M_prod)
 
+c=======================Modified part=================================
+
+
+           call  boost_to_frame(pfull, frame_id, P2)
+           call SMATRIX(P2,M_full)
+
+
+c           call SMATRIX_PROD(pprod,M_prod)
+c           write(999,*) (M_prod)
+c           write(999,*) "---------after-boost------"
+           call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
+           call SMATRIX_PROD(P2,M_prod)
+
+
+
+c          do j=1,nexternal
+c              write (999,*) (P2(k,j), k=0,3)
+c           enddo
+c              write(999,*) (M_prod)
+c           do j=1,nexternal_prod
+c              write (999,*) (pprod(k,j), k=0,3)
+c           enddo
+c           close(999)
+
+c==========================================================================
            weight=M_full*jac/M_prod
 
            if (weight.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
@@ -1993,6 +2016,83 @@ c         write(*,*) 'cluster.f: uncompressed code ',i,' is ',ids(i)
 
       return
       end
+
+
+
+
+C     -----------------------------------------
+
+      subroutine boost_to_frame_prod(P1, frame_id, nexternal_prod, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id, nexternal_prod
+
+      integer ids(nexternal_prod)
+      integer i,j
+      Pboost(0)= 0d0
+      Pboost(1)= 0d0
+      Pboost(2)= 0d0
+      Pboost(3)= 0d0
+
+c     uncompress
+      call mapid_prod(frame_id, ids,nexternal_prod)
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal_prod
+       if (ids(i).eq.1)then
+c             write (999,*) (Pboost(j), j=0,3)
+            do j=0,3
+                   Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3
+          Pboost(j) = -1 * Pboost(j)
+      enddo
+
+c              write (999,*) (Pboost(j), j=0,3)
+      do i=1, nexternal_prod
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo
+      return
+      end
+
+
+
+
+
+
+
+
+      subroutine mapid_prod(id,ids,nexternal_prod)
+c**************************************************************************
+c     input:
+c            id        compressed particle id
+c            ids       array of particle ids
+c**************************************************************************
+      implicit none
+      include 'nexternal.inc'
+      integer i, icd, id, nexternal_prod, ids(nexternal_prod)
+
+      icd=id
+      do i=1,nexternal_prod
+         ids(i)=0
+         if (btest(id,i)) then
+            ids(i)=1
+         endif
+c         write(*,*) 'cluster.f: uncompressed code ',i,' is ',ids(i)
+      enddo
+
+      return
+      end
+
+
+
 
 
 
