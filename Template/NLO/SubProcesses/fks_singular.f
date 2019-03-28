@@ -2238,7 +2238,7 @@ c folds).
       double precision showerscale
       double precision showerscale_a(nexternal,nexternal)
       logical improved_scale_choice
-      parameter (improved_scale_choice=.false.)
+      parameter (improved_scale_choice=.true.)
       if (icontr.eq.0) return
       if (.not. improved_scale_choice) then
          call update_shower_scale_Sevents_v1(ifold_counter,showerscale
