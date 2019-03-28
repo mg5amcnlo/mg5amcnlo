@@ -18,7 +18,7 @@ C
       INTEGER I,J,K
       INTEGER HELSET(NEXTERNAL)
       REAL*8 P(0:3,NEXTERNAL_PROD) 
-      REAL*8 PFULL(0:3,NEXTERNAL), Ptrial(0:3,NEXTERNAL) 
+      REAL*8 PFULL(0:3,NEXTERNAL), Ptrial(0:3,NEXTERNAL), P2(0:3,NEXTERNAL) 
       double precision x(36), Ecollider
       CHARACTER*120 BUFF(NEXTERNAL_PROD)
       integer iforest(2,-nexternal:-1,N_MAX_CG)
@@ -39,6 +39,7 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision mean, variance, maxweight,weight,std
       double precision temp
       double precision Pprod(0:3,nexternal_prod)
+
       integer nb_mc_masses, indices_mc_masses(nexternal)
       double precision values_mc_masses(nexternal)
 
@@ -97,7 +98,8 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        read(56,*) P_seed
        close(56)
        iseed = iseed + P_seed
-
+c       open(unit=999,file="/data/DOC/sujays/divisors")
+       open(unit=999,file="/home/sujay/Downloads/momentaboost")
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
 c
@@ -338,8 +340,29 @@ c        initialize the helicity amps
            do i = 1, 3*(nexternal-nexternal_prod)+1
               call  ntuple(x(i),0d0,1d0,i,1)
            enddo
-
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
+
+         call  boost_to_frame(pfull, frame_id, P2)
+
+c============================================== 
+
+
+
+c           write(999,*) "-------------p-------------------------"
+c           do j=1,nexternal
+c              write (999,*) (p(k,j), k=0,3)
+c           enddo
+            write(999,*) "-------------pfull-------------------------"
+          do j=1,nexternal
+              write (999,*) (P2(k,j), k=0,3)
+           enddo
+c              write(999,*) "-----------pprod-------------------------"
+c           do j=1,nexternal_prod
+c              write (999,*) (pprod(k,j), k=0,3)
+c           enddo
+           close(999)
+c==============================================
+
            if (jac.lt.0d0) then
              counter2=counter2+1 
              counter3=counter3+1 
@@ -1893,5 +1916,87 @@ c
       LAMBDA=tmp
       RETURN
       END
+
+
+
+
+c======================================================================
+C     Subroutine to return momenta in a dedicated frame
+C     frame_id is the tag of the particle to put at rest
+C     frame_id follow the convention of cluster.f (sum 2**(N-1))
+C     -----------------------------------------
+
+      subroutine boost_to_frame(P1, frame_id, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id
+
+      integer ids(nexternal)
+      integer i,j
+      Pboost(0)= 0d0
+      Pboost(1)= 0d0
+      Pboost(2)= 0d0
+      Pboost(3)= 0d0
+
+c     uncompress
+      call mapid(frame_id, ids)
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal
+       if (ids(i).eq.1)then
+c             write (999,*) (Pboost(j), j=0,3)
+            do j=0,3
+                   Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3
+          Pboost(j) = -1 * Pboost(j)
+      enddo
+       
+c              write (999,*) (Pboost(j), j=0,3)
+      do i=1, nexternal
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo
+      return
+      end
+
+
+
+
+c========================================================================
+
+
+      subroutine mapid(id,ids)
+c**************************************************************************
+c     input:
+c            id        compressed particle id
+c            ids       array of particle ids
+c**************************************************************************
+      implicit none
+      include 'nexternal.inc'
+      integer i, icd, id, ids(nexternal)
+
+      icd=id
+      do i=1,nexternal
+         ids(i)=0
+         if (btest(id,i)) then
+            ids(i)=1
+         endif
+c         write(*,*) 'cluster.f: uncompressed code ',i,' is ',ids(i)
+      enddo
+
+      return
+      end
+
+
+
+
+
 
 
