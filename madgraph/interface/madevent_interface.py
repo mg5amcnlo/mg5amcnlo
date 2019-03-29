@@ -3563,11 +3563,9 @@ Beware that this can be dangerous for local multicore runs.""")
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
-
         self.update_status('Combining Events', level='parton')
 
         
-
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
     
@@ -3593,7 +3591,9 @@ Beware that this can be dangerous for local multicore runs.""")
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir in self.get_Gdir():
+        Gdirs = self.get_Gdir()
+        Gdirs.sort()
+        for Gdir in Gdirs:
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
@@ -3602,7 +3602,6 @@ Beware that this can be dangerous for local multicore runs.""")
                              result.get('xerru'),
                              result.get('axsec')
                              )
-
                 sum_xsec += result.get('xsec')
                 sum_xerru.append(result.get('xerru'))
                 sum_axsec += result.get('axsec')
@@ -3627,7 +3626,6 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
-        
         if partials:
             for i in range(partials):
                 try:
@@ -5634,7 +5632,6 @@ tar -czf split_$1.tar.gz split_$1
         elif self.run_card['python_seed'] >= 0:
             import random
             random.seed(self.run_card['python_seed'])
-                                                               
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
@@ -6617,7 +6614,9 @@ class GridPackCmd(MadEventCmd):
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir in self.get_Gdir():
+        Gdirs = self.get_Gdir()
+        Gdirs.sort()
+        for Gdir in Gdirs:
             #mfactor already taken into accoun in auto_dsig.f
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
