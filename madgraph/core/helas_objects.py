@@ -676,7 +676,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # the decay is applied
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
-
+                else:
+                    if 99 in leg.get('polarization'):
+                        raise Exception("polarization A only valid for propagator.")
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing
