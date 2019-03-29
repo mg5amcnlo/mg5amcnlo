@@ -99,7 +99,7 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        close(56)
        iseed = iseed + P_seed
 c       open(unit=999,file="/data/DOC/sujays/divisors")
-       open(unit=999,file="/home/sujay/Downloads/momentaboost")
+c       open(unit=999,file="/home/sujay/Downloads/momentaboost")
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
 c
@@ -286,7 +286,7 @@ c              write(999,*) (M_prod)
 c           do j=1,nexternal_prod
 c              write (999,*) (pprod(k,j), k=0,3)
 c           enddo
-           close(999)
+c           close(999)
 
 c==========================================================================
 
