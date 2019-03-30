@@ -612,6 +612,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
         # define the resulting momenta
         if self.offshell:
+            
+            
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
             
@@ -622,6 +624,12 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
 
+            if "P1T" in self.tag or "P1L" in self.tag:
+                for i in range(1,4):
+                    P = "P%s" % (self.outgoing)
+                    value = ["1d-30", "0d0", "1d-15"]
+                    out.write("  IF (%(P)s(0)*1e-10.gt.%(P)s(%(i)s)) %(P)s(%(i)s)=%(val)s\n"
+                              % {"P": P, "i":i, 'val':value[i-1]})
         
         # Returning result
         return out.getvalue()
