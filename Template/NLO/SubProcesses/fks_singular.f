@@ -3203,8 +3203,9 @@ c Minimal starting scale
       SCALUP(iFKS)=max(SCALUP(iFKS),3d0)
 c
 c
-      do i=1,nexternal-1
-         do j=i+1,nexternal
+      do i=1,nexternal
+         do j=1,nexternal
+            if(j.eq.i)cycle
 c Initialise
             SCALUP_a(iFKS,i,j)=0d0
 c S events

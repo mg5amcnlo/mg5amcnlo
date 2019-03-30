@@ -801,8 +801,9 @@ c
          if (do_many_scalup) then
 c Write the <scales> block
             scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
-            do i=1,NUP-1
-               do j=i+1,NUP
+            do i=1,NUP
+               do j=1,NUP
+                  if(i.eq.j)cycle
                   if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
                      write(str_tmp,701)
      &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"

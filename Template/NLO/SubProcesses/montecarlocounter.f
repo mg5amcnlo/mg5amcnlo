@@ -1230,6 +1230,7 @@ c
       double precision masses_to_MC(0:25)
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
+      logical are_col_conn(nexternal,nexternal)
 c
       include '../Source/MODEL/coupl.inc'
       include '../Source/MODEL/mp_coupl.inc'
@@ -1576,6 +1577,7 @@ c the entries relevant to i and/or j equal to i_fks, to be provided later
       SCALUP_tmp_H=-1d0
       do i=1,nexternal
          do j=1,nexternal
+            if(i.eq.j)cycle
             SCALUP_tmp_H(i,j)=xscales(i,j)
          enddo
       enddo
@@ -1641,6 +1643,16 @@ c alternatives is left for future work
       if(pdg_type(i_fks).eq.21)then
          SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
          SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
+         if(ic.eq.j_fks)then
+            SCALUP_tmp_H(jc,i_fks)=xscales(jc,ic)
+         elseif(jc.eq.j_fks)then
+            SCALUP_tmp_H(ic,i_fks)=xscales(ic,jc)
+         else
+            write(*,*)'Error in complete_xmcsubt'
+            write(*,*)'ic or jc must be equal to j_fks'
+            write(*,*)ic,jc,i_fks,j_fks
+            stop
+         endif
       elseif(abs(pdg_type(i_fks)).le.6)then
          if(ic.ne.-1) then
             do i=1,nexternal
@@ -1661,6 +1673,22 @@ c alternatives is left for future work
             enddo
          endif
       endif
+      SCALUP_tmp_H(j_fks,i_fks)=SCALUP_tmp_H(i_fks,j_fks)
+c  After assigning all scales to the H event, a relabelling is necessary
+c  so that sensible scalup_tmp_H entries be in one-to-one correspondence
+c  to existing colour lines in the H-event colour flow.
+      are_col_conn=.false.
+      do i=1,nexternal
+         do j=1,nexternal
+            are_col_conn(i,j)=
+     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(1,j)).or.
+     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(2,j)).or.
+     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(1,j)).or.
+     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(2,j))
+c  Reset to -1 scales that are incompatible with the H-event colour flow
+            if(.not.are_col_conn(i,j))SCALUP_tmp_H(i,j)=-1d0
+         enddo
+      enddo
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
 c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
