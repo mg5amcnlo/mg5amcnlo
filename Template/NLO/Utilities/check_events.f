@@ -46,7 +46,7 @@ c negative number of events
       double precision wgt4a,wgt4s
       double precision wgt5a,wgt5s
       double precision saved_weight,tmp,wmin,wmax,wlim
-      integer ipos,ineg,ipos_S,ineg_S,ipos_H,ineg_H
+      integer ipos,ineg,ipos_S,ineg_S,ipos_H,ineg_H,nBorn
       character*80 event_file
       character*140 buff
       character*6 ch6
@@ -274,6 +274,13 @@ c
       close(34)
 
       if(idec.eq.0)call checkmothers()
+      if(.not.AddInfoLHE)then
+         write(*,*)'Enter the Born multiplicity, counting only initial-'
+         write(*,*)'   and final-state particles (no resonances).'
+         write(*,*)'If the line after each event starts'
+         write(*,*)'with a hash, ''#'', this entry is ignored'
+         read(*,*)nBorn
+      endif
 
       write(*,*)'  '
       if(unweighted)then
@@ -308,7 +315,7 @@ c
       call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
      #                           MonteCarlo)
       if(itempsc.ne.isavesc.or.itempPDF.ne.isavePDF)then
-        write(*,*)'Error in check_events'
+        write(*,*)'Error #1 in check_events'
         write(*,*)itempsc,isavesc,itempPDF,isavePDF
       endif
       maxevt=abs(maxevt)
@@ -477,6 +484,16 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
            itoterr=itoterr+1
          endif
 
+         if(.not.AddInfoLHE)then
+           if(npart-nBorn.ne.0.and.npart-nBorn.ne.1)then
+             write(*,*)'The Born multiplicity seems incorrect:'
+             write(*,*)'cannot extract S/H events from this file.'
+             write(*,*)'  Event #',i,pup(4,1),pup(4,2)
+             write(*,*)npart,nup,nborn
+             stop
+           endif
+         endif
+
          call storeprocesses(npart,idup_eff,numproc)
          call storecolconn(npart,numproc,icolup_eff,numconn)
          call checkcolconn(i,numproc,numconn,wrong)
@@ -518,17 +535,45 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
 
          if(sign(1.d0,XWGTUP).gt.0.d0)then
            ipos=ipos+1
-           if (AddInfoLHE .and. iSorH_lhe.eq.1) then
-              ipos_S=ipos_S+1
-           elseif (AddInfoLHE .and. iSorH_lhe.eq.2) then
-              ipos_H=ipos_H+1
+           if(AddInfoLHE)then
+             if(iSorH_lhe.eq.1)then
+               ipos_S=ipos_S+1
+             elseif(iSorH_lhe.eq.2)then
+               ipos_H=ipos_H+1
+             else
+               write(*,*)'Error #2 in check_events',iSorH_lhe
+               stop
+             endif
+           else
+             if((npart-nBorn).eq.0)then
+               ipos_S=ipos_S+1
+             elseif((npart-nBorn).eq.1)then
+               ipos_H=ipos_H+1
+             else
+               write(*,*)'Error #3 in check_events',npart,nBorn
+               stop
+             endif
            endif
          else
            ineg=ineg+1
-           if (AddInfoLHE .and. iSorH_lhe.eq.1) then
-              ineg_S=ineg_S+1
-           elseif (AddInfoLHE .and. iSorH_lhe.eq.2) then
-              ineg_H=ineg_H+1
+           if(AddInfoLHE)then
+             if(iSorH_lhe.eq.1)then
+               ineg_S=ineg_S+1
+             elseif(iSorH_lhe.eq.2)then
+               ineg_H=ineg_H+1
+             else
+               write(*,*)'Error #4 in check_events',iSorH_lhe
+               stop
+             endif
+           else
+             if((npart-nBorn).eq.0)then
+               ineg_S=ineg_S+1
+             elseif((npart-nBorn).eq.1)then
+               ineg_H=ineg_H+1
+             else
+               write(*,*)'Error #5 in check_events',npart,nBorn
+               stop
+             endif
            endif
          endif
 
@@ -579,9 +624,11 @@ c Don't check momentum conservation in that case
  111     continue
       enddo
 
-      if(maxevt.ne.(ipos+ineg))then
+      if( maxevt.ne.(ipos+ineg) .or. 
+     #    ipos.ne.(ipos_S+ipos_H) .or.
+     #    ineg.ne.(ineg_S+ineg_H) )then
         write(*,*)'Something wrong with counting events:',
-     #             maxevt,ipos,ineg
+     #             maxevt,ipos,ineg,ipos_S,ineg_S,ipos_H,ineg_H
       endif
 
       open(unit=99,file='SCALUP.top',status='unknown')
@@ -609,17 +656,19 @@ c Don't check momentum conservation in that case
       write (*,*) ' of which:',ipos,' w>0',ineg,' w<0'
       write (*,500) '   ==> ',100*ipos/dfloat(i),'% w>0   ',
      #               100*ineg/dfloat(i),'% w<0'
-      if (AddinfoLHE) then
-         write (*,*) 'The total number of S-events is:',ipos_S+ineg_S
-         write (*,*) ' of which:',ipos_S,' w>0',ineg_S,' w<0'
-         write (*,500) '   ==> ',100*ipos_S/dfloat(ipos_S+ineg_S)
-     $        ,'% w>0   ',100*ineg_S/dfloat(ipos_S+ineg_S),'% w<0'
-         write (*,*) 'The total number of H-events is:',ipos_H+ineg_H
-         write (*,*) ' of which:',ipos_H,' w>0',ineg_H,' w<0'
-         write (*,500) '   ==> ',100*ipos_H/dfloat(ipos_H+ineg_H)
-     $        ,'% w>0   ',100*ineg_H/dfloat(ipos_H+ineg_H),'% w<0'
-         write (*,*) ''
-      endif
+      write(*,*)' '
+      write (*,*) 'The total number of S-events is:',ipos_S+ineg_S
+      write (*,*) ' of which:',ipos_S,' w>0',ineg_S,' w<0'
+      if((ipos_S+ineg_S).ne.0)
+     #  write (*,500) '   ==> ',100*ipos_S/dfloat(ipos_S+ineg_S)
+     #        ,'% w>0   ',100*ineg_S/dfloat(ipos_S+ineg_S),'% w<0'
+      write(*,*)' '
+      write (*,*) 'The total number of H-events is:',ipos_H+ineg_H
+      write (*,*) ' of which:',ipos_H,' w>0',ineg_H,' w<0'
+      if((ipos_H+ineg_H).ne.0)
+     #   write (*,500) '   ==> ',100*ipos_H/dfloat(ipos_H+ineg_H)
+     #         ,'% w>0   ',100*ineg_H/dfloat(ipos_H+ineg_H),'% w<0'
+      write (*,*) ' '
       write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
       write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 

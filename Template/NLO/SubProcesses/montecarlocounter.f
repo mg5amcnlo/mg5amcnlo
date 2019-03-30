@@ -1724,8 +1724,17 @@ c$$$              stop
             endif
 c only colour-connected partons livezone and sensible scales
 c contribute to Delta
-            if(xscales2(i,j).eq.-1d0.or.dzones2(i,j).or.
-     &         stoppingScale.gt.startingScale)then
+            if(xscales2(i,j).eq.-1d0.or.dzones2(i,j))then
+               i_dipole_dead_counter=i_dipole_dead_counter+1
+               cycle
+            endif
+            if(stoppingScale.lt.scltarget)then
+              scltarget=stoppingScale
+              sclstart=startingScale
+              itmp=i
+              jtmp=j
+            endif
+            if(stoppingScale.gt.startingScale)then
                i_dipole_dead_counter=i_dipole_dead_counter+1
                cycle
             endif
@@ -1739,12 +1748,6 @@ c contribute to Delta
                isudtype=4
             endif
 c
-            if(stoppingScale.lt.scltarget)then
-              scltarget=stoppingScale
-              sclstart=startingScale
-              itmp=i
-              jtmp=j
-            endif
             if(stoppingScale.le.smallptlow)then
               deltanum=0.d0
             elseif( stoppingScale.gt.smallptlow .and.
