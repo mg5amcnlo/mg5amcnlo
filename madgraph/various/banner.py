@@ -686,13 +686,20 @@ def recover_banner(results_object, level, run=None, tag=None):
         try:    
             _tag = results_object[run].tags[-1] 
         except Exception,error:
-            return Banner()      
+            if os.path.exists( pjoin(results_object.path,'Events','%s_banner.txt' % (run))):
+                tag = None
+            else:
+                return Banner()      
     else:
         _tag = tag
-                                          
-    path = results_object.path
-    banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
+    if tag:        
+        path = results_object.path
+        banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
+    else:
+        banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))
+    
+        
     if not os.path.exists(banner_path):
         if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
@@ -712,6 +719,7 @@ def recover_banner(results_object, level, run=None, tag=None):
 
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
+    
     banner = Banner(banner_path)
     
     
