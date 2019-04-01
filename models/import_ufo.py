@@ -469,6 +469,9 @@ class UFOMG5Converter(object):
         self.ufomodel = model
         self.checked_lor = set()
 
+        if hasattr(self.ufomodel, 'all_running_elements'):
+            self.model.set('running_elements', self.ufomodel.all_running_elements)
+        
         if auto:
             self.load_model()
 
@@ -1547,6 +1550,17 @@ class OrganizeModelExpression:
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
+        
+        if hasattr(self.model, 'all_running_elements'):
+            all_elements = set()
+            for runs in self.model.all_running_elements:
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+            all_elements.union(self.track_dependant)
+            self.track_dependant = list(all_elements)
+
+        
     
     def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 

@@ -1044,6 +1044,7 @@ class Model(PhysicsObject):
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
+        self['running_elements'] = set()
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         

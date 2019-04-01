@@ -5473,7 +5473,17 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
+        
+        if self.model.get('running_elements'):
+            all_elements = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+            all_elements.union(set(self.PS_dependent_key))
+            self.PS_dependent_key = list(all_elements)
+
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
