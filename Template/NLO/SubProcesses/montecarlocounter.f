@@ -1233,9 +1233,7 @@ c
       logical are_col_conn(nexternal,nexternal)
 c
       include '../Source/MODEL/coupl.inc'
-      include '../Source/MODEL/mp_coupl.inc'
       include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/mp_input.inc'
       mcmass=0d0
       masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
