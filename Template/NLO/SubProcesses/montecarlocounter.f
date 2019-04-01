@@ -1592,14 +1592,14 @@ c have it identical to the scale for i_fks.
       jc=-1
       do i=1,nexternal
          if(i.eq.i_fks)cycle
-         if(ICOLUP_H(1,i_fks).ne.0d0.and.
+         if(ICOLUP_H(1,i_fks).ne.0.and.
      &      (ICOLUP_H(1,i).eq.ICOLUP_H(1,i_fks).or.
      &       ICOLUP_H(2,i).eq.ICOLUP_H(1,i_fks)))then
             icount_i=icount_i+1
             ic=i
 c ic is the parton connected to the colour of i_fks
          endif
-         if(ICOLUP_H(2,i_fks).ne.0d0.and.
+         if(ICOLUP_H(2,i_fks).ne.0.and.
      &      (ICOLUP_H(1,i).eq.ICOLUP_H(2,i_fks).or.
      &       ICOLUP_H(2,i).eq.ICOLUP_H(2,i_fks)))then
             icount_j=icount_j+1

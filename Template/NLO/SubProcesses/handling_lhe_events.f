@@ -964,6 +964,11 @@ c
          endif
          if (do_many_scalup) then
 c Read the <scales> block
+            do i=1,NUP
+               do j=1,NUP
+                  SCALUP_a(i,j)=-1d0
+               enddo
+            enddo
             read(ifile,'(a)')string
             do i=1,len(trim(string))-6
                if(string(i:i+5).eq.'scalup' .or.
@@ -1142,6 +1147,11 @@ c
          endif
          if (do_many_scalup) then
 c Read the <scales> block
+            do i=1,NUP
+               do j=1,NUP
+                  SCALUP_a(i,j)=-1d0
+               enddo
+            enddo
             read(ifile,'(a)')string
             do i=1,len(trim(string))-6
                if(string(i:i+5).eq.'scalup' .or.
