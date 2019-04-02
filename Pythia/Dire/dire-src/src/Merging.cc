@@ -113,8 +113,6 @@ void MyMerging::storeInfos() {
 
   int posOffset=2;
 
-//  myHistory->state.list();
-
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -153,7 +151,7 @@ void MyMerging::storeInfos() {
       }
     }
 
-    for (int id = 0; id < dipEnds.size(); ++id) {
+    for (size_t id = 0; id < dipEnds.size(); ++id) {
 
       int iRad(0), iRec(0);
       map<int,int>::iterator it
@@ -167,8 +165,11 @@ void MyMerging::storeInfos() {
       iRec = it2->second;
 
       // Already covered clustering.
-      if ( find(radSave.begin(), radSave.end(), iRad) != radSave.end()
-        && find(recSave.begin(), recSave.end(), iRec) != recSave.end() ) {
+      vector<int>::iterator itRad = find(radSave.begin(), radSave.end(), iRad);
+      vector<int>::iterator itRec = find(recSave.begin(), recSave.end(), iRec);
+      //int indexRad = std::distance(radSave.begin(), itRad);
+      //int indexRec = std::distance(recSave.begin(), itRec);
+      if ( itRad != radSave.end() && itRec != recSave.end()) {
         if (myHistory->children[i]->state[iRad].id() != 21 ||
             myHistory->children[i]->state[iRec].id() != 21) continue;
         else {
@@ -187,7 +188,6 @@ void MyMerging::storeInfos() {
       else       stateVars = myHistory->showers->spacePtr->getStateVariables(
         myHistory->state, iRad, iemtReq+posOffset, iRec, "");
       double t    = stateVars["t"];
-//      double mass = myHistory->children[i]->clusterIn.mass();
       double mass = sqrt(stateVars["m2dip"]);
       // Just store pT for now.
       stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
