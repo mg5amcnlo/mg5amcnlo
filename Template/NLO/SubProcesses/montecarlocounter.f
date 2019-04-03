@@ -1231,15 +1231,12 @@ c
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
       logical are_col_conn(nexternal,nexternal)
+      integer get_mass_from_id
+      external get_mass_from_id
 c
-      include '../Source/MODEL/coupl.inc'
-      include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/mp_coupl.inc'
-      include '../Source/MODEL/mp_input.inc'
       mcmass=0d0
       masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
-      include '../Source/param_card.inc'
 c
       do i=1,2
         istup_local(i) = -1
@@ -1445,13 +1442,12 @@ c     fill masses
             do i=7,20
                if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
             enddo
-            masses_to_MC(5) =MDL_MB
-            masses_to_MC(6) =MDL_MT
-            masses_to_MC(15)=MDL_MTA
-            masses_to_MC(23)=MDL_MZ
-            masses_to_MC(24)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
-     &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
-            masses_to_MC(25)=MDL_MH
+            masses_to_MC(5) =get_mass_from_id(5)
+            masses_to_MC(6) =get_mass_from_id(6)
+            masses_to_MC(15)=get_mass_from_id(15)
+            masses_to_MC(23)=get_mass_from_id(23)
+            masses_to_MC(24)=get_mass_from_id(24)
+            masses_to_MC(25)=get_mass_from_id(25)
 c
             call cpu_time(tBefore)
             idOut=0
@@ -1490,13 +1486,12 @@ c     fill masses
             do i=7,20
                if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
             enddo
-            masses_to_MC(5) =MDL_MB
-            masses_to_MC(6) =MDL_MT
-            masses_to_MC(15)=MDL_MTA
-            masses_to_MC(23)=MDL_MZ
-            masses_to_MC(24)=sqrt(MDL_MZ**2/2d0+sqrt(MDL_MZ**4/4d0
-     &               -(1d0/AEWM1*MDL_MZ**2*pi)/(sqrt(2d0)*MDL_GF)))
-            masses_to_MC(25)=MDL_MH
+            masses_to_MC(5) =get_mass_from_id(5)
+            masses_to_MC(6) =get_mass_from_id(6)
+            masses_to_MC(15)=get_mass_from_id(15)
+            masses_to_MC(23)=get_mass_from_id(23)
+            masses_to_MC(24)=get_mass_from_id(24)
+            masses_to_MC(25)=get_mass_from_id(25)
 c
             idOut=0
             do i=3,nexternal-1
