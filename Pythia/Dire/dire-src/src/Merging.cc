@@ -276,12 +276,12 @@ void MyMerging::getDipoles( int iRad, int colTag, int colSign,
 void MyMerging::getStoppingInfo(double scales [100][100],
   double masses [100][100]) {
 
-  myHistory->state.list();
+  //myHistory->state.list();
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    cout << radSave[i] << " "
-      << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
-      << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
+    //cout << radSave[i] << " "
+    //  << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
+    //  << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
