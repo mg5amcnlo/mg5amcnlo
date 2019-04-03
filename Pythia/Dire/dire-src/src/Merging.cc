@@ -125,16 +125,7 @@ void MyMerging::storeInfos() {
     int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
 
     // Only consider last event entry as allowed emission.
-//    if (emt != myHistory->state.size()-1) {
-    if (emt != iemtReq+posOffset) {
-      /*stoppingScalesSave.push_back(-1.);
-      radSave.push_back(-1);
-      emtSave.push_back(-1);
-      recSave.push_back(-1);
-      mDipSave.push_back(-1.);
-      isInDeadzone.push_back(true);*/
-      continue;
-    }
+    if (emt != iemtReq+posOffset) continue;
 
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
@@ -167,18 +158,27 @@ void MyMerging::storeInfos() {
       // Already covered clustering.
       vector<int>::iterator itRad = find(radSave.begin(), radSave.end(), iRad);
       vector<int>::iterator itRec = find(recSave.begin(), recSave.end(), iRec);
-      //int indexRad = std::distance(radSave.begin(), itRad);
-      //int indexRec = std::distance(recSave.begin(), itRec);
-      if ( itRad != radSave.end() && itRec != recSave.end()) {
+      int indexRad = std::distance(radSave.begin(), itRad);
+      int indexRec = std::distance(recSave.begin(), itRec);
+
+      int ir(0), is(0);
+      ir = count(radSave.begin(), radSave.end(), iRad);
+      is = count(recSave.begin(), recSave.end(), iRec);
+      if (ir==2 || is==2) continue;
+
+      //if ( itRad != radSave.end() && itRec != recSave.end()) {
+      if ( (itRad != radSave.end() || itRec != recSave.end()) 
+        && indexRad == indexRec) {
         if (myHistory->children[i]->state[iRad].id() != 21 ||
             myHistory->children[i]->state[iRec].id() != 21) continue;
-        else {
-          // Only continue of gluon was already counted as part of two dipoles.
-          int ir(0), is(0);
-          ir = count(radSave.begin(), radSave.end(), iRad);
-          is = count(recSave.begin(), recSave.end(), iRec);
-           if (ir==2 && is==2) continue;
-        }
+//        else {
+//          // Only continue of gluon was already counted as part of two dipoles.
+//          int ir(0), is(0);
+//          ir = count(radSave.begin(), radSave.end(), iRad);
+//          is = count(recSave.begin(), recSave.end(), iRec);
+//          //if (ir==2 && is==2) continue;
+//          if (ir==2 || is==2) continue;
+//        }
       }
 
       bool isFSR = myHistory->showers->timesPtr->isTimelike(myHistory->state,
@@ -277,8 +277,12 @@ void MyMerging::getDipoles( int iRad, int colTag, int colSign,
 void MyMerging::getStoppingInfo(double scales [100][100],
   double masses [100][100]) {
 
+  //myHistory->state.list();
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
+    //cout << radSave[i] << " "
+    //  << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
+    //  << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
