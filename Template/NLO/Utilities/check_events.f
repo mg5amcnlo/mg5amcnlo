@@ -55,12 +55,15 @@ c negative number of events
       character*10 MonteCarlo
       character*2 ch2,pm
       character*9 ch1
+      character*6 cc(4)
+      data cc/'light ','bottom','top   ','gluon '/
       common/cevtnorm/event_norm
 
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
+      logical are_col_conn
 
       include "nexternal.inc"
-      integer j,k
+      integer j,k,ipl0,ipl
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal),xnorm
 
       integer kk,kr,kf,kpdf
@@ -370,6 +373,20 @@ c
         tmp=8*wlim/100.d0
         call bookup(6,'weight',tmp,-4*wlim,4*wlim)
       endif
+      if(AddInfoLHE)then
+        call bookup(11,'scalup[ifks]',2d0,0d0,200d0)
+        call bookup(12,'scalup[ifks]',8d0,0d0,800d0)
+        call bookup(13,'log scalup[ifks]',0.1d0,0d0,4d0)
+        call bookup(14,'scalup[jfks]',2d0,0d0,200d0)
+        call bookup(15,'scalup[jfks]',8d0,0d0,800d0)
+        call bookup(16,'log scalup[jfks]',0.1d0,0d0,4d0)
+        do k=1,4
+          call bookup(20+5*(k-1)+1,'scalup '//cc(k),2d0,0d0,200d0)
+          call bookup(20+5*(k-1)+2,'scalup '//cc(k),8d0,0d0,800d0)
+          call bookup(20+5*(k-1)+3,'log scalup '//cc(k),0.1d0,0d0,4d0)
+        enddo
+      endif
+
 
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
@@ -388,6 +405,59 @@ c
              call mfill(4,XWGTUP,abs(XWGTUP))
              call mfill(5,XWGTUP,abs(XWGTUP))
              call mfill(6,XWGTUP,abs(XWGTUP))
+           endif
+         endif
+         if(AddInfoLHE)then
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                      fksfather_lhe,ipartner_lhe,
+     #                      scale1_lhe,scale2_lhe,
+     #                      jwgtinfo,mexternal,iwgtnumpartn,
+     #           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+           wrong=.false.
+           do j=1,NUP
+             if(j.eq.ifks_lhe)then
+               ipl0=10
+             elseif(j.eq.jfks_lhe)then
+               ipl0=13
+             else
+               ipl0=-1
+             endif
+             if(abs(IDUP(j)).le.4)then
+               ipl=20
+             elseif(abs(IDUP(j)).eq.5)then
+               ipl=25
+             elseif(abs(IDUP(j)).eq.6)then
+               ipl=30
+             elseif(IDUP(j).eq.21)then
+               ipl=35
+             endif
+             do k=1,NUP
+               if(j.eq.k)cycle
+               are_col_conn=
+     #          (ICOLUP(1,j).ne.0.and.ICOLUP(1,j).eq.ICOLUP(1,k)).or.
+     #          (ICOLUP(1,j).ne.0.and.ICOLUP(1,j).eq.ICOLUP(2,k)).or.
+     #          (ICOLUP(2,j).ne.0.and.ICOLUP(2,j).eq.ICOLUP(1,k)).or.
+     #          (ICOLUP(2,j).ne.0.and.ICOLUP(2,j).eq.ICOLUP(2,k))
+               if(SCALUP_a(j,k).gt.0.d0)then
+                 call mfill(ipl+1,SCALUP_a(j,k),XWGTUP)
+                 call mfill(ipl+2,SCALUP_a(j,k),XWGTUP)
+                 call mfill(ipl+3,log10(SCALUP_a(j,k)),XWGTUP)
+                 if( ((ipl0.eq.10.or.ipl0.eq.13).and.iSorH_lhe.ne.2) .or.
+     #               ipl0.eq.-1 )goto 222
+                 call mfill(ipl0+1,SCALUP_a(j,k),XWGTUP)
+                 call mfill(ipl0+2,SCALUP_a(j,k),XWGTUP)
+                 call mfill(ipl0+3,log10(SCALUP_a(j,k)),XWGTUP)
+ 222             continue
+                 wrong=wrong.or.(.not.are_col_conn)
+               else
+                 wrong=wrong.or.are_col_conn
+               endif
+             enddo
+           enddo
+           if(wrong)then
+             write(44,*)'####event:',i+1
+             write(44,*)' colour flow and scales not consistent'
+             itoterr=itoterr+1
            endif
          endif
          if(index(buff,'endoffile').ne.0)then
@@ -617,7 +687,7 @@ c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
 
          percentage=i*100d0/maxevt
-         istep=maxevt/10
+         istep=max(10,maxevt/10)
          if(mod(i,istep).eq.0.or.i.eq.maxevt)
      &        write(*,*)'Processed',int(percentage),'% of the file'
 
@@ -644,6 +714,19 @@ c Don't check momentum conservation in that case
       call multitop(4,3,2,'weight    ',' ','LOG')
       call multitop(5,3,2,'weight    ',' ','LOG')
       call multitop(6,3,2,'weight    ',' ','LOG')
+      if(AddInfoLHE)then
+        call multitop(11,3,2,'scalup[ifks]',' ','LOG')
+        call multitop(12,3,2,'scalup[ifks]',' ','LOG')
+        call multitop(13,3,2,'log scalup[ifks]',' ','LOG')
+        call multitop(14,3,2,'scalup[jfks]',' ','LOG')
+        call multitop(15,3,2,'scalup[jfks]',' ','LOG')
+        call multitop(16,3,2,'log scalup[jfks]',' ','LOG')
+        do k=1,4
+          call multitop(20+5*(k-1)+1,3,2,'scalup '//cc(k),' ','LOG')
+          call multitop(20+5*(k-1)+2,3,2,'scalup '//cc(k),' ','LOG')
+          call multitop(20+5*(k-1)+3,3,2,'log scalup '//cc(k),' ','LOG')
+        enddo
+      endif
       close(99)
 
       if(event_norm.eq.'ave'.or.event_norm.eq.'bia')
