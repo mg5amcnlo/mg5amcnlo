@@ -365,53 +365,8 @@ c respectively.
       double precision emscwgt(nexternal)
       double precision MCsec(nexternal-1,max_bcol)
       double precision xmcxsec2(max_bcol)
-      include "genps.inc"
-      integer idup(nexternal-1,maxproc)
-      integer mothup(2,nexternal-1,maxproc)
-      integer icolup(2,nexternal-1,max_bcol)
-      integer idup_s(nexternal-1,maxproc)
-      integer mothup_s(2,nexternal-1,maxproc)
-      integer icolup_s(2,nexternal-1,maxflow)
-      integer idup_h(nexternal,maxproc)
-      integer mothup_h(2,nexternal,maxproc)
-      integer icolup_h(2,nexternal,maxflow)
-      integer icolup_tmp(2,nexternal-1)
-      integer iemitter,ipartner,icolLO(2,nexternal-1)
-      double precision wgt
-      integer spinup_local(nexternal)
-      integer istup_local(nexternal)
-      double precision p_read(0:3,nexternal)
-      double precision wgt_read
-      double precision wgt_sudakov
-
-C     To access Pythia8 control variables
-      include 'pythia8_control.inc'
-      include "born_leshouche.inc"
-      integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
-      logical firsttime1
-      data firsttime1 /.true./
-      include 'leshouche_decl.inc'
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      save mothup_d, icolup_d, niprocs_d
-
-      logical         Hevents
-      common/SHevents/Hevents
-      integer nexternal_now
-
       double precision tiny
       parameter (tiny=1d-7)
-
-      do i=1,2
-        istup_local(i) = -1
-      enddo
-      do i=3,nexternal
-        istup_local(i) = 1
-      enddo
-      do i=1,nexternal
-        spinup_local(i) = -9
-      enddo
-      pythia_cmd_file=''
 
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
@@ -507,6 +462,28 @@ c equal.
             pdg_equal=.false.
             return
          endif
+      enddo
+      end
+      
+      logical function colour_con_equal(n,icol1,icol2)
+c Returns .true. if the lists of colour-connection codes --'icol1' and
+c 'icol2'-- are equal. It is not smart: if they are equal, but are
+c labelled differently (e.g. replacing '501' with '502' and vice versa)
+c this routine will NOT consider them equal. If the first element of
+c icol1 or icol2 is equal to -1, it means that that array has not been
+c set --> if they are both equal to -1, consider icol1 and icol2 equal
+      implicit none
+      include 'nexternal.inc'
+      integer n,i,j,icol1(2,nexternal),icol2(2,nexternal)
+      colour_con_equal=.true.
+      if (icol1(1,1).eq.-1 .and. icol2(1,1).eq.-1) return
+      do i=1,n
+         do j=1,2
+            if (icol1(j,i).ne.icol2(j,i)) then
+               colour_con_equal=.false.
+               return
+            endif
+         enddo
       enddo
       end
       
@@ -1210,6 +1187,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       y_bst(icontr)=ybst_til_tolab
       shower_scale(icontr)=-99d9
       ifold_cnt(icontr)=ifold_counter
+      icolour_con(1,1,icontr)=-1
       call set_pdg(icontr,nFKSprocess)
       if (type.eq.2) then
 c     Born contribution
@@ -2045,8 +2023,51 @@ c Fills the function that is returned to the MINT integrator
       return
       end
       
+      subroutine set_colour_connections(iFKS,ifold_counter)
+c If the 'complete_xmcsubt' subroutine has been called, update the
+c icolour_con() information with the colour flow picked in that
+c subroutine. Do this for all contributions that have the FKS
+c configuration equal to iFKS and fold equal to ifold_counter, i.e., the
+c FKS config and fold for which 'complete_xmcsubt' has been called. In
+c case this subroutine was not called, simply set the (first element of)
+c icolour_con() information for that contribution equal to -1 (i.e., some
+c bogus value). We can check if complete_xmcsubt has been called by
+c checking if the first element of icolup_s is positive.
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      integer i,iFKS,ifold_counter,ii,jj
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common /colour_connections/ icolup_s,icolup_h
+      do i=1,icontr
+         if (ifold_cnt(i).ne.ifold_counter) cycle
+         if (nFKS(i).ne.iFKS) cycle
+         if (H_event(i)) then
+            if (icolup_s(1,1).ge.0) then
+               icolour_con(1:2,1:nexternal,i)=icolup_h(1:2,1:nexternal)
+            else
+               icolour_con(1,1,i)=-1
+            endif
+         else
+            if (icolup_s(1,1).ge.0) then
+               do ii=1,nexternal-1
+                  do jj=1,2
+                     icolour_con(jj,ii,i)=icolup_s(jj,ii)
+                  enddo
+               enddo
+               do jj=1,2
+                  icolour_con(jj,nexternal,i)=-1
+               enddo
+            else
+               icolour_con(1,1,i)=-1
+            endif
+         endif
+      enddo
+      return
+      end
 
-      subroutine include_shape_in_shower_scale(p,iFKS)
+
+      subroutine include_shape_in_shower_scale(p,iFKS,ifold_counter)
 c Includes the shape function from the MC counter terms in the shower
 c starting scale. This function needs to be called (at least) once per
 c FKS configuration that is included in the current PS point.
@@ -2075,8 +2096,7 @@ c FKS configuration that is included in the current PS point.
       double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
       common /cshowerscale_a/SCALUP_a
       parameter (izero=0,mohdr=-100)
-      integer     fold,ifold_counter
-      common /cfl/fold,ifold_counter
+      integer ifold_counter
 c Compute the shower starting scale including the shape function
       if ( (.not. MCcntcalled) .and.
      &     abrv.ne.'born' .and. ickkw.ne.4) then
@@ -2094,28 +2114,27 @@ c Compute the shower starting scale including the shape function
       call set_cms_stuff(mohdr)
       call set_shower_scale(iFKS*2,.true.)
       
-c loop over all the weights and update the relevant ones
-c     (i.e. nFKS(i)=iFKS)
+c loop over all the contributions and update the relevant ones
+c (i.e. when nFKS(i)=iFKS and ifold_cnt(i)=ifold_counter)
       do i=1,icontr
          if (ifold_cnt(i).ne.ifold_counter) cycle
-         if (nFKS(i).eq.iFKS) then
-            if (H_event(i)) then
+         if (nFKS(i).ne.iFKS) cycle
+         if (H_event(i)) then
 c H-event contribution
-               shower_scale(i)=SCALUP(iFKS*2)
-               do j=1,nexternal
-                  do k=1,nexternal
-                     shower_scale_a(i,j,k)=SCALUP_a(iFKS*2,j,k)
-                  enddo
+            shower_scale(i)=SCALUP(iFKS*2)
+            do j=1,nexternal
+               do k=1,nexternal
+                  shower_scale_a(i,j,k)=SCALUP_a(iFKS*2,j,k)
                enddo
-            else
+            enddo
+         else
 c S-event contribution
-               shower_scale(i)=SCALUP(iFKS*2-1)
-               do j=1,nexternal
-                  do k=1,nexternal
-                     shower_scale_a(i,j,k)=SCALUP_a(iFKS*2-1,j,k)
-                  enddo
+            shower_scale(i)=SCALUP(iFKS*2-1)
+            do j=1,nexternal
+               do k=1,nexternal
+                  shower_scale_a(i,j,k)=SCALUP_a(iFKS*2-1,j,k)
                enddo
-            endif
+            enddo
          endif
       enddo
       return
@@ -2136,8 +2155,8 @@ c various FKS configurations can be summed together.
       include 'fks_info.inc'
       include 'timing_variables.inc'
       integer i,j,ii,jj,i_soft
-      logical momenta_equal,pdg_equal,equal,found_S
-      external momenta_equal,pdg_equal
+      logical momenta_equal,pdg_equal,equal,found_S,colour_con_equal
+      external momenta_equal,pdg_equal,colour_con_equal
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
@@ -2198,6 +2217,17 @@ c     Identical contributions found: sum the contribution "i" to "ii"
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
                enddo
+               if (.not. colour_con_equal(nexternal,icolour_con(1,1,ii)
+     $              ,icolour_con(1,1,i))) then
+                  write (*,*) 'ERROR in sum_identical_contributions: '/
+     $                 /'colour connections in identical H-event '/
+     $                 /'contributions should be equal'
+                  write (*,*) 'ii: ',icolour_con(1,1:nexternal,ii)
+                  write (*,*) '    ',icolour_con(2,1:nexternal,ii)
+                  write (*,*) 'i:  ',icolour_con(1,1:nexternal,i)
+                  write (*,*) '    ',icolour_con(2,1:nexternal,i)
+                  stop 1
+               endif
                exit
             enddo
          else
@@ -2234,7 +2264,8 @@ c folds).
       use weight_lines
       implicit none
       include 'nexternal.inc'
-      integer ifold_counter,i,j,k,ifold_picked
+      integer ifold_counter,i,j,k,ifold_picked,icolour(2,nexternal),jj
+     $     ,ii
       double precision showerscale
       double precision showerscale_a(nexternal,nexternal)
       logical improved_scale_choice
@@ -2243,9 +2274,12 @@ c folds).
       if (.not. improved_scale_choice) then
          call update_shower_scale_Sevents_v1(ifold_counter,showerscale
      $        ,showerscale_a,ifold_picked)
+         write (*,*) 'Error in update_shower_scale_Sevents: Not '/
+     $        /'correctly updated with icolour info'
+         stop 1
       else
          call update_shower_scale_Sevents_v2(ifold_counter,showerscale
-     $        ,showerscale_a,ifold_picked)
+     $        ,showerscale_a,icolour,ifold_picked)
       endif
 c Overwrite the shower scale for the S-events
       do i=1,icontr
@@ -2257,6 +2291,7 @@ c Overwrite the shower scale for the S-events
                   shower_scale_a(i,j,k)= showerscale_a(j,k)
                enddo
             enddo
+            icolour_con(1:2,1:nexternal,i)=icolour(1:2,1:nexternal)
          endif
       enddo
       return
@@ -2383,7 +2418,7 @@ c Shower scale is weighted average within the fold
 
 
       subroutine update_shower_scale_Sevents_v2(ifold_counter
-     $     ,showerscale,showerscale_a,ifold_picked)
+     $     ,showerscale,showerscale_a,icolour,ifold_picked)
 c Improved way of assigning shower starting scales. It picks a fold
 c randomly, based on the weight of the fold to the sum over all
 c folds. Within a fold, pick an FKS configuration randomly, weighted by
@@ -2394,7 +2429,8 @@ c contributions to the picked fold, use the weights of those instead).
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,k,l,ict,ifl,ifold_counter,iFKS,ifold_picked
+      integer i,j,k,l,ict,ifl,ifold_counter,iFKS,ifold_picked,icolour(2
+     $     ,nexternal),ii,jj
       double precision wgt_fold_fks(fks_configs,ifold_counter),ran2
      $     ,target,tmp_scale(fks_configs,ifold_counter),showerscale
      $     ,tmp_scale_a(fks_configs,ifold_counter,nexternal,nexternal)
@@ -2521,6 +2557,11 @@ c instead.
          endif
       endif
       showerscale=tmp_scale(iFKS,ifl)
+      do i=1,icontr
+         if (iFKS.ne.nFKS(i) .or. ifl.ne.ifold_cnt(i)) cycle
+         icolour(1:2,1:nexternal)=icolour_con(1:2,1:nexternal,i)
+         exit
+      enddo
       do j=1,nexternal
          do k=1,nexternal
             showerscale_a(j,k)=tmp_scale_a(iFKS,ifl,j,k)
@@ -2632,7 +2673,7 @@ c PS point that should be written in the event file.
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'timing_variables.inc'
-      integer i,j,k,l,iFKS_picked,ict,ifold_picked
+      integer i,j,k,l,iFKS_picked,ict,ifold_picked,jj,ii
       double precision tot_sum,rnd,ran2,current,target
       external ran2
       integer           i_process_addwrite
@@ -2651,6 +2692,8 @@ c PS point that should be written in the event file.
       common /cshowerscale/SCALUP
       double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
       common /cshowerscale/SCALUP_a
+      integer colour_connections(2,nexternal)
+      common /colour_connections_to_write/ colour_connections
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
@@ -2686,6 +2729,8 @@ c found the contribution that should be written:
                SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked,k,l)
             enddo
          enddo
+         colour_connections(1:2,1:nexternal)=icolour_con(1:2
+     $        ,1:nexternal,icontr_picked)
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
@@ -2708,6 +2753,8 @@ c$$$         ifold_picked=ifold_cnt(icontr_picked)
                SCALUP_a(iFKS_picked*2-1,k,l)=shower_scale_a(icontr_picked,k,l)
             enddo
          enddo
+         colour_connections(1:2,1:nexternal)=icolour_con(1:2,1:nexternal
+     $        ,icontr_picked)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       call cpu_time(tAfter)
@@ -4711,8 +4758,8 @@ c timing statistics
       include "timing_variables.inc"
 
 c For the MINT folding
-      integer fold
-      common /cfl/fold
+      integer fold,ifold_counter
+      common /cfl/fold,ifold_counter
       double precision virt_wgt_save
       save virt_wgt_save
 

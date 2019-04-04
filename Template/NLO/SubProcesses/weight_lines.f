@@ -7,8 +7,8 @@
          logical, allocatable :: H_event(:)
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
-     $        ,plot_id(:),niproc(:),parton_pdf(:,:,:),icontr_sum(:,:)
-     $        ,ifold_cnt(:)
+     $        ,plot_id(:),niproc(:),icontr_sum(:,:),ifold_cnt(:)
+     $        ,icolour_con(:,:,:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -41,10 +41,6 @@ c parton_pdg
          allocate(itemp3(nexternal,n_proc,max_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdg
          call move_alloc(itemp3,parton_pdg)
-c parton_pdf
-         allocate(itemp3(nexternal,n_proc,max_contr))
-         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
-         call move_alloc(itemp3,parton_pdf)
 c parton_iproc
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=parton_iproc
@@ -115,14 +111,14 @@ c niproc
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=niproc
          call move_alloc(itemp1,niproc)
-c parton_pdf
-         allocate(itemp3(nexternal,max_iproc,n_contr))
-         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
-         call move_alloc(itemp3,parton_pdf)
 c icontr_sum
          allocate(itemp2(0:n_contr,n_contr))
          itemp2(0:max_contr,1:max_contr)=icontr_sum
          call move_alloc(itemp2,icontr_sum)
+c icolour_con
+         allocate(itemp3(2,nexternal,n_contr))
+         itemp3(1:2,1:nexternal,1:max_contr)=icolour_con
+         call move_alloc(itemp3,icolour_con)
 c momemta
          allocate(temp3(0:3,nexternal,n_contr))
          temp3(0:3,1:nexternal,1:max_contr)=momenta
@@ -204,8 +200,8 @@ c update maximum
       allocate(plot_id(1))
       allocate(ifold_cnt(1))
       allocate(niproc(1))
-      allocate(parton_pdf(nexternal,1,1))
       allocate(icontr_sum(0:1,1))
+      allocate(icolour_con(2,nexternal,1))
       allocate(momenta(0:3,nexternal,1))
       allocate(momenta_m(0:3,nexternal,2,1))
       allocate(wgt(3,1))
@@ -244,8 +240,8 @@ c update maximum
       if (allocated(plot_id)) deallocate(plot_id)
       if (allocated(ifold_cnt)) deallocate(ifold_cnt)
       if (allocated(niproc)) deallocate(niproc)
-      if (allocated(parton_pdf)) deallocate(parton_pdf)
       if (allocated(icontr_sum)) deallocate(icontr_sum)
+      if (allocated(icolour_con)) deallocate(icolour_con)
       if (allocated(momenta)) deallocate(momenta)
       if (allocated(momenta_m)) deallocate(momenta_m)
       if (allocated(wgt)) deallocate(wgt)

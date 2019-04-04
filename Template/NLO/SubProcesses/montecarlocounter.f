@@ -1151,6 +1151,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer istup_local(nexternal)
       double precision wgt_sudakov
       double precision scales(0:99)
+      common /colour_connections/ icolup_s,icolup_h
 
       integer itmp,jtmp
       double precision scltarget,sclstart,sudpdffact
