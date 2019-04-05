@@ -590,6 +590,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      save
       include "pmass.inc"
 
 c Initialise if first time
@@ -1221,7 +1222,7 @@ c               cstlow <= smallptupp
 cSF ARE noemProb AND mDipole USEFUL?
       double precision noemProb, startingScale, stoppingScale, mDipole
       double precision mcmass(21)
-      double precision pysudakov,scalefunH,deltanum,deltaden,deltarat
+      double precision pysudakov,deltanum,deltaden,deltarat
       integer nG_S,nQ_S,i_dipole_counter,isudtype
       integer i_dipole_dead_counter
 c
@@ -1704,10 +1705,13 @@ c have it identical to the scales for i_fks. First clean up
           icount=icount+1
           fksscales(icount)=xscales(iBtoR(jbar),iBtoR(i))
           if(abs(IDUP_S(jbar)).le.6)then
-            ifksscl(icount)=iBtoR(i)
+c Here and just below: in the case of more sophisticated scale
+c assignments (in assign_ifks_Hscale), this could be replaced by:
+c  ifksscl(icount)=iBtoR(i)
+            ifksscl(icount)=1
           elseif(IDUP_S(jbar).eq.21)then
             if(are_col_conn_H(i_fks,iBtoR(i)))
-     #        ifksscl(icount)=iBtoR(i)
+     #        ifksscl(icount)=1
           endif
         endif
       enddo
@@ -1722,6 +1726,11 @@ c what follows can be generalised if need be
       call assign_ifks_Hscale(IDUP_S(jbar),ifksscl,fksscales)
       do i=1,nexternal
         if(are_col_conn_H(i_fks,i))SCALUP_tmp_H(i_fks,i)=fksscales(3)
+c The assignments for (j_fks,*) stem from MC considerations; in particular,
+c they guarantee a symmetric treatment of i_fks and j_fks in the case of
+c final-state branchings, and a shower from an initial-state j_fks
+c that respects the ordering in t. Note that assigments driven by
+c matrix-element considerations could be significantly different
         if(are_col_conn_H(j_fks,i))SCALUP_tmp_H(j_fks,i)=fksscales(3)
       enddo
 c Final consistency checks
@@ -1934,19 +1943,16 @@ c     itype=1 to take the minimum of the two scales in the case of mother=gluon
 c
       fksscales(3)=1.d10
       if(itype.eq.0)then
-        wrong=.false.
-        icount=min(ifksscl(1),1)+min(ifksscl(2),1)
-        wrong=wrong .or. 
-     #        ( icount.eq.0 .or.
-     #         (icount.ne.1.and.(abs(ipdg).le.6.or.ipdg.eq.21)) )
-        if(ifksscl(1).ne.0)fksscales(3)=fksscales(1)
-        if(ifksscl(2).ne.0)fksscales(3)=fksscales(2)
+        wrong=.not.((ifksscl(1).eq.1.and.ifksscl(2).eq.0).or.
+     &              (ifksscl(1).eq.0.and.ifksscl(2).eq.1))
         if(wrong)then
           write(*,*)'Something wrong in assign_ifks_Hscale (0):'
           write(*,*)ipdg,icount,i_fks,j_fks
           write(*,*)ifksscl(1),ifksscl(2),fksscales(1),fksscales(2)
           stop
         endif
+        if(ifksscl(1).ne.0)fksscales(3)=fksscales(1)
+        if(ifksscl(2).ne.0)fksscales(3)=fksscales(2)
       elseif(itype.eq.1)then
         do i=1,2
           if(fksscales(i).gt.0d0)
@@ -4011,16 +4017,5 @@ c bosons
 c
       charge=tmp
 
-      return
-      end
-
-
-      function scalefunH(q)
-c     Functional form for shower scale relevant to an emission
-c     from the colour line of the FKS parton
-      implicit none
-      double precision scalefunH,q
-      scalefunH=max(q,3d0)
-c
       return
       end
