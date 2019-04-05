@@ -124,8 +124,12 @@ void MyMerging::storeInfos() {
 
     int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
 
+    cout <<  iemtReq+posOffset << "\t\t " << rad << " " << emt << " " << rec << endl;
+
     // Only consider last event entry as allowed emission.
     if (emt != iemtReq+posOffset) continue;
+
+    myHistory->children[i]->state.list();
 
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
@@ -276,12 +280,12 @@ void MyMerging::getDipoles( int iRad, int colTag, int colSign,
 void MyMerging::getStoppingInfo(double scales [100][100],
   double masses [100][100]) {
 
-  //myHistory->state.list();
+  myHistory->state.list();
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    //cout << radSave[i] << " "
-    //  << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
-    //  << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
+    cout << radSave[i] << " "
+      << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
+      << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
@@ -1485,6 +1489,9 @@ bool MyMerging::generateHistories( const Event& process) {
     mergingHooksPtr->orderHistories(false);
   else
     mergingHooksPtr->orderHistories(true);
+
+  if (settingsPtr->flag("Dire:doMcAtNloDelta"))
+    mergingHooksPtr->orderHistories(false);
 
   // For pp > h, allow cut on state, so that underlying processes
   // can be clustered to gg > h
