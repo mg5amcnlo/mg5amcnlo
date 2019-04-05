@@ -1253,6 +1253,9 @@ c
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double complex cdummy(2)
+c Jamp amplitudes of the Born (to be filled with a call the sborn())
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
+      common/to_amps/  amp2,       jamp2
 c
       mcmass=0d0
       masses_to_MC=0d0

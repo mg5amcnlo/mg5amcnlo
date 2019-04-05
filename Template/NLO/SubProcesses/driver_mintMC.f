@@ -970,17 +970,21 @@ c
                endif
             endif               
             kk0=0
-            if (passcuts_nbody .and. abrv.ne.'real') then
-c Include the MonteCarlo subtraction terms
+c compute the MonteCarlo subtraction terms. Pass the 'passcuts_nbody'
+c logical variable to the compute_MC_subt_term subroutine to determine
+c if we should actually include it in the S/H-event contributions.
+            if (abrv.ne.'real') then
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
-                  call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+     $                 ,gfactcl,probne)
                   kk1=2
-                  write(kkunit,554)'SDK',probne,probne_bog,scltarget,sclstart,sudpdffact
+                  write(kkunit,554)'SDK',probne,probne_bog,scltarget
+     $                 ,sclstart,sudpdffact
                   do kk=1,nexternal
-                    write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+                     write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
                   enddo
                else
 c For UNLOPS all real-emission contributions need to be added to the
@@ -988,6 +992,8 @@ c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
+            endif
+            if (passcuts_nbody .and. abrv.ne.'real') then
                if(kk0.eq.1)then
                do kk=1,nexternal
                  write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)

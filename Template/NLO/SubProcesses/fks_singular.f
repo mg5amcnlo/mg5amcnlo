@@ -312,7 +312,7 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+      subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne)
       use extra_weights
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
@@ -330,7 +330,7 @@ c respectively.
      $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
      $     ,xmcxsec(nexternal),g22,wgt1,xlum_mc_fact,fks_Hij
       external dot,fks_Sij,f_damp,fks_Hij
-      logical lzone(nexternal),flagmc
+      logical lzone(nexternal),flagmc,passcuts
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -369,13 +369,6 @@ c respectively.
       parameter (tiny=1d-7)
 
       call cpu_time(tBefore)
-      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
-      if(UseSfun)then
-         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-      else
-         sevmc = fks_Hij(p,i_fks,j_fks)
-      endif
-      if (sevmc.eq.0d0) return
 
 c -- call to MC counterterm functions
       first_MCcnt_call=.true.
@@ -421,13 +414,21 @@ c     positivity check
       if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
 c -- end of call to MC counterterm functions
 
+      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
+      if(UseSfun)then
+         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+      else
+         sevmc = fks_Hij(p,i_fks,j_fks)
+      endif
+      if (sevmc.eq.0d0) return
+
       MCcntcalled=.true.
       if(ileg.gt.4 .or. ileg.lt.1)then
          write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
      $        ileg
          stop 1
       endif
-      if (flagmc) then
+      if (passcuts .and. flagmc) then
          g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
             if(lzone(i))then
