@@ -813,6 +813,8 @@ c
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common /colour_connections/ icolup_s,icolup_h
 c
       kkunit=90+imode
       sigintF=0d0
@@ -874,6 +876,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+         icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          jac=1d0
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
@@ -894,7 +897,9 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          endif
 c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
-         call include_shape_in_shower_scale(p,nFKS_picked_nbody)
+         call include_shape_in_shower_scale(p,nFKS_picked_nbody
+     $        ,ifold_counter)
+         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
             
          
  11      continue
@@ -916,6 +921,7 @@ c for different nFKSprocess.
             gfactsf=1.d0
             gfactcl=1.d0
             MCcntcalled=.false.
+            icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(ndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
@@ -1020,7 +1026,8 @@ c Include the real-emission contribution.
             endif
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.
-            call include_shape_in_shower_scale(p,iFKS)
+            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+            call set_colour_connections(iFKS,ifold_counter)
             done=done.or.(kk1.ne.0)
          enddo
  12      continue

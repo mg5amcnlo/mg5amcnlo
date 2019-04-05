@@ -1109,6 +1109,21 @@ c fills arrays relevant to shower scales, and computes Delta
       external ran2
       logical extra
 
+c Controls assignments of scales in H events in LHE file.
+c Set iHscale=0 for scale=target_scale
+c     iHscale=1 for scale=dipole_mass
+      integer iHscale,jbar,ifksscl(2)
+      parameter (iHscale=0)
+      double precision dipole_mass,fksscales(3)
+      external dipole_mass
+
+c Maps real labels onto Born labels, by excluding i_fks
+c  1<=iRtoB(k)<=nexternal-1,  1<=k<=nexternal
+      integer iRtoB(nexternal)
+c Maps Born labels onto real labels, by excluding i_fks
+c  1<=iBtoR(k)<=nexternal,  1<=k<=nexternal-1
+      integer iBtoR(nexternal-1)
+
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -1129,7 +1144,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt,wgt2
       logical lzone(nexternal)
 
-      integer i, j
+      integer i,j,k
       double precision tiny
       parameter(tiny=1d-7)
 
@@ -1151,6 +1166,7 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer istup_local(nexternal)
       double precision wgt_sudakov
       double precision scales(0:99)
+      common /colour_connections/ icolup_s,icolup_h
 
       integer itmp,jtmp
       double precision scltarget,sclstart,sudpdffact
@@ -1201,12 +1217,12 @@ c               cstlow <= smallptupp
       logical*1 dzones(0:99,0:99)
       logical*1 dzones2(0:99,0:99)
 
-      integer id,type,icount,icount_i,icount_j,ic,jc
+      integer id,type,icount
 cSF ARE noemProb AND mDipole USEFUL?
       double precision noemProb, startingScale, stoppingScale, mDipole
       double precision mcmass(21)
       double precision pysudakov,scalefunH,deltanum,deltaden,deltarat
-      integer nG_S,nQ_S,i_dipole_counter,isudtype,relabel(nexternal)
+      integer nG_S,nQ_S,i_dipole_counter,isudtype
       integer i_dipole_dead_counter
 c
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -1230,7 +1246,8 @@ c
       double precision masses_to_MC(0:25)
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
-      logical are_col_conn(nexternal,nexternal)
+      logical are_col_conn_S(nexternal-1,nexternal-1)
+      logical are_col_conn_H(nexternal,nexternal)
       integer get_mass_from_id
       external get_mass_from_id
 c
@@ -1341,6 +1358,8 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
 
 c Additional information for LHE
       if(AddInfoLHE)then
+         ifks_lhe(nFKSprocess)=i_fks
+         jfks_lhe(nFKSprocess)=j_fks
          fksfather_lhe(nFKSprocess)=fksfather
          if(jpartner.ne.0)then
             ipartner_lhe(nFKSprocess)=jpartner
@@ -1371,6 +1390,17 @@ c colour configuration read from born_leshouche.inc and jflow
         ICOLUP_S(1,i)=ICOLUP(1,i,jflow)
         ICOLUP_S(2,i)=ICOLUP(2,i,jflow)
       enddo
+      are_col_conn_S=.false.
+      do i=1,nexternal-1
+         do j=1,nexternal-1
+            if(i.ne.j)
+     &        are_col_conn_S(i,j)=
+     &      (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
+     &      (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(2,j)).or.
+     &      (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(1,j)).or.
+     &      (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j))
+         enddo
+      enddo
 c SCALUP_tmp_S* are the m_ij scales, ie the starting scales (as determined
 c by the D(mu) function) for extra radiation; they are copies of the
 c emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
@@ -1384,10 +1414,7 @@ c the latter is employed in the computation of Delta
       SCALUP_tmp_S2=-1d0
       do i=1,nexternal-2
          do j=i+1,nexternal-1
-            if( (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
-     &          (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(2,j)).or.
-     &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(1,j)).or.
-     &          (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j)) )then
+            if(are_col_conn_S(i,j))then
                SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
                SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
                SCALUP_tmp_S2(i,j)=emscav_tmp_a2(i,j)
@@ -1424,6 +1451,29 @@ c Fill selected color configuration into jpart array.
         ICOLUP_H(1,i)=jpart(4,i)
         ICOLUP_H(2,i)=jpart(5,i)
       enddo
+      are_col_conn_H=.false.
+      do i=1,nexternal
+         do j=1,nexternal
+            if(i.ne.j)
+     &        are_col_conn_H(i,j)=
+     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(1,j)).or.
+     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(2,j)).or.
+     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(1,j)).or.
+     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(2,j))
+         enddo
+      enddo
+      do i=1,nexternal
+        if(i.lt.i_fks)then
+          iRtoB(i)=i
+          iBtoR(i)=i
+        elseif(i.eq.i_fks)then
+          iRtoB(i)=-1
+          if(i.lt.nexternal)iBtoR(i)=i+1
+        elseif(i.gt.i_fks)then
+          iRtoB(i)=i-1
+          if(i.lt.nexternal)iBtoR(i)=i+1
+        endif
+      enddo
 c
       nexternal_now=nexternal
       call clear_HEPEUP_event()
@@ -1438,7 +1488,7 @@ c
       dzones2=.true.
       if(do_time_profiling)then
          if (is_pythia_active.eq.0) then
-c     fill masses
+c Fill masses
             do i=7,20
                if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
             enddo
@@ -1482,7 +1532,7 @@ c
          write(*,*)
       else
          if (is_pythia_active.eq.0) then
-c     fill masses
+c Fill masses
             do i=7,20
                if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
             enddo
@@ -1513,14 +1563,16 @@ c
 c After the calls above, we have
 c   xscales(i,j)=t_ij
 c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
-c emitted equal to the FKS parton. Therefore, 1<=i,j<=nexternal, with
-c sensible values returned only if i != i_fks and/or j != i_fks.
-c The same labeling conventions apply to xmasses(i,j) (which is the
+c emitted equal to the FKS parton. Although both emitter and recoiler
+c are Born-level quantities, their labellings follow the real-process
+c conventions. Thus, in the matrix xscales(i,j) one has 1<=i,j<=nexternal, 
+c with xscales(i_fks,*)=xscales(*,i_fks)=-1.
+c The same labelling conventions apply to xmasses(i,j) (which is the
 c dipole mass associated with the colour line that connects i and j)
 c and dzones(i,j) (which is the dead zone relevant to the emission
 c from parton i colour-connected with recoiler j).
 c
-c Therefore, since any the pair of indices (i,j) associated with sensible
+c Since any the pair of indices (i,j) associated with sensible
 c entries in the arrays returned by Pythia is in one-to-one correspondence
 c with Born-level quantities, it is convenient to define relabelled
 c copies of such arrays (which we call xscales2, xmasses2, and dzones2),
@@ -1529,26 +1581,16 @@ c
 c By construction, t_ij are the target scales. For notational consistency
 c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
 c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
-      do i=1,nexternal
-         if(i.lt.i_fks)then
-            relabel(i)=i
-         elseif(i.eq.i_fks)then
-            relabel(i)=-1
-         elseif(i.gt.i_fks)then
-            relabel(i)=i-1
-         endif
-      enddo
-c
       SCALUP_tmp_H2=-1d0
       do i=1,nexternal
          if(i.eq.i_fks)cycle
          do j=1,nexternal
             if(j.eq.i_fks)cycle
-            xscales2(relabel(i),relabel(j))=xscales(i,j)
-            xmasses2(relabel(i),relabel(j))=xmasses(i,j)
-            dzones2(relabel(i),relabel(j))=dzones(i,j)
-            scalup_tmp_H2(relabel(i),relabel(j))=
-     &        xscales2(relabel(i),relabel(j))
+            xscales2(iRtoB(i),iRtoB(j))=xscales(i,j)
+            xmasses2(iRtoB(i),iRtoB(j))=xmasses(i,j)
+            dzones2(iRtoB(i),iRtoB(j))=dzones(i,j)
+            scalup_tmp_H2(iRtoB(i),iRtoB(j))=
+     &        xscales2(iRtoB(i),iRtoB(j))
          enddo
       enddo
 c Checks
@@ -1563,126 +1605,124 @@ c Checks
          enddo
       enddo
 c
-c The target scales will also be written onto the LHE file for H events.
-c For consistency with the case of SCALUP_tmp_S, a copy of xscales is 
-c created and called SCALUP_tmp_H, that will help determine the H-event 
-c shower scales written onto the LHE file. At this point of the code, the
-c latter array is correctly labelled with 1<=i,j<=nexternal, but lacks
-c the entries relevant to i and/or j equal to i_fks, to be provided later
+c Scales written onto the LHE file for H events.
+c For notational consistency with the case of SCALUP_tmp_S, the array that
+c contains these scales is called SCALUP_tmp_H. If the scales are identified
+c with the target scales, SCALUP_tmp_H is a copy of xscales, but this is
+c only one of the possible options. Furthermore, at this point of the code
+c xscales is correctly labelled with 1<=i,j<=nexternal, but lacks the entries 
+c relevant to i and j equal to i_fks; these will be provided later
       SCALUP_tmp_H=-1d0
       do i=1,nexternal
+         icount=0
          do j=1,nexternal
-            if(i.eq.j)cycle
-            SCALUP_tmp_H(i,j)=xscales(i,j)
+            if(i.eq.j.or.i.eq.i_fks.or.i.eq.j_fks)cycle
+            if(iHscale.eq.0)then
+              if(are_col_conn_H(i,j))then
+                if(iRtoB(j).gt.0.and.are_col_conn_S(iRtoB(i),iRtoB(j)))then
+c If the H-event colour line corresponds to an S-event colour line that
+c connects the two partons whose labels are obtained from mapping the 
+c labels at the real-emission level, the content of xscales() must be right
+                  SCALUP_tmp_H(i,j)=xscales(i,j)
+                else
+c Otherwise, an S-event colour line must have been broken, which can happen
+c only in the splitting mother->i_fks+j_fks. If j=j_fks, the previous if clause
+c must be fulfilled, which leaves one with only the case j=i_fks to deal with
+                  if(j.ne.i_fks)then
+                    write(*,*)'Error #6 in complete_xmcsubt:',
+     #                i,j,i_fks,j_fks
+                    stop
+                  else
+                    SCALUP_tmp_H(i,j)=xscales(i,j_fks)
+                  endif
+                endif
+              endif
+            elseif(iHscale.eq.1)then
+              if(are_col_conn_H(i,j))then
+                SCALUP_tmp_H(i,j)=dipole_mass(p,i,j)
+                icount=icount+1
+              endif
+            else
+              write(*,*)'Error in complete_xmcsubt:'
+              write(*,*)' unknown iHscale:',iHscale
+              stop
+            endif
          enddo
+         if(iHscale.eq.1)then
+           if( (pdg_type(i).eq.21.and.icount.ne.2) .or.
+     #         (abs(pdg_type(i)).le.6.and.icount.ne.1) )then
+              write(*,*)'Error #1 in complete_xmcsubt:',
+     #                  i,pdg_type(i),icount
+              stop
+           endif
+         endif
       enddo
 c
-c Assignment of shower scale for i_fks and j_fks. Scale for i_fks is not
-c present in xscales, while that for j_fks gets overwritten below, so to
-c have it identical to the scale for i_fks.
-      icount_i=0
-      icount_j=0
-      icount=0
-      ic=-1
-      jc=-1
+c Assignment of shower scale for i_fks and j_fks. The scales for i_fks are not
+c present in xscales, while those for j_fks get overwritten below, so to
+c have it identical to the scales for i_fks. First clean up
       do i=1,nexternal
-         if(i.eq.i_fks)cycle
-         if(ICOLUP_H(1,i_fks).ne.0.and.
-     &      (ICOLUP_H(1,i).eq.ICOLUP_H(1,i_fks).or.
-     &       ICOLUP_H(2,i).eq.ICOLUP_H(1,i_fks)))then
-            icount_i=icount_i+1
-            ic=i
-c ic is the parton connected to the colour of i_fks
-         endif
-         if(ICOLUP_H(2,i_fks).ne.0.and.
-     &      (ICOLUP_H(1,i).eq.ICOLUP_H(2,i_fks).or.
-     &       ICOLUP_H(2,i).eq.ICOLUP_H(2,i_fks)))then
-            icount_j=icount_j+1
-            jc=i
-c jc is the parton connected to the anti-colour of i_fks
-         endif
+        SCALUP_tmp_H(i_fks,i)=-1.d0
+        SCALUP_tmp_H(j_fks,i)=-1.d0
       enddo
-      icount=icount_i+icount_j
-c Checks
-      if(pdg_type(i_fks).eq.21) then
-         if (ic.ne.j_fks .and. jc.ne.j_fks) then
-            write(*,*)'Incorrect colour information 1 in '/
-     $           /'complete_xmcsubt'
-            write(*,*)i_fks,j_fks,ic,jc
-            stop
-         endif
-         if(ic.eq.-1.or.jc.eq.-1)then
-            write(*,*)'Incorrect colour information 2 in '/
-     $           /'complete_xmcsubt'
-            write(*,*)i_fks,ic,jc
-            stop
-         endif
-         if(xscales(ic,jc).eq.-1d0.or.xscales(jc,ic).eq.-1d0)then
-            write(*,*)'Incorrect colour information 4 in '/
-     $           /'complete_xmcsubt'
-            write(*,*)i_fks,ic,jc,xscales(ic,jc),xscales(jc,ic)
-         endif
-      elseif(abs(pdg_type(i_fks)).le.6) then
-         if ((ic.ne.-1.and.jc.ne.-1).or.(ic.eq.-1.and.jc.eq.-1))then
-            write(*,*)'Incorrect colour information 3 in '/
-     $           /'complete_xmcsubt'
-            write(*,*)i_fks,ic,jc
-            stop
-         endif
+      jbar=iRtoB(j_fks)
+      if(iBtoR(jbar).ne.j_fks)then
+        write(*,*)'Error #2 in complete_xmcsubt:',
+     #            j_fks,jbar,iRtoB(j_fks),iBtoR(jbar)
       endif
-c Assign identical shower scale to i_fks and to j_fks.
-c The coded scale is the t_ij value of the colour line that emitted i_fks,
-c taken from j_fks to its partner. Alternatives to this choice can be
-c envisaged, for example involving dipole masses. The coding of these
-c alternatives is left for future work
-      if(pdg_type(i_fks).eq.21)then
-         SCALUP_tmp_H(i_fks,ic)=xscales(ic,jc)
-         SCALUP_tmp_H(i_fks,jc)=xscales(jc,ic)
-         if(ic.eq.j_fks)then
-            SCALUP_tmp_H(jc,i_fks)=xscales(jc,ic)
-         elseif(jc.eq.j_fks)then
-            SCALUP_tmp_H(ic,i_fks)=xscales(ic,jc)
-         else
-            write(*,*)'Error in complete_xmcsubt'
-            write(*,*)'ic or jc must be equal to j_fks'
-            write(*,*)ic,jc,i_fks,j_fks
-            stop
-         endif
-      elseif(abs(pdg_type(i_fks)).le.6)then
-         if(ic.ne.-1) then
-            do i=1,nexternal
-               if(i.eq.i_fks)cycle
-               if (xscales(ic,i).ne.-1d0) then
-                  SCALUP_tmp_H(i_fks,ic)=xscales(ic,i)
-                  SCALUP_tmp_H(j_fks,ic)=SCALUP_tmp_H(i_fks,ic)
-               endif
-            enddo
-         endif
-         if(jc.ne.-1) then
-            do i=1,nexternal
-               if(i.eq.i_fks)cycle
-               if (xscales(jc,i).ne.-1d0) then
-                  SCALUP_tmp_H(i_fks,jc)=xscales(jc,i)
-                  SCALUP_tmp_H(j_fks,jc)=SCALUP_tmp_H(i_fks,jc)
-               endif
-            enddo
-         endif
+      icount=0
+      fksscales(1)=-1.d0
+      fksscales(2)=-1.d0
+      ifksscl(1)=0
+      ifksscl(2)=0
+      do i=1,nexternal-1
+        if(are_col_conn_S(jbar,i).and.i.ne.jbar)then
+          icount=icount+1
+          fksscales(icount)=xscales(iBtoR(jbar),iBtoR(i))
+          if(abs(IDUP_S(jbar)).le.6)then
+            ifksscl(icount)=iBtoR(i)
+          elseif(IDUP_S(jbar).eq.21)then
+            if(are_col_conn_H(i_fks,iBtoR(i)))
+     #        ifksscl(icount)=iBtoR(i)
+          endif
+        endif
+      enddo
+      if( (IDUP_S(jbar).eq.21.and.icount.ne.2) .or.
+     #    (abs(IDUP_S(jbar)).le.6.and.icount.ne.1) )then
+         write(*,*)'Error #3 in complete_xmcsubt:',
+     #             jbar,IDUP_S(jbar),icount
+         stop
       endif
-      SCALUP_tmp_H(j_fks,i_fks)=SCALUP_tmp_H(i_fks,j_fks)
-c  After assigning all scales to the H event, a relabelling is necessary
-c  so that sensible scalup_tmp_H entries be in one-to-one correspondence
-c  to existing colour lines in the H-event colour flow.
-      are_col_conn=.false.
+c Associate a single scale with i_fks and j_fks;
+c what follows can be generalised if need be
+      call assign_ifks_Hscale(IDUP_S(jbar),ifksscl,fksscales)
       do i=1,nexternal
+        if(are_col_conn_H(i_fks,i))SCALUP_tmp_H(i_fks,i)=fksscales(3)
+        if(are_col_conn_H(j_fks,i))SCALUP_tmp_H(j_fks,i)=fksscales(3)
+      enddo
+c Final consistency checks
+      do i=1,nexternal
+         icount=0
          do j=1,nexternal
-            are_col_conn(i,j)=
-     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(1,j)).or.
-     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(2,j)).or.
-     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(1,j)).or.
-     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(2,j))
-c  Reset to -1 scales that are incompatible with the H-event colour flow
-            if(.not.are_col_conn(i,j))SCALUP_tmp_H(i,j)=-1d0
+           if(are_col_conn_H(i,j))then
+             if(SCALUP_tmp_H(i,j).ne.-1.d0)icount=icount+1
+           else
+             if(SCALUP_tmp_H(i,j).ne.-1.d0)then
+               write(*,*)'Error #4 in complete_xmcsubt:',
+     #          i,j,pdg_type(i),pdg_type(j),i_fks,j_fks,SCALUP_tmp_H(i,j)
+               do k=1,nexternal
+                 write(*,*)k,ICOLUP_H(1,k),ICOLUP_H(2,k)
+               enddo
+               stop
+             endif
+           endif
          enddo
+         if( (pdg_type(i).eq.21.and.icount.ne.2) .or.
+     #       (abs(pdg_type(i)).le.6.and.icount.ne.1) )then
+           write(*,*)'Error #5 in complete_xmcsubt:',
+     #                i,pdg_type(i),icount
+           stop
+         endif
       enddo
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
@@ -1818,7 +1858,6 @@ c
       end
 
 
-
       function get_to_zero(sc,xlow,xupp)
       implicit none
       double precision get_to_zero,sc,xlow,xupp
@@ -1833,6 +1872,68 @@ c
         tmp=1d0
       endif
       get_to_zero=tmp
+      return
+      end
+
+
+      function dipole_mass(p,i,j)
+      implicit none
+      include 'nexternal.inc'
+      double precision dipole_mass,sign,tmp
+      double precision p(0:3,nexternal)
+      integer i,j,k
+c
+      sign=1.d0
+      if(i.le.2)sign=-sign
+      if(j.le.2)sign=-sign
+      tmp=(p(0,i)+sign*p(0,j))**2
+      do k=1,3
+        tmp=tmp-(p(k,i)+sign*p(k,j))**2
+      enddo
+      tmp=sqrt(max(0.d0,tmp))
+      dipole_mass=tmp
+      return
+      end
+
+
+      subroutine assign_ifks_Hscale(ipdg,ifksscl,fksscales)
+      implicit none
+      double precision fksscales(3)
+      integer ipdg,ifksscl(2),i,icount
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical wrong
+c Set itype=0 to set scale according to the colour line to which i_fks belongs
+c     itype=1 to take the minimum of the two scales in the case of mother=gluon
+      integer itype
+      parameter (itype=0)
+c
+      fksscales(3)=1.d10
+      if(itype.eq.0)then
+        wrong=.false.
+        icount=min(ifksscl(1),1)+min(ifksscl(2),1)
+        wrong=wrong .or. 
+     #        ( icount.eq.0 .or.
+     #         (icount.ne.1.and.(abs(ipdg).le.6.or.ipdg.eq.21)) )
+        if(ifksscl(1).ne.0)fksscales(3)=fksscales(1)
+        if(ifksscl(2).ne.0)fksscales(3)=fksscales(2)
+        if(wrong)then
+          write(*,*)'Something wrong in assign_ifks_Hscale (0):'
+          write(*,*)ipdg,icount,i_fks,j_fks
+          write(*,*)ifksscl(1),ifksscl(2),fksscales(1),fksscales(2)
+          stop
+        endif
+      elseif(itype.eq.1)then
+        do i=1,2
+          if(fksscales(i).gt.0d0)
+     #      fksscales(3)=min(fksscales(3),fksscales(i))
+        enddo
+      endif
+      if(fksscales(3).eq.1.d10)then
+        write(*,*)'Could not assign scale in assign_ifks_Hscale:'
+        write(*,*)ipdg,ifksscl(1),ifksscl(2),fksscales(1),fksscales(2)
+        stop
+      endif
       return
       end
 
