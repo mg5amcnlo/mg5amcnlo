@@ -276,6 +276,9 @@ MyHistory::MyHistory( int depth,
   for ( multimap<double, MyClustering *>::iterator it = sorted.begin();
   it != sorted.end(); ++it ) {
 
+state.list();
+it->second->list();
+
     // Check if reclustering follows ordered sequence.
     bool ordered = isOrdered;
     if ( mergingHooksPtr->orderHistories() ) {
@@ -283,7 +286,7 @@ MyHistory::MyHistory( int depth,
       // ordered path, then we don't need to continue along this path, unless
       // we have not yet found an allowed path.
       if ( !ordered || ( mother && (it->first < scale) ) ) {
-        if ( onlyOrderedPaths() && onlyAllowedPaths() ) continue;
+        if ( onlyOrderedPaths() && onlyAllowedPaths() ) { cout << __LINE__ << endl; continue;}
         ordered = false;
       }
     }
@@ -291,7 +294,7 @@ MyHistory::MyHistory( int depth,
     if ( !ordered || ( mother && (it->first < scale) ) ) ordered = false;
 
     Event newState(cluster(*it->second));
-    if ( newState.size() == 0) continue;
+    if ( newState.size() == 0) { cout << __LINE__ << endl; continue;}
 
     // Check if reclustered state should be disallowed.
     bool doCut = mergingHooksPtr->canCutOnRecState()
@@ -304,6 +307,8 @@ MyHistory::MyHistory( int depth,
      }
 
     pair <double,double> probs = (doAuxInfo) ? getProb(*it->second) : make_pair(1.,1.);
+
+cout << probs.second << endl;
 
     // Perform the clustering and recurse and construct the next
     // history node.
@@ -3721,6 +3726,8 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
       }
     }
   }
+
+  cout << "emt=" << emt << " " << clus.size() << endl;
 
   // Done
   return clus;
