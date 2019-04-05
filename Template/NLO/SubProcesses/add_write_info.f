@@ -14,7 +14,7 @@ c intermediate resonances. It also boosts the events to the lab frame
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
       double precision ybst_til_tolab,shower_scale
-     &,shower_scale_a(nexternal,nexternal)
+     &,shower_scale_a(-nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
       integer iconfig
       logical Hevents,putonshell
       integer ndim,jpart(7,-nexternal+3:2*nexternal-3),npart
@@ -586,6 +586,10 @@ c
          endif
          do j=0,4
             pb(j,ito(i))=pb(j,i)
+         enddo
+         do j=nexpart,-ns,-1
+            if(j.eq.i)cycle
+            shower_scale_a(ito(i),ito(j))=shower_scale_a(i,j)
          enddo
       enddo
 c

@@ -37,7 +37,8 @@ c missing???
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
       integer npart
-      double precision shower_scale,shower_scale_a(nexternal,nexternal)
+      double precision shower_scale
+     &,shower_scale_a(-nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -255,7 +256,8 @@ c get info on beam and PDFs
       parameter (izero=0)
       double precision aqcd,aqed,scale
       character*140 buff
-      double precision shower_scale,shower_scale_a(nexternal,nexternal)
+      double precision shower_scale
+     &,shower_scale_a(-nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
       INTEGER MAXNUP,i,j,k
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -282,22 +284,25 @@ c
       scalup_a=-1d0
       if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
-         do j=1,nexternal
-            do k=1,nexternal
+         do j=1,2*nexternal-3
+            do k=1,2*nexternal-3
+               if(j.eq.k)cycle
                scalup_a(j,k)=sqrt(muF12_current)
             enddo
          enddo
       elseif (ickkw.eq.-1) then
          scale = mu_r
-         do j=1,nexternal
-            do k=1,nexternal
+         do j=1,2*nexternal-3
+            do k=1,2*nexternal-3
+               if(j.eq.k)cycle
                scalup_a(j,k)=mu_r
             enddo
          enddo
       else
          scale = shower_scale
-         do j=1,nexternal
-            do k=1,nexternal
+         do j=1,2*nexternal-3
+            do k=1,2*nexternal-3
+               if(j.eq.k)cycle
                scalup_a(j,k)=shower_scale_a(j,k)
             enddo
          enddo

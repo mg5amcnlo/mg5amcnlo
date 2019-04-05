@@ -804,7 +804,8 @@ c Write the <scales> block
             do i=1,NUP
                do j=1,NUP
                   if(i.eq.j)cycle
-                  if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0)then
+                  if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0.and.
+     &               SCALUP_a(i,j).ne.0d0)then
                      write(str_tmp,701)
      &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
                      scale_str=trim(scale_str)//trim(str_tmp)
