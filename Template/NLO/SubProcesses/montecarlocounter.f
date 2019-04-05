@@ -1250,6 +1250,9 @@ c
       logical are_col_conn_H(nexternal,nexternal)
       integer get_mass_from_id
       external get_mass_from_id
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double complex cdummy(2)
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1319,19 +1322,37 @@ c
       enddo
 
 c Assign flow on statistical basis
-      rrnd=ran2()
-      wgt11=0d0
-      jflow=0
-      cflows=0
-      do while(jflow.eq.0.and.cflows.lt.max_bcol)
-         cflows=cflows+1
-         wgt11=wgt11+xmcxsec2(cflows)
-         if(wgt11.ge.rrnd*wgt2)jflow=cflows
-      enddo
-      if(jflow.eq.0)then
-         write(*,*)'Error in xmcsubt: flow unweighting failed'
-         stop
+      if (wgt2.gt.0d0) then
+         ! use born-bars times kernels
+         rrnd=ran2()
+         wgt11=0d0
+         jflow=0
+         cflows=0
+         do while(jflow.eq.0.and.cflows.lt.max_bcol)
+            cflows=cflows+1
+            wgt11=wgt11+xmcxsec2(cflows)
+            if(wgt11.ge.rrnd*wgt2)jflow=cflows
+         enddo
+         if(jflow.eq.0)then
+            write(*,*)'Error in xmcsubt: flow unweighting failed'
+            stop
+         endif
+      else
+         ! use the born-bars
+         call sborn(p_born,cdummy)
+         wgt11=0.d0
+         do i=1,max_bcol
+            wgt11=wgt11+jamp2(i)
+         enddo
+         wgt2=ran2()*wgt11
+         jflow=0
+         wgt11=0d0
+         do while (wgt11 .lt. wgt2)
+            jflow=jflow+1
+            wgt11=wgt11+jamp2(jflow)
+         enddo
       endif
+         
 
 c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
       if(dampMCsubt.and.wgt.gt.1d-30)then
