@@ -2559,6 +2559,7 @@ c instead.
       endif
       showerscale=tmp_scale(iFKS,ifl)
       do i=1,icontr
+         if (H_event(i)) cycle
          if (iFKS.ne.nFKS(i) .or. ifl.ne.ifold_cnt(i)) cycle
          icolour(1:2,1:nexternal)=icolour_con(1:2,1:nexternal,i)
          exit
