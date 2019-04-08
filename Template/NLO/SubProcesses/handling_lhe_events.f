@@ -668,6 +668,7 @@ c
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       logical do_many_scalup
       parameter (do_many_scalup=.true.)
+      logical are_col_conn(MAXNUP,MAXNUP)
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -800,12 +801,22 @@ c
             endif
          endif
          if (do_many_scalup) then
-c Write the <scales> block
+c Write the <scales> block only for scales related to valid colour lines
+            are_col_conn=.false.
             scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
             do i=1,NUP
                do j=1,NUP
                   if(i.eq.j)cycle
-                  if(SCALUP_a(i,j).gt.scaleMCcut)then
+                  are_col_conn(i,j)=
+     &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
+     &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
+     &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
+     &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
+                  if(are_col_conn(i,j).and.SCALUP_a(i,j).lt.scaleMCcut)then
+                     write(*,*)'Colour error in write_lhef_event',i,j
+                     stop
+                  endif
+                  if(are_col_conn(i,j))then
                      write(str_tmp,701)
      &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
                      scale_str=trim(scale_str)//trim(str_tmp)

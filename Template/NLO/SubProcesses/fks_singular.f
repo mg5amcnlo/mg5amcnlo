@@ -3222,8 +3222,8 @@ c
       double precision SCALUP_tmp_S(nexternal,nexternal)
       double precision SCALUP_tmp_H(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
-
-c Initialise
+c
+c One scale per event
       SCALUP(iFKS)=0d0
 c S events
       if(.not.Hevents)then
@@ -3248,14 +3248,13 @@ c H events
          SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS),
      &                    ref_H_scale(iFKS)-min(emsca,scalemax)))
       endif
-c Minimal starting scale
+c Safety measure
       SCALUP(iFKS)=max(SCALUP(iFKS),scaleMCcut)
 c
-c
+c Multiple scales per event
       do i=1,nexternal
          do j=1,nexternal
             if(j.eq.i)cycle
-c Initialise
             SCALUP_a(iFKS,i,j)=0d0
 c S events
             if(.not.Hevents)then
@@ -3267,7 +3266,6 @@ c S events
      $            ,scalemax_a,ileg,xm12)
                   SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
                endif
-               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),shower_S_scale(iFKS))
 c H events
             else
                if(dampMCsubt.and.emsca_a(i,j).ne.0d0)then
@@ -3277,12 +3275,11 @@ c H events
      $            ,scalemax_a(i,j),ileg,xm12)
                   SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
                endif
-               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),max(shower_H_scale(iFKS),
-     &            ref_H_scale(iFKS)-min(emsca_a(i,j),scalemax_a(i,j))))
             endif
-c Minimal starting scale
+c Safety measures
+            SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
+     &                             sqrt((1d0-xi_i_fks_ev)*shat_ev))
             SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
-            SCALUP_a(iFKS,j,i)=SCALUP_a(iFKS,i,j)
          enddo
       enddo
 c
