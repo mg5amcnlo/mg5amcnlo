@@ -3976,7 +3976,7 @@ c
       endif
  
       max_scale=min(max_scale,shower_S_scale(nFKSprocess*2-1))
-      max_scale=max(max_scale,3d0)
+      max_scale=max(max_scale,scaleMCcut)
       if(qMC.gt.max_scale)lzone=.false.
 
       return

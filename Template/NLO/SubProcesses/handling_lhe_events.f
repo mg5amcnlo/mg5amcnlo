@@ -664,6 +664,7 @@ c
       character*50 str_tmp
       include './run.inc'
       include 'unlops.inc'
+      include 'madfks_mcatnlo.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       logical do_many_scalup
       parameter (do_many_scalup=.true.)
@@ -804,8 +805,7 @@ c Write the <scales> block
             do i=1,NUP
                do j=1,NUP
                   if(i.eq.j)cycle
-                  if(SCALUP_a(i,j).ne.-1d0.and.SCALUP_a(i,j).ne.3d0.and.
-     &               SCALUP_a(i,j).ne.0d0)then
+                  if(SCALUP_a(i,j).gt.scaleMCcut)then
                      write(str_tmp,701)
      &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
                      scale_str=trim(scale_str)//trim(str_tmp)

@@ -3248,7 +3248,7 @@ c H events
      &                    ref_H_scale(iFKS)-min(emsca,scalemax)))
       endif
 c Minimal starting scale
-      SCALUP(iFKS)=max(SCALUP(iFKS),3d0)
+      SCALUP(iFKS)=max(SCALUP(iFKS),scaleMCcut)
 c
 c
       do i=1,nexternal
@@ -3280,7 +3280,7 @@ c H events
      &            ref_H_scale(iFKS)-min(emsca_a(i,j),scalemax_a(i,j))))
             endif
 c Minimal starting scale
-            SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),3d0)
+            SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
             SCALUP_a(iFKS,j,i)=SCALUP_a(iFKS,i,j)
          enddo
       enddo
