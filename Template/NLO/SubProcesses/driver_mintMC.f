@@ -804,7 +804,13 @@ c
       double precision probne_bog
       common/cprobne_bog/probne_bog
       common/cprobne_true/probne
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                fksfather_lhe,ipartner_lhe
       integer kk,kk0,kk1,kkunit
+      logical verbose_test
+      parameter (verbose_test=.true.)
       logical done
       integer ifold(ndimmax) 
       common /cifold/ifold
@@ -931,10 +937,10 @@ c check if event or counter-event passes cuts
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
-            if(passcuts_n1body.and.(.not.passcuts_nbody))then
-              write(*,*)'SFWARNING4',passcuts_n1body,passcuts_nbody
-              stop
-            endif
+c$$$            if(passcuts_n1body.and.(.not.passcuts_nbody))then
+c$$$              write(*,*)'SFWARNING4',passcuts_n1body,passcuts_nbody
+c$$$              stop
+c$$$            endif
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
@@ -973,7 +979,7 @@ c
 c compute the MonteCarlo subtraction terms. Pass the 'passcuts_nbody'
 c logical variable to the compute_MC_subt_term subroutine to determine
 c if we should actually include it in the S/H-event contributions.
-            if (abrv.ne.'real') then
+            if (abrv.ne.'real' .and. p1_cnt(0,1,0).gt.0d0) then
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
@@ -981,11 +987,16 @@ c if we should actually include it in the S/H-event contributions.
                   call compute_MC_subt_term(p,passcuts_nbody,gfactsf
      $                 ,gfactcl,probne)
                   kk1=2
-                  write(kkunit,554)'SDK',probne,probne_bog,scltarget
-     $                 ,sclstart,sudpdffact
+                  if(verbose_test)then
+                  write(kkunit,554)'SDK',probne,probne_bog,scltarget,sclstart,sudpdffact
+                  if(iFKS.gt.fks_configs.or.iFKS.le.0)then
+                    write(*,*)"SDK error",iFKS,fks_configs
+                  endif
+                  write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
                   do kk=1,nexternal
-                     write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
+                    write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
                   enddo
+                  endif
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
@@ -995,9 +1006,11 @@ c events are called, so this will remain 0.
             endif
             if (passcuts_nbody .and. abrv.ne.'real') then
                if(kk0.eq.1)then
+               if(verbose_test)then
                do kk=1,nexternal
                  write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
                enddo
+               endif
                endif
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
@@ -1019,10 +1032,13 @@ c Include the real-emission contribution.
             if (passcuts_n1body) then
                if(kk1.eq.0)then
                  kk1=3
+                 if(verbose_test)then
                  write(kkunit,554)'SD3',probne,probne_bog,scltarget,sclstart,sudpdffact
+                 write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
                  do kk=1,nexternal
                    write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
                  enddo
+                 endif
                endif
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
@@ -1038,13 +1054,17 @@ c subtraction terms.
          enddo
  12      continue
          if(kk0.ne.0.and.(.not.done))then
+           if(verbose_test)then
            write(kkunit,554)'SD1',probne,probne_bog,scltarget,sclstart,sudpdffact
+           write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
            do kk=1,nexternal
              write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
            enddo
+           endif
          endif
  554     format(1x,a,5(1x,e14.8))
  555     format(1x,i2,5(1x,e14.8))
+ 557     format(2(1x,i2))
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
      $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then

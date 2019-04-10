@@ -2,8 +2,9 @@ c Compile with:
 c  gfortran -ffixed-line-length-132 -o readfort90n readfort90n.for 
 c                                       mcatnlo_hbook_gfortran.f
       implicit real*8(a-h,o-z)
-      parameter (nexternal=5)
+      include 'nexternal.inc'
       real*8 p(0:3,nexternal),psave(nexternal)
+      integer ifksmat(nexternal),jfksmat(nexternal)
       character*3 ch1,ch3
       character*2 ch2
       logical check,plot,dead
@@ -33,6 +34,13 @@ c
         read(5,*)ipl4
         if(ipl4.eq.0)dead=.true.
       endif
+c See the setting of itype in outfun() to see what
+c is plotted, in particular pt vs pt(relative)
+      write(6,*)'enter -2 to keep j_fks<=2'
+      write(6,*)'      -1 to keep j_fks>2'
+      write(6,*)'       0 to keep all'
+      write(6,*)'       n>0 to keep j_fks=n'
+      read(5,*)njfks
       write(6,*)'enter 0 for events generated without folding'
       write(6,*)'      1 otherwise'
       read(5,*)ifold
@@ -66,18 +74,40 @@ c
       j3sp=0
       j3hp=0
       j3hn=0
+      do i=1,nexternal
+        ifksmat(i)=0
+        jfksmat(i)=0
+      enddo
       ch3='EVT'
       do i=1,nevts
         check=.false.
         read(iunit,554,err=999,end=999)ch1,sud,bogus,scltarget,
      #                                 sclstart,sudpdffact
+        read(iunit,557)i_fks,j_fks
+        if( i_fks.le.0.or.i_fks.gt.nexternal .or.
+     #      j_fks.le.0.or.j_fks.gt.nexternal )then
+          write(*,*)'FKS error',i,i_fks,j_fks
+          stop
+        endif
+        ifksmat(i_fks)=ifksmat(i_fks)+1
+        jfksmat(j_fks)=jfksmat(j_fks)+1
         if(ch1.ne.'EVT')then
+          i_fkssave=i_fks
+          j_fkssave=j_fks
           sudsave=sud
           bogsave=bogus
           sc0save=sclstart
           sc1save=scltarget
           pdfsave=sudpdffact
         else
+c$$$          check=check .or.
+c$$$     #          abs(sudsave-sud).gt.1.d-6 .or.
+c$$$     #          abs(bogsave-bogus).gt.1.d-6 .or.
+c$$$     #          abs(sc0save-sclstart).gt.1.d-6 .or.
+c$$$     #          abs(sc1save-scltarget).gt.1.d-6 .or.
+c$$$     #          abs(pdfsave-sudpdffact).gt.1.d-6 .or.
+c$$$     #          i_fkssave .ne. i_fks .or.
+c$$$     #          j_fkssave .ne. j_fks
           check=check .or.
      #          abs(sudsave-sud).gt.1.d-6 .or.
      #          abs(bogsave-bogus).gt.1.d-6 .or.
@@ -89,6 +119,11 @@ c
      #       (ipl1.eq.2.and.ch1.eq.'SD3') .or.
      #       (ipl1.eq.3.and.ch1.eq.'SD1') .or.
      #       (ipl1.eq.4.and.ch1.eq.'EVT')
+        plot=plot .and. (
+     #       (njfks.eq.-2.and.j_fks.le.2) .or.
+     #       (njfks.eq.-1.and.j_fks.gt.2) .or.
+     #        njfks.eq.0 .or.
+     #       (njfks.gt.0.and.j_fks.eq.njfks) )
         itot=itot+1
         if(ch1.eq.'SDK')then
           i1=i1+1
@@ -193,9 +228,11 @@ c
           write(6,*)'error #4:',sc0save,sclstart,sc1save,scltarget
           write(6,*)'error #4:',pdfsave,sudpdffact
           write(6,*)'error #4:',psave(1),p(0,1),psave(2),p(0,2)
+          write(6,*)'error #4:',i_fks,i_fkssave,j_fks,j_fkssave
           stop
         endif
-        if(plot)call outfun(p,sud,bogus,scltarget,sclstart,sudpdffact)
+        if(plot)call outfun(p,sud,bogus,scltarget,sclstart,sudpdffact,
+     #                      i_fks,j_fks)
       enddo
  999  continue
       call topout
@@ -215,9 +252,14 @@ c
         write(6,*)'# previous SD1 event (Sw>0,Sw<0,Hw>0,Hw<0):',j3,
      #    j3sp,j3sn,j3hp,j3hn
       endif
+      do i=1,nexternal
+        write(6,600)'#',i,' --> ifks:',ifksmat(i),'  jfks:',jfksmat(i)
+      enddo
  554  format(1x,a,5(1x,e14.8))
  555  format(1x,i2,5(1x,e14.8))
  556  format(1x,i2,1x,e14.8)
+ 557  format(2(1x,i2))
+ 600  format(1x,a1,i2,a10,i8,a7,i8)
       end
 
 
@@ -235,6 +277,29 @@ c
 c
       tmp=sqrt(px**2+py**2+pz**2)
       p3=tmp
+      return
+      end
+
+
+      function xptrel(en1,px1,py1,pz1,en2,px2,py2,pz2)
+      implicit real*8(a-h,o-z)
+c
+      xl1=p3(en1,px1,py1,pz1)
+      xl2=p3(en2,px2,py2,pz2)
+      if(xl1.eq.0)then
+        xptrel=0.d0
+        return
+      endif
+      if(xl2.eq.0)then
+        xptrel=-1.d8
+        return
+      endif
+      en3=0.d0
+      px3=py1*pz2-pz1*py2
+      py3=pz1*px2-px1*pz2
+      pz3=px1*py2-py1*px2
+      tmp=p3(en3,px3,py3,pz3)/xl2
+      xptrel=tmp
       return
       end
 
@@ -524,15 +589,19 @@ c
       end
 
 
-      subroutine outfun(p,sud,bogus,sc1,sc0,pdf)
+      subroutine outfun(p,sud,bogus,sc1,sc0,pdf,i_fks,j_fks)
       implicit real*8(a-h,o-z)
       real*4 one
       parameter (pi=3.1415926535897932385d0)
       parameter (one=1.e0)
-      parameter (nexternal=5)
+      include 'nexternal.inc'
       parameter (ione=1)
       parameter (itwo=2)
-      real*8 p(0:3,nexternal)
+      real*8 p(0:3,nexternal),q(0:3)
+      integer itype
+c itype=0 -> pt, angles wrt parton #1
+c itype=1 -> pt, angles wrt parton j_fks
+      parameter (itype=1)
       logical pscales,dead
       common/cdead/dead
 c
@@ -548,17 +617,39 @@ c
       else
         pscales=.true.
       endif
-      pt=xpt(p(0,nexternal),p(1,nexternal),
-     #       p(2,nexternal),p(3,nexternal))
-      th1=angle(p(0,nexternal),p(1,nexternal),
-     #          p(2,nexternal),p(3,nexternal),
-     #          p(0,ione),p(1,ione),
-     #          p(2,ione),p(3,ione))
-      th2=angle(p(0,nexternal),p(1,nexternal),
-     #          p(2,nexternal),p(3,nexternal),
-     #          p(0,itwo),p(1,itwo),
-     #          p(2,itwo),p(3,itwo))
-      energy=p(0,nexternal)
+      if(itype.eq.0)then
+        pt=xpt(p(0,i_fks),p(1,i_fks),
+     #         p(2,i_fks),p(3,i_fks))
+        th1=angle(p(0,i_fks),p(1,i_fks),
+     #            p(2,i_fks),p(3,i_fks),
+     #            p(0,ione),p(1,ione),
+     #            p(2,ione),p(3,ione))
+        th2=angle(p(0,i_fks),p(1,i_fks),
+     #            p(2,i_fks),p(3,i_fks),
+     #            p(0,itwo),p(1,itwo),
+     #            p(2,itwo),p(3,itwo))
+      elseif(itype.eq.1)then
+        if(j_fks.le.2)then
+          do i=0,3
+            q(i)=p(i,j_fks)
+          enddo
+        else
+          do i=0,3
+            q(i)=p(i,i_fks)+p(i,j_fks)
+          enddo
+        endif
+        pt=xptrel(p(0,i_fks),p(1,i_fks),
+     #            p(2,i_fks),p(3,i_fks),
+     #            q(0),q(1),q(2),q(3))
+        th1=angle(p(0,i_fks),p(1,i_fks),
+     #            p(2,i_fks),p(3,i_fks),
+     #            q(0),q(1),q(2),q(3))
+        th2=th1
+      else
+        write(*,*)'error in outfun: itype=',itype
+        stop
+      endif
+      energy=p(0,i_fks)
 c
       kk=0
       call mfill(kk+1,sngl(pt),one)

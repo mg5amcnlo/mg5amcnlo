@@ -48,9 +48,13 @@ c missing???
       common/cprobne_bog/probne_bog
       double precision probne
       common/cprobne_true/probne
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       integer kk,izero,ione
       parameter (izero=0)
       parameter (ione=1)
+      logical verbose_test
+      parameter (verbose_test=.true.)
 
       call cpu_time(tBefore)
 
@@ -66,7 +70,9 @@ c missing???
       evnt_wgt=evtsgn*weight
       call generate_momenta(ndim,iconfig,wgt,x,p)
 
+      if(verbose_test)then
       write(92,554)'EVT',probne,probne_bog,scltarget,sclstart,sudpdffact
+      write(92,557)i_fks,j_fks
       if(Hevents)then
         write(92,556)ione,evtsgn
       else
@@ -75,9 +81,11 @@ c missing???
       do kk=1,nexternal
         write(92,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
       enddo
+      endif
  554  format(1x,a,5(1x,e14.8))
  555  format(1x,i2,5(1x,e14.8))
  556  format(1x,i2,1x,e14.8)
+ 557  format(2(1x,i2))
 
 c
 c Get all the info we need for writing the events.
