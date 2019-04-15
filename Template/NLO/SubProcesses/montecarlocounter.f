@@ -474,8 +474,7 @@ c over colour partners
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
-      double precision emscwgt_a(nexternal,nexternal),
-     # emscav_a(nexternal,nexternal)
+      double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -590,6 +589,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      double precision qMC_a(nexternal)
+      integer iBtoR(nexternal-1)
+
       save
       include "pmass.inc"
 
@@ -999,7 +1001,7 @@ c Emsca stuff
                emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
+               emscav(npartner)=qMC
             endif
          else
             ptresc=(qMC-scalemin)/(scalemax-scalemin)
@@ -1011,54 +1013,60 @@ c Emsca stuff
                emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
+c A more sophisticated alternative is:
+c    emscav(npartner)=scalemax*(qMC/scalemax)**power,
+c with power=O(1)
+               emscav(npartner)=qMC
             endif
          endif
+         emscav_tmp(npartner)=emscav(npartner)
+      else
+         write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
+         stop
       endif
-      emscav_tmp(npartner)=emscav(npartner)
-c Emsca stuff
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1 
-            if(dampMCsubt)then
+c
+c Emsca stuff for multiple scales
+      if(dampMCsubt)then
+         do i=1,nexternal-1
+            iBtoR(i)=i+(1+sign(1,i-i_fks))/2
+            if(i.eq.j_fks)then
+               qMC_a(i)=qMC
+            else
+               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))/
+     #                  max(pp(0,iBtoR(i)),1d-5)
+            endif
+            do j=1,nexternal-1
+               if(j.eq.i)cycle
                if(emscasharp_a(i,j))then
-                  if(qMC.le.scalemax_a(i,j))then
-                     emscwgt_a(i,j)=1d0
+                  if(qMC_a(i).le.scalemax_a(i,j))then
                      emscav_a(i,j)=emsca_bare_a(i,j)
                      emscav_a2(i,j)=emsca_bare_a2(i,j)
                   else
-                     emscwgt_a(i,j)=0d0
-                     emscav_a(i,j)=scalemax_a(i,j)
-                     emscav_a2(i,j)=scalemax_a(i,j)
+                     emscav_a(i,j)=qMC_a(i)
+                     emscav_a2(i,j)=qMC_a(i)
                   endif
                else
-                  ptresc_a(i,j)=(qMC-scalemin_a(i,j))/
+                  ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
      &                          (scalemax_a(i,j)-scalemin_a(i,j))
-                  if(ptresc_a(i,j).le.0d0)then
-                     emscwgt_a(i,j)=1d0
-                     emscav_a(i,j)=emsca_bare_a(i,j)
-                     emscav_a2(i,j)=emsca_bare_a2(i,j)
-                  elseif(ptresc_a(i,j).lt.1d0)then 
-                     emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),one)
+                  if(ptresc_a(i,j).lt.1d0)then 
                      emscav_a(i,j)=emsca_bare_a(i,j)
                      emscav_a2(i,j)=emsca_bare_a2(i,j)
                   else
-                     emscwgt_a(i,j)=0d0
-                     emscav_a(i,j)=scalemax_a(i,j)
-                     emscav_a2(i,j)=scalemax_a(i,j)
+c A more sophisticated alternative is:
+c    emscav_a*(i,j)=scalemax_a(i,j)*(qMC_a(i)/scalemax_a(i,j))**power,
+c with power=O(1)
+                     emscav_a(i,j)=qMC_a(i)
+                     emscav_a2(i,j)=qMC_a(i)
                   endif
                endif
-            endif
-            emscav_tmp_a(i,j)=emscav_a(i,j)
-            emscav_tmp_a2(i,j)=emscav_a2(i,j)
-c
-            ptresc_a(j,i)=ptresc_a(i,j)
-            emscwgt_a(j,i)=emscwgt_a(i,j)
-            emscav_a(j,i)=emscav_a(i,j)
-            emscav_a2(j,i)=emscav_a2(i,j)
-            emscav_tmp_a(j,i)=emscav_tmp_a(i,j)
-            emscav_tmp_a2(j,i)=emscav_tmp_a2(i,j)
+               emscav_tmp_a(i,j)=emscav_a(i,j)
+               emscav_tmp_a2(i,j)=emscav_a2(i,j)
+            enddo
          enddo
-      enddo
+      else
+         write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
+         stop
+      endif
 c Main loop over colour partners used to end here
       return
       end
@@ -1080,8 +1088,7 @@ c fills arrays relevant to shower scales, and computes Delta
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,wgt11,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
-      double precision emscwgt_a(nexternal,nexternal),
-     & emscav_a(nexternal,nexternal)
+      double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner,mpartner,cflows,jflow
       common/c_colour_flow/jflow
@@ -3596,6 +3603,11 @@ c Consistency check
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
+      double precision qMC_a(nexternal)
+      integer iBtoR(nexternal-1)
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
 c Consistency check
       shattmp=2d0*dot(pp(0,1),pp(0,2))
       if(abs(shattmp/shat-1d0).gt.1d-5)then
@@ -3609,31 +3621,38 @@ c Consistency check
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
       emsca_a=-1d0
 
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1
+      do i=1,nexternal-1
+         iBtoR(i)=i+(1+sign(1,i-i_fks))/2
+         if(i.eq.j_fks)then
+            qMC_a(i)=qMC
+         else
+            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))/
+     #               max(pp(0,iBtoR(i)),1d-5)
+         endif
+         do j=1,nexternal-1
+            if(j.eq.i)cycle
             if(dampMCsubt)then
-               emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.(1d-3*scalemax_a(i,j))
+               emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
+     #                           (1d-3*scalemax_a(i,j))
                if(emscasharp_a(i,j))then
                   emsca_bare_a(i,j)=scalemax_a(i,j)
                   emsca_bare_a2(i,j)=scalemax_a(i,j)
-                  emsca_a(i,j)=emsca_bare_a(i,j)
+                  emsca_a(i,j)=max(emsca_bare_a(i,j),qMC_a(i))
                else
                   rrnd=ran2()
                   rrnd=emscainv(rrnd,1d0)
-                  emsca_bare_a(i,j)=scalemin_a(i,j)+rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+                  emsca_bare_a(i,j)=scalemin_a(i,j)+
+     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
                   rrnd=ran2()
                   rrnd=emscainv(rrnd,1d0)
-                  emsca_bare_a2(i,j)=scalemin_a(i,j)+rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-                  ptresc_a(i,j)=(qMC-scalemin_a(i,j))/(scalemax_a(i,j)-scalemin_a(i,j))
+                  emsca_bare_a2(i,j)=scalemin_a(i,j)+
+     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+                  ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
+     #                          (scalemax_a(i,j)-scalemin_a(i,j))
                   if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
-                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
+                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=qMC_a(i)
                endif
             endif
-            emsca_a(j,i)=emsca_a(i,j)
-            emsca_bare_a(j,i)=emsca_bare_a(i,j)
-            emsca_bare_a2(j,i)=emsca_bare_a2(i,j)
-            emscasharp_a(j,i)=emscasharp_a(i,j)
-            ptresc_a(j,i)=ptresc_a(i,j)
          enddo
       enddo
 
