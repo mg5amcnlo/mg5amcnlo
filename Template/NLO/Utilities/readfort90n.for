@@ -5,7 +5,7 @@ c                                       mcatnlo_hbook_gfortran.f
       include 'nexternal.inc'
       real*8 p(0:3,nexternal),psave(nexternal)
       integer ifksmat(nexternal),jfksmat(nexternal)
-      character*3 ch1,ch3
+      character*3 ch1,ch3,ch1save
       character*2 ch2
       logical check,plot,dead
       common/cdead/dead
@@ -92,6 +92,7 @@ c is plotted, in particular pt vs pt(relative)
         ifksmat(i_fks)=ifksmat(i_fks)+1
         jfksmat(j_fks)=jfksmat(j_fks)+1
         if(ch1.ne.'EVT')then
+          ch1save=ch1
           i_fkssave=i_fks
           j_fkssave=j_fks
           sudsave=sud
@@ -100,15 +101,11 @@ c is plotted, in particular pt vs pt(relative)
           sc1save=scltarget
           pdfsave=sudpdffact
         else
-c$$$          check=check .or.
-c$$$     #          abs(sudsave-sud).gt.1.d-6 .or.
-c$$$     #          abs(bogsave-bogus).gt.1.d-6 .or.
-c$$$     #          abs(sc0save-sclstart).gt.1.d-6 .or.
-c$$$     #          abs(sc1save-scltarget).gt.1.d-6 .or.
-c$$$     #          abs(pdfsave-sudpdffact).gt.1.d-6 .or.
-c$$$     #          i_fkssave .ne. i_fks .or.
-c$$$     #          j_fkssave .ne. j_fks
           check=check .or.
+     #          i_fkssave .ne. i_fks .or.
+     #          j_fkssave .ne. j_fks
+          if(ch1save.ne.'SD1')
+     #      check=check .or.
      #          abs(sudsave-sud).gt.1.d-6 .or.
      #          abs(bogsave-bogus).gt.1.d-6 .or.
      #          abs(sc0save-sclstart).gt.1.d-6 .or.

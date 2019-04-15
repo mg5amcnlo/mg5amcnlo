@@ -988,6 +988,8 @@ c if we should actually include it in the S/H-event contributions.
      $                 ,gfactcl,probne)
                   kk1=2
                   if(verbose_test)then
+c Write SDK: a valid n-body configuration has been found, and 
+c MC counterterms have been computed
                   write(kkunit,554)'SDK',probne,probne_bog,scltarget,sclstart,sudpdffact
                   if(iFKS.gt.fks_configs.or.iFKS.le.0)then
                     write(*,*)"SDK error",iFKS,fks_configs
@@ -1005,13 +1007,6 @@ c events are called, so this will remain 0.
                endif
             endif
             if (passcuts_nbody .and. abrv.ne.'real') then
-               if(kk0.eq.1)then
-               if(verbose_test)then
-               do kk=1,nexternal
-                 write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
-               enddo
-               endif
-               endif
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
@@ -1033,6 +1028,7 @@ c Include the real-emission contribution.
                if(kk1.eq.0)then
                  kk1=3
                  if(verbose_test)then
+c Write SD3 only when SDK was not written, for a given i index of the main loop
                  write(kkunit,554)'SD3',probne,probne_bog,scltarget,sclstart,sudpdffact
                  write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
                  do kk=1,nexternal
@@ -1055,8 +1051,11 @@ c subtraction terms.
  12      continue
          if(kk0.ne.0.and.(.not.done))then
            if(verbose_test)then
+c Write SD1 only if there was a valid n-body configuration, and if neither
+c SDK or SD3 has been written at any time in the do i=1,proc_map(proc_map(0,1),0)
+c loop. This is likely happening only for 'virt' contributions
            write(kkunit,554)'SD1',probne,probne_bog,scltarget,sclstart,sudpdffact
-           write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
+           write(kkunit,557)ifks_lhe(nFKS_picked_nbody),jfks_lhe(nFKS_picked_nbody)
            do kk=1,nexternal
              write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
            enddo
