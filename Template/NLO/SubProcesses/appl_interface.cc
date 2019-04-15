@@ -132,23 +132,33 @@ extern "C" void appl_init_() {
     std::cout << "amcblast INFO: Booking grid from scratch with name " << grid_filename_in << " ..." << std::endl;
 
     int min_alphas_p = 9999; // any large value will do
+    int max_alphas_p = 0;
 
     // TODO: the following assumes that 'the' LO is the matrix element with the lowest power in
-    // alphas; in general there will be many LOs with different alphas powers, but APPLgrid doesn't
-    // understand that (yet)
+    // alphas and 'NLO' is the one with the highest power; in general there will be many LOs with
+    // different alphas powers, but APPLgrid doesn't understand that (yet)
     for (int i = 0; i != __amp_split_size; ++i)
     {
         if (appl_common_fixed_.qcdpower[i] < min_alphas_p)
         {
             min_alphas_p = appl_common_fixed_.qcdpower[i];
         }
+
+        if (appl_common_fixed_.qcdpower[i] > max_alphas_p)
+        {
+            max_alphas_p = appl_common_fixed_.qcdpower[i];
+        }
     }
 
     // `appl_common_fixed_.qcdpower` has the power of `gs`, but we need powers of `alphas`
     assert( (min_alphas_p % 2) == 0 );
+    assert( (max_alphas_p % 2) == 0 );
     min_alphas_p /= 2;
+    max_alphas_p /= 2;
 
-    int leading_order = min_alphas_p; /////MZ keep this at the moment beacuse applgrid needs it; eventually to be dropped 
+    int leading_order = min_alphas_p;
+    int next_to_leading_order = max_alphas_p;
+
 	//appl_common_fixed_.bpower;
     //std::cout << "amcblast INFO: bpower = " << leading_order << std::endl;
 
@@ -258,7 +268,7 @@ extern "C" void appl_init_() {
     grid_obs.push_back(new appl::grid(Nbins,    obsbins,
                                       NQ2,      Q2min,         Q2max, Q2order,  
 				      Nx,       xmin,          xmax,  xorder,
-				      filename, leading_order, nloops));
+				      filename, leading_order, next_to_leading_order, nloops));
     // Use the reweighting function
     grid_obs[grid_obs.size()-1]->reweight(true);
     // The grid is an aMC@NLO type
