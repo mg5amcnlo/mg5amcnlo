@@ -283,7 +283,7 @@ MyHistory::MyHistory( int depth,
       // ordered path, then we don't need to continue along this path, unless
       // we have not yet found an allowed path.
       if ( !ordered || ( mother && (it->first < scale) ) ) {
-        if ( onlyOrderedPaths() && onlyAllowedPaths() ) { cout << __LINE__ << endl; continue;}
+        if ( onlyOrderedPaths() && onlyAllowedPaths() ) continue;
         ordered = false;
       }
     }
@@ -291,7 +291,7 @@ MyHistory::MyHistory( int depth,
     if ( !ordered || ( mother && (it->first < scale) ) ) ordered = false;
 
     Event newState(cluster(*it->second));
-    if ( newState.size() == 0) { cout << __LINE__ << endl; continue;}
+    if ( newState.size() == 0) continue;
 
     // Check if reclustered state should be disallowed.
     bool doCut = mergingHooksPtr->canCutOnRecState()
