@@ -1394,8 +1394,6 @@ double DireSpace::noEmissionProbability( double pTbegAll, double pTendAll,
       // Calculate the median absolute deviation and stop if it's very small.
       double MAD = findMedian(diff2median);
 
-cout << scientific << setprecision(6) << nTrials << " median=" << medianNow << " MAD=" << MAD << endl; 
-
       //if (MAD/medianNow < 1e-4) break;
       if (MAD/medianNow < 0.2) break;
 
@@ -1405,8 +1403,6 @@ cout << scientific << setprecision(6) << nTrials << " median=" << medianNow << "
     }
 
   }
-
-  //cout << scientific << setprecision(6) << nTrials << " " << wt/nTrials << " " << findMedian(means) << endl;
 
   //wt /= nTrials;
   //wt = findMedian(means);
@@ -6355,7 +6351,7 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
     isClustered = cluster_II(state,iRad,iEmt,iRecAft,radID,RadBefore,RecBefore,NewEvent);
 
   // Clustering not possible, e.g. because not in allowed phase space.
-  if (!isClustered) { cout << __LINE__ << endl; NewEvent.clear(); return make_pair(NewEvent, make_pair(0,0));}
+  if (!isClustered) return make_pair(NewEvent, make_pair(0,0));
 
   // Put some dummy production scales for RecBefore, RadBefore
   RecBefore.scale(mu);
@@ -6664,11 +6660,12 @@ pair <Event, pair<int,int> > DireSpace::clustered_internal( const Event& state,
   // Now check event.
   for ( int i = 0; i < outState.size(); ++i) {
     if ( outState[i].status() == 23
-      && particleDataPtr->isResonance(outState[i].id())) outState[i].status(22);
+      && particleDataPtr->isResonance(outState[i].id()))
+      outState[i].status(22);
   }
 
   // Check if the state is valid. If not, return empty state.
-  if (!validEvent( outState, true )) {  cout << __LINE__ << endl; outState.clear();}
+  if (!validEvent( outState, true )) outState.clear();
 
   // Done
   return make_pair(outState, make_pair(radPos, recPos));
@@ -6768,11 +6765,8 @@ bool DireSpace::cluster_IF( const Event& state,
   double xOld = xNew*xCS; 
 
   // Check phase space contraints.
-  if ( !inAllowedPhasespace( 1, z, pT2, Q2, xOld, 2, m2Bef, m2r, m2s, m2e) ) {
-    cout << 1 << " " << z << " " << pT2 << " " << Q2 << " " << xOld << " " << 2 << " " << m2Bef << " " << m2r << " " << m2s << " " << m2e << endl;
-    abort();
+  if ( !inAllowedPhasespace( 1, z, pT2, Q2, xOld, 2, m2Bef, m2r, m2s, m2e) )
     return false;
-  }
 
   Vec4 pRadBef, pRecBef;
 
