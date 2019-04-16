@@ -276,9 +276,6 @@ MyHistory::MyHistory( int depth,
   for ( multimap<double, MyClustering *>::iterator it = sorted.begin();
   it != sorted.end(); ++it ) {
 
-state.list();
-it->second->list();
-
     // Check if reclustering follows ordered sequence.
     bool ordered = isOrdered;
     if ( mergingHooksPtr->orderHistories() ) {
@@ -307,8 +304,6 @@ it->second->list();
      }
 
     pair <double,double> probs = (doAuxInfo) ? getProb(*it->second) : make_pair(1.,1.);
-
-cout << probs.second << endl;
 
     // Perform the clustering and recurse and construct the next
     // history node.
@@ -3726,8 +3721,6 @@ vector<MyClustering> MyHistory::getClusterings (int emt, int rad,
       }
     }
   }
-
-  cout << "emt=" << emt << " " << clus.size() << endl;
 
   // Done
   return clus;
