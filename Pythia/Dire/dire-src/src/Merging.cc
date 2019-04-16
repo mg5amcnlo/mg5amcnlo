@@ -43,6 +43,10 @@ bool validEvent( const Event& event ) {
     validMomenta = false;
   }
 
+  double x1 = 2.*event[3].e()/event[0].m();
+  double x2 = 2.*event[4].e()/event[0].m();
+  if (x1 < 0. || x2 < 0. || x1 > 1. || x2 > 1.) validMomenta = false;
+
   if ( event[3].status() == -21
     && (abs(event[3].px()) > mTolErr || abs(event[3].py()) > mTolErr)){
     validMomenta = false;
@@ -113,6 +117,9 @@ void MyMerging::storeInfos() {
 
   int posOffset=2;
 
+  if (!myHistory) return;
+
+  bool filled = false;
   // Store information on every possible last clustering.
   for ( int i = 0 ; i < int(myHistory->children.size()); ++i) {
 
@@ -123,13 +130,17 @@ void MyMerging::storeInfos() {
     int rec = myHistory->children[i]->clusterIn.recPos();
 
     int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
+    int jradReq = atoi(infoPtr->getEventAttribute("jfks").c_str());
 
-    cout <<  iemtReq+posOffset << "\t\t " << rad << " " << emt << " " << rec << endl;
+    //cout <<  iemtReq+posOffset << "\t\t " << jradReq+posOffset << endl;
 
     // Only consider last event entry as allowed emission.
     if (emt != iemtReq+posOffset) continue;
+    if (rad != jradReq+posOffset) continue;
 
-    myHistory->children[i]->state.list();
+    filled = true;
+
+    //myHistory->children[i]->state.list();
 
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
@@ -190,6 +201,7 @@ void MyMerging::storeInfos() {
         myHistory->state, iRad, iemtReq+posOffset, iRec, "");
       else       stateVars = myHistory->showers->spacePtr->getStateVariables(
         myHistory->state, iRad, iemtReq+posOffset, iRec, "");
+
       double t    = stateVars["t"];
       double mass = sqrt(stateVars["m2dip"]);
       // Just store pT for now.
@@ -280,12 +292,12 @@ void MyMerging::getDipoles( int iRad, int colTag, int colSign,
 void MyMerging::getStoppingInfo(double scales [100][100],
   double masses [100][100]) {
 
-  myHistory->state.list();
+  //if (myHistory) myHistory->state.list();
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    cout << radSave[i] << " "
-      << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
-      << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
+    //cout << radSave[i] << " "
+    //  << (atoi(infoPtr->getEventAttribute("ifks").c_str())+2)
+    //  << " " << recSave[i] << "  --> " << stoppingScalesSave[i] << endl;
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }
@@ -1474,15 +1486,16 @@ int MyMerging::mergeProcessUNLOPS( Event& process) {
 
 bool MyMerging::generateHistories( const Event& process) {
 
+  // Clear previous history.
+  if (myHistory) { delete myHistory; myHistory = NULL;}
+
   // Input not valid.
   if (!validEvent(process)) {
     cout << "Warning in MyMerging::generateHistories: Input event "
          << "has invalid flavour or momentum structure, thus reject. " << endl;
+    process.list();
     return false;
   }
-
-  // Clear previous history.
-  if (myHistory) delete myHistory;
 
   // For now, prefer construction of ordered histories.
   if ( settingsPtr->flag("Dire:doMOPS") )
@@ -1949,6 +1962,8 @@ int MyMerging::calculateWeights( double RNpath, bool useAll ) {
 // Function to perform UNLOPS merging on this event.
 
 int MyMerging::getStartingConditions( double RNpath, Event& process) {
+
+  if (!myHistory) return 1;
 
   // Initialise which part of UNLOPS merging is applied.
   bool doUNLOPSSubt     = settingsPtr->flag("Merging:doUNLOPSSubt");
