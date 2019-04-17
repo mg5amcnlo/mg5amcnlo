@@ -939,7 +939,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       " given as defined variables for the UFOExpressionParserPythonIF"+\
                       " must be either a dictionary or a string.")
             args = args[1:]
-            for key, value in self.defined_variables.items():
+            for key, value in list(self.defined_variables.items()):
                 if not isinstance(key,str) or \
                       not any(isinstance(value,t) for t in [float,complex,int]):
                     # This is not a valid environment variable for the parser

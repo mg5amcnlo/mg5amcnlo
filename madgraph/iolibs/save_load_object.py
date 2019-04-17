@@ -33,7 +33,7 @@ def save_to_file(filename, object, log=True):
     if not isinstance(filename, six.string_types):
         raise SaveObjectError("filename must be a string")
 
-    files.write_to_file(filename, pickle_object, object, log=log)
+    files.write_to_file(filename, pickle_object, object, log=log, binary=True)
 
     return True
     

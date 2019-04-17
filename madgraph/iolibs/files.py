@@ -57,7 +57,11 @@ def write_to_file(filename, myfunct, *args, **opts):
     """
 
     try:
-        sock = open(filename, 'w')
+        if 'binary' not in opts or not opts['binary']:
+            sock = open(filename, 'w')
+        else:
+            sock = open(filename, 'wb')
+
         try:
             ret_value = myfunct(sock, *args)
         finally:
