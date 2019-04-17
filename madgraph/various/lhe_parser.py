@@ -11,6 +11,10 @@ import time
 import os
 import shutil
 import sys
+import six
+if six.PY3:
+    import io
+    file = io.IOBase
 from six.moves import filter
 from six.moves import range
 from six.moves import zip

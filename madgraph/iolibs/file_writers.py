@@ -21,6 +21,11 @@ from __future__ import absolute_import
 import re
 import collections
 from six.moves import range
+import six
+if six.PY3:
+    import io
+    file = io.IOBase
+
 try:
     import madgraph
 except ImportError:

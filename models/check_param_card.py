@@ -5,13 +5,14 @@ from __future__ import print_function
 import itertools
 import xml.etree.ElementTree as ET
 import math
-import StringIO
+
 import os
 import re
 import shutil
 import logging
 import random
 import six
+StringIO = six
 from six.moves import range
 
 logger = logging.getLogger('madgraph.models') # -> stdout

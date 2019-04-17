@@ -36,6 +36,9 @@ from six.moves import range
 from six.moves import zip
 from six.moves import input
 StringIO = six
+if six.PY3:
+    import io
+    file = io.IOBase
 try:
     # Use in MadGraph
     import madgraph

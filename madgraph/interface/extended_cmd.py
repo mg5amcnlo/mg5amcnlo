@@ -26,6 +26,10 @@ import signal
 import subprocess
 import sys
 import traceback
+import six
+if six.PY3:
+    import io
+    file = io.IOBase
 from six.moves import map
 from six.moves import range
 from six.moves import input
