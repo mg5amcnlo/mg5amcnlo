@@ -33,11 +33,11 @@ import subprocess
 import sys
 import time
 import tarfile
-import StringIO
 import shutil
 import copy
 from six.moves import range
-
+import six
+StringIO = six
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)

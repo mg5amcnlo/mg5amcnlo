@@ -35,11 +35,10 @@ import time
 import traceback
 import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 import glob
-import StringIO
-import six
 from six.moves import range
 from six.moves import input
-
+import six
+StringIO = six
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)

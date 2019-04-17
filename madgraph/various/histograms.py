@@ -29,10 +29,12 @@ import math
 import os
 import re
 import sys
-import StringIO
+
 import subprocess
 import xml.dom.minidom as minidom
 from xml.parsers.expat import ExpatError as XMLParsingError
+import six
+StringIO = six
 from six.moves import range
 from six.moves import zip
 

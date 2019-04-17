@@ -24,19 +24,18 @@ import re
 import signal
 import subprocess
 import sys
-import StringIO
-import sys
 import optparse
 import time
 import shutil
 import traceback
 import gzip as ziplib
 from distutils.version import LooseVersion, StrictVersion
+import six
 from six.moves import zip_longest
 from six.moves import range
 from six.moves import zip
 from six.moves import input
-
+StringIO = six
 try:
     # Use in MadGraph
     import madgraph

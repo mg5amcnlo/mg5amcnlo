@@ -39,8 +39,8 @@ import copy
 import datetime
 import tarfile
 import traceback
-import StringIO
 import six
+StringIO = six
 from six.moves import range
 from six.moves import zip
 try:

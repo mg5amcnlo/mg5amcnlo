@@ -34,13 +34,14 @@ import subprocess
 import copy
 import sys
 import shutil
-import StringIO
+
 import traceback
 import time
 import inspect
 import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 import random
 import six
+StringIO = six
 from six.moves import range
 
 #useful shortcut

@@ -25,7 +25,7 @@ import glob
 import math
 import xml.sax.handler
 import shutil
-from cStringIO import StringIO
+from six import StringIO
 from six.moves import map
 from six.moves import range
 

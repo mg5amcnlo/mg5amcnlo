@@ -23,8 +23,8 @@ import os
 import sys
 import re
 import math
-import StringIO
 import six
+StringIO = six
 from six.moves import range
 
 pjoin = os.path.join

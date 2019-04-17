@@ -23,7 +23,8 @@ import math
 import numbers
 import os
 import re
-import StringIO
+import six
+StringIO = six
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 

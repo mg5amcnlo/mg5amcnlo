@@ -19,7 +19,7 @@ from six.moves import zip
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
-from cStringIO import StringIO
+from six import StringIO
 from distutils import dir_util
 import itertools
 import fractions
