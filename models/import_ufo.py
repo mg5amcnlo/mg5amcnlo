@@ -2259,7 +2259,7 @@ class RestrictModel(model_reader.ModelReader):
                          isinstance(vert, base_objects.Interaction) ]
             for vertex in vertices:
                 modify = False
-                for key, coupling in vertex['couplings'].items():
+                for key, coupling in list(vertex['couplings'].items()):
                     if coupling in zero_couplings:
                         modify=True
                         del vertex['couplings'][key]

@@ -109,10 +109,11 @@ except AttributeError:
 
 # Python 2.x/3.0 compatibility.
 def load_ply_lex():
-    if sys.version_info[0] < 3:
-        from . import lex
-    else:
-        import ply.lex as lex
+    from . import lex
+    #if sys.version_info[0] < 3:
+    #    from . import lex
+    #else:
+    #    import ply.lex as lex
     return lex
 
 # This object is a stand-in for a logging object created by the 
@@ -2804,6 +2805,31 @@ class ParserReflect(object):
 
     # Compute a signature over the grammar
     def signature(self):
+
+        found_md5=True
+        try:
+            from hashlib import md5
+        except ImportError:
+            try:
+                from md5 import md5
+            except:
+                found_md5=False
+        if found_md5:
+            try:
+                sig = md5()
+                if self.start:
+                    sig.update(self.start.encode('latin-1'))
+                if self.prec:
+                    sig.update("".join(["".join(p) for p in self.prec]).encode('latin-1'))
+                if self.tokens:
+                    sig.update(" ".join(self.tokens).encode('latin-1'))
+                for f in self.pfuncs:
+                    if f[3]:
+                        sig.update(f[3].encode('latin-1'))
+            except (TypeError,ValueError):
+                pass
+            return sig.digest()
+
         import madgraph.various.misc as md5
         text = StringIO()
         if self.start:
