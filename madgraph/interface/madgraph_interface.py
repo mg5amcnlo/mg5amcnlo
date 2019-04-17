@@ -7359,7 +7359,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                  'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
                         '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
-                self.history.pop()
+                if self.history and 'fastjet' in self.history[-1]:
+                    self.history.pop()
             elif int(output.split('.')[0]) < 3:
                 logger.warning('%s is not ' % args[1] + \
                         'v3 or greater. Please install FastJet v3+.')
