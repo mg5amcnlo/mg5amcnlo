@@ -22,10 +22,15 @@ if __name__ == "__main__":
     import sys
     import os
     root = os.path.dirname(__file__)
-    if os.path.basename(root) == 'internal':
-        sys.path.append(os.path.dirname(root))
-    else:
-        sys.path.append(os.path.dirname(os.path.dirname(root)))
+    if __package__ is None:
+        if os.path.basename(root) == 'internal':
+            __package__ = "internal"
+            sys.path.append(os.path.dirname(root))
+            import internal
+        else:
+            __package__ = "madgraph.various"
+
+#        sys.path.append(os.path.dirname(os.path.dirname(root)))
         
 from . import lhe_parser
 from . import banner

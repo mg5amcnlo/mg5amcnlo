@@ -20,7 +20,16 @@ pjoin = os.path.join
 
 if '__main__' == __name__:
     import sys
+    import os 
     sys.path.append('../../')
+    root = os.path.dirname(__file__)
+    if os.path.basename(root) == 'internal':
+            __package__ = "internal"
+            sys.path.append(os.path.dirname(root))
+            import internal
+    else:
+        __package__ = "madgraph.various"
+
 from . import misc
 import logging
 import gzip
@@ -226,7 +235,7 @@ class EventFile(object):
             line = ''
             while '</init>' not in line.lower():
                 try:
-                    line  = next(super(EventFile, self))
+                    line  = super(EventFile, self).next()
                 except StopIteration:
                     self.seek(0)
                     self.banner = ''
@@ -282,7 +291,7 @@ class EventFile(object):
             line = ''
             mode = 0
             while '</event>' not in line:
-                line = next(super(EventFile, self))
+                line = super(EventFile, self).next()
                 if '<event' in line:
                     mode = 1
                     text = ''
