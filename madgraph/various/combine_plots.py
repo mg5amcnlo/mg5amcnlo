@@ -13,6 +13,8 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import glob
 import os
 import re
@@ -43,9 +45,9 @@ class one_plot:
     
     def add_histo(self, string_values, tag):
         """Add the histogram in the data base (string format) """
-        if tag in self.histo.values():
-            print "Warning: skyping the histogram with tag " + tag
-            print "         since it is already present in the data base"
+        if tag in list(self.histo.values()):
+            print("Warning: skyping the histogram with tag " + tag)
+            print("         since it is already present in the data base")
             return
         self.histo[tag] = {}
         self.histo[tag]["values"] = string_values
@@ -128,16 +130,16 @@ class load_data:
                 trappe.write("HIST PATTERNED %s \n" % color1)
 #                trappe.write("SET COLOR %s \n" % color1)
             except:
-                print "warning: cannot find histo in file 1 for tag " + tag_plot 
+                print("warning: cannot find histo in file 1 for tag " + tag_plot) 
         
             try:
                 trappe.write(self.plots[tag_plot].get_histo(file2, norm2))
                 trappe.write(histtype2)
                 trappe.write("HIST PATTERNED %s \n" % color2)
                 trappe.write("SET COLOR WHITE \n")
-            except Exception, error:
-                print error
-                print "warning: cannot find histo in file 2 for tag " + tag_plot 
+            except Exception as error:
+                print(error)
+                print("warning: cannot find histo in file 2 for tag " + tag_plot) 
                 raise
             
             #trappe.write(self.plots[tag_plot].end)
@@ -162,8 +164,8 @@ class load_data:
              if line.find("TITLE TOP") > -1:
                 index = line.find('''"''')
                 if index < 0:
-                  print "warning: unable to find the name of the plot in the title"
-                  print "         skipping this plot (might not be a real plot)"
+                  print("warning: unable to find the name of the plot in the title")
+                  print("         skipping this plot (might not be a real plot)")
                   return
                 else:
                   plot_tag = line[index + 1:]
@@ -194,8 +196,8 @@ class load_data:
                     else:
                       newplot = 0
                   else:
-                    print "warning: unusual format, unable to extract the tag of the plot"
-                    print "         skipping this plot (might not be a real plot)"
+                    print("warning: unusual format, unable to extract the tag of the plot")
+                    print("         skipping this plot (might not be a real plot)")
                     return
                   
              if line.find("SET ORDER") > -1 and plot_tag != "":

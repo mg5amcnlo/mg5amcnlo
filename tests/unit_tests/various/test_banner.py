@@ -14,6 +14,7 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
@@ -56,7 +57,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue(mybanner.has_key('slha'))
+        self.assertTrue('slha' in mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')

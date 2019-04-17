@@ -14,10 +14,12 @@
 ################################################################################
 """A File for splitting"""
 
+from __future__ import absolute_import
 import sys
 import re
 import os
 import logging
+from six.moves import range
 
 logger = logging.getLogger('madgraph.shower_card') 
 
@@ -77,7 +79,7 @@ class ShowerCard(dict):
         """ if testing, card is the content"""
         self.testing = testing
         dict.__init__(self)
-        self.keylist = self.keys()
+        self.keylist = list(self.keys())
 
         if card:
             self.read_card(card)

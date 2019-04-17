@@ -13,9 +13,10 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import cmath
 import copy
-import cPickle
+import six.moves.cPickle
 import glob
 import logging
 import numbers
@@ -25,6 +26,8 @@ import shutil
 import sys
 import time
 from madgraph.interface.tutorial_text import output
+from six.moves import range
+from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -110,7 +113,7 @@ class AbstractRoutine(object):
                 rank = max(sum(coeff), rank)
             return rank -1 # due to the coefficient associate to the wavefunctions
         else:
-            raise ALOHAERROR, '%s is not a valid information that can be computed' % info
+            raise ALOHAERROR('%s is not a valid information that can be computed' % info)
 
 
 class AbstractRoutineBuilder(object):
@@ -206,7 +209,7 @@ class AbstractRoutineBuilder(object):
             if not data == target:
                 text = """Unable to deal with 4(or more) point interactions
 in presence of majorana particle/flow violation"""
-                raise ALOHAERROR, text
+                raise ALOHAERROR(text)
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
@@ -286,7 +289,7 @@ in presence of majorana particle/flow violation"""
                 lorentz = eval(lorentz)
             except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
-                raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
+                raise ALOHAERROR('unknow type in Lorentz Evaluation: %s ' % str(error)) 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):
@@ -687,7 +690,7 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         
         fsock = open(filepos, 'w')
-        cPickle.dump(dict(self), fsock)
+        six.moves.cPickle.dump(dict(self), fsock)
         
     def load(self, filepos=None):
         """ reload the pickle file """
@@ -696,7 +699,7 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
             fsock = open(filepos, 'r')
-            self.update(cPickle.load(fsock))        
+            self.update(six.moves.cPickle.load(fsock))        
             return True
         else:
             return False
@@ -837,7 +840,7 @@ class AbstractALOHAModel(dict):
                                 realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
                                 try:
                                     self[(realname, outgoing)].add_combine(m)
-                                except Exception,error:
+                                except Exception as error:
                                     self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                        
         if save:
@@ -935,7 +938,7 @@ class AbstractALOHAModel(dict):
             if not self.explicit_combine:
                 lorentzname = list_l_name[0]
                 lorentzname += ''.join(tag)
-                if self.has_key((lorentzname, outgoing)):
+                if (lorentzname, outgoing) in self:
                     self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                 else:
                     lorentz = eval('self.model.lorentz.%s' % list_l_name[0])
@@ -1059,8 +1062,8 @@ class AbstractALOHAModel(dict):
                 break
         else: 
 
-            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s' % \
-                        (name, ext, '\n'.join(paths))
+            raise ALOHAERROR('No external routine \"%s.%s\" in directories\n %s' % \
+                        (name, ext, '\n'.join(paths)))
        
         if output_dir:
             for filepath in ext_files:
@@ -1083,8 +1086,8 @@ class AbstractALOHAModel(dict):
                         if part1.spin == 2 and (i % 2 != j % 2 ):
                             continue 
                         for lorentz in vertex.lorentz:
-                            if self.symmetries.has_key(lorentz.name):
-                                if self.symmetries[lorentz.name].has_key(i+1):
+                            if lorentz.name in self.symmetries:
+                                if i+1 in self.symmetries[lorentz.name]:
                                     self.symmetries[lorentz.name][i+1] = max(self.symmetries[lorentz.name][i+1], j+1)
                                 else:
                                     self.symmetries[lorentz.name][i+1] = j+1
@@ -1225,7 +1228,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     text +='\n'
     
 
-    file(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
+    open(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
 
 
             

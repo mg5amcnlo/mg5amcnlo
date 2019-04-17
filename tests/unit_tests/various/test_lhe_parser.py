@@ -14,12 +14,14 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph .various.misc as misc
 import tempfile
 import os
 import shutil
+from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
 

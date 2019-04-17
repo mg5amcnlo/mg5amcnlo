@@ -17,6 +17,7 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
+from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -27,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import time
+import six
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -144,7 +146,7 @@ class MG4Runner(MERunner):
         # Create a copy of Template
         if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
-            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+            raise IOError("Path %s is not a valid MG4 path" % str(mg4_path))
 
         self.mg4_path = os.path.abspath(mg4_path)
 
@@ -156,8 +158,8 @@ class MG4Runner(MERunner):
             temp_dir = "ptest_%s_%s" % (self.type, i)         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
-            raise IOError, "Path %s for test already exist" % \
-                                    str(os.path.join(mg4_path, temp_dir))
+            raise IOError("Path %s for test already exist" % \
+                                    str(os.path.join(mg4_path, temp_dir)))
 
         shutil.copytree(os.path.join(mg4_path, 'Template'),
                         os.path.join(mg4_path, temp_dir))
@@ -181,7 +183,7 @@ class MG4Runner(MERunner):
 
         if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
-            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+            raise IOError("Path %s is not a valid MG4 path" % str(mg4_path))
 
     def cleanup(self):
         """Clean up temporary directories"""
@@ -683,18 +685,16 @@ class PickleRunner(MERunner):
                                      pickle_file)
                 except:
                     pass
-                object_list = filter(lambda runner:\
-                                  (not model or runner.model == model) and \
+                object_list = [runner for runner in object_list if (not model or runner.model == model) and \
                                   (not orders or runner.orders == orders) and \
                                   (not energy or runner.energy == energy) and \
                                   (not proc_list or \
-                                   runner.proc_list == proc_list),
-                                     object_list)
+                                   runner.proc_list == proc_list)]
 
             return object_list
 
-        raise IOError, "Path %s is not valid pickle directory" % \
-              str(pickle_path)
+        raise IOError("Path %s is not valid pickle directory" % \
+              str(pickle_path))
 
     @staticmethod
     def store_comparison(pickle_path, proc_list, model, name,
@@ -733,7 +733,7 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
-        if isinstance(model, basestring):
+        if isinstance(model, six.string_types):
             model= [model] * len(self.me_runners)
 
         self.results = []

@@ -3,9 +3,10 @@
 # Date: Fri 18 Mar 2011 18:40:51
 
 
-from object_library import all_lorentz, Lorentz
+from __future__ import absolute_import
+from .object_library import all_lorentz, Lorentz
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 ###################################
 # CounterTerms Lorentz structures #

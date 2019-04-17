@@ -63,6 +63,8 @@
 # own risk!
 # ----------------------------------------------------------------------------
 
+from __future__ import absolute_import
+from six.moves import range
 __version__    = "3.3"
 __tabversion__ = "3.2"       # Table version
 
@@ -94,21 +96,21 @@ from cStringIO import StringIO
 # Compatibility function for python 2.6/3.0
 if sys.version_info[0] < 3:
     def func_code(f):
-        return f.func_code
+        return f.__code__
 else:
     def func_code(f):
         return f.__code__
 
 # Compatibility
 try:
-    MAXINT = sys.maxint
+    MAXINT = sys.maxsize
 except AttributeError:
     MAXINT = sys.maxsize
 
 # Python 2.x/3.0 compatibility.
 def load_ply_lex():
     if sys.version_info[0] < 3:
-        import lex
+        from . import lex
     else:
         import ply.lex as lex
     return lex
@@ -1849,7 +1851,7 @@ class LRTable(object):
 
     def read_pickle(self,filename):
         try:
-            import cPickle as pickle
+            import six.moves.cPickle as pickle
         except ImportError:
             import pickle
 
@@ -2670,7 +2672,7 @@ del _lr_goto_items
 
     def pickle_table(self,filename,signature=""):
         try:
-            import cPickle as pickle
+            import six.moves.cPickle as pickle
         except ImportError:
             import pickle
         outf = open(filename,"wb")

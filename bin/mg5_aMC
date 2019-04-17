@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+from __future__ import absolute_import
+from __future__ import print_function
 import time
 start = time.time()
 
@@ -125,7 +127,7 @@ except:
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
-    print( 'WARNING: loading of madgraph too slow!!!', time.time() - start)
+    print(( 'WARNING: loading of madgraph too slow!!!', time.time() - start))
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
@@ -169,7 +171,7 @@ try:
     else:
         # Interactive mode
         if options.web:
-            if not os.environ.has_key('MADGRAPH_DATA'):
+            if 'MADGRAPH_DATA' not in os.environ:
                 os.environ['MADGRAPH_DATA'] = root_path
                 os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
                 os.environ['REMOTE_USER'] = 'webmode'
@@ -177,7 +179,7 @@ try:
         else:
             cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print 'writting history and quit on KeyboardInterrupt' 
+    print('writting history and quit on KeyboardInterrupt') 
     pass
 
 try:
@@ -186,7 +188,7 @@ try:
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
-except Exception, error:
+except Exception as error:
     pass
 
 

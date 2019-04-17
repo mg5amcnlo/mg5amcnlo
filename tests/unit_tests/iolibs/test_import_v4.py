@@ -15,6 +15,7 @@
 
 """Unit test library for the import v4 format routines"""
 
+from __future__ import absolute_import
 import StringIO
 import copy
 import os
@@ -25,6 +26,7 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
+from six.moves import range
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 #===============================================================================

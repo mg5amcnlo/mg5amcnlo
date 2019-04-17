@@ -15,6 +15,7 @@
 
 """Unit test library for the export_FKS format routines"""
 
+from __future__ import absolute_import
 import StringIO
 import copy
 import fractions
@@ -23,6 +24,7 @@ import sys
 import tempfile
 import glob
 import shutil
+from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -156,10 +158,10 @@ class TestFKSOutput(unittest.TestCase):
             run_cmd('generate p p > w+ [QCD]')
             try:
                 run_cmd('output %s' % os.path.join(path, 'W-newway'))
-            except fks_common.FKSProcessError, err:
+            except fks_common.FKSProcessError as err:
                 # catch the error if gosam is not there
                 if not 'Generation of the virtuals with GoSam failed' in str(err):
-                    raise Exception, err
+                    raise Exception(err)
         except Exception as e:
             run_cmd('set low_mem_multicore_nlo_generation False')
             run_cmd('set OLP MadLoop')

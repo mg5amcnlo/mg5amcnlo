@@ -3,6 +3,8 @@
 #test
 
 #Extension
+from __future__ import absolute_import
+from __future__ import print_function
 import string
 import os
 import sys
@@ -29,7 +31,7 @@ def go_to_main_dir():
     if 'bin' in list_dir:
         return
     else:
-        print 'script must be launched from main or bin/Source directory'
+        print('script must be launched from main or bin/Source directory')
         sys.exit()
             
 

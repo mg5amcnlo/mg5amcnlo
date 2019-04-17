@@ -16,6 +16,7 @@
 """Unit test library for the spin correlated decay routines
 in the madspin directory"""
 
+from __future__ import absolute_import
 import sys
 import os
 import string

@@ -1,8 +1,11 @@
 
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
 __date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
-from function_library import *
+from .function_library import *
 
 class ParamCardWriter(object):
     
@@ -15,7 +18,7 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            from parameters import all_parameters
+            from .parameters import all_parameters
             list_of_parameters = [param for param in all_parameters if \
                                                        param.nature=='external']
         
@@ -33,7 +36,7 @@ class ParamCardWriter(object):
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
         requested in the param_card.dat"""
-        from particles import all_particles
+        from .particles import all_particles
         
         self.dep_mass = [(part, part.mass) for part in all_particles \
                             if part.pdg_code > 0 and \
@@ -117,8 +120,8 @@ class ParamCardWriter(object):
     
     def write_dep_param_block(self, lhablock):
         import cmath
-        from parameters import all_parameters
-        from particles import all_particles
+        from .parameters import all_parameters
+        from .particles import all_particles
         for parameter in all_parameters:
             exec("%s = %s" % (parameter.name, parameter.value))
         text = "##  Not dependent paramater.\n"
@@ -176,9 +179,9 @@ class ParamCardWriter(object):
     
     def write_qnumber(self):
         """ write qnumber """
-        from particles import all_particles
-        import particles
-        print particles.__file__
+        from .particles import all_particles
+        from . import particles
+        print(particles.__file__)
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""
@@ -203,5 +206,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat', generic=True)
-    print 'write ./param_card.dat'
+    print('write ./param_card.dat')
     

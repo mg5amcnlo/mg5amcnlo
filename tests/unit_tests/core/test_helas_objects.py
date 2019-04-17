@@ -12,7 +12,10 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
 from madgraph.iolibs import helas_call_writers
+from six.moves import range
+from six.moves import zip
 
 """Unit test library for the helas_objects module"""
 
@@ -2753,7 +2756,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
 
         goal_no_quark = 9
         quark_none = {0:[0],1:[0],3:[0],4:[0],6:[0],7:[0]}
-        quark_true = dict(zip(range(goal_no_quark),[1]*goal_no_quark))
+        quark_true = dict(list(zip(list(range(goal_no_quark)),[1]*goal_no_quark)))
 
         myleglist = base_objects.LegList()
 
@@ -3381,8 +3384,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                        a1.get('number') - a2.get('number'))):
                 self.assertEqual(wf.get('number'), i + 1)
 
-            for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                           me.get_all_wavefunctions())):
+            for i, wf in enumerate([wf for wf in me.get_all_wavefunctions() if not wf.get('mothers')]):
                 self.assertEqual(wf.get('number_external'), i + 1)
 
     def test_decay_chain_process_overall_orders(self):
@@ -3495,8 +3497,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                        a1.get('number') - a2.get('number'))):
                 self.assertEqual(wf.get('number'), i + 1)
 
-            for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                           me.get_all_wavefunctions())):
+            for i, wf in enumerate([wf for wf in me.get_all_wavefunctions() if not wf.get('mothers')]):
                 self.assertEqual(wf.get('number_external'), i + 1)
 
     def test_multistage_decay_chain_process(self):
@@ -3610,8 +3611,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                    matrix_elements[0].get('diagrams')],[])):
             self.assertEqual(wf.get('number'), i + 1)
 
-        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                       matrix_elements[0].get_all_wavefunctions())):
+        for i, wf in enumerate([wf for wf in matrix_elements[0].get_all_wavefunctions() if not wf.get('mothers')]):
             self.assertEqual(wf.get('number_external'), i + 1)
 
         # Test the setting of wavefunctions as "onshell" if they
@@ -3850,15 +3850,13 @@ class HelasMultiProcessTest(unittest.TestCase):
                                    matrix_elements[0].get('diagrams')],[])):
             self.assertEqual(wf.get('number'), i + 1)
 
-        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                       matrix_elements[0].get('diagrams')[0].\
-                                       get('wavefunctions'))):
+        for i, wf in enumerate([wf for wf in matrix_elements[0].get('diagrams')[0].\
+                                       get('wavefunctions') if not wf.get('mothers')]):
             self.assertEqual(wf.get('number_external'), i + 1)
 
-        for wf in filter (lambda wf: not wf.get('mothers'),
-                                       sum([d.get('wavefunctions') for d in \
+        for wf in [wf for wf in sum([d.get('wavefunctions') for d in \
                                             matrix_elements[0].get('diagrams')\
-                                            [1:]], [])):
+                                            [1:]], []) if not wf.get('mothers')]:
             old_wf = filter(lambda w: w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers'),\
                             matrix_elements[0].get('diagrams')[0].\
@@ -3918,15 +3916,13 @@ class HelasMultiProcessTest(unittest.TestCase):
                                    matrix_elements[0].get('diagrams')],[])):
             self.assertEqual(wf.get('number'), i + 1)
 
-        for i, wf in enumerate(filter (lambda wf: not wf.get('mothers'),
-                                       matrix_elements[0].get('diagrams')[0].\
-                                       get('wavefunctions'))):
+        for i, wf in enumerate([wf for wf in matrix_elements[0].get('diagrams')[0].\
+                                       get('wavefunctions') if not wf.get('mothers')]):
             self.assertEqual(wf.get('number_external'), i + 1)
 
-        for wf in filter (lambda wf: not wf.get('mothers'),
-                                       sum([d.get('wavefunctions') for d in \
+        for wf in [wf for wf in sum([d.get('wavefunctions') for d in \
                                             matrix_elements[0].get('diagrams')\
-                                            [1:]], [])):
+                                            [1:]], []) if not wf.get('mothers')]:
             old_wf = filter(lambda w: w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers'),\
                             matrix_elements[0].get('diagrams')[0].\

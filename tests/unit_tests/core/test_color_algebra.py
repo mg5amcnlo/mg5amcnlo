@@ -16,6 +16,7 @@
 """Unit test library for the color algebra related routines 
 in the core library"""
 
+from __future__ import absolute_import
 import copy
 import fractions
 

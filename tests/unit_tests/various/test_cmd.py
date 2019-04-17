@@ -13,6 +13,8 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 from madgraph import MG5DIR
@@ -49,10 +51,10 @@ class TestInstall(unittest.TestCase):
         if not os.path.exists(pjoin(MG5DIR, 'input','mg5_configuration.txt')):
             return        
         
-        text1 = file(pjoin(MG5DIR,'input','.mg5_configuration_default.txt')).read()
-        text2 = file(pjoin(MG5DIR,'input','mg5_configuration.txt')).read()
+        text1 = open(pjoin(MG5DIR,'input','.mg5_configuration_default.txt')).read()
+        text2 = open(pjoin(MG5DIR,'input','mg5_configuration.txt')).read()
         warning = """WARNING: Your file mg5_configuration.txt and .mg5_configuration_default.txt
         are different. This probably fine but please check it before any release."""
         if text1 != text2:
-            print warning
+            print(warning)
         

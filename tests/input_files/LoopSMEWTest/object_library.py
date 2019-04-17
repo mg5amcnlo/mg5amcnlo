@@ -7,8 +7,10 @@
 ##
 ##
 
+from __future__ import absolute_import
 import cmath
 import re
+import six
 
 
 class UFOError(Exception):
@@ -130,7 +132,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in self.__dict__.iteritems():
+        for k,v in six.iteritems(self.__dict__):
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:
@@ -253,7 +255,7 @@ class Coupling(UFOBaseClass):
         parameter or just a string which can possibly contain CTparameter defining the Laurent serie."""
         
         if isinstance(self.value,dict):
-            if -x in self.value.keys():
+            if -x in list(self.value.keys()):
                 return self.value[-x]
             else:
                 return 'ZERO'

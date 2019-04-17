@@ -1,6 +1,9 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import math
 import random
+from six.moves import range
 
 class FortranList(list):
     
@@ -116,7 +119,7 @@ def RAMBO(N,ET,XM):
         xmt += abs(XM[i])
         
     if xmt > ET:
-        raise RAMBOError, ' Not enough energy in this case'
+        raise RAMBOError(' Not enough energy in this case')
 
 #                                                                                                                                          
 # THE PARAMETER VALUES ARE NOW ACCEPTED                                                                                                    
@@ -159,10 +162,10 @@ def RAMBO(N,ET,XM):
     if N != 2:
         wt = (2 * N-4) * math.log(ET) + Z[N]
     if wt < -180 and iwarn[1] < 5:
-        print "RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY UNDERFLOW" % wt
+        print("RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY UNDERFLOW" % wt)
         iwarn[1] += 1
     if wt > 174 and iwarn[2] < 5:      
-        print " RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY  OVERFLOW" % wt
+        print(" RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY  OVERFLOW" % wt)
         iwarn[2] += 1
 
                                                                                                                                           
@@ -192,8 +195,8 @@ def RAMBO(N,ET,XM):
             break
         n_iter  += 1
         if n_iter  > itmax:
-            print "RAMBO WARNS: %s ITERATIONS DID NOT GIVE THE DESIRED ACCURACY = %s" \
-                    %(n_iter , f0)
+            print("RAMBO WARNS: %s ITERATIONS DID NOT GIVE THE DESIRED ACCURACY = %s" \
+                    %(n_iter , f0))
             break
         x=x-f0/(x*g0)
     for i in range(1, N+1):
@@ -213,10 +216,10 @@ def RAMBO(N,ET,XM):
 # RETURN FOR  WEIGHTED MASSIVE MOMENTA                                                                                                     
     wt += wtm
     if(wt < -180 and iwarn[3] < 5):
-        print " RAMBO WARNS: WEIGHT = EXP(%s) MAY UNDERFLOW" % wt
+        print(" RAMBO WARNS: WEIGHT = EXP(%s) MAY UNDERFLOW" % wt)
         iwarn[3] += 1
     if(wt > 174  and iwarn[4] > 5):
-        print " RAMBO WARNS: WEIGHT = EXP(%s) MAY OVERFLOW" % wt
+        print(" RAMBO WARNS: WEIGHT = EXP(%s) MAY OVERFLOW" % wt)
         iwarn[4] += 1
 
 # RETURN

@@ -1,11 +1,14 @@
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import gzip
+from six.moves import range
 
 if '__main__' == __name__:
     import sys
     sys.path.append('../../')
-import misc
+from . import misc
 import os
 import logging
 
@@ -226,7 +229,7 @@ class HEPMC_Event(object):
         self.C = '%s\n' % line
 
     def __iter__(self):
-        return self.particles.values().__iter__()
+        return list(self.particles.values()).__iter__()
     
     #def __next__(self):
     #    
@@ -249,9 +252,9 @@ class HEPMC_EventFile(object):
         else:
             try:
                 return gzip.GzipFile.__new__(HEPMC_EventFileGzip, path, mode, *args, **opt)
-            except IOError, error:
+            except IOError as error:
                 raise
-            except Exception, error:
+            except Exception as error:
                 if mode == 'r':
                     misc.gunzip(path)
                 return file.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)  
@@ -283,7 +286,7 @@ class HEPMC_EventFile(object):
             while 'HepMC::IO_GenEvent-START_EVENT_LISTING' not in line:
 
                 try:
-                    line  = super(HEPMC_EventFile, self).next()
+                    line  = next(super(HEPMC_EventFile, self))
                 except StopIteration:
                     self.seek(0)
                     self.header = ''
@@ -302,7 +305,7 @@ class HEPMC_EventFile(object):
         text = self.start_event
         line = ''
         while 1:
-            line = super(HEPMC_EventFile, self).next()
+            line = next(super(HEPMC_EventFile, self))
             if line.startswith('E'):
                 self.start_event = line
                 if text:
@@ -359,4 +362,4 @@ if "__main__" == __name__:
         nb_event +=1
         for p in event:
              nb_p+=1
-    print nb_event, nb_p
+    print(nb_event, nb_p)

@@ -15,6 +15,8 @@
 
 """Unit test library for the export Pythia8 format routines"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import StringIO
 import copy
 import fractions
@@ -1334,8 +1336,8 @@ double Sigma_sm_qq_six::matrix_uu_six()
                                                       process_string = "q q~ > q q~",
                                                       path = "/tmp")
         
-        print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
-        print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
+        print("Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:")
+        print("cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc")
 
 
 #===============================================================================

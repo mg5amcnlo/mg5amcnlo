@@ -1,13 +1,14 @@
-import particles
-import couplings
-import CT_couplings
-import lorentz
-import parameters
-import CT_parameters
-import vertices
-import CT_vertices
-import write_param_card
-import coupling_orders
+from __future__ import absolute_import
+from . import particles
+from . import couplings
+from . import CT_couplings
+from . import lorentz
+from . import parameters
+from . import CT_parameters
+from . import vertices
+from . import CT_vertices
+from . import write_param_card
+from . import coupling_orders
 
 # model options
 gauge = [0, 1]

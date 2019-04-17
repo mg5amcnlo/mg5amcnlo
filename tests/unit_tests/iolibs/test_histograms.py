@@ -15,6 +15,7 @@
 
 """Unit test library to test the histograms.py functions"""
 
+from __future__ import absolute_import
 import StringIO
 import copy
 import fractions

@@ -14,11 +14,14 @@
 ################################################################################
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import logging
 import os
 import pydoc
 import subprocess
 import time
+from six.moves import range
 start=time.time()
 import madgraph.iolibs.files as files
 import madgraph.interface.madevent_interface as me_cmd
@@ -118,7 +121,7 @@ class ExtLauncher(object):
             "particles."
                                          
         if not self.force:
-            if msg:  print msg
+            if msg:  print(msg)
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}
             choices = ['y', 'n']
             path_info = 'path of the new %(card)s' % {'card':os.path.basename(filename)}
@@ -153,7 +156,7 @@ class MadLoopLauncher(ExtLauncher):
 
         if filename == 'PS.input':
             if not self.force:
-                if msg!='':  print msg
+                if msg!='':  print(msg)
                 question = 'Do you want to specify the Phase-Space point: %(card)s?' % {'card':filename}
                 choices = ['y', 'n']
                 path_info = 'path of the PS.input file'
@@ -168,7 +171,7 @@ class MadLoopLauncher(ExtLauncher):
                                         pi in range(4)]) for pmom in range(1)]))
                     else:
                         default_ps = process_checks.LoopMatrixElementEvaluator.\
-                            parse_check_output(file(os.path.join(dir_path,\
+                            parse_check_output(open(os.path.join(dir_path,\
                                           'result.dat')),format='dict')['res_p']
                         PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi \
                                              in pmom]) for pmom in default_ps]))                     
@@ -204,8 +207,8 @@ class MadLoopLauncher(ExtLauncher):
                                 curr_path, sub_path, infos,
                                 req_files = ['HelFilter.dat','LoopFilter.dat'])
                 if nps == None:
-                    raise MadGraph5Error,"MadLoop could not initialize the process %s"\
-                      %shell_name
+                    raise MadGraph5Error("MadLoop could not initialize the process %s"\
+                      %shell_name)
                 logger.debug(("MadLoop initialization performed for %s"+\
                         " using %d PS points (%s)")\
                         %(shell_name,abs(nps),\
@@ -222,13 +225,13 @@ class MadLoopLauncher(ExtLauncher):
                 # check
                 t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
                 if t1==None or t2==None:
-                    raise MadGraph5Error,"Error while running process %s."\
-                                                                     %shell_name
+                    raise MadGraph5Error("Error while running process %s."\
+                                                                     %shell_name)
                 try:
                     rFile=open(os.path.join(curr_path,'result.dat'), 'r')
                 except IOError:
-                    raise MadGraph5Error,"Could not find result file %s."%\
-                                       str(os.path.join(curr_path,'result.dat'))
+                    raise MadGraph5Error("Could not find result file %s."%\
+                                       str(os.path.join(curr_path,'result.dat')))
                 # The result are returned as a dictionary.
                 result = evaluator.parse_check_output(rFile,format='dict')
                 for line in self.format_res_string(result, shell_name):
@@ -429,7 +432,7 @@ class MWLauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many core do you want to use?', max_node, list(range(2,max_node+1)))
             else:
                 nb_node=max_node
                 
@@ -523,7 +526,7 @@ class aMCatNLOLauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, list(range(2,max_node+1)))
             else:
                 nb_node=max_node
                 
@@ -536,14 +539,14 @@ class aMCatNLOLauncher(ExtLauncher):
         
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
-        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
+        all_options = list(usecmd.options_configuration.keys()) +  list(usecmd.options_madgraph.keys()) + list(usecmd.options_madevent.keys())
         for line in set_cmd:
             arg = line.split()
             if arg[1] not in all_options:
                 continue
             try:
                 usecmd.exec_cmd(line)
-            except Exception, error:
+            except Exception as error:
                 misc.sprint('Command %s fails with msg: %s'%(str(line), \
                                                                     str(error)))
                 pass
@@ -621,7 +624,7 @@ class MELauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, list(range(2,max_node+1)))
             else:
                 nb_node=max_node
                 
@@ -637,7 +640,7 @@ class MELauncher(ExtLauncher):
                 usecmd.pass_in_web_mode()
             #Check if some configuration were overwritten by a command. If so use it    
             set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
-            all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
+            all_options = list(usecmd.options_configuration.keys()) +  list(usecmd.options_madgraph.keys()) + list(usecmd.options_madevent.keys())
             for line in set_cmd:
                 arg = line.split()
                 if arg[1] not in all_options:
@@ -726,7 +729,7 @@ class Pythia8Launcher(ExtLauncher):
             date_file_list.append((lastmod_date, os.path.split(file)[-1]))
 
         if not date_file_list:
-            raise MadGraph5Error, 'No Pythia output found'
+            raise MadGraph5Error('No Pythia output found')
         # Sort files according to date with newest first
         date_file_list.sort()
         date_file_list.reverse()
@@ -749,7 +752,7 @@ class Pythia8Launcher(ExtLauncher):
                     break
         
         if self.name == '':
-            raise MadGraph5Error, 'too many runs in this directory'
+            raise MadGraph5Error('too many runs in this directory')
 
         # Find all exported models
         models = misc.glob("Processes_*", pjoin(self.running_dir,os.path.pardir))
@@ -774,16 +777,16 @@ class Pythia8Launcher(ExtLauncher):
         """launch the main program"""
 
         # Make pythia8
-        print "Running make for pythia8 directory"
+        print("Running make for pythia8 directory")
         if self.model_dir:
-            print "Running make in %s" % self.model_dir
+            print("Running make in %s" % self.model_dir)
             misc.compile(cwd=self.model_dir, mode='cpp')
         # Finally run make for executable
         makefile = self.executable.replace("main_","Makefile_")
-        print "Running make with %s" % makefile
+        print("Running make with %s" % makefile)
         misc.compile(arg=['-f', makefile], cwd=self.running_dir, mode='cpp')
         
-        print "Running " + self.executable
+        print("Running " + self.executable)
         
         output = open(os.path.join(self.running_dir, self.name), 'w')
         if not self.executable.startswith('./'):
@@ -795,8 +798,8 @@ class Pythia8Launcher(ExtLauncher):
         path = os.path.join(self.running_dir, self.name) 
         pydoc.pager(open(path).read())
 
-        print "Output of the run is found at " + \
-              os.path.realpath(os.path.join(self.running_dir, self.name))
+        print("Output of the run is found at " + \
+              os.path.realpath(os.path.join(self.running_dir, self.name)))
 
 # old compatibility shortcut
 open_file = misc.open_file

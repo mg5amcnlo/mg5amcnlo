@@ -16,11 +16,15 @@
 """Classes and methods required for all calculations related to SU(N) color 
 algebra."""
 
+from __future__ import absolute_import
 import array
 import copy
 import fractions
 import itertools
 import madgraph.various.misc as misc
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 #===============================================================================
 # ColorObject
@@ -808,7 +812,7 @@ class ColorString(list):
         dictionary written as {old_index:new_index,...}, does that for ALL 
         color objects."""
 
-        map(lambda col_obj: col_obj.replace_indices(repl_dict), self)
+        list(map(lambda col_obj: col_obj.replace_indices(repl_dict), self))
 
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 
@@ -833,8 +837,7 @@ class ColorString(list):
         are still non trivial color objects."""
 
         if self:
-            raise ValueError, \
-                "String %s cannot be simplified to a number!" % str(self)
+            raise ValueError("String %s cannot be simplified to a number!" % str(self))
 
         if self.Nc_power >= 0:
             return (self.coeff * fractions.Fraction(\
@@ -1050,7 +1053,7 @@ class ColorFactor(list):
         dictionary written as {old_index:new_index,...}, does that for ALL 
         color strings."""
 
-        map(lambda col_str:col_str.replace_indices(repl_dict), self)
+        list(map(lambda col_str:col_str.replace_indices(repl_dict), self))
 
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 

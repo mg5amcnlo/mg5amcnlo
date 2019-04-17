@@ -15,6 +15,7 @@
 
 """Unit test library for the export Python format routines"""
 
+from __future__ import absolute_import
 import StringIO
 import copy
 import fractions

@@ -15,6 +15,7 @@
 
 """Unit test library for the save model routines"""
 
+from __future__ import absolute_import
 import StringIO
 
 import tests.unit_tests as unittest

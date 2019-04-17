@@ -20,6 +20,7 @@ simply modify this script. Support for new ME generator is achieved through
 inheritance of the MERunner class.
 """
 
+from __future__ import absolute_import
 import logging
 import logging.config
 import pydoc
@@ -30,7 +31,7 @@ import sys
 mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
 sys.path.append(mg5_path)
 
-import me_comparator
+from . import me_comparator
 from madgraph import MG4DIR
 mg4_path = os.getcwd()
 
@@ -87,7 +88,7 @@ if '__main__' == __name__:
     # Print the output
     my_comp.output_result(filename=filename)
 
-    pydoc.pager(file(filename,'r').read())
+    pydoc.pager(open(filename,'r').read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

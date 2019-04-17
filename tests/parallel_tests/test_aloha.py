@@ -16,6 +16,8 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import math
 import os
 import time
@@ -32,6 +34,8 @@ import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
+from six.moves import range
+from six.moves import zip
 
 
 set_global = misc.set_global
@@ -911,9 +915,9 @@ class testLorentzObject(unittest.TestCase):
 
         self.assertEqual(power.__class__, aloha_lib.MultLorentz)        
         self.assertEqual(product, power)
-        power = power.expand(veto=range(100))
+        power = power.expand(veto=list(range(100)))
 
-        keys= power.keys()
+        keys= list(power.keys())
         keys.sort()
         self.assertEqual(keys, [(0,)])
         solution = '( (P3_0 * P3_0) + (-1 * P3_1 * P3_1) + (-1 * P3_2 * P3_2) + (-1 * P3_3 * P3_3) )'
@@ -977,7 +981,7 @@ class testLorentzObject(unittest.TestCase):
         obj = aloha_obj.P(1,2)
         low_level = obj.expand()
 
-        keys= low_level.keys()
+        keys= list(low_level.keys())
         keys.sort()
         self.assertEqual(keys, [(0,),(1,),(2,),(3,)])
         self.assertEqual(str(low_level[(0,)]), '(P2_0)')
@@ -1059,7 +1063,7 @@ class testLorentzObject(unittest.TestCase):
         mu, nu, alpha, beta = 1,2,3,4
         
         analytical = (P(-1, t)* P(-1,t)-1) * (Metric(alpha, beta))
-        analytical= analytical.expand(veto=range(100))
+        analytical= analytical.expand(veto=list(range(100)))
     
     
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
@@ -1119,7 +1123,7 @@ class testLorentzObject(unittest.TestCase):
         mu, nu, s0, s1, s2 = 2,3,4,5,6
         
         zero = P(mu,t) * aloha_obj.Spin3halfPropagatorout(mu,nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1128,7 +1132,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
 
         zero = P(mu,t) * aloha_obj.Spin3halfPropagatorin(mu,nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1160,7 +1164,7 @@ class testLorentzObject(unittest.TestCase):
         #                     (Mass(part) * Identity(-3, s2) )
                                      
         zero = Spin3halfPropagator(nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1285,7 +1289,7 @@ class testLorentzObject(unittest.TestCase):
              
         zero = P(mu,t) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         
-        zero = zero.expand(veto=range(100)).simplify() 
+        zero = zero.expand(veto=list(range(100))).simplify() 
         
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1294,7 +1298,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
         
         zero = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
-        zero = zero.expand(veto=range(100)).simplify() 
+        zero = zero.expand(veto=list(range(100))).simplify() 
         
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1352,36 +1356,36 @@ class testLorentzObject(unittest.TestCase):
 
         #part 1 
         p1 = 0.5j * ( Metric(1003,'I2') * Metric(2003,'I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2))
-        p1e = p1.expand(veto=range(100)).simplify().factorize()
+        p1e = p1.expand(veto=list(range(100))).simplify().factorize()
         
         solp1 = complex(0,1/2) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
-        zero = p1e - solp1.expand(veto=range(100)).simplify().factorize()
+        zero = p1e - solp1.expand(veto=list(range(100))).simplify().factorize()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
         
         #part 2
         p2 =   0.5j * ( Metric(1003,'I3') * Metric(2003,'I2') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p2e = p2.expand(veto=range(100)).simplify().factorize()
-        zero = p2e - solp1.expand(veto=range(100)).simplify().factorize()
+        p2e = p2.expand(veto=list(range(100))).simplify().factorize()
+        zero = p2e - solp1.expand(veto=list(range(100))).simplify().factorize()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
         
         # part 3 -and part 8
         p3 = complex(0,-1/3) * ( Metric(1003,2003)**2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) )
-        p3e = p3.expand(veto=range(100)).simplify()
+        p3e = p3.expand(veto=list(range(100))).simplify()
         solp3 = complex(0,-4/3) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
-        zero = p3e - solp3.expand(veto=range(100)).simplify()
+        zero = p3e - solp3.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
             
         # part 4
         p4 = -0.5j * ( Metric(1003,'I2') * P(2003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p4e = p4.expand(veto=range(100)).simplify()
+        p4e = p4.expand(veto=list(range(100))).simplify()
         solp4 = complex(0,-1/2) * OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2)
-        zero = p4e - solp4.expand(veto=range(100))
+        zero = p4e - solp4.expand(veto=list(range(100)))
         
         for ind in zero.listindices():
             data = zero.get_rep(ind)
@@ -1389,42 +1393,42 @@ class testLorentzObject(unittest.TestCase):
         
         # part 5
         p5 = -0.5j * ( Metric(2003,'I3') * P(1003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p5e = p5.expand(veto=range(100)).simplify()
-        zero = p5e - solp4.expand(veto=range(100)).simplify()
+        p5e = p5.expand(veto=list(range(100))).simplify()
+        zero = p5e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)   
         
         #part 6    
         p6 = -0.5j * ( Metric(1003,'I3') * P(2003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )   
-        p6e = p6.expand(veto=range(100)).simplify()
-        zero = p6e - solp4.expand(veto=range(100)).simplify()
+        p6e = p6.expand(veto=list(range(100))).simplify()
+        zero = p6e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
         
         #part 7
         p7= -0.5j * ( Metric(2003,'I2') * P(1003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p7e = p7.expand(veto=range(100)).simplify()
-        zero = p7e - solp4.expand(veto=range(100)).simplify()
+        p7e = p7.expand(veto=list(range(100))).simplify()
+        zero = p7e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
         
         # part 9
         p9 = complex(0,1/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Metric(1003,2003)**2 * Spinor(-1,1) * Spinor(-1,2) )
-        p9e = p9.expand(veto=range(100)).simplify()
+        p9e = p9.expand(veto=list(range(100))).simplify()
         solp9 = complex(0,4/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p9e - solp9.expand(veto=range(100)).simplify()
+        zero = p9e - solp9.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
             
         # part 10
         p10 = complex(0,1/3) * ( OverMass2(3) * P(1003,3) * P(2003,3) * Metric('I2','I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p10e = p10.expand(veto=range(100)).simplify()
+        p10e = p10.expand(veto=list(range(100))).simplify()
         solp10 = complex(0,1/3) * ( OverMass2(3) * P(-1,3) **2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p10e - solp10.expand(veto=range(100)).simplify()
+        zero = p10e - solp10.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
@@ -1432,26 +1436,26 @@ class testLorentzObject(unittest.TestCase):
         
         # part 11
         p11 = complex(0,2/3) * ( OverMass2(3)**2 * P('I2',3) * P('I3',3) * P(1003,3) * P(2003,3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p11e = p11.expand(veto=range(100)).simplify()
+        p11e = p11.expand(veto=list(range(100))).simplify()
         solp11 = complex(0,2/3) * ( OverMass2(3)**2 * P(-1,3) **2 * P('I2',3) * P('I3',3)  * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p11e - solp11.expand(veto=range(100)).simplify()
+        zero = p11e - solp11.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
             
         # full
         full = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p9 + p10 + p11
-        fulle = full.expand(veto=range(100))
+        fulle = full.expand(veto=list(range(100)))
         solfull = complex(0,1/3) * ((OverMass2(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OverMass2(3) * P('I2',3)*P('I3',3)) * Spinor(-1,1) * Spinor(-1,2))  
         solfullbis = 2 * solp1 + solp3 + 4 * solp4 + solp9 +solp10 + solp11
         # first sanity
-        zero = solfullbis.expand(veto=range(100)) - solfull.expand(veto=range(100))
+        zero = solfullbis.expand(veto=list(range(100))) - solfull.expand(veto=list(range(100)))
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0,6)
         
         
-        zero = fulle - solfull.expand(veto=range(100))
+        zero = fulle - solfull.expand(veto=list(range(100)))
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0,6)
@@ -2272,7 +2276,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         #checking that (/p + m)(/p-m)=0 (for onshell)
         expr = (PSlash(1,2,1)+ M(1)*Identity(1,2))*(PSlash(2,3,1)-M(1)*Identity(2,3))
-        expr = expr.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr = expr.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
 
@@ -2282,7 +2286,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         #checking that (/p + m)(/p-m)(P)=0 (for onshell)
         expr = (PSlash(1,2,1)+ M(1)*Identity(1,2))*(PSlash(2,3,1)-M(1)*Identity(2,3))*(Gamma(4,3,4)*Identity(3,4) * P(4,1))
-        expr = expr.expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr = expr.expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in expr.listindices():
             data = expr.get_rep(ind)
             self.assertAlmostEqual(eval(str(data)), 0)  
@@ -2290,8 +2294,8 @@ class TestSomeObjectProperty(unittest.TestCase):
         # check that /P2 /P3 + /P3 /P2 = 2 P2 * P3        
         expr1 = PSlash(1,-1,2) * PSlash(-1,2,3) + PSlash(1,-1,3) * PSlash(-1,2,2)
         expr2 = 2 * P(-1,2) * P(-1,3) * Identity(1,2)
-        expr1 = expr1.simplify().expand(veto=range(len(aloha_lib.KERNEL)))
-        expr2 = expr2.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr1 = expr1.simplify().expand(veto=list(range(len(aloha_lib.KERNEL))))
+        expr2 = expr2.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in expr1.listindices():
             P2_0, P2_1, P2_2, P2_3 = 7,2,3,5
             P3_0, P3_1, P3_2, P3_3 = 73,23,30,51
@@ -2441,8 +2445,8 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         object1 = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
               
-        object1 = object1.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
-        object1_paper = object1_paper.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        object1 = object1.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
+        object1_paper = object1_paper.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         P3_0, P3_1, P3_2, P3_3 = 1,2,3,4
         P2_0, P2_1, P2_2, P2_3 = 10,20,30,50
         
@@ -2463,7 +2467,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         zero = - 1 * object1_paper - object1
         
         zero = zero.simplify()
-        zero = zero.expand(veto=range(len(aloha_lib.KERNEL)))
+        zero = zero.expand(veto=list(range(len(aloha_lib.KERNEL))))
         zero = zero.simplify()
         P3_0, P3_1, P3_2, P3_3 = 1,2,3,4
         P2_0, P2_1, P2_2, P2_3 = 10,20,30,50
@@ -2475,7 +2479,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                 self.assertEqual(zero.get_rep(ind), 0) 
             except Exception as error:
                 error.message = '%s (for component %s) is not zero' % (zero.get_rep(ind),ind)
-                raise AssertionError, error.message
+                raise AssertionError(error.message)
         
         object1_paper = 2 * P(-1,2) * P(-1, 3) * Gamma(3,2,1) - P(3,3) * P(-1,2) * Gamma(-1,2,1)\
                         - P(-2,3) * Gamma(3,2,-3)* P(-4,2)*Gamma(-4,-3,-5)*Gamma(-2,-5,1)
@@ -2485,7 +2489,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                 - complex(0,1) * Epsilon(3,-1,-2,-3) * P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*Gamma5(-4,1)
 
         zero =   object1_paper - object2_paper
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in zero.listindices(): 
             self.assertEqual(zero.get_rep(ind), 0)   
             
@@ -2495,7 +2499,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         object_kent = (Gamma(3,2,-1)*Gamma(4,-1,-10) - Identity(2,-10)*Metric(3,4)) * PSlash(-10,1,2)
         
         zero = object_fr - object_kent
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in zero.listindices(): 
             self.assertEqual(zero.get_rep(ind), 0)  
             
@@ -2504,7 +2508,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         object_kent = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
                  
         zero = object_fr - complex(0,1)* object_kent
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         
         for ind in zero.listindices():
             self.assertEqual(zero.get_rep(ind), 0)              
@@ -2761,11 +2765,11 @@ class TestSomeObjectProperty(unittest.TestCase):
 
         false = aloha_lib.AddVariable([])
         if false:
-            raise AssertionError, 'empty list are not False'
+            raise AssertionError('empty list are not False')
         
         false = aloha_lib.MultVariable([])
         if false:
-            raise AssertionError, 'empty list are not False'      
+            raise AssertionError('empty list are not False')      
           
 
 class TestSimplify(unittest.TestCase):
@@ -3359,7 +3363,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         helas_suite.compute_all()
         timing = time.time()-start
         if timing > 5:
-            print "WARNING ALOHA SLOW (taking %s s for the full sm)" % timing
+            print("WARNING ALOHA SLOW (taking %s s for the full sm)" % timing)
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
         error = 'wrong contraction for %s'
@@ -3454,7 +3458,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
                 self.assertEqual(abstract.expr.nb_lor, 0, error % name)
                 self.assertEqual(abstract.expr.nb_spin, 1, error % name)
             else:
-                raise Exception, 'not expected routine %s' % name
+                raise Exception('not expected routine %s' % name)
             
     def find_helas(self, name, model):
         for lorentz in model.all_lorentz:

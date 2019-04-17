@@ -15,10 +15,12 @@
 
 """Function to save any Python object to file."""
 
+from __future__ import absolute_import
 import pickle
-import cPickle
+import six.moves.cPickle
 
 from . import files as files
+import six
 
 class SaveObjectError(Exception):
     """Exception raised if an error occurs in while trying to save an
@@ -28,8 +30,8 @@ class SaveObjectError(Exception):
 def save_to_file(filename, object, log=True):
     """Save any Python object to file filename"""
 
-    if not isinstance(filename, basestring):
-        raise SaveObjectError, "filename must be a string"
+    if not isinstance(filename, six.string_types):
+        raise SaveObjectError("filename must be a string")
 
     files.write_to_file(filename, pickle_object, object, log=log)
 
@@ -39,13 +41,13 @@ def load_from_file(filename):
     """Save any Python object to file filename"""
 
     if not isinstance(filename, str):
-        raise SaveObjectError, "filename must be a string"
+        raise SaveObjectError("filename must be a string")
     return files.read_from_file(filename, unpickle_object)
     
 def pickle_object(fsock, object):
     """Helper routine to pickle an object to file socket fsock"""
 
-    cPickle.dump(object, fsock, protocol=2)
+    six.moves.cPickle.dump(object, fsock, protocol=2)
 
 class UnPickler(pickle.Unpickler):
     """Treat problem of librarie"""

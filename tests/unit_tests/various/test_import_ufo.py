@@ -15,6 +15,7 @@
 """Unit test Library for importing and restricting model"""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -118,7 +119,7 @@ class TestImportUFONoSideEffect(unittest.TestCase):
                 elif hasattr(part,"goldstoneboson"):
                     self.assertEqual(part.goldstoneboson,True)
                 else:
-                    raise import_ufo.UFOImportError, "Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name
+                    raise import_ufo.UFOImportError("Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name)
                     
         
     def test_ImportUFONoSideEffectNLO(self):
@@ -466,10 +467,10 @@ class TestRestrictModel(unittest.TestCase):
         assert coupling_ddz_1 == coupling_eez_1
         
         result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
-        self.assertTrue(coupling_eez_2 in input_eez['couplings'].values())
-        self.assertFalse(coupling_eez_1 in input_eez['couplings'].values())
-        self.assertFalse(coupling_ddz_1 in input_ddz['couplings'].values())
-        self.assertFalse(coupling_ddz_2 in input_ddz['couplings'].values())
+        self.assertTrue(coupling_eez_2 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_eez_1 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_ddz_1 in list(input_ddz['couplings'].values()))
+        self.assertFalse(coupling_ddz_2 in list(input_ddz['couplings'].values()))
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""

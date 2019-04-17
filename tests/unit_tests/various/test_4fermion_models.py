@@ -15,6 +15,7 @@
 """Unit tests for four-fermion models."""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import logging
 import math
@@ -32,6 +33,8 @@ import madgraph.various.process_checks as process_checks
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 

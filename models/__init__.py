@@ -14,6 +14,7 @@
 ################################################################################
 """All models for MG5, in particular UFO models (by FeynRules)"""
 
+from __future__ import absolute_import
 import os
 import sys
 import madgraph.various.misc as misc
@@ -44,8 +45,8 @@ def load_model(name, decay=False):
         model_path = os.path.realpath(os.sep.join(path_split))
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
         if sys_path != model_path:
-            raise Exception, 'name %s already consider as a python library cann\'t be reassigned(%s!=%s)' % \
-                (path_split[-1], model_path, sys_path) 
+            raise Exception('name %s already consider as a python library cann\'t be reassigned(%s!=%s)' % \
+                (path_split[-1], model_path, sys_path)) 
 
     with misc.TMP_variable(sys, 'path', [os.sep.join(path_split[:-1])]):
         __import__(path_split[-1])

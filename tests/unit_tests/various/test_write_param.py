@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import random
 import StringIO
 import os
@@ -23,6 +24,7 @@ import madgraph.core.base_objects as base_objects
 
 import models.import_ufo as import_ufo
 import models.write_param_card as writter
+from six.moves import range
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]

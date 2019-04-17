@@ -29,7 +29,11 @@ following actions:
 6. tar the MadGraph5_vVERSION directory.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
+from six.moves import range
+from six.moves import input
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
@@ -46,7 +50,7 @@ import os.path as path
 import re
 import shutil
 import subprocess
-import urllib
+import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 
 from datetime import date
 
@@ -78,12 +82,12 @@ diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communic
 
 if diff_result:
     logging.warning("Directory is not up-to-date. The release follow the last committed version.")
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
 
 release_date = date.fromtimestamp(time.time())
-for line in file(os.path.join(MG5DIR,'VERSION')):
+for line in open(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
         version = line.rsplit('=')[1].strip()
@@ -91,14 +95,14 @@ for line in file(os.path.join(MG5DIR,'VERSION')):
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
             logging.warning("WARNING: The release time information is : %s" % line)
-            answer = raw_input('Do you want to continue anyway? (y/n)')
+            answer = input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
 
-Update_note = file(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
+Update_note = open(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
 if version not in Update_note:
     logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
 
@@ -114,7 +118,7 @@ if pattern.match(version):
 else:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
          "in consequence the automatic update of the code will be deactivated" )
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
     rev_nb=None
@@ -123,11 +127,11 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
         web_version = int(filetext.read().strip())            
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
         web_version = -1
@@ -138,21 +142,21 @@ if rev_nb:
     elif rev_nb_i in [web_version+i for i in range(1,4)]:
         logging.warning("WARNING: current version on the web is %s" % web_version)
         logging.warning("Please check that this (small difference) is expected.")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
     elif web_version < rev_nb_i:
         logging.warning("CRITICAL: current version on the web is %s" % web_version)
         logging.warning("This is a very large difference. Indicating a wrong manipulation.")
         logging.warning("and can creates trouble for the auto-update.")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
     else:
         logging.warning("CRITICAL: current version on the web is %s" % web_version)
         logging.warning("This FORBIDS any auto-update for this version.")
         rev_nb=None
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()                        
 # 1. bzr branch the present directory to a new directory
@@ -250,7 +254,7 @@ ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
-    print 'Fail to create OfflineHEPToolsInstaller'
+    print('Fail to create OfflineHEPToolsInstaller')
     sys.exit()
 
 # 5. tar the MadGraph5_vVERSION directory.
@@ -277,14 +281,14 @@ except:
 
 
 logging.info("Running tests on directory %s", filepath)
-print os.listdir(filepath)
+print(os.listdir(filepath))
 import subprocess
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
-print "status:", status
+print("status:", status)
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
-print "status:", status
+print("status:", status)
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
-print "status:", status
+print("status:", status)
 
 
 logging.info("Thanks for creating a release. please check that the tests were sucessfull before releasing the version")

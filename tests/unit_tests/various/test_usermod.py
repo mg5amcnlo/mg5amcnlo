@@ -15,6 +15,7 @@
 """Unit test Library for importing and restricting model"""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -30,6 +31,9 @@ import models.usermod as usermod
 import models as ufomodels
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
+import six
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
@@ -157,7 +161,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in self.__dict__.iteritems():
+        for k,v in six.iteritems(self.__dict__):
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from six.moves import range
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
@@ -92,12 +94,12 @@ class WriteALOHA:
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start + self.momentum_size
         else:
-            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
-                    % (self.name, ind_name)                                 
+            raise Exception('WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
+                    % (self.name, ind_name))                                 
                                  
     def get_header_txt(self,mode=''): 
         """ Prototype for language specific header""" 
-        raise Exception, 'THis function should be overwritten'
+        raise Exception('THis function should be overwritten')
         return ''
     
     def get_declaration_txt(self):
@@ -110,7 +112,7 @@ class WriteALOHA:
 
     def get_momenta_txt(self):
         """ Prototype for the definition of the momenta"""
-        raise Exception, 'THis function should be overwritten'
+        raise Exception('THis function should be overwritten')
 
     def get_momentum_conservation_sign(self):
         """find the sign associated to the momentum conservation"""
@@ -741,7 +743,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             else:
                 return +1
             
-        keys = self.routine.fct.keys()        
+        keys = list(self.routine.fct.keys())        
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
@@ -785,7 +787,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                                   {'i': self.outgoing, 'COUP': coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
 
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
@@ -814,7 +816,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 to_order[self.pass_to_HELAS(ind)] = \
                         '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
                         coeff, formatted)
-            key = to_order.keys()
+            key = list(to_order.keys())
             key.sort()
             for i in key:
                 out.write(to_order[i])
@@ -973,7 +975,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     expr = self.routine.expr[tuple(arg)]
                 except KeyError:
                     expr = None
-                for ind in self.routine.expr.values()[0].listindices():
+                for ind in list(self.routine.expr.values())[0].listindices():
                     if expr:
                         data = expr.get_rep(ind)
                     else:
@@ -1587,7 +1589,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                       {'i': self.outgoing, 'coup': coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
 
                     out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
@@ -1909,7 +1911,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add(('fct', fct))
             return 'cmath.{0}(%s)'.format(fct)
         else:
-            raise Exception, "Unable to handle function name %s (no special rule defined and not in cmath)" % fct
+            raise Exception("Unable to handle function name %s (no special rule defined and not in cmath)" % fct)
     
     def define_expression(self):
         """Define the functions in a 100% way """
@@ -1930,7 +1932,7 @@ class ALOHAWriterForPython(WriteALOHA):
             else:
                 return +1
             
-        keys = self.routine.fct.keys()        
+        keys = list(self.routine.fct.keys())        
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
@@ -1970,7 +1972,7 @@ class ALOHAWriterForPython(WriteALOHA):
                           {'i': self.outgoing,'coup':coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
                     
                     out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s**2)\n' % 
                           {'i': self.outgoing,'coup':coup_name})                    
@@ -2218,7 +2220,7 @@ class WriterFactory(object):
         elif language == 'gpu':
             return ALOHAWriterForGPU(data, outputdir)
         else:
-            raise Exception, 'Unknown output format'
+            raise Exception('Unknown output format')
 
 
     

@@ -15,11 +15,13 @@
 
 """Unit test library for the export v4 format routines"""
 
+from __future__ import absolute_import
 import StringIO
 import copy
 import fractions
 import os 
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))

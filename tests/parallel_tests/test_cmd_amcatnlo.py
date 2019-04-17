@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -85,7 +86,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         try:
             shutil.rmtree(self.path)
-        except Exception, error:
+        except Exception as error:
             pass
 
         interface = MGCmd.MasterCmd()

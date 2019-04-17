@@ -15,6 +15,7 @@
 """Unit test Library for the objects in decay module."""
 from __future__ import division
 
+from __future__ import absolute_import
 import math
 import copy
 import os
@@ -26,6 +27,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.various.process_checks as process_checks
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+from six.moves import range
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 

@@ -13,11 +13,13 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import os
 import math
 import logging
 import re
 import xml.dom.minidom as minidom
+from six.moves import range
 
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
@@ -79,9 +81,9 @@ class RunStatistics(dict):
             new_stats = [new_stats, ]
         elif isinstance(new_stats,list):
             if any(not isinstance(_,RunStatistics) for _ in new_stats):
-                raise MadGraph5Error, "The 'new_stats' argument of the function "+\
+                raise MadGraph5Error("The 'new_stats' argument of the function "+\
                         "'updtate_statistics' must be a (possibly list of) "+\
-                                                       "RunStatistics instance."
+                                                       "RunStatistics instance.")
  
         keys = set([])
         for stat in [self,]+new_stats:
@@ -280,7 +282,7 @@ class OneResult(object):
         elif isinstance(filepath, file):
             finput = filepath
         else:
-            raise Exception, "filepath should be a path or a file descriptor"
+            raise Exception("filepath should be a path or a file descriptor")
         
         i=0
         found_xsec_line = False
@@ -311,12 +313,12 @@ class OneResult(object):
                         if 'end code not correct' in line:
                             error_code = data[4]
                             log = pjoin(os.path.dirname(filepath), 'log.txt')
-                            raise Exception, "Reported error: End code %s \n Full associated log: \n%s"\
-                                  % (error_code, open(log).read())
+                            raise Exception("Reported error: End code %s \n Full associated log: \n%s"\
+                                  % (error_code, open(log).read()))
                         else:
                             log = pjoin(os.path.dirname(filepath), 'log.txt')
-                            raise Exception, "Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
-                                %  (line, open(log).read())                        
+                            raise Exception("Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
+                                %  (line, open(log).read()))                        
                 if len(data) > 10:
                     self.maxwgt = data[10]
                 if len(data) >12:
@@ -364,7 +366,7 @@ class OneResult(object):
         if statistics_node:
             try:
                 self.run_statistics.load_statistics(statistics_node[0])
-            except ValueError, IndexError:
+            except ValueError as IndexError:
                 logger.warning('Fail to read run statistics from results.dat')
 
     def set_mfactor(self, value):
@@ -712,7 +714,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
         P_comb = Combine_results(Pdir)
         
         if jobs:
-            for job in filter(lambda j: j['p_dir'] in Pdir, jobs):
+            for job in [j for j in jobs if j['p_dir'] in Pdir]:
                     P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
         elif folder_names:
@@ -731,7 +733,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                             dir = folder.replace('*', '_G' + name)
                         P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), mfactor)
                 if jobs:
-                    for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                    for job in [j for j in jobs if j['p_dir'] == Pdir]:
                         P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
             except IOError:

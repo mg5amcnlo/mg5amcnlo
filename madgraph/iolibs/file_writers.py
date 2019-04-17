@@ -17,8 +17,10 @@
 Fortran, C++, etc."""
 
 
+from __future__ import absolute_import
 import re
 import collections
+from six.moves import range
 try:
     import madgraph
 except ImportError:
@@ -148,8 +150,8 @@ class FileWriter(file):
             if preproc_command is None:
                 preproc_endif = self.preprocessor_endif_re.match(line[2:])
                 if len(if_stack)==0 or preproc_endif is None:
-                    raise self.FilePreProcessingError, 'Incorrect '+\
-                             'preprocessing command %s at line %d.'%(line,i)
+                    raise self.FilePreProcessingError('Incorrect '+\
+                             'preprocessing command %s at line %d.'%(line,i))
                 if preproc_endif.group('new_block') is None:
                     if_stack.pop()
                 elif preproc_endif.group('endif')=='else':
@@ -158,15 +160,15 @@ class FileWriter(file):
             elif preproc_command.group('command')=='if':
                 try:
                     if_stack.append(eval(preproc_command.group('body'))==True)
-                except Exception, e:
-                    raise self.FilePreProcessingError, 'Could not evaluate'+\
+                except Exception as e:
+                    raise self.FilePreProcessingError('Could not evaluate'+\
                       "python expression '%s' given the context %s provided."%\
                             (preproc_command.group('body'),str(context))+\
-                                           "\nLine %d of file %s."%(i,self.name)
+                                           "\nLine %d of file %s."%(i,self.name))
         
         if len(if_stack)>0:
-            raise self.FilePreProcessingError, 'Some conditional statements are'+\
-                                                     ' not properly terminated.'
+            raise self.FilePreProcessingError('Some conditional statements are'+\
+                                                     ' not properly terminated.')
         return res
 
 #===============================================================================
@@ -600,7 +602,7 @@ class CPPWriter(FileWriter):
                                 'Non-matching } in C++ output: ' \
                                 + myline)                
             # First take care of "case" and "default"
-            if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+            if self.__keyword_list[-1] in list(self.cont_indent_keywords.keys()):
                 key = self.__keyword_list.pop()
                 self.__indent = self.__indent - self.cont_indent_keywords[key]
             # Now check that we have matching {
@@ -731,7 +733,7 @@ class CPPWriter(FileWriter):
         for key in self.cont_indent_keywords.keys():
             if re.search(key, myline):
                 # Check if we have a continuous indent keyword since before
-                if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+                if self.__keyword_list[-1] in list(self.cont_indent_keywords.keys()):
                     self.__indent = self.__indent - \
                                     self.cont_indent_keywords[\
                                        self.__keyword_list.pop()]
