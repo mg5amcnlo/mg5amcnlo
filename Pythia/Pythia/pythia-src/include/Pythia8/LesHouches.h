@@ -517,8 +517,6 @@ public:
   // Function to close (and possibly update) the output file.
   bool closeLHEF(bool updateInit = false);
 
-private:
-
   // Pointer to event that should be printed.
   Event* eventPtr;
 
