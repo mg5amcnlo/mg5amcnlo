@@ -39,9 +39,13 @@ public:
   // Constructor.
   MyMerging() { settingsPtr = 0; infoPtr = 0; particleDataPtr = 0;
     rndmPtr = 0; beamAPtr = 0; beamBPtr = 0; trialPartonLevelPtr = 0;
-    mergingHooksPtr = 0; myHistory = 0; myLHEF3Ptr = 0; fsr = 0; isr = 0; }
+    mergingHooksPtr = 0; myHistory = 0; myLHEF3Ptr = 0; fsr = 0; isr = 0;
+    lhaPtr = 0; }
 
   void setWeightsPtr( WeightContainer* wgtsIn ) { psweights = wgtsIn; } 
+
+  void setLHAPtr( LHEF3FromPythia8* lhaUpIn ) { lhaPtr = lhaUpIn; } 
+
   void setShowerPtrs( DireTimes* timesPtr, DireSpace* spacePtr) {
     fsr = timesPtr; isr = spacePtr; }
 
@@ -216,6 +220,7 @@ protected:
 
   // Create and open file for LHEF 3.0 output.
   LHEF3FromPythia8* myLHEF3Ptr;
+  LHEF3FromPythia8* lhaPtr;
 
   WeightContainer* psweights;
 
