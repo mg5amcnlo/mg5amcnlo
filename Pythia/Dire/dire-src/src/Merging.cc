@@ -140,6 +140,12 @@ void MyMerging::storeInfos() {
 
     filled = true;
 
+    // Save clustered event in external container, if necessary.
+    if (lhaPtr) {
+      lhaPtr->setEventPtr(&myHistory->children[i]->state);
+      lhaPtr->setEvent();
+    }
+
     //myHistory->children[i]->state.list();
 
     vector<pair<int,int> > dipEnds;
