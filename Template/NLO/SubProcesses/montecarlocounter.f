@@ -1157,6 +1157,13 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       parameter(tiny=1d-7)
 
       double precision p(0:3,nexternal)
+c For the boost to the lab frame
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+      double precision chy,shy,chymo,xdir(3),p_lab(0:3,nexternal)
+      data (xdir(i),i=1,3) /0d0,0d0,1d0/
+
       double precision xkern(2),xkernazi(2),factor
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision MCsec(nexternal-1,max_bcol)
@@ -1509,7 +1516,16 @@ c Fill selected color configuration into jpart array.
 c
       nexternal_now=nexternal
       call clear_HEPEUP_event()
-      call fill_HEPEUP_event_2(p, wgt, nexternal_now, idup_h,
+      
+c Boost H-event momenta to lab frame before passing to pythia
+      chy=cosh(ybst_til_tolab)
+      shy=sinh(ybst_til_tolab)
+      chymo=chy-1d0
+      do i=1,nexternal
+         call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
+      enddo
+
+      call fill_HEPEUP_event_2(p_lab, wgt, nexternal_now, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
      &       emsca, emscav_tmp, emscav_tmp_a)
       xscales=-1d0
