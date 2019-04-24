@@ -1625,24 +1625,40 @@ c     is consistent with the MG_aMC S-event state.
      $        ,nup_in,nexternal-1
          stop 1
       endif
-c     Assume that Pythia did not change the order... Might need updating in the future.
-c     CHECK PARTICLE ID
-      if (ANY(idup_in(1:nup_in).ne.idup_s(1:nup_in))) then
-         write (*,*) 'montecarlocounter.f: States not compatible #2'
-         write (*,*) idup_in(1:nup_in)
-         write (*,*) idup_s(1:nup_in)
-         stop 1
-      endif
-c     CHECK COLOUR INFORMATION
-      if (ANY(icolup_in(1:2,1:nup_in).ne.icolup_s(1:2,1:nup_in)) ) then
-         write (*,*) 'montecarlocounter.f: States not compatible #3'
-         write (*,*) icolup_in(1,1:nup_in)
-         write (*,*) icolup_in(2,1:nup_in)
-         write (*,*) icolup_s(1,1:nup_in)
-         write (*,*) icolup_s(2,1:nup_in)
-         stop 1
-      endif
-
+      do i=1,nup_in
+         do j=1,nexternal-1
+            if (i.le.nincoming) then
+c     incoming momenta should always be particle 1 and 2.
+               if (j.ne.i) cycle
+            elseif (j.le.nincoming) then
+               cycle
+            endif
+            if (idup_in(i).eq.idup_s(j)) then
+c     found the same particles
+               if (any(icolup_in(1:2,i).ne.icolup_s(1:2,j))) then
+                  write (*,*) 'montecarlocounter.f: '/
+     $                 /'States not compatible #3'
+                  write (*,*) 'returned by Pythia:'
+                  write (*,*) idup_in(1:nup_in)
+                  write (*,*) icolup_in(1,1:nup_in)
+                  write (*,*) icolup_in(2,1:nup_in)
+                  write (*,*) 'available in MG5_aMC:'
+                  write (*,*) idup_s(1:nup_in)
+                  write (*,*) icolup_s(1,1:nup_in)
+                  write (*,*) icolup_s(2,1:nup_in)
+                  stop 1
+               endif
+               exit
+            endif
+         enddo
+         if (j.gt.nexternal-1) then
+c     went all the way through the 2nd do-loop without finding the corresponding particle...
+            write (*,*) 'montecarlocounter.f: States not compatible #2'
+            write (*,*) idup_in(1:nup_in)
+            write (*,*) idup_s(1:nup_in)
+            stop 1
+         endif
+      enddo
 
 c After the calls above, we have
 c   xscales(i,j)=t_ij
