@@ -1072,6 +1072,14 @@ c loop. This is likely happening only for 'virt' contributions
             write (*,*) ifold(:)
             stop 1
          endif
+c Special check: in rare cases there can be S-event contributions,
+c without a single FKS configuration that contains a soft singularity
+c passing cuts (this only happens if n-body configuration does not pass
+c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
+c add a bogus contribution corresponding to an FKS configuration that
+c contains a soft singularity to make sure that the code continues
+c correctly.
+         call special_check_SoftSing(proc_map(proc_map(0,1),1))
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
@@ -1408,3 +1416,33 @@ c     include all quarks (except top quark) and the gluon.
       endif
       return
       end
+
+
+      subroutine special_check_SoftSing(isoft)
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'fks_info.inc'
+      integer i_soft,isoft,i
+      logical found_S
+      i_soft=0
+      found_S=.false.
+      do i=1,icontr
+         if (H_event(i)) then
+            cycle
+         else
+            found_S=.true.
+         endif
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
+            i_soft=i
+            exit
+         endif
+      enddo
+      if (found_S .and. i_soft.eq.0) then
+         ! add an artificial contribution
+         call update_fks_dir(isoft)
+         call add_wgt(2,1d-199,0d0,0d0)
+      endif
+      return
+      end
+

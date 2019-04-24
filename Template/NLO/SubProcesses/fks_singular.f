@@ -2182,25 +2182,12 @@ c that has a soft singularity. We set it to 'i_soft'.
          endif
       enddo
       if (found_S .and. i_soft.eq.0) then
-         ! in some cases (n-body does not pass cuts, but probne
-         ! (i.e. delta) is not equal to 1 in driver_mintMC, there can be
-         ! S-event contributions without there being an i_soft. Simply
-         ! take that contribution as i_soft proxy. There should only be
-         ! one.
-         do i=1,icontr
-            if (.not. H_event(i)) then
-               if (i_soft.eq.0) then
-                  i_soft=i
-               else
-                  write (*,*) 'ERROR: S-event contribution found, '/
-     $                 /'but no FKS configuration with soft singularity'
-                  do j=1,icontr
-                     write (*,*) j,H_event(j),itype(j)
-                  enddo
-                  stop 1
-               endif
-            endif
+         write (*,*) 'ERROR: S-event contribution found, '/
+     $        /'but no FKS configuration with soft singularity'
+         do j=1,icontr
+            write (*,*) j,H_event(j),itype(j)
          enddo
+         stop 1
       endif
 c Main loop over contributions. For H-events we have to check explicitly
 c to which contribution we can sum the current contribution (if any),
@@ -2209,6 +2196,8 @@ c while for the S-events we can sum it to the 'i_soft' one.
          do j=1,niproc(i)
             unwgt(j,i)=0d0
          enddo
+      enddo
+      do i=1,icontr
          icontr_sum(0,i)=0
          if (H_event(i)) then
             do ii=1,i
@@ -2634,6 +2623,7 @@ c check the consistency of the results up to machine precision (10^-10 here)
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
                do i=1, icontr
                   write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+     $                 ,H_event(i),itype(i),nFKS(i)
                   if (icontr_sum(0,i).eq.0) cycle
                   do j=1,niproc(i)
                      write (*,*) j,unwgt(j,i)
