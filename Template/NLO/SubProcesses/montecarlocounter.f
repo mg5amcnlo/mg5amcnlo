@@ -589,7 +589,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
-      double precision qMC_a(nexternal)
+      double precision Eem,qMC_a(nexternal)
       integer iBtoR(nexternal-1)
 
       save
@@ -1001,7 +1001,7 @@ c Emsca stuff
                emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-               emscav(npartner)=qMC
+               emscav(npartner)=scalemax
             endif
          else
             ptresc=(qMC-scalemin)/(scalemax-scalemin)
@@ -1013,10 +1013,7 @@ c Emsca stuff
                emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-c A more sophisticated alternative is:
-c    emscav(npartner)=scalemax*(qMC/scalemax)**power,
-c with power=O(1)
-               emscav(npartner)=qMC
+               emscav(npartner)=scalemax
             endif
          endif
          emscav_tmp(npartner)=emscav(npartner)
@@ -1028,12 +1025,24 @@ c
 c Emsca stuff for multiple scales
       if(dampMCsubt)then
          do i=1,nexternal-1
-            iBtoR(i)=i+(1+sign(1,i-i_fks))/2
+            if(i.lt.i_fks)then
+              iBtoR(i)=i
+            elseif(i.eq.i_fks)then
+              if(i.lt.nexternal)iBtoR(i)=i+1
+            elseif(i.gt.i_fks)then
+              if(i.lt.nexternal)iBtoR(i)=i+1
+            endif
             if(i.eq.j_fks)then
                qMC_a(i)=qMC
             else
-               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))/
-     #                  max(pp(0,iBtoR(i)),1d-5)
+               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
+               Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
+     #               dot(pp(0,2),pp(0,iBtoR(i))) )/
+     #             sqrt(2*dot(pp(0,1),pp(0,2)))
+c qMC_a is the dot product of i_fks with its emitter,
+c divided by the energy of the latter in the incoming
+c parton cm frame
+               qMC_a(i)=qMC_a(i)/Eem
             endif
             do j=1,nexternal-1
                if(j.eq.i)cycle
@@ -1042,8 +1051,8 @@ c Emsca stuff for multiple scales
                      emscav_a(i,j)=emsca_bare_a(i,j)
                      emscav_a2(i,j)=emsca_bare_a2(i,j)
                   else
-                     emscav_a(i,j)=qMC_a(i)
-                     emscav_a2(i,j)=qMC_a(i)
+                     emscav_a(i,j)=scalemax_a(i,j)
+                     emscav_a2(i,j)=scalemax_a(i,j)
                   endif
                else
                   ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
@@ -1052,11 +1061,8 @@ c Emsca stuff for multiple scales
                      emscav_a(i,j)=emsca_bare_a(i,j)
                      emscav_a2(i,j)=emsca_bare_a2(i,j)
                   else
-c A more sophisticated alternative is:
-c    emscav_a*(i,j)=scalemax_a(i,j)*(qMC_a(i)/scalemax_a(i,j))**power,
-c with power=O(1)
-                     emscav_a(i,j)=qMC_a(i)
-                     emscav_a2(i,j)=qMC_a(i)
+                     emscav_a(i,j)=scalemax_a(i,j)
+                     emscav_a2(i,j)=scalemax_a(i,j)
                   endif
                endif
                emscav_tmp_a(i,j)=emscav_a(i,j)
@@ -1612,13 +1618,31 @@ c
          call dire_clear()
       endif
 
-      write(*,*)
-      do i=1,NUP_in
-        write(*,*) IDUP_in(i), ISTUP_in(i), MOTHUP_in(1,i), MOTHUP_in(2,i),
-     &             ICOLUP_in(1,i), ICOLUP_in(2,i), PUP_in(1,i), PUP_in(2,i),
-     &             PUP_in(3,i), PUP_in(4,i), PUP_in(5,i), 
-     &             SCALES_in(1,i), SCALES_in(2,i)
-      enddo
+c     Check if the S-event state (as created from the H-event by Pythia)
+c     is consistent with the MG_aMC S-event state.
+      if (NUP_in .ne. nexternal-1) then
+         write (*,*) 'montecarlocounter.f: States not compatible #1'
+     $        ,nup_in,nexternal-1
+         stop 1
+      endif
+c     Assume that Pythia did not change the order... Might need updating in the future.
+c     CHECK PARTICLE ID
+      if (ANY(idup_in(1:nup_in).ne.idup_s(1:nup_in))) then
+         write (*,*) 'montecarlocounter.f: States not compatible #2'
+         write (*,*) idup_in(1:nup_in)
+         write (*,*) idup_s(1:nup_in)
+         stop 1
+      endif
+c     CHECK COLOUR INFORMATION
+      if (ANY(icolup_in(1:2,1:nup_in).ne.icolup_s(1:2,1:nup_in)) ) then
+         write (*,*) 'montecarlocounter.f: States not compatible #3'
+         write (*,*) icolup_in(1,1:nup_in)
+         write (*,*) icolup_in(2,1:nup_in)
+         write (*,*) icolup_s(1,1:nup_in)
+         write (*,*) icolup_s(2,1:nup_in)
+         stop 1
+      endif
+
 
 c After the calls above, we have
 c   xscales(i,j)=t_ij
@@ -3631,7 +3655,7 @@ c Consistency check
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
-      double precision qMC_a(nexternal)
+      double precision Eem,qMC_a(nexternal)
       integer iBtoR(nexternal-1)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -3650,12 +3674,24 @@ c Consistency check
       emsca_a=-1d0
 
       do i=1,nexternal-1
-         iBtoR(i)=i+(1+sign(1,i-i_fks))/2
+         if(i.lt.i_fks)then
+           iBtoR(i)=i
+         elseif(i.eq.i_fks)then
+           if(i.lt.nexternal)iBtoR(i)=i+1
+         elseif(i.gt.i_fks)then
+           if(i.lt.nexternal)iBtoR(i)=i+1
+         endif
          if(i.eq.j_fks)then
             qMC_a(i)=qMC
          else
-            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))/
-     #               max(pp(0,iBtoR(i)),1d-5)
+            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
+            Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
+     #            dot(pp(0,2),pp(0,iBtoR(i))) )/
+     #          sqrt(2*dot(pp(0,1),pp(0,2)))
+c qMC_a is the dot product of i_fks with its emitter,
+c divided by the energy of the latter in the incoming
+c parton cm frame
+            qMC_a(i)=qMC_a(i)/Eem
          endif
          do j=1,nexternal-1
             if(j.eq.i)cycle
@@ -3665,7 +3701,7 @@ c Consistency check
                if(emscasharp_a(i,j))then
                   emsca_bare_a(i,j)=scalemax_a(i,j)
                   emsca_bare_a2(i,j)=scalemax_a(i,j)
-                  emsca_a(i,j)=max(emsca_bare_a(i,j),qMC_a(i))
+                  emsca_a(i,j)=emsca_bare_a(i,j)
                else
                   rrnd=ran2()
                   rrnd=emscainv(rrnd,1d0)
@@ -3678,7 +3714,7 @@ c Consistency check
                   ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
      #                          (scalemax_a(i,j)-scalemin_a(i,j))
                   if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
-                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=qMC_a(i)
+                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
                endif
             endif
          enddo
