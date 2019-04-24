@@ -18,7 +18,7 @@ import sys
 import re
 import os
 import logging
-
+import madgraph.various.misc as misc
 logger = logging.getLogger('madgraph.shower_card') 
 
 pjoin = os.path.join
@@ -116,6 +116,8 @@ class ShowerCard(dict):
         if not testing write_to is an input path, if testing the text is
         returned by the function
         """
+        
+        
         if key in self.logical_vars:
             if str(value).lower() in self.true:
                 self[key] = True
@@ -160,7 +162,8 @@ class ShowerCard(dict):
                     if key not in self.logical_vars:
                         newlines.append('%s = %s #%s' % (key, value, comment))
                     else:
-                        if key:
+
+                        if self[key]:
                             newlines.append('%s = %s #%s' % (key, 'T', comment))
                         else:
                             newlines.append('%s = %s #%s' % (key, 'F', comment))
