@@ -1196,6 +1196,9 @@ c To access Pythia8 control variables
       include 'leshouche_decl.inc'
       save mothup_d, icolup_d, niprocs_d
 
+C To allow retrieval of S-event from Pythia
+      include 'hep_event_streams.inc'
+
       logical         Hevents
       common/SHevents/Hevents
       integer nexternal_now
@@ -1608,6 +1611,15 @@ c
          call dire_get_dead_zones(dzones)
          call dire_clear()
       endif
+
+      write(*,*)
+      do i=1,NUP_in
+        write(*,*) IDUP_in(i), ISTUP_in(i), MOTHUP_in(1,i), MOTHUP_in(2,i),
+     &             ICOLUP_in(1,i), ICOLUP_in(2,i), PUP_in(1,i), PUP_in(2,i),
+     &             PUP_in(3,i), PUP_in(4,i), PUP_in(5,i), 
+     &             SCALES_in(1,i), SCALES_in(2,i)
+      enddo
+
 c After the calls above, we have
 c   xscales(i,j)=t_ij
 c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being

@@ -522,6 +522,7 @@ extern "C" {
     pythia4dire.readString("Beams:setProductionScalesFromLHEF = off");
 
     pythia4dire.setLHAupPtr(&lhareader4dire);
+    merging->setLHAPtr(&lhawriter4dire);
     dire.initSettings(pythia4dire);
 
     //pythia4dire.readString("Dire:doMECs                     = on");

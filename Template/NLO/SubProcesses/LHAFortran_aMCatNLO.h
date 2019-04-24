@@ -220,41 +220,27 @@ private:
 
 // LHA3FromPythia8 class.
 
-class LHA3FromPythia8 : public LHAup {
+class LHA3FromPythia8 : public LHEF3FromPythia8 {
 
 public:
 
   // Constructor.
   LHA3FromPythia8(Event* eventPtrIn, Settings* settingsPtrIn,
-    Info* infoPtrIn, ParticleData* particleDataPtrIn, int pDigitsIn = 15) :
-    eventPtr(eventPtrIn),settingsPtr(settingsPtrIn), infoPtr(infoPtrIn),
-    particleDataPtr(particleDataPtrIn), pDigits(pDigitsIn) {}
+    Info* infoPtrIn, ParticleData* particleDataPtrIn, int pDigitsIn = 15,
+    bool = false) : LHEF3FromPythia8(eventPtrIn, settingsPtrIn, infoPtrIn,
+    particleDataPtrIn, pDigitsIn, false) {}
 
   // Routine for reading, setting and printing the initialisation info.
   bool setInit();
 
   // Routine for reading, setting and printing the next event.
-  void setEventPtr(const Event* evPtr) { eventPtr = evPtr; }
   void setProcessPtr(const Event* evPtr) { processPtr = evPtr; }
   bool setEvent(int = 0);
 
 private:
 
   // Pointer to event that should be printed.
-  const Event* eventPtr;
   const Event* processPtr;
-
-  // Pointer to settings and info objects.
-  Settings* settingsPtr;
-  Info* infoPtr;
-  ParticleData* particleDataPtr;
-
-  // Number of digits to set width of double write out
-  int  pDigits;
-
-  // Some internal init and event block objects for convenience.
-  HEPRUP heprup;
-  HEPEUP hepeup;
 
 };
 
