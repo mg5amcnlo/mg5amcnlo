@@ -2182,9 +2182,25 @@ c that has a soft singularity. We set it to 'i_soft'.
          endif
       enddo
       if (found_S .and. i_soft.eq.0) then
-         write (*,*) 'ERROR: S-event contribution found, '/
-     $        /'but no FKS configuration with soft singularity'
-         stop 1
+         ! in some cases (n-body does not pass cuts, but probne
+         ! (i.e. delta) is not equal to 1 in driver_mintMC, there can be
+         ! S-event contributions without there being an i_soft. Simply
+         ! take that contribution as i_soft proxy. There should only be
+         ! one.
+         do i=1,icontr
+            if (.not. H_event(i)) then
+               if (i_soft.eq.0) then
+                  i_soft=i
+               else
+                  write (*,*) 'ERROR: S-event contribution found, '/
+     $                 /'but no FKS configuration with soft singularity'
+                  do j=1,icontr
+                     write (*,*) j,H_event(j),itype(j)
+                  enddo
+                  stop 1
+               endif
+            endif
+         enddo
       endif
 c Main loop over contributions. For H-events we have to check explicitly
 c to which contribution we can sum the current contribution (if any),
@@ -2736,7 +2752,9 @@ c found the contribution that should be written:
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
-c For S-events, ifold_picked is already set in update_shower_scale_Sevents()
+c For S-events, ifold_picked is already set in
+c update_shower_scale_Sevents(). Note that for S-events, the fold chosen
+c doesn't really matter.
 c$$$         ifold_picked=ifold_cnt(icontr_picked)
          do k=1,icontr_sum(0,icontr_picked)
             ict=icontr_sum(k,icontr_picked)
