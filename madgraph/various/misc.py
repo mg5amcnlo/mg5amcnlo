@@ -122,10 +122,14 @@ def get_pkg_info(info_str=None):
     if info_str:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
 
+    if PACKAGE_INFO:
+        return PACKAGE_INFO
+    
     elif MADEVENT:
         info_dict ={}
         info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
-        info_dict['date'] = '20xx-xx-xx'                        
+        info_dict['date'] = '20xx-xx-xx'
+        PACKAGE_INFO = info_dict                        
     else:
         if PACKAGE_INFO:
             return PACKAGE_INFO
