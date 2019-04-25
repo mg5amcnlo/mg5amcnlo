@@ -501,6 +501,8 @@ extern "C" {
     for (int i=1; i <= 25; ++i){
       if (masses[i]<0.) continue;
       stringstream s;
+      // Need a non-zero muon mass to get correct Higgs width. Otherwise gets a NAN. Need to be fixed later.
+      if (i==13) continue;
       s << i << ":m0 =" << masses[i];
       pythia4dire.readString(s.str());
     }
@@ -537,12 +539,6 @@ extern "C" {
     pythia4dire.readString("Dire:doMcAtNloDelta             = on");
     pythia4dire.readString("Dire:doAuxMergingInfo           = off");
     //pythia4dire.readString("Dire:doSingleLegSudakovs        = on");
-    pythia4dire.readString("1:m0 = 0.0");
-    pythia4dire.readString("2:m0 = 0.0");
-    pythia4dire.readString("3:m0 = 0.0");
-    pythia4dire.readString("4:m0 = 0.0");
-    pythia4dire.readString("11:m0 = 0.0");
-    pythia4dire.readString("13:m0 = 0.0");
 
     // Disallow Pythia to overwrite parts of Les Houches input.
     pythia4dire.readString("LesHouches:setQuarkMass = 0");
