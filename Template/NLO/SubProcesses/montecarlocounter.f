@@ -1277,6 +1277,8 @@ c
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double complex cdummy(2)
+      logical isspecial(max_bcol)
+      common/cisspecial/isspecial
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
@@ -1790,6 +1792,22 @@ c  ifksscl(icount)=iBtoR(i)
           endif
         endif
       enddo
+      if (isspecial(jflow)) then
+         if (icount.eq.1 .and. IDUP_S(jbar).eq.21) then
+            icount=2
+            fksscales(2)=fksscales(1)
+            if (ifksscl(1).eq.0) then
+               ifksscl(2)=1
+            else
+               ifksscl(2)=0
+            endif
+         else
+            write (*,*) 'error in complete_xmcsubt 33: '/
+     &           /'when "special" icount should be 1 and '/
+     &           /'the father a gluon'
+            stop 1
+         endif
+      endif
       if( (IDUP_S(jbar).eq.21.and.icount.ne.2) .or.
      #    (abs(IDUP_S(jbar)).le.6.and.icount.ne.1) )then
          write(*,*)'Error #3 in complete_xmcsubt:',
@@ -1879,6 +1897,15 @@ c contribute to Delta
             endif
             if(stoppingScale.gt.startingScale)then
                i_dipole_dead_counter=i_dipole_dead_counter+1
+               if (isspecial(jflow) .and. idup_s(i).eq.21) then
+                  if (idup_s(j).ne.21) then
+                     write (*,*) 'SPECIAL and a gluon is not connected '/
+     $                    /'to another gluon',i,j,idup_s(i),idup_s(j)
+                     stop 1
+                  endif
+c     count the special case twice.
+                  i_dipole_dead_counter=i_dipole_dead_counter+1
+               endif
                cycle
             endif
             if(i.le.2.and.j.le.2)then
@@ -1930,6 +1957,16 @@ c
             if(deltarat.ge.1.d0)deltarat=1.d0
             if(deltarat.le.0.d0)deltarat=0.d0
             wgt_sudakov=wgt_sudakov*deltarat
+            if (isspecial(jflow) .and. idup_s(i).eq.21) then
+               if (idup_s(j).ne.21) then
+                  write (*,*) 'SPECIAL and a gluon is not connected '/
+     $                 /'to another gluon',i,j,idup_s(i),idup_s(j)
+                  stop 1
+               endif
+c     double colour connection, so include the delta once more.
+               wgt_sudakov=wgt_sudakov*deltarat 
+               i_dipole_counter=i_dipole_counter+1
+            endif
             i_dipole_counter=i_dipole_counter+1
          enddo
       enddo
