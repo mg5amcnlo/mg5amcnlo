@@ -1272,7 +1272,7 @@ c
       parameter(pi=3.1415926535897932384626433d0)
       logical are_col_conn_S(nexternal-1,nexternal-1)
       logical are_col_conn_H(nexternal,nexternal)
-      integer get_mass_from_id
+      double precision get_mass_from_id
       external get_mass_from_id
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
