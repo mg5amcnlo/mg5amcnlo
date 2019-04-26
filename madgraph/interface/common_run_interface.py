@@ -4483,8 +4483,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return
 
         self.from_banner = {}
-        for card in from_banner:
-            self.from_banner[card] = banner.charge_card(card)
+        print from_banner, banner.keys()
+        try:
+            for card in from_banner:
+                self.from_banner[card] = banner.charge_card(card)
+        except KeyError:
+            if from_banner == ['param', 'run'] and banner.keys() == ['mgversion']:
+                if self.mother_interface:
+                    results = self.mother_interface.results
+                    run_name = self.mother_interface.run_name 
+                    run_tag = self.mother_interface.run_tag
+                    banner = banner_mod.recover_banner(results, 'parton', run_name, run_tag)
+                    self.mother_interface.banner = banner
+                    return self.init_from_banner(from_banner, banner)
+                else:
+                    raise
+
         return self.from_banner
     
 
@@ -5585,7 +5599,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 args_str = ' '.join(str(a) for a in args[start+1:len(args)])
                 self.shower_card.set_param(args[start],args_str,self.paths['shower'])
-     
+
         # MadLoop Parameter  ---------------------------------------------------
         elif self.has_ml and args[start] in self.ml_vars \
                                                and card in ['', 'MadLoop_card']:
@@ -6011,7 +6025,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if name in self.modified_card:
                 self.modified_card.remove(name)
         else:
-            raise Exception, "Need to add the associate writter proxy"
+            raise Exception, "Need to add the associate writter proxy for %s" % name
         
     def write_card_run(self):
         """ write the run_card """

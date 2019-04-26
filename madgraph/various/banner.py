@@ -703,7 +703,7 @@ def recover_banner(results_object, level, run=None, tag=None):
     if not os.path.exists(banner_path):
         if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
-        elif level in ['parton','pythia8']:
+        elif level == 'parton':
             paths = [pjoin(path,'Events',run, 'unweighted_events.lhe.gz'),
                      pjoin(path,'Events',run, 'unweighted_events.lhe'),
                      pjoin(path,'Events',run, 'events.lhe.gz'),

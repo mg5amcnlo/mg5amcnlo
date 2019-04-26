@@ -18,7 +18,12 @@ import sys
 import re
 import os
 import logging
-import madgraph.various.misc as misc
+try:
+    import madgraph
+except ImportError:
+    import internal.misc as misc
+else:
+    import madgraph.various.misc as misc
 logger = logging.getLogger('madgraph.shower_card') 
 
 pjoin = os.path.join
