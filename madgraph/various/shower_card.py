@@ -22,8 +22,13 @@ try:
     import madgraph
 except ImportError:
     import internal.misc as misc
+    import internal.banner as banner
+    from internal import InvalidCmd
 else:
     import madgraph.various.misc as misc
+    import madgraph.various.banner as banner
+    from madgraph import InvalidCmd
+    
 logger = logging.getLogger('madgraph.shower_card') 
 
 pjoin = os.path.join
@@ -124,13 +129,10 @@ class ShowerCard(dict):
         
         
         if key in self.logical_vars:
-            if str(value).lower() in self.true:
-                self[key] = True
-            elif str(value).lower() in self.false:
-                self[key] = False
-            else:
-                raise ShowerCardError('%s is not a valid value for %s' % \
-                        (value, key))
+            try:
+                banner.ConfigFile.format_variable(value, bool, key)
+            except InvalidCmd, error:
+                raise ShowerCardError(str(error))
         elif key in self.string_vars:
             if value.lower() == 'none':
                 self[key] = ''
@@ -138,16 +140,14 @@ class ShowerCard(dict):
                 self[key] = value
         elif key in self.int_vars:
             try:
-                self[key] = int(value)
-            except ValueError:
-                raise ShowerCardError('%s is not a valid value for %s. An integer number is expected' % \
-                        (value, key))
+                banner.ConfigFile.format_variable(value, int, key)
+            except InvalidCmd, error:
+                raise ShowerCardError(str(error))
         elif key in self.float_vars:
             try:
-                self[key] = float(value)
-            except ValueError:
-                raise ShowerCardError('%s is not a valid value for %s. A floating point number is expected' % \
-                        (value, key))
+                banner.ConfigFile.format_variable(value, float, key)
+            except InvalidCmd, error:
+                raise ShowerCardError(str(error))
         else:
             raise ShowerCardError('Unknown entry: %s = %s' % (key, value))
         self.keylist.append(key)
