@@ -1285,6 +1285,8 @@ C     -----------------------------------------
 
 c     uncompress
       call mapid(frame_id, ids)
+      pboost(:) = 0d0
+      p2(:,:) = 0d0
 c     find the boost momenta --sum of particles--
       do i=1,nexternal
        if (ids(i).eq.1)then
