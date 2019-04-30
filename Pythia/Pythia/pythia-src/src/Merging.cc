@@ -129,6 +129,9 @@ int Merging::mergeProcess(Event& process){
   if ( applyTMSCut ) return 1;
 
   // Possibility to perform CKKW-L merging on this event.
+  if ( true ) return clusterAndStore(process);
+
+  // Possibility to perform CKKW-L merging on this event.
   if ( mergingHooksPtr->doCKKWLMerging() )
     vetoCode = mergeProcessCKKWL(process);
 
@@ -147,6 +150,253 @@ int Merging::mergeProcess(Event& process){
   return vetoCode;
 
 }
+
+//--------------------------------------------------------------------------
+
+// Function to steer different merging prescriptions.
+
+int Merging::clusterAndStore(Event& process){
+
+  // Clear all previous event-by-event information.
+  clearInfos();
+
+  // Ensure that merging hooks to not veto events in the trial showers.
+  mergingHooksPtr->doIgnoreStep(true);
+  // For pp > h, allow cut on state, so that underlying processes
+  // can be clustered to gg > h
+  if ( mergingHooksPtr->getProcessString().compare("pp>h") == 0 )
+    mergingHooksPtr->allowCutOnRecState(true);
+  // For now, prefer construction of ordered histories.
+  mergingHooksPtr->orderHistories(true);
+
+  // Prepare process record for merging. If Pythia has already decayed
+  // resonances used to define the hard process, remove resonance decay
+  // products.
+  Event newProcess( mergingHooksPtr->bareEvent( process, true) );
+  // Reset any incoming spins for W+-.
+  if (mergingHooksPtr->doWeakClustering())
+    for (int i = 0;i < newProcess.size();++i)
+      newProcess[i].pol(9);
+  // Store candidates for the splitting V -> qqbar'.
+  mergingHooksPtr->storeHardProcessCandidates( newProcess);
+
+  // Get merging scale in current event.
+  double tmsnow = mergingHooksPtr->tmsNow( newProcess );
+  // Calculate number of clustering steps.
+  int nSteps = mergingHooksPtr->getNumberOfClusteringSteps( newProcess, true);
+
+  // Check if hard event cut should be applied later.
+  bool allowReject = settingsPtr->flag("Merging:applyVeto");
+
+  // Too few steps can be possible if a chain of resonance decays has been
+  // removed. In this case, reject this event, since it will be handled in
+  // lower-multiplicity samples.
+  int nRequested = mergingHooksPtr->nRequested();
+
+  // Store hard event cut information, reset veto information.
+  mergingHooksPtr->setHardProcessInfo(nSteps, tmsnow);
+  mergingHooksPtr->setEventVetoInfo(-1, -1.);
+
+  // Get random number to choose a path.
+  double RN = rndmPtr->flat();
+
+  // Set dummy process scale.
+  newProcess.scale(0.0);
+  // Generate all histories.
+  History FullHistory( nSteps, 0.0, newProcess, Clustering(), mergingHooksPtr,
+            (*beamAPtr), (*beamBPtr), particleDataPtr, infoPtr,
+            trialPartonLevelPtr, coupSMPtr, true, true, true, true, 1.0, 0);
+
+  // Project histories onto desired branches, e.g. only ordered paths.
+  FullHistory.projectOntoDesiredHistories();
+
+  // Setup the selected path. Needed for
+  FullHistory.select(RN)->setSelectedChild();
+
+  int posOffset=2;
+  bool filled = false;
+  // Store information on every possible last clustering.
+  for ( int i = 0 ; i < int(FullHistory.children.size()); ++i) {
+
+    //// Get all clustering variables.
+    map<string,double> stateVars;
+    int rad = FullHistory.children[i]->clusterIn.emittor;
+    int emt = FullHistory.children[i]->clusterIn.emitted;
+    int rec = FullHistory.children[i]->clusterIn.recoiler;
+
+    int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
+    int jradReq = atoi(infoPtr->getEventAttribute("jfks").c_str());
+
+    // Only consider last event entry as allowed emission.
+    if (emt != iemtReq+posOffset) continue;
+    if (rad != jradReq+posOffset) continue;
+
+    filled = true;
+
+    vector<pair<int,int> > dipEnds;
+    // Loop through final state of system to find possible dipole ends.
+    for (int ip = 0; ip < FullHistory.children[i]->state.size(); ++ip) {
+      if ( FullHistory.children[i]->state[ip].isFinal()
+        || FullHistory.children[i]->state[ip].mother1()== 1
+        || FullHistory.children[i]->state[ip].mother1()== 2 ) {
+        // Find dipole end formed by colour index.
+        int colTag = FullHistory.children[i]->state[ip].col();
+        if (colTag > 0) getDipoles( ip,  colTag,  1, FullHistory.children[i]->state, dipEnds);
+        // Find dipole end formed by anticolour index.
+        int acolTag = FullHistory.children[i]->state[ip].acol();
+        if (acolTag > 0) getDipoles( ip, acolTag, -1, FullHistory.children[i]->state, dipEnds);
+      }
+    }
+
+    for (size_t id = 0; id < dipEnds.size(); ++id) {
+
+      int iRad(0), iRec(0);
+      map<int,int>::iterator it
+      = FullHistory.children[i]->clusterIn.iPosInMother.find(dipEnds[id].first);
+      if ( it == FullHistory.children[i]->clusterIn.iPosInMother.end() ) continue;
+      iRad = it->second;
+
+      map<int,int>::iterator it2
+      = FullHistory.children[i]->clusterIn.iPosInMother.find(dipEnds[id].second);
+      if ( it2 == FullHistory.children[i]->clusterIn.iPosInMother.end() ) continue;
+      iRec = it2->second;
+
+      // Already covered clustering.
+      vector<int>::iterator itRad = find(radSave.begin(), radSave.end(), iRad);
+      vector<int>::iterator itRec = find(recSave.begin(), recSave.end(), iRec);
+      int indexRad = std::distance(radSave.begin(), itRad);
+      int indexRec = std::distance(recSave.begin(), itRec);
+      if ( (itRad != radSave.end() || itRec != recSave.end()) 
+        && indexRad == indexRec) {
+        if (FullHistory.children[i]->state[iRad].id() != 21 ||
+            FullHistory.children[i]->state[iRec].id() != 21) continue;
+        else {
+          // Only continue of gluon was already counted as part of two dipoles.
+          int ir(0), is(0);
+          ir = count(radSave.begin(), radSave.end(), iRad);
+          is = count(recSave.begin(), recSave.end(), iRec);
+          if (ir==2 || is==2) continue;
+        }
+      }
+
+      // Function to compute "pythia pT separation" from Particle input
+      int type = FullHistory.state[iRad].isFinal() ? 1 : -1;
+      double t = FullHistory.pTLund(FullHistory.state, iRad, emt, iRec, type);
+      Vec4 qDip;
+      if (FullHistory.state[iRad].isFinal()) qDip += FullHistory.state[iRad].p();
+      else qDip -= FullHistory.state[iRad].p();
+      if (FullHistory.state[emt].isFinal()) qDip += FullHistory.state[iRec].p();
+      else qDip -= FullHistory.state[iRec].p();
+      if (FullHistory.state[emt].isFinal()) qDip += FullHistory.state[emt].p();
+      else qDip -= FullHistory.state[emt].p();
+      double mass = abs(qDip.m2Calc());
+      // Just store pT for now.
+      stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
+      radSave.push_back(iRad);
+      emtSave.push_back(emt);
+      recSave.push_back(iRec);
+      mDipSave.push_back(mass);
+      bool dead = (t<=0.);
+      isInDeadzone.push_back(dead);
+
+    }
+
+  }
+
+  // Done.
+  return -1;
+
+}
+
+//--------------------------------------------------------------------------
+
+// Setup a dipole end for a QCD colour charge.
+
+void Merging::getDipoles( int iRad, int colTag, int colSign,
+  const Event& event, vector<pair<int,int> >& dipEnds) {
+
+  vector<int> recPos;
+
+  // Colour: other end by same index in final state or opposite in beam.
+  if (colSign > 0 && !event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].col()  == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].acol() == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Anticolour: other end by same index in final state or opposite in beam.
+  if (colSign < 0 && !event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].acol() == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].col()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Colour: other end by same index in final state or opposite in beam.
+  if (colSign > 0 && event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].acol() == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].col()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Anticolour: other end by same index in final state or opposite in beam.
+  if (colSign < 0 && event[iRad].isFinal())
+  for (int iRecNow = 0; iRecNow < event.size(); ++iRecNow) {
+    if (iRecNow == iRad) continue;
+    if ( ( event[iRecNow].col()   == colTag &&  event[iRecNow].isFinal() )
+      || ( event[iRecNow].acol()  == colTag && !event[iRecNow].isFinal() ) ) {
+      //iPartner = iRecNow;
+      //break;
+      recPos.push_back(iRecNow);
+    }
+  }
+
+  // Store dipole colour end(s).
+  for (unsigned int i = 0; i < recPos.size(); ++i) {
+    int iRecNow = recPos[i];
+    dipEnds.push_back(make_pair(iRad,iRecNow));
+  }
+
+}
+
+//--------------------------------------------------------------------------
+
+void Merging::getStoppingInfo(double scales [100][100],
+  double masses [100][100]) {
+
+  int posOffest=2;
+  for (unsigned int i=0; i < radSave.size(); ++i){
+    scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
+    masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
+  }
+
+}
+
+//--------------------------------------------------------------------------
+
+void Merging::getDeadzones(bool dzone [100][100]) {
+
+  int posOffest=2;
+  for (unsigned int i=0; i < radSave.size(); ++i){
+    dzone[radSave[i]-posOffest][recSave[i]-posOffest] = isInDeadzone[i];
+  }
+
+}
+
 
 //--------------------------------------------------------------------------
 
