@@ -1568,6 +1568,7 @@ c
             idIn2 = idup_s(2)
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
+            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
             call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
             call cpu_time(tAfter)
             write(*,*)'time elapsed in dire_init_default',tAfter-tBefore
@@ -1612,6 +1613,7 @@ c
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
             call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
+            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
          endif
          call dire_setevent()
          call dire_next()
@@ -1619,6 +1621,28 @@ c
          call dire_get_dead_zones(dzones)
          call dire_clear()
       endif
+
+c      write(*,*) 'before'
+c      do i=0,nexternal
+c         do j=0,nexternal
+c           write (*,*) xscales(i,j)
+c         enddo
+c      enddo
+c
+c      call pythia_setevent()
+c      call pythia_next()
+c      call pythia_get_stopping_info(xscales,xmasses)
+c      call pythia_get_dead_zones(dzones)
+c      call pythia_clear()
+c
+c      write(*,*) 'after'
+c      do i=0,nexternal
+c         do j=0,nexternal
+c           write (*,*) xscales(i,j)
+c         enddo
+c      enddo
+
+c      call abort
 
 c     Check if the S-event state (as created from the H-event by Pythia)
 c     is consistent with the MG_aMC S-event state.
