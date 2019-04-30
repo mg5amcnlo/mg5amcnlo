@@ -328,8 +328,11 @@ class TestModUFO(unittest.TestCase):
 
 
     def setUp(self):
-        
-        self.path = tempfile.mkdtemp(prefix='unitest_usermod') 
+        self.debug=True
+        if self.debug:
+            self.path = "/tmp/"
+        else:   
+            self.path = tempfile.mkdtemp(prefix='unitest_usermod') 
 
         #Read the full SM
         self.sm_path = import_ufo.find_ufo_path('sm')
@@ -337,7 +340,8 @@ class TestModUFO(unittest.TestCase):
         
     def tearDown(self):
         
-        shutil.rmtree(self.path)
+        if not self.debug:
+            shutil.rmtree(self.path)
 
 
     def test_write_model(self):

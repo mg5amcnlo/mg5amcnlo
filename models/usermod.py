@@ -334,8 +334,9 @@ class UFOModel(object):
 # This file was automatically created by The UFO_usermod        
 
 from __future__ import division
-from object_library import all_particles, Particle
-import parameters as Param
+from __future__ import absolute_import
+from .object_library import all_particles, Particle
+from . import parameters as Param
 
 """
         text += self.create_file_content(self.particles)
@@ -349,10 +350,11 @@ import parameters as Param
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_vertices, Vertex
-import particles as P
-import couplings as C
-import lorentz as L
+from __future__ import absolute_import
+from .object_library import all_vertices, Vertex
+from . import particles as P
+from . import couplings as C
+from . import lorentz as L
 
 """
         text += self.create_file_content(self.vertices)
@@ -370,10 +372,11 @@ import lorentz as L
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_vertices, all_CTvertices, Vertex, CTVertex
-import particles as P
-import couplings as C
-import lorentz as L
+from __future__ import absolute_import
+from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
+from . import particles as P
+from . import couplings as C
+from . import lorentz as L
 
 """
         text += self.create_file_content(self.CTvertices)
@@ -388,7 +391,8 @@ import lorentz as L
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_couplings, Coupling
+from __future__ import absolute_import
+from .object_library import all_couplings, Coupling
 """
         text += self.create_file_content(self.couplings)
         ff = open(os.path.join(outputdir, 'couplings.py'), 'w')
@@ -401,7 +405,8 @@ from object_library import all_couplings, Coupling
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_lorentz, Lorentz
+from __future__ import absolute_import
+from .object_library import all_lorentz, Lorentz
 """
 
         text += self.create_file_content(self.lorentz)
@@ -415,7 +420,8 @@ from object_library import all_lorentz, Lorentz
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_parameters, Parameter
+from __future__ import absolute_import
+from .object_library import all_parameters, Parameter
 """
 
         text += self.create_file_content(self.parameters)
@@ -432,9 +438,10 @@ from object_library import all_parameters, Parameter
         text = """
 # This file was automatically created by The UFO_usermod        
 
-from object_library import all_CTparameters, CTParameter
+from __future__ import absolute_import
+from .object_library import all_CTparameters, CTParameter
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
+from .function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
 """
 
         text += self.create_file_content(self.CTparameters)
@@ -448,8 +455,8 @@ from function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
         """ """
         text = """
 # This file was automatically created by The UFO_usermod        
-
-from object_library import all_orders, CouplingOrder
+from __future__ import absolute_import
+from .object_library import all_orders, CouplingOrder
 """
 
         text += self.create_file_content(self.orders)
@@ -463,8 +470,9 @@ from object_library import all_orders, CouplingOrder
         text = """
 # This file was automatically created by The UFO_usermod        
 
+from __future__ import absolute_import
 import cmath
-from object_library import all_functions, Function
+from .object_library import all_functions, Function
 
 """
 
@@ -479,7 +487,9 @@ from object_library import all_functions, Function
         
         text = """
 # This file was automatically created by The UFO_usermod   
-from object_library import all_propagators, Propagator
+
+from __future__ import absolute_import
+from .object_library import all_propagators, Propagator
 """
 
         text += self.create_file_content(self.propagators)
