@@ -57,6 +57,10 @@ public:
   // Function to steer different merging prescriptions.
   virtual int mergeProcess( Event& process);
 
+  void clear() { return; }
+  void getStoppingInfo(double scales [100][100], double masses [100][100]);
+  void getDeadzones(bool dzone [100][100]);
+
 protected:
 
   //----------------------------------------------------------------------//
@@ -114,6 +118,23 @@ protected:
 
   // Function to apply the merging scale cut on an input event.
   bool cutOnProcess( Event& process);
+
+  void clearInfos() {
+    stoppingScalesSave.clear();
+    mDipSave.clear();
+    radSave.clear();
+    emtSave.clear();
+    recSave.clear();
+    isInDeadzone.clear();
+  }
+
+  int clusterAndStore(Event& process);
+  void getDipoles( int iRad, int colTag, int colSign,
+    const Event& event, vector<pair<int,int> >& dipEnds);
+
+  vector<double> stoppingScalesSave, mDipSave;
+  vector<int> radSave, emtSave, recSave;
+  vector<bool> isInDeadzone;
 
 };
 
