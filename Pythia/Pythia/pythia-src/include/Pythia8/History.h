@@ -58,6 +58,10 @@ public:
   // The recoiler before the splitting.
   int recBef;
 
+  // Map between particle positions in the clustered states -> particle
+  // positions in unclustered real-emission state.
+  map<int,int> iPosInMother;
+
   // Default constructor
   Clustering(){
     emitted    = 0;
@@ -90,17 +94,18 @@ public:
     spinRadBef = inSystem.spinRad;
     radBef     = inSystem.radBef;
     recBef     = inSystem.recBef;
+    iPosInMother = inSystem.iPosInMother;
   }
 
   // Constructor with input
   Clustering( int emtIn, int radIn, int recIn, int partnerIn,
     double pTscaleIn, int flavRadBefIn = 0, int spinRadIn = 9,
     int spinEmtIn = 9, int spinRecIn = 9, int spinRadBefIn = 9,
-    int radBefIn = 0, int recBefIn = 0)
+    int radBefIn = 0, int recBefIn = 0, map<int,int> posIn = map<int,int>())
     : emitted(emtIn), emittor(radIn), recoiler(recIn), partner(partnerIn),
       pTscale(pTscaleIn), flavRadBef(flavRadBefIn), spinRad(spinRadIn),
       spinEmt(spinEmtIn), spinRec(spinRecIn), spinRadBef(spinRadBefIn),
-      radBef(radBefIn), recBef(recBefIn) {}
+      radBef(radBefIn), recBef(recBefIn), iPosInMother(posIn) {}
 
   // Function to return pythia pT scale of clustering
   double pT() const { return pTscale; }
