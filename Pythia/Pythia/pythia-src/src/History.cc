@@ -5826,6 +5826,7 @@ Event History::cluster( Clustering & inSystem ) {
   Event NewEvent = Event();
   NewEvent.init("(hard process-modified)", particleDataPtr);
   NewEvent.clear();
+  map<int,int>  iPosMothTmp, iPosMoth;
 
   // Check if external clustering should be used.
   if ( mergingHooksPtr->useShowerPlugin() ) {
@@ -5844,9 +5845,13 @@ Event History::cluster( Clustering & inSystem ) {
   }
 
   // Copy all unchanged particles to NewEvent
-  for (int i = 0; i < state.size(); ++i)
-    if ( i != Rad && i != Rec && i != Emt )
-      NewEvent.append( state[i] );
+  for (int i = 0; i < state.size(); ++i) {
+    //if ( i != Rad && i != Rec && i != Emt )
+    //  NewEvent.append( state[i] );
+    if ( i == Rad || i == Rec || i == Emt ) continue;
+    int iNext = NewEvent.append( state[i] );
+    iPosMothTmp[iNext] = i; 
+  }
 
   // Copy all the junctions one by one
   for (int i = 0; i < state.sizeJunction(); ++i)
@@ -6162,8 +6167,13 @@ Event History::cluster( Clustering & inSystem ) {
   outState.clear();
 
   // Copy system and incoming beam particles to outState
-  for (int i = 0; i < 3; ++i)
-    outState.append( NewEvent[i] );
+  //for (int i = 0; i < 3; ++i)
+  //  outState.append( NewEvent[i] );
+  for (int i = 0; i < 3; ++i) {
+    int iNext = outState.append( NewEvent[i] );
+    iPosMoth[iNext] = iPosMothTmp[i]; 
+  }
+
   // Copy all the junctions one by one
   for (int i = 0; i < state.sizeJunction(); ++i)
     outState.appendJunction( state.getJunction(i) );
@@ -6181,32 +6191,39 @@ Event History::cluster( Clustering & inSystem ) {
   // Append first incoming particle
   if ( RecBefore.mother1() == 1) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = Rec; 
     recAppended = true;
   } else if ( RadBefore.mother1() == 1 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = Rad; 
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in1 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 1) in1 =i;
-    outState.append( state[in1] );
+    //outState.append( state[in1] );
+    int iNext = outState.append( state[in1] );
+    iPosMoth[iNext] = in1;
     size++;
   }
   // Append second incoming particle
   if ( RecBefore.mother1() == 2) {
     recPos = outState.append( RecBefore );
+    iPosMoth[recPos] = Rec;
     recAppended = true;
   } else if ( RadBefore.mother1() == 2 ) {
     radPos = outState.append( RadBefore );
+    iPosMoth[radPos] = Rad;
     radAppended = true;
   } else {
     // Find second incoming in input event
     int in2 = 0;
     for(int i=0; i < int(state.size()); ++i)
       if (state[i].mother1() == 2) in2 =i;
-
-    outState.append( state[in2] );
+    //outState.append( state[in2] );
+    int iNext = outState.append( state[in2] );
+    iPosMoth[iNext] = in2;
     size++;
   }
 
@@ -6214,11 +6231,13 @@ Event History::cluster( Clustering & inSystem ) {
   if (!recAppended && !RecBefore.isFinal()) {
     recAppended = true;
     recPos = outState.append( RecBefore);
+    iPosMoth[recPos] = Rec;
   }
   // Append new radiator if not done already
   if (!radAppended && !RadBefore.isFinal()) {
     radAppended = true;
     radPos = outState.append( RadBefore);
+    iPosMoth[radPos] = Rad;
   }
 
   // Append intermediate particle
@@ -6226,29 +6245,49 @@ Event History::cluster( Clustering & inSystem ) {
   // Append intermediate particle
   // (careful not to append reclustered recoiler)
   for (int i = 0; i < int(NewEvent.size()-1); ++i)
-    if (NewEvent[i].status() == -22) outState.append( NewEvent[i] );
+    if (NewEvent[i].status() == -22) {
+      //outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
+    }
   // Append final state particles, resonances first
   for (int i = 0; i < int(NewEvent.size()-1); ++i)
-    if (NewEvent[i].status() == 22) outState.append( NewEvent[i] );
+    if (NewEvent[i].status() == 22) {
+      //outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
+    }
   // Then start appending partons
-  if (!radAppended && RadBefore.statusAbs() == 22)
+  if (!radAppended && RadBefore.statusAbs() == 22) {
     radPos = outState.append(RadBefore);
-  if (!recAppended)
+    iPosMoth[radPos] = Rad;
+  }
+  if (!recAppended) {
     recPos = outState.append(RecBefore);
-  if (!radAppended && RadBefore.statusAbs() != 22)
+    iPosMoth[recPos] = Rec;
+  }
+  if (!radAppended && RadBefore.statusAbs() != 22) {
     radPos = outState.append(RadBefore);
+    iPosMoth[radPos] = Rad;
+  }
   // Then partons (not reclustered recoiler)
   for(int i = 0; i < int(NewEvent.size()-1); ++i)
     if ( NewEvent[i].status()  != 22
       && NewEvent[i].colType() != 0
-      && NewEvent[i].isFinal())
-      outState.append( NewEvent[i] );
+      && NewEvent[i].isFinal()) {
+      //outState.append( NewEvent[i] );
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
+    }
   // Then the rest
   for(int i = 0; i < int(NewEvent.size()-1); ++i)
     if ( NewEvent[i].status() != 22
       && NewEvent[i].colType() == 0
-      && NewEvent[i].isFinal() )
-      outState.append( NewEvent[i]);
+      && NewEvent[i].isFinal() ) {
+      //outState.append( NewEvent[i]);
+      int iNext = outState.append( NewEvent[i] );
+      iPosMoth[iNext] = iPosMothTmp[i]; 
+    }
 
   // Find intermediate and respective daughters
   vector<int> posIntermediate;
@@ -6387,6 +6426,9 @@ Event History::cluster( Clustering & inSystem ) {
       outState[radPos].mother1(iColResNow);
 
   }
+
+  // Store 1-to-1 map between particles in clustered and unclustered state.
+  inSystem.iPosInMother = iPosMoth;
 
   // If event is not constructed properly, return false
   if ( !validEvent(outState) ) {
