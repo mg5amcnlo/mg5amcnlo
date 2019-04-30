@@ -132,8 +132,6 @@ void MyMerging::storeInfos() {
     int iemtReq = atoi(infoPtr->getEventAttribute("ifks").c_str());
     int jradReq = atoi(infoPtr->getEventAttribute("jfks").c_str());
 
-    //cout <<  iemtReq+posOffset << "\t\t " << jradReq+posOffset << endl;
-
     // Only consider last event entry as allowed emission.
     if (emt != iemtReq+posOffset) continue;
     if (rad != jradReq+posOffset) continue;
@@ -145,8 +143,6 @@ void MyMerging::storeInfos() {
       lhaPtr->setEventPtr(&myHistory->children[i]->state);
       lhaPtr->setEvent();
     }
-
-    //myHistory->children[i]->state.list();
 
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
@@ -181,13 +177,6 @@ void MyMerging::storeInfos() {
       vector<int>::iterator itRec = find(recSave.begin(), recSave.end(), iRec);
       int indexRad = std::distance(radSave.begin(), itRad);
       int indexRec = std::distance(recSave.begin(), itRec);
-
-//      int ir(0), is(0);
-//      ir = count(radSave.begin(), radSave.end(), iRad);
-//      is = count(recSave.begin(), recSave.end(), iRec);
-//      if (ir==2 || is==2) continue;
-
-      //if ( itRad != radSave.end() && itRec != recSave.end()) {
       if ( (itRad != radSave.end() || itRec != recSave.end()) 
         && indexRad == indexRec) {
         if (myHistory->children[i]->state[iRad].id() != 21 ||
