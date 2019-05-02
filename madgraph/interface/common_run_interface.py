@@ -2267,8 +2267,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-
-
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
 
@@ -2287,9 +2285,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd(line, model=opts['model'])
+        out = cmd.exec_cmd(line, model=opts['model'])
+        
+    
         self.child = None
         del cmd
+        return out
+        
+        
 
     ############################################################################ 
     def do_print_results(self, line):
@@ -3316,7 +3319,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
             if mass and abs(width/mass) < 1e-12:
-                logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if hasattr(interface, 'run_card'):
+                    if interface.run_card['small_width_treatment'] < 1e-12:
+                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                else:
+                    logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
                     CommonRunCmd.sleep_for_error = False
@@ -5782,10 +5789,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
                 if mass:
                     if abs(width/mass) < self.run_card['small_width_treatment']:
-                        logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
+                        logger.info("Particle %s will use a fake width  ( %s instead of %s ).\n" +
                           "Cross-section will be rescaled according to NWA if needed."  +
                           "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
-                          param.lhacode[0], abs(mass*self.run_card['small_width_treatment']), width)
+                          param.lhacode[0], abs(mass*self.run_card['small_width_treatment']), width,'$MG:BOLD')
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                     if CommonRunCmd.sleep_for_error:
@@ -5975,7 +5982,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif pattern_width.search(param_text):
                 self.do_compute_widths('')
                 self.param_card = param_card_mod.ParamCard(self.paths['param'])
-        
+                
             # calling the routine doing the work    
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
                                    self.paths['param'], timer)
@@ -6343,9 +6350,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             line += ' --nlo'
 
         try:
-            return self.mother_interface.do_compute_widths(line)
+            out = self.mother_interface.do_compute_widths(line)
         except InvalidCmd, error:
             logger.error("Invalid command: %s " % error)
+        else:
+            if hasattr(self, 'run_card'):
+                for pid, info in out.items():
+                    total = 0
+                    for key, partial in info:
+                        total += partial
+                    mass = self.param_card.get_value('mass', pid)
+                    misc.sprint( mass, total, self.run_card['small_width_treatment'])
+                    if total and total/mass < self.run_card['small_width_treatment']:
+                        text = "Particle %s with very small width (%g)\n"
+                        text +="    This can lead to numerical issues if you have s-channel resonances.\n"
+                        text +="    To avoid that we will use a fake width: %g.\n"
+                        text +="    Final Cross-section is corrected to reflect the original width.\n"
+                        text +="    Though breitWigner shaped observables will be wider (to the fake-width).\n"
+                        text +="    To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card"    
+                        logger.info(text,pid, abs(mass*self.run_card['small_width_treatment']),total, '$MG:BOLD')
+                        
+            
 
     def help_compute_widths(self):
         signal.alarm(0) # avoid timer if any
