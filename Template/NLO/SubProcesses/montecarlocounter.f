@@ -1024,7 +1024,7 @@ c Emsca stuff
 c
 c Emsca stuff for multiple scales
       if(dampMCsubt)then
-         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC_a)
+         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a)
          do i=1,nexternal-1
 c$$$            if(i.lt.i_fks)then
 c$$$              iBtoR(i)=i
@@ -3751,7 +3751,7 @@ c Consistency check
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
       emsca_a=-1d0
 
-      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC_a)
+      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a)
       do i=1,nexternal-1
 c$$$         if(i.lt.i_fks)then
 c$$$           iBtoR(i)=i
@@ -4185,7 +4185,7 @@ c
 
 
 
-      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC_a)
+      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -4200,7 +4200,7 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
-      double precision qMC_a(nexternal),zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
+      double precision qMC,qMC_a(nexternal),zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -4221,7 +4221,7 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
 
 c Stop if not PYTHIA8
       if(shower_mc.ne.'PYTHIA8')then
-         write(*,*)'assign_qMC_a should be called only for PY8'
+         write(*,*)'assign_qMC_array should be called only for PY8'
          stop
       endif
 
@@ -4245,7 +4245,7 @@ c Initialise
 c Discard if unphysical FKS variables
       if(xi_i_fks.lt.0d0.or.xi_i_fks.gt.1d0.or.
      &   abs(y_ij_fks).gt.1d0)then
-         write(*,*)'Error 0 in assign_qMC_a: fks variables'
+         write(*,*)'Error 0 in assign_qMC_array: fks variables'
          write(*,*)xi_i_fks,y_ij_fks
          stop
       endif
@@ -4253,6 +4253,10 @@ c Discard if unphysical FKS variables
       do ipart=1,nexternal
       if(ipart.eq.i_fks.or..not.
      &   (pdg_type(ipart).eq.21.or.abs(pdg_type(ipart)).le.6))cycle
+      if(ipart.eq.j_fks)then
+         qMC_a(ipart)=qMC
+         cycle
+      endif
 c Determine ileg
 c ileg = 1 ==> emission from left     incoming parton
 c ileg = 2 ==> emission from right    incoming parton
@@ -4265,7 +4269,7 @@ c ileg = 4 ==> emission from massless outgoing parton
       elseif(pmass(ipart).eq.0d0)then
          ileg=4
       else
-         write(*,*)'Error 1 in assign_qMC_a: unknown ileg'
+         write(*,*)'Error 1 in assign_qMC_array: unknown ileg'
          write(*,*)ileg,ipart,pmass(ipart)
          stop
       endif
@@ -4392,7 +4396,7 @@ c azimuth = irrelevant (hence set = 0)
                if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
                if(qMCarg.lt.-tiny) then
                   isqrtneg=isqrtneg+1
-                  write(*,*)'Error 2 in assign_qMC_a: negtive sqrt'
+                  write(*,*)'Error 2 in assign_qMC_array: negtive sqrt'
                   write(*,*)qMCarg,isqrtneg
                   if(isqrtneg.ge.100)stop
                endif
@@ -4425,7 +4429,7 @@ c azimuth = irrelevant (hence set = 0)
                if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
                if(qMCarg.lt.-tiny)then
                   isqrtneg=isqrtneg+1
-                  write(*,*)'Error 3 in assign_qMC_a: negtive sqrt'
+                  write(*,*)'Error 3 in assign_qMC_array: negtive sqrt'
                   write(*,*)qMCarg,isqrtneg
                   if(isqrtneg.ge.100)stop
                endif
@@ -4441,7 +4445,7 @@ c azimuth = irrelevant (hence set = 0)
             endif
          endif
       else
-         write(*,*)'Error 4 in assign_qMC_a: assigned wrong ileg'
+         write(*,*)'Error 4 in assign_qMC_array: assigned wrong ileg'
          stop
       endif
       enddo
