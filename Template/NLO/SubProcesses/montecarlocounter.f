@@ -1024,26 +1024,27 @@ c Emsca stuff
 c
 c Emsca stuff for multiple scales
       if(dampMCsubt)then
+         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC_a)
          do i=1,nexternal-1
-            if(i.lt.i_fks)then
-              iBtoR(i)=i
-            elseif(i.eq.i_fks)then
-              if(i.lt.nexternal)iBtoR(i)=i+1
-            elseif(i.gt.i_fks)then
-              if(i.lt.nexternal)iBtoR(i)=i+1
-            endif
-            if(i.eq.j_fks)then
-               qMC_a(i)=qMC
-            else
-               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
-               Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
-     #               dot(pp(0,2),pp(0,iBtoR(i))) )/
-     #             sqrt(2*dot(pp(0,1),pp(0,2)))
-c qMC_a is the dot product of i_fks with its emitter,
-c divided by the energy of the latter in the incoming
-c parton cm frame
-               qMC_a(i)=qMC_a(i)/Eem
-            endif
+c$$$            if(i.lt.i_fks)then
+c$$$              iBtoR(i)=i
+c$$$            elseif(i.eq.i_fks)then
+c$$$              if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$            elseif(i.gt.i_fks)then
+c$$$              if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$            endif
+c$$$            if(i.eq.j_fks)then
+c$$$               qMC_a(i)=qMC
+c$$$            else
+c$$$               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
+c$$$               Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
+c$$$     #               dot(pp(0,2),pp(0,iBtoR(i))) )/
+c$$$     #             sqrt(2*dot(pp(0,1),pp(0,2)))
+c$$$c qMC_a is the dot product of i_fks with its emitter,
+c$$$c divided by the energy of the latter in the incoming
+c$$$c parton cm frame
+c$$$               qMC_a(i)=qMC_a(i)/Eem
+c$$$            endif
             do j=1,nexternal-1
                if(j.eq.i)cycle
                if(emscasharp_a(i,j))then
@@ -3750,26 +3751,27 @@ c Consistency check
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
       emsca_a=-1d0
 
+      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC_a)
       do i=1,nexternal-1
-         if(i.lt.i_fks)then
-           iBtoR(i)=i
-         elseif(i.eq.i_fks)then
-           if(i.lt.nexternal)iBtoR(i)=i+1
-         elseif(i.gt.i_fks)then
-           if(i.lt.nexternal)iBtoR(i)=i+1
-         endif
-         if(i.eq.j_fks)then
-            qMC_a(i)=qMC
-         else
-            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
-            Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
-     #            dot(pp(0,2),pp(0,iBtoR(i))) )/
-     #          sqrt(2*dot(pp(0,1),pp(0,2)))
-c qMC_a is the dot product of i_fks with its emitter,
-c divided by the energy of the latter in the incoming
-c parton cm frame
-            qMC_a(i)=qMC_a(i)/Eem
-         endif
+c$$$         if(i.lt.i_fks)then
+c$$$           iBtoR(i)=i
+c$$$         elseif(i.eq.i_fks)then
+c$$$           if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$         elseif(i.gt.i_fks)then
+c$$$           if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$         endif
+c$$$         if(i.eq.j_fks)then
+c$$$            qMC_a(i)=qMC
+c$$$         else
+c$$$            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
+c$$$            Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
+c$$$     #            dot(pp(0,2),pp(0,iBtoR(i))) )/
+c$$$     #          sqrt(2*dot(pp(0,1),pp(0,2)))
+c$$$c qMC_a is the dot product of i_fks with its emitter,
+c$$$c divided by the energy of the latter in the incoming
+c$$$c parton cm frame
+c$$$            qMC_a(i)=qMC_a(i)/Eem
+c$$$         endif
          do j=1,nexternal-1
             if(j.eq.i)cycle
             if(dampMCsubt)then
@@ -4176,6 +4178,276 @@ c bosons
       if(dipdg.eq.25)     tmp= 0d0
 c
       charge=tmp
+
+      return
+      end
+
+
+
+
+      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC_a)
+      implicit none
+      include "nexternal.inc"
+      include "coupl.inc"
+      include "run.inc"
+      double precision pp(0:3,nexternal),pp_rec(0:3)
+      double precision xi_i_fks,y_ij_fks,xij
+
+      integer ileg,j,i,nfinal,ipart
+      double precision xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),xk3(0:3)
+c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
+      double precision qMC_a(nexternal),zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
+      logical extra
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      integer fksfather
+      common/cfksfather/fksfather
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision tiny
+      parameter(tiny=1d-5)
+      double precision zero
+      parameter(zero=0d0)
+
+      integer isqrtneg
+      save isqrtneg
+
+      double precision pmass(nexternal)
+      include "pmass.inc"
+
+c Stop if not PYTHIA8
+      if(shower_mc.ne.'PYTHIA8')then
+         write(*,*)'assign_qMC_a should be called only for PY8'
+         stop
+      endif
+
+c Initialise
+      do i=0,3
+         pp_rec(i)=0d0
+         xp1(i)=0d0
+         xp2(i)=0d0
+         xk1(i)=0d0
+         xk2(i)=0d0
+         xk3(i)=0d0
+      enddo
+      nfinal=nexternal-2
+      xm12=0d0
+      xm22=0d0
+      xq1q=0d0
+      xq2q=0d0
+      qMC_a=-1d0
+      extra=.true.
+
+c Discard if unphysical FKS variables
+      if(xi_i_fks.lt.0d0.or.xi_i_fks.gt.1d0.or.
+     &   abs(y_ij_fks).gt.1d0)then
+         write(*,*)'Error 0 in assign_qMC_a: fks variables'
+         write(*,*)xi_i_fks,y_ij_fks
+         stop
+      endif
+
+      do ipart=1,nexternal
+      if(ipart.eq.i_fks.or..not.
+     &   (pdg_type(ipart).eq.21.or.abs(pdg_type(ipart)).le.6))cycle
+c Determine ileg
+c ileg = 1 ==> emission from left     incoming parton
+c ileg = 2 ==> emission from right    incoming parton
+c ileg = 3 ==> emission from massive  outgoing parton
+c ileg = 4 ==> emission from massless outgoing parton
+      if(ipart.le.2)then
+         ileg=ipart
+      elseif(pmass(ipart).ne.0d0)then
+         ileg=3
+      elseif(pmass(ipart).eq.0d0)then
+         ileg=4
+      else
+         write(*,*)'Error 1 in assign_qMC_a: unknown ileg'
+         write(*,*)ileg,ipart,pmass(ipart)
+         stop
+      endif
+
+c Determine and assign momenta:
+c xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
+c xp2 = incoming right parton (emitter (recoiler) if ileg = 2 (1))
+c xk1 = outgoing parton       (emitter (recoiler) if ileg = 3 (4))
+c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
+c xk3 = extra parton          (FKS parton)
+      do j=0,3
+c xk1 and xk2 are never used for ISR
+         xp1(j)=pp(j,1)
+         xp2(j)=pp(j,2)
+         xk3(j)=pp(j,i_fks)
+         if(ileg.gt.2)pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,ipart)
+         if(ileg.eq.3)then
+            xk1(j)=pp(j,ipart)
+            xk2(j)=pp_rec(j)
+         elseif(ileg.eq.4)then
+            xk1(j)=pp_rec(j)
+            xk2(j)=pp(j,ipart)
+         endif
+      enddo
+
+c Determine the Mandelstam invariants needed in the MC functions in terms
+c of FKS variables: the argument of MC functions are (p+k)^2, NOT 2 p.k
+c
+c Definitions of invariants in terms of momenta
+c
+c xm12 =     xk1 . xk1
+c xm22 =     xk2 . xk2
+c xtk  = - 2 xp1 . xk3
+c xuk  = - 2 xp2 . xk3
+c xq1q = - 2 xp1 . xk1 + xm12
+c xq2q = - 2 xp2 . xk2 + xm22
+c w1   = + 2 xk1 . xk3        = - xq1q + xq2q - xtk
+c w2   = + 2 xk2 . xk3        = - xq2q + xq1q - xuk
+c xq1c = - 2 xp1 . xk2        = - s - xtk - xq1q + xm12
+c xq2c = - 2 xp2 . xk1        = - s - xuk - xq2q + xm22
+c
+c Parametrisation of invariants in terms of FKS variables
+c
+c ileg = 1
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c xk1  =  irrelevant
+c xk2  =  irrelevant
+c yi = y_ij_fks
+c x = 1 - xi_i_fks
+c B = sqrt(s)/2*(1-x)
+c
+c ileg = 2
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , -yi )
+c xk1  =  irrelevant
+c xk2  =  irrelevant
+c yi = y_ij_fks
+c x = 1 - xi_i_fks
+c B = sqrt(s)/2*(1-x)
+c
+c ileg = 3
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c xk1  =  ( sqrt(veckn_ev**2+xm12) , 0 , 0 , veckn_ev )
+c xk2  =  xp1 + xp2 - xk1 - xk3
+c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
+c yj = y_ij_fks
+c yi = irrelevant
+c x = 1 - xi_i_fks
+c veckn_ev is such that xk2**2 = xm22
+c B = sqrt(s)/2*(1-x)
+c azimuth = irrelevant (hence set = 0)
+c
+c ileg = 4
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c xk1  =  xp1 + xp2 - xk2 - xk3
+c xk2  =  A * ( 1 , 0 , 0 , 1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
+c yj = y_ij_fks
+c yi = irrelevant
+c x = 1 - xi_i_fks
+c A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yj)))
+c B = sqrt(s)/2*(1-x)
+c azimuth = irrelevant (hence set = 0)
+
+      if(ileg.eq.1)then
+         xtk=-2*dot(xp1,xk3)
+         xuk=-2*dot(xp2,xk3)
+         if(extra)then
+            if(shower_mc.eq.'HERWIG6'  .or.
+     &         shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+            if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xtk)
+            if(shower_mc.eq.'PYTHIA6PT'.or.
+     &         shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xtk*xi_i_fks)
+         endif
+      elseif(ileg.eq.2)then
+         xtk=-2*dot(xp1,xk3)
+         xuk=-2*dot(xp2,xk3)
+         if(extra)then
+            if(shower_mc.eq.'HERWIG6'  .or.
+     &         shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+            if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xuk)
+            if(shower_mc.eq.'PYTHIA6PT'.or.
+     &         shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xuk*xi_i_fks)
+         endif
+      elseif(ileg.eq.3)then
+         xm12=pmass(ipart)**2
+         xm22=dot(pp_rec,pp_rec)
+         xtk=-2*dot(xp1,xk3)
+         xuk=-2*dot(xp2,xk3)
+         xq1q=-2*dot(xp1,xk1)+xm12
+         xq2q=-2*dot(xp2,xk2)+xm22
+         w1=-xq1q+xq2q-xtk
+         w2=-xq2q+xq1q-xuk
+         if(extra)then
+            if(shower_mc.eq.'HERWIG6'.or.
+     &         shower_mc.eq.'HERWIGPP')then
+               zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+               qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+               if(qMCarg.lt.-tiny) then
+                  isqrtneg=isqrtneg+1
+                  write(*,*)'Error 2 in assign_qMC_a: negtive sqrt'
+                  write(*,*)qMCarg,isqrtneg
+                  if(isqrtneg.ge.100)stop
+               endif
+               qMC_a(ipart)=sqrt(qMCarg)
+            elseif(shower_mc.eq.'PYTHIA6Q')then
+               qMC_a(ipart)=sqrt(w1+xm12)
+            elseif(shower_mc.eq.'PYTHIA6PT')then
+               write(*,*)'PYTHIA6PT not available for FSR'
+               stop
+            elseif(shower_mc.eq.'PYTHIA8')then
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               qMC_a(ipart)=sqrt(z*(1-z)*w1)
+            endif
+         endif
+      elseif(ileg.eq.4)then
+         xm12=dot(pp_rec,pp_rec)
+         xm22=0d0
+         xtk=-2*dot(xp1,xk3)
+         xuk=-2*dot(xp2,xk3)
+         xij=2*(1-xm12/sh-xi_i_fks)/(2-xi_i_fks*(1-y_ij_fks))
+         w2=2*dot(xk2,xk3)
+         xq2q=-2*dot(xp2,xk2)+xm22
+         xq1q=xuk+xq2q+w2
+         w1=-xq1q+xq2q-xtk
+         if(extra)then
+            if(shower_mc.eq.'HERWIG6'.or.
+     &         shower_mc.eq.'HERWIGPP')then
+               zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+               qMCarg=zeta2*(1-zeta2)*w2
+               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+               if(qMCarg.lt.-tiny)then
+                  isqrtneg=isqrtneg+1
+                  write(*,*)'Error 3 in assign_qMC_a: negtive sqrt'
+                  write(*,*)qMCarg,isqrtneg
+                  if(isqrtneg.ge.100)stop
+               endif
+               qMC_a(ipart)=sqrt(qMCarg)
+            elseif(shower_mc.eq.'PYTHIA6Q')then
+               qMC_a(ipart)=sqrt(w2)
+            elseif(shower_mc.eq.'PYTHIA6PT')then
+               write(*,*)'PYTHIA6PT not available for FSR'
+               stop
+            elseif(shower_mc.eq.'PYTHIA8')then
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               qMC_a(ipart)=sqrt(z*(1-z)*w2)
+            endif
+         endif
+      else
+         write(*,*)'Error 4 in assign_qMC_a: assigned wrong ileg'
+         stop
+      endif
+      enddo
+
+c Checks on invariants
+c      call check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22)
 
       return
       end
