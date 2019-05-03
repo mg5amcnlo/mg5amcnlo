@@ -590,6 +590,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
       double precision Eem,qMC_a(nexternal)
+      common /to_complete/qMC_a
       integer iBtoR(nexternal-1)
 
       save
@@ -1283,6 +1284,8 @@ c
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
+      double precision qMC_a(nexternal)
+      common /to_complete/qMC_a
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1614,7 +1617,7 @@ c
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
             call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
-            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
+c$$$            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
          endif
          call dire_setevent()
          call dire_next()
@@ -1630,11 +1633,11 @@ c           write (*,*) xscales(i,j)
 c         enddo
 c      enddo
 c
-c      call pythia_setevent()
-c      call pythia_next()
-c      call pythia_get_stopping_info(xscales,xmasses)
-c      call pythia_get_dead_zones(dzones)
-c      call pythia_clear()
+c$$$      call pythia_setevent()
+c$$$      call pythia_next()
+c$$$      call pythia_get_stopping_info(xscales,xmasses)
+c$$$      call pythia_get_dead_zones(dzones)
+c$$$      call pythia_clear()
 c
 c      write(*,*) 'after'
 c      do i=0,nexternal
@@ -1901,6 +1904,17 @@ cSF The following definition of startingScale is unprotected:
 cSF cstupp must be sufficiently large
             startingScale = min(SCALUP_tmp_S2(i,j),cstupp)
             stoppingScale = SCALUP_tmp_H2(i,j)
+
+            ! rescale the starting scale, since we have DIRE sudakov
+            ! templates, but PYTHIA scales (except for the stopping
+            ! scale, which is already a DIRE scale)
+            ! REMOVE THIS FOR PYTHIA!!!
+c$$$            write (*,*) startingScale,stoppingScale,qMC_a(i),i
+c$$$     $           ,startingScale*stoppingScale/qMC_a(i),sqrt(p(1,4)**2
+c$$$     $           +p(2,4)**2)
+            startingScale=startingScale*stoppingScale/qMC_a(i)
+            !
+
 c Passing the following if clause must be exceedingly rare
             if(startingScale.le.smallptupp)then
               write(*,*)'Warning in xmcsubt: startingScale, smallptupp'
@@ -1968,9 +1982,14 @@ c
                endif
                pdffnum=pdg2pdf(abs(lpp(i)),id,
      &                         xbjrk_cnt(i,0),stoppingScale)
+               ! for gluon take sqrt() since there are two colour lines,
+               !  and the current sudakov is only for a single
+               !  line. Assumes that PDFs are positive definite.
+               if (id.eq.0) pdffnum=sqrt(pdffnum)
                deltanum=deltanum*pdffnum
                pdffden=pdg2pdf(abs(lpp(i)),id,
      &                         xbjrk_cnt(i,0),startingScale)
+               if (id.eq.0) pdffden=sqrt(pdffden)
                deltaden=deltaden*pdffden
                sudpdffact=sudpdffact*pdffnum/pdffden
             endif
