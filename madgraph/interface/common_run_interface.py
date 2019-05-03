@@ -5789,10 +5789,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
                 if mass:
                     if abs(width/mass) < self.run_card['small_width_treatment']:
-                        logger.info("Particle %s will use a fake width  ( %s instead of %s ).\n" +
-                          "Cross-section will be rescaled according to NWA if needed."  +
-                          "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
-                          param.lhacode[0], abs(mass*self.run_card['small_width_treatment']), width,'$MG:BOLD')
+                        logger.warning("Particle %s with small width detected (%s): See https://answers.launchpad.net/mg5amcnlo/+faq/3053 to learn the special handling of that case",
+                                    param.lhacode[0], width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                     if CommonRunCmd.sleep_for_error:
@@ -6360,15 +6358,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     for key, partial in info:
                         total += partial
                     mass = self.param_card.get_value('mass', pid)
-                    misc.sprint( mass, total, self.run_card['small_width_treatment'])
                     if total and total/mass < self.run_card['small_width_treatment']:
-                        text = "Particle %s with very small width (%g)\n"
-                        text +="    This can lead to numerical issues if you have s-channel resonances.\n"
-                        text +="    To avoid that we will use a fake width: %g.\n"
-                        text +="    Final Cross-section is corrected to reflect the original width.\n"
-                        text +="    Though breitWigner shaped observables will be wider (to the fake-width).\n"
-                        text +="    To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card"    
-                        logger.info(text,pid, abs(mass*self.run_card['small_width_treatment']),total, '$MG:BOLD')
+                        text = "Particle %s with very small width (%g): Learn about special handling here: https://answers.launchpad.net/mg5amcnlo/+faq/3053"
+                        logger.warning(text,pid,total)
                         
             
 
