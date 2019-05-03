@@ -102,21 +102,22 @@ class ShowerCard(dict):
         lines = content.split('\n')
         list_dm = []
         for l in lines:
-          if '#' in l:
-             l = l.split('#',1)[0]
-          if '=' not in l:
-             continue
-          args = l.split('=',1) # here the 1 is important in case of string passed
-          key = args[0].strip().lower()
-          value = args[1].strip()
-          self.set_param(key, value)
-          if str(key).upper().startswith('DM'):
-              list_dm.append(int(key.split('_',1)[1]))
-          #special case for DM_*
-          for i in range(1,100):
-              if not i in list_dm: 
-                  self['dm_'+str(i)] = ''
+            if '#' in l:
+                l = l.split('#',1)[0]
+            if '=' not in l:
+                continue
+            args = l.split('=',1) # here the 1 is important in case of string passed
+            key = args[0].strip().lower()
+            value = args[1].strip()
+            self.set_param(key, value)
+            if str(key).upper().startswith('DM'):
+                list_dm.append(int(key.split('_',1)[1]))
+            #special case for DM_*
+            for i in range(1,100):
+                if not i in list_dm: 
+                    self['dm_'+str(i)] = ''
 
+        misc.sprint(self['nsplit_jobs'])
         self.text=content
 
 
@@ -127,10 +128,9 @@ class ShowerCard(dict):
         returned by the function
         """
         
-        
         if key in self.logical_vars:
             try:
-                banner.ConfigFile.format_variable(value, bool, key)
+                self[key] = banner.ConfigFile.format_variable(value, bool, key)
             except InvalidCmd, error:
                 raise ShowerCardError(str(error))
         elif key in self.string_vars:
@@ -140,12 +140,12 @@ class ShowerCard(dict):
                 self[key] = value
         elif key in self.int_vars:
             try:
-                banner.ConfigFile.format_variable(value, int, key)
+                self[key] = banner.ConfigFile.format_variable(value, int, key)
             except InvalidCmd, error:
                 raise ShowerCardError(str(error))
         elif key in self.float_vars:
             try:
-                banner.ConfigFile.format_variable(value, float, key)
+                self[key] =  banner.ConfigFile.format_variable(value, float, key)
             except InvalidCmd, error:
                 raise ShowerCardError(str(error))
         else:
