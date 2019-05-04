@@ -5073,6 +5073,9 @@ This implies that with decay chains:
         final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
+            if "{" in particle:
+                particle = particle.split("{",1)[0]
+            
             if particle in pids:
                 final.add(pids[particle])
             elif particle in self._multiparticles:

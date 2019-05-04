@@ -592,14 +592,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.check_launch(args)
         for part in self.list_branches.keys():
             if part in self.mg5cmd._multiparticles:
+            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
-            pid = self.mg5cmd._curr_model.get('name2pdg')[part]
-            if pid in self.final_state:
-                break
-#        else:
-#            logger.info("Nothing to decay ...")
-#            return
+            else:
+                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                if pid in self.final_state:
+                    break
+        else:
+            logger.info("Nothing to decay ...")
+            return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
