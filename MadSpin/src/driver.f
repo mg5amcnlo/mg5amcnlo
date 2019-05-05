@@ -2028,8 +2028,8 @@ C     -----------------------------------------
 
       include 'nexternal.inc'
 
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
-      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION P1(0:3,*)
+      DOUBLE PRECISION P2(0:3,*)
       DOUBLE PRECISION PBOOST(0:3)
       integer frame_id, nexternal_prod
 
