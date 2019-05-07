@@ -1749,7 +1749,7 @@ class EasterEgg(object):
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
-    special_banner = {(4,5): May4_banner, (5,5): May4_banner}
+    special_banner = {(4,5): May4_banner}
 
     
     def __init__(self, msgtype):
@@ -1772,6 +1772,8 @@ class EasterEgg(object):
             elif msgtype=='loading' and date in self.special_banner:
                 self.change_banner(date)
                 return
+            else:
+                return
             if MADEVENT:
                 return
             
@@ -1784,6 +1786,7 @@ class EasterEgg(object):
             else:
                 self.call_linux(msg)
         except Exception, error:
+            raise
             sprint(error)
             pass
     
