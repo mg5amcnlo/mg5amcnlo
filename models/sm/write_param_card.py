@@ -1,11 +1,49 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from six.moves import range
 __date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
+import sys
+if sys.version_info[0] ==2:
+    PY3 = False
+else:
+    PY3 = True
+
+if not __package__:
+    import os
+    pjoin = os.path.join
+    root = os.path.abspath(os.path.dirname(__file__))
+    sys.path.append(os.path.dirname(root))
+    __package__ = os.path.basename(root)
+    import importlib
+    importlib.import_module(os.path.basename(root))
+
+
 from .function_library import *
+
+
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+
+    
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
 
 class ParamCardWriter(object):
     
@@ -85,7 +123,10 @@ class ParamCardWriter(object):
             self.write_block(lhablock)
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
-            need_writing.sort(self.order_param)
+            if PY3:
+                need_writing.sort(key=cmp_to_key(self.order_param))
+            else:
+                need_writing.sort(self.order_param)
             [self.write_param(param, lhablock) for param in need_writing]
             
             if self.generic_output:
@@ -94,7 +135,8 @@ class ParamCardWriter(object):
 
         if self.generic_output:
             self.write_qnumber()
-                               
+            
+                              
     def write_block(self, name):
         """ write a comment for a block"""
         
@@ -155,7 +197,6 @@ class ParamCardWriter(object):
         """ write qnumber """
         from .particles import all_particles
         from . import particles
-        print(particles.__file__)
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""

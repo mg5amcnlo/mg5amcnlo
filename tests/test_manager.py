@@ -30,10 +30,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
-import six
-from six.moves import map
 
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
     sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
@@ -57,6 +55,9 @@ sys.path.insert(0, root_path)
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
+
+import six
+from six.moves import map
 
 import tests.IOTests
 import aloha

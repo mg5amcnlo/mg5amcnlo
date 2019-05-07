@@ -10,6 +10,8 @@ from .object_library import all_parameters, Parameter
 
 from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
+
+
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',
                  nature = 'internal',

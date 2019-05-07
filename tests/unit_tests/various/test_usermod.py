@@ -328,7 +328,7 @@ class TestModUFO(unittest.TestCase):
 
 
     def setUp(self):
-        self.debug=True
+        self.debug=False
         if self.debug:
             self.path = "/tmp/"
         else:   
@@ -342,7 +342,7 @@ class TestModUFO(unittest.TestCase):
         
         if not self.debug:
             shutil.rmtree(self.path)
-
+        self.assertFalse(self.debug)
 
     def test_write_model(self):
         """ Check that we can write all the require UFO files """

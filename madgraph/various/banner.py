@@ -696,8 +696,9 @@ def recover_banner(results_object, level, run=None, tag=None):
     else:
         _tag = tag
     
+    path = results_object.path    
     if tag:        
-        path = results_object.path
+
         banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     else:
         banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))

@@ -156,7 +156,7 @@ class TestMECmdRWGT(unittest.TestCase):
         """ testing that we can reweight the tt~ sample when increasing the top mass
         """
         me_cmd = self.get_MEcmd(pjoin(_pickle_path, 'ttbar.lhe.gz'))
-        
+        misc.sprint(pjoin(_pickle_path, 'ttbar.lhe.gz'))
         cmd_lines = """
         change output 2.0
         launch
@@ -166,8 +166,9 @@ class TestMECmdRWGT(unittest.TestCase):
         ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
         ff.write(cmd_lines)
         ff.close()
-        
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        misc.sprint(self.run_dir)
+        if 1:
+        #with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
 
         #check that initial file is untouched!        
