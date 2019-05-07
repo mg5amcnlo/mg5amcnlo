@@ -696,14 +696,13 @@ def recover_banner(results_object, level, run=None, tag=None):
     else:
         _tag = tag
     
+
     path = results_object.path    
     if tag:        
-
         banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     else:
         banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))
-    
-        
+      
     if not os.path.exists(banner_path):
         if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
@@ -1219,8 +1218,8 @@ class ConfigFile(dict):
             if value in allowed:
                 valid=True     
             elif isinstance(value, str):
-                value = value.lower()
-                allowed = [v.lower() for v in allowed]
+                value = value.lower().strip()
+                allowed = [str(v).lower() for v in allowed]
                 if value in allowed:
                     i = allowed.index(value)
                     value = self.allowed_value[lower_name][i]
@@ -1355,7 +1354,7 @@ class ConfigFile(dict):
                 elif value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
                     value =int(value[:-1]) * convert[value[-1]] 
-                else:
+                elif 'd' in value:
                     try:
                         value = float(value.replace('d','e'))
                     except ValueError:
@@ -1369,11 +1368,8 @@ class ConfigFile(dict):
                             value = new_value
                         else:
                             raise InvalidCmd("incorect input: %s need an integer for %s" % (value,name))
-            elif targettype == float:
-                value = value.replace('d','e') # pass from Fortran formatting
-                try:
-                    value = float(value)
-                except ValueError:
+                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
+                elif '/' in value or '*' in value:               
                     try:
                         split = re.split('(\*|/)',value)
                         v = float(split[0])
@@ -1384,9 +1380,47 @@ class ConfigFile(dict):
                                 v /=  float(split[2*i+2])
                     except:
                         v=0
-                        raise InvalidCmd("%s can not be mapped to a float" % value)
                     finally:
-                        value = v
+                        value = int(v)
+                        if value != v:
+                            raise InvalidCmd, "%s can not be mapped to an integer" % v
+                else:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value
+            elif targettype == float:
+                if value.endswith(('k', 'M')) and value[:-1].isdigit():
+                    convert = {'k':1000, 'M':1000000}
+                    value = 1.*int(value[:-1]) * convert[value[-1]]
+                else:
+                    value = value.replace('d','e') # pass from Fortran formatting
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        try:
+                            split = re.split('(\*|/)',value)
+                            v = float(split[0])
+                            for i in range((len(split)//2)):
+                                if split[2*i+1] == '*':
+                                    v *=  float(split[2*i+2])
+                                else:
+                                    v /=  float(split[2*i+2])
+                        except:
+                            v=0
+                            raise InvalidCmd("%s can not be mapped to a float" % value)
+                    finally:
+                        value = int(v)
+                        if value != v:
+                            raise InvalidCmd( "%s can not be mapped to a float" % v)
+                else:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        raise InvalidCmd( "%s can not be mapped to an float" % value)
+                     
+                    value = 1.*int(value[:-1]) * convert[value[-1]] 
+                            value = v
             else:
                 raise InvalidCmd("type %s is not handle by the card" % targettype)
             
