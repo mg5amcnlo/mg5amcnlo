@@ -1354,7 +1354,7 @@ class ConfigFile(dict):
                 elif value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
                     value =int(value[:-1]) * convert[value[-1]] 
-                elif 'd' in value:
+                elif 'd' in value or 'e' in value:
                     try:
                         value = float(value.replace('d','e'))
                     except ValueError:
@@ -1368,7 +1368,6 @@ class ConfigFile(dict):
                             value = new_value
                         else:
                             raise InvalidCmd("incorect input: %s need an integer for %s" % (value,name))
-                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
                 elif '/' in value or '*' in value:               
                     try:
                         split = re.split('(\*|/)',value)
@@ -1383,12 +1382,13 @@ class ConfigFile(dict):
                     finally:
                         value = int(v)
                         if value != v:
-                            raise InvalidCmd, "%s can not be mapped to an integer" % v
+                            raise InvalidCmd( "%s can not be mapped to an integer" % v)
                 else:
                     try:
                         value = int(value)
                     except ValueError:
-                        raise InvalidCmd, "%s can not be mapped to an integer" % value
+                        raise InvalidCmd( "%s can not be mapped to an integer" % value)
+                     
             elif targettype == float:
                 if value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
@@ -1409,17 +1409,7 @@ class ConfigFile(dict):
                         except:
                             v=0
                             raise InvalidCmd("%s can not be mapped to a float" % value)
-                    finally:
-                        value = int(v)
-                        if value != v:
-                            raise InvalidCmd( "%s can not be mapped to a float" % v)
-                else:
-                    try:
-                        value = int(value)
-                    except ValueError:
-                        raise InvalidCmd( "%s can not be mapped to an float" % value)
-                     
-                    value = 1.*int(value[:-1]) * convert[value[-1]] 
+                        finally:
                             value = v
             else:
                 raise InvalidCmd("type %s is not handle by the card" % targettype)
