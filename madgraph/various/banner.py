@@ -1350,20 +1350,6 @@ class ConfigFile(dict):
                 elif value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
                     value =int(value[:-1]) * convert[value[-1]] 
-                elif 'd' in value:
-                    try:
-                        value = float(value.replace('d','e'))
-                    except ValueError:
-                        raise InvalidCmd, "%s can not be mapped to an integer" % value                    
-                    try:
-                        new_value = int(value)
-                    except ValueError:
-                        raise InvalidCmd, "%s can not be mapped to an integer" % value
-                    else:
-                        if value == new_value:
-                            value = new_value
-                        else:
-                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
                 elif '/' in value or '*' in value:               
                     try:
                         split = re.split('(\*|/)',value)
@@ -1382,9 +1368,18 @@ class ConfigFile(dict):
                             raise InvalidCmd, "%s can not be mapped to an integer" % v
                 else:
                     try:
-                        value = int(value)
+                        value = float(value.replace('d','e'))
+                    except ValueError:
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value                    
+                    try:
+                        new_value = int(value)
                     except ValueError:
                         raise InvalidCmd, "%s can not be mapped to an integer" % value
+                    else:
+                        if value == new_value:
+                            value = new_value
+                        else:
+                            raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
                      
             elif targettype == float:
                 if value.endswith(('k', 'M')) and value[:-1].isdigit():

@@ -121,6 +121,7 @@ def get_pkg_info(info_str=None):
 
     if info_str:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
+        return info_dict
 
     if PACKAGE_INFO:
         return PACKAGE_INFO
