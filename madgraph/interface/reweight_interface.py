@@ -1808,7 +1808,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         misc.sprint(tag, onedir)
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
-                        raise Exception
+                        raise Exception, "two different matrix-element have the same initial/final state. Leading to an ambiguity. If your events are ALWAYS written in the correct-order (look at the numbering in the Feynman Diagram). Then you can add inside your reweight_card the line 'change keep_ordering True'." 
 
                 data[tag] = order, pdir, hel
              
