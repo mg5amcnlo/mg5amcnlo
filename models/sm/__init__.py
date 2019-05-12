@@ -5,6 +5,7 @@ from . import lorentz
 from . import parameters
 from . import vertices
 from . import coupling_orders
+from . import function_library
 #from . import write_param_card
 try:
     from . import decays

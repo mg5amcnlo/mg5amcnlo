@@ -5,6 +5,22 @@ from six.moves import range
 __date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
+import sys
+if sys.version_info[0] ==2:
+    PY3 = False
+else:
+    PY3 = True
+
+if not __package__:
+    import os
+    pjoin = os.path.join
+    root = os.path.abspath(os.path.dirname(__file__))
+    sys.path.append(os.path.dirname(root))
+    __package__ = os.path.basename(root)
+    import importlib
+    importlib.import_module(os.path.basename(root))
+
+
 from .function_library import *
 
 class ParamCardWriter(object):

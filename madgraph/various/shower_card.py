@@ -134,7 +134,7 @@ class ShowerCard(dict):
         if key in self.logical_vars:
             try:
                 self[key] = banner.ConfigFile.format_variable(value, bool, key)
-            except InvalidCmd, error:
+            except InvalidCmd as error:
                 raise ShowerCardError(str(error))
         elif key in self.string_vars:
             if value.lower() == 'none':
@@ -144,12 +144,12 @@ class ShowerCard(dict):
         elif key in self.int_vars:
             try:
                 self[key] = banner.ConfigFile.format_variable(value, int, key)
-            except InvalidCmd, error:
+            except InvalidCmd as  error:
                 raise ShowerCardError(str(error))
         elif key in self.float_vars:
             try:
                 self[key] =  banner.ConfigFile.format_variable(value, float, key)
-            except InvalidCmd, error:
+            except InvalidCmd as error:
                 raise ShowerCardError(str(error))
         else:
             raise ShowerCardError('Unknown entry: %s = %s' % (key, value))

@@ -6,7 +6,7 @@ from . import lorentz
 from . import parameters
 from . import vertices
 from . import coupling_orders
-from . import write_param_card
+#from . import write_param_card
 from . import propagators
 
 

@@ -286,7 +286,7 @@ class HEPMC_EventFile(object):
             while 'HepMC::IO_GenEvent-START_EVENT_LISTING' not in line:
 
                 try:
-                    line  = next(super(HEPMC_EventFile, self))
+                    line  = super(HEPMC_EventFile, self).next()
                 except StopIteration:
                     self.seek(0)
                     self.header = ''
@@ -305,7 +305,7 @@ class HEPMC_EventFile(object):
         text = self.start_event
         line = ''
         while 1:
-            line = next(super(HEPMC_EventFile, self))
+            line = super(HEPMC_EventFile, self).next()
             if line.startswith('E'):
                 self.start_event = line
                 if text:
