@@ -1696,7 +1696,9 @@ class MultiProcess(base_objects.PhysicsObject):
         
         isids = [leg['ids'] for leg in process_definition['legs'] \
                  if leg['state'] == False]
-        fsids = [leg['ids'] for leg in process_definition['legs'] \
+        fsids = [leg['ids']  for leg in process_definition['legs'] \
+                 if leg['state'] == True]
+        polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
@@ -1711,14 +1713,13 @@ class MultiProcess(base_objects.PhysicsObject):
             red_fsidlist = set()
 
             for prod in itertools.product(*fsids):
-
-                tag = sorted(prod)
+                tag = zip(prod, polids)
+                tag = sorted(tag)
                 # Remove double counting between final states
                 if tuple(tag) in red_fsidlist:
                     continue
                 
                 red_fsidlist.add(tuple(tag))
-                
                 # Generate leg list for process
                 leg_list = [copy.copy(leg) for leg in islegs]
                 leg_list.extend([\
