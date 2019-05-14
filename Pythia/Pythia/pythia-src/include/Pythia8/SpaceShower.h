@@ -80,7 +80,7 @@ class SpaceShower {
 public:
 
   // Constructor.
-  SpaceShower() {beamOffset = 0;}
+  SpaceShower() {beamOffset = 0; usePDF = true;}
 
   // Destructor.
   virtual ~SpaceShower() {}
@@ -192,6 +192,17 @@ public:
 
   // Pointer to MergingHooks object for NLO merging.
   MergingHooks* mergingHooksPtr;
+
+  // Select next pT in downwards evolution, based only on dipole mass and
+  // incoming momentum fraction.
+  double findMean(vector<double> a); 
+  double findMedian(vector<double> a);
+  double pTnext( vector<SpaceDipoleEnd> dipEnds, Event event, double pTbegAll,
+    double pTendAll, double m2dip, int id, int type, double s = -1.,
+    double x = -1.);
+  double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
+    int id, int type, double s = -1., double x = -1.);
+  bool usePDF;
 
 protected:
 
