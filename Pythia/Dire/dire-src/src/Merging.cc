@@ -200,7 +200,8 @@ void MyMerging::storeInfos() {
       double t    = stateVars["t"];
       double mass = sqrt(stateVars["m2dip"]);
       // Just store pT for now.
-      stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
+      //stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
+      stoppingScalesSave.push_back(t);
       radSave.push_back(iRad);
       emtSave.push_back(iemtReq+posOffset);
       recSave.push_back(iRec);
@@ -313,7 +314,6 @@ void MyMerging::getDeadzones(bool dzone [100][100]) {
 void MyMerging::clear() {
   fsr->debugPtr->clear(); 
 }
-
 
 //--------------------------------------------------------------------------
 
