@@ -71,27 +71,28 @@ c
       include 'MCmasses_PYTHIA8.inc'
 c
       call dire_init(mcmass)
+      call pythia_init(mcmass)
       open(unit=iunit1,file='sudakov.log',status='unknown')
       open(unit=iunit2,file='sudakov.err',status='unknown')
 
       write(*,*)'enter lower and upper bounds of st range'
-c      read(*,*)stlow,stupp
-      stlow=5.0
-      stupp=1000.0
+      read(*,*)stlow,stupp
+c      stlow=5.0
+c      stupp=1000.0
       write(*,*)'enter lower and upper bounds of M range'
-c      read(*,*)xmlow,xmupp
-      xmlow=1000.0
-      xmupp=1001.0
+      read(*,*)xmlow,xmupp
+c      xmlow=5.0
+c      xmupp=100.0
       write(*,*)'enter Sudakov lower threshold'
       write(*,*)' Sudakov will be set to zero if below threshold'
-c      read(*,*)xlowthrs
-      xlowthrs=0.0001
+      read(*,*)xlowthrs
+c      xlowthrs=0.0001
 
       write(*,*)'enter -1 to use Pythia default seed'
       write(*,*)'       0 to use Pythia timestamp'
       write(*,*)'       >=1 to use random seeds'
-c      read(5,*)ifk88seed
-      ifk88seed=-1
+      read(5,*)ifk88seed
+c      ifk88seed=-1
 
 c Discard first (tends to be extremely small)
       if(ifk88seed.ge.1)rnd=fk88random(ifk88seed)
@@ -114,12 +115,12 @@ c
       ieHfail=0
       ieLfail=0
       do itype=1,4
-c        if (itype .ne. 3) cycle
+c        if (itype .ne. 1) cycle
         write(*,*)'===>Doing itype=',itype
         write(iunit1,*)'===>Doing itype=',itype
         write(iunit2,*)'===>Doing itype=',itype
         do ipart=1,npart
-          if (ipart .ne. 7) cycle
+c          if (ipart .ne. 1) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart
@@ -597,14 +598,17 @@ c
       integer id, itype,iseed,iunit
       real*8 mcmass(21)
       double precision temp
+
 c
-      call dire_get_no_emission_prob(temp, stupp,
+c      call dire_get_no_emission_prob(temp, stupp,
+c     #     stlow, md, id, itype, iseed, min_py_sudakov)
+      call pythia_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
-c      write(iunit,*) 'md=', md, ' start=', stupp,
-c     #           ' stop=', stlow, ' --> sud=', temp
-      write(*,*) 'md=', md, ' start=', stupp,
+      write(iunit,*) 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
+c      write(*,*) 'md=', md, ' start=', stupp,
+c     #           ' stop=', stlow, ' --> sud=', temp
 c
       return
       end
