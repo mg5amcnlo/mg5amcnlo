@@ -1871,6 +1871,279 @@ void TimeShower::setupHVdip( int iSys, int i, Event& event,
 
 // Select next pT in downwards evolution of the existing dipoles.
 
+double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
+  double m2dip, int idA, int type, double s, double x) {
+
+  double x1 = x;
+  double x2 = m2dip/s/x1;
+
+  // Make dummy event with two entries.
+  Event state;
+  state.init("(dummy event)", particleDataPtr);
+  // Setup two dipole ends for each flavor combination.
+  Vec4 pA(0., 0., 0.5*sqrt(m2dip), 0.5*sqrt(m2dip)), pB, pBtmp;
+  double phi   = 2.*M_PI*rndmPtr->flat();
+  double theta = M_PI*rndmPtr->flat();
+  double sign_theta = rndmPtr->flat() > 0.5 ? 1. : -1.;
+  pA.rot(sign_theta*theta,phi);
+  if (type < 0) {
+    pB.p(-pA.px(),-pA.py(),-pA.pz(), 0.5*sqrt(m2dip));
+    pBtmp.p(0., 0.,-0.5*sqrt(m2dip), 0.5*sqrt(m2dip));
+    RotBstMatrix rotate;
+    rotate.bst( pB, pBtmp);
+    // After this, the inactive beam returns to the correct energy fraction.
+    pB.rotbst(rotate);
+    pA.rotbst(rotate);
+  }
+  if (type > 0) pB.p(-pA.px(),-pA.py(),-pA.pz(), 0.5*sqrt(m2dip));
+
+  int iSys = 0;
+  int colA  = 1;
+  int acolA = 2;
+  if (particleDataPtr->colType(idA) == 1) {colA = 1; acolA = 0;}
+  if (particleDataPtr->colType(idA) ==-1) {colA = 0; acolA = 1;}
+
+  // Add recoiler. For 1->3 splitting, attach "dummy" recoiler.
+  double sign = (type>0) ? 1. : -1.;
+  state.append( 90, -11, 0, 0, 0, 0, 0, 0, pA+pB, (pA+pB).mCalc(), (pA+pB).mCalc() );  
+  if (type > 0) state.append( idA, 23, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+
+  int idB  = (idA == 21) ? 21
+           : ((type < 0) ? idA : -idA);
+  vector<int> recids; recids.push_back(idB);
+  vector<int> recpos;
+
+  for (unsigned int i = 0; i < recids.size(); ++i) {
+    int colB(acolA), acolB(colA);
+    if (type < 0) swap(colB,acolB);
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 1
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) ==-1
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   ==-1) {colB = 0; acolB = colA;}
+    if ( type < 0
+      && particleDataPtr->colType(idA) == 2
+      && particleDataPtr->colType(recids[i])   == 1) {colB = acolA; acolB = 0;}
+
+    if (type < 0) state.append( recids[i], -21, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    if (type > 0) state.append( recids[i],  23, 0, 0, 0, 0, colB, acolB, pB, 0.0, sqrt(m2dip) );
+    recpos.push_back(i+1);
+  }
+
+  if (type < 0) state.append( idA, 23, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
+
+//state.list();
+
+  beamAPtr->clear();
+  beamBPtr->clear();
+  beamAPtr->append( 1, idA, x1);
+  beamBPtr->append( 2, idB, x2);
+  beamAPtr->xfISR( 0, idA, x1, pTbegAll*pTbegAll);
+  int vsc1 = beamAPtr->pickValSeaComp();
+  beamBPtr->xfISR( 0, idB, x2, pTbegAll*pTbegAll);
+  int vsc2 = beamBPtr->pickValSeaComp();
+  infoPtr->setValence( (vsc1 == -3), (vsc2 == -3));
+
+  // Store participating partons as first set in list of all systems.
+  partonSystemsPtr->clear();
+  partonSystemsPtr->addSys();
+  partonSystemsPtr->setInA(0, 1);
+  partonSystemsPtr->setInB(0, 2);
+  partonSystemsPtr->setSHat( 0, m2dip);
+  partonSystemsPtr->setPTHat( 0, pTbegAll);
+
+  // Find positions of incoming colliding partons.
+  int in1 = (type > 0) ? 1 : 2;
+  vector<TimeDipoleEnd> dipEnds;
+  prepare(iSys,state,true);
+  dipEnds = dipEnd;
+  dipEnd.clear();
+
+  // Set output.
+  double wt(0.), wt2(0.);
+  int nTrialsMax(10000), nTrials(0);
+  vector<double> means;
+  vector<double> wts;
+  vector<double> medians;
+
+  for (int i=0; i < nTrialsMax; ++i) {
+
+    double startingScale = pTbegAll;
+    double wtnow = 1.;
+    doTrialNow = true;
+
+    while ( true ) {
+
+      // Reset process scale so that shower starting scale is correctly set.
+      state.scale(startingScale);
+
+      // Get pT before reclustering
+      double minScale = pTendAll;
+
+      mergingHooksPtr->setShowerStoppingScale(minScale);
+
+      // If the maximal scale and the minimal scale coincide (as would
+      // be the case for the corrected scales of unordered histories),
+      // do not generate Sudakov
+      if (minScale >= startingScale) break;
+
+      // Get trial shower pT.
+      double pTtrial = pTnext( dipEnds, state, startingScale, minScale, m2dip, idA, type, s, x);
+
+      // Done if evolution scale has fallen below minimum
+      if ( pTtrial < minScale ) { wtnow *= 1.; break;}
+
+      // Reset starting scale.
+      startingScale = pTtrial;
+
+      if ( pTtrial > minScale) wtnow *= 0.;
+      if ( wtnow == 0.) break;
+      if ( pTtrial > minScale) continue;
+
+      // Done
+      break;
+
+    }
+
+    wt += wtnow;
+    nTrials++;
+    wt2 += wtnow;
+    wts.push_back(wtnow);
+
+    // Stop if the median of the Sudakov is stable.
+    //double mean = wt/double(nTrials);
+    //means.push_back(mean);
+    if (nTrials%20==0 && nTrials > 0) { 
+      double mean = wt2/20.;
+      means.push_back(mean);
+      medians.push_back(findMedian(wts));
+      wt2=0.;
+      wts.clear();
+    }
+    /*if (nTrials%10==0 && nTrials >= 100) {
+      //double medianNow = findMedian(means);
+      double medianNow = findMedian(medians);
+      // Calculate the input for the median absolute deviation.
+      vector<double> diff2median;
+      //for (size_t im=0; im< means.size(); ++im)
+      // diff2median.push_back(abs(means[im]-medianNow));
+      for (size_t im=0; im< medians.size(); ++im)
+       diff2median.push_back(abs(medians[im]-medianNow));
+      // Calculate the median absolute deviation and stop if it's very small.
+      double MAD = findMedian(diff2median);
+      //if (MAD/medianNow < 1e-4)  break;
+      if (MAD/medianNow < 0.2) break;
+
+      // Stop if Sudakov is very likely vanishing.
+      if ( medianNow < settingsPtr->parm("Dire:Sudakov:Min")) break;
+
+    }*/
+
+  }
+
+  //wt /= nTrials;
+  //wt = findMedian(means);
+  //wt = findMedian(medians);
+  wt = findMean(means);
+  if (wt < settingsPtr->parm("Dire:Sudakov:Min")) wt = 0.;
+
+  beamAPtr->clear();
+  beamBPtr->clear();
+  partonSystemsPtr->clear();
+
+  // Done
+  double res = wt;
+  return res;
+
+}
+
+double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
+  double pTbegAll, double pTendAll, double, int, int, double, double) {
+
+  // Starting values: no radiating dipole found.
+  double pT2sel = pow2(pTendAll);
+  iDipSel       = 0;
+  iSysSel       = 0;
+  dipSel        = 0;
+  usePDF = false;
+
+  // Loop over all possible dipole ends.
+  for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
+
+    TimeDipoleEnd* dipEndNow      = &dipEnds[iDipEnd];
+
+    // Find properties of dipole and radiating dipole end.
+    int iNow      = dipEndNow->iRadiator;
+    int iRec      = dipEndNow->iRecoiler;
+
+    // Note dipole mass correction when recoiler is a rescatter.
+    dipEndNow->m2Rec         = event[iRec].m2();
+    dipEndNow->mRec          = sqrt(dipEndNow->m2Rec);
+    dipEndNow->m2Rad         = event[iNow].m2();
+    dipEndNow->mRad          = sqrt(dipEndNow->m2Rad);
+    dipEndNow->m2Dip         = abs(2.*event[iNow].p()*event[iRec].p());
+    dipEndNow->mDip          = sqrt(dipEndNow->m2Dip);
+    dipEndNow->m2DipCorr     = dipEndNow->m2Dip;
+
+    // Reset emission properties.
+    dipEndNow->pT2         =  0.0;
+    dipEndNow->z           = -1.0;
+
+    double pT2start = min( dipEndNow->m2Dip, pTbegAll*pTbegAll);
+    //double pT2stop  = max( pT2colCut, pTendAll*pTendAll);
+    double pT2stop  = pTendAll*pTendAll;
+    pT2stop         = max( pT2stop, pT2sel);
+
+    // Do QCD, QED, weak or HV evolution if it makes sense.
+    if (pT2start > pT2sel) {
+      if (dipEndNow->colType != 0) pT2nextQCD(pT2start, pT2sel, *dipEndNow, event);
+
+      // Update if found larger pT than current maximum.
+      if (dipEndNow->pT2 > pT2sel) {
+        pT2sel  = dipEndNow->pT2;
+        dipSel  = &dipEnds[iDipEnd];
+        iDipSel = iDipEnd;
+        splittingNameSel = splittingNameNow;
+      }
+    }
+
+  // End loop over dipole ends.
+  }
+
+  usePDF = true;
+
+  // Return nonvanishing value if found pT is bigger than already found.
+  return (dipSel == 0) ? 0. : sqrt(pT2sel);
+
+}
+
+// Function for calculating mean 
+double TimeShower::findMean(vector<double> a) { 
+  double sum = 0.;
+  int n = a.size();
+  for (int i = 0; i < n; i++) sum += a[i]; 
+  return (double)sum/(double)n; 
+} 
+  
+// Function for calculating median 
+double TimeShower::findMedian(vector<double> a) { 
+  int n = a.size();
+  // First we sort the array 
+  sort(a.begin(), a.end()); 
+  // check for even case 
+  if (n % 2 != 0) return (double)a[n/2]; 
+  return (double)(a[(n-1)/2] + a[n/2])/2.0; 
+}
+
+//--------------------------------------------------------------------------
+
+// Select next pT in downwards evolution of the existing dipoles.
+
 double TimeShower::pTnext( Event& event, double pTbegAll, double pTendAll,
   bool isFirstTrial, bool doTrialIn) {
 
@@ -2288,7 +2561,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
           double xNew = xOld * (1. + (dip.m2 - dip.m2Rad) /
             (dip.m2Dip - dip.m2Rad));
           double xMaxAbs = beam.xMax(iSysRec);
-          if (xMaxAbs < 0.) {
+          if (usePDF && xMaxAbs < 0.) {
             infoPtr->errorMsg("Warning in TimeShower::pT2nextQCD: "
             "xMaxAbs negative");
             return;
@@ -2296,18 +2569,20 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
 
           // New: Ensure that no x-value larger than unity is picked. Only
           // necessary for imprecise LHE input.
-          if (xNew > 1.) wt = 0.;
+          if (usePDF && xNew > 1.) wt = 0.;
 
           // Firstly reduce by PDF ratio.
-          if (xNew > xMaxAbs) wt = 0.;
+          if (usePDF && xNew > xMaxAbs) wt = 0.;
           else {
-            int idRec     = event[dip.iRecoiler].id();
+            int idRec = event[dip.iRecoiler].id();
             pdfScale2 = (useFixedFacScale) ? fixedFacScale2
               : factorMultFac * dip.pT2;
-            double pdfOld = max ( TINYPDF,
-              beam.xfISR( iSysRec, idRec, xOld, pdfScale2) );
-            double pdfNew =
-              beam.xfISR( iSysRec, idRec, xNew, pdfScale2);
+            double pdfOld = (usePDF)
+              ? max ( TINYPDF, beam.xfISR( iSysRec, idRec, xOld, pdfScale2) )
+               : 1.;
+            double pdfNew = (usePDF)
+              ? beam.xfISR( iSysRec, idRec, xNew, pdfScale2)
+              : 1.;
             wt *= min( 1., pdfNew / pdfOld);
           }
 
