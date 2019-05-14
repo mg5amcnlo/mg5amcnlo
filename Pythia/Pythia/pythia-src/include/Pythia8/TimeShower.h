@@ -80,7 +80,7 @@ class TimeShower {
 public:
 
   // Constructor.
-  TimeShower() {beamOffset = 0;}
+  TimeShower() {beamOffset = 0; usePDF = true; }
 
   // Destructor.
   virtual ~TimeShower() {}
@@ -202,6 +202,17 @@ public:
 
   // Pointer to MergingHooks object for NLO merging.
   MergingHooks* mergingHooksPtr;
+
+  // Select next pT in downwards evolution, based only on dipole mass and
+  // incoming momentum fraction.
+  double findMean(vector<double> a); 
+  double findMedian(vector<double> a);
+  double pTnext( vector<TimeDipoleEnd> dipEnds, Event event, double pTbegAll,
+    double pTendAll, double m2dip, int id, int type, double s = -1.,
+    double x = -1.);
+  double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
+    int id, int type, double s = -1., double x = -1.);
+  bool usePDF;
 
 protected:
 
