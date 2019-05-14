@@ -60,6 +60,9 @@ public:
   void clear() { return; }
   void getStoppingInfo(double scales [100][100], double masses [100][100]);
   void getDeadzones(bool dzone [100][100]);
+  double generateSingleSudakov ( double pTbegAll, 
+   double pTendAll, double m2dip, int idA, int type, double s = -1.,
+   double x = -1.);
 
 protected:
 
