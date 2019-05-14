@@ -289,9 +289,9 @@ int Merging::clusterAndStore(Event& process){
       else qDip -= FullHistory.state[iRec].p();
       if (FullHistory.state[emt].isFinal()) qDip += FullHistory.state[emt].p();
       else qDip -= FullHistory.state[emt].p();
-      double mass = abs(qDip.m2Calc());
+      double mass = sqrt(abs(qDip.m2Calc()));
       // Just store pT for now.
-      stoppingScalesSave.push_back( (t>0.) ? sqrt(t) : t);
+      stoppingScalesSave.push_back(t);
       radSave.push_back(iRad);
       emtSave.push_back(emt);
       recSave.push_back(iRec);
@@ -394,6 +394,34 @@ void Merging::getDeadzones(bool dzone [100][100]) {
   for (unsigned int i=0; i < radSave.size(); ++i){
     dzone[radSave[i]-posOffest][recSave[i]-posOffest] = isInDeadzone[i];
   }
+
+}
+
+//--------------------------------------------------------------------------
+
+double Merging::generateSingleSudakov ( double pTbegAll, 
+  double pTendAll, double m2dip, int idA, int type, double s, double x) {
+
+  // II
+  double prob = 1.;
+  if (type == 1) {
+    prob = trialPartonLevelPtr->spacePtr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
+  // FF
+  } else if (type == 2) {
+    prob = trialPartonLevelPtr->timesPtr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  // IF
+  } else if (type == 3) {
+    prob = trialPartonLevelPtr->spacePtr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      1, s, x);
+  // FI
+  } else if (type == 4) {
+    prob = trialPartonLevelPtr->timesPtr->noEmissionProbability( pTbegAll, pTendAll, m2dip, idA,
+      -1, s, x);
+  }
+
+  return prob;
 
 }
 
