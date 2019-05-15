@@ -406,11 +406,9 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Sort the legs
             legs = vertex.get('legs')[:-1]
             if vertex in schannels:
-                legs.sort(lambda l1, l2: l2.get('number') - \
-                          l1.get('number'))
+                legs.sort(key=lambda l: l.get('number'), reverse=True)
             else:
-                legs.sort(lambda l1, l2: l1.get('number') - \
-                          l2.get('number'))
+                legs.sort(key=lambda l: l.get('number'))
             for ileg,leg in enumerate(legs):
                 newleg = copy.copy(leg)
                 try:
@@ -3608,8 +3606,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # After generation of all wavefunctions and amplitudes,
             # first sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                                       wf1.get('number') - wf2.get('number'))
+            diagram_wavefunctions.sort(key=lambda wf:wf.get('number')) 
             
             # Then make sure that all mothers come before daughters
             iwf = len(diagram_wavefunctions) - 1
@@ -4513,8 +4510,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         external_wfs = [wf for wf in self.get('diagrams')[0].get('wavefunctions') if not wf.get('mothers')]
 
-        external_wfs.sort(lambda w1, w2: w1.get('number_external') - \
-             w2.get('number_external'))
+        external_wfs.sort(key=lambda w: w.get('number_external'))
 
         i = 1
         while i < len(external_wfs):
@@ -5424,9 +5420,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
              " of class HelasMultiProcess cannot be called with a value for compute_loop_nc")
         
         # Define the objects stored in the contained color_information
-        for key in color_information:
-            exec("%s=color_information['%s']"%(key,key))
-        
+        if 'list_colorize' in color_information:
+            list_colorize = color_information['list_colorize']
+        else:
+            list_colorize = [] 
+        if 'list_color_basis' in color_information:
+            list_color_basis = color_information['list_color_basis']
+        else:
+            list_color_basis = []
+        if 'list_color_matrices' in color_information:
+            list_color_matrices = color_information['list_color_matrices']
+        else:
+            list_colorize = []        
+
         # Always create an empty color basis, and the
         # list of raw colorize objects (before
         # simplification) associated with amplitude
@@ -5436,10 +5442,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         
         colorize_obj = col_basis.create_color_dict_list(\
                          matrix_element.get('base_amplitude'))
-        #list_colorize = []
-        #list_color_basis = []
-        #list_color_matrices = []
-        
+
         try:
             # If the color configuration of the ME has
             # already been considered before, recycle
@@ -5468,6 +5471,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                list_color_basis[col_index])
         matrix_element.set('color_matrix',
                                list_color_matrices[col_index])
+
 
     # Below is the type of HelasMatrixElement which should be created by this
     # HelasMultiProcess class

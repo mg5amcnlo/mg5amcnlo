@@ -812,7 +812,8 @@ class Metric(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(cls,l1,l2):
-        if l1<l2:
+
+        if str(l1)<str(l2):
             return '_ETA_%s_%s' % (l1,l2)
         else:
             return '_ETA_%s_%s' % (l2,l1)

@@ -7715,8 +7715,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         to_distinguish.append(abs(part.get('pdg_code')))
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
-                                 a1.get_number_of_diagrams())
+            self._curr_amps.sort(key=lambda x: x.get_number_of_diagrams(),reverse=True)
 
             cpu_time1 = time.time()
             ndiags = 0

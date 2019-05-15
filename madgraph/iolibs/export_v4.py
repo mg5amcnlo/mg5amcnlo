@@ -27,6 +27,7 @@ import glob
 import logging
 import math
 import os
+import io
 import re
 import shutil
 import subprocess
@@ -1800,7 +1801,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            if 'clang' in out and  misc.which('clang'):
+            if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
                 compiler = 'g++'
@@ -5604,13 +5605,18 @@ class UFO_model_to_mg4(object):
         
         if format == 'fortran':
             fsock = writers.FortranWriter(file_path, 'w')
-        else:
-            fsock = open(file_path, 'w')
-        
-        file.writelines(fsock, comment * 77 + '\n')
-        file.writelines(fsock,'%(comment)s written by the UFO converter\n' % \
+            write_class = io.FileIO
+            
+            write_class.writelines(fsock, comment * 77 + '\n')
+            write_class.writelines(fsock, '%(comment)s written by the UFO converter\n' % \
                                {'comment': comment + (6 - len(comment)) *  ' '})
-        file.writelines(fsock, comment * 77 + '\n\n')
+            write_class.writelines(fsock, comment * 77 + '\n\n')
+        else:
+            fsock = open(file_path, 'w')  
+            fsock.writelines(comment * 77 + '\n')
+            fsock.writelines('%(comment)s written by the UFO converter\n' % \
+                                   {'comment': comment + (6 - len(comment)) *  ' '})
+            fsock.writelines(comment * 77 + '\n\n')
         return fsock       
 
     

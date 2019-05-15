@@ -20,6 +20,12 @@ based on relevant properties.
 """
 
 from __future__ import absolute_import
+#force filter to be a generator # like in py3
+try:
+    from  itertools import ifilter as filter
+except:
+    pass
+
 import array
 import copy
 import itertools
@@ -155,8 +161,8 @@ class DiagramTag(object):
         leg_vertices = [cls.vertices_from_link(l, model) for l in link.links]
         # The daughter legs are in the first entry
         legs = base_objects.LegList(sorted([l for l,v in leg_vertices],
-                                           lambda l1,l2: l2.get('number') - \
-                                           l1.get('number')))
+                                           key= lambda l: l.get('number'), reverse=True))
+
         # The daughter vertices are in the second entry
         vertices = base_objects.VertexList(sum([v for l, v in leg_vertices],
                                                []))
@@ -369,7 +375,12 @@ class DiagramTagChainLink(object):
             return len(self.links) < len(other.links)
 
         if self.vertex_id[0] != other.vertex_id[0]:
-            return self.vertex_id[0] < other.vertex_id[0]
+            if isinstance(self.vertex_id[0], int) and isinstance(other.vertex_id[0], tuple):
+                return True
+            elif isinstance(self.vertex_id[0], tuple) and isinstance(other.vertex_id[0], int):
+                return False
+            else:
+                return self.vertex_id[0] < other.vertex_id[0]
 
         for i, link in enumerate(self.links):
             if i > len(other.links) - 1:
@@ -803,8 +814,8 @@ class Amplitude(base_objects.PhysicsObject):
                     nexttolastvertex = copy.copy(vertices.pop())
                     legs = copy.copy(nexttolastvertex.get('legs'))
                     ntlnumber = legs[-1].get('number')
-                    lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
-                                     lastvx.get('legs'))[0]
+                    lastleg = next(filter(lambda leg: leg.get('number') != ntlnumber,
+                                     lastvx.get('legs')))
                     # Reset onshell in case we have forbidden s-channels
                     if lastleg.get('onshell') == False:
                         lastleg.set('onshell', None)

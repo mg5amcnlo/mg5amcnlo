@@ -210,8 +210,7 @@ class WriteALOHA:
         # couplings
         if  couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
-            detected_couplings.sort(coup_sort)
+            detected_couplings.sort(key=lambda x: x[4:])
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -744,7 +743,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 return +1
             
         keys = list(self.routine.fct.keys())        
-        keys.sort(sort_fct)
+        keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
 

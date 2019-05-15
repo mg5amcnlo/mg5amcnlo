@@ -22,9 +22,7 @@ import re
 import collections
 from six.moves import range
 import six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
 
 try:
     import madgraph
@@ -33,7 +31,7 @@ except ImportError:
 else:
     import madgraph.various.misc as misc
 
-class FileWriter(file):
+class FileWriter(io.FileIO):
     """Generic Writer class. All writers should inherit from this class."""
 
     supported_preprocessor_commands = ['if']
@@ -56,8 +54,12 @@ class FileWriter(file):
 
     def __init__(self, name, opt = 'w'):
         """Initialize file to write to"""
+        return super(FileWriter, self).__init__(name, opt)
 
-        return file.__init__(self, name, opt)
+    def write(self, line):
+        if isinstance(line,str):
+            line=line.encode()
+        super(FileWriter,self).write(line)
 
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
@@ -407,11 +409,6 @@ class FortranWriter(FileWriter):
             i = i + 1
         return len(splitline)-1
 
-#===============================================================================
-# CPPWriter
-#===============================================================================
-
-
     def remove_routine(self, text, fct_names, formatting=True):
         """write the incoming text but fully removing the associate routine/function
            text can be a path to a file, an iterator, a string
@@ -455,7 +452,9 @@ class FortranWriter(FileWriter):
         return removed
         
 
-
+#===============================================================================
+# CPPWriter
+#===============================================================================
 class CPPWriter(FileWriter):
     """Routines for writing C++ lines. Keeps track of brackets,
     spaces, indentation and splitting of long lines"""

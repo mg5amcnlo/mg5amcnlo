@@ -24,26 +24,6 @@ from .function_library import *
 
 
 
-def cmp_to_key(mycmp):
-    'Convert a cmp= function into a key= function'
-
-    
-    class K:
-        def __init__(self, obj, *args):
-            self.obj = obj
-        def __lt__(self, other):
-            return mycmp(self.obj, other.obj) < 0
-        def __gt__(self, other):
-            return mycmp(self.obj, other.obj) > 0
-        def __eq__(self, other):
-            return mycmp(self.obj, other.obj) == 0
-        def __le__(self, other):
-            return mycmp(self.obj, other.obj) <= 0
-        def __ge__(self, other):
-            return mycmp(self.obj, other.obj) >= 0
-        def __ne__(self, other):
-            return mycmp(self.obj, other.obj) != 0
-    return K
 
 class ParamCardWriter(object):
     
@@ -124,7 +104,7 @@ class ParamCardWriter(object):
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
             if PY3:
-                need_writing.sort(key=cmp_to_key(self.order_param))
+                need_writing.sort(key=misc.cmp_to_key(self.order_param))
             else:
                 need_writing.sort(self.order_param)
             [self.write_param(param, lhablock) for param in need_writing]

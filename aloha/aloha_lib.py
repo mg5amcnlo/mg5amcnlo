@@ -1465,7 +1465,7 @@ class IndicesIterator:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         for i in range(self.len):
             if self.data[i] < 3:
                 self.data[i] += 1
@@ -1473,6 +1473,8 @@ class IndicesIterator:
             else:
                 self.data[i] = 0
         raise StopIteration
+    #Python2
+    next = __next__
             
     def nextscalar(self):
         if self.data:

@@ -26,6 +26,10 @@ import math
 import six
 StringIO = six
 from six.moves import range
+if six.PY3:
+    import io
+    file = io.IOBase
+
 
 pjoin = os.path.join
 
@@ -978,6 +982,7 @@ class ConfigFile(dict):
         pass
 
     def __copy__(self):
+        misc.sprint("in copy")
         return self.__class__(self)
 
     def __add__(self, other):
@@ -1044,7 +1049,7 @@ class ConfigFile(dict):
                 
         name = name.strip()
         lower_name = name.lower() 
-
+        
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
             text='%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name])
@@ -2383,7 +2388,7 @@ class RunCard(ConfigFile):
             if not self.list_parameter:
                 text = text % self
             else:
-                data = dict(self)                
+                data = dict((key.lower(),value) for key, value in self.items())              
                 for name in self.list_parameter:
                     if self.list_parameter[name] != str:
                         data[name] = ', '.join(str(v) for v in data[name])

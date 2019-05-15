@@ -912,7 +912,7 @@ class AbstractALOHAModel(dict):
                     if a[0] < b[0]: return -1
                     else: return 1
                 routines = request[l_name][conjg]
-                routines.sort(sorting)
+                routines.sort(key=misc.cmp_to_key(sorting))
                 if not conjg:
                     # No need to conjugate -> compute directly
                     self.compute_aloha(builder, routines=routines)

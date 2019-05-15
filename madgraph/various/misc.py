@@ -762,7 +762,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
-    return 'LLVM' in output
+    return 'LLVM' in str(output)
 
 def detect_cpp_std_lib_dependence(cpp_compiler):
     """ Detects if the specified c++ compiler will normally link against the C++
@@ -2096,6 +2096,26 @@ def wget(http, path, *args, **opt):
         return call(['curl', '-L', http, '-o%s' % path], *args, **opt)
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function (for using python2 type of sort)'
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
 
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()

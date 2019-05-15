@@ -22,6 +22,28 @@ from six.moves import range
 class ParamCardWriterError(Exception):
     """ a error class for this file """
 
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
+
 class ParamCardWriter(object):
     """ A class for writting an update param_card for a given model """
 
@@ -178,7 +200,7 @@ class ParamCardWriter(object):
             self.define_input_file(path)
   
         # order the parameter in a smart way
-        self.external.sort(self.order_param)
+        self.external.sort(key=cmp_to_key(self.order_param))
         todo_block= ['MASS', 'DECAY'] # ensure that those two block are always written
         
         cur_lhablock = ''
@@ -252,16 +274,8 @@ class ParamCardWriter(object):
         else:
             return
         
-        text = ""
-        def sort(el1, el2):
-            (p1,n) =el1
-            (p2,n) = el2
-            if (p1["pdg_code"] -p2["pdg_code"]) > 0:
-                return 1
-            else:
-                return -1 
-        
-        data.sort(sort)
+        text = ""        
+        data.sort(key= lambda el: el[0]["pdg_code"])
         for part, param in data:
             # don't write the width of ghosts particles
             if part["type"] == "ghost":
