@@ -1532,7 +1532,7 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
     
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+,\-*/()\s]*''')
+    separator = re.compile(r'''[+,\-*/()\s]+''')
     
     
     def __init__(self, model):
@@ -1707,7 +1707,6 @@ class OrganizeModelExpression:
         # Split the different part of the expression in order to say if a 
         #subexpression is dependent of one of tracked variable
         expr = self.separator.split(expr)
-        
         # look for each subexpression
         for subexpr in expr:
             if subexpr in self.track_dependant:
