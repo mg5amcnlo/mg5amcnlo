@@ -80,7 +80,7 @@ class TimeShower {
 public:
 
   // Constructor.
-  TimeShower() {beamOffset = 0; usePDF = true; }
+  TimeShower() {beamOffset = 0; usePDF = useSystems = true; }
 
   // Destructor.
   virtual ~TimeShower() {}
@@ -212,7 +212,7 @@ public:
     double x = -1.);
   double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
     int id, int type, double s = -1., double x = -1.);
-  bool usePDF;
+  bool usePDF, useSystems;
 
 protected:
 
