@@ -606,18 +606,21 @@ void TimeShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
   int iInA = partonSystemsPtr->getInA(iSys);
   int iInB = partonSystemsPtr->getInB(iSys);
   if (iSys == 0 || iInA == 0) dipEnd.resize(0);
+  if (!useSystems) dipEnd.resize(0);
   int dipEndSizeBeg = dipEnd.size();
 
   // No dipoles for 2 -> 1 processes.
-  if (partonSystemsPtr->sizeOut(iSys) < 2) return;
+  if (useSystems && partonSystemsPtr->sizeOut(iSys) < 2) return;
 
   // In case of DPS overwrite limitPTmaxIn by saved value.
   if (doSecondHard && iSys == 0) limitPTmaxIn = dopTlimit1;
   if (doSecondHard && iSys == 1) limitPTmaxIn = dopTlimit2;
+  if (!useSystems) limitPTmaxIn = dopTlimit1;
 
   // Reset number of proposed splittings. Used for global recoil.
   // First check if this system belongs to the hard scattering.
   bool isHard = false;
+  if (!useSystems) {
   for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
     int ii = partonSystemsPtr->getOut( iSys, i);
     for (int iHard = 0; iHard < int(hardPartons.size()); ++iHard) {
@@ -629,14 +632,19 @@ void TimeShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
     }
     if (isHard) break;
   }
+  } else isHard = true;
+
   // If the system belongs to the hard scattering, initialise
   // counter of proposed emissions.
   if (isHard &&  nProposed.find(iSys) == nProposed.end() )
     nProposed.insert(make_pair(iSys,0));
 
+  int nFinal = (useSystems) ? partonSystemsPtr->sizeOut(iSys) : event.size();
+
   // Loop through final state of system to find possible dipole ends.
-  for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
-    int iRad = partonSystemsPtr->getOut( iSys, i);
+  //for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
+  for (int i = 0; i < nFinal; ++i) {
+    int iRad = (useSystems) ? partonSystemsPtr->getOut( iSys, i) : i;
 
     if (event[iRad].isFinal() && event[iRad].scale() > 0.) {
 
@@ -666,6 +674,7 @@ void TimeShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
                      || ( doQEDshowerByOther && event[iRad].isResonance() ) );
       int  gamType  = (idRad == 22) ? 1 : 0;
       bool doGamDip = (gamType == 1) && doQEDshowerByGamma;
+
       if (doChgDip || doGamDip) setupQEDdip( iSys, i, chgType, gamType,
          event, limitPTmaxIn);
 
@@ -1123,16 +1132,16 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
   Event& event, bool isOctetOnium, bool limitPTmaxIn) {
 
   // Initial values. Find if allowed to hook up beams.
-  int iRad     = partonSystemsPtr->getOut(iSys, i);
+  int iRad     = (useSystems) ? partonSystemsPtr->getOut(iSys, i) : i;
   int iRec     = 0;
-  int sizeAllA = partonSystemsPtr->sizeAll(iSys);
-  int sizeOut  = partonSystemsPtr->sizeOut(iSys);
+  int sizeAllA = (useSystems) ?  partonSystemsPtr->sizeAll(iSys) : event.size();
+  int sizeOut  = (useSystems) ?  partonSystemsPtr->sizeOut(iSys) : event.size();
   int sizeAll  = ( allowBeamRecoil ) ? sizeAllA : sizeOut;
   int sizeIn   = sizeAll - sizeOut;
   int sizeInA  = sizeAllA - sizeIn - sizeOut;
   int iOffset  = i + sizeAllA - sizeOut;
   bool otherSystemRec = false;
-  bool allowInitial   = (partonSystemsPtr->hasInAB(iSys)) ? true : false;
+  bool allowInitial   = (useSystems) ? (partonSystemsPtr->hasInAB(iSys)) ? true : false : true;
   // PS dec 2010: possibility to allow for several recoilers and each with
   // flexible normalization
   bool   isFlexible   = false;
@@ -1143,7 +1152,7 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
   // Exclude rescattered incoming and not final outgoing.
   if (colSign > 0)
   for (int j = 0; j < sizeAll; ++j) if (j + sizeInA != iOffset) {
-    int iRecNow = partonSystemsPtr->getAll(iSys, j + sizeInA);
+    int iRecNow = (useSystems) ? partonSystemsPtr->getAll(iSys, j + sizeInA) : j;
     if ( ( j <  sizeIn && event[iRecNow].col()  == colTag
       && !event[iRecNow].isRescatteredIncoming() )
       || ( j >= sizeIn && event[iRecNow].acol() == colTag
@@ -1157,7 +1166,7 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
   // Exclude rescattered incoming and not final outgoing.
   if (colSign < 0)
   for (int j = 0; j < sizeAll; ++j) if (j + sizeInA != iOffset) {
-    int iRecNow = partonSystemsPtr->getAll(iSys, j + sizeInA);
+    int iRecNow = (useSystems) ? partonSystemsPtr->getAll(iSys, j + sizeInA) : j;
     if ( ( j <  sizeIn && event[iRecNow].acol()  == colTag
       && !event[iRecNow].isRescatteredIncoming() )
       || ( j >= sizeIn && event[iRecNow].col() == colTag
@@ -1183,7 +1192,7 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
     }
     double ppMin = LARGEM2;
     for (int j = 0; j < sizeOut; ++j) if (j != i) {
-        int iRecNow  = partonSystemsPtr->getOut(iSys, j);
+        int iRecNow  = (useSystems) ? partonSystemsPtr->getOut(iSys, j) : j;
         if (!event[iRecNow].isFinal()) continue;
         double ppNow = event[iRecNow].p() * event[iRad].p()
           - event[iRecNow].m() * event[iRad].m();
@@ -1207,7 +1216,7 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
     }
 
     // If no success then look for match to non-rescattered in initial state.
-    if (iRec == 0 && allowInitial) {
+    if (useSystems && iRec == 0 && allowInitial) {
       for (int iSysR = 0; iSysR < partonSystemsPtr->sizeSys(); ++iSysR)
       if (iSysR != iSys) {
         int j = partonSystemsPtr->getInA(iSysR);
@@ -1228,6 +1237,24 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
         }
       }
     }
+
+    // If no success then look for match to non-rescattered in initial state.
+    if (!useSystems && iRec == 0 && allowInitial) {
+      for (int j = 0; j <= event.size(); ++j) {
+        if (event[j].isFinal()) continue;
+        if (j > 0 && ( (colSign > 0 && event[j].col() == colTag)
+          || (colSign < 0 && event[j].acol()  == colTag) ) ) {
+          iRec = j;
+          break;
+        }
+        if (j > 0 && ( (colSign > 0 && event[j].col() == colTag)
+          || (colSign < 0 && event[j].acol()  == colTag) ) ) {
+          iRec = j;
+          break;
+        }
+      }
+    }
+
   }
 
   // Junctions (PS&ND dec 2010)
@@ -1359,6 +1386,13 @@ void TimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
       if (iSys == 0 || (iSys == 1 && doSecondHard)) pTmax *= pTmaxFudge;
       else if (sizeIn > 0) pTmax *= pTmaxFudgeMPI;
     } else pTmax = 0.5 * m( event[iRad], event[iRec]);
+
+    // Force maximal pT to LHEF input value.
+    if ( abs(event[iRad].status()) > 20 &&  abs(event[iRad].status()) < 24
+      && settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+      && event[iRad].scale() > 0.)
+      pTmax = event[iRad].scale();
+
     int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
     int isrType  = (event[iRec].isFinal()) ? 0 : event[iRec].mother1();
     // This line in case mother is a rescattered parton.
@@ -1874,8 +1908,11 @@ void TimeShower::setupHVdip( int iSys, int i, Event& event,
 double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
   double m2dip, int idA, int type, double s, double x) {
 
+
+
   double x1 = x;
   double x2 = m2dip/s/x1;
+  useSystems = false;
 
   // Make dummy event with two entries.
   Event state;
@@ -1896,6 +1933,8 @@ double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
     pA.rotbst(rotate);
   }
   if (type > 0) pB.p(-pA.px(),-pA.py(),-pA.pz(), 0.5*sqrt(m2dip));
+
+
 
   int iSys = 0;
   int colA  = 1;
@@ -1937,15 +1976,15 @@ double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
 
   if (type < 0) state.append( idA, 23, 0, 0, 0, 0, colA, acolA, pA, 0.0, sqrt(m2dip) );
 
-//state.list();
-
+  int idInA = (idA != 6) ? idA : 21; 
+  int idInB = (idB != 6) ? idB : 21; 
   beamAPtr->clear();
   beamBPtr->clear();
-  beamAPtr->append( 1, idA, x1);
-  beamBPtr->append( 2, idB, x2);
-  beamAPtr->xfISR( 0, idA, x1, pTbegAll*pTbegAll);
+  beamAPtr->append( 1, idInA, x1);
+  beamBPtr->append( 2, idInB, x2);
+  beamAPtr->xfISR( 0, idInA, x1, pTbegAll*pTbegAll);
   int vsc1 = beamAPtr->pickValSeaComp();
-  beamBPtr->xfISR( 0, idB, x2, pTbegAll*pTbegAll);
+  beamBPtr->xfISR( 0, idInB, x2, pTbegAll*pTbegAll);
   int vsc2 = beamBPtr->pickValSeaComp();
   infoPtr->setValence( (vsc1 == -3), (vsc2 == -3));
 
@@ -1957,10 +1996,15 @@ double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
   partonSystemsPtr->setSHat( 0, m2dip);
   partonSystemsPtr->setPTHat( 0, pTbegAll);
 
+
+
   // Find positions of incoming colliding partons.
   int in1 = (type > 0) ? 1 : 2;
   vector<TimeDipoleEnd> dipEnds;
   prepare(iSys,state,true);
+
+
+
   dipEnds = dipEnd;
   dipEnd.clear();
 
@@ -2055,6 +2099,7 @@ double TimeShower::noEmissionProbability( double pTbegAll, double pTendAll,
   beamAPtr->clear();
   beamBPtr->clear();
   partonSystemsPtr->clear();
+  useSystems = true;
 
   // Done
   double res = wt;
@@ -2094,9 +2139,17 @@ double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
     dipEndNow->pT2         =  0.0;
     dipEndNow->z           = -1.0;
 
-    double pT2start = min( dipEndNow->m2Dip, pTbegAll*pTbegAll);
+    //double pT2start = min( dipEndNow->m2Dip, pTbegAll*pTbegAll);
     //double pT2stop  = max( pT2colCut, pTendAll*pTendAll);
+    // Find maximum evolution scale for dipole.
+    dipEndNow->m2DipCorr    = pow2(dipEndNow->mDip - dipEndNow->mRec) - dipEndNow->m2Rad;
+    double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
+    double pT2begDip = min( pow2(pTbegDip), 0.25 * dipEndNow->m2DipCorr);
+    double pT2start = pT2begDip;
     double pT2stop  = pTendAll*pTendAll;
+
+    if (pT2start < pT2stop) { pT2sel = 0.; dipSel =0; break; }
+
     pT2stop         = max( pT2stop, pT2sel);
 
     // Do QCD, QED, weak or HV evolution if it makes sense.
