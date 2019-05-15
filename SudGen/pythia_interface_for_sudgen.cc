@@ -45,6 +45,9 @@ extern "C" {
     pythia.readString("Print:quiet = on");
     pythia.readString("Merging:nRequested = 0");
     pythia.readString("Beams:setProductionScalesFromLHEF = off");
+    pythia.readString("TimeShower:QEDshowerByQ = off");
+    pythia.readString("TimeShower:QEDshowerByL = off");
+    pythia.readString("TimeShower:QEDshowerByOther = off");
 
     pythia.settings.addParm("Dire:Sudakov:Min",0.0,false,false,0.0,1e0);
 
