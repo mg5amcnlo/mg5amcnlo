@@ -59,6 +59,7 @@ extern "C" {
     pythia.readString("2:m0 = 0.0");
     pythia.readString("3:m0 = 0.0");
     pythia.readString("4:m0 = 0.0");
+    pythia.settings.forceParm("Spaceshower:pt0ref", 0.0);
 
     pythia.init();
     // Perform a single step to check initialization.

@@ -74,6 +74,7 @@ c
       include 'MCmasses_PYTHIA8.inc'
 c
       call dire_init(mcmass)
+      call pythia_init(mcmass)
       write(*,*)'enter lower and upper bounds of st range'
       read(*,*)stlow,stupp
       write(*,*)'enter lower and upper bounds of M range'
@@ -624,7 +625,9 @@ c
       real*8 mcmass(21)
       double precision temp
 c
-      call dire_get_no_emission_prob(temp, stupp,
+c      call dire_get_no_emission_prob(temp, stupp,
+c     #     stlow, md, id, itype, iseed, min_py_sudakov)
+      call pythia_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
       write(iunit,*) 'md=', md, ' start=', stupp,
