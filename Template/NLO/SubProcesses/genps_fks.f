@@ -1512,6 +1512,7 @@ c
       xp(3,2)=-xp(0,2)
 c
       xp(0,i_fks)=E_i_fks*(chy_lbst-shy_lbst*yijdir)
+      p_i_fks(0)=p_i_fks(0)*(chy_lbst-shy_lbst*yijdir)
       xpifksred(1)=sinth_i_fks*cosphi_i_fks    
       xpifksred(2)=sinth_i_fks*sinphi_i_fks    
       xpifksred(3)=chy_lbst*yijdir-shy_lbst

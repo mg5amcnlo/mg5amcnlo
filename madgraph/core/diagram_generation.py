@@ -1334,7 +1334,7 @@ class DecayChainAmplitude(Amplitude):
     def __init__(self, argument = None, collect_mirror_procs = False,
                  ignore_six_quark_processes = False, loop_filter=None, diagram_filter=False):
         """Allow initialization with Process and with ProcessDefinition"""
-
+ 
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
             from madgraph.loop.loop_diagram_generation import LoopMultiProcess
@@ -1373,7 +1373,8 @@ class DecayChainAmplitude(Amplitude):
                           " incoming particle"
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
-                                        ignore_six_quark_processes))
+                                        ignore_six_quark_processes,
+                                        diagram_filter=diagram_filter))
 
             # Flag decaying legs in the core diagrams by onshell = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
@@ -1782,7 +1783,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not process.get('required_s_channels') and \
                    not process.get('forbidden_onsh_s_channels') and \
                    not process.get('forbidden_s_channels') and \
-                   not process.get('is_decay_chain'):
+                   not process.get('is_decay_chain') and not diagram_filter:
                     try:
                         crossed_index = success_procs.index(sorted_legs)
                         # The relabeling of legs for loop amplitudes is cumbersome
@@ -1923,7 +1924,6 @@ class MultiProcess(base_objects.PhysicsObject):
 
         max_WEIGHTED_order = \
                         (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
-
         # get the definition of the WEIGHTED
         hierarchydef = process_definition['model'].get('order_hierarchy')
         tmp = []
@@ -1946,7 +1946,6 @@ class MultiProcess(base_objects.PhysicsObject):
             # failed_procs are processes that have already failed
             # based on crossing symmetry
             failed_procs = []
-            
             # Generate all combinations for the initial state        
             for prod in apply(itertools.product, isids):
                 islegs = [ base_objects.Leg({'id':id, 'state': False}) \
@@ -2020,13 +2019,13 @@ class MultiProcess(base_objects.PhysicsObject):
                     sorted_legs = sorted(legs.get_outgoing_id_list(model))
                     # Check if crossed process has already failed
                     # In that case don't check process
-                    if tuple(sorted_legs) in failed_procs:
+                    if tuple(sorted_legs) in failed_procs and not process_definition.get('forbidden_s_channels'):
                         continue
 
                     amplitude = Amplitude({'process': process})
                     try:
                         amplitude.generate_diagrams(diagram_filter=diagram_filter)
-                    except InvalidCmd:
+                    except InvalidCmd, error:
                         failed_procs.append(tuple(sorted_legs))
                     else:
                         if amplitude.get('diagrams'):
@@ -2035,7 +2034,6 @@ class MultiProcess(base_objects.PhysicsObject):
                             return {coupling: max_order_now}
                         else:
                             failed_procs.append(tuple(sorted_legs))
-
             # No processes found, increase max_order_now
             max_order_now += 1
             logger.setLevel(oldloglevel)

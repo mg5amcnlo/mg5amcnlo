@@ -399,13 +399,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         text=''
         for i,e in enumerate(initial_states):
-            if len(e) ==1:
-                e.append(0)
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
+                if len(t) ==1:
+                    t.append(0)
                 text=text+'   '
                 try:
                     for p in t:
+                        if p == None : p = 0
                         text=text+' '+str(p)
                 except TypeError:
                         text=text+' '+str(t)

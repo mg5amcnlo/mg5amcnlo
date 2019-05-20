@@ -384,7 +384,7 @@ class Systematics(object):
                     misc.gzip(to_check) 
                 else:
                     import shutil
-                    shutil.move(self.output.name, self.output_path)
+                    shutil.move(to_check, self.output_path)
         
         return all_cross
         
@@ -832,7 +832,6 @@ class Systematics(object):
             loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
             
         
-        
         # MUR part
         if self.b1 == 0 == self.b2:
             if loinfo['n_qcd'] != 0:
@@ -938,9 +937,16 @@ def call_systematics(args, result=sys.stdout, running=True,
                      log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
 
+
     input, output = args[0:2]
+    
+    start_opts = 2
+    if output and output.startswith('-'):
+        start_opts = 1
+        output = input
+    
     opts = {}
-    for arg in args[2:]:
+    for arg in args[start_opts:]:
         if '=' in arg:
             key,values= arg.split('=')
             key = key.replace('-','')
@@ -987,41 +993,52 @@ def call_systematics(args, result=sys.stdout, running=True,
             
         if isinstance(card, banner.RunCardLO):
             # LO case
-            opts['mur'] = [float(x) for x in card['sys_scalefact'].split()]
-            opts['muf'] = opts['mur']
-            if card['sys_alpsfact'] != 'None':
-                opts['alps'] = [float(x) for x in card['sys_alpsfact'].split()]
+            if 'systematics_arguments' in card.user_set:
+                return call_systematics([input, output] + card['systematics_arguments']
+                                        , result=result, running=running,
+                     log=log)
+                
             else:
-                opts['alps'] = [1.0]
-            opts['together'] = [('mur','muf','alps','dyn')]
-            if '&&' in card['sys_pdf']:
-                pdfs =  card['sys_pdf'].split('&&')
-            else:
-                data = card['sys_pdf'].split()
-                pdfs = []
-                for d in data:
-                    if not d.isdigit():
-                        pdfs.append(d)
-                    elif int(d) > 500:
-                        pdfs.append(d)
-                    else:
-                        pdfs[-1] = '%s %s' % (pdfs[-1], d)
-
-            opts['dyn'] = [-1,1,2,3,4]
-            opts['pdf'] = []
-            for pdf in pdfs:
-                split = pdf.split()
-                if len(split)==1:
-                    opts['pdf'].append('%s' %pdf)
+                opts['mur'] = [float(x) for x in card['sys_scalefact'].split()]
+                opts['muf'] = opts['mur']
+                if card['sys_alpsfact'] != 'None':
+                    opts['alps'] = [float(x) for x in card['sys_alpsfact'].split()]
                 else:
-                    pdf,nb = split
-                    for i in range(int(nb)):
-                        opts['pdf'].append('%s@%s' % (pdf, i))
-            if not opts['pdf']:
-                opts['pdf'] = 'central'
+                    opts['alps'] = [1.0]
+                opts['together'] = [('mur','muf','alps','dyn')]
+                if '&&' in card['sys_pdf']:
+                    pdfs =  card['sys_pdf'].split('&&')
+                else:
+                    data = card['sys_pdf'].split()
+                    pdfs = []
+                    for d in data:
+                        if not d.isdigit():
+                            pdfs.append(d)
+                        elif int(d) > 500:
+                            pdfs.append(d)
+                        else:
+                            pdfs[-1] = '%s %s' % (pdfs[-1], d)
+        
+                opts['dyn'] = [-1,1,2,3,4]
+                opts['pdf'] = []
+                for pdf in pdfs:
+                    split = pdf.split()
+                    if len(split)==1:
+                        opts['pdf'].append('%s' %pdf)
+                    else:
+                        pdf,nb = split
+                        for i in range(int(nb)):
+                            opts['pdf'].append('%s@%s' % (pdf, i))
+                if not opts['pdf']:
+                    opts['pdf'] = 'central'
         else:
             #NLO case
-            raise Exception
+            if 'systematics_arguments' in card.user_set:
+                return call_systematics([input, output] + card['systematics_arguments']
+                                        , result=result, running=running,
+                     log=log)
+            else:
+                raise Exception
         del opts['from_card']
     
 
@@ -1031,6 +1048,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     return obj
 
 if __name__ == "__main__":
+        
     sys_args = sys.argv[1:]
     for i, arg in enumerate(sys_args) :
         if arg.startswith('--lhapdf_config=') :
@@ -1042,7 +1060,7 @@ if __name__ == "__main__":
         lhapdf = misc.import_python_lhapdf('lhapdf-config')
          
     if not lhapdf:
-            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf-config=')
+            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf_config=')
     call_systematics(sys_args)
     
 

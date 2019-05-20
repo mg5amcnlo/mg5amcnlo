@@ -3650,11 +3650,11 @@ class ProcessDefinition(Process):
         # Extract hierarchy and particles corresponding to the
         # different hierarchy levels from the model
         particles, hierarchy = model.get_particles_hierarchy()
-
         # Find legs corresponding to the different orders
         # making sure we look at lowest hierarchy first for each leg
         max_order_now = []
         new_legs =  copy.copy(self.get('legs'))
+        import madgraph.core.base_objects as base_objects
         for parts, value in zip(particles, hierarchy):
             ileg = 0
             while ileg < len(new_legs):

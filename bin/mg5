@@ -24,7 +24,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 
-print '\033[91mWarning: The script ./bin/mg5 will be removed in future versions; use ./bin/mg5_aMC instead.\033[0m'
+print('\033[91mWarning: The script ./bin/mg5 will be removed in future versions; use ./bin/mg5_aMC instead.\033[0m')
 
 sys.argv.pop(0)
 if __debug__:
