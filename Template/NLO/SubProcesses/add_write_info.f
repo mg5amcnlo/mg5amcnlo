@@ -574,7 +574,7 @@ c     Remove non-resonant mothers, set position of particles
         
 c
 c Shift particles to right place
-c     
+c
       do i=nexpart,-ns,-1
          if(ito(i).le.0) cycle
          do j=1,7
@@ -588,7 +588,7 @@ c
             pb(j,ito(i))=pb(j,i)
          enddo
          do j=nexpart,-ns,-1
-            if(j.eq.i)cycle
+            if(j.eq.i.or.ito(j).le.0)cycle
             shower_scale_a(ito(i),ito(j))=shower_scale_a(i,j)
          enddo
       enddo
