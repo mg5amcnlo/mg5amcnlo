@@ -589,8 +589,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
-      double precision Eem,qMC_a(nexternal)
-      common /to_complete/qMC_a
+      double precision Eem,qMC_a2(nexternal-1,nexternal-1)
+      common /to_complete/qMC_a2
       integer iBtoR(nexternal-1)
 
       save
@@ -1025,31 +1025,12 @@ c Emsca stuff
 c
 c Emsca stuff for multiple scales
       if(dampMCsubt)then
-         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a)
+         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
          do i=1,nexternal-1
-c$$$            if(i.lt.i_fks)then
-c$$$              iBtoR(i)=i
-c$$$            elseif(i.eq.i_fks)then
-c$$$              if(i.lt.nexternal)iBtoR(i)=i+1
-c$$$            elseif(i.gt.i_fks)then
-c$$$              if(i.lt.nexternal)iBtoR(i)=i+1
-c$$$            endif
-c$$$            if(i.eq.j_fks)then
-c$$$               qMC_a(i)=qMC
-c$$$            else
-c$$$               qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
-c$$$               Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
-c$$$     #               dot(pp(0,2),pp(0,iBtoR(i))) )/
-c$$$     #             sqrt(2*dot(pp(0,1),pp(0,2)))
-c$$$c qMC_a is the dot product of i_fks with its emitter,
-c$$$c divided by the energy of the latter in the incoming
-c$$$c parton cm frame
-c$$$               qMC_a(i)=qMC_a(i)/Eem
-c$$$            endif
             do j=1,nexternal-1
                if(j.eq.i)cycle
                if(emscasharp_a(i,j))then
-                  if(qMC_a(i).le.scalemax_a(i,j))then
+                  if(qMC_a2(i,j).le.scalemax_a(i,j))then
                      emscav_a(i,j)=emsca_bare_a(i,j)
                      emscav_a2(i,j)=emsca_bare_a2(i,j)
                   else
@@ -1057,7 +1038,7 @@ c$$$            endif
                      emscav_a2(i,j)=scalemax_a(i,j)
                   endif
                else
-                  ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
+                  ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
      &                          (scalemax_a(i,j)-scalemin_a(i,j))
                   if(ptresc_a(i,j).lt.1d0)then 
                      emscav_a(i,j)=emsca_bare_a(i,j)
@@ -1243,12 +1224,27 @@ c               cstlow <= smallptupp
       logical*1 dzones(0:99,0:99)
       logical*1 dzones2(0:99,0:99)
 
-      integer id,type,icount
+      integer id,type,icount,jcount,kcount,irec(2)
+      integer iflip(2)
+      data iflip/2,1/
+
+      double precision emscav_a2_tmp,emscav_tmp_a2_tmp,ptresc_a_tmp
+      double precision sref,acll1,acll2,acllfct(2),dot
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+
+      logical usePythia,useDire
+      data usePythia/.false./
+      data useDire/.true./
+
 cSF ARE noemProb AND mDipole USEFUL?
-      double precision noemProb, startingScale, stoppingScale, mDipole
+      double precision startingScale0,stoppingScale0
+      double precision noemProb, startingScale(2), stoppingScale(2), mDipole
       double precision mcmass(21)
-      double precision pysudakov,deltanum,deltaden,deltarat
-      integer nG_S,nQ_S,i_dipole_counter,isudtype
+      double precision pysudakov,deltanum(2,2),deltaden(2),deltarat(2,2)
+      double precision gltmp,xtmp(2),glfact(2),glrat(2)
+      integer nG_S,nQ_S,i_dipole_counter,isudtype(2)
       integer i_dipole_dead_counter
 c
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -1258,7 +1254,7 @@ c
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
-      double precision pdg2pdf,pdffnum,pdffden
+      double precision pdg2pdf,pdffnum(2),pdffden(2)
       external pdg2pdf
 c
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -1284,8 +1280,8 @@ c
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
-      double precision qMC_a(nexternal)
-      common /to_complete/qMC_a
+      double precision qMC_a2(nexternal-1,nexternal-1)
+      common /to_complete/qMC_a2
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1317,6 +1313,20 @@ c Input check
             stop
          endif
       enddo
+      if( (useDire.and.usePythia) .or.
+     #    ((.not.useDire).and.(.not.usePythia)) )then
+        write(*,*)'complete_xmcsubt: Dire or Pythia?'
+        write(*,*)useDire,usePythia
+        stop
+      endif
+
+cSF TEMPORARY
+      if(usePythia)then
+        write(*,*)'has'
+        write(*,*)'xscales -> xscales^2 AND xmasses -> sqrt(xmasses)'
+        write(*,*)'been done?'
+        stop
+      endif
 
 c Compute MC cross section
       wgt=0d0
@@ -1487,7 +1497,7 @@ cSF thus can be directly passed rather than reconstructed
         firsttime1=.false.
         call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
 c Fake call for initialisation
-        deltanum=pysudakov(1.d2,2.d2,1,1,mcmass)
+        deltanum(1,1)=pysudakov(1.d2,2.d2,1,1,mcmass)
         if(cstlow.gt.smallptupp)then
           write(*,*)'Error in xmcsubt: cstlow,smallptupp',
      &               cstlow,smallptupp
@@ -1572,27 +1582,31 @@ c
             idIn2 = idup_s(2)
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
-            call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
+            if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
+            if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
             call cpu_time(tAfter)
             write(*,*)'time elapsed in dire_init_default',tAfter-tBefore
          endif
          call cpu_time(tBefore)
-         call dire_setevent()
+         if(useDire)call dire_setevent()
+         if(usePythia)call pythia_setevent()
          call cpu_time(tAfter)
-         write(*,*)'time elapsed in dire_setevent',tAfter-tBefore
+         write(*,*)'time elapsed in MC_setevent',tAfter-tBefore
          call cpu_time(tBefore)
-         call dire_next()
+         if(useDire)call dire_next()
+         if(usePythia)call pythia_next()
          call cpu_time(tAfter)
-         write(*,*)'time elapsed in dire_next',tAfter-tBefore
+         write(*,*)'time elapsed in MC_next',tAfter-tBefore
          call cpu_time(tBefore)
-         call dire_get_stopping_info(xscales,xmasses)
+         if(useDire)call dire_get_stopping_info(xscales,xmasses)
+         if(usePythia)call pythia_get_stopping_info(xscales,xmasses)
          call cpu_time(tAfter)
-         write(*,*)'time elapsed in dire_get_stopping_info',tAfter-tBefore
+         write(*,*)'time elapsed in MC_get_stopping_info',tAfter-tBefore
          call cpu_time(tBefore)
-         call dire_get_dead_zones(dzones)
+         if(useDire)call dire_get_dead_zones(dzones)
+         if(usePythia)call pythia_get_dead_zones(dzones)
          call cpu_time(tAfter)
-         write(*,*)'time elapsed in dire_get_dead_zones',tAfter-tBefore
+         write(*,*)'time elapsed in MC_get_dead_zones',tAfter-tBefore
          write(*,*)
       else
          if (is_pythia_active.eq.0) then
@@ -1616,14 +1630,23 @@ c
             idIn2 = idup_s(2)
             if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
             if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
-c$$$            call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
+            if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
+            if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
          endif
-         call dire_setevent()
-         call dire_next()
-         call dire_get_stopping_info(xscales,xmasses)
-         call dire_get_dead_zones(dzones)
-         call dire_clear()
+         if(useDire)then
+           call dire_setevent()
+           call dire_next()
+           call dire_get_stopping_info(xscales,xmasses)
+           call dire_get_dead_zones(dzones)
+           call dire_clear()
+         endif
+         if(usePythia)then
+           call pythia_setevent()
+           call pythia_next()
+           call pythia_get_stopping_info(xscales,xmasses)
+           call pythia_get_dead_zones(dzones)
+           call pythia_clear()
+         endif
       endif
 
 c      write(*,*) 'before'
@@ -1658,13 +1681,13 @@ c     is consistent with the MG_aMC S-event state.
       do i=1,nup_in
          do j=1,nexternal-1
             if (i.le.nincoming) then
-c     incoming momenta should always be particle 1 and 2.
+c incoming momenta should always be particle 1 and 2.
                if (j.ne.i) cycle
             elseif (j.le.nincoming) then
                cycle
             endif
             if (idup_in(i).eq.idup_s(j)) then
-c     found the same particles
+c found the same particles
                if (any(icolup_in(1:2,i).ne.icolup_s(1:2,j))) then
                   write (*,*) 'montecarlocounter.f: '/
      $                 /'States not compatible #3'
@@ -1682,7 +1705,7 @@ c     found the same particles
             endif
          enddo
          if (j.gt.nexternal-1) then
-c     went all the way through the 2nd do-loop without finding the corresponding particle...
+c went all the way through the 2nd do-loop without finding the corresponding particle...
             write (*,*) 'montecarlocounter.f: States not compatible #2'
             write (*,*) idup_in(1:nup_in)
             write (*,*) idup_s(1:nup_in)
@@ -1897,122 +1920,310 @@ c
       do i=1,nexternal-1
          if(idup_s(i).eq.21)nG_S=nG_S+1
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
+         icount=0
          do j=1,nexternal-1
+c At fixed i, loop over j to find the colour lines that begin at i 
+c (at most [because of dead zones] one for quarks, two for gluons).
+c For each of these colour lines, find the starting and stopping
+c scales and store them in startingScale(*) and stoppingScale(*).
+c Store the corresponding Sudakov type in isudtype(*)
             if(j.eq.i)cycle
             if(xscales2(i,j).eq.-1d0)cycle
-cSF The following definition of startingScale is unprotected:
-cSF cstupp must be sufficiently large
-            startingScale = min(SCALUP_tmp_S2(i,j),cstupp)
-            stoppingScale = SCALUP_tmp_H2(i,j)
-
-            ! rescale the starting scale, since we have DIRE sudakov
-            ! templates, but PYTHIA scales (except for the stopping
-            ! scale, which is already a DIRE scale)
-            ! REMOVE THIS FOR PYTHIA!!!
-c$$$            write (*,*) startingScale,stoppingScale,qMC_a(i),i
-c$$$     $           ,startingScale*stoppingScale/qMC_a(i),sqrt(p(1,4)**2
-c$$$     $           +p(2,4)**2)
-            startingScale=startingScale*stoppingScale/qMC_a(i)
-            !
-
-c Passing the following if clause must be exceedingly rare
-            if(startingScale.le.smallptupp)then
-              write(*,*)'Warning in xmcsubt: startingScale, smallptupp'
-              write(*,*)startingScale,smallptupp
-c$$$              stop
-              startingScale=smallptupp
-            endif
-c only colour-connected partons livezone and sensible scales
-c contribute to Delta
-            if(xscales2(i,j).eq.-1d0.or.dzones2(i,j))then
+            if(dzones2(i,j))then
                i_dipole_dead_counter=i_dipole_dead_counter+1
                cycle
             endif
-            if(stoppingScale.lt.scltarget)then
-              scltarget=stoppingScale
-              sclstart=startingScale
+            icount=icount+1
+            if( (abs(idup_s(i)).le.6.and.icount.gt.1) .or.
+     #          (idup_s(i).eq.21 .and.
+     #            (icount.gt.2.and.(.not.isspecial(jflow))) .or.
+     #            (icount.gt.1.and.isspecial(jflow)) ) )then
+              write(*,*)'Error #6 in complete_xmcsubt'
+              write(*,*)i,idup_s(i),icount,isspecial(jflow)
+              stop
+            endif
+cSF The following definition of startingScale is unprotected:
+cSF cstupp must be sufficiently large
+            startingScale0 = min(SCALUP_tmp_S2(i,j),cstupp)
+            stoppingScale0 = SCALUP_tmp_H2(i,j)
+            if(useDire)then
+c Compute the anticollinear suppression factor
+              sref=dot(p(0,1),p(0,2))
+cSF CHECK TO BE REMOVED
+              if(abs((xi_i_fks_ev*p_i_fks_ev(0)-p(0,i_fks))/p_i_fks_ev(0)).gt.1.d-6 .or.
+     #           abs((xi_i_fks_ev*p_i_fks_ev(3)-p(3,i_fks))/p_i_fks_ev(0)).gt.1.d-6)then
+                print*,"WTF",xi_i_fks_ev,p_i_fks_ev(0),p(0,i_fks),p_i_fks_ev(3),p(3,i_fks)
+                print*,"WTF",xi_i_fks_ev*p_i_fks_ev(0),p(0,i_fks),xi_i_fks_ev*p_i_fks_ev(3),p(3,i_fks)
+                stop
+              endif
+              acll1=dot(p_i_fks_ev(0),p(0,iBtoR(i)))
+              if(acll1.le.0.d0)then
+                if(acll1.gt.-1.d-3*sref)then
+                  acll1=0.d0
+                else
+                  write(*,*)'Error #9 in complete_xmcsubt: acll1'
+                  write(*,*)i,iBtoR(i),acll1
+                  stop
+                endif
+              endif
+              acll2=dot(p_i_fks_ev(0),p(0,iBtoR(j)))
+              if(acll2.le.0.d0)then
+                if(acll2.gt.-1.d-3*sref)then
+                  acll2=0.d0
+                else
+                  write(*,*)'Error #9 in complete_xmcsubt: acll2'
+                  write(*,*)i,iBtoR(i),acll2
+                  stop
+                endif
+              endif
+c With massless partons:
+c   acllfct(icount) -> 1  with i_fks||iBtoR(i)
+c   acllfct(icount) -> 0  with i_fks||iBtoR(j)
+c This is the ratio of the partial-fractioned eikonal (which is used
+c by Dire in a secondary hit and miss) over the full eikonal (which
+c serves as upper bound to the former).
+c We are computing the Delta contribution at given i, looping over j;
+c therefore, the argument of acllfct(*) identifies the end of the
+c line, ie the recoiler
+              acllfct(icount)=acll2/max(acll1+acll2,1.d-8)
+              if(acllfct(icount).gt.1.d0.or.acllfct(icount).lt.0.d0)then
+                write(*,*)'Error #8 in complete_xmcsubt'
+                write(*,*)i,j,acll1,acll2
+                stop
+              endif
+              if(acllfct(icount).lt.1.d-8)then
+                acllfct(icount)=1.d8
+              else
+                acllfct(icount)=1/acllfct(icount)
+              endif
+c Redefine startingScale0
+cSF Assumption: identify xscales2(i,j) with the Pythia-to-Dire translation
+cSF of qMC_a2(i,j). Then:
+              if(emscasharp_a(i,j))then
+                 if(xscales2(i,j).le.scalemax_a(i,j))then
+                    emscav_a2_tmp=emsca_bare_a2(i,j)
+                 else
+                    emscav_a2_tmp=scalemax_a(i,j)
+                 endif
+              else
+                 ptresc_a_tmp=(xscales2(i,j)-scalemin_a(i,j))/
+     &                        (scalemax_a(i,j)-scalemin_a(i,j))
+                 if(ptresc_a_tmp.lt.1d0)then 
+                    emscav_a2_tmp=emsca_bare_a2(i,j)
+                 else
+                    emscav_a2_tmp=scalemax_a(i,j)
+                 endif
+              endif
+              emscav_tmp_a2_tmp=emscav_a2_tmp
+              startingScale0=min(emscav_tmp_a2_tmp,cstupp)
+            endif
+            if(usePythia)then
+              acllfct(icount)=1.d0
+            endif
+c Passing the following if clause must be exceedingly rare
+            if(startingScale0.le.smallptupp)then
+              write(*,*)'Warning in xmcsubt: startingScale0, smallptupp'
+              write(*,*)startingScale0,smallptupp
+c$$$              stop
+              startingScale0=smallptupp
+            endif
+            if(stoppingScale0.lt.scltarget)then
+              scltarget=stoppingScale0
+              sclstart=startingScale0
               itmp=i
               jtmp=j
             endif
-            if(stoppingScale.gt.startingScale)then
-               i_dipole_dead_counter=i_dipole_dead_counter+1
-               if (isspecial(jflow) .and. idup_s(i).eq.21) then
-                  if (idup_s(j).ne.21) then
-                     write (*,*) 'SPECIAL and a gluon is not connected '/
-     $                    /'to another gluon',i,j,idup_s(i),idup_s(j)
-                     stop 1
-                  endif
-c     count the special case twice.
-                  i_dipole_dead_counter=i_dipole_dead_counter+1
-               endif
-               cycle
-            endif
+            stoppingScale(icount)=stoppingScale0
+            startingScale(icount)=startingScale0
             if(i.le.2.and.j.le.2)then
-               isudtype=1
+               isudtype(icount)=1
             elseif(i.gt.2.and.j.gt.2)then
-               isudtype=2
+               isudtype(icount)=2
             elseif(i.le.2.and.j.gt.2)then
-               isudtype=3
+               if(useDire)isudtype(icount)=3
+c For Pythia: IF is identical to II
+               if(usePythia)isudtype(icount)=1
             elseif(i.gt.2.and.j.le.2)then
-               isudtype=4
+               isudtype(icount)=4
             endif
-c
-            if(stoppingScale.le.smallptlow)then
-              deltanum=0.d0
-            elseif( stoppingScale.gt.smallptlow .and.
-     #              stoppingScale.le.smallptupp )then
-              deltanum=pysudakov(smallptupp,xmasses2(i,j),
-     &                           idup_s(i),isudtype,mcmass)
-              deltanum=deltanum*
-     #                 get_to_zero(stoppingScale,smallptlow,smallptupp)
+            if(stoppingScale(icount).gt.startingScale(icount))then
+               i_dipole_dead_counter=i_dipole_dead_counter+1
             else
-              deltanum=pysudakov(stoppingScale,xmasses2(i,j),
-     &                           idup_s(i),isudtype,mcmass)
+               i_dipole_counter=i_dipole_counter+1
             endif
-            deltaden=pysudakov(startingScale,xmasses2(i,j),
-     &                         idup_s(i),isudtype,mcmass)
-            if(i.le.nincoming)then
-               LP=SIGN(1,LPP(i))
-               if (idup_s(i).le.6) then ! (anti-)quark 
-                  id=LP*idup_s(i)
-               elseif (idup_s(i).eq.21) then ! gluon
-                  id=0
-               elseif (idup_s(i).eq.22) then ! photon
-                  id=7
-               endif
-               pdffnum=pdg2pdf(abs(lpp(i)),id,
-     &                         xbjrk_cnt(i,0),stoppingScale)
-               ! for gluon take sqrt() since there are two colour lines,
-               !  and the current sudakov is only for a single
-               !  line. Assumes that PDFs are positive definite.
-               if (id.eq.0) pdffnum=sqrt(pdffnum)
-               deltanum=deltanum*pdffnum
-               pdffden=pdg2pdf(abs(lpp(i)),id,
-     &                         xbjrk_cnt(i,0),startingScale)
-               if (id.eq.0) pdffden=sqrt(pdffden)
-               deltaden=deltaden*pdffden
-               sudpdffact=sudpdffact*pdffnum/pdffden
-            endif
-            if(deltaden.eq.0.d0)then
-              deltarat=1.d0
-            else
-              deltarat=deltanum/deltaden
-            endif
-            if(deltarat.ge.1.d0)deltarat=1.d0
-            if(deltarat.le.0.d0)deltarat=0.d0
-            wgt_sudakov=wgt_sudakov*deltarat
             if (isspecial(jflow) .and. idup_s(i).eq.21) then
+c double colour connection, count twice
                if (idup_s(j).ne.21) then
                   write (*,*) 'SPECIAL and a gluon is not connected '/
      $                 /'to another gluon',i,j,idup_s(i),idup_s(j)
                   stop 1
                endif
-c     double colour connection, so include the delta once more.
-               wgt_sudakov=wgt_sudakov*deltarat 
-               i_dipole_counter=i_dipole_counter+1
+               if(stoppingScale(icount).gt.startingScale(icount))then
+                  i_dipole_dead_counter=i_dipole_dead_counter+1
+               else
+                  i_dipole_counter=i_dipole_counter+1
+               endif
             endif
-            i_dipole_counter=i_dipole_counter+1
+c
+c Conventions:
+c   deltanum(i,j) <--> stoppingScale(i),isudtype(j)
+c   deltaden(j)   <--> startingScale(j)
+c Given our definitions, whenever a quantity is computed for
+c which both the stopping scale and the Sudakov type are relevant,
+c the arguments of stoppingScale(*) and isudtype(*) must be equal.
+c The ratio:
+c    deltarat(i,j) = deltanum(i,j)/deltaden(j)
+c is the Sudakov of type isudtype(j) (with CF for quarks, and CA/2 for gluons) 
+c between scales [stoppingScale(i),startingScale(j)]
+c
+            if(stoppingScale(icount).le.smallptlow)then
+c Still inside the j loop, but the information is sufficient to 
+c compute deltaden(*) and deltanum(*,*)
+              deltanum(icount,icount)=0.d0
+            elseif( stoppingScale(icount).gt.smallptlow .and.
+     #              stoppingScale(icount).le.smallptupp )then
+              deltanum(icount,icount)=
+     #             pysudakov(smallptupp,xmasses2(i,j),
+     #                       idup_s(i),isudtype(icount),mcmass)
+              deltanum(icount,icount)=deltanum(icount,icount)*
+     #                 get_to_zero(stoppingScale(icount),smallptlow,smallptupp)
+            else
+              deltanum(icount,icount)=
+     #             pysudakov(stoppingScale(icount),xmasses2(i,j),
+     #                       idup_s(i),isudtype(icount),mcmass)
+            endif
+            deltaden(icount)=pysudakov(startingScale(icount),xmasses2(i,j),
+     &                                 idup_s(i),isudtype(icount),mcmass)
+c End of primary loop over j
          enddo
+
+c No live colour connection starting from/ending in i has been found:
+c go to the next i
+         if(icount.eq.0)goto 111
+c
+         if(i.le.nincoming)then
+           LP=SIGN(1,LPP(i))
+           if (idup_s(i).le.6) then ! (anti-)quark 
+              id=LP*idup_s(i)
+           elseif (idup_s(i).eq.21) then ! gluon
+              id=0
+           elseif (idup_s(i).eq.22) then ! photon
+              id=7
+           endif
+           do jcount=1,icount
+             pdffnum(jcount)=pdg2pdf(abs(lpp(i)),id,xbjrk_cnt(i,0),
+     #                               stoppingScale(jcount))
+             pdffden(jcount)=pdg2pdf(abs(lpp(i)),id,xbjrk_cnt(i,0),
+     #                               startingScale(jcount))
+           enddo
+         else
+           pdffnum(jcount)=1.d0
+           pdffden(jcount)=1.d0
+         endif
+c
+         if(icount.eq.1)then
+c This is either a quark, or a gluon with either only one colour line 
+c corresponding to a live zone or a gluon with a single colour line but
+c a double colour connection (eg in gg->H). The condition that the starting
+c scale is larger than the stopping scale has not been enforced
+c so far, so do it here
+           if(stoppingScale(1).lt.startingScale(1))then
+             sudpdffact=sudpdffact*pdffnum(1)/pdffden(1)
+             if (isspecial(jflow).and.idup_s(i).eq.21) then
+               deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
+               deltaden(1)=deltaden(1)**2*pdffden(1)
+             else
+               deltanum(1,1)=deltanum(1,1)*pdffnum(1)
+               deltaden(1)=deltaden(1)*pdffden(1)
+             endif
+             if(deltaden(1).eq.0.d0)then
+               deltarat(1,1)=1.d0
+             else
+               deltarat(1,1)=deltanum(1,1)/deltaden(1) * acllfct(1)
+             endif
+             if(deltarat(1,1).ge.1.d0)deltarat(1,1)=1.d0
+             if(deltarat(1,1).le.0.d0)deltarat(1,1)=0.d0
+             wgt_sudakov=wgt_sudakov*deltarat(1,1)
+           endif
+         else
+c A gluon with two partners corresponding to a live zone
+           do jcount=1,icount
+c Start by computing deltanum(1,2) and deltanum(2,1)
+             if(stoppingScale(jcount).le.smallptlow)then
+               deltanum(jcount,iflip(jcount))=0.d0
+             elseif( stoppingScale(jcount).gt.smallptlow .and.
+     #               stoppingScale(jcount).le.smallptupp )then
+               deltanum(jcount,iflip(jcount))=
+     #              pysudakov(smallptupp,xmasses2(i,j),
+     #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
+               deltanum(jcount,iflip(jcount))=deltanum(jcount,iflip(jcount))*
+     #                  get_to_zero(stoppingScale(jcount),smallptlow,smallptupp)
+             else
+               deltanum(jcount,iflip(jcount))=
+     #              pysudakov(stoppingScale(jcount),xmasses2(i,j),
+     #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
+             endif
+           enddo
+c Here, deltaden(*) and deltanum(*,*) must be filled with sensible values.
+c Proceed to compute the corresponding Sudakov; the effective colour factor 
+c is CA, with a single stopping scale and two possibly different starting scales
+c (each of the latter is responsible for CA/2)
+           do jcount=1,icount
+             if( deltaden(jcount).eq.0.d0 )then
+               deltarat(1,jcount)=1.d0
+               deltarat(2,jcount)=1.d0
+             else
+               do kcount=1,icount
+                 if(stoppingScale(kcount).lt.startingScale(jcount))then
+                   deltarat(kcount,jcount)=deltanum(kcount,jcount)/
+     #                                     deltaden(jcount)
+                 else
+                   deltarat(kcount,jcount)=1.d0
+                 endif
+               enddo
+             endif
+c glfact(*) define the relative weights of the two no-emission probabilities.
+c In their computations, use the CA/2 Sudakov with starting and stopping
+c scales relevant to the same colour line
+             gltmp=deltarat(jcount,jcount)*acllfct(jcount)
+             if(gltmp.le.0.d0)then
+               glfact(jcount)=1.d8
+             elseif(gltmp.ge.1.d0)then
+               glfact(jcount)=0.d0
+             else
+               glfact(jcount)=-2*log(gltmp)
+             endif
+           enddo
+           glrat(1)=glfact(1)/(max(glfact(1)+glfact(2),1.d-8))
+           glrat(2)=glfact(2)/(max(glfact(1)+glfact(2),1.d-8))
+           if( glrat(1).lt.0.d0.or.glrat(1).gt.1.d0 .or.
+     #         glrat(2).lt.0.d0.or.glrat(2).gt.1.d0 )then
+             write(*,*)'Error #7 in complete_xmcsubt'
+             write(*,*)glrat(1),glrat(2)
+             stop
+           endif
+c
+           do jcount=1,icount
+             xtmp(jcount)=1.d0
+             if( pdffden(jcount).gt.0.d0 )then
+               if(stoppingScale(jcount).lt.startingScale(1))
+     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,1)
+               if(stoppingScale(jcount).lt.startingScale(2))
+     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,2)
+               if(xtmp(jcount).lt.1.d0)
+     #           xtmp(jcount)=xtmp(jcount)*acllfct(jcount)
+               if(stoppingScale(jcount).lt.startingScale(jcount))
+     #           xtmp(jcount)=xtmp(jcount)*pdffnum(jcount)/pdffden(jcount)
+             endif
+             if(xtmp(jcount).ge.1.d0)xtmp(jcount)=1.d0
+             if(xtmp(jcount).le.0.d0)xtmp(jcount)=0.d0
+           enddo
+           sudpdffact=sudpdffact*
+     #                ( glrat(1)*pdffnum(1)/max(pdffden(1),1.d-8)+
+     #                  glrat(2)*pdffnum(2)/max(pdffden(2),1.d-8) )
+           wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
+         endif
+ 111     continue
       enddo
       if(i_dipole_counter+i_dipole_dead_counter.ne.nQ_S+2*nG_S)then
          write(*,*)'Mismatch in number of dipole ends and Delta factors'
@@ -2023,6 +2234,7 @@ c     double colour connection, so include the delta once more.
         scltarget=-1.d8
         sclstart=-1.d8
       endif
+
 
 cSF THE FOLLOWING MIGHT READ
 c        if(UseDelta)probne = wgt_sudakov
@@ -3752,7 +3964,7 @@ c Consistency check
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
-      double precision Eem,qMC_a(nexternal)
+      double precision Eem,qMC_a2(nexternal-1,nexternal-1)
       integer iBtoR(nexternal-1)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -3770,27 +3982,8 @@ c Consistency check
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
       emsca_a=-1d0
 
-      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a)
+      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
       do i=1,nexternal-1
-c$$$         if(i.lt.i_fks)then
-c$$$           iBtoR(i)=i
-c$$$         elseif(i.eq.i_fks)then
-c$$$           if(i.lt.nexternal)iBtoR(i)=i+1
-c$$$         elseif(i.gt.i_fks)then
-c$$$           if(i.lt.nexternal)iBtoR(i)=i+1
-c$$$         endif
-c$$$         if(i.eq.j_fks)then
-c$$$            qMC_a(i)=qMC
-c$$$         else
-c$$$            qMC_a(i)=dot(pp(0,i_fks),pp(0,iBtoR(i)))
-c$$$            Eem=( dot(pp(0,1),pp(0,iBtoR(i)))+
-c$$$     #            dot(pp(0,2),pp(0,iBtoR(i))) )/
-c$$$     #          sqrt(2*dot(pp(0,1),pp(0,2)))
-c$$$c qMC_a is the dot product of i_fks with its emitter,
-c$$$c divided by the energy of the latter in the incoming
-c$$$c parton cm frame
-c$$$            qMC_a(i)=qMC_a(i)/Eem
-c$$$         endif
          do j=1,nexternal-1
             if(j.eq.i)cycle
             if(dampMCsubt)then
@@ -3809,7 +4002,7 @@ c$$$         endif
                   rrnd=emscainv(rrnd,1d0)
                   emsca_bare_a2(i,j)=scalemin_a(i,j)+
      #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-                  ptresc_a(i,j)=(qMC_a(i)-scalemin_a(i,j))/
+                  ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
      #                          (scalemax_a(i,j)-scalemin_a(i,j))
                   if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
                   if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
@@ -4202,9 +4395,7 @@ c
       end
 
 
-
-
-      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a)
+      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a2)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -4219,7 +4410,8 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
-      double precision qMC,qMC_a(nexternal),zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
+      double precision qMC,qMC_a(nexternal),qMC_a2(nexternal-1,nexternal-1)
+      double precision zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -4231,6 +4423,7 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       parameter(tiny=1d-5)
       double precision zero
       parameter(zero=0d0)
+      integer iRtoB(nexternal)
 
       integer isqrtneg
       save isqrtneg
@@ -4259,6 +4452,7 @@ c Initialise
       xq1q=0d0
       xq2q=0d0
       qMC_a=-1d0
+      qMC_a2=-1d0
       extra=.true.
 
 c Discard if unphysical FKS variables
@@ -4467,6 +4661,34 @@ c azimuth = irrelevant (hence set = 0)
          write(*,*)'Error 4 in assign_qMC_array: assigned wrong ileg'
          stop
       endif
+      enddo
+c
+c qMC_a2 is generated from qMC_a through two operations (here, n is the
+c number of particles at the Born level):
+c - a relabelling from n+1 entries, where i_fks is skipped, to n entries, 
+c   all filled (thus, the conventions are the same as those relevant e.g. 
+c   to xscales and xscales2);
+c - a conversion from an array to a matrix, where the first index represents 
+c   the emitter of i_fks, and the second one is the recoiler (connected with
+c   a colour line to the emitter). Since in PY8 the dependence of the shower 
+c   variable is immaterial (or negligible), all columns are filled with
+c   the same value. In more realistic cases, only one (two) column(s) per
+c   row must be non-zero in the case of quarks (gluons)
+      do i=1,nexternal
+        if(i.lt.i_fks)then
+          iRtoB(i)=i
+        elseif(i.eq.i_fks)then
+          iRtoB(i)=-1
+        elseif(i.gt.i_fks)then
+          iRtoB(i)=i-1
+        endif
+      enddo
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         do j=1,nexternal
+            if(j.eq.i_fks)cycle
+            qMC_a2(iRtoB(i),iRtoB(j))=qMC_a(i)
+         enddo
       enddo
 
 c Checks on invariants
