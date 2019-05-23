@@ -788,7 +788,7 @@ class MultVariable(array):
             text = '(%s)' % (' * '.join(t))
         return text
         
-    __rep__ = __str__
+    __repr__ = __str__
     
     def factorize(self):
         return self
@@ -1460,12 +1460,14 @@ class IndicesIterator:
         else:
             # Special case for Scalar object
             self.data = 0
-            self.next = self.nextscalar
                 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if not self.len:
+            return self.nextscalar()
+
         for i in range(self.len):
             if self.data[i] < 3:
                 self.data[i] += 1

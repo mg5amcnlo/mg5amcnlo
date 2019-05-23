@@ -516,6 +516,11 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
             raise MadGraph5Error(error_msg)
 
+        try:
+            out = out.decode('utf-8')
+        except:
+            out = str(out)
+
         # Check if this is due to the need of gfortran 4.6 for quadruple precision
         if any(tag.upper() in out.upper() for tag in ['real(kind=16)','real*16',
             'complex*32']) and mode == 'fortran' and not \

@@ -1404,6 +1404,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         super(Cmd,self).onecmd('history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        try:
+            error = error.encode('utf-8','backslashreplace')
+        except:
+            error = str(error)
         error_text += self.config_debug % {'debug' :self.debug_output}
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
