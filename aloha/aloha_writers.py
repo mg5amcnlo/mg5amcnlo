@@ -594,12 +594,13 @@ class ALOHAWriterForFortran(WriteALOHA):
         p = [] # a list for keeping track how to write the momentum
         
         signs = self.get_momentum_conservation_sign()
-        
+        misc.sprint(self.declaration)
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
                 out.write("    OM{0} = {1}\n    if (M{0}.ne.{1}) OM{0}={2}/M{0}**2\n".format( 
                          i+1, self.change_number_format(0), self.change_number_format(1)))
-            
+
+
             if i+1 == self.outgoing:
                 out_type = type
                 out_size = self.type_to_size[type] 
@@ -630,6 +631,20 @@ class ALOHAWriterForFortran(WriteALOHA):
                     value = ["1d-30", "0d0", "1d-15"]
                     out.write("  IF (DABS(%(P)s(0))*1e-10.gt.DABS(%(P)s(%(i)s))) %(P)s(%(i)s)=%(val)s\n"
                               % {"P": P, "i":i, 'val':value[i-1]})
+            i = self.outgoing -1
+            if self.declaration.is_used('Tnorm%s' % (i+1)):
+                out.write("    TNORM{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))\n".format(
+                        i+1))
+            if self.declaration.is_used('TnormZ%s' % (i+1)):
+                out.write("    TNORMZ{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3)) + P{0}(3)\n".format(
+                        i+1))
+            if self.declaration.is_used('FWM%s' % (i+1)):
+                out.write("     FWM{0} = DSQRT(max(0d0,DABS(P{0}(0)) - DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))))\n"\
+                          .format(i+1))
+            if self.declaration.is_used('FWP%s' % (i+1)):
+                out.write("     FWP{0} = DSQRT(DABS(P{0}(0)) + DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3)))\n"\
+                          .format(i+1))
+
         
         # Returning result
         return out.getvalue()
@@ -756,7 +771,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
-
+            misc.sprint(name,fct, objs)
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])

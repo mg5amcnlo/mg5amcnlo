@@ -432,7 +432,8 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        if propa not in  ["1L", "1T", "1A"]:
+        misc.sprint
+        if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
             denominator = propagator.denominator      
@@ -445,7 +446,15 @@ in presence of majorana particle/flow violation"""
         elif propa == "1A":
             numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-
+        elif propa in ["1P", "1M"]:
+            numerator =  "UFPC(1,id)*UFP(2,id) + UFMC(1,id)*UFM(2,id)"
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1M":
+            numerator = "(UFMC(1,id)*UFM(2,id))" 
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        else:
+            raise Exception
+        misc.sprint(numerator)
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
         if spin in [1,-1]:
