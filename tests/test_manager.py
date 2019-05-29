@@ -699,8 +699,8 @@ class TestFinder(list):
             base = class_.__name__
         candidate = [base + '.' + name for name in dir(class_) if \
                        name.startswith(prefix)\
-                       and inspect.ismethod(eval('class_.' + name))]
-
+                       and (inspect.ismethod(getattr(class_, name)) or 
+                           inspect.isfunction(getattr(class_, name)))]
         if not checking:
             self += candidate
         else:

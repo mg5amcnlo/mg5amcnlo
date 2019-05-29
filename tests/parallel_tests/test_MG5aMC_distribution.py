@@ -16,7 +16,7 @@
 """Acceptance test library for the sanity of current MG5aMC version"""
 
 from __future__ import absolute_import
-import StringIO
+from io import StringIO
 import copy
 import fractions
 import os 

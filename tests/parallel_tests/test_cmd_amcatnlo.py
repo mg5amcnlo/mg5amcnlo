@@ -24,7 +24,8 @@ import logging
 import tempfile
 import time
 import math
-from cStringIO import StringIO
+from io import StringIO
+#from cStringIO import StringIO
 
 logger = logging.getLogger('test_cmd')
 

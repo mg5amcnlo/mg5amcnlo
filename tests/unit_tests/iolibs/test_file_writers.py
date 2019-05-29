@@ -16,7 +16,7 @@
 """Unit test library for the writer classes"""
 
 from __future__ import absolute_import
-import StringIO
+from io import StringIO
 import re
 import os
 
@@ -375,7 +375,7 @@ void Sigma2ff2fftgmZ::setIdColAcol()
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
 
-        fsock = StringIO.StringIO()
+        fsock = StringIO()
 
         non_strings = [1.2, ["hej"]]
 
