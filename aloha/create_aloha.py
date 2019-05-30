@@ -690,8 +690,12 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         
         fsock = open(filepos, 'w')
-        six.moves.cPickle.dump(dict(self), fsock)
-        
+        t=dict(self)
+        try:
+            six.moves.cPickle.dump(dict(self), fsock)
+        except:
+            logger.info('aloha not saved')
+            
     def load(self, filepos=None):
         """ reload the pickle file """
         return False

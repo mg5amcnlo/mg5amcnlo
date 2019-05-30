@@ -533,7 +533,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                     (self.change_number_format(0),self.change_number_format(1)))
         if KERNEL.has_pi:
             out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
-        for type, name in self.declaration:
+        
+        
+        for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
@@ -1592,6 +1594,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
                     out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
+
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
                     ptype = 'list_complex'
@@ -1932,7 +1935,7 @@ class ALOHAWriterForPython(WriteALOHA):
                 return +1
             
         keys = list(self.routine.fct.keys())        
-        keys.sort(sort_fct)
+        keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
             format = '    %s = %s\n' % (name, self.get_fct_format(fct))
@@ -2195,6 +2198,13 @@ class Declaration_list(set):
                             (name, type2, type)
             
         set.add(self,obj)
+        
+    def tolist(self):
+
+        out = list(self)
+        out.sort(key=lambda n:n[1])
+        return out
+    
         
 
 class WriterFactory(object):

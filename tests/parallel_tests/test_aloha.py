@@ -3167,16 +3167,16 @@ class test_aloha_creation(unittest.TestCase):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 S3(*)
- real*8 P1(0:3)
+ complex*16 COUP
  real*8 M1
+ real*8 OM1
+ real*8 P1(0:3)
+ complex*16 S3(*)
  complex*16 TMP0
+ complex*16 V1(6)
+ complex*16 V2(*)
  real*8 W1
  complex*16 denom
- real*8 OM1
- complex*16 COUP
- complex*16 V1(6)
 entry VVS1_2(V2, S3, COUP, M1, W1,V1)
 
     OM1 = 0d0
@@ -3201,18 +3201,18 @@ subroutine VVS1_2_1(V2, S3, COUP1, COUP2, M1, W1,V1)
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 COUP2
- complex*16 S3(*)
- real*8 P1(0:3)
- real*8 M1
- real*8 W1
  complex*16 COUP1
+ complex*16 COUP2
+ real*8 M1
+ real*8 OM1
+ real*8 P1(0:3)
+ complex*16 S3(*)
+ complex*16 V1(6)
+ complex*16 V2(*)
+ complex*16 Vtmp(6)
+ real*8 W1
  complex*16 denom
  integer*4 i
- complex*16 Vtmp(6)
- real*8 OM1
- complex*16 V1(6)
 entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 
     call VVS1_1(V2,S3,COUP1,M1,W1,V1)
@@ -3514,8 +3514,11 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         for name, expr in amp.contracted.items():
             exec('%s = %s' % (name,expr))       
 
-        for i in range(100):
-            ufo_value = [eval(str(amp.expr.get_rep([i]))) for i in range(4)]
+        #for i in range(100):
+        ufo_value = []
+        for i in range(4):
+            ufo_value.append(eval(str(amp.expr.get_rep([i]))))   
+            #ufo_value = [eval(str(amp.expr.get_rep([i]))) for i in range(4)]
 
         #computed with 1.4.8.4 // 1.5.3 // 1.5.4
         solution = [(-518016-1383424j), (317568-1604608j), (162600-4898488j), (-31800-8538056j)]
@@ -3540,16 +3543,16 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 TMP2
- complex*16 S3(*)
- complex*16 TMP1
- real*8 P1(0:3)
- complex*16 TMP0
- complex*16 vertex
  complex*16 COUP
- complex*16 V1(*)
+ real*8 P1(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
  complex*16 TMP3
+ complex*16 V1(*) 
+ complex*16 V2(*)
+ complex*16 vertex
 P1(0) = dble(V1(1))
 P1(1) = dble(V1(2))
 P1(2) = dimag(V1(2))
@@ -4209,7 +4212,11 @@ end
         
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = solution.split('\n')
+        split_solution = split_solution[:1] + split_solution[12:]
         split_routine = routine.split('\n')
+        split_routine = split_routine[:1] + split_routine[12:]
+        
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4235,6 +4242,9 @@ end
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = [l.strip() for l in solution.split('\n')]
         split_routine = [l.strip() for l in routine.split('\n')]
+        split_solution = split_solution[:1] + split_solution[-2:]
+        split_routine = split_routine[:1] + split_routine[-2:]
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4286,6 +4296,8 @@ end
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = [l.strip() for l in solution.split('\n')]
         split_routine = [l.strip() for l in routine.split('\n')]
+        split_solution = split_solution[:1] + split_solution[-20:]
+        split_routine = split_routine[:1] + split_routine[-20:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4744,10 +4756,26 @@ end
 
 
 """
+        text_split = [l.strip() for l in text.split('\n')]
+        target_split = [l.strip() for l in target.split('\n')]
+        target2_split = [l.strip() for l in target2.split('\n')]
+        #check that all defintion are in both side
+        # raise an error is one line is missing
+        for line in list(target_split):
+            if line.startswith(('real','complex', 'parameter')):
+                index = text_split.index(line)
+                index2 = target_split.index(line)
+                index3 = target2_split.index(line)
+                text_split.pop(index)
+                target_split.pop(index2)
+                target2_split.pop(index3)
+        
+
+
         try:
-            self.assertEqual(text.split('\n'), target.split('\n'))         
+            self.assertEqual(text_split, target_split)         
         except Exception:
-            self.assertEqual(text.split('\n'), target2.split('\n'))         
+            self.assertEqual(text_split, target2_split)
 
     def test_short_fortranwriter_CFF(self):
         """ test that python writer works """
@@ -4756,17 +4784,17 @@ end
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 F2(6)
- complex*16 V3(*)
- complex*16 TMP0
- real*8 P2(0:3)
- real*8 W2
- real*8 P3(0:3)
- complex*16 F1(*)
- real*8 M2
- complex*16 denom
  complex*16 COUP
+ complex*16 F1(*)
+ complex*16 F2(6)
  complex*16 FCT0
+ real*8 M2
+ real*8 P2(0:3)
+ real*8 P3(0:3)
+ complex*16 TMP0
+ complex*16 V3(*)
+ real*8 W2
+ complex*16 denom
 P3(0) = dble(V3(1))
 P3(1) = dble(V3(2))
 P3(2) = dimag(V3(2))
@@ -4846,8 +4874,8 @@ end
         builder.apply_conjugation()
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
+        split_solution = solution.split('\n')[18:]
+        split_routine = routine.split('\n')[18:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4891,7 +4919,10 @@ end
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = solution.split('\n')
+        split_solution = split_solution[:1] + split_solution[12:]
         split_routine = routine.split('\n')
+        split_routine = split_routine[:1] + split_routine[12:]
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4925,8 +4956,8 @@ end
         amp = builder.compute_routine(2)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
+        split_solution = solution.split('\n')[12:]
+        split_routine = routine.split('\n')[12:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -5130,13 +5161,13 @@ def SSS1_3(S2,S3,COUP,M1):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 S3(*)
- real*8 P1(0:3)
- complex*16 S1(3)
- complex*16 denom
  complex*16 COUP
  complex*16 M1
+ real*8 P1(0:3)
+ complex*16 S1(3)
  complex*16 S2(*)
+ complex*16 S3(*)
+ complex*16 denom
 entry SSS1_2(S2, S3, COUP, M1,S1)
 
 entry SSS1_3(S2, S3, COUP, M1,S1)
@@ -5243,14 +5274,14 @@ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<d
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 F1(*)
  complex*16 F2(*)
+ real*8 M3
+ real*8 P3(0:3)
  complex*16 V3(6)
  real*8 W3
- real*8 P3(0:3)
- real*8 M3
- complex*16 F1(*)
  complex*16 denom
- complex*16 COUP
     V3(1) = +F1(1)+F2(1)
     V3(2) = +F1(2)+F2(2)
 P3(0) = -dble(V3(1))
@@ -5270,14 +5301,14 @@ end
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 F1(*)
  complex*16 F2(*)
+ real*8 M3
+ real*8 P3(0:3)
  complex*16 V3(6)
  real*8 W3
- real*8 P3(0:3)
- real*8 M3
- complex*16 F1(*)
  complex*16 denom
- complex*16 COUP
     V3(1) = +F1(1)+F2(1)
     V3(2) = +F1(2)+F2(2)
 P3(0) = -dble(V3(1))

@@ -223,7 +223,8 @@ class ALOHAExpressionParser(UFOExpressionParser):
             obj = p[1].split('(',1)[0]
         
         if obj in self.aloha_object:
-            p[0] = ''.join(p[1:])
+            p2 = [x for i,x in enumerate(p) if i>0]
+            p[0] = ''.join(p2)
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))
              p[0] = str(new)
