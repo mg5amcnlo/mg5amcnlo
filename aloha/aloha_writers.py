@@ -729,7 +729,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         out = StringIO()
 
         if self.routine.contracted:
-            for name,obj in self.routine.contracted.items():
+            all_keys = list(self.routine.contracted.keys())
+            all_keys.sort()
+            for name in all_keys:
+                obj = self.routine.contracted[name]
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
                 
@@ -1559,7 +1562,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
-                
+        
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
