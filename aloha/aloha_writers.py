@@ -1440,7 +1440,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if add_i:
             out.write(self.ci_definition)
                     
-        for type, name in self.declaration:
+        for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
                 if name.startswith('P'):
@@ -1924,7 +1924,11 @@ class ALOHAWriterForPython(WriteALOHA):
         out = StringIO()
 
         if self.routine.contracted:
-            for name,obj in self.routine.contracted.items():
+            keys = list( self.routine.contracted.keys())
+            keys.sort()
+            
+            for name in keys:
+                obj = self.routine.contracted[name]
                 out.write('    %s = %s\n' % (name, self.write_obj(obj)))
 
         def sort_fct(a, b):

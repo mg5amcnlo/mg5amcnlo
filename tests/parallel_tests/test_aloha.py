@@ -3248,10 +3248,10 @@ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex
 void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
+ double  OM1;
  double  P1[4];
  std::complex<double>  TMP0;
  std::complex<double>  denom;
- double  OM1;
     OM1 = 0.;
     if (M1 != 0.)
  OM1=1./(M1*M1);
@@ -3276,8 +3276,8 @@ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<d
 }
 void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- int  i;
  std::complex<double>  Vtmp[6];
+ int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;
@@ -3289,8 +3289,8 @@ while (i < 6)
 }
 void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- int  i;
  std::complex<double>  Vtmp[6];
+ int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;
@@ -3984,9 +3984,8 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         
         numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
-        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi,
-                   100*math.pi]
- 
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, 3.14159265359,
+                   100*3.14159265359]
         solution = ['CI', '1d0/2d0 * CI', '(3d0 + 9d0*CI)', '1d0', '0d0', '1d0', '2d0', '-3d0', '3d0', '3d0', '101d0/100d0', '2000d0', '1d0/3d0', '1d0/4d0', '3d0/4d0','3.14159265359d0', '314.159265359d0']
 #        converted = [writer.change_number_format(number) for number in numbers]
         for i, number in enumerate(numbers):
@@ -4005,8 +4004,8 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForPython(abstract, '/tmp')
         
         numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
-        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi, 1.001,
-                   100*math.pi]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, 3.14159265359 , 1.001,
+                   100*3.14159265359]
  
         solution = ['1j', '1j/2', '(3+9j)', '1', '0', '1', '2', '-3', '3', '3', '101/100', '2000', '1/3', '1/4', '3/4','3.14159265359','1.001','314.159265359']
 #        converted = [writer.change_number_format(number) for number in numbers]
@@ -4505,14 +4504,14 @@ import wavefunctions
 def FFV13C1_0(F2,F1,V3,COUP):
     P2 = [complex(F2[0]).real, complex(F2[1]).real, complex(F2[1]).imag, complex(F2[0]).imag]
     P3 = [complex(V3[0]).real, complex(V3[1]).real, complex(V3[1]).imag, complex(V3[0]).imag]
-    TMP5 = (F1[4]*(F2[2]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))+F2[3]*(P2[0]*(P3[3]*(V3[4]+1j*(V3[3]))-V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3[4]+1j*(V3[3]))+V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]+1j*(P2[1]))-P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[5]*(F2[2]*(P2[0]*(P3[3]*(V3[4]-1j*(V3[3]))+V3[5]*(+1j*(P3[1])-P3[2]))+(P2[3]*(P3[0]*(+1j*(V3[3])-V3[4])+V3[2]*(P3[2]-1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]-1j*(P2[1]))+P3[3]*V3[2]*(+1j*(P2[1])-P2[2]))))+F2[3]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))))
-    TMP4 = (P2[0]*P3[0]-P2[1]*P3[1]-P2[2]*P3[2]-P2[3]*P3[3])
-    TMP7 = (-1)*(F1[4]*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-1j*(V3[4])))+F1[5]*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5])))
-    TMP6 = (-1)*(F1[4]*(F2[2]*(P3[0]+P3[3])+F2[3]*(P3[1]-1j*(P3[2])))+F1[5]*(F2[2]*(P3[1]+1j*(P3[2]))+F2[3]*(P3[0]-P3[3])))
-    TMP1 = (V3[2]*P2[0]-V3[3]*P2[1]-V3[4]*P2[2]-V3[5]*P2[3])
     TMP0 = (F1[2]*(F2[4]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))+F2[5]*(P2[0]*(P3[3]*(-1)*(V3[4]+1j*(V3[3]))+V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]+1j*(V3[3]))-V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*-V3[5]*(P2[2]+1j*(P2[1]))+P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[3]*(F2[4]*(P2[0]*(P3[3]*(+1j*(V3[3])-V3[4])+V3[5]*(P3[2]-1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]-1j*(V3[3]))+V3[2]*(+1j*(P3[1])-P3[2]))+(P3[0]*V3[5]*(+1j*(P2[1])-P2[2])+P3[3]*V3[2]*(P2[2]-1j*(P2[1])))))+F2[5]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))))
-    TMP3 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(+1j*(V3[4])-V3[3]))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    TMP1 = (V3[2]*P2[0]-V3[3]*P2[1]-V3[4]*P2[2]-V3[5]*P2[3])
     TMP2 = (F1[2]*(F2[4]*(P3[3]-P3[0])+F2[5]*(P3[1]-1j*(P3[2])))+F1[3]*(F2[4]*(P3[1]+1j*(P3[2]))-F2[5]*(P3[0]+P3[3])))
+    TMP3 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(+1j*(V3[4])-V3[3]))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    TMP4 = (P2[0]*P3[0]-P2[1]*P3[1]-P2[2]*P3[2]-P2[3]*P3[3])
+    TMP5 = (F1[4]*(F2[2]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))+F2[3]*(P2[0]*(P3[3]*(V3[4]+1j*(V3[3]))-V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3[4]+1j*(V3[3]))+V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]+1j*(P2[1]))-P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[5]*(F2[2]*(P2[0]*(P3[3]*(V3[4]-1j*(V3[3]))+V3[5]*(+1j*(P3[1])-P3[2]))+(P2[3]*(P3[0]*(+1j*(V3[3])-V3[4])+V3[2]*(P3[2]-1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]-1j*(P2[1]))+P3[3]*V3[2]*(+1j*(P2[1])-P2[2]))))+F2[3]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))))
+    TMP6 = (-1)*(F1[4]*(F2[2]*(P3[0]+P3[3])+F2[3]*(P3[1]-1j*(P3[2])))+F1[5]*(F2[2]*(P3[1]+1j*(P3[2]))+F2[3]*(P3[0]-P3[3])))
+    TMP7 = (-1)*(F1[4]*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-1j*(V3[4])))+F1[5]*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5])))
     vertex = COUP*(TMP1*(TMP2+TMP6)+(TMP4*(-1)*(TMP3+TMP7)+(-1j*(TMP0)+1j*(TMP5))))
     return vertex
 
