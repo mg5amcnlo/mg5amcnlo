@@ -33,6 +33,7 @@ const int __max_nproc__ = 121;
 typedef struct {
   int amp_split_size; // Maximum number of coupling-combinations
   int qcdpower[__amp_split_size]; // Power of alpha_s for each amp_split
+  int qedpower[__amp_split_size]; // Power of alpha for each amp_split
 } __amcatnlo_common_fixed__;
 
 // Map of the PDF combinations from aMC@NLO - structure for each 

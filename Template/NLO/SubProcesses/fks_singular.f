@@ -1054,6 +1054,7 @@ c not change between events, counter events and n-body contributions.
            do j=1,amp_split_size
              call amp_split_pos_to_orders(j, orders)
              appl_qcdpower(j) = orders(qcd_pos)
+             appl_qedpower(j) = orders(qed_pos)
            enddo
          endif
 c Initialize hiostograms for fixed order runs
