@@ -411,7 +411,6 @@ extern "C" void appl_fill_() {
     // Fill the grid with the values of the observables
     // W0
     weight.at(ilumi) = W0[0];
-    assert( grid_index == 0 );
     grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
     weight.at(ilumi) = 0;
   }
@@ -446,17 +445,14 @@ extern "C" void appl_fill_() {
 
       // W0
       weight.at(ilumi) = W0[k];
-      assert( grid_index == 0 );
       grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
       weight.at(ilumi) = 0;
       // WR
       weight.at(ilumi) = WR[k];
-      assert( grid_index == 0 );
       grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+1);
       weight.at(ilumi) = 0;
       // WF
       weight.at(ilumi) = WF[k];
-      assert( grid_index == 0 );
       grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+2);
       weight.at(ilumi) = 0;
     }
@@ -489,7 +485,6 @@ extern "C" void appl_fill_() {
 
     // WB
     weight.at(ilumi) = WB[1];
-    assert( grid_index == 3 );
     grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index);
     weight.at(ilumi) = 0;
   }
