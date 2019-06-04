@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <stdlib.h>
@@ -15,6 +16,9 @@
 
 // Declare grids
 std::vector<appl::grid> grid_obs;
+
+// translates an index from the range [0, __amp_split_size) to the indices need by `fill_grid`
+std::vector<std::vector<int>> translation_tables;
   
 // Declare the input and output grids
 std::string grid_filename_in;
@@ -126,55 +130,103 @@ extern "C" void appl_init_() {
     std::cout << "amcblast INFO: Reading existing APPLgrid from file " << grid_filename_in << " ..." << std::endl;
     // Open the existing grid
     grid_obs.emplace_back(grid_filename_in);
+
+    auto const& order_ids = grid_obs.back().order_ids();
+    translation_tables.emplace_back();
+    auto& translation_table = translation_tables.back();
+
+    int qcd_power = -1;
+    int qed_power = -1;
+    int index = 0;
+
+    // build the translation table
+    for (auto const& id : order_ids)
+    {
+        if ((qcd_power != id.alphs()) || (qed_power != id.alpha()))
+        {
+            qcd_power = id.alphs();
+            qed_power = id.alpha();
+            translation_table.push_back(index++);
+        }
+        else
+        {
+            ++index;
+        }
+    }
+
+    // if there's exactly one LO and one NLO make sure that the order is W0,WR,WF,WB (for
+    // compatibility reasons)
+    if ((order_ids.size() == 4) && (translation_table.size() == 2))
+    {
+        translation_table[0] = 3;
+        translation_table[1] = 0;
+    }
   }
   // If the grid does not exist, book it after having defined all the
   // relevant parameters.
   else {
     std::cout << "amcblast INFO: Booking grid from scratch with name " << grid_filename_in << " ..." << std::endl;
 
-    int min_alphas_p = 9999; // any large value will do
-    int max_alphas_p = 0;
+    int lo_power = 9999;
+    int nlo_power = 0;
 
-    // TODO: the following assumes that 'the' LO is the matrix element with the lowest power in
-    // alphas and 'NLO' is the one with the highest power; in general there will be many LOs with
-    // different alphas powers, but APPLgrid doesn't understand that (yet)
-    for (int i = 0; i != __amp_split_size; ++i)
+    for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
     {
-        if (appl_common_fixed_.qcdpower[i] < min_alphas_p)
-        {
-            min_alphas_p = appl_common_fixed_.qcdpower[i];
-        }
+        int sum = appl_common_fixed_.qcdpower[i] + appl_common_fixed_.qedpower[i];
 
-        if (appl_common_fixed_.qcdpower[i] > max_alphas_p)
+        lo_power = std::min(lo_power, sum);
+        nlo_power = std::max(nlo_power, sum);
+    }
+
+    // TODO: we assume that there is always at least one LO, and also at least one NLO
+    assert( nlo_power == (lo_power + 2) );
+
+    std::vector<appl::order_id> order_ids;
+    order_ids.reserve(appl_common_fixed_.amp_split_size);
+
+    translation_tables.emplace_back();
+    translation_tables.back().reserve(appl_common_fixed_.amp_split_size);
+
+    for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
+    {
+        int const qcd = appl_common_fixed_.qcdpower[i];
+        int const qed = appl_common_fixed_.qedpower[i];
+        int const sum = qcd + qed;
+
+        translation_tables.back().push_back(order_ids.size());
+
+        if (sum == lo_power)
         {
-            max_alphas_p = appl_common_fixed_.qcdpower[i];
+            // WB
+            order_ids.emplace_back(qcd / 2, qed / 2, 0, 0);
+        }
+        else if (sum == nlo_power)
+        {
+            // W0
+            order_ids.emplace_back(qcd / 2, qed / 2, 0, 0);
+            // WR
+            order_ids.emplace_back(qcd / 2, qed / 2, 0, 1);
+            // WF
+            order_ids.emplace_back(qcd / 2, qed / 2, 1, 0);
         }
     }
 
-    // `appl_common_fixed_.qcdpower` has the power of `gs`, but we need powers of `alphas`
-    assert( (min_alphas_p % 2) == 0 );
-    assert( (max_alphas_p % 2) == 0 );
-    min_alphas_p /= 2;
-    max_alphas_p /= 2;
+    // if there's exactly one LO and one NLO make sure that the order is W0,WR,WF,WB (for
+    // compatibility reasons)
+    if (translation_tables.back().size() == 2)
+    {
+        int sum_one = appl_common_fixed_.qcdpower[0] + appl_common_fixed_.qedpower[0];
+        int sum_two = appl_common_fixed_.qcdpower[1] + appl_common_fixed_.qedpower[1];
 
-    int leading_order = min_alphas_p;
-    int next_to_leading_order = max_alphas_p;
+        if (sum_one < sum_two)
+        {
+            // WB,W0,WR,WF -> W0,WR,WF,WB
+            std::rotate(order_ids.begin(), std::next(order_ids.begin(), 1), order_ids.end());
 
-    // TODO: set the power of `alpha` to its proper value
-    std::vector<appl::order_id> order_ids = {
-        appl::order_id(next_to_leading_order, -1, 0, 0), // W0
-        appl::order_id(next_to_leading_order, -1, 0, 1), // WR
-        appl::order_id(next_to_leading_order, -1, 1, 0), // WF
-        appl::order_id(        leading_order, -1, 0, 0)  // WB
-    };
-
-	//appl_common_fixed_.bpower;
-    //std::cout << "amcblast INFO: bpower = " << leading_order << std::endl;
-
-    // Number of loops in the APPLgrid formalism.
-    // Here we store four grids, W0, WR, WF and W0, in the notation of arXiv:1110.4738.
-    // Always book with nloops = 3.
-    int const nloops = 3; // 4 grids
+            translation_tables.back()[0] = 3;
+            translation_tables.back()[1] = 0;
+        }
+    }
 
     // Define the settings for the interpolation in x and Q2.
     // These are common to all the grids computed.
@@ -323,6 +375,9 @@ extern "C" void appl_fill_() {
   // Histogram number
   int nh = appl_common_histokin_.obs_num - 1;
 
+  // translate (index,nh) -> index of the APPLgrid
+  int const grid_index = translation_tables.at(nh).at(index);
+
   // (n+1)-body contribution (corresponding to xsec11 in aMC@NLO)
   // It uses only Events (k=0) and the W0 weight.
   if(itype == 1) {
@@ -356,7 +411,8 @@ extern "C" void appl_fill_() {
     // Fill the grid with the values of the observables
     // W0
     weight.at(ilumi) = W0[0];
-    grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],0);
+    assert( grid_index == 0 );
+    grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
     weight.at(ilumi) = 0;
   }
   // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
@@ -390,15 +446,18 @@ extern "C" void appl_fill_() {
 
       // W0
       weight.at(ilumi) = W0[k];
-      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],0);
+      assert( grid_index == 0 );
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
       weight.at(ilumi) = 0;
       // WR
       weight.at(ilumi) = WR[k];
-      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],1);
+      assert( grid_index == 0 );
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+1);
       weight.at(ilumi) = 0;
       // WF
       weight.at(ilumi) = WF[k];
-      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],2);
+      assert( grid_index == 0 );
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+2);
       weight.at(ilumi) = 0;
     }
   }
@@ -430,7 +489,8 @@ extern "C" void appl_fill_() {
 
     // WB
     weight.at(ilumi) = WB[1];
-    grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],3);
+    assert( grid_index == 3 );
+    grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index);
     weight.at(ilumi) = 0;
   }
 
