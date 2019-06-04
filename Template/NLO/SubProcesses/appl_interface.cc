@@ -160,6 +160,14 @@ extern "C" void appl_init_() {
     int leading_order = min_alphas_p;
     int next_to_leading_order = max_alphas_p;
 
+    // TODO: set the power of `alpha` to its proper value
+    std::vector<appl::order_id> order_ids = {
+        appl::order_id(next_to_leading_order, -1, 0, 0), // W0
+        appl::order_id(next_to_leading_order, -1, 0, 1), // WR
+        appl::order_id(next_to_leading_order, -1, 1, 0), // WF
+        appl::order_id(        leading_order, -1, 0, 0)  // WB
+    };
+
 	//appl_common_fixed_.bpower;
     //std::cout << "amcblast INFO: bpower = " << leading_order << std::endl;
 
@@ -269,7 +277,7 @@ extern "C" void appl_init_() {
     grid_obs.emplace_back(Nbins,    obsbins.data(),
                                       NQ2,      Q2min,         Q2max, Q2order,  
 				      Nx,       xmin,          xmax,  xorder,
-				      filename, leading_order, next_to_leading_order, nloops);
+				      filename, order_ids);
     // Use the reweighting function
     grid_obs[grid_obs.size()-1].reweight(true);
     // The grid is an aMC@NLO type
