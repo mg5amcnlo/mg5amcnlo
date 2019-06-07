@@ -839,7 +839,7 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
     iNow          = dipEndNow->iRadiator;
     iRec          = dipEndNow->iRecoiler;
     idDaughter    = event[dipEndNow->iRadiator].id();
-    xDaughter     = x1;
+    xDaughter     = (usePDF) ? x1 : 0.;
 
     x1Now         = (sideA) ? x1 : x2;
     x2Now         = (sideA) ? x2 : x1;
@@ -917,7 +917,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   }
 
   // Hard cut-off for z-integration if no bound from Bjorken x is possible.
-  if (!usePDF) zMinAbs = 1e-6;
+  if (!usePDF) { zMinAbs = 1e-6; xMaxAbs = 1.;}
 
   // Starting values for handling of massive quarks (c/b), if any.
   double idMassive   = 0;
@@ -1374,10 +1374,10 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
     // Evaluation of new daughter and mother PDF's.
     pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
-    double xPDFdaughterNew = max ( TINYPDF,
-      beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2) );
-    double xPDFmotherNew =
-      beam.xfISR(iSysNow, idMother, xMother, pdfScale2);
+    double xPDFdaughterNew = (usePDF) ? max ( TINYPDF,
+      beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2) ) : 1.;
+    double xPDFmotherNew = (usePDF) ?
+      beam.xfISR(iSysNow, idMother, xMother, pdfScale2) : 1.;
 
     //wt *= xPDFmotherNew / xPDFdaughterNew;
     double pdfRatio = (usePDF) ? xPDFmotherNew / xPDFdaughterNew : 1.; 
@@ -1424,6 +1424,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 void SpaceShower::pT2nearThreshold( BeamParticle& beam,
   double m2Massive, double m2Threshold, double xMaxAbs,
   double zMinAbs, double zMaxMassive) {
+
+cout << "aaaaaaaaaaaa" << endl;
 
   // Initial values, to be used in kinematics and weighting.
   double Lambda2       = (abs(idDaughter) == 4) ? Lambda4flav2 : Lambda5flav2;
@@ -3018,8 +3020,10 @@ bool SpaceShower::branch( Event& event) {
   // Redo choice of companion kind whenever new flavour.
   if (idMother != idDaughterNow) {
     pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
+cout << scientific << setprecision(8) << "enter " << __LINE__ << endl;
     beamNow.xfISR( iSysSel, idMother, xNew, pdfScale2);
     beamNow.pickValSeaComp();
+cout << scientific << setprecision(8) << "exit " << __LINE__ << endl;
   }
   BeamParticle& beamRec = (side == 1) ? *beamBPtr : *beamAPtr;
   beamRec[iSysSel].iPos( iNewRecoiler);
