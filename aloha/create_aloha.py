@@ -256,7 +256,7 @@ in presence of majorana particle/flow violation"""
         
         if need_P_sign:
             expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
-        
+
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
         return lorentz_expr
@@ -432,7 +432,6 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        misc.sprint
         if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
@@ -446,15 +445,31 @@ in presence of majorana particle/flow violation"""
         elif propa == "1A":
             numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa in ["1P", "1M"]:
-            numerator =  "UFPC(1,id)*UFP(2,id) + UFMC(1,id)*UFM(2,id)"
-            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa in ["1P"]:
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFP(1,id)*UFPC(2,id)"
+            else:
+                numerator =  "VFP(1,id)*VFPC(2,id)"
+               
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        
         elif propa == "1M":
-            numerator = "(UFMC(1,id)*UFM(2,id))" 
-            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFM(1,id)*UFMC(2,id)"
+            else:
+                numerator =  "VFM(1,id)*VFMC(2,id)"
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         else:
             raise Exception
-        misc.sprint(numerator)
+
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
         if spin in [1,-1]:
@@ -498,13 +513,13 @@ in presence of majorana particle/flow violation"""
             denominator = self.mod_propagator_expression(tag, denominator)  
                 
         numerator = self.parse_expression(numerator, needPflipping)
-        
+      
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
             self.denominator = eval(self.denominator)
             if not isinstance(self.denominator, numbers.Number):
                 self.denominator = self.denominator.simplify().expand().simplify().get((0,))
- 
+        needPflipping = False
         if spin ==4:
             return eval(numerator) * propaR
         else:

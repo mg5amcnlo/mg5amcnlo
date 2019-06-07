@@ -1254,7 +1254,7 @@ class EPST2(aloha_lib.FactoryLorentz):
 # UFP U fermion plus component (first two component)
 #       the denominator is include in the denominator of the propagator
 #===============================================================================
-fsign = 1
+fsign = -1
     
 class L_UFP(aloha_lib.LorentzObject):
     """ 
@@ -1368,10 +1368,10 @@ class L_UFPC(aloha_lib.LorentzObject):
     
 
         u = {
-            (0,): fwm * normz,
-            (1,): fwm * (fsign* p1 + complex(0,-fsign)*p2),
-            (2,): fwp * normz,
-            (3,): fwp * (fsign* p1 + complex(0,-fsign)*p2),
+            (0,): fwp * normz,
+            (1,): fwp * (fsign* p1 + complex(0,-fsign)*p2),
+            (2,): fwm * normz,
+            (3,): fwm * (fsign* p1 + complex(0,-fsign)*p2),
             }
 
     
@@ -1411,10 +1411,10 @@ class L_UFMC(aloha_lib.LorentzObject):
     
 
         u = {
-            (0,): fwp * (-fsign*p1 + complex(0,-fsign)*p2),
-            (1,): fwp * normz,
-            (2,): fwm * (-fsign*p1 + complex(0,-fsign)*p2),
-            (3,): fwm * normz,
+            (0,): fwm * (-fsign*p1 + complex(0,-fsign)*p2),
+            (1,): fwm * normz,
+            (2,): fwp * (-fsign*p1 + complex(0,-fsign)*p2),
+            (3,): fwp * normz,
             }
 
     
@@ -1429,7 +1429,183 @@ class UFMC(aloha_lib.FactoryLorentz):
     def get_unique_name(self, spin1, particle):
         return '_UFMC%s_%s_' % (particle, spin1)
 
+class L_VFP(aloha_lib.LorentzObject):
+    """ 
 
+    """
+    
+    def __init__(self, name, spin1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [], [spin1],
+                                         tags=['|p%s|_z' % particle,
+                                               'FWP%s' % particle,
+                                               'FWM%s' % particle])
+    
+    def create_representation(self):
+        """create representation"""
+        #E = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        #p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+        normz = aloha_lib.DVariable('TnormZ%s' % self.particle)
+        fwp = aloha_lib.DVariable('FWP%s' % self.particle)
+        fwm = aloha_lib.DVariable('FWM%s' % self.particle)
+    
+
+        u = {
+            (0,): -1*fwp * (-1 *fsign * p1 + complex(0,fsign)*p2),
+            (1,): -1*fwp * normz,
+            (2,): 1*fwm * (-1 *fsign * p1 + complex(0,fsign)*p2),
+            (3,): 1*fwm * normz,
+            }
+
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(u,
+                                self.lorentz_ind,self.spin_ind)
+
+
+class VFP(aloha_lib.FactoryLorentz):
+
+    object_class = L_VFP
+    
+    @classmethod
+    def get_unique_name(self, spin1, particle):
+        return '_VFP%s_%s_' % (particle, spin1)
+
+class L_VFPC(aloha_lib.LorentzObject):
+    """ 
+
+    """
+    
+    def __init__(self, name, spin1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [], [spin1],
+                                         tags=['|p%s|_z' % particle,
+                                               'FWP%s' % particle,
+                                               'FWM%s' % particle])
+    
+    def create_representation(self):
+        """create representation"""
+        #E = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        #p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+        normz = aloha_lib.DVariable('TnormZ%s' % self.particle)
+        fwp = aloha_lib.DVariable('FWP%s' % self.particle)
+        fwm = aloha_lib.DVariable('FWM%s' % self.particle)
+    
+
+        u = {
+            (0,): fwm * (-1 *fsign * p1 + complex(0,-1*fsign)*p2),
+            (1,): fwm * normz,
+            (2,): -1*fwp * (-1 *fsign * p1 + complex(0,-1*fsign)*p2),
+            (3,): -1*fwp * normz,
+            }
+
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(u,
+                                self.lorentz_ind,self.spin_ind)
+
+
+class VFPC(aloha_lib.FactoryLorentz):
+
+    object_class = L_VFPC
+    
+    @classmethod
+    def get_unique_name(self, spin1, particle):
+        return '_VFPC%s_%s_' % (particle, spin1)
+
+
+class L_VFM(aloha_lib.LorentzObject):
+    """ 
+
+    """
+    
+    def __init__(self, name, spin1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [], [spin1],
+                                         tags=['|p%s|_z' % particle,
+                                               'FWP%s' % particle,
+                                               'FWM%s' % particle])
+    
+    def create_representation(self):
+        """create representation"""
+        #E = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        #p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+        normz = aloha_lib.DVariable('TnormZ%s' % self.particle)
+        fwp = aloha_lib.DVariable('FWP%s' % self.particle)
+        fwm = aloha_lib.DVariable('FWM%s' % self.particle)
+    
+
+        u = {
+            (0,): fwm * normz,
+            (1,): fwm * (fsign * p1 + complex(0,fsign)*p2),
+            (2,): -1*fwp * normz,
+            (3,): -1*fwp * (fsign * p1 + complex(0,fsign)*p2),
+            }
+
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(u,
+                                self.lorentz_ind,self.spin_ind)
+
+
+class VFM(aloha_lib.FactoryLorentz):
+
+    object_class = L_VFM
+    
+    @classmethod
+    def get_unique_name(self, spin1, particle):
+        return '_VFM%s_%s_' % (particle, spin1)
+
+class L_VFMC(aloha_lib.LorentzObject):
+    """ 
+
+    """
+    
+    def __init__(self, name, spin1, particle):
+        
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self,name, [], [spin1],
+                                         tags=['|p%s|_z' % particle,
+                                               'FWP%s' % particle,
+                                               'FWM%s' % particle])
+    
+    def create_representation(self):
+        """create representation"""
+        #E = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        #p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
+        normz = aloha_lib.DVariable('TnormZ%s' % self.particle)
+        fwp = aloha_lib.DVariable('FWP%s' % self.particle)
+        fwm = aloha_lib.DVariable('FWM%s' % self.particle)
+    
+
+        u = {
+            (0,): -1*fwp * normz,
+            (1,): -1*fwp * (fsign * p1 + complex(0,-1*fsign)*p2),
+            (2,): fwm * normz,
+            (3,): fwm * (fsign * p1 + complex(0,-1*fsign)*p2),
+
+            }
+
+    
+        self.representation = aloha_lib.LorentzObjectRepresentation(u,
+                                self.lorentz_ind,self.spin_ind)
+
+
+class VFMC(aloha_lib.FactoryLorentz):
+
+    object_class = L_VFMC
+    
+    @classmethod
+    def get_unique_name(self, spin1, particle):
+        return '_VFMC%s_%s_' % (particle, spin1)
 
 #===============================================================================
 # Denominator Propagator 
@@ -1479,6 +1655,7 @@ SpinorPropagatorout = lambda spin1, spin2, particle: -1 * (Gamma('mu', spin1, sp
 
 SpinorPropagatorin = lambda spin1, spin2, particle: (Gamma('mu', spin1, spin2) * \
                     P('mu', particle) + Mass(particle) * Identity(spin1, spin2))
+
 
 VectorPropagator = lambda l1, l2, part: complex(0,1)*(-1 * Metric(l1, l2) + OverMass2(part) * \
                                     Metric(l1,'I3')* P('I3', part) * P(l2, part))

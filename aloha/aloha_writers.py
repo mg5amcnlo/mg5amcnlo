@@ -594,7 +594,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         p = [] # a list for keeping track how to write the momentum
         
         signs = self.get_momentum_conservation_sign()
-        misc.sprint(self.declaration)
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
                 out.write("    OM{0} = {1}\n    if (M{0}.ne.{1}) OM{0}={2}/M{0}**2\n".format( 
@@ -636,15 +635,16 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write("    TNORM{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))\n".format(
                         i+1))
             if self.declaration.is_used('TnormZ%s' % (i+1)):
-                out.write("    TNORMZ{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3)) + P{0}(3)\n".format(
+                out.write("    TNORMZ{0} =  TNORM{0} - P{0}(3)\n".format(
                         i+1))
-            if self.declaration.is_used('FWM%s' % (i+1)):
-                out.write("     FWM{0} = DSQRT(max(0d0,DABS(P{0}(0)) - DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))))\n"\
-                          .format(i+1))
-            if self.declaration.is_used('FWP%s' % (i+1)):
-                out.write("     FWP{0} = DSQRT(DABS(P{0}(0)) + DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3)))\n"\
-                          .format(i+1))
 
+            if self.declaration.is_used('FWP%s' % (i+1)):
+                out.write("     FWP{0} = DSQRT(-P{0}(0) + TNORM{0})\n"\
+                          .format(i+1))
+            if self.declaration.is_used('FWM%s' % (i+1)):
+                out.write("     FWM{0} = DSQRT(-P{0}(0) - TNORM{0})\n"\
+                          .format(i+1))
+                #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
         # Returning result
         return out.getvalue()

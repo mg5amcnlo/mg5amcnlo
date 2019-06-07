@@ -206,7 +206,9 @@ class ALOHAExpressionParser(UFOExpressionParser):
                     'OverMass2','Width','Scalar','Spinor','Vector',
                     'Spin2','Spin32','C','Epsilon','Metric','Identity',
                     'ProjM','ProjP','Coup','Norm', 'EPSL', 'EPST1', 'EPST2', 'PT',
-                    'UFP', 'UFM', 'UFPC', 'UFMC', 'Tnorm', 'TnormZ']
+                    'UFP', 'UFM', 'UFPC', 'UFMC',
+                    'VFP', 'VFM', 'VFPC', 'VFMC',
+                     'Tnorm', 'TnormZ']
 
     def p_expression_pi(self, p):
         '''expression : PI'''
