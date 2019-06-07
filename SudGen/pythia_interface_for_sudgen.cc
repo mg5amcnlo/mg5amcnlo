@@ -60,6 +60,15 @@ extern "C" {
     pythia.readString("3:m0 = 0.0");
     pythia.readString("4:m0 = 0.0");
     pythia.settings.forceParm("Spaceshower:pt0ref", 0.0);
+    pythia.readString("TimeShower:MEcorrections = off");
+    pythia.readString("TimeShower:PhiPolAsym = off");
+    pythia.readString("TimeShower:PhiPolAsymHard = off");
+    pythia.readString("SpaceShower:MEcorrections = off");
+    pythia.readString("SpaceShower:PhiPolAsym = off");
+    pythia.readString("SpaceShower:PhiPolAsymHard = off");
+    pythia.readString("SpaceShower:PhiIntAsym = off");
+    pythia.readString("SpaceShower:RapidityOrder = off");
+    pythia.readString("SpaceShower:nQuarkin = 3");
 
     pythia.init();
     // Perform a single step to check initialization.
@@ -76,7 +85,21 @@ extern "C" {
     // Set cut-off for Sudakov.
     pythia.settings.parm("Dire:Sudakov:Min", min_sudakov);
     noemProb = pythia.mergingPtr->generateSingleSudakov ( startingScale,
-      stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
+      stoppingScale, pow(mDipole,2) , id, type, pow2(7000.), 0.1);
+  }
+
+
+  void pythia_get_no_emission_prob_x_( double& noemProb, double& startingScale,
+    double& stoppingScale, double& mDipole, int& id, int& type, int& seed,
+    double& min_sudakov, double& x) {
+    // Set random seed.`
+    pythia.readString("Random:setSeed = on");
+    pythia.settings.mode("Random:seed", seed);
+    pythia.rndm.init(seed);
+    // Set cut-off for Sudakov.
+    pythia.settings.parm("Dire:Sudakov:Min", min_sudakov);
+    noemProb = pythia.mergingPtr->generateSingleSudakov ( startingScale,
+      stoppingScale, pow(mDipole,2) , id, type, pow2(7000.), x);
   }
 
 

@@ -707,7 +707,7 @@ double SpaceShower::noEmissionProbability( double pTbegAll, double pTendAll,
 
   // Set output.
   double wt(0.), wt2(0.);
-  int nTrialsMax(10000), nTrials(0);
+  int nTrialsMax(50000), nTrials(0);
   vector<double> means;
   vector<double> wts;
   vector<double> medians;
@@ -819,6 +819,9 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
   iSysSel       = 0;
   dipEndSel     = 0;
   usePDF = false;
+  //usePDF = true;
+
+  bool hasEvolSideA(false), hasEvolSideB(false);
 
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
@@ -836,11 +839,16 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
 
     // Find properties of dipole and radiating dipole end.
     sideA         = ( abs(dipEndNow->side) == 1 );
+
+    if (sideA!=1) continue;
+    if (sideA==1 && hasEvolSideA) continue;
+    hasEvolSideA=true;
+
     iNow          = dipEndNow->iRadiator;
     iRec          = dipEndNow->iRecoiler;
     idDaughter    = event[dipEndNow->iRadiator].id();
-    xDaughter     = (usePDF) ? x1 : 0.;
-
+    //xDaughter     = (usePDF) ? x1 : 0.;
+    xDaughter=x1;
     x1Now         = (sideA) ? x1 : x2;
     x2Now         = (sideA) ? x2 : x1;
     // Note dipole mass correction when recoiler is a rescatter.
@@ -935,7 +943,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     if (pT2 < HEAVYPT2EVOL * m2Massive) return;
     mRatio = sqrt( m2Massive / m2Dip );
     zMaxMassive = (1. -  mRatio) / ( 1. +  mRatio * (1. -  mRatio) );
-    if (xDaughter > HEAVYXEVOL * zMaxMassive * xMaxAbs) return;
+    if (usePDF && xDaughter > HEAVYXEVOL * zMaxMassive * xMaxAbs) return;
 
     // Find threshold scale below which only g -> Q + Qbar will be allowed.
     m2Threshold = (idMassive == 4) ? min( pT2, CTHRESHOLD * m2c)
@@ -951,7 +959,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   int    idSister       = 0;
   double z              = 0.;
   double zMaxAbs        = 0.;
-  double zRootMax       = 0.;
+  double zRootMax       = 0.; 
   double zRootMin       = 0.;
   double g2gInt         = 0.;
   double q2gInt         = 0.;
@@ -987,7 +995,13 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   // Begin evolution loop towards smaller pT values.
   int    loopTinyPDFdau = 0;
   bool   hasTinyPDFdau  = false;
+
+  bool skipped= false;
+
   do {
+
+    if (skipped) cout << __LINE__ << endl;
+    skipped=false;
 
     // Default values for current tentative emission.
     wt = 0.;
@@ -1034,6 +1048,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
       zMaxAbs     = 1. - 0.5 * (pT2minNow / m2Dip) *
         ( sqrt( 1. + 4. * m2Dip / pT2minNow ) - 1. );
       if (isMassive) zMaxAbs = min( zMaxAbs, zMaxMassive);
+
+      zMinAbs = max(0.,1.-zMaxAbs);
 
       // Go to another z range with lower mass scale if current is closed.
       if (zMinAbs > zMaxAbs) {
@@ -1297,7 +1313,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
       }
     }
 
-    if (!usePDF) wt *= z;
+    //    if (!usePDF) wt *= z;
 
     // Cancel out uncertainty-band extra headroom factors.
     wt /= overFac;
@@ -1310,7 +1326,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
       if (sideA) xMother += (m2Rec / (x2Now * sCM)) * (1. / z - 1.);
       else       xMother += (m2Rec / (x1Now * sCM)) * (1. / z - 1.);
     }
-    if (xMother > xMaxAbs) { wt = 0.; continue; }
+    if (usePDF && xMother > xMaxAbs) { wt = 0.; continue; }
 
     // Forbidden emission if outside allowed z range for given pT2.
     mSister = particleDataPtr->m0(idSister);
@@ -1318,7 +1334,17 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     pT2corr = Q2 - z * (m2Dip + Q2) * (Q2 + m2Sister) / m2Dip;
     if (pT2corr < TINYPT2) { wt = 0.; continue; }
 
+    double zMaxNow     = 1. - 0.5 * (pT2 / m2Dip) *
+        ( sqrt( 1. + 4. * m2Dip / pT2 ) - 1. );
+
+    double zMinNow = max(zMinAbs,1.-zMaxNow);
+
+    if (z > zMaxNow) { wt = 0.; continue; }
+    if (z < zMinNow) { wt = 0.; /*cout << "skip" << endl; skipped=true;*/ continue; }
     // For emissions in the hard scattering system, optionally veto
+
+    //cout << "sucess" << endl;
+
     // emissions not ordered in rapidity (= angle).
     if ( iSysNow == 0 && doRapidityOrder && dipEndNow->nBranch > 0
       && pT2 > pow2( (1. - z) / (z * (1. - dipEndNow->zOld)) )
@@ -1424,8 +1450,6 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 void SpaceShower::pT2nearThreshold( BeamParticle& beam,
   double m2Massive, double m2Threshold, double xMaxAbs,
   double zMinAbs, double zMaxMassive) {
-
-cout << "aaaaaaaaaaaa" << endl;
 
   // Initial values, to be used in kinematics and weighting.
   double Lambda2       = (abs(idDaughter) == 4) ? Lambda4flav2 : Lambda5flav2;
@@ -3020,10 +3044,8 @@ bool SpaceShower::branch( Event& event) {
   // Redo choice of companion kind whenever new flavour.
   if (idMother != idDaughterNow) {
     pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
-cout << scientific << setprecision(8) << "enter " << __LINE__ << endl;
     beamNow.xfISR( iSysSel, idMother, xNew, pdfScale2);
     beamNow.pickValSeaComp();
-cout << scientific << setprecision(8) << "exit " << __LINE__ << endl;
   }
   BeamParticle& beamRec = (side == 1) ? *beamBPtr : *beamAPtr;
   beamRec[iSysSel].iPos( iNewRecoiler);

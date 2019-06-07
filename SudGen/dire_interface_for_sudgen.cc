@@ -95,7 +95,7 @@ extern "C" {
     pythia4dire.readString("Enhance:isr_qcd_1->2&1&2_CS = 1.0");
     pythia4dire.readString("Enhance:isr_qcd_1->1&1&1_CS = 1.0");
 
-    pythia4dire.readString("ShowerPDF:usePDF = off");
+    pythia4dire.readString("ShowerPDF:usePDF = on");
 
     dire.init(pythia4dire);
 
@@ -117,8 +117,22 @@ extern "C" {
     // Set cut-off for Sudakov.
     pythia4dire.settings.parm("Dire:Sudakov:Min", min_sudakov);
     noemProb = merging->generateSingleSudakov ( startingScale,
-      stoppingScale, pow(mDipole,2) , id, type, 7000., 0.1);
+      stoppingScale, pow(mDipole,2) , id, type, pow2(7000.), 0.1);
 
+  }
+
+
+  void dire_get_no_emission_prob_x_( double& noemProb, double& startingScale,
+    double& stoppingScale, double& mDipole, int& id, int& type, int& seed,
+    double& min_sudakov, double& x) {
+    // Set random seed.`
+    pythia4dire.readString("Random:setSeed = on");
+    pythia4dire.settings.mode("Random:seed", seed);
+    pythia4dire.rndm.init(seed);
+    // Set cut-off for Sudakov.
+    pythia4dire.settings.parm("Dire:Sudakov:Min", min_sudakov);
+    noemProb = merging->generateSingleSudakov ( startingScale,
+      stoppingScale, pow(mDipole,2) , id, type, pow2(7000.), x);
   }
 
 
