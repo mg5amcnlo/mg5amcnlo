@@ -1599,8 +1599,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             elif self.get('polarization') == [1,-1]:
                 if self.get('spin') != 3:
                     raise InvalidCmd, 'polarization not handle for decay particle'
-                misc.sprint(dir(self))
-                raise Exception, self.get('spin')
                 output['propa'] = 'P1T'
             elif self.get('polarization') == [99]:
                 if self.get('spin') != 3:
