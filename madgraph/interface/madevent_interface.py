@@ -3403,8 +3403,7 @@ Beware that this can be dangerous for local multicore runs.""")
         #fsock.close()
         
         # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events']:
+        for name in ['../bin/internal/gen_ximprove', 'all']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
