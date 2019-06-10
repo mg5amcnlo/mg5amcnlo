@@ -132,7 +132,7 @@ C ----------
           JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+              IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I)=.TRUE.
                  NGOOD = NGOOD +1
                  IGOOD(NGOOD) = I        
