@@ -105,7 +105,6 @@ C     Continue only if IMODE is 0, 4 or 5
             DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
-	 write(*,*) frame_id
 	 if(frame_id.ne.6)then
            call boost_to_frame(PP, frame_id, P1)
          else
