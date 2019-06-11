@@ -707,7 +707,7 @@ double SpaceShower::noEmissionProbability( double pTbegAll, double pTendAll,
 
   // Set output.
   double wt(0.), wt2(0.);
-  int nTrialsMax(50000), nTrials(0);
+  int nTrialsMax(500000), nTrials(0);
   vector<double> means;
   vector<double> wts;
   vector<double> medians;
@@ -1070,6 +1070,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
       // Integrals of splitting kernels for gluons: g -> g, q -> g.
       if (isGluon) {
+//        g2gInt = overFac * (8./3.)
+//          * log( (1. - zMinAbs) / (1. - zMaxAbs) );
         g2gInt = overFac * HEADROOMG2G * 6.
           * log(zMaxAbs * (1.-zMinAbs) / (zMinAbs * (1.-zMaxAbs)));
         if (doMEcorrections) g2gInt *= calcMEmax(MEtype, 21, 21);
@@ -1077,6 +1079,9 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         if (canEnhanceET) g2gInt *= userHooksPtr->enhanceFactor("isr:G2GG");
         q2gInt = overFac * HEADROOMQ2G * (16./3.)
           * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
+
+//q2gInt = 0.;
+
         if (doMEcorrections) q2gInt *= calcMEmax(MEtype, 1, 21);
         // Optionally enhanced branching rate.
         if (canEnhanceET) q2gInt *= userHooksPtr->enhanceFactor("isr:Q2GQ");
@@ -1218,6 +1223,11 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         wt = pow2( 1. - z * (1. - z));
         // Account for headroom factor used to enhance trial probability
         wt /= HEADROOMG2G;
+
+//          z = 1. - (1. - zMinAbs) * pow( (1. - zMaxAbs) / (1. - zMinAbs),
+//            rndmPtr->flat() );
+//          wt = 0.5 * (1. + pow2(z));
+
         // Optionally enhanced branching rate.
         nameNow = "isr:G2GG";
         if (canEnhanceET) {
@@ -1249,6 +1259,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
             isEnhancedQ2GQ = true;
           }
         }
+
+//wt=0.;
       }
 
     // Select z value of branching to q, and corrective weight.
@@ -1313,7 +1325,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
       }
     }
 
-    //    if (!usePDF) wt *= z;
+        if (!usePDF) wt *= z;
 
     // Cancel out uncertainty-band extra headroom factors.
     wt /= overFac;
@@ -1336,14 +1348,9 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
     double zMaxNow     = 1. - 0.5 * (pT2 / m2Dip) *
         ( sqrt( 1. + 4. * m2Dip / pT2 ) - 1. );
-
     double zMinNow = max(zMinAbs,1.-zMaxNow);
-
     if (z > zMaxNow) { wt = 0.; continue; }
-    if (z < zMinNow) { wt = 0.; /*cout << "skip" << endl; skipped=true;*/ continue; }
-    // For emissions in the hard scattering system, optionally veto
-
-    //cout << "sucess" << endl;
+    if (z < zMinNow) { wt = 0.; continue; }
 
     // emissions not ordered in rapidity (= angle).
     if ( iSysNow == 0 && doRapidityOrder && dipEndNow->nBranch > 0
