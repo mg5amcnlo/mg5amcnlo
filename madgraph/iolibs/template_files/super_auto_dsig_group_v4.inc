@@ -132,9 +132,11 @@ C     Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative summed weights:'
+	if (SUMPROB.ne.0d0)then
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dE12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
         ENDDO
+	endif
         SUMPROB=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
@@ -144,9 +146,11 @@ C     Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative number of events:'
+	if (SUMPROB.ne.0d0)then
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dE12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
         ENDDO
+	ENDIF
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dI12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
