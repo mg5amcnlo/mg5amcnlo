@@ -1064,7 +1064,6 @@ class CheckValidForCmd(cmd.CheckCmd):
                 'wrong process format: restriction should be place after the final states')
                 
         # '{}' should only be used for onshell particle (including initial/final state)
-        #  and not for NLO!
         # check first that polarization are not include between > >
         if nbsep == 2:
             if '{' in particles_parts[1]:
@@ -1074,9 +1073,26 @@ class CheckValidForCmd(cmd.CheckCmd):
             if '{' in split[1]:
                 raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
             
-        #if '[' in process and '{' in process:
-        #    if 'noborn' not in process:
-        #        raise self.InvalidCmd('Polarization restriction can not be used for NLO process')
+        if '[' in process and '{' in process:
+            valid = False
+            if 'noborn' in process:
+                valid = True
+                
+            order = process.split('[')[1].split(']')[0]
+            if '=' in order:
+                order = order.split('=')[1]
+            if order.strip().lower() != 'qcd':
+                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+
+            for p in particles_parts[1].split():
+                if '{' in p:
+                    part = p.split('{')[0]
+                else:
+                    continue
+                if self._curr_model:
+                    p = self._curr_model.get_particle(part)
+                    if p.get('color') != 1:
+                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
         
 
 
@@ -5073,9 +5089,6 @@ This implies that with decay chains:
         final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
-            if "{" in particle:
-                particle = particle.split("{",1)[0]
-            
             if particle in pids:
                 final.add(pids[particle])
             elif particle in self._multiparticles:
