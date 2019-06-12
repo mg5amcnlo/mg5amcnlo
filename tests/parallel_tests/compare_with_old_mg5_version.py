@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 263 #2.4.0
+    reference_number = 310 #2.4.0
     nb_test = 0
     
     
@@ -311,6 +311,7 @@ class OLDMG5Comparator(unittest.TestCase):
         my_proc_list = ['u u~ > w+{T} w-{TL}', 
                         ' u d~ > w+{T}, w+ > e+ ve',
                         ' u d~ > w+{L}, w+ > e+ ve',
+                        ' g g > t{L} t~{R}, t > w+ b, t~ > w- b~'
                         'W+{T} > e+ ve',
                         'e+{L} e-{R} > mu+ mu-',
                         'e+ e- > mu+ mu-{L}']
@@ -355,6 +356,7 @@ class OLDMG5Comparator(unittest.TestCase):
     def test_short_polarization(self): 
         """Test a short list of processes with squared order constraints"""
 
+        #self.create_short_polarization()
         comparisons = me_comparator.PickleRunner.find_comparisons(\
             os.path.join(_pickle_path, "mg5_short_paralleltest_pol.pkl"))
 
