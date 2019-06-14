@@ -242,6 +242,7 @@ class ParamCardWriter(object):
 
         if lhablock == 'MASS':
             data = self.dep_mass
+            #misc.sprint(data)
             prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width
@@ -266,12 +267,13 @@ class ParamCardWriter(object):
             if self.model['parameter_dict'][param.name].imag:
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real (not the case for %s)'%param.name
             value = complex(self.model['parameter_dict'][param.name]).real
-            text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
+            text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], param.expr.replace('mdl_',''))  
         
         # Add duplicate parameter
         if lhablock == 'MASS':
             data = self.duplicate_mass 
+            misc.sprint(self.duplicate_mass)
             name = 'mass'
         elif lhablock == 'DECAY':
             data = self.duplicate_width
@@ -281,9 +283,11 @@ class ParamCardWriter(object):
             if self.model['parameter_dict'][param.name].imag:
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
-            text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
+            misc.sprint(value)
+            text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], part[name].replace('mdl_',''))
-            
+            misc.sprint("""%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
+                        value, part["name"], part[name].replace('mdl_','')))
         if not text:
             return
          
