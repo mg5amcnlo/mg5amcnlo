@@ -133,11 +133,11 @@ C ----------
       IF(ntry(nFKSprocess).LT.2) then
 	    if (T_SUM(2).lt.1e-10*T_SUM(1)) T_SUM(2) = T_SUM(1)	
 	do IHEL=1,NCOMB
-            if ( DABS(T_SAVE(IHEL,1)).gt.T_SUM(1)*1d-8/NCOMB)then
+            if ( DABS(T_SAVE(IHEL,1)).gt.DABS(T_SUM(1))*1d-8/NCOMB)then
               GOODHEL(IHEL,nFKSprocess)=.TRUE.
             endif
 
-            if ( DABS(T_SAVE(IHEL,2)).gt.T_SUM(2)*1d-8/NCOMB)then
+            if ( DABS(T_SAVE(IHEL,2)).gt.DABS(T_SUM(2))*1d-8/NCOMB)then
               GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
             endif
 	 enddo	

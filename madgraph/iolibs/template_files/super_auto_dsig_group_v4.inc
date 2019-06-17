@@ -69,6 +69,10 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+      integer nb_spin_state(2)
+      data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
+      common /nb_hel_state/ nb_spin_state
+
       include 'coupl.inc'
       include 'run.inc'
 C   ICONFIG has this config number

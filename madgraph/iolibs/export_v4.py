@@ -4115,6 +4115,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                           'iolibs/template_files/%s' % self.matrix_file)
         replace_dict['template_file2'] = pjoin(_file_path, \
                           'iolibs/template_files/split_orders_helping_functions.inc')      
+        
+        s1,s2 = matrix_element.get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
+        
         if writer:
             file = open(replace_dict['template_file']).read()
             file = file % replace_dict
@@ -5193,6 +5198,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         ncomb=matrix_elements[0].get_helicity_combinations()
         replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+
+        s1,s2 = matrix_elements[0].get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
         
         if writer:
             file = open(pjoin(_file_path, \

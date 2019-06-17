@@ -4625,6 +4625,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             mothers.append(wf)
 
         return mothers
+    
+
 
     def get_num_configs(self):
         """Get number of diagrams, which is always more than number of
@@ -4764,6 +4766,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             for leg in initial_legs]
         
         return reduce(lambda x, y: x * y, hel_per_part, 1)
+
+    def get_spin_state_initial(self):
+        """Gives (number of state for each initial particle)"""
+
+        model = self.get('processes')[0].get('model')
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  leg.get('id')].get_helicity_states())
+            for leg in initial_legs]
+        
+        if len(hel_per_part) == 1:
+            hel_per_part.append(0)
+        
+        return hel_per_part
 
     def get_beams_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
