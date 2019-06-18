@@ -273,7 +273,6 @@ class ParamCardWriter(object):
         # Add duplicate parameter
         if lhablock == 'MASS':
             data = self.duplicate_mass 
-            misc.sprint(self.duplicate_mass)
             name = 'mass'
         elif lhablock == 'DECAY':
             data = self.duplicate_width

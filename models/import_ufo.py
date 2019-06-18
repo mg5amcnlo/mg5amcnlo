@@ -422,7 +422,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     # save in a pickle files to fasten future usage
-    if ReadWrite:
+    if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
                                    model, log=False)
 
@@ -444,6 +444,8 @@ class UFOMG5Converter(object):
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
+                                  # only trigger if all particles are of QCD type (not h>gg)
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -545,6 +547,12 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if self.non_qcd_gluon_emission:
+            logger.critical("Model with non QCD emission (found %i). This type of model is not fully supported within MG5aMC. Do not use default LO dynamical scale, MLM matching/merging and scale uncertainty with this model",
+                            self.non_qcd_gluon_emission)
+            time.sleep(10)
+            self.model['allow_pickle'] = False 
+            
         if self.perturbation_couplings:
             try:
                 self.ufomodel.add_NLO()
@@ -1294,6 +1302,7 @@ class UFOMG5Converter(object):
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
         
+     
         
         
         # Now consider the name only
@@ -1323,6 +1332,13 @@ class UFOMG5Converter(object):
                     raise InvalidModel, '''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
+                        # check that gluon emission from quark are QCD tagged
+                if 21 in [particle.pdg_code for particle in interaction_info.particles] and\
+                    'QCD' not in  order:
+                    col = [par.get('color') for par in particles]
+                    if 1 not in col:
+                        self.non_qcd_gluon_emission +=1
+       
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = '%s%s' % \
                                                (coupling_sign,coupling.name)
@@ -1340,7 +1356,8 @@ class UFOMG5Converter(object):
                     order_to_int[order] = interaction                        
                     # add to the interactions
                     self.interactions.append(interaction)
-        
+
+            
         # check if this interaction conserve the charge defined
  #       if type=='base':
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -1353,7 +1370,7 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
-        
+
         
         
     def get_sign_flow(self, flow, nb_fermion):

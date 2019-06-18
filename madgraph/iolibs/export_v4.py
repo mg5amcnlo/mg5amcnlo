@@ -5051,6 +5051,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         filename = 'config_nqcd.inc'
         self.write_config_nqcd_file(writers.FortranWriter(filename),
                                     nqcd_list)
+        misc.sprint("config_nqcd")
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
@@ -5120,6 +5121,17 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symfact_orig.dat'
         self.write_symfact_file(open(filename, 'w'), symmetry)
+        misc.sprint(filename, nqcd_list, symmetry)
+        
+        # check consistency
+        for i, sym_fact in enumerate(symmetry):
+            if sym_fact > 0:
+                continue
+            if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
+                misc.sprint(i, sym_fact, nqcd_list[i], nqcd_list[abs(sym_fact)])
+                raise Exception, "identical diagram with different QCD powwer" 
+                                      
+        
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
