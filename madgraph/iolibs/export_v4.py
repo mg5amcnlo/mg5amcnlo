@@ -3841,8 +3841,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
         
-        if self.model and self.model['limitations']:
-            self.proc_characteristic['limitations'] += self.model['limitations']
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
 
         # set limitation linked to the model
@@ -3978,6 +3976,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             # Set lowercase/uppercase Fortran code
             writers.FortranWriter.downcase = False
 
+        # check if MLM/.../ is supported for this matrix-element and update associate flag
+        if 'SCALE' in self.model["limitations"]:
+            if 'SCALE' not in self.proc_characteristic["limitations"]:
+                used_couplings = matrix_element.get_used_couplings(output="set") 
+                for vertex in self.model.get('interactions'):
+                    particles = [p for p in vertex.get('particles')]
+                    if 21 in [p.get('pdg_code') for p in particles]:
+                        colors = [par.get('color') for par in particles]
+                        if 1 in colors:
+                            continue
+                        elif 'QCD' not in vertex.get('orders'):
+                            for bad_coup in vertex.get('couplings').values():
+                                if bad_coup in used_couplings:
+                                    self.proc_characteristic["limitations"].append('SCALE')
+                                    break
+
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':''}
@@ -4110,7 +4124,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ampsplitorders']='\n'.join(amp_so)
         replace_dict['sqsplitorders']='\n'.join(sqamp_so)
         
-        
+
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
         jamp_lines = self.get_JAMP_lines_split_order(\

@@ -5810,13 +5810,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
             if 'SCALE' in proc_charac['limitations']:
                 if self.run_card['use_syst']:
-                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n"+\
                       "You can NOT run with use_syst = True for this model."
                 if self.run_card['dynamical_scale_choice'] == -1:
-                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n"+\
                       "You can NOT run with CKKW dynamical scale for this model. Please choose another one." 
                 if self.run_card['ickkw']:
-                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
                 
 
