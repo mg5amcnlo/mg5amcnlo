@@ -5796,13 +5796,47 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     if CommonRunCmd.sleep_for_error:
                         time.sleep(5)
                         CommonRunCmd.sleep_for_error = False
-
+                        
+            # @LO if PY6 shower => event_norm on sum
+            if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
+                if self.run_card['event_norm'] != 'sum':
+                    logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm sum') 
+            # @LO if PY6 shower => event_norm on sum
+            elif 'pythia8_card.dat' in self.cards:
+                if self.run_card['event_norm'] == 'sum':
+                    logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm average')  
+                
+            if 'SCALE' in proc_charac['limitations']:
+                if self.run_card['use_syst']:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with use_syst = True for this model."
+                if self.run_card['dynamical_scale_choice'] == -1:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with CKKW dynamical scale for this model. Please choose another one." 
+                if self.run_card['ickkw']:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                
 
         ########################################################################
         #       NLO specific check
         ########################################################################
         # For NLO run forbid any pdg specific cut on massless particle
         if isinstance(self.run_card,banner_mod.RunCardNLO):
+            
+            try:
+                proc_charac = self.mother_interface.proc_characteristics
+            except:
+                proc_charac = None
+
+            if proc_charac and 'SCALE' in proc_charac['limitations']:
+                if self.run_card['ickkw']:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                            
+            
             for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
                            self.run_card['mxx_min_pdg'].keys()): 
             
@@ -5811,9 +5845,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.param_card.get_value('mass', int(pdg), default=0) ==0:
                     raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
         
-        # if NLO reweighting is ON: ensure that we keep the rwgt information
-        if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
-            isinstance(self.run_card,banner_mod.RunCardNLO) and \
+            # if NLO reweighting is ON: ensure that we keep the rwgt information
+            if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
                 re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO|NLO_tree)\s*(?:#|$)''', re.M+re.I)
@@ -5823,25 +5856,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:BOLD' )
                     self.do_set('run_card store_rwgt_info True')
         
-        # if external computation for the systematics are asked then switch 
-        #automatically the book-keeping of the weight for NLO
-        if 'run' in self.allow_arg and \
-                    self.run_card['systematics_program'] == 'systematics' and \
-                    isinstance(self.run_card,banner_mod.RunCardNLO) and \
-                    not self.run_card['store_rwgt_info']:
-            logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
-            self.do_set('run_card store_rwgt_info True')
+            # if external computation for the systematics are asked then switch 
+            #automatically the book-keeping of the weight for NLO
+            if 'run' in self.allow_arg and \
+                        self.run_card['systematics_program'] == 'systematics'  and \
+                        not self.run_card['store_rwgt_info']:
+                logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
+                self.do_set('run_card store_rwgt_info True')
         
-        # @LO if PY6 shower => event_norm on sum
-        if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
-            if self.run_card['event_norm'] != 'sum':
-                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm sum') 
-        # @LO if PY6 shower => event_norm on sum
-        elif 'pythia8_card.dat' in self.cards:
-            if self.run_card['event_norm'] == 'sum':
-                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm average')         
+       
         
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):

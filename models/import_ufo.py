@@ -550,8 +550,8 @@ class UFOMG5Converter(object):
         if self.non_qcd_gluon_emission:
             logger.critical("Model with non QCD emission (found %i). This type of model is not fully supported within MG5aMC. Do not use default LO dynamical scale, MLM matching/merging and scale uncertainty with this model",
                             self.non_qcd_gluon_emission)
-            time.sleep(10)
             self.model['allow_pickle'] = False 
+            self.model['limitations'].append('SCALE')
             
         if self.perturbation_couplings:
             try:
@@ -1328,13 +1328,14 @@ class UFOMG5Converter(object):
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
-                if '1' in order:
+
+                if '1' in coupling.order:
                     raise InvalidModel, '''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
-                        # check that gluon emission from quark are QCD tagged
+                # check that gluon emission from quark are QCD tagged
                 if 21 in [particle.pdg_code for particle in interaction_info.particles] and\
-                    'QCD' not in  order:
+                    'QCD' not in  coupling.order:
                     col = [par.get('color') for par in particles]
                     if 1 not in col:
                         self.non_qcd_gluon_emission +=1

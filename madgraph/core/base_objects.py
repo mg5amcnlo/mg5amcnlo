@@ -1045,6 +1045,7 @@ class Model(PhysicsObject):
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
         self['allow_pickle'] = True
+        self['limitations'] = [] # SCALE means that the model can not be use with MLM, default CKKW scale, systematics
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         

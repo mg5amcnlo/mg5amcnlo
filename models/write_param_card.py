@@ -282,7 +282,6 @@ class ParamCardWriter(object):
             if self.model['parameter_dict'][param.name].imag:
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
-            misc.sprint(value)
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], part[name].replace('mdl_',''))
             misc.sprint("""%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 

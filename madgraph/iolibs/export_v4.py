@@ -3840,7 +3840,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        
+        if self.model and self.model['limitations']:
+            self.proc_characteristic['limitations'] += self.model['limitations']
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+
+        # set limitation linked to the model
+    
+        
         # indicate the PDG of all initial particle
         try:
             pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
@@ -5121,7 +5128,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symfact_orig.dat'
         self.write_symfact_file(open(filename, 'w'), symmetry)
-        misc.sprint(filename, nqcd_list, symmetry)
         
         # check consistency
         for i, sym_fact in enumerate(symmetry):
