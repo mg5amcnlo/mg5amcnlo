@@ -3263,18 +3263,19 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
-        if 'SCALE' in proc_characteristic['limitations']:
-            no_systematics = True
-            if self['dynamical_scale_choice'] ==  -1:
-                self['dynamical_scale_choice'] = 3
-            if self['ickkw']  == 1:
-                logger.warning("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
-            self['ickkw'] = 0
-            
+
         
         if no_systematics:
             self['use_syst'] = False
             self['systematics_program'] = 'none'
+
+        if 'MLM' in proc_characteristic['limitations']:
+            if self['dynamical_scale_choice'] ==  -1:
+                self['dynamical_scale_choice'] = 3
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
+            
             
     def write(self, output_file, template=None, python_template=False,
               **opt):

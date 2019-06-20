@@ -458,7 +458,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                          'loop_orders':vertex.get('loop_orders')}
         else:
             # Not that it is going to be used here, but it might be eventually
-            inter = model.get_interaction(vertex.get('id'))
+            #inter = model.get_interaction(vertex.get('id'))
             loop_info = {}
 
         if last_vertex:

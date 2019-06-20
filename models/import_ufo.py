@@ -549,11 +549,11 @@ class UFOMG5Converter(object):
 
         if self.non_qcd_gluon_emission:
             logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
-            "  Restriction on LO dynamical scale, MLM matching/merging and scale uncertainty can occur with this model.\n"+\
-            "  Use such feature with care.")
+            "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
+            "  Use such features with care.", self.non_qcd_gluon_emission)
 
             self.model['allow_pickle'] = False 
-            self.model['limitations'].append('SCALE')
+            self.model['limitations'].append('MLM')
             
         if self.perturbation_couplings:
             try:

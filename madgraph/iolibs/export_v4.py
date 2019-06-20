@@ -3977,8 +3977,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             writers.FortranWriter.downcase = False
 
         # check if MLM/.../ is supported for this matrix-element and update associate flag
-        if 'SCALE' in self.model["limitations"]:
-            if 'SCALE' not in self.proc_characteristic["limitations"]:
+        if 'MLM' in self.model["limitations"]:
+            if 'MLM' not in self.proc_characteristic["limitations"]:
                 used_couplings = matrix_element.get_used_couplings(output="set") 
                 for vertex in self.model.get('interactions'):
                     particles = [p for p in vertex.get('particles')]
@@ -3989,7 +3989,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         elif 'QCD' not in vertex.get('orders'):
                             for bad_coup in vertex.get('couplings').values():
                                 if bad_coup in used_couplings:
-                                    self.proc_characteristic["limitations"].append('SCALE')
+                                    self.proc_characteristic["limitations"].append('MLM')
                                     break
 
         # The proc prefix is not used for MadEvent output so it can safely be set
@@ -5072,7 +5072,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         filename = 'config_nqcd.inc'
         self.write_config_nqcd_file(writers.FortranWriter(filename),
                                     nqcd_list)
-        misc.sprint("config_nqcd")
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),

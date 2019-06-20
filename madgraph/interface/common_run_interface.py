@@ -5808,11 +5808,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
                     self.do_set('run_card event_norm average')  
                 
-            if 'SCALE' in proc_charac['limitations']:
-                if self.run_card['use_syst']:
-                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
-                        "As your process seems to be impacted by the issue,\n"+\
-                      "You can NOT run with use_syst = True for this model."
+            if 'MLM' in proc_charac['limitations']:
                 if self.run_card['dynamical_scale_choice'] == -1:
                     raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n"+\
@@ -5834,7 +5830,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             except:
                 proc_charac = None
 
-            if proc_charac and 'SCALE' in proc_charac['limitations']:
+            if proc_charac and 'MLM' in proc_charac['limitations']:
                 if self.run_card['ickkw']:
                     raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
