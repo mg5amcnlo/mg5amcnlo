@@ -6388,7 +6388,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     if total and total/mass < small_width_treatment:
                         text = "Particle %s with very small width (%g): Learn about special handling here: https://answers.launchpad.net/mg5amcnlo/+faq/3053"
                         logger.warning(text,pid,total)
-                    elif total total/mass < 1e-11:
+                    elif total and total/mass < 1e-11:
                         text = "Particle %s with very small width (%g): Numerical inaccuracies can occur if that particle is in a s-channel"
                         logger.critical(text,pid,total)                        
                         

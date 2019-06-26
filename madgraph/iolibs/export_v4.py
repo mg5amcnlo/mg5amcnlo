@@ -3977,7 +3977,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             writers.FortranWriter.downcase = False
 
         # check if MLM/.../ is supported for this matrix-element and update associate flag
-        if 'MLM' in self.model["limitations"]:
+        if self.model and 'MLM' in self.model["limitations"]:
             if 'MLM' not in self.proc_characteristic["limitations"]:
                 used_couplings = matrix_element.get_used_couplings(output="set") 
                 for vertex in self.model.get('interactions'):
