@@ -3319,7 +3319,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
             if mass and abs(width/mass) < 1e-12:
-                if hasattr(interface, 'run_card'):
+                if hasattr(interface, 'run_card') and isinstance(interface.run_card, banner_mod.RunCardLO):
                     if interface.run_card['small_width_treatment'] < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 else:
@@ -6380,9 +6380,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     for key, partial in info:
                         total += partial
                     mass = self.param_card.get_value('mass', pid)
-                    if total and total/mass < self.run_card['small_width_treatment']:
+                    try:
+                        small_width_treatment = self.run_card['small_width_treatment']
+                    except Exception: #NLO
+                        small_width_treatment = 0
+                    
+                    if total and total/mass < small_width_treatment:
                         text = "Particle %s with very small width (%g): Learn about special handling here: https://answers.launchpad.net/mg5amcnlo/+faq/3053"
                         logger.warning(text,pid,total)
+                    elif total total/mass < 1e-11:
+                        text = "Particle %s with very small width (%g): Numerical inaccuracies can occur if that particle is in a s-channel"
+                        logger.critical(text,pid,total)                        
                         
             
 

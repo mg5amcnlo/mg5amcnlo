@@ -284,8 +284,7 @@ class ParamCardWriter(object):
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], part[name].replace('mdl_',''))
-            misc.sprint("""%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
-                        value, part["name"], part[name].replace('mdl_','')))
+
         if not text:
             return
          

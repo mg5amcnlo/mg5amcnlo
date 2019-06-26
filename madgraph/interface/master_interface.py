@@ -47,7 +47,7 @@ import madgraph.fks.fks_base as fks_base
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 logger = logging.getLogger('cmdprint') # -> stdout
 
@@ -198,6 +198,10 @@ class Switcher(object):
 
     def do_add(self, line, *args, **opts):
         
+        allow_switch = True
+        if self._curr_proc_defs:
+           allow_switch = False
+        
         argss = cmd.Cmd.split_arg(line)
         if len(argss)>=1 and argss[0] in ['process','timing','profile']:
             proc_line = ' '.join(argss[1:])
@@ -207,17 +211,17 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode in ['all', 'real', 'LOonly']:
-                    self.change_principal_cmd('aMC@NLO')
+                    self.change_principal_cmd('aMC@NLO', allow_switch)
                 elif nlo_mode in ['virt', 'sqrvirt']:
-                    self.change_principal_cmd('MadLoop')
+                    self.change_principal_cmd('MadLoop', allow_switch)
                 elif nlo_mode == 'noborn': 
-                    self.change_principal_cmd('MadLoop')
+                    self.change_principal_cmd('MadLoop', allow_switch)
                     self.cmd.validate_model(self, loop_type=nlo_mode,
                                                             coupling_type=orders)
-                    self.change_principal_cmd('MadGraph')
+                    self.change_principal_cmd('MadGraph', allow_switch)
                     return self.cmd.create_loop_induced(self, line, *args, **opts)
             else:
-                self.change_principal_cmd('MadGraph') 
+                self.change_principal_cmd('MadGraph', allow_switch) 
         try:
             return  self.cmd.do_add(self, line, *args, **opts)
         except fks_base.NoBornException:
@@ -225,7 +229,7 @@ class Switcher(object):
             logger.info(" No Born diagrams found. Now switching to the loop-induced mode.        ", '$MG:BOLD')
             logger.info(" Please cite ref. 'arXiv:1507.00020' when using results from this mode. ", '$MG:BOLD')
             logger.info("------------------------------------------------------------------------", '$MG:BOLD')            
-            self.change_principal_cmd('MadGraph')
+            self.change_principal_cmd('MadGraph',allow_switch)
             return self.cmd.create_loop_induced(self, line, *args, **opts)
 
         
@@ -608,9 +612,15 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
                             %args[0]+" Valid interfaces are %s"\
                             %','.join(interface_quick_name.keys()))
         
-    def change_principal_cmd(self, name):
+    def change_principal_cmd(self, name, allow_switch=True):
+
 
         old_cmd=self.current_interface
+        if old_cmd == name:
+            return
+        elif not allow_switch:
+            raise InvalidCmd, "Command not compatible with previous command: Can not combine LO/NLO feature."
+            
         if name in self.interface_names.keys():
             self.prompt= self.interface_names[name][0]+'>'
             self.cmd= self.interface_names[name][1]
