@@ -65,8 +65,8 @@ C
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
 
-    INTEGER NB_SPIN_SATE(2)
-    common /nb_hel_state/ nb_spin_state
+    INTEGER NB_SPIN_STATE_in(2)
+    common /nb_hel_state/ nb_spin_state_in
     
     INTEGER IMIRROR
     COMMON/TO_MIRROR/ IMIRROR
@@ -125,9 +125,9 @@ C ----------
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                  T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
+                  T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
                ELSE IF(POL(JJ).NE.1d0)THEN
-                  T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2d0
+                  T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
                ENDIF
             ENDDO
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then

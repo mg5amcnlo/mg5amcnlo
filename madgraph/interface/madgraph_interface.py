@@ -1091,6 +1091,13 @@ class CheckValidForCmd(cmd.CheckCmd):
                     continue
                 if self._curr_model:
                     p = self._curr_model.get_particle(part)
+                    if not p:
+                        if part in self._multiparticles:
+                            for part2 in self._multiparticles[part]:
+                                p = self._curr_model.get_particle(part2)
+                                if p.get('color') != 1:
+                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                        continue
                     if p.get('color') != 1:
                         raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
         
@@ -4723,7 +4730,11 @@ This implies that with decay chains:
                 pol, rest = pol.split('}',1)
                 if rest:
                     raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
-                for p in pol:
+                ignore  =False
+                for i,p in enumerate(pol):
+                    if ignore or p==',':
+                        ignore= False
+                        continue
                     if p in ['t','T']:
                         polarization += [1,-1]
                     elif p in ['l', 'L']:
@@ -4733,11 +4744,30 @@ This implies that with decay chains:
                     elif p in ["A",'a']:
                         polarization += [99]
                     elif p in ['+']:
-                        polarization += [1]
+                        if i +1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(p)
+                            ignore = True
+                        else:
+                            polarization += [1]
                     elif p in ['-']:
-                        polarization += [-1]
+                        if i+1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(-p)
+                            ignore = True
+                        else:
+                            polarization += [-1]
                     elif p in [0]:
                         polarization += [0]
+                    elif p.isdigit():
+                        p = int(p)
+                        if abs(p) > 3: 
+                            raise self.InvalidCmd("polarization are between -3 and 3")
+                        polarization.append(p)
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
 
