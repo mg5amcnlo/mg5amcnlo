@@ -531,7 +531,6 @@ PYUTI="mcatnlo_pyan_stdhep.o"
         new_text = self.card.text
         old_card = shower_card.ShowerCard(new_text, testing=True)
         new_text = old_card.set_param('ue_enabled', '.false.', write_to=True)
-        misc.sprint(new_text)
         new_card = shower_card.ShowerCard(new_text, testing=True)
         self.assertFalse(new_card['ue_enabled'])
 

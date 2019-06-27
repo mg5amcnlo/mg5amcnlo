@@ -852,12 +852,12 @@ class FKSHelasRealProcess(object): #test written
         if self.__dict__ == other.__dict__:
             return True
         else:
-            failed = []
-            for key in self.__dict__:
-                if self.__dict__[key] != other.__dict__[key]:
-                    failed.append(key)
-            import madgraph.various.misc as misc
-            misc.sprint(failed)
+#            failed = []
+#            for key in self.__dict__:
+#                if self.__dict__[key] != other.__dict__[key]:
+#                    failed.append(key)
+#            import madgraph.various.misc as misc
+
             return False
                 
         

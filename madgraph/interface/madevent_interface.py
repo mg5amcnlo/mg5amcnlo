@@ -3406,8 +3406,7 @@ Beware that this can be dangerous for local multicore runs.""")
         #fsock.close()
         
         # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events']:
+        for name in ['../bin/internal/gen_ximprove', 'all']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
@@ -6644,7 +6643,8 @@ class GridPackCmd(MadEventCmd):
         
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
-            
+        
+        self.banner.add_generation_info(sum_xsec, self.nb_event)
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
@@ -6659,7 +6659,7 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(outdir, self.run_name, "partials%s.lhe" % i))
                    
         self.results.add_detail('nb_event', nb_event)
-    
+        self.banner.add_generation_info(sum_xsec, nb_event)
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
 

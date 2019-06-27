@@ -7302,7 +7302,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
                 # importing a loop model from MG5
-                MadGraphCmd.do_import(self,'model %s' %model_name, force=True)
+                if 'modelname' in self.history.get('full_model_line'):
+                    opts = '--modelname'
+                else:
+                    opts=''
+                MadGraphCmd.do_import(self,'model %s %s' % (model_name, opts), force=True)
             elif log:
                 logger.info('Note that you have to reload the model')
 

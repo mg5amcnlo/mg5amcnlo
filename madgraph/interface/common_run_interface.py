@@ -3323,7 +3323,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
             if mass and abs(width/mass) < 1e-12:
-                if hasattr(interface, 'run_card'):
+                if hasattr(interface, 'run_card') and isinstance(interface.run_card, banner_mod.RunCardLO):
                     if interface.run_card['small_width_treatment'] < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 else:
@@ -5796,7 +5796,28 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     if CommonRunCmd.sleep_for_error:
                         time.sleep(5)
                         CommonRunCmd.sleep_for_error = False
-
+                        
+            # @LO if PY6 shower => event_norm on sum
+            if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
+                if self.run_card['event_norm'] != 'sum':
+                    logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm sum') 
+            # @LO if PY6 shower => event_norm on sum
+            elif 'pythia8_card.dat' in self.cards:
+                if self.run_card['event_norm'] == 'sum':
+                    logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm average')  
+                
+            if 'MLM' in proc_charac['limitations']:
+                if self.run_card['dynamical_scale_choice'] == -1:
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n"+\
+                      "You can NOT run with CKKW dynamical scale for this model. Please choose another one." 
+                if self.run_card['ickkw']:
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n" +\
+                      "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                
 
         ########################################################################
         #       NLO specific check
@@ -5806,14 +5827,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
                            list(self.run_card['mxx_min_pdg'].keys())): 
             
+            try:
+                proc_charac = self.mother_interface.proc_characteristics
+            except:
+                proc_charac = None
+
+            if proc_charac and 'MLM' in proc_charac['limitations']:
+                if self.run_card['ickkw']:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                            
+                   
                 if int(pdg)<0:
                     raise Exception("For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles")
                 if self.param_card.get_value('mass', int(pdg), default=0) ==0:
                     raise Exception("For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg)
         
-        # if NLO reweighting is ON: ensure that we keep the rwgt information
-        if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
-            isinstance(self.run_card,banner_mod.RunCardNLO) and \
+            # if NLO reweighting is ON: ensure that we keep the rwgt information
+            if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
                 re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO|NLO_tree)\s*(?:#|$)''', re.M+re.I)
@@ -5823,25 +5854,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:BOLD' )
                     self.do_set('run_card store_rwgt_info True')
         
-        # if external computation for the systematics are asked then switch 
-        #automatically the book-keeping of the weight for NLO
-        if 'run' in self.allow_arg and \
-                    self.run_card['systematics_program'] == 'systematics' and \
-                    isinstance(self.run_card,banner_mod.RunCardNLO) and \
-                    not self.run_card['store_rwgt_info']:
-            logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
-            self.do_set('run_card store_rwgt_info True')
+            # if external computation for the systematics are asked then switch 
+            #automatically the book-keeping of the weight for NLO
+            if 'run' in self.allow_arg and \
+                        self.run_card['systematics_program'] == 'systematics'  and \
+                        not self.run_card['store_rwgt_info']:
+                logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
+                self.do_set('run_card store_rwgt_info True')
         
-        # @LO if PY6 shower => event_norm on sum
-        if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
-            if self.run_card['event_norm'] != 'sum':
-                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm sum') 
-        # @LO if PY6 shower => event_norm on sum
-        elif 'pythia8_card.dat' in self.cards:
-            if self.run_card['event_norm'] == 'sum':
-                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm average')         
+       
         
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
@@ -6358,9 +6379,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     for key, partial in info:
                         total += partial
                     mass = self.param_card.get_value('mass', pid)
-                    if total and total/mass < self.run_card['small_width_treatment']:
+                    try:
+                        small_width_treatment = self.run_card['small_width_treatment']
+                    except Exception: #NLO
+                        small_width_treatment = 0
+                    
+                    if total and total/mass < small_width_treatment:
                         text = "Particle %s with very small width (%g): Learn about special handling here: https://answers.launchpad.net/mg5amcnlo/+faq/3053"
                         logger.warning(text,pid,total)
+                    elif total and total/mass < 1e-11:
+                        text = "Particle %s with very small width (%g): Numerical inaccuracies can occur if that particle is in a s-channel"
+                        logger.critical(text,pid,total)                        
+
+
             return out      
             
 
