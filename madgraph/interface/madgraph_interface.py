@@ -4732,7 +4732,7 @@ This implies that with decay chains:
             split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
             try:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
-                                       self._curr_model['order_hierarchy']
+                                       self._curr_model.get('order_hierarchy')
                                        [elem if not elem.endswith('.sqrt') else elem[:-5]])
             except KeyError:
                 raise self.InvalidCmd, "The loaded model does not defined a "+\
