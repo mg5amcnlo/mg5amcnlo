@@ -5824,8 +5824,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ########################################################################
         # For NLO run forbid any pdg specific cut on massless particle
         if isinstance(self.run_card,banner_mod.RunCardNLO):
-            for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
-                           list(self.run_card['mxx_min_pdg'].keys())): 
             
             try:
                 proc_charac = self.mother_interface.proc_characteristics
@@ -5837,6 +5835,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
                             
+            for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
+                           list(self.run_card['mxx_min_pdg'].keys())): 
                    
                 if int(pdg)<0:
                     raise Exception("For PDG specific cuts, always use positive PDG codes: the cuts are applied to both particles and anti-particles")

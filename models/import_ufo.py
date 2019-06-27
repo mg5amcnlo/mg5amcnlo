@@ -1332,7 +1332,7 @@ class UFOMG5Converter(object):
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
-                if '1' in order:
+                if '1' in coupling.order:
                     raise InvalidModel('''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''') 
