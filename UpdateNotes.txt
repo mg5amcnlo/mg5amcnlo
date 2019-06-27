@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.6.6(27/07/19)
+2.6.6(28/07/19)
       OM: Bug in the edition of the shower_card. The set command of logical parameter was never setting the 
           parameter to False. (Thanks to Richard Ruiz) 
       RF: Fixed a bug in the creation of the energy-stripped i_FKS momentum. Tested for several processes,
