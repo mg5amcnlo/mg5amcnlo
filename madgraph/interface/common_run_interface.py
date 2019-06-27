@@ -4490,7 +4490,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return
 
         self.from_banner = {}
-        print from_banner, banner.keys()
         try:
             for card in from_banner:
                 self.from_banner[card] = banner.charge_card(card)

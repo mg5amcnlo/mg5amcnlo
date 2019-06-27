@@ -1787,7 +1787,6 @@ class EasterEgg(object):
             else:
                 self.call_linux(msg)
         except Exception, error:
-            raise
             sprint(error)
             pass
     
