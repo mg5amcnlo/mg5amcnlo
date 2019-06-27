@@ -394,9 +394,11 @@ class Banner(dict):
             self.lhe_version = self.get('run_card', 'lhe_version', default=1.0)
             if float(self.lhe_version) < 3:
                 self.lhe_version = 1.0
-        
-        ff.write(header % { 'version':float(self.lhe_version)})
-
+        out = header % { 'version':float(self.lhe_version)}
+        try:
+            ff.write(out)
+        except:
+            ff.write(out.encode('utf-8'))
 
         for tag in [t for t in self.ordered_items if t in list(self.keys())]+ \
             [t for t in self.keys() if t not in self.ordered_items]:
@@ -408,20 +410,37 @@ class Banner(dict):
                                           ('<' in self[tag] or '@' in self[tag]):
                 start_data = '\n<![CDATA['
                 stop_data = ']]>\n'
-            ff.write('<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
+            out = '<%(tag)s>%(start_data)s\n%(text)s\n%(stop_data)s</%(tag)s>\n' % \
                      {'tag':capitalized_tag, 'text':self[tag].strip(),
-                      'start_data': start_data, 'stop_data':stop_data})
+                      'start_data': start_data, 'stop_data':stop_data} 
+            try:
+                ff.write(out)
+            except:
+                ff.write(out.encode('utf-8'))
         
         
         if not '/header' in exclude:
-            ff.write('</header>\n')    
+            out = '</header>\n'
+            try:
+                ff.write(out)
+            except:
+                ff.write(out.encode('utf-8'))   
 
         if 'init' in self and not 'init' in exclude:
             text = self['init']
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':'init', 'text':text.strip()})  
-        if close_tag:          
-            ff.write('</LesHouchesEvents>\n')
+            out = '<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':'init', 'text':text.strip()}
+            try:
+                ff.write(out)
+            except:
+                ff.write(out.encode('utf-8'))
+                
+        if close_tag:
+            out = '</LesHouchesEvents>\n'          
+            try:
+                ff.write(out)
+            except:
+                ff.write(out.encode('utf-8'))            
         return ff
         
         

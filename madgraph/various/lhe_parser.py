@@ -12,9 +12,9 @@ import os
 import shutil
 import sys
 import six
-if six.PY3:
+if True:#six.PY3:
     import io
-    file = io.IOBase
+    file = io.FileIO
 from six.moves import filter
 from six.moves import range
 from six.moves import zip
@@ -199,11 +199,16 @@ class EventFile(object):
 
     def __new__(self, path, mode='r', *args, **opt):
         
+        
+        if mode in ['r','rb']:
+            mode ='r'
+            misc.sprint(path, os.path.exists(path), os.path.exists(path[:-3]))
         if not path.endswith(".gz"):
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
             return EventFile.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
         else:
+            
             try:
                 return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
             except IOError as error:
@@ -217,6 +222,7 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
 
+        self.path = path
         self.to_zip = False
         if path.endswith('.gz') and mode == 'w' and\
                                               isinstance(self, EventFileNoGzip):
@@ -227,24 +233,31 @@ class EventFile(object):
         self.eventgroup  = False
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
+        except TypeError:
+            super(EventFile, self).__init__()
         except IOError:
             if '.gz' in path and isinstance(self, EventFileNoGzip) and\
                 mode == 'r' and os.path.exists(path[:-3]):
                 super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
             else:
                 raise
-                
+        
+        misc.sprint(self.__class__.__mro__)
+        self.fileiterator = super(EventFile, self).__iter__()
+        misc.sprint(self.fileiterator)
+        
         self.banner = ''
         if mode == 'r':
             line = ''
             while '</init>' not in line.lower():
                 try:
-                    line  = super(EventFile, self).next()
+                    line  = next(self.fileiterator)
                 except StopIteration:
                     self.seek(0)
                     self.banner = ''
                     break 
-                if "<event" in line.lower():
+                line = str(line.decode('utf-8')).lower()
+                if '<event' in line:
                     self.seek(0)
                     self.banner = ''
                     break                     
@@ -287,27 +300,36 @@ class EventFile(object):
         self.seek(0)
         return self.len
 
-    def next(self):
-        """get next event"""
-
+    def __iter__(self):
+        misc.sprint(self.path)
         if not self.eventgroup:
             text = ''
             line = ''
             mode = 0
-            while '</event>' not in line:
-                line = super(EventFile, self).next()
+            while True:
+                try:
+                    line = next(self.fileiterator)
+                except StopIteration:
+                    return
+                line = line.decode('utf-8')
+                #misc.sprint(line, self.path)
                 if '<event' in line:
                     mode = 1
                     text = ''
                 if mode:
                     text += line
-            if self.parsing:
-                out = Event(text)
-                if len(out) == 0  and not self.allow_empty_event:
-                    raise Exception
-                return out
-            else:
-                return text
+                    
+                if '</event>' in line:
+                    if self.parsing:
+                        out = Event(text)
+                        if len(out) == 0  and not self.allow_empty_event:
+                            raise Exception
+                        yield out
+                    else:
+                        yield text
+                    text = ''
+                    line = ''
+                    mode = 0
         else:
             events = []
             text = ''
@@ -331,10 +353,10 @@ class EventFile(object):
                 if mode:
                     text += line  
             if len(events) == 0:
-                return next(self)
-            return events
+                yield next(self)
+            yield events
+        
     
-
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT
@@ -835,6 +857,14 @@ class EventFileGzip(EventFile, gzip.GzipFile):
         if not currpos:
             currpos = self.size
         return currpos
+    
+    def write(self, text):
+        try:
+            super(EventFileGzip, self).write(text)
+        except:
+            super(EventFileGzip, self).write(text.encode('utf-8'))
+    #def define_iterator(self):
+    #    self.fileiterator = gzip.GzipFile.__iter__(self)
         
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""
@@ -844,6 +874,12 @@ class EventFileNoGzip(EventFile, file):
         out = super(EventFileNoGzip, self).close(*args, **opts)
         if self.to_zip:
             misc.gzip(self.name)
+
+    def define_iterator(self):
+        self.fileiterator = file.__iter__(self)
+        
+    #def read(self):
+    #    return file.read(self)
     
 class MultiEventFile(EventFile):
     """a class to read simultaneously multiple file and read them in mixing them.
@@ -859,6 +895,7 @@ class MultiEventFile(EventFile):
         to only read all the files twice and not three times."""
         self.eventgroup = False
         self.files = []
+        self.filesiter = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
         self.initial_nb_events = []
@@ -874,6 +911,7 @@ class MultiEventFile(EventFile):
                     self.add(p)
             else:
                 self.files = start_list
+                self.filesiter = [f.__iter__() for f in self.files]
         self._configure = False
         
     def close(self,*args,**opts):
@@ -900,38 +938,37 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(scale)
         self.files.append(obj)
+        self.filesiter.append(obj.__iter__())
         if nb_event:
             obj.len = nb_event
         self._configure = False
         return obj
         
     def __iter__(self):
-        return self
-    
-    def next(self):
-
         if not self._configure:
             self.configure()
-
-        remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
-        if remaining_event == 0:
-            raise StopIteration
-        # determine which file need to be read
-        nb_event = random.randint(1, remaining_event)
-        sum_nb=0
-        for i, obj in enumerate(self.files):
-            sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
-            if nb_event <= sum_nb:
-                self.curr_nb_events[i] += 1
-                event = next(obj)
-                if not self.eventgroup:
-                    event.sample_scale = self.scales[i] # for file reweighting
-                else:
-                    for evt in event:
-                        evt.sample_scale = self.scales[i]
-                return event
-        else:
-            raise Exception
+        while True:
+            remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
+            if remaining_event == 0:
+                return
+                raise StopIteration
+            # determine which file need to be read
+            nb_event = random.randint(1, remaining_event)
+            sum_nb=0
+            for i, obj in enumerate(self.filesiter):
+                sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
+                if nb_event <= sum_nb:
+                    self.curr_nb_events[i] += 1
+                    event = next(obj)
+                    if not self.eventgroup:
+                        event.sample_scale = self.scales[i] # for file reweighting
+                    else:
+                        for evt in event:
+                            evt.sample_scale = self.scales[i]
+                    yield event
+                    break
+            else:
+                raise Exception
     
 
     def define_init_banner(self, wgt, lha_strategy, proc_charac=None):

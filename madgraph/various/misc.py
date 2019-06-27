@@ -1156,7 +1156,7 @@ def gunzip(path, keep=False, stdout=None):
         raise
     else:    
         try:    
-            open(stdout,'w').write(gfile.read())
+            open(stdout,'w').write(gfile.read().decode('utf-8'))
         except IOError:
             # this means that the file is actually not gzip
             if stdout == path:
@@ -1526,6 +1526,13 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
     it.start()
     it.join(timeout_duration)
     return it.result
+
+def mmin(iter, default=None):
+    
+    if six.PY3:
+        return min(iter, default=default)
+    else:
+        return min(iter, default)
 
 
 ################################################################################

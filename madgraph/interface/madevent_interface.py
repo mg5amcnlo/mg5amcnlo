@@ -5675,8 +5675,8 @@ tar -czf split_$1.tar.gz split_$1
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-            if 'VALID' not in bias_module_valid.upper() or \
-               'INVALID' in bias_module_valid.upper():
+            if 'VALID' not in str(bias_module_valid).upper() or \
+               'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
                                                           (bias_name,bias_module_valid))
         

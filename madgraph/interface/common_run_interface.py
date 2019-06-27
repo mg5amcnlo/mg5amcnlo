@@ -1487,7 +1487,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
                             cwd=plot_dir)
-            proc.communicate('%s\n' % event_path)
+            proc.communicate(('%s\n' % event_path).encode('utf-8'))
             del proc
             #proc.wait()
             misc.call(['%s/plot' % self.dirbin, madir, td],

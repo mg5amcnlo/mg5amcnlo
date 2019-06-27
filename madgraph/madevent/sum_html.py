@@ -504,19 +504,26 @@ class Combine_results(list, OneResult):
         """Compute iterations to have a chi-square on the stability of the 
         integral"""
 
-        nb_iter = min([len(a.ysec_iter) for a in self], 0)
+        #iter = [len(a.ysec_iter) for a in self]
+        #if iter:
+        #    nb_iter = min(iter)
+        #else:
+        #    nb_iter = 0 
+        #nb_iter = misc.mmin([len(a.ysec_iter) for a in self], 0)
+        #misc.sprint(nb_iter)
         # syncronize all iterations to a single one
         for oneresult in self:
-            oneresult.change_iterations_number(nb_iter)
+            oneresult.change_iterations_number(0)
             
         # compute value error for each iteration
-        for i in range(nb_iter):
-            value = [one.ysec_iter[i] for one in self]
-            error = [one.yerr_iter[i]**2 for one in self]
-            
-            # store the value for the iteration
-            self.ysec_iter.append(sum(value))
-            self.yerr_iter.append(math.sqrt(sum(error)))
+        #for i in range(nb_iter):
+        #    value = [one.ysec_iter[i] for one in self]
+        #    error = [one.yerr_iter[i]**2 for one in self]
+        #    
+        #   # store the value for the iteration
+        #    raise Exception
+        #    self.ysec_iter.append(sum(value))
+        #    self.yerr_iter.append(math.sqrt(sum(error)))
     
        
     template_file = \
@@ -747,7 +754,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                     else:
                         path = pjoin(G,'results.dat')
                     P_comb.add_results(os.path.basename(G), path, mfactors[G])
-                
+
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
