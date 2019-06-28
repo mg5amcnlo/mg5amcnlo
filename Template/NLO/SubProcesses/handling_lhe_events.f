@@ -602,7 +602,7 @@ c
       endif
       write(ifile,'(a)')
      # '  </init>'
- 501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
+ 501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,e14.8),1x,i6)
 c
       return

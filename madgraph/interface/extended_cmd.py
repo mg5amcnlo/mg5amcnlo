@@ -2332,11 +2332,11 @@ class OneLinePathCompletion(SmartQuestion):
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 # go to retry
                 reprint_opt = True 
-            elif self.value == 'repeat':
+            elif self.value in ['repeat', 'reask']:
                 reprint_opt = True         
             else:
                 raise Exception
-        except Exception, error:            
+        except Exception, error:  
             print """not valid argument. Valid argument are file path or value in (%s).""" \
                           % ','.join(self.allow_arg)
             print 'please retry'
@@ -2421,6 +2421,7 @@ class ControlSwitch(SmartQuestion):
             allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
         # adding special mode
         allowed_args += [key[4:]+';' for key in dir(self) if key.startswith('ans_')]
+        allowed_args += [arg[:-1] for arg in allowed_args if arg[-1] == ';']
         if 'allow_arg' in opts:
             allowed_args += opts['allow_arg']
             del opts['allow_arg']

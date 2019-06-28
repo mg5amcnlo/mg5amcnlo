@@ -501,7 +501,7 @@ c            write(*,*) 'Using 2',l2,x2
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
             xo = xo*xo/stot
             if (xo.eq.0d0)then
-               xo=1d0/stot
+               xo=1/10000d0
                write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to ', xo
             endif

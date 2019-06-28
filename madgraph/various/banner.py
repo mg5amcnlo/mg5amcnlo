@@ -686,13 +686,19 @@ def recover_banner(results_object, level, run=None, tag=None):
         try:    
             _tag = results_object[run].tags[-1] 
         except Exception,error:
-            return Banner()      
+            if os.path.exists( pjoin(results_object.path,'Events','%s_banner.txt' % (run))):
+                tag = None
+            else:
+                return Banner()      
     else:
         _tag = tag
-                                          
-    path = results_object.path
-    banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
+    path = results_object.path
+    if tag:               
+        banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
+    else:
+        banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))
+      
     if not os.path.exists(banner_path):
         if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
@@ -712,6 +718,7 @@ def recover_banner(results_object, level, run=None, tag=None):
 
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
+    
     banner = Banner(banner_path)
     
     
@@ -1207,8 +1214,8 @@ class ConfigFile(dict):
             if value in allowed:
                 valid=True     
             elif isinstance(value, str):
-                value = value.lower()
-                allowed = [v.lower() for v in allowed]
+                value = value.lower().strip()
+                allowed = [str(v).lower() for v in allowed]
                 if value in allowed:
                     i = allowed.index(value)
                     value = self.allowed_value[lower_name][i]
@@ -1343,6 +1350,22 @@ class ConfigFile(dict):
                 elif value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
                     value =int(value[:-1]) * convert[value[-1]] 
+                elif '/' in value or '*' in value:               
+                    try:
+                        split = re.split('(\*|/)',value)
+                        v = float(split[0])
+                        for i in range((len(split)//2)):
+                            if split[2*i+1] == '*':
+                                v *=  float(split[2*i+2])
+                            else:
+                                v /=  float(split[2*i+2])
+                    except:
+                        v=0
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value
+                    finally:
+                        value = int(v)
+                        if value != v:
+                            raise InvalidCmd, "%s can not be mapped to an integer" % v
                 else:
                     try:
                         value = float(value.replace('d','e'))
@@ -1357,24 +1380,29 @@ class ConfigFile(dict):
                             value = new_value
                         else:
                             raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
+                     
             elif targettype == float:
-                value = value.replace('d','e') # pass from Fortran formatting
-                try:
-                    value = float(value)
-                except ValueError:
+                if value.endswith(('k', 'M')) and value[:-1].isdigit():
+                    convert = {'k':1000, 'M':1000000}
+                    value = 1.*int(value[:-1]) * convert[value[-1]] 
+                else:
+                    value = value.replace('d','e') # pass from Fortran formatting
                     try:
-                        split = re.split('(\*|/)',value)
-                        v = float(split[0])
-                        for i in range((len(split)//2)):
-                            if split[2*i+1] == '*':
-                                v *=  float(split[2*i+2])
-                            else:
-                                v /=  float(split[2*i+2])
-                    except:
-                        v=0
-                        raise InvalidCmd, "%s can not be mapped to a float" % value
-                    finally:
-                        value = v
+                        value = float(value)
+                    except ValueError:
+                        try:
+                            split = re.split('(\*|/)',value)
+                            v = float(split[0])
+                            for i in range((len(split)//2)):
+                                if split[2*i+1] == '*':
+                                    v *=  float(split[2*i+2])
+                                else:
+                                    v /=  float(split[2*i+2])
+                        except:
+                            v=0
+                            raise InvalidCmd, "%s can not be mapped to a float" % value
+                        finally:
+                            value = v
             else:
                 raise InvalidCmd, "type %s is not handle by the card" % targettype
             
@@ -1434,7 +1462,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('colored_pdgs', [1,2,3,4,5])
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
-        self.add_param('pdg_initial2', [0])        
+        self.add_param('pdg_initial2', [0])
+        self.add_param('limitations', [], typelist=str)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -2744,8 +2773,26 @@ class RunCardLO(RunCard):
 #
 """, 
     template_off= '# Syscalc is deprecated but to see the associate options type\'update syscalc\''),
-    ]
-    
+
+#    ECUT block (hidden it by default but for e+ e- collider)             
+        runblock(name='ecut', fields=('ej','eb','ea','el','ejmax','ebmax','eamax','elmax','e_min_pdg','e_max_pdg'),
+              template_on=\
+"""#*********************************************************************
+# Minimum and maximum E's (in the center of mass frame)              *
+#*********************************************************************
+  %(ej)s  = ej     ! minimum E for the jets
+  %(eb)s  = eb     ! minimum E for the b
+  %(ea)s  = ea     ! minimum E for the photons
+  %(el)s  = el     ! minimum E for the charged leptons
+  %(ejmax)s   = ejmax ! maximum E for the jets
+ %(ebmax)s   = ebmax ! maximum E for the b
+ %(eamax)s   = eamax ! maximum E for the photons
+ %(elmax)s   = elmax ! maximum E for the charged leptons
+ %(e_min_pdg)s = e_min_pdg ! E cut for other particles (use pdg code). Applied on particle and anti-particle
+ %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50})
+""", 
+    template_off= '#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#'),
+    ]    
     
     
     def default_setup(self):
@@ -2807,6 +2854,7 @@ class RunCardLO(RunCard):
         self.add_param("asrwgtflavor", 5,                                       comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
+        self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum')
         #cut
@@ -2828,14 +2876,14 @@ class RunCardLO(RunCard):
         self.add_param("ptlmax", -1.0, cut=True)
         self.add_param("missetmax", -1.0, cut=True)
         # E cut
-        self.add_param("ej", 0.0, cut=True)
-        self.add_param("eb", 0.0, cut=True)
-        self.add_param("ea", 0.0, cut=True)
-        self.add_param("el", 0.0, cut=True)
-        self.add_param("ejmax", -1.0, cut=True)
-        self.add_param("ebmax", -1.0, cut=True)
-        self.add_param("eamax", -1.0, cut=True)
-        self.add_param("elmax", -1.0, cut=True)
+        self.add_param("ej", 0.0, cut=True, hidden=True)
+        self.add_param("eb", 0.0, cut=True, hidden=True)
+        self.add_param("ea", 0.0, cut=True, hidden=True)
+        self.add_param("el", 0.0, cut=True, hidden=True)
+        self.add_param("ejmax", -1.0, cut=True, hidden=True)
+        self.add_param("ebmax", -1.0, cut=True, hidden=True)
+        self.add_param("eamax", -1.0, cut=True, hidden=True)
+        self.add_param("elmax", -1.0, cut=True, hidden=True)
         # Eta cut
         self.add_param("etaj", 5.0, cut=True)
         self.add_param("etab", -1.0, cut=True)
@@ -2958,8 +3006,8 @@ class RunCardLO(RunCard):
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
         self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_max_pdg',{'__type__':0.}, include=False)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True)
         self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
         self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
         self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
@@ -2975,6 +3023,7 @@ class RunCardLO(RunCard):
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
                      
+        
              
     def check_validity(self):
         """ """
@@ -3155,10 +3204,13 @@ class RunCardLO(RunCard):
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
                 self['use_syst'] = False
+                self.display_block.append('beam_pol')
+                self.display_block.append('ecut')
             else:
                 self['lpp1'] = 0
                 self['lpp2'] = 0    
-                self['use_syst'] = False            
+                self['use_syst'] = False   
+                self.display_block.append('beam_pol')         
                 
         # Check if need matching
         min_particle = 99
@@ -3211,9 +3263,19 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        
         if no_systematics:
             self['use_syst'] = False
             self['systematics_program'] = 'none'
+
+        if 'MLM' in proc_characteristic['limitations']:
+            if self['dynamical_scale_choice'] ==  -1:
+                self['dynamical_scale_choice'] = 3
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
+            
             
     def write(self, output_file, template=None, python_template=False,
               **opt):

@@ -2896,10 +2896,12 @@ c One MUST use kt, and no lower pt cut. The radius parameter can be changed
      &                                            pjet,njet,jet)
                do i=1,NN
                   di(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
-                  if (i.gt.1.and.di(i).gt.di(i-1))then
-                     write(*,*)'Error in set_shower_scale_noshape'
-                     write(*,*)NN,i,di(i),di(i-1)
-                     stop
+                  if (i.gt.1)then
+                     if(di(i).gt.di(i-1))then
+                        write(*,*)'Error in set_shower_scale_noshape'
+                        write(*,*)NN,i,di(i),di(i-1)
+                        stop
+                     endif
                   endif
                enddo
                if(iSH.eq.1)shower_S_scale(iFKS)=di(NN)

@@ -1447,11 +1447,17 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
+        if args[0] in ['low_mem_multicore_nlo_generation']:
+            if sys.version_info[0] == 2 and sys.version_info[1] == 6:
+                raise self.InvalidCmd('python2.6 does not support such functionalities please use python2.7')
+        
+
         if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
+
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
@@ -3080,6 +3086,14 @@ This implies that with decay chains:
                 raise MadGraph5Error("Negative coupling order constraints"+\
                   " can only be given on one type of coupling and either on"+\
                                " squared orders or amplitude orders, not both.")
+
+            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                logger.warning('''Computation of interference term with decay is not 100% validated.  
+                Please check carefully your result.
+                One suggestion is also to compare the generation of your process with and without
+                set group_subprocesses True
+                (to write Before the generate command)
+                ''')
 
             cpu_time1 = time.time()
 
@@ -4718,7 +4732,7 @@ This implies that with decay chains:
             split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
             try:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
-                                       self._curr_model['order_hierarchy']
+                                       self._curr_model.get('order_hierarchy')
                                        [elem if not elem.endswith('.sqrt') else elem[:-5]])
             except KeyError:
                 raise self.InvalidCmd, "The loaded model does not defined a "+\
@@ -5825,8 +5839,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
-                          'maddm':['arXiv:1505.04190'],
-                          'maddump':['arXiv:1806.xxxxx']}
+                          'maddm':['arXiv:1804.00444'],
+                          'maddump':['arXiv:1812.06771']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -7292,7 +7306,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
                 # importing a loop model from MG5
-                MadGraphCmd.do_import(self,'model %s' %model_name, force=True)
+                if 'modelname' in self.history.get('full_model_line'):
+                    opts = '--modelname'
+                else:
+                    opts=''
+                MadGraphCmd.do_import(self,'model %s %s' % (model_name, opts), force=True)
             elif log:
                 logger.info('Note that you have to reload the model')
 
@@ -8132,7 +8150,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
                                                        opts['path'], opts['output'])
                 if float(opts['body_decay']) == 2:
-                    return
+                    return  decay_info
         else:
             skip_2body = True
 
@@ -8153,7 +8171,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             
             
             
-            return
+            return  decay_info
 
         # Do the MadEvent integration!!
         with misc.TMP_directory(dir=os.getcwd()) as path:
@@ -8161,6 +8179,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd('output %s -f' % decay_dir,child=False)
+                
+                #modify some parameter of the default run_card
+                run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))
+                if run_card['ickkw']:
+                    run_card['ickkw'] = 0
+                    run_card['xqcut'] = 0
+                    run_card.remove_all_cut()
+                    run_card.write(pjoin(decay_dir,'Cards','run_card.dat'))
+                
                 # Need to write the correct param_card in the correct place !!!
                 if os.path.exists(opts['output']):
                     files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
@@ -8223,7 +8250,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
             check_param_card.convert_to_slha1(opts['output'])
-        return
+        return decay_info
 
 
 

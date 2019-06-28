@@ -1044,6 +1044,8 @@ class Model(PhysicsObject):
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
+        self['allow_pickle'] = True
+        self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
