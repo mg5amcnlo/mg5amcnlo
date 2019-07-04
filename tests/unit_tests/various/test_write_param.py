@@ -44,6 +44,7 @@ class TestParamWritting(unittest.TestCase):
         self.content = StringIO.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
+        self.content.seek(0)
         
     def test_create_param_dict(self):
         """Check that the dictionary is valid."""
@@ -128,13 +129,15 @@ class TestParamWritting(unittest.TestCase):
         result = "    2   4 5.400000e-01 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)
+        self.content.seek(0)
         
         # check for block decay
         self.writter.write_param(param, 'DECAY')
         result = "DECAY   2   4 5.400000e-01 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)
-        
+        self.content.seek(0)
+                
         # check that fail on complex number
         wrongparam =  base_objects.ParamCardVariable('p8', 0.54 + 2j, 'first', [2,4])
         self.assertRaises(writter.ParamCardWriterError,self.writter.write_param,
@@ -146,7 +149,8 @@ class TestParamWritting(unittest.TestCase):
         result = "    2   4 2.000000e+00 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)               
-        
+        self.content.seek(0)
+                
     def test_write_qnumber(self):
         """ check if we can writte qnumber """
         
@@ -204,6 +208,7 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         self.content = StringIO.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
+        self.content.seek(0) # need in py3 to fully remove header
         
     def test_define_not_dep_param(self):
         """Check that we found all mass-width which are not external."""
@@ -320,5 +325,8 @@ DECAY  21 0.000000e+00 # g : 0.0
 DECAY  22 0.000000e+00 # a : 0.0 
 """.split('\n')
 
-        self.assertEqual(self.content.getvalue().split('\n'), goal)
+        text = self.content.getvalue()
+        #text = text.encode()
+        #misc.sprint(type(text))
+        self.assertEqual(text.split('\n'), goal)
     

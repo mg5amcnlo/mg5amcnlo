@@ -5511,6 +5511,7 @@ class UFO_model_to_mg4(object):
         lower_dict={}
         duplicate = set()
         keys = list(self.model['parameters'].keys())
+        keys.sort()
         for key in keys:
             for param in self.model['parameters'][key]:
                 lower_name = param.name.lower()

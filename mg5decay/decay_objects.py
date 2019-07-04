@@ -1154,7 +1154,8 @@ class DecayParticle(base_objects.Particle):
         # Reset the value of decay_amplitudes
         self.set_amplitudes(clevel, DecayAmplitudeList())
         # Sort the order of onshell channels according to their final mass list.
-        self.get_channels(clevel, True).sort(channelcmp_final)
+        self.get_channels(clevel, True).sort(key=lambda x: x["final_mass_list"], 
+                                             reverse=True)
 
         total_width = self.get('apx_decaywidth')
         for channel in self.get_channels(clevel, True):
@@ -5980,6 +5981,7 @@ def channelcmp_final(x, y):
     """ Sort the channels by their final_mass_list. 
         This will be similar to sort by the final state particles."""
 
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['final_mass_list'], y['final_mass_list'])
 
     return -mycmp
