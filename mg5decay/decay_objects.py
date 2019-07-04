@@ -48,7 +48,7 @@ import itertools
 import logging
 import math
 import os
-import re
+import re  as re_module
 import sys
 import time
 
@@ -217,7 +217,7 @@ class DecayParticle(base_objects.Particle):
         #Find all the possible initial particle(s).
         #Check onshell condition if the model is given.
         if model:
-            if (abs(eval(self.get('mass')) == 0.)) and (len(value) != 0):
+            if (abs(eval("mdl_"+self.get('mass'), globals()) == 0.)) and (len(value) != 0):
                 raise self.PhysicsObjectError("Massless particle %s cannot decay." % self['name'])
 
         for vert in value:
@@ -230,7 +230,7 @@ class DecayParticle(base_objects.Particle):
             if model:
                 # Calculate the total mass
                 total_mass = sum([abs(eval(model.get_particle(l['id']).get('mass'))) for l in vert['legs']])
-                ini_mass = abs(eval(self.get('mass')))
+                ini_mass = abs(eval("mdl_"+self.get('mass')))
                 
                 # Check the onshell condition
                 if (ini_mass.real > (total_mass.real - ini_mass.real))!=onshell:
@@ -1932,9 +1932,9 @@ class DecayModel(model_reader.ModelReader):
 
         self.set_parameters_and_couplings(param_card)
         for param, value in self.get('parameter_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value))
+            exec("globals()[\'%s\'] = %s" % (param, value), globals())
         for param, value in self.get('coupling_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value))        
+            exec("globals()[\'%s\'] = %s" % (param, value), globals())        
 
         for particle in self.get('particles'):
             pid = abs(particle['pdg_code'])
@@ -1963,7 +1963,7 @@ class DecayModel(model_reader.ModelReader):
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
-                                                func.expr))
+                                                func.expr), globals())
 
         # Setup the alpha_s at different scale
         amt = 0.
@@ -2089,7 +2089,7 @@ class DecayModel(model_reader.ModelReader):
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
-                                                func.expr))
+                                                func.expr),  globals())
 
         # External parameters that must be recalculate for different energy
         # scale.
@@ -2110,7 +2110,7 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate derived parameters
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
         for param in derived_parameters:
-            exec("globals()[\'%s\'] = %s" % (param.name, param.expr))
+            exec("globals()[\'%s\'] = %s" % (param.name, param.expr), globals())
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
@@ -2137,7 +2137,7 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate all couplings
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
         for coup in couplings:
-            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr))
+            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr), globals())
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
                                                              coup.expr))
@@ -3228,11 +3228,11 @@ class DecayModel(model_reader.ModelReader):
         param_lines = open(param_card, 'r').read().split('\n')
 
         # Define regular expressions
-        re_decay = re.compile(\
+        re_decay = re_module.compile(\
             "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
-        re_two_body_decay = re.compile(\
+        re_two_body_decay = re_module.compile(\
             "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
-        re_three_body_decay = re.compile(\
+        re_three_body_decay = re_module.compile(\
             "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
 
         # Define the decay pid, total width
@@ -3947,7 +3947,7 @@ class Channel(base_objects.Diagram):
     @classmethod
     def init_regular_expression(cls):
         dico = dict((repr(i), '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
-        cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+        cls.lor_pattern = re_module.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
                                         Gamma5\(%(2)s\)|
@@ -3959,7 +3959,7 @@ class Channel(base_objects.Diagram):
                                         ProjP\(%(2)s\)|
                                         P\(%(2)s\)
                                 )
-        """ % dico, re.VERBOSE)
+        """ % dico, re_module.VERBOSE)
 
 
     def get_apx_matrixelement_sq(self, model):
@@ -4125,10 +4125,10 @@ class Channel(base_objects.Diagram):
                                                          obj.value)
                             while True:
                                 try:
-                                    exec('%s=%s' % (obj.name, val % q_dict_lor))
+                                    exec('%s=%s' % (obj.name, val % q_dict_lor), globals())
                                 except NameError as error:
                                     failname = str(error).split("'")[1]
-                                    exec('%s=mdl_%s' % (failname, failname))
+                                    exec('%s=mdl_%s' % (failname, failname), globals())
                                 else:
                                     break
                         lor_value = eval(new_structure % q_dict_lor)
