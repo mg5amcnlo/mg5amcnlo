@@ -74,7 +74,8 @@ def import_model(model_path, mgme_dir = MG4DIR, absolute=True, web=True):
     # use pickle files if defined
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
         model = save_load_object.load_from_file( \
-                                          os.path.join(model_path, 'model.pkl'))
+                                          os.path.join(model_path, 'model.pkl'),
+                                          binary=True)
         if 'version_tag' in model and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
             return model, model_path
 

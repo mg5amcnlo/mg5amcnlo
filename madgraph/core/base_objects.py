@@ -3042,7 +3042,6 @@ class Process(PhysicsObject):
         if self['orders']:
             keys = list(self['orders'].keys())
             keys.sort(reverse=True)
-            misc.sprint(keys)
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in keys]) + ' '
 

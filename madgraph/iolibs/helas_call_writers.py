@@ -833,16 +833,14 @@ class FortranHelasCallWriter(HelasCallWriter):
         if isinstance(arg, helas_objects.HelasWavefunction):
             return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          FortranHelasCallWriter.sort_wf[l2] - \
-                          FortranHelasCallWriter.sort_wf[l1]))
+                                  key= lambda l: FortranHelasCallWriter.sort_wf[l],
+                                  reverse=True))
 
         if isinstance(arg, helas_objects.HelasAmplitude):
             return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          FortranHelasCallWriter.sort_amp[l2] - \
-                          FortranHelasCallWriter.sort_amp[l1]))
+                                  key= lambda l: FortranHelasCallWriter.sort_amp[l],
+                                  reverse=True))
 
     @staticmethod
     def sorted_mothers(arg):

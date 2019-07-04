@@ -37,6 +37,9 @@ import six
 StringIO = six
 from six.moves import range
 from six.moves import zip
+import io
+if six.PY3:
+    file = io.IOBase
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 
@@ -705,6 +708,8 @@ class HwU(Histogram):
             return
         elif isinstance(file_path, str):
             stream = open(file_path,'r')
+        elif isinstance(file_path, io.IOBase):
+            stream = file_path
         elif isinstance(file_path, file):
             stream = file_path
         else:
@@ -1410,7 +1415,7 @@ class HwU(Histogram):
                     pdf_up     = 0.0
                     pdf_down   = 0.0
                     cntrl_val  = bin.wgts['central']
-                    if wgts[0] <= 90000:
+                    if wgts[0][1] <= 90000:
                         # use Hessian method (CTEQ & MSTW)
                         if len(pdfs)>2:
                             for i in range(int((len(pdfs)-1)/2)):

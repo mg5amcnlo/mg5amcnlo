@@ -32,7 +32,10 @@ def read_from_file(filename, myfunct, *args, **opt):
     returns None if something goes wrong. 
     """
     try:
-        sock = open(filename, 'r')
+        if 'binary' in opt and opt['binary']:
+            sock = open(filename, 'rb')
+        else:
+            sock = open(filename, 'r')
         try:
             ret_value = myfunct(sock, *args)
         finally:

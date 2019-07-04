@@ -35,8 +35,11 @@ class ColorObject(array.array):
 
     def __new__(cls, *args):
         """Create a new ColorObject, assuming an integer array"""
-        return super(ColorObject, cls).__new__(cls, 'i', args)
-
+        try:
+            return super(ColorObject, cls).__new__(cls, 'i', args)
+        except TypeError:
+            assert args[0] == 'i' #happens when unpacking pickle with py3
+            return super(ColorObject, cls).__new__(cls, 'i', args[1])
     def __reduce__(self):
         """Special method needed to pickle color objects correctly"""
         return (self.__class__, tuple([i for i in self]))
@@ -300,6 +303,9 @@ class f(ColorObject):
     def __init__(self, *args):
         """Ensure f and d objects have strictly 3 indices"""
         
+        # for py3 from pickle
+        if len(args) !=3 and args[0] == 'i':
+            args = args[1]
         assert len(args) == 3, "f and d objects must have three indices!"
         
         super(f, self).__init__()

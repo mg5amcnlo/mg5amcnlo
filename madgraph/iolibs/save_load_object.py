@@ -37,12 +37,12 @@ def save_to_file(filename, object, log=True):
 
     return True
     
-def load_from_file(filename):
+def load_from_file(filename,binary=True):
     """Save any Python object to file filename"""
 
     if not isinstance(filename, str):
         raise SaveObjectError("filename must be a string")
-    return files.read_from_file(filename, unpickle_object)
+    return files.read_from_file(filename, unpickle_object, binary=binary)
     
 def pickle_object(fsock, object):
     """Helper routine to pickle an object to file socket fsock"""

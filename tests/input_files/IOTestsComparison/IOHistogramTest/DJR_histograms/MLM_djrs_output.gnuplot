@@ -111,7 +111,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.3539e-15:3.7328e-11]
+set yrange [1.2793e-15:3.7328e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -143,7 +143,7 @@ sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.9800e-01:2.1396e-01]
+set yrange [-2.0096e-01:2.2596e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -259,7 +259,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.1733e-15:2.4993e-11]
+set yrange [1.0773e-15:2.4993e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -333,7 +333,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.1525e-15:2.6431e-11]
+set yrange [1.0250e-15:2.6431e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10

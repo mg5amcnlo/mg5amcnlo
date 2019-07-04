@@ -64,7 +64,7 @@ class TestDrawingOption(unittest.TestCase):
         
         if not hasattr(self, 'store_diagram'):
             filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
             TestDrawingOption.store_diagram = pickle.load(filehandler)
         try:
             _model
@@ -132,7 +132,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         
         if not hasattr(self, 'store_diagram'):
             filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
             TestDrawingS_EPS.store_diagram = pickle.load(filehandler)
         try:
             _model
