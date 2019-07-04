@@ -972,9 +972,10 @@ class ConfigFile(dict):
         
         if isinstance(finput, self.__class__):
             dict.__init__(self, finput)
-            assert list(finput.__dict__.keys())
             for key in finput.__dict__:
                 setattr(self, key, copy.copy(getattr(finput, key)) )
+            for key,value in finput.items():
+                dict.__setitem__(self, key.lower(), value)
             return
         else:
             dict.__init__(self)
@@ -1010,6 +1011,7 @@ class ConfigFile(dict):
         base = self.__class__(self)
         #base = copy.copy(self)
         base.update((key.lower(),value) for key, value in other.items())
+        
         return base
 
     def __radd__(self, other):
@@ -1022,8 +1024,14 @@ class ConfigFile(dict):
         return dict.__contains__(self, key.lower())
 
     def __iter__(self):
-        iter = super(ConfigFile, self).__iter__()
-        return (self.lower_to_case[name] for name in iter)
+        
+        for name in super(ConfigFile, self).__iter__():
+            yield self.lower_to_case[name]
+        
+        
+        #iter = super(ConfigFile, self).__iter__()
+        #misc.sprint(iter)
+        #return (self.lower_to_case[name] for name in iter)
     
     def keys(self):
         return [name for name in self]
@@ -1272,7 +1280,7 @@ class ConfigFile(dict):
         if __debug__:
             if lower_name in self:
                 raise Exception("Duplicate case for %s in %s" % (name,self.__class__))
-            
+        
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
         if isinstance(value, list):
@@ -1298,7 +1306,8 @@ class ConfigFile(dict):
             assert value in allowed or '*' in allowed
         #elif isinstance(value, bool) and allowed != ['*']:
         #    self.allowed_value[name] = [True, False]
-                   
+        
+             
         if system:
             self.system_only.add(lower_name)
         if comment:

@@ -1193,7 +1193,9 @@ class DecayParticle(base_objects.Particle):
                 if br.real < min_br:
                     self.decay_amplitudes[clevel].remove(amp)
                 
-        self.get_amplitudes(clevel).sort(amplitudecmp_width)
+        self.get_amplitudes(clevel).sort(key=lambda x: x['apx_decaywidth'].real,
+                                         reverse=True)
+
 
 
 
@@ -4603,7 +4605,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         # Extract legs from final legs of Channel.
         leglist.extend(base_objects.LegList(\
                 copy.deepcopy(sorted([l for l in dia.get_final_legs()], 
-                                     legcmp_bynumber))))
+                                     key=lambda x: x["number"]))))
+                                     
             
         # Set up process and model.
         self.set('process', base_objects.Process({'legs':leglist}))
@@ -4643,12 +4646,14 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # initial leg
         non_std_numbers.append((new_dia.get_initial_id(model), 1))
-        non_std_numbers.sort(id_num_cmp)
+        import operator
+        non_std_numbers.sort(key = operator.itemgetter(0, 1))
+        #non_std_numbers.sort(id_num_cmp)
 
         # std_number: numbers of legs in process
         std_numbers = [(l.get('id'),l.get('number')) \
                            for l in sorted(self['process']['legs'])]
-        std_numbers.sort(id_num_cmp)
+        std_numbers.sort(key = operator.itemgetter(0, 1))
 
         # Return if the numbers in diagram is the same as process
         if non_std_numbers == std_numbers:
@@ -5959,6 +5964,7 @@ def legcmp(x, y):
 
 def legcmp_bynumber(x, y):
     """Define the leg comparison, useful in generation of process in DecayAmplitude."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['number'], y['number'])
     return mycmp
 
@@ -5988,12 +5994,14 @@ def channelcmp_final(x, y):
 
 def amplitudecmp_width(x, y):
     """ Sort the amplitudes by their width."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['apx_decaywidth'].real, y['apx_decaywidth'].real)
 
     return -mycmp
 
 def part_type_cmp(x, y):
     """ Sort the abstract particle type."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x[0], y[0])
 
     if mycmp == 0:
@@ -6003,7 +6011,8 @@ def part_type_cmp(x, y):
 
 def part_cmp(x, y):
     """ Sort the particle according to signed pdg_code."""
-
+    
+    misc.sprint("call to function not py3 compatible... you should not use it")
     return cmp(x.get_pdg_code(), y.get_pdg_code())
 
 

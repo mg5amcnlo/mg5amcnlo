@@ -2955,7 +2955,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Subtest: test decay_objects.legcmp_bynumber
         l1 = base_objects.Leg({'number':1, 'id':10})
         l2 = base_objects.Leg({'number':2, 'id': 8})
-        sorted_legs = sorted([l2, l1], decay_objects.legcmp_bynumber)
+        sorted_legs = sorted([l2, l1], key=lambda x: x["number"])
         self.assertEqual([l1, l2], sorted_legs)
 
         # Note: initial id in process should be POSITIVE
@@ -3588,9 +3588,9 @@ class Test_AbstractModel(unittest.TestCase):
 
         # Test if the lorentz and color types have no intersection
         # if the particles type are the same            
-        def lorentzcmp(x,y):
-            return cmp(x[1],y[1])
-        keylist = sorted(list(ab_model['abstract_interactions_dict'].keys()), lorentzcmp)
+        import operator
+        keylist = sorted(list(ab_model['abstract_interactions_dict'].keys()), 
+                         key=operator.itemgetter(1))
         #print normal_sm.get_particle(1000021)['self_antipart']
         #print "Interaction type (%d):" % len(keylist)
         #for k in keylist:

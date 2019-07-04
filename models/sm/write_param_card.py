@@ -10,7 +10,7 @@ if sys.version_info[0] ==2:
 else:
     PY3 = True
 
-if not __package__:
+if PY3 and not __package__:
     import os
     pjoin = os.path.join
     root = os.path.abspath(os.path.dirname(__file__))
