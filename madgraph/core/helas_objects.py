@@ -1302,9 +1302,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if flip_sign:
                 # Flip state and particle identity
                 # (to keep particle identity * flow state)
-                new_wf.set('state', filter(lambda state: \
+                new_wf.set('state', list(filter(lambda state: \
                                            state != new_wf.get('state'),
-                                           ['incoming', 'outgoing'])[0])
+                                           ['incoming', 'outgoing']))[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
             try:
                 # Use the copy in wavefunctions instead.
@@ -1429,8 +1429,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'is_part':
             return not self.get('is_part')
         if name == 'state':
-            return filter(lambda state: state != self.get('state'),
-                          ['incoming', 'outgoing'])[0]
+            return list(filter(lambda state: state != self.get('state'),
+                          ['incoming', 'outgoing']))[0]
         return self.get(name)
     
     def get_external_helas_call_dict(self):
@@ -3743,6 +3743,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                           [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers') and \
                                  wf.get('number_external') == number]]
 
+
         # Keep track of wavefunction and amplitude numbers, to ensure
         # unique numbers for all new wfs and amps during manipulations
         numbers = [self.get_all_wavefunctions()[-1].get('number'),
@@ -3758,7 +3759,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 got_majoranas = True
 
         # Now insert decays for all legs that have decays
-        for number in decay_dict.keys():
+        keys = list(decay_dict.keys())
+        keys.sort()
+        for number in keys:
 
                 self.insert_decay(replace_dict[number],
                                   decay_dict[number],
@@ -3800,8 +3803,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         wavefunctions = \
                           sorted(HelasWavefunctionList.\
                                extract_wavefunctions(amplitude.get('mothers')),
-                                 lambda wf1, wf2: wf1.get('number') - \
-                                                  wf2.get('number'))
+                                 key=lambda wf: wf.get('number'))
                         for wf in wavefunctions:
                             # Check if wavefunction already used, otherwise add
                             if wf.get('number') not in wf_numbers and \
@@ -5163,7 +5165,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         decay_is_ids = [[element.get('processes')[0].get_initial_ids()[0] \
                          for element in elements]
                          for elements in decay_elements]
-
+         
         while self['core_processes']:
             # Pop the process to save memory space
             core_process = self['core_processes'].pop(0)
@@ -5172,6 +5174,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                             in is_ids]) for is_ids in decay_is_ids])]
             # List of ids for the final state legs
             fs_ids = [leg.get('id') for leg in fs_legs]
+
             # Create a dictionary from id to (index, leg number)
             fs_numbers = {}
             fs_indices = {}
@@ -5228,15 +5231,15 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     
                     # Remove double counting between final states
                     if sorted([p.get('processes')[0] for p in prod],
-                              lambda x1, x2: x1.compare_for_sort(x2)) \
+                              key=lambda x: x.list_for_sort())\
                               in red_decay_chains:
                         continue
                     
                     # Store already used combinations
                     red_decay_chains.append(\
-                    sorted([p.get('processes')[0] for p in prod],
-                              lambda x1, x2: x1.compare_for_sort(x2)))
-
+                    sorted([p.get('processes')[0] for p in prod],\
+                           key=lambda x: x.list_for_sort()))
+                                            
                     # Add the decays to the list
                     decay_list.append(list(zip(fs_numbers[fs_id], prod)))
 
@@ -5274,7 +5277,10 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
                     
-                matrix_element.insert_decay_chains(decay_dict)    
+                matrix_element.insert_decay_chains(decay_dict)
+                #if __debug__:
+                #    for i, wf in enumerate([wf for wf in matrix_element.get_all_wavefunctions() if not wf.get('mothers')]):
+                #        assert wf.get('number_external') == (i + 1)    
                 
                 if combine:
                     me_tag = IdentifyMETag.create_tag(\

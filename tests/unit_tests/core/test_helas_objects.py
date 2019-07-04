@@ -3375,13 +3375,11 @@ class HelasMultiProcessTest(unittest.TestCase):
                                  iden_factors[i])
 
             for i, amp in enumerate(sorted(me.get_all_amplitudes(),
-                                       lambda a1,a2: \
-                                       a1.get('number') - a2.get('number'))):
+                                       key= lambda a: a.get('number'))):
                 self.assertEqual(amp.get('number'), i + 1)
                   
             for i, wf in enumerate(sorted(me.get_all_wavefunctions(),
-                                       lambda a1,a2: \
-                                       a1.get('number') - a2.get('number'))):
+                                       key=lambda a: a.get('number'))):
                 self.assertEqual(wf.get('number'), i + 1)
 
             for i, wf in enumerate([wf for wf in me.get_all_wavefunctions() if not wf.get('mothers')]):
@@ -3488,13 +3486,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         for i, me in enumerate(matrix_elements):
             self.assertEqual(len(me.get('processes')), num_processes[i])
             for i, amp in enumerate(sorted(me.get_all_amplitudes(),
-                                       lambda a1,a2: \
-                                       a1.get('number') - a2.get('number'))):
+                                       key=lambda a: a.get('number'))):
                 self.assertEqual(amp.get('number'), i + 1)
                   
             for i, wf in enumerate(sorted(me.get_all_wavefunctions(),
-                                       lambda a1,a2: \
-                                       a1.get('number') - a2.get('number'))):
+                                       key=lambda a: a.get('number'))):
                 self.assertEqual(wf.get('number'), i + 1)
 
             for i, wf in enumerate([wf for wf in me.get_all_wavefunctions() if not wf.get('mothers')]):
@@ -3857,10 +3853,10 @@ class HelasMultiProcessTest(unittest.TestCase):
         for wf in [wf for wf in sum([d.get('wavefunctions') for d in \
                                             matrix_elements[0].get('diagrams')\
                                             [1:]], []) if not wf.get('mothers')]:
-            old_wf = filter(lambda w: w.get('number_external') == \
+            old_wf = list(filter(lambda w: w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers'),\
                             matrix_elements[0].get('diagrams')[0].\
-                            get('wavefunctions'))[0]
+                            get('wavefunctions')))[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
             self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
 
@@ -3923,10 +3919,10 @@ class HelasMultiProcessTest(unittest.TestCase):
         for wf in [wf for wf in sum([d.get('wavefunctions') for d in \
                                             matrix_elements[0].get('diagrams')\
                                             [1:]], []) if not wf.get('mothers')]:
-            old_wf = filter(lambda w: w.get('number_external') == \
+            old_wf = list(filter(lambda w: w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers'),\
                             matrix_elements[0].get('diagrams')[0].\
-                            get('wavefunctions'))[0]
+                            get('wavefunctions')))[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
             self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
         

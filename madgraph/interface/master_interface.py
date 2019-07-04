@@ -620,7 +620,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
         if old_cmd == name:
             return
         elif not allow_switch:
-            raise InvalidCmd, "Command not compatible with previous command: Can not combine LO/NLO feature."
+            raise InvalidCmd("Command not compatible with previous command: Can not combine LO/NLO feature.")
             
         if name in list(self.interface_names.keys()):
             self.prompt= self.interface_names[name][0]+'>'

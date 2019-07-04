@@ -17,7 +17,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-import StringIO
+import six
+StringIO = six
 import copy
 import fractions
 import os

@@ -285,8 +285,29 @@ class TestRestrictModel(unittest.TestCase):
                     [('GC_76', 1), ('GC_79', -1)],
                     [('GC_77', 1), ('GC_78', -1)],
                     [('GC_97', 1), ('GC_96', -1)]]
-        expected.sort()
-        iden.sort()
+        expected = [[('GC_100',1), ('GC_108',1), ('GC_49',1), ('GC_45',1), ('GC_40',1), ('GC_41',1), ('GC_104',1)],
+                    [('GC_21', 1), ('GC_27', -1)],
+                    [('GC_3', 1), ('GC_4', -1)],
+                    [('GC_38', 1), ('GC_39', -1)],
+                    [('GC_50', 1), ('GC_51', -1)],
+                    #[('GC_53', 1), ('GC_52', -1)], #GC_52 is not assigned to a vertex to they are consider as different coupling order and not merged... not relevant anyway
+                    [('GC_54', 1), ('GC_56', -1)],
+                    [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_7', 1), ('GC_9', -1)],
+                    [('GC_70', 1), ('GC_73', -1)],
+                    [('GC_74', 1), ('GC_75', -1)],
+                    [('GC_76', 1), ('GC_79', -1)],
+                    [('GC_77', 1), ('GC_78', -1)],
+                    [('GC_96', 1), ('GC_97', -1)]]
+        
+        for elem in expected:
+            elem.sort(key=str)
+        for elem in iden:
+            elem.sort(key=str)
+        
+        expected.sort(key=str)
+        iden.sort(key=str)
+        
         self.assertEqual(expected, iden)
 
     def test_locate_couplings(self):

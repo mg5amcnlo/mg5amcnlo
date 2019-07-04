@@ -265,8 +265,8 @@ def read_interactions_v4(fsock, ref_part_list):
                 # Give color structure
                 # Order particles according to color
                 # Don't consider singlets
-                color_parts = sorted(enumerate(part_list), lambda p1, p2:\
-                                     p1[1].get_color() - p2[1].get_color())
+                color_parts = sorted(enumerate(part_list), 
+                                     key=lambda p: p[1].get_color())
                 color_ind = [(i, part.get_color()) for i, part in \
                              color_parts if part.get_color() !=1]
                 colors = [c for i,c in color_ind]

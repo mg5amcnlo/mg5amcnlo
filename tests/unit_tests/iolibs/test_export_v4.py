@@ -16,7 +16,8 @@
 """Unit test library for the export v4 format routines"""
 
 from __future__ import absolute_import
-import StringIO
+import six
+StringIO = six
 import copy
 import fractions
 import os 
@@ -9785,14 +9786,14 @@ C
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
-      COMPLEX*16 F2(*)
-      COMPLEX*16 V3(*)
-      REAL*8 P1(0:3)
-      REAL*8 M1
-      REAL*8 W1
-      COMPLEX*16 F1(6)
-      COMPLEX*16 DENOM
       COMPLEX*16 COUP
+      COMPLEX*16 F1(6)
+      COMPLEX*16 F2(*)
+      REAL*8 M1
+      REAL*8 P1(0:3)
+      COMPLEX*16 V3(*)
+      REAL*8 W1
+      COMPLEX*16 DENOM
       ENTRY FFV1_2(F2, V3, COUP, M1, W1,F1)
 
       F1(1) = +F2(1)+V3(1)
@@ -9841,8 +9842,8 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_21', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_39', 'GC_51','GC_52', 'GC_53', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_75', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_97', 'GC_98', 'GC_99', 'GC_100']
-        
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_15', 'GC_21', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_50', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_74', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_96', 'GC_98', 'GC_99', 'GC_100']
+        misc.sprint([ p.name for p in mg4_model.coups_indep])
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         

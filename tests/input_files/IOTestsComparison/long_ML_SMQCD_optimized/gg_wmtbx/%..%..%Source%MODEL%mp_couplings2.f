@@ -38,7 +38,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ /(2.000000E+00_16*4.800000E+01_16*MP__PI**2))*4.000000E+00_16
      $ *MP__MDL_TF*MP_REGLOG(CMPLX((MP__MDL_MB__EXP__2
      $ /MP__MDL_MU_R__EXP__2),KIND=16)),KIND=16))
-      MP__R2_SXCW = ((MP__MDL_CKM22*MP__MDL_EE*MP__MDL_COMPLEXI)
+      MP__R2_BXTW = ((MP__MDL_CKM33*MP__MDL_EE*MP__MDL_COMPLEXI)
      $ /(MP__MDL_SW*MP__MDL_SQRT__2))*MP__MDL_R2MIXEDFACTOR_FIN_
       MP__GC_4 = -MP__G
       MP__GC_5 = MP__MDL_COMPLEXI*MP__G

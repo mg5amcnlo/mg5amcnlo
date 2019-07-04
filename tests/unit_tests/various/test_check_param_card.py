@@ -15,7 +15,8 @@
 from __future__ import division
 from __future__ import absolute_import
 import random
-import StringIO
+import six
+StringIO = six
 import os
 import sys
 import tests.unit_tests as unittest

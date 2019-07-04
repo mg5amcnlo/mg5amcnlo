@@ -204,19 +204,23 @@ class MatrixElementEvaluator(object):
         process = matrix_element.get('processes')[0]
         model = process.get('model')
 
+
         if "matrix_elements" not in self.stored_quantities:
             self.stored_quantities['matrix_elements'] = []
             matrix_methods = {}
 
         if self.reuse and "Matrix_%s" % process.shell_string() in globals() and p:
+            if matrix_element not in self.stored_quantities['matrix_elements']:
+                self.stored_quantities['matrix_elements'].append(matrix_element)
             # Evaluate the matrix element for the momenta p
-            matrix = eval("Matrix_%s()" % process.shell_string())
+            matrix = eval("Matrix_%s()" % process.shell_string(), globals())
             me_value = matrix.smatrix(p, self.full_model)
             if output == "m2":
                 return matrix.smatrix(p, self.full_model), matrix.amp2
             else:
                 m2 = matrix.smatrix(p, self.full_model)
             return {'m2': m2, output:getattr(matrix, output)}
+
         if (auth_skipping or self.auth_skipping) and matrix_element in \
                self.stored_quantities['matrix_elements']:
             # Exactly the same matrix element has been tested
@@ -225,8 +229,8 @@ class MatrixElementEvaluator(object):
                         )
             return None
 
-        self.stored_quantities['matrix_elements'].append(matrix_element)
 
+        self.stored_quantities['matrix_elements'].append(matrix_element)
         # Create an empty color basis, and the list of raw
         # colorize objects (before simplification) associated
         # with amplitude
@@ -314,12 +318,12 @@ class MatrixElementEvaluator(object):
             ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
         else:
             # Define the routines (locally is enough)
-            exec(matrix_methods[process.shell_string()])
+            exec(matrix_methods[process.shell_string()], globals())
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process, options)
         # Evaluate the matrix element for the momenta p
-        exec("data = Matrix_%s()" % process.shell_string())
+        exec("data = Matrix_%s()" % process.shell_string(), globals())
         if output == "m2":
             return data.smatrix(p, self.full_model), data.amp2
         else:
@@ -386,8 +390,7 @@ class MatrixElementEvaluator(object):
             raise rambo.RAMBOError("Not correct type for arguments to get_momenta")
 
 
-        sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
-                                            l1.get('number') - l2.get('number'))
+        sorted_legs = sorted(process.get('legs'), key=lambda l: l.get('number')) 
 
         # If an events file is given use it for getting the momentum
         if events:
@@ -1960,10 +1963,10 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                     result = function(process, stored_quantities, opt, options=options)
             else:
                 result = function(process, stored_quantities, options=options)
-                        
+                      
             if result:
                 results.append(result)
-            
+
     return results
 
 #===============================================================================
@@ -3344,7 +3347,7 @@ def check_lorentz(processes, param_card = None,cuttools="", tir={}, options=None
                                            multiprocess,
                                            evaluator,
                                            options=options)
-        
+
         if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(output_path)
@@ -3985,8 +3988,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             # Chose the PS point for the resonance
             set_PSpoint(resonance, force_other_res_offshell=kept_resonances)
 
-#        misc.sprint(kept_resonances)
-#        misc.sprint(len(kept_resonances))
         return tuple(kept_resonances)
 
     def set_PSpoint(resonance, force_other_res_offshell=[], 
@@ -4852,7 +4853,6 @@ def output_lorentz_inv_loop(comparison_results, output='text'):
     if len(transfo_name_header) + 1 > transfo_col_size:
         transfo_col_size = len(transfo_name_header) + 1
     
-    misc.sprint(results)
     for transfo_name, value in results:
         if len(transfo_name) + 1 > transfo_col_size:
             transfo_col_size = len(transfo_name) + 1

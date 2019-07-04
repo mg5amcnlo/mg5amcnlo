@@ -21,10 +21,11 @@ import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import StringIO
+import six
+StringIO = six
 from madgraph import MG5DIR
 
-import StringIO
+
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 

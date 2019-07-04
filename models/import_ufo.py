@@ -1952,7 +1952,11 @@ class RestrictModel(model_reader.ModelReader):
         zero_coupling = []
         iden_coupling = []
         
-        for name, value in self['coupling_dict'].items():
+        
+        keys = list(self['coupling_dict'].keys())
+        keys.sort()
+        for name in keys:
+            value = self['coupling_dict'][name]
             if value == 0:
                 zero_coupling.append(name)
                 continue

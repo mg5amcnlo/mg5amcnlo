@@ -17,7 +17,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ ,CMPLX(0.000000E+00_16,KIND=16),CMPLX(-((MP__MDL_G__EXP__2)
      $ /(2.000000E+00_16*1.600000E+01_16*MP__PI**2))*3.000000E+00_16
      $ *MP__MDL_CF,KIND=16))
-      MP__UVWFCT_G_2_1EPS = MP_COND(CMPLX(MP__MDL_MT,KIND=16)
+      MP__UVWFCT_G_1_1EPS = MP_COND(CMPLX(MP__MDL_MB,KIND=16)
      $ ,CMPLX(0.000000E+00_16,KIND=16),CMPLX(-((MP__MDL_G__EXP__2)
      $ /(2.000000E+00_16*4.800000E+01_16*MP__PI**2))*4.000000E+00_16
      $ *MP__MDL_TF,KIND=16))

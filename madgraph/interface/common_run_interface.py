@@ -5810,13 +5810,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
             if 'MLM' in proc_charac['limitations']:
                 if self.run_card['dynamical_scale_choice'] == -1:
-                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                    raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n"+\
-                      "You can NOT run with CKKW dynamical scale for this model. Please choose another one." 
+                      "You can NOT run with CKKW dynamical scale for this model. Please choose another one.") 
                 if self.run_card['ickkw']:
-                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                    raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n" +\
-                      "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                      "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
                 
 
         ########################################################################
@@ -5832,8 +5832,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             if proc_charac and 'MLM' in proc_charac['limitations']:
                 if self.run_card['ickkw']:
-                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
-                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                    raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
                             
             for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
                            list(self.run_card['mxx_min_pdg'].keys())): 

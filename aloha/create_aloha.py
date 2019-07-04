@@ -881,7 +881,7 @@ class AbstractALOHAModel(dict):
             tag = tag + ['C%s'%i for i in conjugate]             
             tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
-            conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
+            conjugate = tuple([int(float(c[1:])) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
             if loop:
                 aloha.loop_mode = True

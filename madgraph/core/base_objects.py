@@ -3040,8 +3040,11 @@ class Process(PhysicsObject):
             prevleg = leg
 
         if self['orders']:
+            keys = list(self['orders'].keys())
+            keys.sort(reverse=True)
+            misc.sprint(keys)
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in keys]) + ' '
 
         # Add squared orders
         if self['squared_orders']:
@@ -3394,6 +3397,7 @@ class Process(PhysicsObject):
             return 1
         if self.list_for_sort() < other.list_for_sort():
             return -1
+        assert self.list_for_sort() == other.list_for_sort()
         return 0
         
     def identical_particle_factor(self):
@@ -3449,7 +3453,9 @@ for that coupling to be this maximal one. '''%(k,self.get('sqorders_types')[k],
         if not isinstance(other, Process):
             return False
 
+        #misc.sprint("can we speed up this computation? Yes we can!")
         return self.compare_for_sort(other) == 0
+        return self.list_for_sort() == other.list_for_sort()
 
     def __ne__(self, other):
         return not self.__eq__(other)

@@ -95,12 +95,16 @@ class TestSchannelModels(Models4FermionTest):
     """Test class for the s-channel type 4-fermion model"""
 
     def setUp(self):
+
+        
         self.base_model_scalar = import_ufo.import_model('sextet_diquarks')
         self.full_model_scalar = \
                                model_reader.ModelReader(self.base_model_scalar)
         self.full_model_scalar.set_parameters_and_couplings()
         self.full_model_scalar.get('parameter_dict')['mdl_MSIX'] = 1.e5
-        
+
+        import madgraph.various.misc as misc
+        misc.sprint("pass here")        
         self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion')
         self.full_model_4ferm = \
                                model_reader.ModelReader(self.base_model_4ferm)

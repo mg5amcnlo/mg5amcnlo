@@ -257,7 +257,7 @@ DATA
         open(pjoin(self.path,'event.lhe'),'w').write(input)
         
         input = lhe_parser.EventFile(pjoin(self.path,'event.lhe'))
-        self.assertEqual(input.banner, """<LesHouchesEvents version="1.0">
+        self.assertEqual(input.banner.lower(), """<LesHouchesEvents version="1.0">
 <header>
 DATA
 </header>
@@ -265,7 +265,7 @@ DATA
      2212     2212  0.70000000000E+04  0.70000000000E+04 0 0 10042 10042 3  1
   0.16531958660E+02  0.18860728290E+00  0.17208000000E+00   0
 </init>
-""")
+""".lower())
         
         nb_event = 0
         txt = ""

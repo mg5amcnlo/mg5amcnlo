@@ -16,7 +16,8 @@
 """Unit test library for the import v4 format routines"""
 
 from __future__ import absolute_import
-import StringIO
+import six
+StringIO = six
 import copy
 import os
 

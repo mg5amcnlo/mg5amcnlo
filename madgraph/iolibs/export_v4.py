@@ -5147,7 +5147,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 continue
             if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
                 misc.sprint(i, sym_fact, nqcd_list[i], nqcd_list[abs(sym_fact)])
-                raise Exception, "identical diagram with different QCD powwer" 
+                raise Exception("identical diagram with different QCD powwer")
                                       
         
 

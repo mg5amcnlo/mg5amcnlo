@@ -15,7 +15,8 @@
 from __future__ import division
 from __future__ import absolute_import
 import random
-import StringIO
+import six
+StringIO = six
 import os
 
 import tests.unit_tests as unittest
@@ -25,6 +26,7 @@ import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.write_param_card as writter
 from six.moves import range
+import madgraph.various.misc as misc 
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -104,7 +106,7 @@ class TestParamWritting(unittest.TestCase):
         start =result[:]
         for i in range(20):
             random.shuffle(start)
-            start.sort(self.writter.order_param)
+            start.sort(key=misc.cmp_to_key(self.writter.order_param))
             self.assertEqual(start, result, 
                '%s != %s' % ([p.name for p in start], [p.name for p in result]))
         

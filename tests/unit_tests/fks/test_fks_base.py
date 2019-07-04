@@ -426,7 +426,7 @@ class TestFKSProcess(unittest.TestCase):
                       'orders':{'QCD':1}}))
     
     
-    expected_qcd_inter.sort()
+    expected_qcd_inter.sort(key=lambda o: o['id'])
 
     expected_qed_inter = MG.InteractionList()
             
@@ -474,7 +474,7 @@ class TestFKSProcess(unittest.TestCase):
                               'couplings':{(0, 0):'ATT'},
                               'orders':{'QED':1}}))
             
-    expected_qed_inter.sort()
+    expected_qed_inter.sort(key=lambda o:o['id'])
         
     mymodel = MG.Model()
     mymodel.set('particles', mypartlist)

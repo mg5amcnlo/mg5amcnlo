@@ -358,7 +358,7 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             try:
                 QCD = inter.get('orders')['QCD']
-            except Exception, error:
+            except Exception:
                 QCD = 0
 
             return ((part.get('color'),

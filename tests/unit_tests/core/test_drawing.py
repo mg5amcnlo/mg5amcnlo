@@ -787,7 +787,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         #in order to ensure that those problem will not appear again. 
         #Those diagrams were keep in a pickle format"""
         filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
         cls.store_diagram = pickle.load(filehandler)
 
     def setUp(self):
@@ -1007,8 +1007,9 @@ class TestFeynmanDiagram(unittest.TestCase):
             self.assertFalse(vertex in level0)
 
         self.assertEquals(len(t_vertex), 4)
-        level1.sort()
-        t_vertex.sort()
+        import madgraph.various.misc as misc
+        level1.sort(key= lambda p:id(p))
+        t_vertex.sort(key= lambda p:id(p))
         self.assertEquals(level1, t_vertex)
 
 
