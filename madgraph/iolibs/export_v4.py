@@ -171,7 +171,6 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
-        
         self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
@@ -666,7 +665,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
+
+        if self.opt['running']:
+            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
             text = open(path).read() % replace_dict
@@ -3483,6 +3487,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
+        
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
         
         
 
@@ -6998,7 +7006,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'mp': False,  
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name'),
-               'v5_model': False if cmd._model_v4_path else True })
+               'v5_model': False if cmd._model_v4_path else True,
+               'running': cmd._curr_model.get('running_elements'),
+                })
 
         format = cmd._export_format #shortcut
 

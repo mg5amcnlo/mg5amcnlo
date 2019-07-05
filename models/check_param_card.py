@@ -243,6 +243,7 @@ class Block(list):
 
     def def_scale(self, scale):
         """ """
+    
         self.scale = scale
 
     def load_str(self, text):
