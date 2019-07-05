@@ -171,7 +171,6 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
-        
         self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
@@ -666,7 +665,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
+
+        if self.opt['running']:
+            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
             text = open(path).read() % replace_dict
@@ -3484,6 +3488,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Copy the different python file in the Template
         self.copy_python_file()
         
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         
 
     
@@ -3840,7 +3848,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+
+        # set limitation linked to the model
+    
+        
         # indicate the PDG of all initial particle
         try:
             pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
@@ -3970,6 +3983,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 "writer not FortranWriter")
             # Set lowercase/uppercase Fortran code
             writers.FortranWriter.downcase = False
+
+        # check if MLM/.../ is supported for this matrix-element and update associate flag
+        if self.model and 'MLM' in self.model["limitations"]:
+            if 'MLM' not in self.proc_characteristic["limitations"]:
+                used_couplings = matrix_element.get_used_couplings(output="set") 
+                for vertex in self.model.get('interactions'):
+                    particles = [p for p in vertex.get('particles')]
+                    if 21 in [p.get('pdg_code') for p in particles]:
+                        colors = [par.get('color') for par in particles]
+                        if 1 in colors:
+                            continue
+                        elif 'QCD' not in vertex.get('orders'):
+                            for bad_coup in vertex.get('couplings').values():
+                                if bad_coup in used_couplings:
+                                    self.proc_characteristic["limitations"].append('MLM')
+                                    break
 
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
@@ -4103,7 +4132,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ampsplitorders']='\n'.join(amp_so)
         replace_dict['sqsplitorders']='\n'.join(sqamp_so)
         
-        
+
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
         jamp_lines = self.get_JAMP_lines_split_order(\
@@ -5120,6 +5149,16 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symfact_orig.dat'
         self.write_symfact_file(open(filename, 'w'), symmetry)
+        
+        # check consistency
+        for i, sym_fact in enumerate(symmetry):
+            if sym_fact > 0:
+                continue
+            if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
+                misc.sprint(i, sym_fact, nqcd_list[i], nqcd_list[abs(sym_fact)])
+                raise Exception, "identical diagram with different QCD powwer" 
+                                      
+        
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
@@ -6967,7 +7006,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'mp': False,  
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name'),
-               'v5_model': False if cmd._model_v4_path else True })
+               'v5_model': False if cmd._model_v4_path else True,
+               'running': cmd._curr_model.get('running_elements'),
+                })
 
         format = cmd._export_format #shortcut
 

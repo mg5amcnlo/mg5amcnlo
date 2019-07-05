@@ -3053,7 +3053,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         Not needed for StandAlone so we need to call the correct one 
         """
         
-        return export_v4.ProcessExporterFortranMEGroup.write_procdef_mg5(
+        return export_v4.ProcessExporterFortran.write_procdef_mg5(
             self, file_pos, modelname, process_str)
 
     def get_source_libraries_list(self):

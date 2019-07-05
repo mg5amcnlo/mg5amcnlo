@@ -2108,7 +2108,8 @@ class HwUList(histograms_PhysicsObjectList):
           ratio_correlations=True, arg_string='', 
           jet_samples_to_keep=None,
           auto_open=True,
-          lhapdfconfig='lhapdf-config'):
+          lhapdfconfig='lhapdf-config',
+          assigned_colours=None):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -2160,6 +2161,24 @@ class HwUList(histograms_PhysicsObjectList):
         
         self[:] = matching_histo_lists
 
+        # the histogram colours:
+        coli=['col1','col2','col3','col4','col5','col6','col7','col8']
+        colours={coli[0] : "#009e73",
+                 coli[1] : "#0072b2",
+                 coli[2] : "#d55e00",
+                 coli[3] : "#f0e442",
+                 coli[4] : "#56b4e9",
+                 coli[5] : "#cc79a7",
+                 coli[6] : "#e69f00",
+                 coli[7] : "black"}
+        if assigned_colours:
+            for index, item in enumerate(assigned_colours):
+                if (item != None): colours[coli[index]]=item
+
+        replace_dict=colours
+        replace_dict['arg_string']=arg_string
+        replace_dict['output_base_name']=output_base_name
+
         # Write the gnuplot header
         gnuplot_output_list_v4 = [
 """
@@ -2173,7 +2192,7 @@ class HwUList(histograms_PhysicsObjectList):
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-# %s
+# %(arg_string)s
 reset
 
 set lmargin 10
@@ -2183,60 +2202,60 @@ set terminal postscript portrait enhanced mono dashed lw 1.0 "Helvetica" 9
 #set terminal pdf enhanced font "Helvetica 12" lw 1.0 dashed size 29.7cm, 21cm
 set key font ",9"
 set key samplen "2"
-set output "%s.ps"
+set output "%(output_base_name)s.ps"
 
 # This is the "PODO" color palette of gnuplot v.5, but with the order
 # changed: palette of colors selected to be easily distinguishable by
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line  1 lt 1 lc rgb "#009e73" lw 2.5
-set style line 11 lt 2 lc rgb "#009e73" lw 2.5
-set style line 21 lt 4 lc rgb "#009e73" lw 2.5
-set style line 31 lt 6 lc rgb "#009e73" lw 2.5
-set style line 41 lt 8 lc rgb "#009e73" lw 2.5
+set style line  1 lt 1 lc rgb "%(col1)s" lw 2.5
+set style line 11 lt 2 lc rgb "%(col1)s" lw 2.5
+set style line 21 lt 4 lc rgb "%(col1)s" lw 2.5
+set style line 31 lt 6 lc rgb "%(col1)s" lw 2.5
+set style line 41 lt 8 lc rgb "%(col1)s" lw 2.5
 
-set style line  2 lt 1 lc rgb "#0072b2" lw 2.5
-set style line 12 lt 2 lc rgb "#0072b2" lw 2.5
-set style line 22 lt 4 lc rgb "#0072b2" lw 2.5
-set style line 32 lt 6 lc rgb "#0072b2" lw 2.5
-set style line 42 lt 8 lc rgb "#0072b2" lw 2.5
+set style line  2 lt 1 lc rgb "%(col2)s" lw 2.5
+set style line 12 lt 2 lc rgb "%(col2)s" lw 2.5
+set style line 22 lt 4 lc rgb "%(col2)s" lw 2.5
+set style line 32 lt 6 lc rgb "%(col2)s" lw 2.5
+set style line 42 lt 8 lc rgb "%(col2)s" lw 2.5
 
-set style line  3 lt 1 lc rgb "#d55e00" lw 2.5
-set style line 13 lt 2 lc rgb "#d55e00" lw 2.5
-set style line 23 lt 4 lc rgb "#d55e00" lw 2.5
-set style line 33 lt 6 lc rgb "#d55e00" lw 2.5
-set style line 43 lt 8 lc rgb "#d55e00" lw 2.5
+set style line  3 lt 1 lc rgb "%(col3)s" lw 2.5
+set style line 13 lt 2 lc rgb "%(col3)s" lw 2.5
+set style line 23 lt 4 lc rgb "%(col3)s" lw 2.5
+set style line 33 lt 6 lc rgb "%(col3)s" lw 2.5
+set style line 43 lt 8 lc rgb "%(col3)s" lw 2.5
 
-set style line  4 lt 1 lc rgb "#f0e442" lw 2.5
-set style line 14 lt 2 lc rgb "#f0e442" lw 2.5
-set style line 24 lt 4 lc rgb "#f0e442" lw 2.5
-set style line 34 lt 6 lc rgb "#f0e442" lw 2.5
-set style line 44 lt 8 lc rgb "#f0e442" lw 2.5
+set style line  4 lt 1 lc rgb "%(col4)s" lw 2.5
+set style line 14 lt 2 lc rgb "%(col4)s" lw 2.5
+set style line 24 lt 4 lc rgb "%(col4)s" lw 2.5
+set style line 34 lt 6 lc rgb "%(col4)s" lw 2.5
+set style line 44 lt 8 lc rgb "%(col4)s" lw 2.5
 
-set style line  5 lt 1 lc rgb "#56b4e9" lw 2.5
-set style line 15 lt 2 lc rgb "#56b4e9" lw 2.5
-set style line 25 lt 4 lc rgb "#56b4e9" lw 2.5
-set style line 35 lt 6 lc rgb "#56b4e9" lw 2.5
-set style line 45 lt 8 lc rgb "#56b4e9" lw 2.5
+set style line  5 lt 1 lc rgb "%(col5)s" lw 2.5
+set style line 15 lt 2 lc rgb "%(col5)s" lw 2.5
+set style line 25 lt 4 lc rgb "%(col5)s" lw 2.5
+set style line 35 lt 6 lc rgb "%(col5)s" lw 2.5
+set style line 45 lt 8 lc rgb "%(col5)s" lw 2.5
 
-set style line  6 lt 1 lc rgb "#cc79a7" lw 2.5
-set style line 16 lt 2 lc rgb "#cc79a7" lw 2.5
-set style line 26 lt 4 lc rgb "#cc79a7" lw 2.5
-set style line 36 lt 6 lc rgb "#cc79a7" lw 2.5
-set style line 46 lt 8 lc rgb "#cc79a7" lw 2.5
+set style line  6 lt 1 lc rgb "%(col6)s" lw 2.5
+set style line 16 lt 2 lc rgb "%(col6)s" lw 2.5
+set style line 26 lt 4 lc rgb "%(col6)s" lw 2.5
+set style line 36 lt 6 lc rgb "%(col6)s" lw 2.5
+set style line 46 lt 8 lc rgb "%(col6)s" lw 2.5
 
-set style line  7 lt 1 lc rgb "#e69f00" lw 2.5
-set style line 17 lt 2 lc rgb "#e69f00" lw 2.5
-set style line 27 lt 4 lc rgb "#e69f00" lw 2.5
-set style line 37 lt 6 lc rgb "#e69f00" lw 2.5
-set style line 47 lt 8 lc rgb "#e69f00" lw 2.5
+set style line  7 lt 1 lc rgb "%(col7)s" lw 2.5
+set style line 17 lt 2 lc rgb "%(col7)s" lw 2.5
+set style line 27 lt 4 lc rgb "%(col7)s" lw 2.5
+set style line 37 lt 6 lc rgb "%(col7)s" lw 2.5
+set style line 47 lt 8 lc rgb "%(col7)s" lw 2.5
 
-set style line  8 lt 1 lc rgb "black" lw 2.5
-set style line 18 lt 2 lc rgb "black" lw 2.5
-set style line 28 lt 4 lc rgb "black" lw 2.5
-set style line 38 lt 6 lc rgb "black" lw 2.5
-set style line 48 lt 7 lc rgb "black" lw 2.5
+set style line  8 lt 1 lc rgb "%(col8)s" lw 2.5
+set style line 18 lt 2 lc rgb "%(col8)s" lw 2.5
+set style line 28 lt 4 lc rgb "%(col8)s" lw 2.5
+set style line 38 lt 6 lc rgb "%(col8)s" lw 2.5
+set style line 48 lt 7 lc rgb "%(col8)s" lw 2.5
 
 
 set style line 999 lt 1 lc rgb "gray" lw 2.5
@@ -2246,7 +2265,7 @@ safe(x,y,a) = (y == 0.0 ? a : x/y)
 set style data histeps
 set key invert
 
-"""%(arg_string,output_base_name)
+"""%(replace_dict)
 ]
         
         gnuplot_output_list_v5 = [
@@ -2261,7 +2280,7 @@ set key invert
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-# %s
+# %(arg_string)s
 reset
 
 set lmargin 10
@@ -2271,69 +2290,68 @@ set terminal postscript portrait enhanced color "Helvetica" 9
 #set terminal pdf enhanced font "Helvetica 12" lw 1.0 dashed size 29.7cm, 21cm
 set key font ",9"
 set key samplen "2"
-set output "%s.ps"
+set output "%(output_base_name)s.ps"
 
 # This is the "PODO" color palette of gnuplot v.5, but with the order
 # changed: palette of colors selected to be easily distinguishable by
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line  1 lt 1 lc rgb "#009e73" lw 1.3
-set style line 101 lt 1 lc rgb "#009e73" lw 1.3 dt (6,3)
-set style line 11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
-set style line 21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
-set style line 31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
-set style line 41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
+set style line   1 lt 1 lc rgb "%(col1)s" lw 1.3
+set style line 101 lt 1 lc rgb "%(col1)s" lw 1.3 dt (6,3)
+set style line  11 lt 2 lc rgb "%(col1)s" lw 1.3 dt (6,3)
+set style line  21 lt 4 lc rgb "%(col1)s" lw 1.3 dt (3,2)
+set style line  31 lt 6 lc rgb "%(col1)s" lw 1.3 dt (2,1)
+set style line  41 lt 8 lc rgb "%(col1)s" lw 1.3 dt (4,3)
 
-set style line  2 lt 1 lc rgb "#0072b2" lw 1.3
-set style line  102 lt 1 lc rgb "#0072b2" lw 1.3 dt (6,3)
-set style line 12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
-set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
-set style line 32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
-set style line 42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
+set style line   2 lt 1 lc rgb "%(col2)s" lw 1.3
+set style line 102 lt 1 lc rgb "%(col2)s" lw 1.3 dt (6,3)
+set style line  12 lt 2 lc rgb "%(col2)s" lw 1.3 dt (6,3)
+set style line  22 lt 4 lc rgb "%(col2)s" lw 1.3 dt (3,2)
+set style line  32 lt 6 lc rgb "%(col2)s" lw 1.3 dt (2,1)
+set style line  42 lt 8 lc rgb "%(col2)s" lw 1.3 dt (4,3)
 
+set style line   3 lt 1 lc rgb "%(col3)s" lw 1.3
+set style line 103 lt 1 lc rgb "%(col3)s" lw 1.3 dt (6,3)
+set style line  13 lt 2 lc rgb "%(col3)s" lw 1.3 dt (6,3)
+set style line  23 lt 4 lc rgb "%(col3)s" lw 1.3 dt (3,2)
+set style line  33 lt 6 lc rgb "%(col3)s" lw 1.3 dt (2,1)
+set style line  43 lt 8 lc rgb "%(col3)s" lw 1.3 dt (4,3)
 
-set style line  3 lt 1 lc rgb "#d55e00" lw 1.3
-set style line 103 lt 1 lc rgb "#d55e00" lw 1.3 dt (6,3)
-set style line 13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
-set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
-set style line 33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
-set style line 43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
+set style line   4 lt 1 lc rgb "%(col4)s" lw 1.3
+set style line 104 lt 1 lc rgb "%(col4)s" lw 1.3 dt (6,3)
+set style line  14 lt 2 lc rgb "%(col4)s" lw 1.3 dt (6,3)
+set style line  24 lt 4 lc rgb "%(col4)s" lw 1.3 dt (3,2)
+set style line  34 lt 6 lc rgb "%(col4)s" lw 1.3 dt (2,1)
+set style line  44 lt 8 lc rgb "%(col4)s" lw 1.3 dt (4,3)
 
-set style line  4 lt 1 lc rgb "#f0e442" lw 1.3
-set style line  104 lt 1 lc rgb "#f0e442" lw 1.3 dt (6,3)
-set style line 14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
-set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
-set style line 34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
-set style line 44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
+set style line   5 lt 1 lc rgb "%(col5)s" lw 1.3
+set style line 105 lt 1 lc rgb "%(col5)s" lw 1.3 dt (6,3)
+set style line  15 lt 2 lc rgb "%(col5)s" lw 1.3 dt (6,3)
+set style line  25 lt 4 lc rgb "%(col5)s" lw 1.3 dt (3,2)
+set style line  35 lt 6 lc rgb "%(col5)s" lw 1.3 dt (2,1)
+set style line  45 lt 8 lc rgb "%(col5)s" lw 1.3 dt (4,3)
 
-set style line  5 lt 1 lc rgb "#56b4e9" lw 1.3
-set style line  105 lt 1 lc rgb "#56b4e9" lw 1.3 dt (6,3)
-set style line 15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
-set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
-set style line 35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
-set style line 45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
+set style line   6 lt 1 lc rgb "%(col6)s" lw 1.3
+set style line 106 lt 1 lc rgb "%(col6)s" lw 1.3 dt (6,3)
+set style line  16 lt 2 lc rgb "%(col6)s" lw 1.3 dt (6,3)
+set style line  26 lt 4 lc rgb "%(col6)s" lw 1.3 dt (3,2)
+set style line  36 lt 6 lc rgb "%(col6)s" lw 1.3 dt (2,1)
+set style line  46 lt 8 lc rgb "%(col6)s" lw 1.3 dt (4,3)
 
-set style line  6 lt 1 lc rgb "#cc79a7" lw 1.3
-set style line  106 lt 1 lc rgb "#cc79a7" lw 1.3 dt (6,3)
-set style line 16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
-set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
-set style line 36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
-set style line 46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
+set style line   7 lt 1 lc rgb "%(col7)s" lw 1.3
+set style line 107 lt 1 lc rgb "%(col7)s" lw 1.3 dt (6,3)
+set style line  17 lt 2 lc rgb "%(col7)s" lw 1.3 dt (6,3)
+set style line  27 lt 4 lc rgb "%(col7)s" lw 1.3 dt (3,2)
+set style line  37 lt 6 lc rgb "%(col7)s" lw 1.3 dt (2,1)
+set style line  47 lt 8 lc rgb "%(col7)s" lw 1.3 dt (4,3)
 
-set style line  7 lt 1 lc rgb "#e69f00" lw 1.3
-set style line  107 lt 1 lc rgb "#e69f00" lw 1.3 dt (6,3)
-set style line 17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
-set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
-set style line 37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
-set style line 47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
-
-set style line  8 lt 1 lc rgb "black" lw 1.3
-set style line  108 lt 1 lc rgb "black" lw 1.3 dt (6,3)
-set style line 18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
-set style line 28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
-set style line 38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
-set style line 48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
+set style line   8 lt 1 lc rgb "%(col8)s" lw 1.3
+set style line 108 lt 1 lc rgb "%(col8)s" lw 1.3 dt (6,3)
+set style line  18 lt 2 lc rgb "%(col8)s" lw 1.3 dt (6,3)
+set style line  28 lt 4 lc rgb "%(col8)s" lw 1.3 dt (3,2)
+set style line  38 lt 6 lc rgb "%(col8)s" lw 1.3 dt (2,1)
+set style line  48 lt 8 lc rgb "%(col8)s" lw 1.3 dt (4,3)
 
 
 set style line 999 lt 1 lc rgb "gray" lw 1.3
@@ -2343,7 +2361,7 @@ safe(x,y,a) = (y == 0.0 ? a : x/y)
 set style data histeps
 set key invert
 
-"""%(arg_string,output_base_name)
+"""%(replace_dict)
 ]
         
         # determine the gnuplot version
@@ -3382,6 +3400,7 @@ if __name__ == "__main__":
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
+           '--colours=<colour1>,<colour2>,...' to assign a non-default colour to GnuPlot histograms (max 8 colours)
            '--sum'           To sum all identical histograms together
            '--average'       To average over all identical histograms
            '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
@@ -3420,7 +3439,7 @@ if __name__ == "__main__":
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
-                      '--keep_all_weights']
+                      '--keep_all_weights','--colours']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
@@ -3465,6 +3484,12 @@ if __name__ == "__main__":
         if arg.startswith('--assign_types='):
             assigned_types = [(type if type!='None' else None) for type in \
                                                              arg[15:].split(',')]
+
+    assigned_colours = []
+    for arg in sys.argv[1:]:
+        if arg.startswith('--colours='):
+            assigned_colours = [(colour if colour!='None' else None) for colour in \
+                                                             arg[10:].split(',')]
 
     jet_samples_to_keep = None
     
@@ -3623,7 +3648,8 @@ if __name__ == "__main__":
             jet_samples_to_keep=jet_samples_to_keep,
             use_band=use_band,
             auto_open=auto_open,
-            lhapdfconfig=lhapdfconfig)
+            lhapdfconfig=lhapdfconfig,
+            assigned_colours=assigned_colours)
         # Tell the user that everything went for the best
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
