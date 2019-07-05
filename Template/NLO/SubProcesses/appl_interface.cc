@@ -386,12 +386,14 @@ extern "C" void appl_fill_() {
     x2     = appl_common_weights_.x2[0];
     static std::vector<double> x1Saved(grid_obs.size(), 0.0);
     static std::vector<double> x2Saved(grid_obs.size(), 0.0);
-    if(x1 == x1Saved[nh] && x2 == x2Saved[nh])
+    static int grid_index_saved = -1;
+    if(x1 == x1Saved[nh] && x2 == x2Saved[nh] && (grid_index_saved == grid_index))
       return;
     else
     {
       x1Saved[nh] = x1;
       x2Saved[nh] = x2;
+      grid_index_saved = grid_index;
     }
     // Energy scale
     scale2 = appl_common_weights_.muF2[0];
@@ -424,12 +426,14 @@ extern "C" void appl_fill_() {
       {
         static std::vector<double> x1Saved(grid_obs.size(), 0.0);
         static std::vector<double> x2Saved(grid_obs.size(), 0.0);
-        if(x1 == x1Saved[nh] && x2 == x2Saved[nh])
+        static int grid_index_saved = -1;
+        if(x1 == x1Saved[nh] && x2 == x2Saved[nh] && (grid_index_saved == grid_index))
           return;
         else
         {
           x1Saved[nh] = x1;
           x2Saved[nh] = x2;
+          grid_index_saved = grid_index;
         }
       }
       scale2 = appl_common_weights_.muF2[k];
@@ -464,12 +468,14 @@ extern "C" void appl_fill_() {
     x2     = appl_common_weights_.x2[1];
     static std::vector<double> x1Saved(grid_obs.size(), 0.0);
     static std::vector<double> x2Saved(grid_obs.size(), 0.0);
-    if(x1 == x1Saved[nh] && x2 == x2Saved[nh])
+    static int grid_index_saved = -1;
+    if(x1 == x1Saved[nh] && x2 == x2Saved[nh] && (grid_index_saved == grid_index))
       return;
     else
     {
       x1Saved[nh] = x1;
       x2Saved[nh] = x2;
+      grid_index_saved = grid_index;
     }
     scale2 = appl_common_weights_.muF2[1];
     ilumi  = appl_common_weights_.flavmap[1] - 1;
