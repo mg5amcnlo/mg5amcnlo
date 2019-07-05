@@ -25,7 +25,7 @@ import logging
 import tempfile
 import time
 import math
-from cStringIO import StringIO
+from io import StringIO
 from madgraph.various import lhe_parser
 
 logger = logging.getLogger('test_cmd')

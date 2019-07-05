@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 import sys
+import operator
 import os
 from six.moves import range
 from six.moves import zip
@@ -351,7 +352,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'GQQ'},
                               'orders':{'QCD':1}}))
             
-            expected_qcd_inter.sort()
+            expected_qcd_inter.sort(key=operator.itemgetter('id'))
             
             expected_qed_inter = MG.InteractionList()
             
@@ -399,7 +400,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'ATT'},
                               'orders':{'QED':1}}))
             
-            expected_qed_inter.sort()
+            expected_qed_inter.sort(key=operator.itemgetter('id'))
             
             model = MG.Model()
             model.set('particles', mypartlist)

@@ -25,7 +25,7 @@ import logging
 import time
 import tempfile
 import math
-from six.moves.builtins import True
+
 
 logger = logging.getLogger('test_cmd')
 

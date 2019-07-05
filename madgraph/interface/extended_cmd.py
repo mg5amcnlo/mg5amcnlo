@@ -1732,7 +1732,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = raw_input
+            try:
+                fct = raw_input
+            except Exception:
+                fct = input
         
         if timeout:
             signal.alarm(timeout)

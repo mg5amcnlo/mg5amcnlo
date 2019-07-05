@@ -1222,7 +1222,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 newUVCTDiag.get('UVCT_couplings').append((len([1 for loop_parts \
                   in UVCTinter.get('loop_particles') if set(loop_parts).intersection(\
                   set(self['process']['forbidden_particles']))==set([])])) if
-                  loop_parts!=[[]] else  1)
+                  UVCTinter.get('loop_particles')[-1]!=[[]] else  1)
                 self['loop_UVCT_diagrams'].append(newUVCTDiag)
 
         # Remove the additional order requirement in the born orders for this

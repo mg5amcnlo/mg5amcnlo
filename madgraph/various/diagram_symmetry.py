@@ -539,7 +539,7 @@ def find_matrix_elements_for_configs(subproc_group):
                 - matrix_elements[me1].get('identical_particle_factor'))\
                 or (len(me_config_dict[me2]) - len(me_config_dict[me1]))
 
-    sorted_mes = sorted([me for me in me_config_dict], me_sort)
+    sorted_mes = sorted([me for me in me_config_dict], key=misc.cmp_to_key(me_sort))
 
     # Reduce to minimal set of matrix elements
     latest_me = 0

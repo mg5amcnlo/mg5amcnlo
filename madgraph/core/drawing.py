@@ -2347,16 +2347,8 @@ class LoopFeynmanDiagram(FeynmanDiagram):
             if nb_Tloop % 2:
                 direction = 1
         
-        def order(line1, line2):
-            """ put T-channel first """
-            if line1.state == line2.state:
-                return 0
-            if line2.state:
-                return -1
-            else:
-                return 1
         
-        vertex.lines.sort(order)
+        vertex.lines.sort(key=lambda l: l.state)
         for line in vertex.lines:
             if line.begin.level is not None and line.end.level is not None:
                 continue # everything correctly define

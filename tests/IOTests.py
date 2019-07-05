@@ -772,7 +772,7 @@ class IOTestManager(unittest.TestCase):
 """%(fname,folder_name,test_name)
                                 text += misc.Popen(['diff',str(comparison_path),
                                   str(tmp_path)],stdout=subprocess.PIPE).\
-                                                                communicate()[0]
+                                                                communicate()[0].decode('utf-8')
                                 # Remove the last newline
                                 if text[-1]=='\n':
                                     text=text[:-1]
