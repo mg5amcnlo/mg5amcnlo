@@ -845,7 +845,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax)
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
 c
 c     Call for 0<x<1
 c
@@ -1119,6 +1119,7 @@ C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 91 eqs 5.28
 C     It is used to determine physical limits for Y based on inputs
+C     Y is not used in this formula (called with dummy value)
 C**************************************************************************
       implicit none
 c

@@ -127,6 +127,13 @@ import madgraph.interface.master_interface as interface
 if __debug__ and time.time() - start > 0.5:
     print( 'WARNING: loading of madgraph too slow!!!', time.time() - start)
 
+try:
+    import madgraph.various.misc as misc
+    misc.EasterEgg('loading')
+except:
+    pass
+
+
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
         print( "ERROR: %s is not present in the PLUGIN directory. Please install it first")

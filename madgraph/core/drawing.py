@@ -1663,7 +1663,7 @@ class DiagramDrawer(object):
         # Set variable for storing text        
         self.text = ''
         # Do we have to write a file? -> store in self.file
-        if file:
+        if filename:
             self.file = True # Note that this variable will be overwritten. THis
                              #will be the object file. [initialize]
         else:

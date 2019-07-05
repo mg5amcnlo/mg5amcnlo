@@ -1572,7 +1572,7 @@ class Event(list):
             if old_scales:
                 self.matched_scale_data.append(old_scales[initial_pos+jet_position])
             # compute and assign the new four_momenta
-            new_momentum = this_4mom.boost(FourMomentum(new_particle))
+            new_momentum = FourMomentum(new_particle).boost(this_4mom)
             new_particle.set_momentum(new_momentum)
             # compute the new mother
             for tag in ['mother1', 'mother2']:

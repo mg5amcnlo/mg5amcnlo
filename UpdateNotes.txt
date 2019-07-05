@@ -1,5 +1,21 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.6(28/07/19)
+      OM: Bug in the edition of the shower_card. The set command of logical parameter was never setting the 
+          parameter to False. (Thanks to Richard Ruiz) 
+      RF: Fixed a bug in the creation of the energy-stripped i_FKS momentum. Tested for several processes,
+          and seems to have been completely harmless.
+      OM: Forbidding the use of CKKW/default scale for some UFO model allowing gluon emission from quark with
+          no dependence in aS
+      OM: Add an option "keep_ordering" for reweighting feature to allow to sometimes use decay chain even if
+          you have ambiguity between final state particles.
+      OM: Fixed an issue with interference which sometimes happens when some polarization contribution were negative but not all of them.
+      VH: Change in the pythia8 output mode (thanks to Peter Skands)
+      OM: Any number in the cards (not only integer) can use multiplication, division and k/M suffix for times 1000 and 1 million respectively
+      OM: Energy cut (at LO) are now hidden by default for LHC type of run but visible for lepton collider ones.
+      OM: Same for beam polarization
+
+
 2.6.5 (03/02/19)
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
       OM: Fix a bug in the computation of systematics when running with Python 2.6.
@@ -11,6 +27,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Fix  a MLM crash occuring for p p > go go (0,1,2 j)
       OM: Fix issue for BSM model with additional colored particle where the default dynamical scale choice 
           was crashing
+
 
 2.6.4 (09/11/18)
       OM: add specific treatement for small width (at LO only and not for loop-induced)

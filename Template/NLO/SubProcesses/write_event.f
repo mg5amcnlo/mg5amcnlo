@@ -149,7 +149,7 @@ c get info on beam and PDFs
       write(lunlhe,502)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
       write(lunlhe,'(a)')'  </init>'
  250  format(1x,i8)
- 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
+ 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,d14.8),1x,i6)
 
       return

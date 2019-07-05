@@ -458,7 +458,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                          'loop_orders':vertex.get('loop_orders')}
         else:
             # Not that it is going to be used here, but it might be eventually
-            inter = model.get_interaction(vertex.get('id'))
+            #inter = model.get_interaction(vertex.get('id'))
             loop_info = {}
 
         if last_vertex:
@@ -4888,7 +4888,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return output
 
-    def get_used_couplings(self):
+    def get_used_couplings(self, output=str):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
 
@@ -4896,7 +4896,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') not in [0,-1]]
         #some coupling have a minus one associated -> need to remove those
-        return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+        if output == str:
+            return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+        elif output=="set":
+            return set(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
 
 
     def get_mirror_processes(self):
