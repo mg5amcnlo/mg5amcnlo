@@ -5593,9 +5593,12 @@ class UFO_model_to_mg4(object):
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
-        # Keep only separation in alphaS        
+            
+        misc.sprint(self.PS_dependent_key)
+        # Keep only separation in alphaS + running one        
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
+
         for key in keys:
             to_add = [o for o in self.model['parameters'][key] if o.name]
 
@@ -5605,19 +5608,26 @@ class UFO_model_to_mg4(object):
                 self.params_dep += to_add
             else:
                 self.params_indep += to_add
-        # same for couplings
+                
+        # same for couplings + tracking which running happens
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
+        used_running_key = set()
         for key, coup_list in self.model['couplings'].items():
             if any([(k in key) for k in self.PS_dependent_key]):
-                self.coups_dep += [c for c in coup_list if
+                to_add = [c for c in coup_list if
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
+                if to_add:
+                    self.coups_dep += to_add
+                    used_running_key.update(set(key))
             else:
                 self.coups_indep += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings)]
-                
+        #store the running parameter that are used
+        self.used_running_key = used_running_key  
+        misc.sprint(self.used_running_key)   
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -6107,7 +6117,7 @@ class UFO_model_to_mg4(object):
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
         
-        nb_def_by_file = 25
+        nb_def_by_file = 50
         
         self.create_couplings_main(nb_def_by_file)
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
@@ -6190,6 +6200,12 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
                          """)
+        
+        if self.model['running_elements']:
+            running_block = self.model.get_running(self.used_running_key) 
+            misc.sprint(running_block)
+            raise Exception
+            
             
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
