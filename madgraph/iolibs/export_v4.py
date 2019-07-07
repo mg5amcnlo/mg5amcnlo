@@ -12,10 +12,12 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import division
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+import math, cmath
 from cStringIO import StringIO
 from distutils import dir_util
 import itertools
@@ -6204,8 +6206,10 @@ class UFO_model_to_mg4(object):
         if self.model['running_elements']:
             running_block = self.model.get_running(self.used_running_key) 
             misc.sprint(running_block)
-            raise Exception
-            
+            if running_block:
+                fsock.write_comments('calculate the running parameter')
+            for i in range(len(running_block)):
+                fsock.writelines(" call C_RUNNING_%s(G) ! %s \n" % (i+1,list(running_block[i])))   
             
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
@@ -6263,6 +6267,104 @@ class UFO_model_to_mg4(object):
                         ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
+            
+        if running_block:
+            template = """
+                  SUBROUTINE C_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../alfas.inc'
+      INCLUDE 'input.inc'
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat1(%(size)i,%(size)i), mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      data mat1 /%(mat1)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /0d0*%(size)i/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ASMZ)
+      endif
+      r1 = (G0/GMU -1)
+      r2 = G0 * DLOG(G0/GMU)
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat1(j,i) *r1 + mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+            
+            for block_nb, runparams in enumerate(running_block):
+                runparams = list(runparams)
+                data = {}
+                data['block_nb'] = block_nb+1
+                data['size'] = len(runparams) 
+                data['initc0'] = "\n".join(["c0(%i) = MDL_%s" % (i+1, name)
+                                            for i, name in enumerate(runparams)])
+                data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
+                                            for i, name in enumerate(runparams)])
+                # need to compute the matrices
+                # carefull some component are proportional to aS
+                # need to convert those to G^2
+                # need to be carefull with prefactor included (none yet)
+                mat1=[[0*data['size']]*(data['size'])]
+                mat2=[[0*data['size']]*(data['size'])]
+                
+                for elements in self.model["running_elements"]:
+                    for params in elements.run_objects:
+                        params = [str(p) for p in params]
+                        if not any(param in runparams for param in params):
+                            continue
+                        if 'aS' in params:
+                            to_update = mat2
+                            params.remove('aS')
+                        else:
+                            to_update = mat1
+                            params.remove('G')
+                        if len(params) !=2:
+                            raise Exception, "not supported type of running"
+                        misc.sprint(params)
+                        id1 = runparams.index(params[0])
+                        id2 = runparams.index(params[1])
+                        misc.sprint(id1, id2)
+                        assert to_update[id1][id2] == 0
+                        misc.sprint("Missing prefactor!!!!")
+                        misc.sprint("missing parsing -> evaluation?")
+                        to_update[id1][id2] = eval(elements.value)
+                        misc.sprint(eval(elements.value))
+                
+                
+                data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
+                data['mat2'] = ",".join(["%e" % mat2[j][i] for i in range(data['size']) for j in range(data['size'])])
+                fsock.writelines(template % data)
+            
 
     def create_couplings_part(self, nb_file, data, dp=True, mp=False):
         """ create couplings[nb_file].f containing information coming from data.
