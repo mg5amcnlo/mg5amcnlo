@@ -6285,7 +6285,7 @@ class UFO_model_to_mg4(object):
       data mat2 /%(mat2)s/
       data mat1 /%(mat1)s/
       double precision C0(%(size)i),Cout(%(size)i)
-      data C0 /0d0*%(size)i/
+      data C0 /%(size)i * 0d0/
       logical first
       data first /.true./
       integer i,j,k
@@ -6295,6 +6295,7 @@ class UFO_model_to_mg4(object):
       if (first) then
          %(initc0)s
          G0 = SQRT(4.0D0*PI*ASMZ)
+         first = .false.
       endif
       r1 = (G0/GMU -1)
       r2 = G0 * DLOG(G0/GMU)
@@ -6345,9 +6346,11 @@ class UFO_model_to_mg4(object):
                         if 'aS' in params:
                             to_update = mat2
                             params.remove('aS')
+                            prefact = 4*math.pi
                         else:
                             to_update = mat1
                             params.remove('G')
+                            prefact = 16*math.pi**2
                         if len(params) !=2:
                             raise Exception, "not supported type of running"
                         misc.sprint(params)
@@ -6355,10 +6358,8 @@ class UFO_model_to_mg4(object):
                         id2 = runparams.index(params[1])
                         misc.sprint(id1, id2)
                         assert to_update[id1][id2] == 0
-                        misc.sprint("Missing prefactor!!!!")
-                        misc.sprint("missing parsing -> evaluation?")
-                        to_update[id1][id2] = eval(elements.value)
-                        misc.sprint(eval(elements.value))
+                        to_update[id1][id2] = eval(elements.value)*prefact
+                        misc.sprint(to_update[id1][id2])
                 
                 
                 data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
