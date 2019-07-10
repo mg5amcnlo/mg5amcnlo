@@ -756,8 +756,6 @@ double SpaceShower::noEmissionProbability( double pTbegAll, double pTendAll,
     wt2 += wtnow;
     wts.push_back(wtnow);
 
-//cout << wtnow << " " << wt << endl;
-
     // Stop if the median of the Sudakov is stable.
     //double mean = wt/double(nTrials);
     //means.push_back(mean);
@@ -925,7 +923,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   }
 
   // Hard cut-off for z-integration if no bound from Bjorken x is possible.
-  if (!usePDF) { zMinAbs = 1e-6; xMaxAbs = 1.;}
+  if (!usePDF) { zMinAbs = 1e-5; xMaxAbs = 1.;}
+  if (!usePDF) isValence = false;
 
   // Starting values for handling of massive quarks (c/b), if any.
   double idMassive   = 0;
@@ -980,6 +979,13 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   double pT2PDF         = pT2;
   bool   needNewPDF     = true;
 
+  double CA= 3.;
+  double CF = 4./3.;
+  double NF = 5.;
+  double TR = 0.5;
+  double colorFactor_g2gg = (11.*CA - 4.*NF*TR)/6.;
+  double extraHeadroom = 1.;
+
   // Add more headroom if doing uncertainty variations
   // (to ensure at least a minimal number of failed branchings).
   doUncertaintiesNow    = doUncertainties;
@@ -996,12 +1002,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   int    loopTinyPDFdau = 0;
   bool   hasTinyPDFdau  = false;
 
-  bool skipped= false;
-
   do {
-
-    if (skipped) cout << __LINE__ << endl;
-    skipped=false;
 
     // Default values for current tentative emission.
     wt = 0.;
@@ -1043,13 +1044,20 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         Lambda2   = Lambda3flav2;
       }
 
+if (!usePDF) {
+nFlavour  = 3;
+pT2minNow = pT2endDip;
+b0        = 27./6.;
+Lambda2   = Lambda3flav2;
+}
+
       // A change of renormalization scale expressed by a change of Lambda.
       Lambda2    /= renormMultFac;
       zMaxAbs     = 1. - 0.5 * (pT2minNow / m2Dip) *
         ( sqrt( 1. + 4. * m2Dip / pT2minNow ) - 1. );
       if (isMassive) zMaxAbs = min( zMaxAbs, zMaxMassive);
 
-      zMinAbs = max(0.,1.-zMaxAbs);
+//      zMinAbs = max(0.,1.-zMaxAbs);
 
       // Go to another z range with lower mass scale if current is closed.
       if (zMinAbs > zMaxAbs) {
@@ -1070,8 +1078,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
       // Integrals of splitting kernels for gluons: g -> g, q -> g.
       if (isGluon) {
-//        g2gInt = overFac * (8./3.)
-//          * log( (1. - zMinAbs) / (1. - zMaxAbs) );
+
         g2gInt = overFac * HEADROOMG2G * 6.
           * log(zMaxAbs * (1.-zMinAbs) / (zMinAbs * (1.-zMaxAbs)));
         if (doMEcorrections) g2gInt *= calcMEmax(MEtype, 21, 21);
@@ -1080,7 +1087,16 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         q2gInt = overFac * HEADROOMQ2G * (16./3.)
           * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
 
-//q2gInt = 0.;
+// For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
+// Thus, use g->qq~ kernels here!!!
+if (!usePDF) {
+q2gInt = overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
+// There are NF possibilities for this splitting.
+q2gInt *= NF;
+// ... but only one line of the gluon evolving (i.e. only half of the color 
+// factor)
+//q2gInt /= 2.;
+}
 
         if (doMEcorrections) q2gInt *= calcMEmax(MEtype, 1, 21);
         // Optionally enhanced branching rate.
@@ -1101,7 +1117,9 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         // Total QCD evolution coefficient for a gluon.
         //kernelPDF = g2gInt + q2gInt * xPDFmotherSum / xPDFdaughter;
         double pdfRatioOver = xPDFmotherSum / xPDFdaughter;
-        kernelPDF = g2gInt + q2gInt * pdfRatioOver;
+        //kernelPDF = g2gInt + q2gInt * pdfRatioOver;
+        kernelPDF = g2gInt; 
+        kernelPDF += (usePDF) ? q2gInt * pdfRatioOver : q2gInt;
 
       // For valence quark only need consider q -> q g branchings.
       // Introduce an extra factor sqrt(z) to smooth bumps.
@@ -1142,6 +1160,26 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
           g2qInt *= g2Qenhance;
         }
 
+
+// For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
+// Thus, use q->gq kernels here!!!
+if (!usePDF) {
+// Parton density of potential quark mothers to a g.
+xPDFmotherSum = 0.;
+for (int i = -nQuarkIn; i <= nQuarkIn; ++i) {
+  if (i == 0) {
+    xPDFmother[10] = 0.;
+  } else {
+    xPDFmother[i+10] = (usePDF)
+    ? beam.xfISR(iSysNow, i, xDaughter, pdfScale2) : 1.;
+    xPDFmotherSum += xPDFmother[i+10];
+  }
+}
+g2qInt = overFac * HEADROOMQ2G * (16./3.)
+       * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
+}
+
+
         // Parton density of a potential gluon mother to a q.
         xPDFgMother = (usePDF)
           ? beam.xfISR(iSysNow, 21, xDaughter, pdfScale2) : 1.;
@@ -1149,7 +1187,9 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         // Total QCD evolution coefficient for a quark.
         //kernelPDF = q2qInt + g2qInt * xPDFgMother / xPDFdaughter;
         double pdfRatioOver = xPDFgMother / xPDFdaughter;
-        kernelPDF = q2qInt + g2qInt * pdfRatioOver;
+        //kernelPDF = q2qInt + g2qInt * pdfRatioOver;
+        kernelPDF = q2qInt; 
+        kernelPDF += (usePDF) ? g2qInt * pdfRatioOver : g2qInt;
 
       }
 
@@ -1223,11 +1263,6 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         wt = pow2( 1. - z * (1. - z));
         // Account for headroom factor used to enhance trial probability
         wt /= HEADROOMG2G;
-
-//          z = 1. - (1. - zMinAbs) * pow( (1. - zMaxAbs) / (1. - zMinAbs),
-//            rndmPtr->flat() );
-//          wt = 0.5 * (1. + pow2(z));
-
         // Optionally enhanced branching rate.
         nameNow = "isr:G2GG";
         if (canEnhanceET) {
@@ -1248,6 +1283,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
           * ( sqrt(zMaxAbs)- sqrt(zMinAbs) ));
         wt = 0.5 * (1. + pow2(1. - z)) * sqrt(z)
           * xPDFdaughter / xPDFmother[idMother + 10];
+
         // Account for headroom factor used to enhance trial probability
         wt /= HEADROOMQ2G;
         // Optionally enhanced branching rate.
@@ -1260,7 +1296,17 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
           }
         }
 
-//wt=0.;
+
+// For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
+// Thus, use g->qq~ kernels here!!!
+if (!usePDF) {
+idMother = 21;
+idSister = - idDaughter;
+z = zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs);
+wt = (pow2(z) + pow2(1.-z));
+// Account for headroom factor for gluons
+wt /= HEADROOMG2Q;
+}
       }
 
     // Select z value of branching to q, and corrective weight.
@@ -1300,6 +1346,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
             isEnhancedQ2QG = true;
           }
         }
+
       // g -> q (+ qbar).
       } else {
         idMother = 21;
@@ -1313,6 +1360,24 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         }
         // Account for headroom factor for gluons
         wt /= HEADROOMG2Q;
+
+// For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
+// Thus, use q->gq kernels here!!!
+if (!usePDF) {
+// q -> g (+ q): also select flavour.
+double temp = xPDFmotherSum * rndmPtr->flat();
+idMother = -nQuarkIn - 1;
+do { temp -= xPDFmother[(++idMother) + 10]; }
+while (temp > 0. && idMother < nQuarkIn);
+idSister = idMother;
+z = (zMinAbs * zMaxAbs) / pow2( sqrt(zMinAbs) + rndmPtr->flat()
+  * ( sqrt(zMaxAbs)- sqrt(zMinAbs) ));
+wt = 0.5 * (1. + pow2(1. - z)) * sqrt(z);
+    /* * xPDFdaughter / xPDFmother[idMother + 10];*/
+// Account for headroom factor used to enhance trial probability
+wt /= HEADROOMQ2G;
+}
+
         // Optionally enhanced branching rate.
         nameNow = "isr:G2QQ";
         if (canEnhanceET) {
@@ -1325,7 +1390,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
       }
     }
 
-        if (!usePDF) wt *= z;
+if (!usePDF) wt *= z;
 
     // Cancel out uncertainty-band extra headroom factors.
     wt /= overFac;
@@ -1346,11 +1411,11 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     pT2corr = Q2 - z * (m2Dip + Q2) * (Q2 + m2Sister) / m2Dip;
     if (pT2corr < TINYPT2) { wt = 0.; continue; }
 
-    double zMaxNow     = 1. - 0.5 * (pT2 / m2Dip) *
+/*    double zMaxNow     = 1. - 0.5 * (pT2 / m2Dip) *
         ( sqrt( 1. + 4. * m2Dip / pT2 ) - 1. );
     double zMinNow = max(zMinAbs,1.-zMaxNow);
     if (z > zMaxNow) { wt = 0.; continue; }
-    if (z < zMinNow) { wt = 0.; continue; }
+    if (z < zMinNow) { wt = 0.; continue; }*/
 
     // emissions not ordered in rapidity (= angle).
     if ( iSysNow == 0 && doRapidityOrder && dipEndNow->nBranch > 0
@@ -1428,8 +1493,6 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
   // Iterate until acceptable pT (or have fallen below pTmin).
   } while (wt < rndmPtr->flat()) ;
-
-//cout << scientific << setprecision(8) << " picked " << wt << " pT=" << sqrt(pT2) << " " << " z=" << z << " zMin=" << zMinAbs << endl;
 
   // Store outcome of enhanced branching rate analysis.
   splittingNameNow = nameNow;
@@ -2423,8 +2486,6 @@ bool SpaceShower::branch( Event& event) {
   double x1New      = (side == 1) ? xMo : x1;
   double x2New      = (side == 2) ? xMo : x2;
 
-//cout << scientific << setprecision(8) << " try branch pT2=" << dipEndSel->pT2 << " " << " z=" << dipEndSel->z << " zMin=" << x1New << " " <<  x2New<< endl;
-
   // Flag for gamma -> q qbar splittings.
   gamma2qqbar  = false;
 
@@ -3177,8 +3238,6 @@ bool SpaceShower::branch( Event& event) {
   // If gamma -> q qbar valid with photon beam no need for remnants.
   if ( beamNow.isGamma() && beamNow.resolvedGamma() && gamma2qqbar)
     beamNow.resolvedGamma(false);
-
-//cout << scientific << setprecision(8) << " success branch pT2=" << dipEndSel->pT2 << " " << " z=" << dipEndSel->z << " zMin=" << x1New << " " <<  x2New<< endl;
 
   // Done without any errors.
   return true;

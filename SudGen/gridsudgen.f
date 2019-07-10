@@ -120,7 +120,7 @@ c        if (itype .ne. 1) cycle
         write(iunit1,*)'===>Doing itype=',itype
         write(iunit2,*)'===>Doing itype=',itype
         do ipart=1,npart
-c          if (ipart .ne. 1) cycle
+c          if (ipart .ne. 7) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart

@@ -11,7 +11,8 @@
 
       double precision fx(-7:7),x,xmu,nnfx(-6:7)
 
-      call NNPDFDriver('NNPDF23nlo_as_0119_qed_mem0.grid')
+c      call NNPDFDriver('NNPDF23nlo_as_0119_qed_mem0.grid')
+      call NNPDFDriver('NNPDF23_lo_as_0130_qed_mem0.grid')
 
 c
       do i=1,21
@@ -25,7 +26,7 @@ c
       id=21
       itype=1
       iseed=59822
-      min_py_sudakov=0.00001d0
+      min_py_sudakov=0.0000001d0
       x=1d0
       stlow1=stupp1
       stlow2=stupp1
@@ -79,9 +80,10 @@ c$$$      xmu=stlow2
       
       tmp2PDF=fx(mod(id,21))
 
-      write (*,*) x,temp2/temp1,tmp2PDF/tmp1PDF, (temp2
-     $     /temp1)/(tmp2PDF/tmp1PDF), temp2,temp1,(temp2
-     $     /temp1)/(tmp2PDF/tmp1PDF)**2
+      write (*,*) 'id=', id, 'x=', x, 'Pi=',
+     $   temp2/temp1,tmp2PDF/tmp1PDF,
+     $  'Pi/PDFratio=', (temp2/temp1)/(tmp2PDF/tmp1PDF),
+     $   temp2,temp1,(temp2/temp1)/(tmp2PDF/tmp1PDF)**2
 
       enddo
 
