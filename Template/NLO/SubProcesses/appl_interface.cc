@@ -153,6 +153,14 @@ extern "C" void appl_init_() {
             ++index;
         }
     }
+
+    std::cout << "[amcblast] loaded grid the following coupling orders:\n";
+
+    for (auto const& order : order_ids)
+    {
+        std::cout << "O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
+            << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
+    }
   }
   // If the grid does not exist, book it after having defined all the
   // relevant parameters.
@@ -201,6 +209,14 @@ extern "C" void appl_init_() {
             // WF
             order_ids.emplace_back(qcd / 2, qed / 2, 1, 0);
         }
+    }
+
+    std::cout << "[amcblast] booked grid the following coupling orders:\n";
+
+    for (auto const& order : order_ids)
+    {
+        std::cout << "O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
+            << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
     }
 
     // Define the settings for the interpolation in x and Q2.
