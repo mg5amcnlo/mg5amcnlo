@@ -153,14 +153,6 @@ extern "C" void appl_init_() {
             ++index;
         }
     }
-
-    // if there's exactly one LO and one NLO make sure that the order is W0,WR,WF,WB (for
-    // compatibility reasons)
-    if ((order_ids.size() == 4) && (translation_table.size() == 2))
-    {
-        translation_table[0] = 3;
-        translation_table[1] = 0;
-    }
   }
   // If the grid does not exist, book it after having defined all the
   // relevant parameters.
@@ -208,23 +200,6 @@ extern "C" void appl_init_() {
             order_ids.emplace_back(qcd / 2, qed / 2, 0, 1);
             // WF
             order_ids.emplace_back(qcd / 2, qed / 2, 1, 0);
-        }
-    }
-
-    // if there's exactly one LO and one NLO make sure that the order is W0,WR,WF,WB (for
-    // compatibility reasons)
-    if (translation_tables.back().size() == 2)
-    {
-        int sum_one = appl_common_fixed_.qcdpower[0] + appl_common_fixed_.qedpower[0];
-        int sum_two = appl_common_fixed_.qcdpower[1] + appl_common_fixed_.qedpower[1];
-
-        if (sum_one < sum_two)
-        {
-            // WB,W0,WR,WF -> W0,WR,WF,WB
-            std::rotate(order_ids.begin(), std::next(order_ids.begin(), 1), order_ids.end());
-
-            translation_tables.back()[0] = 3;
-            translation_tables.back()[1] = 0;
         }
     }
 
