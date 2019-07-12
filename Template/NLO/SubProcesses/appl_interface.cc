@@ -139,26 +139,27 @@ extern "C" void appl_init_() {
     int qed_power = -1;
     int index = 0;
 
-    // build the translation table
-    for (auto const& id : order_ids)
+    // when loading the grids, the stored orders might be sorted differently
+    for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
     {
-        if ((qcd_power != id.alphs()) || (qed_power != id.alpha()))
-        {
-            qcd_power = id.alphs();
-            qed_power = id.alpha();
-            translation_table.push_back(index++);
-        }
-        else
-        {
-            ++index;
-        }
+        int const alphs = appl_common_fixed_.qcdpower[i] / 2;
+        int const alpha = appl_common_fixed_.qedpower[i] / 2;
+
+        // try to find the W0/WB grid
+        auto const it = std::find(order_ids.begin(), order_ids.end(),
+            appl::order_id(alphs, alpha, 0, 0));
+
+        // TODO: can this happen?
+        assert( it != order_ids.end() );
+
+        translation_table.push_back(std::distance(order_ids.begin(), it));
     }
 
     std::cout << "[amcblast] loaded grid the following coupling orders:\n";
 
     for (auto const& order : order_ids)
     {
-        std::cout << "O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
+        std::cout << "[amcblast] O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
             << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
     }
   }
