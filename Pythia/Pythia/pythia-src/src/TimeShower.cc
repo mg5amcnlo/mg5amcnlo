@@ -114,6 +114,8 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
   useFixedFacScale  = settingsPtr->flag("TimeShower:useFixedFacScale");
   fixedFacScale2    = pow2(settingsPtr->parm("TimeShower:fixedFacScale"));
 
+  usePDFsSave       = settingsPtr->flag("TimeShower:usePDFs");
+
   // Parameters of alphaStrong generation.
   alphaSvalue        = settingsPtr->parm("TimeShower:alphaSvalue");
   alphaSorder        = settingsPtr->mode("TimeShower:alphaSorder");
@@ -2115,7 +2117,7 @@ double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
   iDipSel       = 0;
   iSysSel       = 0;
   dipSel        = 0;
-  usePDF = false;
+  usePDF = usePDFsSave;
 
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {

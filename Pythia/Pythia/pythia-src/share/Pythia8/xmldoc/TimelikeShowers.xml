@@ -805,6 +805,11 @@ The fixed factorization scale, in GeV, that would be used in the
 evaluation of parton densities if the <code>flag</code> above is on. 
 </parm> 
  
+<flag name="TimeShower:usePDFs" default="on"> 
+If switched off, the timelike showers will produce Sudakov factors
+instead of no-emission probabilities.
+</flag>
+ 
 </chapter> 
  
 <!-- Copyright (C) 2017 Torbjorn Sjostrand --> 

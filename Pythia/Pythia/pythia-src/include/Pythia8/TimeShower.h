@@ -268,7 +268,7 @@ private:
          globalRecoil, useLocalRecoilNow, doSecondHard, hasUserHooks,
          singleWeakEmission, alphaSuseCMW, vetoWeakJets, allowMPIdipole,
          weakExternal, recoilDeadCone, doUncertainties, uVarMuSoftCorr,
-         uVarMPIshowers;
+         uVarMPIshowers, usePDFsSave;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, nGluonToQuark,
          weightGluonToQuark, alphaEMorder, nGammaToQuark, nGammaToLepton,
          nCHV, idHV, alphaHVorder, nMaxGlobalRecoil, weakMode;

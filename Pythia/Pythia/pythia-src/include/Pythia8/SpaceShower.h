@@ -256,7 +256,8 @@ private:
          doPhiPolAsymHard, doPhiIntAsym, doRapidityOrder, useFixedFacScale,
          doSecondHard, canVetoEmission, hasUserHooks, alphaSuseCMW,
          singleWeakEmission, vetoWeakJets, weakExternal, doRapidityOrderMPI,
-         doUncertainties, uVarMuSoftCorr, uVarMPIshowers, doMPI, gamma2qqbar;
+         doUncertainties, uVarMuSoftCorr, uVarMPIshowers, doMPI, gamma2qqbar,
+         usePDFsSave;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, alphaEMorder,
          nQuarkIn, enhanceScreening, weakMode;
   double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,

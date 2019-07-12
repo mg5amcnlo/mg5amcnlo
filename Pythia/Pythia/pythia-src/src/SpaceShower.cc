@@ -132,6 +132,8 @@ void SpaceShower::init( BeamParticle* beamAPtrIn,
   useFixedFacScale  = settingsPtr->flag("SpaceShower:useFixedFacScale");
   fixedFacScale2    = pow2(settingsPtr->parm("SpaceShower:fixedFacScale"));
 
+  usePDFsSave       = settingsPtr->flag("SpaceShower:usePDFs");
+
   // Parameters of alphaStrong generation.
   alphaSvalue     = settingsPtr->parm("SpaceShower:alphaSvalue");
   alphaSorder     = settingsPtr->mode("SpaceShower:alphaSorder");
@@ -816,7 +818,7 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
   iDipSel       = 0;
   iSysSel       = 0;
   dipEndSel     = 0;
-  usePDF = false;
+  usePDF = usePDFsSave;
   //usePDF = true;
 
   bool hasEvolSideA(false), hasEvolSideB(false);
@@ -1091,11 +1093,8 @@ Lambda2   = Lambda3flav2;
 // Thus, use g->qq~ kernels here!!!
 if (!usePDF) {
 q2gInt = overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
-// There are NF possibilities for this splitting.
-q2gInt *= NF;
-// ... but only one line of the gluon evolving (i.e. only half of the color 
-// factor)
-//q2gInt /= 2.;
+// There are NF possibilities for this splitting, for g->qq~ and g->q~q alike.
+q2gInt *= 2.*NF;
 }
 
         if (doMEcorrections) q2gInt *= calcMEmax(MEtype, 1, 21);
