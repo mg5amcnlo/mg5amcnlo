@@ -137,7 +137,6 @@ extern "C" void appl_init_() {
 
     int qcd_power = -1;
     int qed_power = -1;
-    int index = 0;
 
     // when loading the grids, the stored orders might be sorted differently
     for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
@@ -152,7 +151,12 @@ extern "C" void appl_init_() {
         // TODO: can this happen?
         assert( it != order_ids.end() );
 
-        translation_table.push_back(std::distance(order_ids.begin(), it));
+        auto const index = std::distance(order_ids.begin(), it);
+
+        std::cout << "[amcblast] mg5_aMC O(as^" << alphs << " a^" << alpha << ") -> " << index
+            << '\n';
+
+        translation_table.push_back(index);
     }
 
     std::cout << "[amcblast] loaded grid the following coupling orders:\n";
@@ -162,6 +166,8 @@ extern "C" void appl_init_() {
         std::cout << "[amcblast] O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
             << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
     }
+
+    std::cout << std::flush;
   }
   // If the grid does not exist, book it after having defined all the
   // relevant parameters.
@@ -219,6 +225,8 @@ extern "C" void appl_init_() {
         std::cout << "O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
             << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
     }
+
+    std::cout << std::flush;
 
     // Define the settings for the interpolation in x and Q2.
     // These are common to all the grids computed.
