@@ -11,11 +11,22 @@ STDHEPDIR= ./StdHEP/
 GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o	\
 	  run_printout.o dgauss.o ranmar.o setrun.o
 
+ifneq ("$(wildcard ./RUNNING)","")
+	LINKLIBS += -lrunning
+	LIBS += $(LIBDIR)librunning.$(libext) 
+endif
+
+
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
-    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc
+    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS)
 	rm -f PDF/*.o
+
+
+$(LIBDIR)librunning.$(libext): Running
+	rm -f $(LIBDIR)librunning.a
+	cd Running; make
 
 $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a
