@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """Definitions of objects inheriting from the classes defined in
 helas_objects.py and which have special attributes and function 
 devoted to the treatment of Loop processes"""
@@ -1034,8 +1033,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
             # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
+            diagram_wavefunctions.sort(key=lambda wf: wf.get('number'))
+                
 
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
@@ -1650,8 +1649,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                       [wf for wf in diagram_wavefunctions if wf['is_loop']])     
 
             # Sort the wavefunctions according to number
-            struct_wfs.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
+            struct_wfs.sort(key = lambda wf: wf.get('number'))
                              
             # After generation of all wavefunctions and amplitudes,
             # add wavefunctions to diagram

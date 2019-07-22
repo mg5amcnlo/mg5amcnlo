@@ -2249,7 +2249,7 @@ c     this subdir has no soft singularities
         jamp_lines = self.get_JAMP_lines(matrix_element)
         new_jamp_lines = []
         for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP1')
+            line = line.replace('JAMP', 'JAMP1')
             new_jamp_lines.append(line)
         replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
     
@@ -2257,7 +2257,7 @@ c     this subdir has no soft singularities
         jamp_lines = self.get_JAMP_lines(matrix_element)
         new_jamp_lines = []
         for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP2')
+            line = line.replace( 'JAMP', 'JAMP2')
             new_jamp_lines.append(line)
         replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
     

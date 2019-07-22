@@ -23,6 +23,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+import madgraph.various.misc as misc
 from operator import itemgetter
 import copy
 import logging
@@ -490,7 +491,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                     if pp['mass'].lower() == 'zero':
                         soft_parts.append(pp.get_pdg_code())
 
-    return {'interactions': sorted(qcd_inter),
+    return {'interactions': sorted(qcd_inter, key=misc.cmp_to_key(misc.dict_cmp)),
             'pert_particles': sorted(set(pert_parts)),
             'soft_particles': sorted(set(soft_parts))}    
 

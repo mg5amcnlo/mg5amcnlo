@@ -482,6 +482,7 @@ QED = CouplingOrder(name = 'QED',
                 self.assertEqual(line1.replace(',',')'), line2.replace(',',')'))
             except Exception:
                 self.assertEqual(target, text)
+                
     def test_write_vertices(self):
         """Check that the content of the file is valid"""
 

@@ -2129,6 +2129,32 @@ def cmp_to_key(mycmp):
             return mycmp(self.obj, other.obj) != 0
     return K
 
+def smallest_diff_key(A, B):
+    """return the smallest key adiff in A such that adiff not in B or A[adiff] != B[bdiff]"""
+    diff_keys = [k for k in A if k not in B or A[k] != B[k]]
+    return min(diff_keys)
+
+def dict_cmp(A, B, level=1):
+    if len(A) != len(B):
+        return (len(A) > len(B)) - (len(A) < len(B))
+    try:
+        adiff = smallest_diff_key(A, B)
+    except ValueError:
+        # No difference.
+        return 0
+    bdiff = smallest_diff_key(B, A)
+    if adiff != bdiff:
+        a = adiff
+        b = bdiff
+        return (a > b) - (a < b)        
+    a = A[adiff]
+    b = B[bdiff]
+    if isinstance(a, dict):
+        return dict_cmp(a,b,level=level+1)
+    else:
+        return (a > b) - (a < b)
+        #return cmp(A[adiff], B[bdiff])
+
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
 #oldfile = __builtin__.file

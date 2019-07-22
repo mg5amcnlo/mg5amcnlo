@@ -32,10 +32,12 @@ import madgraph.core.color_algebra as color
 import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
 import fractions
+import operator
 
 class TestFKSCommon(unittest.TestCase):
     """ a class to test FKS common functions and classes"""
@@ -2171,20 +2173,21 @@ class TestFKSCommon(unittest.TestCase):
         to the perturbative expansion are correctly extracted from the model"""
         # QCD
         dict = fks_common.find_pert_particles_interactions(self.model, 'QCD')
-        res_int = self.expected_qcd_inter
+        res_int = sorted(self.expected_qcd_inter, key=operator.itemgetter('id'))
         res_part = [-6,-2,-1,1,2,6,21]
         res_soft = [-2,-1,1,2,21]
+
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
         # QED
         dict = fks_common.find_pert_particles_interactions(self.model, 'QED')
-        res_int = self.expected_qed_inter
+        res_int = sorted(self.expected_qed_inter, key=operator.itemgetter('id'))
         res_part = [-11,-6,-2,-1,1,2,6,11,22]
         res_soft = [-11,-2,-1,1,2,11,22]
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
 
 
     def test_find_pert_particles_interactionsi_mssm(self):

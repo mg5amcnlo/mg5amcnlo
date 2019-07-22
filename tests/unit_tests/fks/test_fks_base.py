@@ -29,6 +29,7 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
@@ -866,8 +867,9 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),11)
-        for real, fks_info in zip(myfks.real_amps, target_fks_infos):
-            self.assertEqual(real.fks_infos, fks_info)
+        for real in myfks.real_amps:
+            self.assertIn(real.fks_infos, target_fks_infos)
+
 
     def test_FKSProcess_aguux_qed(self):
         """tests that for a g > u u~ all the relevant QED splittings are there"""

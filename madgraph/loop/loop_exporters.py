@@ -797,6 +797,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                     # final color matrix
                     line_denom.append(res.denominator*-1)
                 else:
+                    misc.sprint(real_num, common_denom)
                     res=fractions.Fraction(real_num,common_denom)
                     line_num.append(res.numerator)
                     # Positive denominator means real color coef of the final color matrix

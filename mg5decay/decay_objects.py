@@ -1949,13 +1949,15 @@ class DecayModel(model_reader.ModelReader):
     def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
         
-        if q < 0.5:
-            return
-
         # Raise error for wrong type of q
         if not isinstance(q, int) and not isinstance(q, int) and \
                 not isinstance(q, float):
             raise self.PhysicsObjectError("The argument %s should be numerical type." %str(q))
+
+        if q < 0.5:
+            return
+
+
 
         # Declare global value. amZ0 is the alpha_s at Z pole
         global aS, amZ0, mdl_amZ0
