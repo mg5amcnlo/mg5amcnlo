@@ -1072,12 +1072,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
 
+                assert all([int(i)==i for i in num_list])
+
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5i" % i for i in num_list[k:k + n]])))
+                                     ','.join(["%5i" % int(i) for i in num_list[k:k + n]])))
                 my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
                 ret_list.append("C %s" % repr(my_cs))
+
             return ret_list
 
 

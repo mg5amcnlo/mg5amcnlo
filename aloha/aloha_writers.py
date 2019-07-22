@@ -1069,8 +1069,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         # couplings
         if couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
-            detected_couplings.sort(coup_sort)
+            coup_sort = lambda x,y: int(x[4:])-int(y[4:])  
+            detected_couplings.sort(key=lambda x: int(x[4:]) if x[4:] else 0 )
             if detected_couplings:
                 couplings = detected_couplings
             else:

@@ -791,14 +791,15 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                 assert not (real_num!=0 and imag_num!=0), "MadGraph5_aMC@NLO found a "+\
                   "color matrix element which has both a real and imaginary part."
                 if imag_num!=0:
-                    res=fractions.Fraction(imag_num,common_denom)
+                    assert int(imag_num) == imag_num and int(common_denom) == common_denom
+                    res=fractions.Fraction(int(imag_num),int(common_denom))
                     line_num.append(res.numerator)
                     # Negative denominator means imaginary color coef of the
                     # final color matrix
                     line_denom.append(res.denominator*-1)
                 else:
-                    misc.sprint(real_num, common_denom)
-                    res=fractions.Fraction(real_num,common_denom)
+                    assert int(real_num) == real_num and int(common_denom) == common_denom
+                    res=fractions.Fraction(int(real_num),int(common_denom))
                     line_num.append(res.numerator)
                     # Positive denominator means real color coef of the final color matrix
                     line_denom.append(res.denominator)

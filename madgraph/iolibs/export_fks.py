@@ -3156,8 +3156,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % i for i in num_list[k:k + n]])))
-
+                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================

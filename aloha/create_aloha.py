@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import absolute_import
 import cmath
 import copy
+import operator
 import six.moves.cPickle
 import glob
 import logging
@@ -959,7 +960,7 @@ class AbstractALOHAModel(dict):
                         if a[0] < b[0]: return -1
                         else: return 1
                     routines = request[list_l_name[0]][conjg]
-                    routines.sort(sorting)
+                    routines.sort(key=operator.itemgetter(0))
                     if not conjg:
                         # No need to conjugate -> compute directly
                         self.compute_aloha(builder, routines=routines)
