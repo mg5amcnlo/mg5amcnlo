@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.7()
+      RF: Fixed a bug in the warning when using FxFx in conjunction with Herwig++/Herwig7. Also, with latest version of
+          Herwig7.1.x, the FxFx needed files are compiled by default with in the Herwig code. Thanks Andreas Papaefstathiou.
+
 2.6.6(28/07/19)
       OM: Bug in the edition of the shower_card. The set command of logical parameter was never setting the 
           parameter to False. (Thanks to Richard Ruiz) 

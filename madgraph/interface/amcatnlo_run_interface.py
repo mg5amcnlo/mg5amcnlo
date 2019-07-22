@@ -5396,11 +5396,11 @@ RESTART = %(mint_mode)s
     read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     raise self.InvalidCmd("""FxFx merging does not work with Q-squared ordered showers.""")
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIGPP':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
-                    answer = self.ask(question, 'n', answers, alias=alias)
+                    answer = self.ask(question, 'n', answers)
                     if answer == 'n':
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
