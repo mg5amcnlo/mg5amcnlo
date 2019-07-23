@@ -164,15 +164,15 @@ void CPPProcess::sigmaKin()
 double CPPProcess::sigmaHat() 
 {
   // Select between the different processes
-  if(id1 == 2 && id2 == -2)
-  {
-    // Add matrix elements for processes with beams (2, -2)
-    return matrix_element[0]; 
-  }
-  else if(id1 == -2 && id2 == 2)
+  if(id1 == -2 && id2 == 2)
   {
     // Add matrix elements for processes with beams (-2, 2)
     return matrix_element[1]; 
+  }
+  else if(id1 == 2 && id2 == -2)
+  {
+    // Add matrix elements for processes with beams (2, -2)
+    return matrix_element[0]; 
   }
   else
   {

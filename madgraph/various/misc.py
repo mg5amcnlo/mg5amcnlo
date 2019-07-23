@@ -1126,6 +1126,12 @@ class TMP_variable(object):
     def __enter__(self):
         return self.old_value 
     
+    #allow to use as decorator
+    def __call__(self, func):
+        def wrapper(*args, **kwds):
+            with self:
+                return func(*args, **kwds)
+    
 #
 # GUNZIP/GZIP
 #

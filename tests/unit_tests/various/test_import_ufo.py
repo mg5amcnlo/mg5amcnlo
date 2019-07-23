@@ -384,7 +384,7 @@ class TestRestrictModel(unittest.TestCase):
             self.assertTrue(has_GC, True)
         
         # check that the same occur with opposite sign coupling
-        target = [i for i in iden if len(i)==2][1] 
+        target = [i for i in sorted(iden) if len(i)==2][1] 
         target2 = [i[0] for i in target]
         GC = target2[0]
         

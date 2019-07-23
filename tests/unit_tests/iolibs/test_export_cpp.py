@@ -582,14 +582,14 @@ void Sigma_sm_qqx_qqx::sigmaKin()
 double Sigma_sm_qqx_qqx::sigmaHat() 
 {
   // Select between the different processes
-  if(id1 == 4 && id2 == -4)
-  {
-    // Add matrix elements for processes with beams (4, -4)
-    return matrix_element[0]; 
-  }
-  else if(id1 == 2 && id2 == -2)
+  if(id1 == 2 && id2 == -2)
   {
     // Add matrix elements for processes with beams (2, -2)
+    return matrix_element[0]; 
+  }
+  else if(id1 == 4 && id2 == -4)
+  {
+    // Add matrix elements for processes with beams (4, -4)
     return matrix_element[0]; 
   }
   else
@@ -604,10 +604,10 @@ double Sigma_sm_qqx_qqx::sigmaHat()
 
 void Sigma_sm_qqx_qqx::setIdColAcol() 
 {
-  if(id1 == 4 && id2 == -4)
+  if(id1 == 2 && id2 == -2)
   {
-    // Pick one of the flavor combinations (4, -4)
-    int flavors[1][2] = {{4, -4}}; 
+    // Pick one of the flavor combinations (2, -2)
+    int flavors[1][2] = {{2, -2}}; 
     vector<double> probs; 
     double sum = matrix_element[0]; 
     probs.push_back(matrix_element[0]/sum); 
@@ -615,10 +615,10 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
     id3 = flavors[choice][0]; 
     id4 = flavors[choice][1]; 
   }
-  else if(id1 == 2 && id2 == -2)
+  else if(id1 == 4 && id2 == -4)
   {
-    // Pick one of the flavor combinations (2, -2)
-    int flavors[1][2] = {{2, -2}}; 
+    // Pick one of the flavor combinations (4, -4)
+    int flavors[1][2] = {{4, -4}}; 
     vector<double> probs; 
     double sum = matrix_element[0]; 
     probs.push_back(matrix_element[0]/sum); 

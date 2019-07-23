@@ -132,16 +132,14 @@ class Event:
         """ return a string with the momenta of the event written 
                 in an easy readable way
         """
-        line=""
+        line=[]
         for part in range(1,len(self.particle)+1):
-            line+=str(self.particle[part]["pid"])+" "
-            line+=str(self.particle[part]["momentum"].px)+" "
-            line+=str(self.particle[part]["momentum"].py)+" "
-            line+=str(self.particle[part]["momentum"].pz)+" "
-            line+=str(self.particle[part]["momentum"].E)+"    " 
-            line+=str(self.particle[part]["momentum"].m)+"    " 
-            line+="\n"
-        return line
+            pid = self.particle[part]["pid"]
+            m = self.particle[part]["momentum"]
+            line.append("%i %s %.7g %.7g %.7g %.7g" % 
+                        (pid, m.px, m.py, m.pz, m.E, m.m))
+        line.append('')
+        return "\n".join(line)
     
     def get_tag(self):
         

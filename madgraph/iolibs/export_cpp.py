@@ -721,7 +721,7 @@ class OneProcessExporterCPP(object):
         beams = set([(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
                      for process in self.processes])
-
+        beams = sorted(list(beams))
         res_lines = []
 
         # Write a selection routine for the different processes with
@@ -1328,7 +1328,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         beams = set([(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
                      for process in self.processes])
-
+        beams = sorted(list(beams))
         # Now write a selection routine for final state ids
         for ibeam, beam_parts in enumerate(beams):
             if ibeam == 0:
