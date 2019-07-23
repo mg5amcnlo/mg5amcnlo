@@ -427,7 +427,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     # save in a pickle files to fasten future usage
     if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
-                                   model, log=False)
+                                   model, log=False, allow_fail=True)
 
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 

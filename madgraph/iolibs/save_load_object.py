@@ -20,6 +20,7 @@ import pickle
 import six.moves.cPickle
 
 from . import files as files
+import madgraph.various.misc as misc
 import six
 
 class SaveObjectError(Exception):
@@ -27,13 +28,14 @@ class SaveObjectError(Exception):
     object to file."""
     pass
 
-def save_to_file(filename, object, log=True):
+def save_to_file(filename, object, log=True, allow_fail=True):
     """Save any Python object to file filename"""
 
     if not isinstance(filename, six.string_types):
         raise SaveObjectError("filename must be a string")
 
-    files.write_to_file(filename, pickle_object, object, log=log, binary=True)
+    files.write_to_file(filename, pickle_object, object, log=log, binary=True,
+                        bypass_error=True)
 
     return True
     
@@ -44,11 +46,18 @@ def load_from_file(filename,binary=True):
         raise SaveObjectError("filename must be a string")
     return files.read_from_file(filename, unpickle_object, binary=binary)
     
-def pickle_object(fsock, object):
+def pickle_object(fsock, object, bypass_error=False, **opts):
     """Helper routine to pickle an object to file socket fsock"""
 
-    six.moves.cPickle.dump(object, fsock, protocol=2)
-
+    try:
+        six.moves.cPickle.dump(object, fsock, protocol=2)
+    except Exception as error:
+        if bypass_error:
+            return
+        else:
+            raise 
+        
+        
 class UnPickler(pickle.Unpickler):
     """Treat problem of librarie"""
     

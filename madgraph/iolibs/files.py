@@ -66,7 +66,7 @@ def write_to_file(filename, myfunct, *args, **opts):
             sock = open(filename, 'wb')
 
         try:
-            ret_value = myfunct(sock, *args)
+            ret_value = myfunct(sock, *args, **opts)
         finally:
             sock.close()
     except IOError as xxx_todo_changeme1:
