@@ -80,7 +80,7 @@ class TimeShower {
 public:
 
   // Constructor.
-  TimeShower() {beamOffset = 0; usePDF = useSystems = true; }
+  TimeShower() {beamOffset = 0; pdfMode = 0; useSystems = true; }
 
   // Destructor.
   virtual ~TimeShower() {}
@@ -212,7 +212,8 @@ public:
     double x = -1.);
   double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
     int id, int type, double s = -1., double x = -1.);
-  bool usePDF, useSystems;
+  int pdfMode;
+  bool useSystems;
 
 protected:
 
@@ -268,7 +269,8 @@ private:
          globalRecoil, useLocalRecoilNow, doSecondHard, hasUserHooks,
          singleWeakEmission, alphaSuseCMW, vetoWeakJets, allowMPIdipole,
          weakExternal, recoilDeadCone, doUncertainties, uVarMuSoftCorr,
-         uVarMPIshowers, usePDFsSave;
+         uVarMPIshowers;
+  int    pdfModeSave;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, nGluonToQuark,
          weightGluonToQuark, alphaEMorder, nGammaToQuark, nGammaToLepton,
          nCHV, idHV, alphaHVorder, nMaxGlobalRecoil, weakMode;

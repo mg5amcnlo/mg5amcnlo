@@ -132,7 +132,7 @@ void SpaceShower::init( BeamParticle* beamAPtrIn,
   useFixedFacScale  = settingsPtr->flag("SpaceShower:useFixedFacScale");
   fixedFacScale2    = pow2(settingsPtr->parm("SpaceShower:fixedFacScale"));
 
-  usePDFsSave       = settingsPtr->flag("SpaceShower:usePDFs");
+  pdfModeSave       = settingsPtr->mode("SpaceShower:pdfMode");
 
   // Parameters of alphaStrong generation.
   alphaSvalue     = settingsPtr->parm("SpaceShower:alphaSvalue");
@@ -818,8 +818,7 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
   iDipSel       = 0;
   iSysSel       = 0;
   dipEndSel     = 0;
-  usePDF = usePDFsSave;
-  //usePDF = true;
+  pdfMode = pdfModeSave;
 
   bool hasEvolSideA(false), hasEvolSideB(false);
 
@@ -847,7 +846,6 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
     iNow          = dipEndNow->iRadiator;
     iRec          = dipEndNow->iRecoiler;
     idDaughter    = event[dipEndNow->iRadiator].id();
-    //xDaughter     = (usePDF) ? x1 : 0.;
     xDaughter=x1;
     x1Now         = (sideA) ? x1 : x2;
     x2Now         = (sideA) ? x2 : x1;
@@ -878,7 +876,7 @@ double SpaceShower::pTnext( vector<SpaceDipoleEnd> dipEnds, Event event,
   // End loop over dipole ends.
   }
 
-  usePDF = true;
+  pdfMode = 0;
 
   // Return nonvanishing value if found pT is bigger than already found.
   return (dipEndSel == 0) ? 0. : sqrt(pT2sel);
@@ -918,15 +916,16 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   double pT2         = pT2begDip;
   double xMaxAbs     = beam.xMax(iSysNow);
   double zMinAbs     = xDaughter / xMaxAbs;
-  if (usePDF && xMaxAbs < 0.) {
+  if (pdfMode == 0 && xMaxAbs < 0.) {
     infoPtr->errorMsg("Warning in SpaceShower::pT2nextQCD: "
     "xMaxAbs negative");
     return;
   }
 
-  // Hard cut-off for z-integration if no bound from Bjorken x is possible.
-  if (!usePDF) { zMinAbs = 1e-5; xMaxAbs = 1.;}
-  if (!usePDF) isValence = false;
+// Hard cut-off for z-integration if no bound from Bjorken x is possible.
+if (pdfMode==1) { zMinAbs = 1e-5; xMaxAbs = 1.;}
+if (pdfMode==2) { zMinAbs = 0.5; xMaxAbs = 1.;}
+if (pdfMode!=0) isValence = false;
 
   // Starting values for handling of massive quarks (c/b), if any.
   double idMassive   = 0;
@@ -944,7 +943,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     if (pT2 < HEAVYPT2EVOL * m2Massive) return;
     mRatio = sqrt( m2Massive / m2Dip );
     zMaxMassive = (1. -  mRatio) / ( 1. +  mRatio * (1. -  mRatio) );
-    if (usePDF && xDaughter > HEAVYXEVOL * zMaxMassive * xMaxAbs) return;
+    if (pdfMode==0 && xDaughter > HEAVYXEVOL * zMaxMassive * xMaxAbs) return;
 
     // Find threshold scale below which only g -> Q + Qbar will be allowed.
     m2Threshold = (idMassive == 4) ? min( pT2, CTHRESHOLD * m2c)
@@ -981,12 +980,8 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   double pT2PDF         = pT2;
   bool   needNewPDF     = true;
 
-  double CA= 3.;
-  double CF = 4./3.;
-  double NF = 5.;
+  double NF = nQuarkIn;
   double TR = 0.5;
-  double colorFactor_g2gg = (11.*CA - 4.*NF*TR)/6.;
-  double extraHeadroom = 1.;
 
   // Add more headroom if doing uncertainty variations
   // (to ensure at least a minimal number of failed branchings).
@@ -1015,7 +1010,7 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     // Bad sign if repeated looping with small daughter PDF, so fail.
     // (Example: if all PDF's = 0 below Q_0, except for c/b companion.)
     if (hasTinyPDFdau) ++loopTinyPDFdau;
-    if (usePDF && loopTinyPDFdau > MAXLOOPTINYPDF) {
+    if (pdfMode==0 && loopTinyPDFdau > MAXLOOPTINYPDF) {
       infoPtr->errorMsg("Warning in SpaceShower::pT2nextQCD: "
       "small daughter PDF");
       return;
@@ -1046,11 +1041,12 @@ void SpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         Lambda2   = Lambda3flav2;
       }
 
-if (!usePDF) {
-nFlavour  = 3;
-pT2minNow = pT2endDip;
-b0        = 27./6.;
-Lambda2   = Lambda3flav2;
+// Always use five-flavor running?
+if (pdfMode!=0) {
+  nFlavour  = nQuarkIn;
+  pT2minNow = pT2endDip;
+  b0        = 23./6.;
+  Lambda2   = Lambda5flav2;
 }
 
       // A change of renormalization scale expressed by a change of Lambda.
@@ -1058,8 +1054,6 @@ Lambda2   = Lambda3flav2;
       zMaxAbs     = 1. - 0.5 * (pT2minNow / m2Dip) *
         ( sqrt( 1. + 4. * m2Dip / pT2minNow ) - 1. );
       if (isMassive) zMaxAbs = min( zMaxAbs, zMaxMassive);
-
-//      zMinAbs = max(0.,1.-zMaxAbs);
 
       // Go to another z range with lower mass scale if current is closed.
       if (zMinAbs > zMaxAbs) {
@@ -1071,9 +1065,9 @@ Lambda2   = Lambda3flav2;
 
       // Parton density of daughter at current scale.
       pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
-      xPDFdaughter = (usePDF)
+      xPDFdaughter = (pdfMode==0)
         ? beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2) : 1.;
-      if (usePDF && xPDFdaughter < TINYPDF) {
+      if (pdfMode==0 && xPDFdaughter < TINYPDF) {
         xPDFdaughter  = TINYPDF;
         hasTinyPDFdau = true;
       }
@@ -1091,10 +1085,10 @@ Lambda2   = Lambda3flav2;
 
 // For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
 // Thus, use g->qq~ kernels here!!!
-if (!usePDF) {
-q2gInt = overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
-// There are NF possibilities for this splitting, for g->qq~ and g->q~q alike.
-q2gInt *= 2.*NF;
+if (pdfMode!=0) {
+  q2gInt = overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
+  // There are NF possibilities for splitting, for g->qq~ and g->q~q alike.
+  q2gInt *= 2.*NF;
 }
 
         if (doMEcorrections) q2gInt *= calcMEmax(MEtype, 1, 21);
@@ -1107,7 +1101,7 @@ q2gInt *= 2.*NF;
           if (i == 0) {
             xPDFmother[10] = 0.;
           } else {
-            xPDFmother[i+10] = (usePDF)
+            xPDFmother[i+10] = (pdfMode==0)
               ? beam.xfISR(iSysNow, i, xDaughter, pdfScale2) : 1.;
             xPDFmotherSum += xPDFmother[i+10];
           }
@@ -1118,7 +1112,7 @@ q2gInt *= 2.*NF;
         double pdfRatioOver = xPDFmotherSum / xPDFdaughter;
         //kernelPDF = g2gInt + q2gInt * pdfRatioOver;
         kernelPDF = g2gInt; 
-        kernelPDF += (usePDF) ? q2gInt * pdfRatioOver : q2gInt;
+        kernelPDF += (pdfMode==0) ? q2gInt * pdfRatioOver : q2gInt;
 
       // For valence quark only need consider q -> q g branchings.
       // Introduce an extra factor sqrt(z) to smooth bumps.
@@ -1162,25 +1156,28 @@ q2gInt *= 2.*NF;
 
 // For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
 // Thus, use q->gq kernels here!!!
-if (!usePDF) {
-// Parton density of potential quark mothers to a g.
-xPDFmotherSum = 0.;
-for (int i = -nQuarkIn; i <= nQuarkIn; ++i) {
-  if (i == 0) {
-    xPDFmother[10] = 0.;
-  } else {
-    xPDFmother[i+10] = (usePDF)
-    ? beam.xfISR(iSysNow, i, xDaughter, pdfScale2) : 1.;
-    xPDFmotherSum += xPDFmother[i+10];
-  }
-}
-g2qInt = overFac * HEADROOMQ2G * (16./3.)
-       * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
-}
+if (pdfMode!=0) {
 
+  // Increase overstimate for P_qq, since we will also add P_gq(z) = P_qq(1-z)
+  if (pdfMode==2) q2qInt *= 2.;
+
+  // Parton density of potential quark mothers to a g.
+  xPDFmotherSum = 0.;
+  for (int i = -nQuarkIn; i <= nQuarkIn; ++i) {
+    if (i == 0) {
+      xPDFmother[10] = 0.;
+    } else {
+      xPDFmother[i+10] = (pdfMode==0)
+      ? beam.xfISR(iSysNow, i, xDaughter, pdfScale2) : 1.;
+      xPDFmotherSum += xPDFmother[i+10];
+    }
+  }
+  g2qInt = overFac * HEADROOMQ2G * (16./3.)
+         * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
+}
 
         // Parton density of a potential gluon mother to a q.
-        xPDFgMother = (usePDF)
+        xPDFgMother = (pdfMode==0)
           ? beam.xfISR(iSysNow, 21, xDaughter, pdfScale2) : 1.;
 
         // Total QCD evolution coefficient for a quark.
@@ -1188,7 +1185,7 @@ g2qInt = overFac * HEADROOMQ2G * (16./3.)
         double pdfRatioOver = xPDFgMother / xPDFdaughter;
         //kernelPDF = q2qInt + g2qInt * pdfRatioOver;
         kernelPDF = q2qInt; 
-        kernelPDF += (usePDF) ? g2qInt * pdfRatioOver : g2qInt;
+        kernelPDF += (pdfMode==0) ? g2qInt * pdfRatioOver : g2qInt;
 
       }
 
@@ -1298,13 +1295,13 @@ g2qInt = overFac * HEADROOMQ2G * (16./3.)
 
 // For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
 // Thus, use g->qq~ kernels here!!!
-if (!usePDF) {
-idMother = 21;
-idSister = - idDaughter;
-z = zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs);
-wt = (pow2(z) + pow2(1.-z));
-// Account for headroom factor for gluons
-wt /= HEADROOMG2Q;
+if (pdfMode!=0) {
+  idMother = 21;
+  idSister = - idDaughter;
+  z = zMinAbs + rndmPtr->flat() * (zMaxAbs - zMinAbs);
+  wt = (pow2(z) + pow2(1.-z));
+  // Account for headroom factor for gluons
+  wt /= HEADROOMG2Q;
 }
       }
 
@@ -1336,6 +1333,13 @@ wt /= HEADROOMG2Q;
         // Account for headroom factor for heavy quarks in photon beam.
         if (beam.isGamma() && isMassive) wt /= HEADROOMHQG;
 
+
+// For Sudakov (not no-emission prob), also add P_gq(z) = P_qq(1-z).
+// anddivide out additional factor of 2 in overestimate.
+if (pdfMode==2) {
+  wt += 0.5 *( 1. + pow2(1.-z))/z;
+  wt /= 2.;
+}
         // Optionally enhanced branching rate.
         nameNow = "isr:Q2QG";
         if (canEnhanceET) {
@@ -1362,19 +1366,19 @@ wt /= HEADROOMG2Q;
 
 // For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
 // Thus, use q->gq kernels here!!!
-if (!usePDF) {
-// q -> g (+ q): also select flavour.
-double temp = xPDFmotherSum * rndmPtr->flat();
-idMother = -nQuarkIn - 1;
-do { temp -= xPDFmother[(++idMother) + 10]; }
-while (temp > 0. && idMother < nQuarkIn);
-idSister = idMother;
-z = (zMinAbs * zMaxAbs) / pow2( sqrt(zMinAbs) + rndmPtr->flat()
-  * ( sqrt(zMaxAbs)- sqrt(zMinAbs) ));
-wt = 0.5 * (1. + pow2(1. - z)) * sqrt(z);
-    /* * xPDFdaughter / xPDFmother[idMother + 10];*/
-// Account for headroom factor used to enhance trial probability
-wt /= HEADROOMQ2G;
+if (pdfMode!=0) {
+  // q -> g (+ q): also select flavour.
+  double temp = xPDFmotherSum * rndmPtr->flat();
+  idMother = -nQuarkIn - 1;
+  do { temp -= xPDFmother[(++idMother) + 10]; }
+  while (temp > 0. && idMother < nQuarkIn);
+  idSister = idMother;
+  z = (zMinAbs * zMaxAbs) / pow2( sqrt(zMinAbs) + rndmPtr->flat()
+    * ( sqrt(zMaxAbs)- sqrt(zMinAbs) ));
+  wt = 0.5 * (1. + pow2(1. - z)) * sqrt(z);
+      /* * xPDFdaughter / xPDFmother[idMother + 10];*/
+  // Account for headroom factor used to enhance trial probability
+  wt /= HEADROOMQ2G;
 }
 
         // Optionally enhanced branching rate.
@@ -1389,7 +1393,7 @@ wt /= HEADROOMQ2G;
       }
     }
 
-if (!usePDF) wt *= z;
+if (pdfMode==1) wt *= z;
 
     // Cancel out uncertainty-band extra headroom factors.
     wt /= overFac;
@@ -1402,7 +1406,7 @@ if (!usePDF) wt *= z;
       if (sideA) xMother += (m2Rec / (x2Now * sCM)) * (1. / z - 1.);
       else       xMother += (m2Rec / (x1Now * sCM)) * (1. / z - 1.);
     }
-    if (usePDF && xMother > xMaxAbs) { wt = 0.; continue; }
+    if (pdfMode==0 && xMother > xMaxAbs) { wt = 0.; continue; }
 
     // Forbidden emission if outside allowed z range for given pT2.
     mSister = particleDataPtr->m0(idSister);
@@ -1471,13 +1475,13 @@ if (!usePDF) wt *= z;
 
     // Evaluation of new daughter and mother PDF's.
     pdfScale2 = (useFixedFacScale) ? fixedFacScale2 : factorMultFac * pT2;
-    double xPDFdaughterNew = (usePDF) ? max ( TINYPDF,
+    double xPDFdaughterNew = (pdfMode==0) ? max ( TINYPDF,
       beam.xfISR(iSysNow, idDaughter, xDaughter, pdfScale2) ) : 1.;
-    double xPDFmotherNew = (usePDF) ?
+    double xPDFmotherNew = (pdfMode==0) ?
       beam.xfISR(iSysNow, idMother, xMother, pdfScale2) : 1.;
 
     //wt *= xPDFmotherNew / xPDFdaughterNew;
-    double pdfRatio = (usePDF) ? xPDFmotherNew / xPDFdaughterNew : 1.; 
+    double pdfRatio = (pdfMode==0) ? xPDFmotherNew / xPDFdaughterNew : 1.; 
     wt *= pdfRatio;
 
     // If doing uncertainty variations, postpone accept/reject to branch()

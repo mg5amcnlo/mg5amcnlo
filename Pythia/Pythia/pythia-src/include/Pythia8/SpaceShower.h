@@ -80,7 +80,7 @@ class SpaceShower {
 public:
 
   // Constructor.
-  SpaceShower() {beamOffset = 0; usePDF = true;}
+  SpaceShower() {beamOffset = 0; pdfMode = 0;}
 
   // Destructor.
   virtual ~SpaceShower() {}
@@ -202,7 +202,7 @@ public:
     double x = -1.);
   double noEmissionProbability( double pTbegAll, double pTendAll, double m2dip,
     int id, int type, double s = -1., double x = -1.);
-  bool usePDF;
+  int pdfMode;
 
 protected:
 
@@ -256,8 +256,8 @@ private:
          doPhiPolAsymHard, doPhiIntAsym, doRapidityOrder, useFixedFacScale,
          doSecondHard, canVetoEmission, hasUserHooks, alphaSuseCMW,
          singleWeakEmission, vetoWeakJets, weakExternal, doRapidityOrderMPI,
-         doUncertainties, uVarMuSoftCorr, uVarMPIshowers, doMPI, gamma2qqbar,
-         usePDFsSave;
+         doUncertainties, uVarMuSoftCorr, uVarMPIshowers, doMPI, gamma2qqbar;
+  int    pdfModeSave;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, alphaEMorder,
          nQuarkIn, enhanceScreening, weakMode;
   double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,

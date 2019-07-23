@@ -114,7 +114,7 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
   useFixedFacScale  = settingsPtr->flag("TimeShower:useFixedFacScale");
   fixedFacScale2    = pow2(settingsPtr->parm("TimeShower:fixedFacScale"));
 
-  usePDFsSave       = settingsPtr->flag("TimeShower:usePDFs");
+  pdfModeSave       = settingsPtr->mode("TimeShower:pdfMode");
 
   // Parameters of alphaStrong generation.
   alphaSvalue        = settingsPtr->parm("TimeShower:alphaSvalue");
@@ -2117,7 +2117,7 @@ double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
   iDipSel       = 0;
   iSysSel       = 0;
   dipSel        = 0;
-  usePDF = usePDFsSave;
+  pdfMode = pdfModeSave;
 
   // Loop over all possible dipole ends.
   for (int iDipEnd = 0; iDipEnd < int(dipEnds.size()); ++iDipEnd) {
@@ -2170,7 +2170,7 @@ double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
   // End loop over dipole ends.
   }
 
-  usePDF = true;
+  pdfMode = true;
 
   // Return nonvanishing value if found pT is bigger than already found.
   return (dipSel == 0) ? 0. : sqrt(pT2sel);
@@ -2616,7 +2616,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
           double xNew = xOld * (1. + (dip.m2 - dip.m2Rad) /
             (dip.m2Dip - dip.m2Rad));
           double xMaxAbs = beam.xMax(iSysRec);
-          if (usePDF && xMaxAbs < 0.) {
+          if (pdfMode==0 && xMaxAbs < 0.) {
             infoPtr->errorMsg("Warning in TimeShower::pT2nextQCD: "
             "xMaxAbs negative");
             return;
@@ -2624,18 +2624,18 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
 
           // New: Ensure that no x-value larger than unity is picked. Only
           // necessary for imprecise LHE input.
-          if (usePDF && xNew > 1.) wt = 0.;
+          if (pdfMode==0 && xNew > 1.) wt = 0.;
 
           // Firstly reduce by PDF ratio.
-          if (usePDF && xNew > xMaxAbs) wt = 0.;
+          if (pdfMode==0 && xNew > xMaxAbs) wt = 0.;
           else {
             int idRec = event[dip.iRecoiler].id();
             pdfScale2 = (useFixedFacScale) ? fixedFacScale2
               : factorMultFac * dip.pT2;
-            double pdfOld = (usePDF)
+            double pdfOld = (pdfMode==0)
               ? max ( TINYPDF, beam.xfISR( iSysRec, idRec, xOld, pdfScale2) )
                : 1.;
-            double pdfNew = (usePDF)
+            double pdfNew = (pdfMode==0)
               ? beam.xfISR( iSysRec, idRec, xNew, pdfScale2)
               : 1.;
             wt *= min( 1., pdfNew / pdfOld);

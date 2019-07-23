@@ -805,10 +805,11 @@ The fixed factorization scale, in GeV, that would be used in the
 evaluation of parton densities if the <code>flag</code> above is on. 
 </parm> 
  
-<flag name="TimeShower:usePDFs" default="on"> 
-If switched off, the timelike showers will produce Sudakov factors
-instead of no-emission probabilities.
-</flag>
+<modeopen name="TimeShower:pdfMode" default="0"> 
+Zero means no-emission probabilities are produced, one that Sudakov factors
+are produced according to the momentum sum rule, two that Sudakov
+factors are produced with zmin=0.5.
+</modeopen>
  
 </chapter> 
  
