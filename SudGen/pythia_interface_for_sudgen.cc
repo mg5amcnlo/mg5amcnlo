@@ -68,7 +68,10 @@ extern "C" {
     pythia.readString("SpaceShower:PhiPolAsymHard = off");
     pythia.readString("SpaceShower:PhiIntAsym = off");
     pythia.readString("SpaceShower:RapidityOrder = off");
-    pythia.readString("SpaceShower:nQuarkin = 3");
+
+    // Change number of incoming quarks in the PDFs used in ISR.
+    //pythia.readString("SpaceShower:nQuarkin = 3");
+    pythia.readString("SpaceShower:nQuarkin = 5");
     pythia.readString("SpaceShower:alphaSvalue = 0.130");
 
     pythia.init();
