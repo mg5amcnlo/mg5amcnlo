@@ -378,10 +378,10 @@ class ProcessExporterPython(object):
         
         return "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
-                         % {"param": param} for param in parameters]) + \
+                         % {"param": param} for param in sorted(parameters)]) + \
                "\n        " + "\n        ".join([\
                          "%(coup)s = model.get(\'coupling_dict\')[\"%(coup)s\"]"\
-                              % {"coup": coup} for coup in couplings])
+                              % {"coup": coup} for coup in sorted(couplings)])
 
 #===============================================================================
 # Global helper methods

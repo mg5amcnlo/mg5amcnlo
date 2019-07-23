@@ -1731,7 +1731,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('interaction_id') in [0,-1]:
             return None
 
-        tags = ['C%s' % w for w in self.get_conjugate_index()]
+        tags = ['C%i' % w for w in self.get_conjugate_index()]
         if self.get('is_loop'): 
             if not optimized_output:
                 tags.append('L')
@@ -2888,7 +2888,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if self.get('interaction_id') in [0,-1]:
             return None
 
-        tags = ['C%s' % w for w in self.get_conjugate_index()]
+        tags = ['C%i' % w for w in self.get_conjugate_index()]
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
@@ -3691,13 +3691,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         max_wf = 0
         for nb in tag:
             if outdated and nb in first:
-                replace[first[nb]] = outdated.pop()
+                replace[first[nb]] = outdated.pop(-1)
             elif nb in first:
                 assert first[nb] not in replace, '%s already assigned' % first[nb]
                 max_wf += 1
                 replace[first[nb]] = max_wf
             if nb in last:
-                for value in last[nb]:
+                for value in sorted(last[nb]):
                     outdated.append(replace[value])
 
                    
