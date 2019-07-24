@@ -242,20 +242,16 @@ class EventFile(object):
             else:
                 raise
         
-        misc.sprint(self.__class__.__mro__)
-        self.fileiterator = super(EventFile, self).__iter__()
-        misc.sprint(self.fileiterator)
-        
         self.banner = ''
         if mode == 'r':
             line = ''
             while '</init>' not in line.lower():
-                try:
-                    line  = next(self.fileiterator)
-                except StopIteration:
+                line = self.readline()
+                if not line:
                     self.seek(0)
                     self.banner = ''
                     break 
+
                 line = str(line.decode('utf-8')).lower()
                 if '<event' in line:
                     self.seek(0)
@@ -301,61 +297,80 @@ class EventFile(object):
         return self.len
 
     def __iter__(self):
-        misc.sprint(self.path)
-        if not self.eventgroup:
-            text = ''
-            line = ''
-            mode = 0
-            while True:
-                try:
-                    line = next(self.fileiterator)
-                except StopIteration:
-                    return
-                line = line.decode('utf-8')
-                #misc.sprint(line, self.path)
-                if '<event' in line:
-                    mode = 1
-                    text = ''
-                if mode:
-                    text += line
-                    
-                if '</event>' in line:
-                    if self.parsing:
-                        out = Event(text)
-                        if len(out) == 0  and not self.allow_empty_event:
-                            raise Exception
-                        yield out
-                    else:
-                        yield text
-                    text = ''
-                    line = ''
-                    mode = 0
-        else:
-            events = []
-            text = ''
-            line = ''
-            mode = 0
-            while '</eventgroup>' not in line:
-                line = next(super(EventFile, self))
-                if '<eventgroup' in line:
-                    events=[]
-                    text = ''
-                elif '<event' in line:
-                    text=''
-                    mode=1
-                elif '</event>' in line:
-                    if self.parsing:
-                        events.append(Event(text))
-                    else:
-                        events.append(text)
-                    text = ''
-                    mode = 0
-                if mode:
-                    text += line  
-            if len(events) == 0:
-                yield next(self)
-            yield events
+        return self
+
+    def next(self):
         
+        if not self.eventgroup:
+            return self.next_event()
+        else:
+            return self.next_eventgroup()
+        
+    __next__ = next
+
+    def next_event(self):        
+        
+        text = ''
+        line = ''
+        mode = 0
+        
+        while True:
+            # reading the next line of the file
+            line = self.readline()
+            if not line:
+                raise StopIteration
+            line = line.decode('utf-8')
+            
+            if '<event' in line:
+                mode = 1
+                text = []
+            if mode:
+                text.append(line)
+                
+            if '</event>' in line:
+                if self.parsing:
+                    out = Event(text)
+                    if len(out) == 0  and not self.allow_empty_event:
+                        raise Exception
+                    return out
+                else:
+                    return text
+                
+                    
+    def next_eventgroup(self):
+        events = []
+        text = ''
+        line = ''
+        mode = 0
+        while '</eventgroup>' not in line:
+            
+            # reading the next line of the file
+            line = self.readline()
+            if not line:
+                raise StopIteration
+            line = line.decode('utf-8')
+            
+            if '<eventgroup' in line:
+                events=[]
+                text = ''
+            elif '<event' in line:
+                text = []
+                mode=1
+            elif '</event>' in line:
+                if self.parsing:
+                    events.append(Event(text))
+                else:
+                    events.append('\n'.join(text))
+                    text = ''
+                    mode = 0
+            if mode:
+                text += line  
+        if len(events) == 0:
+            return self.next_eventgroup()
+
+        return events
+    
+
     
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
@@ -863,9 +878,7 @@ class EventFileGzip(EventFile, gzip.GzipFile):
             super(EventFileGzip, self).write(text)
         except:
             super(EventFileGzip, self).write(text.encode('utf-8'))
-    #def define_iterator(self):
-    #    self.fileiterator = gzip.GzipFile.__iter__(self)
-        
+    
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""
     
@@ -875,8 +888,6 @@ class EventFileNoGzip(EventFile, file):
         if self.to_zip:
             misc.gzip(self.name)
 
-    def define_iterator(self):
-        self.fileiterator = file.__iter__(self)
         
     #def read(self):
     #    return file.read(self)
@@ -945,31 +956,37 @@ class MultiEventFile(EventFile):
         return obj
         
     def __iter__(self):
+        
         if not self._configure:
             self.configure()
-        while True:
-            remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
-            if remaining_event == 0:
-                return
-                raise StopIteration
-            # determine which file need to be read
-            nb_event = random.randint(1, remaining_event)
-            sum_nb=0
-            for i, obj in enumerate(self.filesiter):
-                sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
-                if nb_event <= sum_nb:
-                    self.curr_nb_events[i] += 1
-                    event = next(obj)
-                    if not self.eventgroup:
-                        event.sample_scale = self.scales[i] # for file reweighting
-                    else:
-                        for evt in event:
-                            evt.sample_scale = self.scales[i]
-                    yield event
-                    break
-            else:
-                raise Exception
+        return self
+            
+    def next(self):
+        if not self._configure:
+            self.configure()
+        remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
+        if remaining_event == 0:
+            misc.sprint(self.total_event_in_files, self.curr_nb_events)
+            raise StopIteration
+        # determine which file need to be read
+        nb_event = random.randint(1, remaining_event)
+        sum_nb=0
+        for i, obj in enumerate(self.filesiter):
+            sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
+            if nb_event <= sum_nb:
+                self.curr_nb_events[i] += 1
+                event = next(obj)
+                if not self.eventgroup:
+                    event.sample_scale = self.scales[i] # for file reweighting
+                else:
+                    for evt in event:
+                        evt.sample_scale = self.scales[i]
+                return event
+        else:
+            raise StopIteration
+
     
+    __next__ = next
 
     def define_init_banner(self, wgt, lha_strategy, proc_charac=None):
         """define the part of the init_banner"""
@@ -1292,7 +1309,11 @@ class Event(list):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-        for line in text.split('\n'):
+        
+        if not isinstance(text, list):
+            text = text.split('\n')
+        
+        for line in text:
             line = line.strip()
             if not line: 
                 continue

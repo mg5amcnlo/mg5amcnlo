@@ -552,10 +552,12 @@ def get_gfortran_version(compiler='gfortran'):
         p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
+        output = output.decode("utf-8")
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
         version = version_finder.search(output).group('version')
         return version
-    except Exception:
+    except Exception as error:
+        raise error
         return '0'
 
 def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfortran'):

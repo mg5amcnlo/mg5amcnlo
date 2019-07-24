@@ -20,7 +20,6 @@ import pickle
 import six.moves.cPickle
 
 from . import files as files
-import madgraph.various.misc as misc
 import six
 
 class SaveObjectError(Exception):

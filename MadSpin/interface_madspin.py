@@ -1054,6 +1054,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             evt_decayfile[particle.pdg].update(new_file)
                             decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                             continue
+
                         if helicity == decay[0].helicity or helicity==9 or \
                                             self.options["spinmode"] == "none":
                             break # use that event
