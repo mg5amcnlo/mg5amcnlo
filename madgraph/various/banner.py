@@ -3069,7 +3069,7 @@ class RunCardLO(RunCard):
         #Make sure that nhel is only either 0 (i.e. no MC over hel) or
         #1 (MC over hel with importance sampling). In particular, it can
         #no longer be > 1.
-        if 'nhel' not in self.user_set:
+        if 'nhel' not in self:
             raise InvalidRunCard("Parameter nhel is not defined in the run_card.")
         if self['nhel'] not in [1,0]:
             raise InvalidRunCard("Parameter nhel can only be '0' or '1', "+\

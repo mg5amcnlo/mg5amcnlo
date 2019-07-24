@@ -1433,11 +1433,11 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True', 'Auto']:
-                raise self.InvalidCmd('%s needs argument False, True or Auto' % \
-                                      args[0])
+            if args[1].lower() not in ['false', 'true', 'auto']:
+                raise self.InvalidCmd('%s needs argument False, True or Auto, got %s' % \
+                                      (args[0], args[1]))
         if args[0] in ['ignore_six_quark_processes']:
-            if args[1] not in list(self._multiparticles.keys()) and args[1] != 'False':
+            if args[1] not in list(self._multiparticles.keys()) and args[1].lower() != 'false':
                 raise self.InvalidCmd('ignore_six_quark_processes needs ' + \
                                       'a multiparticle name as argument')
 
@@ -7175,7 +7175,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         self.check_set(args)
 
         if args[0] == 'ignore_six_quark_processes':
-            if args[1] == 'False':
+            if args[1].lower() == 'false':
                 self.options[args[0]] = False
                 return
             self.options[args[0]] = list(set([abs(p) for p in \
@@ -7191,10 +7191,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             for q in self.options[args[0]]]))
 
         elif args[0] == 'group_subprocesses':
-            if args[1] not in ['Auto', 'NLO']:
-                self.options[args[0]] = eval(args[1])
+            if args[1].lower() not in ['auto', 'nlo']:
+                self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, name="group_subprocesses")
             else:
-                self.options[args[0]] = args[1]
+                if args[1].lower() == 'nlo':
+                    self.options[args[0]] = "NLO"
+                else:
+                    self.options[args[0]] = "Auto"
             if log:
                 logger.info('Set group_subprocesses to %s' % \
                                                     str(self.options[args[0]]))
@@ -7221,8 +7224,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
-            self.options[args[0]] = eval(args[1])
-            aloha.complex_mass = eval(args[1])
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, "complex_mass_scheme")
+            aloha.complex_mass = self.options[args[0]]
             aloha_lib.KERNEL.clean()
             if self.options[args[0]]:
                 if old:

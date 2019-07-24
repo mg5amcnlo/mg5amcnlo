@@ -202,7 +202,7 @@ class EventFile(object):
         
         if mode in ['r','rb']:
             mode ='r'
-            misc.sprint(path, os.path.exists(path), os.path.exists(path[:-3]))
+
         if not path.endswith(".gz"):
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
@@ -252,8 +252,8 @@ class EventFile(object):
                     self.banner = ''
                     break 
 
-                line = str(line.decode('utf-8')).lower()
-                if '<event' in line:
+                line = str(line.decode('utf-8'))
+                if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
                     break                     
@@ -966,7 +966,6 @@ class MultiEventFile(EventFile):
             self.configure()
         remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
         if remaining_event == 0:
-            misc.sprint(self.total_event_in_files, self.curr_nb_events)
             raise StopIteration
         # determine which file need to be read
         nb_event = random.randint(1, remaining_event)

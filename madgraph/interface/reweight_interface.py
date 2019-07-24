@@ -215,7 +215,6 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
 
-
     @staticmethod
     def get_LO_definition_from_NLO(proc, model, real_only=False):
         """return the LO definitions of the process corresponding to the born/real"""
