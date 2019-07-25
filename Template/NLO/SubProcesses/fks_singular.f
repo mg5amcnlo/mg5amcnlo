@@ -7132,6 +7132,12 @@ c     reset the default dynamical_scale_choice
       integer ee_ibeam
       common /to_ee_ibeam/ee_ibeam
 
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+
+      double precision omx_ee
+      common /to_ee_omx/omx_ee
+
       save beams
 
       if (firsttime) then
@@ -7142,6 +7148,9 @@ c     reset the default dynamical_scale_choice
       endif
 
       ee_ibeam = beams(ibeam)
+
+      if (ibeam.eq.1) omx_ee = omx1_ee
+      if (ibeam.eq.2) omx_ee = omx2_ee
 
       return
       end

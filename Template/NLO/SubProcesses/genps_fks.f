@@ -2153,6 +2153,12 @@ c
 c Define xi_i_fks
 c
       special_ee_coll = j_fks.le.2.and.abs(lpp(1)).eq.4.and..not.generate_with_bw
+      if (special_ee_coll) then
+          write(*,*) 'ERROR, treatment of initial-state singularities '//
+     $               'with e+e- collision not yet implemented!'
+          stop 1
+      endif
+
 
       if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &     ((.not.colltest) .or. 
@@ -3462,9 +3468,11 @@ c     S=A/(B-x) transformation:
       ! omx is 1-x, stored to improve numerical accuracy
       double precision rnd, x, omx, jac, xmin
       double precision expo
-      parameter (expo=0.85d0) ! should be a number 0< x <1
+      double precision get_ee_expo
       double precision tolerance
       parameter (tolerance=1.d-5)
+
+      expo = get_ee_expo()
 
       x = 1d0 - rnd ** (1d0/(1d0-expo))
       omx = rnd ** (1d0/(1d0-expo))
@@ -3477,6 +3485,7 @@ c     S=A/(B-x) transformation:
         endif
       endif
       jac = 1d0/(1d0-expo) * rnd ** (expo/(1d0-expo))
+      jac = 1d0/(1d0-expo) !!!* rnd ** (expo/(1d0-expo))
       ! then rescale it between xmin and 1
       x = x * (1d0 - xmin) + xmin
       omx = omx * (1d0 - xmin)
@@ -3557,6 +3566,11 @@ C dressed lepton stuff
         stop 1
       elseif(generate_with_bw) then
         ! here we treat the case of resonances
+
+        ! MZMZ remove this once it has been corrected
+        write(*,*) 'ERROR, generation with BW not implemented' //
+     $     'for e+e- collisions'
+        stop 1
 
         ! first generate tau with the dedicated function
         idim_dum = 1000 ! this is never used in practice

@@ -170,6 +170,20 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       end
 
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      double precision expo
+      parameter (expo=0.95d0)
+      get_ee_expo = expo
+      return
+      end
+
+
+
+
       double precision function compute_eepdf(x, xmu, n_ee, id, idbeam)
       implicit none
       double precision x, xmu
@@ -179,9 +193,15 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       double precision k_exp
 
       double precision eps
-      parameter (eps=1e-4)
+      parameter (eps=1e-20)
 
       double precision eepdf_tilde, eepdf_tilde_power
+      double precision get_ee_expo
+      double precision ps_expo
+
+      double precision omx_ee
+      common /to_ee_omx/omx_ee
+
 
       if (id.eq.7) then
         compute_eepdf = 0d0
@@ -194,17 +214,13 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       ! this does not include a factor (1-x)^(-kappa)
       ! where k is given by
       k_exp = eepdf_tilde_power(xmu2,n_ee,id,idbeam)
+      ps_expo = get_ee_expo()
 
-      if (1d0-x .gt. eps) then
-      ! if x is not too close to 1,
-      ! add back the factor (1-x)^(-kappa) which
-      ! is not included in the grids
-        compute_eepdf = compute_eepdf * (1d0-x)**(-k_exp)
-      else
-      ! otherwise multiply by the integral of 
-      ! (1d0-x)**(-k_exp) between 1-eps and 1
-        compute_eepdf = compute_eepdf * eps**(-k_exp) / (1d0-k_exp)
+      if (k_exp.gt.ps_expo) then
+          write(*,*) 'WARNING, e+e- exponent exceeding limit', k_exp, ps_expo
       endif
+
+      compute_eepdf = compute_eepdf * (omx_ee)**(-k_exp+ps_expo)
 
       return
       end
