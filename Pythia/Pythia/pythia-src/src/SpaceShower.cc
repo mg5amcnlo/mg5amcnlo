@@ -745,7 +745,7 @@ double SpaceShower::noEmissionProbability( double pTbegAll, double pTendAll,
       startingScale = pTtrial;
 
       if ( pTtrial > minScale) wtnow *= 0.;
-      if ( wtnow == 0.) break;
+      if ( wtnow == 0.)        break;
       if ( pTtrial > minScale) continue;
 
       // Done
@@ -1041,13 +1041,13 @@ if (pdfMode!=0) isValence = false;
         Lambda2   = Lambda3flav2;
       }
 
-// Always use five-flavor running?
-if (pdfMode!=0) {
-  nFlavour  = nQuarkIn;
-  pT2minNow = pT2endDip;
-  b0        = 23./6.;
-  Lambda2   = Lambda5flav2;
-}
+//// Always use five-flavor running?
+//if (pdfMode!=0) {
+//  nFlavour  = nQuarkIn;
+//  pT2minNow = pT2endDip;
+//  b0        = 23./6.;
+//  Lambda2   = Lambda5flav2;
+//}
 
       // A change of renormalization scale expressed by a change of Lambda.
       Lambda2    /= renormMultFac;
@@ -1328,11 +1328,6 @@ if (pdfMode!=0) {
           wt = 0.5 * (1. + pow2(z)) - z * pow2(1.-z) * m2Massive / pT2;
         }
         if (isValence) wt *= sqrt(z);
-        // Account for headroom factor for sea quarks
-        else wt /= HEADROOMQ2Q;
-        // Account for headroom factor for heavy quarks in photon beam.
-        if (beam.isGamma() && isMassive) wt /= HEADROOMHQG;
-
 
 // For Sudakov (not no-emission prob), also add P_gq(z) = P_qq(1-z).
 // anddivide out additional factor of 2 in overestimate.
@@ -1340,6 +1335,12 @@ if (pdfMode==2) {
   wt += 0.5 *( 1. + pow2(1.-z))/z;
   wt /= 2.;
 }
+
+        // Account for headroom factor for sea quarks
+        else wt /= HEADROOMQ2Q;
+        // Account for headroom factor for heavy quarks in photon beam.
+        if (beam.isGamma() && isMassive) wt /= HEADROOMHQG;
+
         // Optionally enhanced branching rate.
         nameNow = "isr:Q2QG";
         if (canEnhanceET) {
