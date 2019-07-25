@@ -1332,7 +1332,7 @@ if (pdfMode!=0) {
 // For Sudakov (not no-emission prob), also add P_gq(z) = P_qq(1-z).
 // anddivide out additional factor of 2 in overestimate.
 if (pdfMode==2) {
-  wt += 0.5 *( 1. + pow2(1.-z))/z;
+  wt += (( 1. + pow2(1.-z))/z) / (2/(1-z));
   wt /= 2.;
 }
 

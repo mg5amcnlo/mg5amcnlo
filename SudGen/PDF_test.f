@@ -23,7 +23,7 @@ c
       stupp2=200d0
       stupp1=20d0
       md=2000d0
-      id=21
+      id=1
       itype=1
       iseed=59822
       min_py_sudakov=0.0000001d0
