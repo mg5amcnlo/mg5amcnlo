@@ -432,7 +432,6 @@ c timing statistics
       common /for_applgrid/ iappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
-C
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
       if (firsttime) then
@@ -481,7 +480,7 @@ c The nbody contributions
          jac=0.5d0
       endif
       call generate_momenta(ndim,iconfig,jac,x,p)
-      if (p_born(0,1).lt.0d0.or.p(0,1).lt.0d0.or.jac.lt.0d0) goto 12
+      if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
@@ -522,8 +521,7 @@ c The n+1-body contributions (including counter terms)
          jac=MC_int_wgt
          call update_fks_dir(iFKS)
          call generate_momenta(ndim,iconfig,jac,x,p)
-         if (p_born(0,1).lt.0d0.or.p(0,1).lt.0d0.or.jac.lt.0d0) cycle
-         if (jac_cnt(0).lt.0.or.jac_cnt(1).lt.0.or.jac_cnt(2).lt.0) cycle
+         if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
