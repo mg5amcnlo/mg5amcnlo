@@ -1041,14 +1041,6 @@ if (pdfMode!=0) isValence = false;
         Lambda2   = Lambda3flav2;
       }
 
-//// Always use five-flavor running?
-//if (pdfMode!=0) {
-//  nFlavour  = nQuarkIn;
-//  pT2minNow = pT2endDip;
-//  b0        = 23./6.;
-//  Lambda2   = Lambda5flav2;
-//}
-
       // A change of renormalization scale expressed by a change of Lambda.
       Lambda2    /= renormMultFac;
       zMaxAbs     = 1. - 0.5 * (pT2minNow / m2Dip) *
@@ -1157,9 +1149,6 @@ if (pdfMode!=0) {
 // For Sudakov (not no-emission prob), do this as forward evolution of a gluon.
 // Thus, use q->gq kernels here!!!
 if (pdfMode!=0) {
-
-  // Increase overstimate for P_qq, since we will also add P_gq(z) = P_qq(1-z)
-  if (pdfMode==2) q2qInt *= 2.;
 
   // Parton density of potential quark mothers to a g.
   xPDFmotherSum = 0.;
@@ -1328,13 +1317,6 @@ if (pdfMode!=0) {
           wt = 0.5 * (1. + pow2(z)) - z * pow2(1.-z) * m2Massive / pT2;
         }
         if (isValence) wt *= sqrt(z);
-
-// For Sudakov (not no-emission prob), also add P_gq(z) = P_qq(1-z).
-// anddivide out additional factor of 2 in overestimate.
-if (pdfMode==2) {
-  wt += (( 1. + pow2(1.-z))/z) / (2/(1-z));
-  wt /= 2.;
-}
 
         // Account for headroom factor for sea quarks
         else wt /= HEADROOMQ2Q;

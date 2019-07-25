@@ -73,7 +73,7 @@ extern "C" {
     //pythia.readString("SpaceShower:nQuarkin = 3");
     pythia.readString("SpaceShower:nQuarkin = 5");
     pythia.readString("SpaceShower:alphaSvalue = 0.130");
-    pythia.readString("SpaceShower:pdfMode = 1");
+    pythia.readString("SpaceShower:pdfMode = 2");
 
     pythia.init();
     // Perform a single step to check initialization.
