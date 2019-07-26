@@ -1239,7 +1239,7 @@ class Event(list):
         try:
             text = text.split('\n')
         except Exception:
-            pass:
+            pass
         for line in text:
             line = line.strip()
             if not line: 
