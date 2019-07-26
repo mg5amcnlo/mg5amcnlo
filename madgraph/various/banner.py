@@ -2396,7 +2396,7 @@ class RunCard(ConfigFile):
                 comment = line[len(nline):]
                 nline = nline.split('=')
                 if python_template and nline[0].startswith('$'):
-                    block_name = nline[0][1:]
+                    block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
                     if not this_group:
                         logger.debug("block %s not defined", block_name)

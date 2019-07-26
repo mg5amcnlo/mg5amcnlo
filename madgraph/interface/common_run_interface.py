@@ -4294,7 +4294,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return lhapdf_pdfsets
 
-    @staticmethod()
+    @staticmethod
     def get_lhapdf_version_static(lhapdf_config):
         """returns the lhapdf version number"""
 
@@ -4320,7 +4320,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.lhapdf_version = self.get_lhapdf_version_static(self.options['lhapdf'])
         return self.lhapdf_version
 
-    @staticmethod()
+    @staticmethod
     def get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version=None):
         """ """
         if not lhapdf_version:
