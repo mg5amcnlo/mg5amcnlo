@@ -18,6 +18,8 @@ from __future__ import absolute_import
 import os
 import sys
 import madgraph.various.misc as misc
+from madgraph import MG5DIR
+pjoin = os.path.join
 
 def load_model(name, decay=False):
     
@@ -30,16 +32,19 @@ def load_model(name, decay=False):
     path_split = name.split(os.sep)
     if len(path_split) == 1:
         try:
-            model_pos = 'models.%s' % name
-            __import__(model_pos)
+            with misc.TMP_variable(sys, 'path', [pjoin(MG5DIR, 'models'), pjoin(MG5DIR, 'models', name)]):  
+                model_pos = 'models.%s' % name
+                __import__(model_pos)
             return sys.modules[model_pos]
-        except Exception:
+        except Exception as error:
             pass
         for p in os.environ['PYTHONPATH']:
             new_name = os.path.join(p, name)
             try:
                 return load_model(new_name, decay)
             except Exception:
+                pass
+            except ImportError:
                 pass
     elif path_split[-1] in sys.modules:
         model_path = os.path.realpath(os.sep.join(path_split))
@@ -49,7 +54,8 @@ def load_model(name, decay=False):
                 (path_split[-1], model_path, sys_path)) 
 
     # remove any link to previous model
-    for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card']:
+    for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card',
+                 'CT_couplings', 'CT_vertices', 'CT_parameters']:
         try:
             del sys.modules[name]
         except Exception:

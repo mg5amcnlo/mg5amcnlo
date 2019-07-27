@@ -31,7 +31,7 @@ import aloha.aloha_lib as aloha_lib
 from aloha.aloha_lib import *
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
-import models.sm.object_library as object_library
+#import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
 from six.moves import range
@@ -3469,7 +3469,9 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 
     def test_short_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.MSSM_SLHA2.object_library import Lorentz
+
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
@@ -3493,7 +3495,8 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFFF = Lorentz(name = 'FFFF3',
                  spins = [ 2, 2, 2, 2 ],
                  structure = 'Gamma(-2,-4,3)*Gamma(-2,-3,1)*Gamma(-1,2,-3)*Gamma(-1,4,-4) - Gamma(-1,-2,3)*Gamma(-1,4,-2)*Identity(1,2) - Gamma(-1,-2,1)*Gamma(-1,2,-2)*Identity(3,4) + 4*Identity(1,2)*Identity(3,4)')
@@ -3532,7 +3535,8 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         
         
         aloha_lib.KERNEL.clean()
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         VVS1 = Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
@@ -3593,7 +3597,8 @@ end
     def test_short_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -3645,7 +3650,8 @@ end
     def test_short_aloha_expr_FFFF(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFFF = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
                 structure = 'Identity(2,1)*Identity(4,3)')

@@ -200,7 +200,7 @@ class LoopExporterFortran(object):
         same loop exporter.
         """
         if not hasattr(self, 'aloha_model'):
-            self.aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            self.aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         return self.aloha_model
 
     #===========================================================================

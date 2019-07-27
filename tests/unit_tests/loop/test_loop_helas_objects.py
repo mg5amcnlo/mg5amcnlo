@@ -104,7 +104,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         """ Check that the function get_analytic_info and compute_analytic
         info in the class HelasWavefunction behaves as expected """
 
-        alohaModel = create_aloha.AbstractALOHAModel(self.myloopmodel.get('name'))
+        alohaModel = create_aloha.AbstractALOHAModel(self.myloopmodel.get('modelpath'))
         alohaModel.add_Lorentz_object(self.myloopmodel.get('lorentz'))
         
         d_helas_wf = helas_objects.HelasWavefunction({

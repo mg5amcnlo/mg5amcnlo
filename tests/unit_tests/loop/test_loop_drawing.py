@@ -69,6 +69,8 @@ class TestLoopDrawer(unittest.TestCase):
                 print(error)
                 raise Exception
                 pass
+            TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                            '../../input_files/test_draw_nlo.obj'), 'rb'))
 
     class FakeAMP(dict):
         
@@ -397,6 +399,8 @@ class TestLoopDrawer(unittest.TestCase):
             self.assertnozerolength(diagram)
 
     def test_NLO_draw_uux_uuxddx(self):
+        TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                            '../../input_files/test_draw_nlo.obj'), 'rb'))
         for i in range(139,140):
             diagram = copy.deepcopy(self.store_diagram['u u~ > u u~ d d~'][i])
             structure = self.store_diagram['u u~ > u u~ d d~']['structure']

@@ -1427,11 +1427,16 @@ class UFOMG5Converter(object):
         assert name not in [l.name for l in self.model['lorentz']]
         with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
                                self.model['lorentz']):
+            misc.sprint(self.model['lorentz'][0].__class__)
             new = self.model['lorentz'][0].__class__(name = name,
                     spins = spins,
                     structure = expr)
             if formfact:
                 new.formfactors = formfact
+            if self.model['lorentz'][-1].name != name:
+                self.model['lorentz'].append(new)
+            if name in [l.name for l in self.ufomodel.all_lorentz]:
+                self.ufomodel.all_lorentz.remove(new)
 
         assert name in [l.name for l in self.model['lorentz']]
         assert name not in [l.name for l in self.ufomodel.all_lorentz]

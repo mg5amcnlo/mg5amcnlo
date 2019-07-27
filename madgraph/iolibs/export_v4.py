@@ -4796,7 +4796,7 @@ c           This is dummy particle used in multiparticle vertices
                 identical_indices[leg.get('id')] = [i + ninitial + 1]
 
         # Remove keys which have only one particle
-        for key in identical_indices.keys():
+        for key in list(identical_indices.keys()):
             if len(identical_indices[key]) < 2:
                 del identical_indices[key]
 

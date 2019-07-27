@@ -2302,7 +2302,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         if not alohaModel:# is None:
             # Generate it here
             model = self.get('processes')[0].get('model')
-            myAlohaModel = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            myAlohaModel = create_aloha.AbstractALOHAModel(model.get('modelpath'))
             myAlohaModel.add_Lorentz_object(model.get('lorentz'))
         else:
             # Use the one provided

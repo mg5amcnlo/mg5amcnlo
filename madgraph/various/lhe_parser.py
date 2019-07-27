@@ -438,7 +438,7 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, str):
+        elif isinstance(get_wgt, (str,unicode)):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -906,7 +906,7 @@ class MultiEventFile(EventFile):
         to only read all the files twice and not three times."""
         self.eventgroup = False
         self.files = []
-        self.filesiter = []
+        #self.filesiter = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
         self.initial_nb_events = []
@@ -922,7 +922,7 @@ class MultiEventFile(EventFile):
                     self.add(p)
             else:
                 self.files = start_list
-                self.filesiter = [f.__iter__() for f in self.files]
+                #self.filesiter = [f.__iter__() for f in self.files]
         self._configure = False
         
     def close(self,*args,**opts):
@@ -949,7 +949,7 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(scale)
         self.files.append(obj)
-        self.filesiter.append(obj.__iter__())
+        #self.filesiter.append(obj.__iter__())
         if nb_event:
             obj.len = nb_event
         self._configure = False
@@ -970,7 +970,7 @@ class MultiEventFile(EventFile):
         # determine which file need to be read
         nb_event = random.randint(1, remaining_event)
         sum_nb=0
-        for i, obj in enumerate(self.filesiter):
+        for i, obj in enumerate(self.files):
             sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
@@ -1174,7 +1174,7 @@ class MultiEventFile(EventFile):
         (stop to write event when target is reached)
         """
 
-        if isinstance(get_wgt, str):
+        if isinstance(get_wgt, (str,unicode)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
@@ -1217,7 +1217,7 @@ class MultiEventFile(EventFile):
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
         
-        if isinstance(path, str):
+        if isinstance(path, (str,unicode)):
             out = EventFile(path, 'w')
             if self.parsefile and not banner:    
                 banner = self.files[0].banner
@@ -2260,7 +2260,7 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, str):
+                if isinstance(k, (str, unicode)):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
@@ -2459,7 +2459,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, str):
+        elif  isinstance(obj, (str, unicode)):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -2666,7 +2666,7 @@ class OneNLOWeight(object):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, str):
+        if isinstance(input, (str, unicode)):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -3028,7 +3028,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, str):
+        if isinstance(input, (str,unicode)):
             self.parse(input)
         
             

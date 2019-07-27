@@ -7,13 +7,11 @@
 # or functions that are simply not defined.
 #
 #
-
-from __future__ import absolute_import
 __date__ = "22 July 2010"
 __author__ = "claude.duhr@durham.ac.uk"
 
 from cmath import cos, sin, acos, asin
-from .object_library import all_functions, Function
+from object_library import all_functions, Function
 
 #
 # shortcuts for functions from cmath

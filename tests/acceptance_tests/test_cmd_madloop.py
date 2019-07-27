@@ -408,7 +408,8 @@ class TestCmdLoop(unittest.TestCase):
                        'report':'full'}
             cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
                                                                 options.items())
-            # print "Running first CMS check cmd: ",cmd
+            
+            #print "Running first CMS check cmd: %s" %cmd
             self.do(cmd)
             self.assertEqual(cwd, os.getcwd())
             for mode in ['NWA','CMS']:

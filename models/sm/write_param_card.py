@@ -1,29 +1,11 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-__date__ = "02 Aug 2012"
+from six.moves import range
+__date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
-import sys
-if sys.version_info[0] ==2:
-    PY3 = False
-else:
-    PY3 = True
-
-if PY3 and not __package__:
-    import os
-    pjoin = os.path.join
-    root = os.path.abspath(os.path.dirname(__file__))
-    sys.path.append(os.path.dirname(root))
-    __package__ = os.path.basename(root)
-    import importlib
-    importlib.import_module(os.path.basename(root))
-
-
-from .function_library import *
-
-
-
+from function_library import *
 
 class ParamCardWriter(object):
     
@@ -36,7 +18,7 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            from .parameters import all_parameters
+            from parameters import all_parameters
             list_of_parameters = [param for param in all_parameters if \
                                                        param.nature=='external']
         
@@ -49,12 +31,11 @@ class ParamCardWriter(object):
         self.fsock.write(self.header)
         
         self.write_card(list_of_parameters)
-        self.fsock.close()
     
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
         requested in the param_card.dat"""
-        from .particles import all_particles
+        from particles import all_particles
         
         self.dep_mass = [(part, part.mass) for part in all_particles \
                             if part.pdg_code > 0 and \
@@ -103,10 +84,7 @@ class ParamCardWriter(object):
             self.write_block(lhablock)
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
-            if PY3:
-                need_writing.sort(key=misc.cmp_to_key(self.order_param))
-            else:
-                need_writing.sort(self.order_param)
+            need_writing.sort(self.order_param)
             [self.write_param(param, lhablock) for param in need_writing]
             
             if self.generic_output:
@@ -115,8 +93,7 @@ class ParamCardWriter(object):
 
         if self.generic_output:
             self.write_qnumber()
-            
-                              
+                               
     def write_block(self, name):
         """ write a comment for a block"""
         
@@ -142,7 +119,7 @@ class ParamCardWriter(object):
     
     def write_dep_param_block(self, lhablock):
         import cmath
-        from .parameters import all_parameters
+        from parameters import all_parameters
         for parameter in all_parameters:
             exec("%s = %s" % (parameter.name, parameter.value))
         text = "##  Not dependent paramater.\n"
@@ -175,8 +152,8 @@ class ParamCardWriter(object):
     
     def write_qnumber(self):
         """ write qnumber """
-        from .particles import all_particles
-        from . import particles
+        from particles import all_particles
+        
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""
@@ -187,11 +164,12 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': part.spin,
+                                 'spin': 2 * part.spin + 1,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         
         self.fsock.write(text)
+        
         
             
             

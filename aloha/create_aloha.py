@@ -27,6 +27,7 @@ import shutil
 import sys
 import time
 from madgraph.interface.tutorial_text import output
+
 from six.moves import range
 from six.moves import zip
 
@@ -39,13 +40,15 @@ import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
+import models
 try:
     import madgraph.iolibs.files as files
     import madgraph.various.misc as misc
 except Exception:
     import aloha.files as files
     import aloha.misc as misc
-    
+
+   
 aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
 
@@ -620,7 +623,6 @@ class AbstractALOHAModel(dict):
         
         # Option
         self.explicit_combine = explicit_combine
-        
         # Extract the model name if combined with restriction
         model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
@@ -631,15 +633,16 @@ class AbstractALOHAModel(dict):
                os.path.isfile(os.path.join(root_path, "models", name,
                                            "restrict_%s.dat" % rest)):
                 model_name = model_name_re.group("name")
-
         # load the UFO model
-        try:
-            python_pos = model_name 
-            __import__(python_pos)
-        except Exception:
-            python_pos = 'models.%s' % model_name 
-            __import__(python_pos)
-        self.model = sys.modules[python_pos]
+        self.model = models.load_model(model_name)
+#         
+#         try:
+#             python_pos = model_name 
+#             __import__(python_pos)
+#         except Exception:
+#             python_pos = 'models.%s' % model_name 
+#             __import__(python_pos)
+#         self.model = sys.modules[python_pos]
         # find the position on the disk
         self.model_pos = os.path.dirname(self.model.__file__)
 

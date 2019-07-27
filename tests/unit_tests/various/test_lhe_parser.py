@@ -369,14 +369,17 @@ DATA
         
         open(pjoin(self.path, 'event.lhe'),'w').write(input)
         input_lhe = lhe_parser.EventFile(pjoin(self.path, 'event.lhe.gz'))
-        output_lhe = lhe_parser.EventFile(pjoin(self.path, 'event2.lhe.gz'),'w')
+        output_lhe = lhe_parser.EventFile(pjoin(self.path, 'event2.lhe.gz'),'wb')
         output_lhe.write(input_lhe.banner)
         for event in input_lhe:
             output_lhe.write(str(event))
         output_lhe.close()
         self.assertTrue(pjoin(self.path,'event2.lhe.gz'))
-        text = open(pjoin(self.path, 'event2.lhe.gz')).read()
-        self.assertFalse(text.startswith('<LesHouchesEvents version="1.0">'))
+        try:
+            text = open(pjoin(self.path, 'event2.lhe.gz'), 'r').read()
+            self.assertFalse(text.startswith('<LesHouchesEvents version="1.0">'))
+        except UnicodeDecodeError:
+            pass
         misc.gunzip(pjoin(self.path,'event2.lhe.gz'))
         self.assertTrue(pjoin(self.path,'event2.lhe'))
         input_lhe = lhe_parser.EventFile(pjoin(self.path, 'event.lhe'))
