@@ -30,6 +30,7 @@ import models.import_ufo as import_ufo
 import madgraph.iolibs.files as files
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
+import madgraph.various.misc as misc
 from madgraph.iolibs import save_load_object
 
 import  models.check_param_card as check_param_card 
@@ -378,7 +379,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #    else:
                 #        solutions[variable].append(singlevalue)
         self.assertEqual(nb_value, 116 - len(checked_solutions))
-        self.assertEqual(set(checked_solutions), set(['GC_%s ' % i for i in [27,67,54,38,78,15,79,96,73,9,74,4,50]]))
+
+        # before merging with py3 it was [27,67,54,38,78,15,79,96,73,9,74,4,50]
+        self.assertEqual(set(checked_solutions), set(['GC_%s ' % i for i in [4, 9, 27, 30, 39, 51, 56, 67, 73, 75, 78, 79, 97]]))
 
         
         

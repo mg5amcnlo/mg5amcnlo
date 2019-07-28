@@ -912,17 +912,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_initial_states()
                 # check those which are charged under qcd
-                if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:
-                        sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
-
+                if pjoin(self.me_dir,'bin','internal','ufomodel') not in sys.path:
+                    sys.path.insert(0,pjoin(self.me_dir,'bin','internal', 'ufomodel'))     
+                if pjoin(self.me_dir,'bin','internal') not in sys.path:    
+                    sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
+                
                 #Ensure that the model that we are going to load is the current
                 #one.
                 to_del = [name  for name in sys.modules.keys()
                                                 if name.startswith('internal.ufomodel')
                                                 or name.startswith('ufomodel')]
-                for name in to_del:
-                    del(sys.modules[name])
-
+                for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card',
+                             'CT_couplings', 'CT_vertices', 'CT_parameters'] + to_del:
+                    try:
+                        del sys.modules[name]
+                    except Exception:
+                        continue
+                        
+                #raise Exception( sys.path, self.me_dir)              
+                #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles

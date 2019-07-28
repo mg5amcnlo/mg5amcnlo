@@ -144,13 +144,13 @@ class Lhco_filter:
 
         diag=diagram_class.MG_diagram(directory,1)
 
-        list=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
+        olist=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
         content=diag.output_type_info()
         
         total=0
         data={}
-        for i in range(0,len(list)):
-            data[list[i]]=content[i]
+        for i in range(0,len(olist)):
+            data[olist[i]]=content[i]
             total+=content[i]
         #data['n_out']=total
         
