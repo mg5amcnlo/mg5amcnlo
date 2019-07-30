@@ -2170,7 +2170,7 @@ double TimeShower::pTnext( vector<TimeDipoleEnd> dipEnds, Event event,
   // End loop over dipole ends.
   }
 
-  pdfMode = true;
+  pdfMode = 0;
 
   // Return nonvanishing value if found pT is bigger than already found.
   return (dipSel == 0) ? 0. : sqrt(pT2sel);
