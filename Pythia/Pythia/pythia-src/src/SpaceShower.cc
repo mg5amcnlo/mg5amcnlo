@@ -1467,6 +1467,11 @@ if (pdfMode==1) wt *= z;
     double pdfRatio = (pdfMode==0) ? xPDFmotherNew / xPDFdaughterNew : 1.; 
     wt *= pdfRatio;
 
+// Change defintion of alphaS-argument. Kept here only for debugging purposes.
+//double asQ2  = alphaS.alphaS(Q2);
+//double asPT2 = alphaS.alphaS(pT2);
+//wt *= asQ2/asPT2;
+
     // If doing uncertainty variations, postpone accept/reject to branch()
     if (wt > 0. && pT2 > pT2min && doUncertaintiesNow ) {
       dipEndNow->pAccept = wt;
