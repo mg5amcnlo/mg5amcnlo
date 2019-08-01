@@ -7356,6 +7356,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
+                output = output.decode()
                 res = 0
             except Exception:
                 res = 1
