@@ -981,18 +981,11 @@ c bpower.
       include 'run.inc'
       include 'genps.inc'
       include 'timing_variables.inc'
-      double precision pi,vegas_wgt,enhance,xnoborn_cnt,xtot
-     $     ,bpower,cpower,tiny
-      data xnoborn_cnt /0d0/
-      integer inoborn_cnt,i
-      data inoborn_cnt /0/
-      double precision wgt_c
+      double precision pi,vegas_wgt
+      integer i
       logical firsttime
       data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
-      parameter (tiny=1d-6)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/    p_born
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
@@ -1009,12 +1002,6 @@ c bpower.
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,          jamp2
-      double precision   diagramsymmetryfactor
-      common /dsymfactor/diagramsymmetryfactor
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
       integer iappl
@@ -1043,6 +1030,61 @@ c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
          firsttime=.false.
       endif
+      call set_cms_stuff(0)
+c f_* multiplication factors for Born and nbody
+      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+     $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
+      f_nb=f_b
+      call cpu_time(tAfter)
+      tf_nb=tf_nb+(tAfter-tBefore)
+      return
+      end
+
+
+      subroutine include_multichannel_enhance(imode)
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      include 'timing_variables.inc'
+      double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real
+     $     ,pas(0:3,nexternal)
+      data xnoborn_cnt /0d0/
+      integer inoborn_cnt,i,imode
+      data inoborn_cnt /0/
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/    p_born
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/ p_born_ev
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer            mapconfig(0:lmaxconfigs), iconfig
+      common/to_mconfigs/mapconfig,                iconfig
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
+      common/to_amps/  amp2,          jamp2
+      double precision   diagramsymmetryfactor
+      common /dsymfactor/diagramsymmetryfactor
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      double precision f_dis_d,f_dis_p,f_dis_l
+      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal),granny_is_res
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+
+      call cpu_time(tBefore)
+
 c Compute the multi-channel enhancement factor 'enhance'.
       enhance=1.d0
       if (p_born(0,1).gt.0d0) then
@@ -1076,137 +1118,18 @@ c Compute the multi-channel enhancement factor 'enhance'.
             enhance=0d0
          endif
       endif
-      call set_cms_stuff(0)
-c f_* multiplication factors for Born and nbody
-      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
-     $     *pi**2))*enhance*fkssymmetryfactorBorn*vegas_wgt
-      f_nb=f_b
-      call cpu_time(tAfter)
-      tf_nb=tf_nb+(tAfter-tBefore)
-      return
-      end
 
-      subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
-c Compute all relevant prefactors for the real emission and counter
-c terms.
-      implicit none
-      include 'nexternal.inc'
-      include 'run.inc'
-      include 'genps.inc'
-      include 'fks_powers.inc'
-      include 'coupl.inc'
-      include 'timing_variables.inc'
-      double precision vegas_wgt,enhance,xnoborn_cnt,xtot
-     &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
-     &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
-     &     ,prefact_deg_sxi,zero,enhance_real
-      parameter (pi=3.1415926535897932385d0, zero=0d0)
-      data xnoborn_cnt /0d0/
-      integer inoborn_cnt,i
-      data inoborn_cnt /0/
-      double precision wgt_c
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/    p_born
-      double precision p_born_ev(0:3,nexternal-1)
-      common/pborn_ev/p_born_ev
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision    xi_i_fks_ev,y_ij_fks_ev
-      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-      double precision  xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision  xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision   xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
-      double precision    delta_used
-      common /cdelta_used/delta_used
-      double precision    xicut_used
-      common /cxicut_used/xicut_used
-      double precision     xiScut_used,xiBSVcut_used
-      common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6),nphotons
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,          jamp2
-      double precision   diagramsymmetryfactor
-      common /dsymfactor/diagramsymmetryfactor
-      logical nocntevents
-      common/cnocntevents/nocntevents
-      integer igranny,iaunt
-      logical granny_chain(-nexternal:nexternal),granny_is_res
-     &     ,granny_chain_real_final(-nexternal:nexternal)
-      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
-     &     ,granny_chain_real_final
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      ! prefactors for the DIS scheme
-      double precision prefact_dis_d,prefact_dis_p,prefact_dis_l
-      double precision f_dis_d,f_dis_p,f_dis_l
-      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-      double precision pmass(nexternal)
-      include 'pmass.inc'
-      call cpu_time(tBefore)
-      enhance=1.d0
-      if (p_born(0,1).gt.0d0) then
-         call sborn(p_born,wgt_c)
-      elseif(p_born(0,1).lt.0d0)then
-         enhance=0d0
-      endif
-c Compute the multi-channel enhancement factor 'enhance'.
-      if (enhance.eq.0d0)then
-         xnoborn_cnt=xnoborn_cnt+1.d0
-         if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-            write (*,*) 'WARNING: no Born momenta more than 10**',
-     $           inoborn_cnt,'times'
-            inoborn_cnt=inoborn_cnt+1
-         endif
-      else
-         xtot=0d0
-         if (mapconfig(0).eq.0) then
-            write (*,*) 'Fatal error in compute_prefactor_n1body,'/
-     &           /' no Born diagrams ',mapconfig
-     &           ,'. Check bornfromreal.inc'
-            write (*,*) 'Is fks_singular compiled correctly?'
-            stop 1
-         endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
-         enddo
-         if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
-            enhance=enhance*diagramsymmetryfactor
-         else
-            enhance=0d0
-         endif
-      endif
-
+c In the case there is the special phase-space mapping for resonances,
+c use the Born computed with those as the mapping.
       enhance_real=1.d0
-      if (granny_is_res) then
+      if (granny_is_res .and. imode.eq.2) then
          if (p_born_ev(0,1).gt.0d0) then
             calculatedBorn=.false.
+            pas(0:3,nexternal)=0d0
+            pas(0:3,1:nexternal-1)=p_born_ev(0:3,1:nexternal-1)
+            call set_alphas(pas)
             call sborn(p_born_ev,wgt_c)
+            call set_alphas(p1_cnt(0,1,0))
             calculatedBorn=.false.
          elseif(p_born_ev(0,1).lt.0d0)then
             if (enhance.ne.0d0) then 
@@ -1246,18 +1169,114 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
          enhance_real=enhance
       endif
 
+      if (imode.eq.1) then
+         f_b=      f_b      *enhance
+         f_nb=     f_nb     *enhance
+      elseif(imode.eq.2) then
+         f_r=      f_r      *enhance_real
+      elseif(imode.eq.4) then
+         f_MC_S=   f_MC_S   *enhance
+         f_MC_H=   f_MC_H   *enhance
+      elseif(imode.eq.3) then
+         f_s=      f_s      *enhance
+         f_s_MC_S= f_s_MC_S *enhance
+         f_S_MC_H= f_S_MC_H *enhance
+         f_c=      f_c      *enhance
+         f_c_MC_S= f_c_MC_S *enhance
+         f_c_MC_H= f_c_MC_H *enhance
+         f_dc=     f_dc     *enhance
+         f_sc=     f_sc     *enhance
+         f_sc_MC_S=f_sc_MC_S*enhance
+         f_sc_MC_H=f_sc_MC_H*enhance
+         f_dsc(1)= f_dsc(1) *enhance
+         f_dsc(2)= f_dsc(2) *enhance
+         f_dsc(3)= f_dsc(3) *enhance
+         f_dsc(4)= f_dsc(4) *enhance
+         f_dis_d=  f_dis_d  *enhance
+         f_dis_p=  f_dis_p  *enhance
+         f_dis_l=  f_dis_l  *enhance
+      endif
+      call cpu_time(tAfter)
+      tf_nb=tf_nb+(tAfter-tBefore)
+
+      return
+      end
+      
+
+      subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
+c Compute all relevant prefactors for the real emission and counter
+c terms.
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      include 'fks_powers.inc'
+      include 'coupl.inc'
+      include 'timing_variables.inc'
+      double precision vegas_wgt,prefact,prefact_cnt_ssc,prefact_deg
+     $     ,prefact_c,prefact_coll,jac_ev,pi,prefact_cnt_ssc_c
+     $     ,prefact_coll_c,prefact_deg_slxi,prefact_deg_sxi,zero
+      integer i
+      parameter (pi=3.1415926535897932385d0, ZERO=0d0)
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision    xi_i_fks_ev,y_ij_fks_ev
+      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      double precision  xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision  xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision   xinorm_cnt(-2:2)
+      common /cxinormcnt/xinorm_cnt
+      double precision    delta_used
+      common /cdelta_used/delta_used
+      double precision    xicut_used
+      common /cxicut_used/xicut_used
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg
+      integer ngluons,nquarks(-6:6),nphotons
+      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
+      logical nocntevents
+      common/cnocntevents/nocntevents
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      ! prefactors for the DIS scheme
+      double precision prefact_dis_d,prefact_dis_p,prefact_dis_l
+      double precision f_dis_d,f_dis_p,f_dis_l
+      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      double precision pmass(nexternal)
+      include 'pmass.inc'
+      call cpu_time(tBefore)
+
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
-      f_r=prefact*jac_ev*enhance_real*fkssymmetryfactor*vegas_wgt
+      f_r=prefact*jac_ev*fkssymmetryfactor*vegas_wgt
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then
          prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      $        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
      $        -y_ij_fks_ev)
-         f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
+         f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)
      $        *fkssymmetryfactor*vegas_wgt
-         f_s_MC_S=prefact*jac_cnt(0)*enhance
+         f_s_MC_S=prefact*jac_cnt(0)
      $        *fkssymmetryfactor*vegas_wgt
          f_s_MC_H=f_s_MC_S
 
@@ -1268,9 +1287,9 @@ c equal to ione, so no need to define separate factors.
             prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
      $           /deltaS)/deltaS
             f_c=(prefact_c+prefact_coll)*jac_cnt(1)
-     $           *enhance*fkssymmetryfactor*vegas_wgt
+     $           *fkssymmetryfactor*vegas_wgt
             f_c_MC_S=prefact_c*jac_cnt(1)
-     $           *enhance*fkssymmetryfactor*vegas_wgt
+     $           *fkssymmetryfactor*vegas_wgt
             f_c_MC_H=f_c_MC_S
 
             call set_cms_stuff(1)
@@ -1281,13 +1300,13 @@ c equal to ione, so no need to define separate factors.
             prefact_coll_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
      $           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
      $           *log(delta_used/deltaS)/deltaS
-            f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
+            f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))
      $           *fkssymmetryfactorDeg*vegas_wgt
             f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c
-     &           +prefact_coll_c)*jac_cnt(2)*enhance
+     &           +prefact_coll_c)*jac_cnt(2)
      &           *fkssymmetryfactorDeg*vegas_wgt
             f_sc_MC_S=prefact_c*jac_cnt(2)
-     $           *enhance*fkssymmetryfactor*vegas_wgt
+     $           *fkssymmetryfactor*vegas_wgt
             f_sc_MC_H=f_sc_MC_S
 
             call set_cms_stuff(2)
@@ -1298,24 +1317,24 @@ c equal to ione, so no need to define separate factors.
      &           ,xiScut_used)*( log(xicut_used)**2
      &           -log(min(xiimax_cnt(1),xiScut_used))**2 )*1/(2.d0
      &           *deltaS)
-            f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
+            f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
             f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))
-     &           *enhance*fkssymmetryfactorDeg*vegas_wgt
+     &           *fkssymmetryfactorDeg*vegas_wgt
             f_dsc(3)=prefact_deg_slxi*jac_cnt(2)/(shat/(32*pi**2))
-     &           *enhance*fkssymmetryfactorDeg*vegas_wgt
+     &           *fkssymmetryfactorDeg*vegas_wgt
             f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat
-     &           /(32*pi**2))*enhance*fkssymmetryfactorDeg
+     &           /(32*pi**2))*fkssymmetryfactorDeg
      &           *vegas_wgt
             ! prefactor for the DIS scheme
             prefact_dis_d=xinorm_cnt(1)/xiScut_used/deltaS
-            f_dis_d=prefact_dis_d*jac_cnt(2)/(shat/(32*pi**2))*enhance
+            f_dis_d=prefact_dis_d*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
             prefact_dis_p=xinorm_cnt(1)*dlog(xiScut_used)/xiScut_used/deltaS
-            f_dis_p=prefact_dis_p*jac_cnt(2)/(shat/(32*pi**2))*enhance
+            f_dis_p=prefact_dis_p*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
             prefact_dis_l=xinorm_cnt(1)*dlog(xiScut_used)**2/2d0/xiScut_used/deltaS
-            f_dis_l=prefact_dis_l*jac_cnt(2)/(shat/(32*pi**2))*enhance
+            f_dis_l=prefact_dis_l*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
          else
             f_c=0d0
