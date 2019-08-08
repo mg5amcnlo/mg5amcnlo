@@ -1235,8 +1235,8 @@ c               cstlow <= smallptupp
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
       logical usePythia,useDire
-      data usePythia/.false./
-      data useDire/.true./
+      data usePythia/.true./
+      data useDire/.false./
 
 cSF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
@@ -1320,13 +1320,13 @@ c Input check
         stop
       endif
 
-cSF TEMPORARY
-      if(usePythia)then
-        write(*,*)'has'
-        write(*,*)'xscales -> xscales^2 AND xmasses -> sqrt(xmasses)'
-        write(*,*)'been done?'
-        stop
-      endif
+c$$$cSF TEMPORARY
+c$$$      if(usePythia)then
+c$$$        write(*,*)'has'
+c$$$        write(*,*)'xscales -> xscales^2 AND xmasses -> sqrt(xmasses)'
+c$$$        write(*,*)'been done?'
+c$$$        stop
+c$$$      endif
 
 c Compute MC cross section
       wgt=0d0
