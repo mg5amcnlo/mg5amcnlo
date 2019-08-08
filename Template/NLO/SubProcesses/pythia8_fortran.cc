@@ -35,6 +35,7 @@ extern "C" {
     }
     lhareader.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
+    pythia.mergingPtr->setLHAPtr(&lhawriter);
     pythia.setUserHooksPtr(&printFirstEmission);
     if (cmdFilePath!="") {
       cout<<"Initialising Pythia8 from cmd file '"<<cmdFilePath<<"'"<<endl;		
@@ -54,6 +55,7 @@ extern "C" {
   void pythia_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26]) {
     lhareader.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
+    pythia.mergingPtr->setLHAPtr(&lhawriter);
     pythia.setUserHooksPtr(&printFirstEmission);
 
     // Reconstruct the process string.

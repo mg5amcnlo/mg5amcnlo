@@ -64,6 +64,9 @@ public:
    double pTendAll, double m2dip, int idA, int type, double s = -1.,
    double x = -1.);
 
+  LHEF3FromPythia8* lhaPtr;
+  void setLHAPtr( LHEF3FromPythia8* lhaUpIn ) { lhaPtr = lhaUpIn; }
+
 protected:
 
   //----------------------------------------------------------------------//
@@ -71,7 +74,7 @@ protected:
   //----------------------------------------------------------------------//
 
   // Constructor.
-  Merging() { settingsPtr = 0; infoPtr = 0; particleDataPtr = 0;
+  Merging() { lhaPtr=0; settingsPtr = 0; infoPtr = 0; particleDataPtr = 0;
     rndmPtr = 0; beamAPtr = 0; beamBPtr = 0; trialPartonLevelPtr = 0;
     mergingHooksPtr = 0; }
 

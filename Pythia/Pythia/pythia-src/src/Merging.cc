@@ -233,6 +233,12 @@ int Merging::clusterAndStore(Event& process){
 
     filled = true;
 
+    // Save clustered event in external container, if necessary.
+    if (lhaPtr) {
+      lhaPtr->setEventPtr(&FullHistory.children[i]->state);
+      lhaPtr->setEvent();
+    }
+
     vector<pair<int,int> > dipEnds;
     // Loop through final state of system to find possible dipole ends.
     for (int ip = 0; ip < FullHistory.children[i]->state.size(); ++ip) {
