@@ -35,7 +35,6 @@ extern "C" {
     }
     lhareader.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
-    pythia.mergingPtr->setLHAPtr(&lhawriter);
     pythia.setUserHooksPtr(&printFirstEmission);
     if (cmdFilePath!="") {
       cout<<"Initialising Pythia8 from cmd file '"<<cmdFilePath<<"'"<<endl;		
@@ -47,6 +46,7 @@ extern "C" {
     }
     pythia.setLHAupPtr(& lhareader);
     pythia.init();
+    pythia.mergingPtr->setLHAPtr(&lhawriter);
     // Flag that Pythia8 intiialisation has been performed.
     pythia_control_.is_pythia_active = 1;
   }
@@ -55,7 +55,6 @@ extern "C" {
   void pythia_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26]) {
     lhareader.setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
-    pythia.mergingPtr->setLHAPtr(&lhawriter);
     pythia.setUserHooksPtr(&printFirstEmission);
 
     // Reconstruct the process string.
@@ -114,6 +113,7 @@ extern "C" {
 
     pythia.setLHAupPtr(& lhareader);
     pythia.init();
+    pythia.mergingPtr->setLHAPtr(&lhawriter);
     // Flag that Pythia8 intiialisation has been performed.
     pythia_control_.is_pythia_active = 1;
   }
