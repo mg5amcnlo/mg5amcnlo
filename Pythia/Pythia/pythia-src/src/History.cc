@@ -8408,7 +8408,7 @@ double History::pTLund(const Event& event, int rad, int emt, int rec,
      recAft *=  (1. - (Qsq - m2RadBef)/(mar2 - m2RadBef))
                /(1. + (Qsq - m2RadBef)/(mar2 - m2RadBef));
      // Reclustering not kinematically possible if Qsq is larger than mar2.
-     if (Qsq > mar2) return 0.;
+     if (Qsq > mar2) { /*cout << __LINE__ << " reject here " << endl;*/ return 0.; }
   }
 
   Vec4   sum   = radAft + recAft + emtAft;
@@ -8421,6 +8421,14 @@ double History::pTLund(const Event& event, int rad, int emt, int rec,
                + RecAfterBranch.p()).m2Calc();
   double q2AR = (RadAfterBranch.p() + RecAfterBranch.p()).m2Calc();
 
+  // Check that dipole mass after intial-state emission is positive.
+  // If not, the emission is not kinematically allowed and the pT should
+  // be zero.
+  if (Type != 1 && q2BR < 0.) {
+    //cout << __LINE__ << " not possible here " << endl;
+    return 0.;
+  }
+
   // Prepare for more complicated z definition for massive splittings.
   double lambda13 = sqrt( pow2(Qsq - m2RadAft - m2EmtAft )
     - 4. * m2RadAft*m2EmtAft );
@@ -8431,12 +8439,22 @@ double History::pTLund(const Event& event, int rad, int emt, int rec,
   double z = (Type==1) ? 1./ ( 1- k1 -k3) * ( x1 / (2.-x2) - k3)
                      : q2BR / q2AR;
 
+  // Splitting is kinematically not allowed if z>1 or z<0. In that case,
+  // set pT to zero to trigger pahse space checks downstream.
+  if (z > 1. || z < 0.) {
+    //cout << __LINE__ << " not possible here " << endl;
+    return 0.;
+  }
+
   // Separation of splitting, different for FSR and ISR
   double pTpyth = (Type==1) ? z*(1.-z) : (1.-z);
 
   // pT^2 = separation*virtuality
   if (Type == 1) pTpyth *= (Qsq - m2RadBef);
   else           pTpyth *= Qsq;
+
+  //cout << "[" << rad << "," << emt << "," << rec << "] Q2=" << Qsq
+  //     << " z=" << z << " " << pTpyth << " " << q2BR << " " << q2AR << endl; 
 
   // Check for threshold in ISR, only relevant for c and b.
   // Use pT2 = (1 - z) * (Qsq + m^2).
@@ -8452,7 +8470,10 @@ double History::pTLund(const Event& event, int rad, int emt, int rec,
     }
   }
 
-  if ( pTpyth < 0. ) pTpyth = 0.;
+  if ( pTpyth < 0. ) {
+    //cout << __LINE__ << " not possible here " << endl;
+    pTpyth = 0.;
+  }
 
   // Return pT
   return sqrt(pTpyth);
