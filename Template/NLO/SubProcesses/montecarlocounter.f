@@ -1224,7 +1224,7 @@ c               cstlow <= smallptupp
       logical*1 dzones(0:99,0:99)
       logical*1 dzones2(0:99,0:99)
 
-      integer id,type,icount,jcount,kcount,irec(2)
+      integer id,type,icount,jcount,kcount,jindex(2)
       integer iflip(2)
       data iflip/2,1/
 
@@ -1740,7 +1740,11 @@ c SCALUP_tmp_H2, meant to be used in the computation of Delta.
          do j=1,nexternal
             if(j.eq.i_fks)cycle
             xscales2(iRtoB(i),iRtoB(j))=xscales(i,j)
-            xmasses2(iRtoB(i),iRtoB(j))=xmasses(i,j)
+c In pythia the dipole masses can be arbitary large since the clustering
+c does not know exactly all the phase-space boundaries. Use min() to put
+c a cap on this (i.e., equal to the largest allowed value in pysudakov()
+c tables).
+            xmasses2(iRtoB(i),iRtoB(j))=min(xmasses(i,j),cxmupp)
             dzones2(iRtoB(i),iRtoB(j))=dzones(i,j)
             scalup_tmp_H2(iRtoB(i),iRtoB(j))=
      &        xscales2(iRtoB(i),iRtoB(j))
@@ -1921,6 +1925,8 @@ c
          if(idup_s(i).eq.21)nG_S=nG_S+1
          if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
          icount=0
+         jindex(1)=-1
+         jindex(2)=-1
          do j=1,nexternal-1
 c At fixed i, loop over j to find the colour lines that begin at i 
 c (at most [because of dead zones] one for quarks, two for gluons).
@@ -1942,10 +1948,13 @@ c Store the corresponding Sudakov type in isudtype(*)
               write(*,*)i,idup_s(i),icount,isspecial(jflow)
               stop
             endif
-cSF The following definition of startingScale is unprotected:
-cSF cstupp must be sufficiently large
+c The following definition of startingScale is unprotected:
+c cstupp must be sufficiently large
             startingScale0 = min(SCALUP_tmp_S2(i,j),cstupp)
-            stoppingScale0 = SCALUP_tmp_H2(i,j)
+c Same comment on cstupp as above. Inserted here as a safety
+c measure, since Pythia might give very large scales. In those
+c case, the computed Sudakovs are actually discarded later
+            stoppingScale0 = min(SCALUP_tmp_H2(i,j),cstupp)
             if(useDire)then
 c Compute the anticollinear suppression factor
               sref=dot(p(0,1),p(0,2))
@@ -2035,6 +2044,7 @@ c$$$              stop
             endif
             stoppingScale(icount)=stoppingScale0
             startingScale(icount)=startingScale0
+            jindex(icount)=j
             if(i.le.2.and.j.le.2)then
                isudtype(icount)=1
             elseif(i.gt.2.and.j.gt.2)then
@@ -2147,6 +2157,11 @@ c so far, so do it here
            endif
          else
 c A gluon with two partners corresponding to a live zone
+           if(jindex(1).eq.-1.or.jindex(2).eq.-1)then
+             write(*,*)'Error #10 in complete_xmcsubt:',
+     #                 jindex(1),jindex(2),i,icount
+             stop
+           endif
            do jcount=1,icount
 c Start by computing deltanum(1,2) and deltanum(2,1)
              if(stoppingScale(jcount).le.smallptlow)then
@@ -2154,13 +2169,13 @@ c Start by computing deltanum(1,2) and deltanum(2,1)
              elseif( stoppingScale(jcount).gt.smallptlow .and.
      #               stoppingScale(jcount).le.smallptupp )then
                deltanum(jcount,iflip(jcount))=
-     #              pysudakov(smallptupp,xmasses2(i,j),
+     #              pysudakov(smallptupp,xmasses2(i,jindex(iflip(jcount))),
      #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
                deltanum(jcount,iflip(jcount))=deltanum(jcount,iflip(jcount))*
      #                  get_to_zero(stoppingScale(jcount),smallptlow,smallptupp)
              else
                deltanum(jcount,iflip(jcount))=
-     #              pysudakov(stoppingScale(jcount),xmasses2(i,j),
+     #              pysudakov(stoppingScale(jcount),xmasses2(i,jindex(iflip(jcount))),
      #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
              endif
            enddo
@@ -2224,6 +2239,7 @@ c
            wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
          endif
  111     continue
+c End of primary loop over i
       enddo
       if(i_dipole_counter+i_dipole_dead_counter.ne.nQ_S+2*nG_S)then
          write(*,*)'Mismatch in number of dipole ends and Delta factors'
