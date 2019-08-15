@@ -2376,9 +2376,12 @@ RESTART = %(mint_mode)s
         # latter is only the only line that contains integers.
         for j,fs in enumerate([files_mint_grids,files_MC_integer]):
             linesoffiles=[]
+            polyfit_data=[]
             for f in fs:
                 with open(f,'r+') as fi:
-                    linesoffiles.append(fi.readlines())
+                    data=fi.readlines()
+                    linesoffiles.append([ dat for dat in data if 'POL' not in dat.split()[0] ])
+                    polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 action=list(set([row.strip().split()[0] for row in rowgrp])) # list(set()) structure to remove duplicants
@@ -2414,8 +2417,30 @@ RESTART = %(mint_mode)s
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
                 else:
                     raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
-                    
                 to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
+
+            if polyfit_data:
+                # special for data regarding virtuals. Need to simply append
+                # all the data, but skipping doubles.
+                for i,onefile in enumerate(polyfit_data):
+                    # Get the number of channels, and the number of PS points per channel
+                    data_amount_in_file=[int(oneline.split()[1]) for oneline in onefile if len(oneline.split())==2]
+                    if i==0:
+                        filtered_list=[ [] for i in range(len(data_amount_in_file)) ]
+                    start=len(data_amount_in_file)
+                    for channel,channel_size in enumerate(data_amount_in_file):
+                        end=start+channel_size
+                        for data_channel in onefile[start:end]:
+                            if data_channel not in filtered_list[channel]:
+                                filtered_list[channel].append(data_channel)
+                        start=end
+                # The amount of data in each file (per channel):
+                for channel in filtered_list:
+                    to_write.append("POL " + str(len(channel)) + "\n")
+                # All the data:
+                for ch in filtered_list:
+                    for dat in ch:
+                        to_write.append(dat)
             # write the data over the master location
             if j==0:
                 with open(pjoin(location,'mint_grids'),'w') as f:
