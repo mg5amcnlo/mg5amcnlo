@@ -35,7 +35,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	reweight_xsec.o boostwdir2.o initcluster.o cluster.o		\
 	splitorders_stuff.o reweight.o get_color.o FKSParamReader.o	\
 	iproc_map.o MC_integer.o $(reweight_xsec_events_pdf_dummy)	\
-	$(applgrid_interface) weight_lines.o mint_module.o
+	$(applgrid_interface) weight_lines.o mint_module.o polfit.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\

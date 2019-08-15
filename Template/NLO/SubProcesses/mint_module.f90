@@ -92,7 +92,7 @@ module mint_module
   integer, dimension(maxchannels), public :: iconfigs
   double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult
   double precision, dimension(0:n_ave_virt,maxchannels), public :: average_virtual
-  double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint
+  double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
   logical :: only_virt,new_point,pass_cuts_check
@@ -343,6 +343,7 @@ contains
     do k_ord_virt=0,n_ord_virt
        call regrid_ave_virt(k_ord_virt)
     enddo
+    call do_polyfit()
 ! Regrid the MC over integers (used for the MC over FKS dirs)
     call regrid_MC_integer
   end subroutine update_integration_grids
@@ -668,6 +669,8 @@ contains
           virtual=(f(ithree)+average_virtual(k_ord_virt,ichan)*f(isix))*virtual_fraction(ichan)
           born=f(isix)*virtual_fraction(ichan)
           call fill_ave_virt(x,k_ord_virt,virtual,born)
+          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
+                                 (f(3)+polyfit(k_ord_virt)*f(6))/f(6),f(6)/wgt_mult)
        else
           f(isix)=0d0
        endif
@@ -802,6 +805,7 @@ contains
     enddo
     do k_ord_virt=0,n_ord_virt
        call get_ave_virt(x,k_ord_virt)
+       call get_polyfit(ichan,k_ord_virt,x(1:ndim-3),polyfit(k_ord_virt))
     enddo
   end subroutine get_random_x
   
@@ -988,7 +992,7 @@ contains
 
   subroutine reset_mint_grids
     implicit none
-    integer :: kdim,kchan,kint,k_ord_virt
+    integer :: kdim,kchan,kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
@@ -996,6 +1000,7 @@ contains
     regridded(1:nchans)=.true.
     nhits_in_grids(1:nchans)=0
     call init_ave_virt
+    call init_polyfit(ndim-3,nchans,n_ord_virt,1000)
     ans_chan(0:nchans)=0d0
     if (double_events) then
        ! when double events, start with the very first channel only. For the
@@ -1046,6 +1051,7 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     write (12,*) 'IDE',(ifold(i),i=1,ndim)
+    call save_polyfit(12)
     close (12)
   end subroutine write_grids_to_file
   
@@ -1053,6 +1059,7 @@ contains
 ! Read the MINT integration grids from file
     implicit none
     integer :: i,j,k,kchan,idum
+    integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
     open (unit=12, file='mint_grids',status='old')
     ans(1,0)=0d0
@@ -1083,6 +1090,16 @@ contains
     enddo
     read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
+    ! polyfit stuff:
+    do kchan=1,nchans
+       read (12,*) dummy,points(kchan)
+    enddo
+    do kchan=1,nchans
+       backspace(12)
+    enddo
+    call init_polyfit(ndim-3,nchans,n_ord_virt,maxval(points(1:nchans)))
+    call restore_polyfit(12)
+    call do_polyfit()
     close (12)
 ! check for zero cross-section: if restoring grids corresponding to
 ! sigma=0, just terminate the run
