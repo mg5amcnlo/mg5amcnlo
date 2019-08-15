@@ -52,8 +52,7 @@
       ! virtual/born ratio
       valid_ord_virt(k_ord_virt)=.true.
       if (k_ord_virt.eq.0) then
-         n(ichan)=n(ichan)+1
-         if (n(ichan).gt.maxpoint) then
+         if (n(ichan).eq.maxpoint) then
 ! increase the size of the allocated variables:
             maxpoint=maxpoint+1000
             allocate(temp3(maxpoint,0:n_ord_virt,nchan))
@@ -76,6 +75,7 @@
             deallocate(a)
             allocate(a(maxpoint*3+maxdeg*3+3))
          endif
+         n(ichan)=n(ichan)+1
 ! add the point to the saved information
          do i=1,ndim
             x2d(n(ichan),i,ichan)=x(i)
@@ -159,6 +159,8 @@
             enddo
          enddo
       enddo
+      if (verbose) write (*,*) 'polyfit - valid orders virt'
+     $     ,valid_ord_virt(0:n_ord_virt)
       return
       end
 
