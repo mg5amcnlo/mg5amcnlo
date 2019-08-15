@@ -665,12 +665,12 @@ contains
           isix=2*k_ord_virt+6
        endif
        if (f(ithree).ne.0d0) then
-          f(isix)=f(isix)/virtual_fraction(ichan)
-          virtual=(f(ithree)+average_virtual(k_ord_virt,ichan)*f(isix))*virtual_fraction(ichan)
-          born=f(isix)*virtual_fraction(ichan)
+          born=f(isix)
+          ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
+          virtual=f(ithree)*virtual_fraction(ichan)+average_virtual(k_ord_virt,ichan)*f(isix)
           call fill_ave_virt(x,k_ord_virt,virtual,born)
-          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
-                                 (f(3)+polyfit(k_ord_virt)*f(6))/f(6),f(6)/wgt_mult)
+          virtual=f(ithree)*virtual_fraction(ichan)+polyfit(k_ord_virt)*f(isix)
+          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3),vitual/born,born/wgt_mult)
        else
           f(isix)=0d0
        endif
