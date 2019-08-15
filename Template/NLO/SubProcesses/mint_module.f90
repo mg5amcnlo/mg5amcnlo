@@ -670,7 +670,7 @@ contains
           virtual=f(ithree)*virtual_fraction(ichan)+average_virtual(k_ord_virt,ichan)*f(isix)
           call fill_ave_virt(x,k_ord_virt,virtual,born)
           virtual=f(ithree)*virtual_fraction(ichan)+polyfit(k_ord_virt)*f(isix)
-          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3),vitual/born,born/wgt_mult)
+          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3),virtual/born,born/wgt_mult)
        else
           f(isix)=0d0
        endif
