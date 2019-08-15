@@ -49,7 +49,7 @@ c Vegas stuff
       double precision weight,event_weight,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
-      integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
+      integer ixi_i,iphi_i,iy_ij,vn
       logical putonshell
       logical unwgt
       double precision evtsgn

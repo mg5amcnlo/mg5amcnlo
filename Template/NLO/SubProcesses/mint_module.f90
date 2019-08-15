@@ -68,26 +68,15 @@
 module mint_module
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
-  integer, parameter          :: ndimmax=60       ! max number of dimensions of the integral
-  integer, parameter          :: n_ave_virt=10    ! max number of grids to set up to approx virtual
-  integer, parameter          :: nintegrals=26    ! number of integrals to keep track of
+  integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
+  integer, parameter, public  :: n_ave_virt=10    ! max number of grids to set up to approx virtual
+  integer, parameter, public  :: nintegrals=26    ! number of integrals to keep track of
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
   integer, parameter, private :: min_it1=5        ! minimal number of iterations in the mint step 1 phase
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
-  integer, parameter          :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
-
-  integer :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi
-  integer, dimension(ndimmax) :: ifold
-  integer, dimension(maxchannels) :: iconfigs
-  double precision :: accuracy,min_virt_fraction_mint,wgt_mult
-  double precision, dimension(0:n_ave_virt,maxchannels) :: average_virtual
-  double precision, dimension(0:n_ave_virt) :: virt_wgt_mint,born_wgt_mint
-  double precision, dimension(maxchannels) :: virtual_fraction
-  double precision, dimension(nintegrals,0:maxchannels) :: ans,unc
-  logical :: only_virt,new_point,pass_cuts_check
-  
+  integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
   !     nintervals = min_inter * 2^n,
@@ -96,6 +85,19 @@ module mint_module
   ! The number of intergrals should be equal to
   !     nintegrals=6+2*n_ave_virt
   !
+
+! public variables 
+  integer, public :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi
+  integer, dimension(ndimmax), public :: ifold
+  integer, dimension(maxchannels), public :: iconfigs
+  double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult
+  double precision, dimension(0:n_ave_virt,maxchannels), public :: average_virtual
+  double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint
+  double precision, dimension(maxchannels), public :: virtual_fraction
+  double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
+  logical :: only_virt,new_point,pass_cuts_check
+
+! private variables
   character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
                                                    'ABS integral ', & !  1
                                                    'Integral     ', & !  2
@@ -125,17 +127,15 @@ module mint_module
                                                    'B 10         '/)  ! 26
 
 
-  integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point
+  integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
   integer, dimension(ndimmax), private :: icell,ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
   integer, dimension(maxchannels), private :: nhits_in_grids
   integer, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: nvirt,nvirt_acc
   integer, dimension(13), private :: gen_counters
-
-  logical, private :: double_events,reset,even_rn
+  logical, private :: double_events,reset,even_rn,firsttime
   logical, dimension(maxchannels), private :: regridded
-
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
   double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
@@ -148,15 +148,41 @@ module mint_module
   double precision, dimension(ndimmax), private :: rand
   double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
 
-  integer, private :: ng,npg,k
-  logical, private :: firsttime
-
+! Common blocks used elsewhere in the code
   integer                                   npoints
   double precision            cross_section
   common /for_FixedOrder_lhe/ cross_section,npoints
   logical              fixed_order,nlo_ps
   common /c_fnlo_nlops/fixed_order,nlo_ps
-  
+
+! functions and subroutines:
+  public :: mint,gen,read_grids_from_file
+  private :: initialise_mint,setup_basic_mint &
+       &,update_accumulated_results,prepare_next_iteration &
+       &,check_desired_accuracy,update_integration_grids &
+       &,combine_final_three_iterations &
+       &,print_results_accumulated_three_iterations &
+       &,update_virtual_fraction,combine_iterations &
+       &,print_results_accumulated,check_fractional_uncertainty &
+       &,print_results_current_iteration &
+       &,compute_fractional_uncertainty,combine_results_channels &
+       &,check_for_special_channels_loop &
+       &,combine_results_channels_special_loop,get_amount_of_points &
+       &,add_point_to_grids,add_point_to_bounding_envelope &
+       &,accumulate_the_point,compute_integrand,get_random_x &
+       &,start_iteration,reset_accumulated_grids_for_updating &
+       &,check_evenly_random_numbers,finalise_mint,write_results &
+       &,write_channel_info,setup_imode_1 &
+       &,reset_upper_bounding_envelope,setup_imode_m1,setup_imode_0 &
+       &,reset_mint_grids,setup_common,write_grids_to_file &
+       &,double_grid,regrid,smooth_xacc,nextlexi ,init_ave_virt&
+       &,get_ave_virt,fill_ave_virt,regrid_ave_virt ,double_ave_virt&
+       &,get_channel,close_run_zero_res,ran3 &
+       &,initialize_even_random_numbers,get_ran &
+       &,increase_gen_counters_middle,increase_gen_counters_before &
+       &,increase_gen_counters_end,check_upper_bound &
+       &,get_random_cell_flat,get_weighted_cell,initialise_mint_gen &
+       &,print_gen_counters
 contains
 
   subroutine mint(fun)
@@ -1425,6 +1451,7 @@ contains
     integer, save :: current_dim
     integer :: i,iret
     if (firsttime) then
+! initialise the hypercubes
        dng=1d0/dble(ng)
        current_dim=0
        do i=1,ndim
