@@ -146,6 +146,7 @@ module mint_module
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
   double precision, private :: upper_bound,vol_chan
   double precision, dimension(ndimmax), private :: rand
+  double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
 
   integer, private :: ng,npg,k
   logical, private :: firsttime
