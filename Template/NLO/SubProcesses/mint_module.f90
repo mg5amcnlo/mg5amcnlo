@@ -586,10 +586,10 @@ contains
     if (ntotcalls(1).gt.max_points .and. pass_cuts_point.lt.25  &
          .and. double_events) then
 ! Not enough points passed the cuts: give an error message
-       write (*,*) 'ERROR: NOT ENOUGH POINTS PASS THE CUTS. ' / &
-            / 'RESULTS CANNOT BE TRUSTED. ' / &
-            / 'LOOSEN THE GENERATION CUTS, OR ADAPT SET_TAU_MIN()' / &
-            / ' IN SETCUTS.F ACCORDINGLY.'
+       write (*,*) 'ERROR: NOT ENOUGH POINTS PASS THE CUTS. ' // &
+            'RESULTS CANNOT BE TRUSTED. ' // &
+            'LOOSEN THE GENERATION CUTS, OR ADAPT SET_TAU_MIN()' // &
+            ' IN SETCUTS.F ACCORDINGLY.'
        stop 1
     endif
     if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25 .and. &

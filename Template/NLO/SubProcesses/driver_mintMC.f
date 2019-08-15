@@ -683,8 +683,6 @@ c
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
-      logical new_point
-      common /c_new_point/ new_point
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif

@@ -370,8 +370,6 @@ c timing statistics
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
-      logical new_point
-      common /c_new_point/ new_point
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
