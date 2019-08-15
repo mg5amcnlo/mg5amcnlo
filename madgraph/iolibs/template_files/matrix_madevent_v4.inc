@@ -49,6 +49,7 @@ C
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
+
 C  
 C GLOBAL VARIABLES
 C  
@@ -58,7 +59,7 @@ C
     CHARACTER*101        HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
-    REAL*8 POL(2)
+	REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
     
     INTEGER          ISUM_HEL
@@ -68,6 +69,7 @@ C
     DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
+
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -235,6 +237,11 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+
+	%(fake_width_declaration)s
+	logical first
+	data first /.true./
+	save first
 C
 C FUNCTION
 C
@@ -245,6 +252,9 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
+
+	double precision small_width_treatment
+	common/narrow_width/small_width_treatment
 C  
 C COLOR DATA
 C  
@@ -252,6 +262,11 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+if (first) then
+	first=.false.
+	%(fake_width_definitions)s
+endif
+
 %(helas_calls)s
 %(jamp_lines)s
 

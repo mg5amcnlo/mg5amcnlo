@@ -384,7 +384,7 @@ class Systematics(object):
                     misc.gzip(to_check) 
                 else:
                     import shutil
-                    shutil.move(self.output.name, self.output_path)
+                    shutil.move(to_check, self.output_path)
         
         return all_cross
         
@@ -831,7 +831,6 @@ class Systematics(object):
             loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
             loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
             
-        
         
         # MUR part
         if self.b1 == 0 == self.b2:

@@ -1639,7 +1639,7 @@ c or to fill histograms.
       include 'orders.inc'
       include 'FKSParams.inc'
       integer orders(nsplitorders)
-      integer i,j,k,iamp
+      integer i,j,k,iamp,icontr_orig
       logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
      $     ,wgt_wo_pdf,conv
@@ -1655,6 +1655,9 @@ c or to fill histograms.
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       virt_found=.false.
+c number of contributions before they are (possibly) increased through a
+c call to separate_flavour_config().
+      icontr_orig=icontr
       i=0
       do while (i.lt.icontr)
          i=i+1
@@ -1671,8 +1674,12 @@ c call the PDFs
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          call weight_lines_allocated(nexternal,max_contr,iwgt,iproc)
-c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and parton_pdg_uborn
-         call set_pdg_codes(iproc,pd,nFKSprocess,i)
+c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and
+c parton_pdg_uborn [Do only for the contributions that were already
+c available as part of the input -- NOT the ones that are created
+c through the call to separate_flavour_config(), since that will
+c overwrite the relevant information.]
+         if (i.le.icontr_orig) call set_pdg_codes(iproc,pd,nFKSprocess,i)
          if (separate_flavour_configs .and. ipr(i).eq.0) then
             call separate_flavour_config(i) ! this increases icontr
          endif

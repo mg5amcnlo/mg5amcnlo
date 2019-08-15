@@ -399,13 +399,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         text=''
         for i,e in enumerate(initial_states):
-            if len(e) ==1:
-                e.append(0)
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
+                if len(t) ==1:
+                    t.append(0)
                 text=text+'   '
                 try:
                     for p in t:
+                        if p == None : p = 0
                         text=text+' '+str(p)
                 except TypeError:
                         text=text+' '+str(t)
@@ -3104,7 +3105,7 @@ Parameters              %(params)s\n\
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'

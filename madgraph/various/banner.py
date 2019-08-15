@@ -2758,7 +2758,7 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
-        self.add_param("python_seed", -1, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
+        self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],
@@ -2954,6 +2954,7 @@ class RunCardLO(RunCard):
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
+        self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)

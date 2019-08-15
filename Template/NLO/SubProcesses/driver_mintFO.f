@@ -370,6 +370,11 @@ c timing statistics
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
+      logical new_point
+      common /c_new_point/ new_point
+      if (new_point .and. ifl.ne.2) then
+         pass_cuts_check=.false.
+      endif
       if (firsttime) then
          firsttime=.false.
          call setup_ini_fin_fks_map(ini_fin_fks_map)
@@ -421,6 +426,7 @@ c The nbody contributions
       call set_cms_stuff(izero)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
+         pass_cuts_check=.true.
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
          if (abrv(1:2).ne.'vi') then
@@ -464,6 +470,7 @@ c The n+1-body contributions (including counter terms)
          call set_cms_stuff(mohdr)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
+            pass_cuts_check=.true.
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
@@ -474,6 +481,7 @@ c The n+1-body contributions (including counter terms)
             call compute_soft_collinear_counter_term(0d0)
          endif
          if (passcuts_n1body) then
+            pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)

@@ -2,7 +2,7 @@
 ! MINT Integrator Package
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ! Original version by Paolo Nason (for POWHEG (BOX))
-! Modified by Rikkert Frederix (for aMC@NLO)
+! Modified by Rikkert Frederix (for MadGraph5_aMC@NLO)
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !      subroutine mint(fun,ndim,ncalls0,itmax,imode,
 ! ndim=number of dimensions
@@ -86,7 +86,7 @@ module mint_module
   double precision, dimension(0:n_ave_virt) :: virt_wgt_mint,born_wgt_mint
   double precision, dimension(maxchannels) :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels) :: ans,unc
-  logical :: only_virt,new_point
+  logical :: only_virt,new_point,pass_cuts_check
   
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
@@ -125,7 +125,7 @@ module mint_module
                                                    'B 10         '/)  ! 26
 
 
-  integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls
+  integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point
   integer, dimension(ndimmax), private :: icell,ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
@@ -553,7 +553,8 @@ contains
           ans_chan(kchan)=0d0
           ans_chan(kchan+1)=1d0
           ntotcalls(1:nintegrals)=0
-          non_zero_point(1:nintegrals)=0
+!          non_zero_point(1:nintegrals)=0  ! don't set this to zero
+          pass_cuts_point=0
           kpoint_iter=0
           channel_loop_done=.false.
           return
@@ -582,8 +583,18 @@ contains
        if (i.eq.4 .and. non_zero_point(i).ne.0 ) &
             ntotcalls(i) = non_zero_point(i)
     enddo
-    if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25  &
+    if (ntotcalls(1).gt.max_points .and. pass_cuts_point.lt.25  &
          .and. double_events) then
+! Not enough points passed the cuts: give an error message
+       write (*,*) 'ERROR: NOT ENOUGH POINTS PASS THE CUTS. ' / &
+            / 'RESULTS CANNOT BE TRUSTED. ' / &
+            / 'LOOSEN THE GENERATION CUTS, OR ADAPT SET_TAU_MIN()' / &
+            / ' IN SETCUTS.F ACCORDINGLY.'
+       stop 1
+    endif
+    if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25 .and. &
+         double_events .and. &
+         ( (nit.eq.1 .and. ichan.eq.nchans) .or. nit.gt.1 )  ) then
 ! zero cross-section: warn the user in the log, but print everything
 ! and save files/grids as any other run
        write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
@@ -594,7 +605,10 @@ contains
     endif
 ! Goto beginning of loop over PS points until enough points have found
 ! that pass cuts.
-    if (non_zero_point(1).lt.int(0.99*ncalls) .and. double_events) then
+    if ( ( ((non_zero_point(1).lt.int(0.99*ncalls) .and. nit.gt.1) .or. &
+            (non_zero_point(1).lt.int(0.99*ncalls*ichan) .and. nit.eq.1)) &
+           .and. double_events ) &
+        .and. ntotcalls(1).lt.max_points) then
        enough_points=.false.
     else
        enough_points=.true.
@@ -688,6 +702,7 @@ contains
     do i=1,nintegrals
        if (f(i).ne.0d0) non_zero_point(i)=non_zero_point(i)+1
     enddo
+    if (pass_cuts_check) pass_cuts_point=pass_cuts_point+1
 ! Add the PS point to the result of this iteration
     vtot(1:nintegrals,ichan)=vtot(1:nintegrals,ichan)+f(1:nintegrals)
     etot(1:nintegrals,ichan)=etot(1:nintegrals,ichan)+f(1:nintegrals)**2
@@ -778,6 +793,7 @@ contains
     etot(1:nintegrals,0:nchans)=0d0
     kpoint_iter=0
     non_zero_point(1:nintegrals)=0
+    pass_cuts_point=0
   end subroutine start_iteration
 
   subroutine reset_accumulated_grids_for_updating
@@ -919,7 +935,7 @@ contains
             nintcurr_virt*ifold(kdim).ne.nint_used_virt) then
           write(*,*) 'mint: the values in the ifold array shoud be divisors of', &
                nint_used,'and',nint_used_virt
-          stop
+          stop 1
        endif
        do kint=1,nintcurr
           ymax(kint,kdim,1:nchans)=ans(1,1:nchans)**(1d0/ndim)
