@@ -34,7 +34,8 @@ pjoin = os.path.join
 class TestAMCatNLOEW(unittest.TestCase):
     """ a suite of extra tests for the ew stuff """
     
-    interface = mgcmd.MasterCmd()
+    def setUp(self):
+        self.interface = mgcmd.MasterCmd()
 
     def test_generate_fks_ew(self):
         """check that the generate command works as expected.

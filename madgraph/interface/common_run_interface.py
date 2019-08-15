@@ -935,8 +935,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         continue
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
-                                    % part.name,'$MG:BOLD')
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.''',
+                                     part.name,'$MG:BOLD')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)

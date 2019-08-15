@@ -488,6 +488,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             # this is a very rough attempt, and works only to guess QED/QCD
             qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+            if qed < 0 or qcd < 0:
+                raise MadGraph5Error,'\nAutomatic process-order determination lead to negative constraints:\n' + \
+                      ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
+                      'Please specify the coupling orders from the command line.'
             orders = {'QED': qed, 'QCD': qcd}
             # set all the other coupling to zero
             for o in myprocdef['model'].get_coupling_orders():

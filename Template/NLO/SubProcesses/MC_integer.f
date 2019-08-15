@@ -58,6 +58,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       data firsttime/maxdim*.true./
       data realfirsttime/.true./
       character*1 cdum
+      character*3 action
       integer nintervals(maxdim),maxintervals,niint_thisd
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim)
@@ -95,7 +96,7 @@ c Read the grid for 'this_dim' from file
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
                read(52,*,end=999,err=999) cdum
             enddo
-            read(52,*,end=999,err=999)
+            read(52,*,end=999,err=999) action,
      &           (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
             do i=this_dim+1,maxdim ! make sure that there are enough lines in this file
                read(52,*,end=999,err=999) cdum
@@ -266,7 +267,7 @@ c Write grid to a file
       enddo
       open(unit=52,file='grid.MC_integer',status='unknown',err=999)
       do this_dim=1,maxdim
-         write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
+         write(52,*) 'AVE',(grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
 c
