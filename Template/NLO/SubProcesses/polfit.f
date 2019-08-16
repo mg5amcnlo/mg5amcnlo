@@ -80,6 +80,9 @@
          do i=1,ndim
             x2d(n(ichan),i,ichan)=x(i)
          enddo
+! initialise all to zero
+         y(n(ichan),0:n_ord_virt,ichan)=0d0
+         w(n(ichan),0:n_ord_virt,ichan)=0d0
       endif
       y(n(ichan),k_ord_virt,ichan)=virt
       w(n(ichan),k_ord_virt,ichan)=sqrt(abs(absXS))
