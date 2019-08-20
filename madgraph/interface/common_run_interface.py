@@ -4349,7 +4349,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_pdfsetsdir(self):
         
         lhapdf_version = self.get_lhapdf_version()
-        return self.get_lhapdf_pdfsetsdir(self.options['lhapdf'], lhapdf_version)
+        return self.get_lhapdf_pdfsetsdir_static(self.options['lhapdf'], lhapdf_version)
 
     ############################################################################
     def get_Pdir(self):
