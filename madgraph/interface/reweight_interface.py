@@ -422,12 +422,13 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 raise self.InvalidCmd("No events files defined.")
             
-        opts = {'rwgt_name':None}
+        opts = {'rwgt_name':None, 'rwgt_info':None}
         if any(a.startswith('--') for a in args):
             for a in args[:]:
                 if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
                     opts[key] = value .replace("'","") .replace('"','')
+        misc.sprint(opts)
         return opts
 
     def help_launch(self):
@@ -463,7 +464,8 @@ class ReweightInterface(extended_cmd.Cmd):
         opts = self.check_launch(args)
         if opts['rwgt_name']:
             self.options['rwgt_name'] = opts['rwgt_name']
-
+        if opts['rwgt_info']:
+            self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.has_standalone_dir:                           
@@ -795,8 +797,12 @@ class ReweightInterface(extended_cmd.Cmd):
             tag = self.options['rwgt_name']
         else:
             tag = str(rewgtid)
-        
-        if not self.second_model and not self.dedicated_path:
+
+        if 'rwgt_info' in self.options and self.options['rwgt_info']:
+            card_diff = self.options['rwgt_info']
+            for name in type_rwgt:
+                mg_rwgt_info.append((tag, name, self.options['rwgt_info']))
+        elif not self.second_model and not self.dedicated_path:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  self.new_param_card
             card_diff = old_param.create_diff(new_param)
