@@ -1666,7 +1666,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
-                                 '--remove_wgts=', '--keep_wgts','--start_id='))
+                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         

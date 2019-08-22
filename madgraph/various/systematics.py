@@ -58,6 +58,7 @@ class Systematics(object):
                  log=lambda x: sys.stdout.write(str(x)+'\n'),
                  only_beam=False,
                  ion_scaling=True,
+                 weight_format=None,
                  ):
 
         # INPUT/OUTPUT FILE
@@ -66,6 +67,7 @@ class Systematics(object):
         else:
             self.input = input_file
         self.output_path = output_file
+        self.weight_format = weight_format
         if output_file != None:
             if isinstance(output_file, str):
                 if output_file == input_file:
@@ -325,7 +327,8 @@ class Systematics(object):
         else:
             lowest_id = self.get_id()        
 
-        ids = [lowest_id+i for i in range(len(self.args)-1)]
+        ids = [self.get_wgt_name(*self.args[i][:5], cid=lowest_id+i) for i in range(len(self.args)-1)]
+        #ids = [lowest_id+i for i in range(len(self.args)-1)]
         all_cross = [0 for i in range(len(self.args))]
         
         self.input.parsing = False
@@ -395,6 +398,7 @@ class Systematics(object):
         #print "normalisation is ", norm
         #print "nb_event is ", nb_event
     
+        misc.sprint(len(all_cross))
         max_scale, min_scale = 0,sys.maxint
         max_alps, min_alps = 0, sys.maxint
         max_dyn, min_dyn = 0,sys.maxint
@@ -610,8 +614,9 @@ class Systematics(object):
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
-                
-            text +='<weight id="%s" %s> %s </weight>\n' % (cid, tag, info)
+            
+            wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
+            text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
             cid+=1
         
         if in_scale or in_alps or in_pdf:
@@ -659,6 +664,13 @@ class Systematics(object):
         
         return lowest_id
         
+    def get_wgt_name(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_format:            
+            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn}
+        else:
+            wgt_name = cid
+        return wgt_name
 
     def get_id(self):
         
