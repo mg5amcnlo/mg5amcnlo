@@ -2,6 +2,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.6.7()
       OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
+      OM: systematics now supports the option --weight_format (see help command for details)
       RF: Fixed a bug in the warning when using FxFx in conjunction with Herwig++/Herwig7. Also, with latest version of
           Herwig7.1.x, the FxFx needed files are compiled by default with in the Herwig code. Thanks Andreas Papaefstathiou.
 

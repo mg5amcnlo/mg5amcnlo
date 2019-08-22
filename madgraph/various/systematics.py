@@ -667,7 +667,7 @@ class Systematics(object):
     def get_wgt_name(self, mur, muf, alps, dyn, pdf, cid=0):
         
         if self.weight_format:            
-            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn}
+            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid}
         else:
             wgt_name = cid
         return wgt_name

@@ -1583,6 +1583,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
+        logger.info("   --weight_format=\"%(id)i\"  # allow to customise the name of the weight. The resulting name SHOULD be unique.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1601,6 +1602,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
         logger.info("       PATTERN  : keep/remove all the weights matching the (python) regular expression.")
         logger.info("       note that multiple entry of those arguments are allowed")
+        logger.info("")
+        logger.info("   Input for weight format")
+        logger.info("     The parameter will be interpreted by python using: https://docs.python.org/2/library/stdtypes.html#string-formatting")
+        logger.info("     The allowed parameters are 'muf','mur','pdf','dyn','alps','id'") 
     def complete_systematics(self, text, line, begidx, endidx):
         """auto completion for the systematics command"""
  
