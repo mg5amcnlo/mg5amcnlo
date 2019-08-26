@@ -810,7 +810,7 @@ c
      #                fksfather_lhe,ipartner_lhe
       integer kk,kk0,kk1,kkunit
       logical verbose_test
-      parameter (verbose_test=.true.)
+      parameter (verbose_test=.false.)
       logical done
       integer ifold(ndimmax) 
       common /cifold/ifold

@@ -1776,21 +1776,23 @@ c relevant to i and j equal to i_fks; these will be provided later
             if(i.eq.j.or.i.eq.i_fks.or.i.eq.j_fks)cycle
             if(iHscale.eq.0)then
               if(are_col_conn_H(i,j))then
-                if(iRtoB(j).gt.0.and.are_col_conn_S(iRtoB(i),iRtoB(j)))then
+                if(iRtoB(j).gt.0) then
+                  if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
 c If the H-event colour line corresponds to an S-event colour line that
 c connects the two partons whose labels are obtained from mapping the 
 c labels at the real-emission level, the content of xscales() must be right
-                  SCALUP_tmp_H(i,j)=xscales(i,j)
+                     SCALUP_tmp_H(i,j)=xscales(i,j)
+                   endif
                 else
 c Otherwise, an S-event colour line must have been broken, which can happen
 c only in the splitting mother->i_fks+j_fks. If j=j_fks, the previous if clause
 c must be fulfilled, which leaves one with only the case j=i_fks to deal with
                   if(j.ne.i_fks)then
-                    write(*,*)'Error #6 in complete_xmcsubt:',
-     #                i,j,i_fks,j_fks
+                     write(*,*)'Error #6 in complete_xmcsubt:',
+     &                   i,j,i_fks,j_fks
                     stop
                   else
-                    SCALUP_tmp_H(i,j)=xscales(i,j_fks)
+                     SCALUP_tmp_H(i,j)=xscales(i,j_fks)
                   endif
                 endif
               endif
@@ -2127,8 +2129,8 @@ c
      #                               startingScale(jcount))
            enddo
          else
-           pdffnum(jcount)=1.d0
-           pdffden(jcount)=1.d0
+           pdffnum(1:2)=1.d0
+           pdffden(1:2)=1.d0
          endif
 c
          if(icount.eq.1)then

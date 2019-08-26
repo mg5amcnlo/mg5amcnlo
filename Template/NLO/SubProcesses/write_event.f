@@ -54,7 +54,7 @@ c missing???
       parameter (izero=0)
       parameter (ione=1)
       logical verbose_test
-      parameter (verbose_test=.true.)
+      parameter (verbose_test=.false.)
 
       call cpu_time(tBefore)
 
@@ -579,7 +579,7 @@ c********************************************************************
         VTIMUP_out(i)=0.d0
         SPINUP_out(i)=dfloat(spin(i))
         SCALES_out(1,i)=scales(i)
-        SCALES_out(2,i)=scales(i+NUP_out)
+        SCALES_out(2,i)=scales(i)
       enddo
 
       ifks_out = i_fks
