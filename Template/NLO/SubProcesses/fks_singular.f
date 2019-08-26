@@ -1435,6 +1435,7 @@ c     ipr(icontr): for separate_flavour_configs: the iproc of current
 c        contribution
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1442,7 +1443,6 @@ c        contribution
       include 'coupl.inc'
       include 'fks_info.inc'
       include 'q_es.inc'
-      include 'FKSParams.inc'
       include 'orders.inc'
       integer type,i,j
       logical foundIt,foundOrders
@@ -1630,6 +1630,7 @@ c or to fill histograms.
       use weight_lines
       use extra_weights
       use mint_module
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1637,7 +1638,6 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
-      include 'FKSParams.inc'
       integer orders(nsplitorders)
       integer i,j,k,iamp,icontr_orig
       logical virt_found
@@ -1990,11 +1990,11 @@ c Use the saved weight_lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer i,kr,kf,iwgt_save,dd
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales),c_mu2_r
@@ -2073,11 +2073,11 @@ c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
 c computations (ickkw.eq.-1).
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer i,ks,kh,iwgt_save
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
@@ -2179,11 +2179,11 @@ c Use the saved weight_lines info to perform PDF reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer n,izero,i,nn
       parameter (izero=0)

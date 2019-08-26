@@ -4,12 +4,11 @@ c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
+      use FKSParams
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include 'born_nhel.inc'
-c general MadFKS parameters
-      include 'FKSParams.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)

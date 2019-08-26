@@ -4,6 +4,7 @@ c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
       use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -73,9 +74,6 @@ c statistics for MadLoop
 c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
-
-c general MadFKS parameters
-      include "FKSParams.inc"
 
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max

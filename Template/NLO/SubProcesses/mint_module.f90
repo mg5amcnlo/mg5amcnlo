@@ -64,8 +64,8 @@
 ! nintegrals>6 : virtual and born order by order
 !
 
-
 module mint_module
+  use FKSParams ! contains use_poly_virtual
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -332,7 +332,6 @@ contains
   
   subroutine update_integration_grids
     implicit none
-    include 'FKSParams.inc'
     integer :: kchan,kdim,k_ord_virt
     do kchan=1,nchans
        do kdim=1,ndim
@@ -650,7 +649,6 @@ contains
 
   subroutine add_point_to_grids(x)
     implicit none
-    include 'FKSParams.inc'
     integer :: kdim,k_ord_virt,ithree,isix
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
@@ -785,7 +783,6 @@ contains
   
   subroutine get_random_x(x,vol,kfold)
     implicit none
-    include 'FKSParams.inc'
     integer :: kdim,k_ord_virt,nintcurr
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
@@ -1007,7 +1004,6 @@ contains
 
   subroutine reset_mint_grids
     implicit none
-    include 'FKSParams.inc'
     integer :: kdim,kchan,kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
@@ -1045,7 +1041,6 @@ contains
   subroutine write_grids_to_file
 ! Write the MINT integration grids to file
     implicit none
-    include 'FKSParams.inc'
     integer :: i,j,k,kchan
     open (unit=12,file='mint_grids',status='unknown')
     do kchan=1,nchans
@@ -1080,7 +1075,6 @@ contains
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    include 'FKSParams.inc'
     integer :: i,j,k,kchan,idum
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
