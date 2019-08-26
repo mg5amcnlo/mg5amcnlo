@@ -5854,14 +5854,22 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-c$$$               virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
-               virt_wgt=virt_wgt-polyfit(0)*born_wgt
+               if (use_poly_virtual) then
+                  virt_wgt=virt_wgt-polyfit(0)*born_wgt
+               else
+                  virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
+               endif
                do iamp=1,amp_split_size
                   if (amp_split_virt(iamp).eq.0d0) cycle
+                  if (use_poly_virtual) then
+                     amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $                    polyfit(iamp)
+     $                    *amp_split_born_for_virt(iamp)
+               else
                   amp_split_virt(iamp)=amp_split_virt(iamp)-
-c$$$     $                 average_virtual(iamp,ichan)
-     $                 polyfit(iamp)
+     $                 average_virtual(iamp,ichan)
      $                 *amp_split_born_for_virt(iamp)
+                  endif
                enddo
             endif
             if (abrv.ne.'virt') then
@@ -5881,14 +5889,21 @@ c$$$     $                 average_virtual(iamp,ichan)
      $        amp_split_virt_save(1:amp_split_size)
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
-c$$$         avv_wgt=average_virtual(0,ichan)*born_wgt
-         avv_wgt=polyfit(0)*born_wgt
-         do iamp=1, amp_split_size
-            if (amp_split_born_for_virt(iamp).eq.0d0) cycle
-c$$$            amp_split_avv(iamp)= average_virtual(iamp,ichan)
-            amp_split_avv(iamp)= polyfit(iamp)
-     $           *amp_split_born_for_virt(iamp)
-         enddo
+         if (use_poly_virtual) then
+            avv_wgt=polyfit(0)*born_wgt
+            do iamp=1, amp_split_size
+               if (amp_split_born_for_virt(iamp).eq.0d0) cycle
+               amp_split_avv(iamp)= polyfit(iamp)
+     $              *amp_split_born_for_virt(iamp)
+            enddo
+         else
+            avv_wgt=average_virtual(0,ichan)*born_wgt
+            do iamp=1, amp_split_size
+               if (amp_split_born_for_virt(iamp).eq.0d0) cycle
+               amp_split_avv(iamp)= average_virtual(iamp,ichan)
+     $              *amp_split_born_for_virt(iamp)
+            enddo
+         endif
       endif
 
 c eq.(MadFKS.C.13)

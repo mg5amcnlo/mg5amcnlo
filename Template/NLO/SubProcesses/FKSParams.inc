@@ -21,11 +21,11 @@
      &        QED_squared_selected, QCD_squared_selected,
      &        SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected)
 
-      logical separate_flavour_configs, IncludeBornContributions
+      logical separate_flavour_configs, IncludeBornContributions,use_poly_virtual
 
       common /FKSPARAMS/IRPoleCheckThreshold,virt_fraction,
      &       PrecisionVirtualAtRunTime,min_virt_fraction,
      &       NHelForMCoverHels,separate_flavour_configs,
      &       QCD_squared_selected, QED_squared_selected,
      &       VetoedContributionTypes, SelectedContributionTypes,
-     &       SelectedCouplingOrders
+     &       SelectedCouplingOrders,use_poly_virtual

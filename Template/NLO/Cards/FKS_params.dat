@@ -153,6 +153,16 @@
 0.005d0
 ! Default :: 0.005d0
 !
+! Use a polynomial fit for the virtual corrections. Gets a better accuracy,
+! but uses more memmory and disk space.
+#UsePolyVirtual
+.True.
+! Default :: .True.
+!
+! ==========================================================================
+! Combination of matrix elements
+! ==========================================================================
+!
 ! For fixed order calculations only (ignored for (N)LO+PS runs): This
 ! parameter determines if parton flavour configurations with idential
 ! matrix elements should be separated at the level of the analysis or
@@ -168,12 +178,6 @@
 #SeparateFlavourConfigurations
 .false.
 ! Default :: .false.
-!
-! ==========================================================================
-! Arbitrary numerical parameters used in the FKS formalism
-! ==========================================================================
-!
-! To be implemented by the FKS authors
 !
 ! ==========================================================================
 ! End of FKS_params.dat file

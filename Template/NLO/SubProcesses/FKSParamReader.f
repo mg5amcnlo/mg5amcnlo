@@ -74,6 +74,9 @@
            else if (buff .eq. '#SeparateFlavourConfigurations') then
              read(68,*,end=999) separate_flavour_configs
 
+           else if (buff .eq. '#UsePolyVirtual') then
+             read(68,*,end=999) use_poly_virtual
+
            else if (buff .eq. '#VetoedContributionTypes') then
              read(68,*,end=999) VetoedContributionTypes(0)
              if (VetoedContributionTypes(0) .lt. 0.or.
@@ -210,6 +213,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > VirtualFraction           = ',Virt_fraction
       write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
       write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
+      write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -234,6 +238,7 @@ C     a non existing or malformed parameter file
       QCD_squared_selected=-1
       Min_virt_fraction=0.005d0
       separate_flavour_configs=.false.
+      use_poly_virtual=.true.
       IncludeBornContributions=.true.
       SelectedContributionTypes(0)=0
       VetoedContributionTypes(0)=0

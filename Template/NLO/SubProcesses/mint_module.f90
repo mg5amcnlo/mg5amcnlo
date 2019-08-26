@@ -332,6 +332,7 @@ contains
   
   subroutine update_integration_grids
     implicit none
+    include 'FKSParams.inc'
     integer :: kchan,kdim,k_ord_virt
     do kchan=1,nchans
        do kdim=1,ndim
@@ -340,10 +341,13 @@ contains
        ! overwrite xgrid with the new xgrid
        if (regridded(kchan)) xgrid(1:nint_used,1:ndim,kchan)=xgrid_new(1:nint_used,1:ndim)
     enddo
-    do k_ord_virt=0,n_ord_virt
-       call regrid_ave_virt(k_ord_virt)
-    enddo
-    call do_polyfit()
+    if (use_poly_virtual) then
+       call do_polyfit()
+    else
+       do k_ord_virt=0,n_ord_virt
+          call regrid_ave_virt(k_ord_virt)
+       enddo
+    endif
 ! Regrid the MC over integers (used for the MC over FKS dirs)
     call regrid_MC_integer
   end subroutine update_integration_grids
@@ -646,6 +650,7 @@ contains
 
   subroutine add_point_to_grids(x)
     implicit none
+    include 'FKSParams.inc'
     integer :: kdim,k_ord_virt,ithree,isix
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
@@ -667,10 +672,16 @@ contains
        if (f(ithree).ne.0d0) then
           born=f(isix)
           ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
-          virtual=f(ithree)*virtual_fraction(ichan)+average_virtual(k_ord_virt,ichan)*f(isix)
-          call fill_ave_virt(x,k_ord_virt,virtual,born)
-          virtual=f(ithree)*virtual_fraction(ichan)+polyfit(k_ord_virt)*f(isix)
-          call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3),virtual/born,born/wgt_mult)
+          if (use_poly_virtual) then
+             virtual=f(ithree)*virtual_fraction(ichan)+ &
+                  polyfit(k_ord_virt)*f(isix)
+             call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
+                  virtual/born,born/wgt_mult)
+          else
+             virtual=f(ithree)*virtual_fraction(ichan)+ &
+                  average_virtual(k_ord_virt,ichan)*f(isix)
+             call fill_ave_virt(x,k_ord_virt,virtual,born)
+          endif
        else
           f(isix)=0d0
        endif
@@ -774,6 +785,7 @@ contains
   
   subroutine get_random_x(x,vol,kfold)
     implicit none
+    include 'FKSParams.inc'
     integer :: kdim,k_ord_virt,nintcurr
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
@@ -804,8 +816,11 @@ contains
        if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=nhits(icell(kdim),kdim,ichan)+1
     enddo
     do k_ord_virt=0,n_ord_virt
-       call get_ave_virt(x,k_ord_virt)
-       call get_polyfit(ichan,k_ord_virt,x(1:ndim-3),polyfit(k_ord_virt))
+       if (use_poly_virtual) then
+          call get_polyfit(ichan,k_ord_virt,x(1:ndim-3),polyfit(k_ord_virt))
+       else
+          call get_ave_virt(x,k_ord_virt)
+       endif
     enddo
   end subroutine get_random_x
   
@@ -992,6 +1007,7 @@ contains
 
   subroutine reset_mint_grids
     implicit none
+    include 'FKSParams.inc'
     integer :: kdim,kchan,kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
@@ -999,8 +1015,11 @@ contains
     nhits(1:nint_used,1:ndim,1:nchans)=0
     regridded(1:nchans)=.true.
     nhits_in_grids(1:nchans)=0
-    call init_ave_virt
-    call init_polyfit(ndim-3,nchans,n_ord_virt,1000)
+    if (use_poly_virtual) then
+       call init_polyfit(ndim-3,nchans,n_ord_virt,1000)
+    else
+       call init_ave_virt
+    endif
     ans_chan(0:nchans)=0d0
     if (double_events) then
        ! when double events, start with the very first channel only. For the
@@ -1026,6 +1045,7 @@ contains
   subroutine write_grids_to_file
 ! Write the MINT integration grids to file
     implicit none
+    include 'FKSParams.inc'
     integer :: i,j,k,kchan
     open (unit=12,file='mint_grids',status='unknown')
     do kchan=1,nchans
@@ -1037,11 +1057,13 @@ contains
              write (12,*) 'MAX',(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
-       do j=1,nintervals_virt
-          do k=0,n_ord_virt
-             write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim)
+       if (.not.use_poly_virtual) then
+          do j=1,nintervals_virt
+             do k=0,n_ord_virt
+                write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim)
+             enddo
           enddo
-       enddo
+       endif
        if (imode.ge.1) then
           write (12,*) 'MAX',ymax_virt(kchan)
        endif
@@ -1051,13 +1073,14 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     write (12,*) 'IDE',(ifold(i),i=1,ndim)
-    call save_polyfit(12)
+    if (use_poly_virtual) call save_polyfit(12)
     close (12)
   end subroutine write_grids_to_file
   
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
+    include 'FKSParams.inc'
     integer :: i,j,k,kchan,idum
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
@@ -1073,11 +1096,13 @@ contains
              read (12,*) dummy,(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
-       do j=1,nintervals_virt
-          do k=0,n_ord_virt
-             read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
+       if (.not.use_poly_virtual) then
+          do j=1,nintervals_virt
+             do k=0,n_ord_virt
+                read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
+             enddo
           enddo
-       enddo
+       endif
        if (imode.ge.2) then
           read (12,*) dummy,ymax_virt(kchan)
        endif
@@ -1091,15 +1116,17 @@ contains
     read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
     ! polyfit stuff:
-    do kchan=1,nchans
-       read (12,*) dummy,points(kchan)
-    enddo
-    do kchan=1,nchans
-       backspace(12)
-    enddo
-    call init_polyfit(ndim-3,nchans,n_ord_virt,maxval(points(1:nchans)))
-    call restore_polyfit(12)
-    call do_polyfit()
+    if (use_poly_virtual) then
+       do kchan=1,nchans
+          read (12,*) dummy,points(kchan)
+       enddo
+       do kchan=1,nchans
+          backspace(12)
+       enddo
+       call init_polyfit(ndim-3,nchans,n_ord_virt,maxval(points(1:nchans)))
+       call restore_polyfit(12)
+       call do_polyfit()
+    endif
     close (12)
 ! check for zero cross-section: if restoring grids corresponding to
 ! sigma=0, just terminate the run
