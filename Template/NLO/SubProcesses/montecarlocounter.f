@@ -2216,6 +2216,9 @@ c scales relevant to the same colour line
              write(*,*)'Error #7 in complete_xmcsubt'
              write(*,*)glrat(1),glrat(2)
              stop
+          elseif (glrat(1).eq.0d0 .and. glrat(2).eq.0d0) then
+             glrat(1)=0.5d0
+             glrat(2)=0.5d0
            endif
 c
            do jcount=1,icount
