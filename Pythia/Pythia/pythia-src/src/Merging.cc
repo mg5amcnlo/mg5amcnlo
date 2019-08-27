@@ -393,7 +393,7 @@ void Merging::getStoppingInfo(double scales [100][100],
     //  << " " << recSave[i] << "  --> scale="
     //  << stoppingScalesSave[i]
     //  << "   mass=" << mDipSave[i]
-    // << endl;
+    //  << endl;
     scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
     masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
   }

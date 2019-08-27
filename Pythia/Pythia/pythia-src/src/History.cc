@@ -8378,6 +8378,9 @@ double History::pTLund(const Event& event, int rad, int emt, int rec,
   Vec4 Q(RadAfterBranch.p() + sign*EmtAfterBranch.p());
   double Qsq = sign * Q.m2Calc();
 
+  // If tiny Q^2 there won't be a viable configuration
+  if (abs(Qsq)<1e-6) { return 0.; }
+  
   // Construct 2->3 variables for FSR
   Vec4 radAft(RadAfterBranch.p());
   Vec4 recAft(RecAfterBranch.p());
