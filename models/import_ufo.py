@@ -106,6 +106,11 @@ def get_model_db():
     r = random.randint(0,1)
     r = [r, (1-r)]
 
+    if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+        data_path.append(os.environ['MG5aMC_WWW']+'/models_db.dat')
+        r.insert(0, 2)
+
+
     for index in r:
         cluster_path = data_path[index]
         try:
@@ -123,6 +128,11 @@ def get_model_db():
 def import_model_from_db(model_name, local_dir=False):
     """ import the model with a given name """
 
+    if os.path.sep in model_name and os.path.exists(os.path.dirname(model_name)):
+        target = os.path.dirname(model_name)
+        model_name = os.path.basename(model_name)
+    else:
+        target = None
     data =get_model_db()
     link = None
     for line in data:
@@ -131,18 +141,29 @@ def import_model_from_db(model_name, local_dir=False):
             link = split[1]
             break
     else:
-        logger.debug('no model with that name found online')
+        logger.debug('no model with that name (%s) found online', model_name)
         return False
     
     #get target directory
-    # 1. PYTHONPATH containing UFO
+    # 1. PYTHONPATH containing UFO --only for omattelaer user
     # 2. models directory
-    target = None 
-    if 'PYTHONPATH' in os.environ and not local_dir:
+    
+    username = ''
+    if not target:
+        try:
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ]  
+        except Exception, error:
+            misc.sprint(str(error))
+            username = ''
+    if username in ['omatt', 'mattelaer', 'olivier'] and target is None and \
+                                    'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
-            if 'UFO' in os.path.basename(directory) and os.path.exists(directory) and\
-                    misc.glob('*/couplings.py', path=directory):
-                target= directory 
+            #condition only for my setup --ATLAS did not like it
+            if 'UFOMODEL' == os.path.basename(directory) and os.path.exists(directory) and\
+                misc.glob('*/couplings.py', path=directory) and 'matt' in directory:
+                target= directory
+                   
     if target is None:
         target = pjoin(MG5DIR, 'models')    
     try:
@@ -401,7 +422,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     # save in a pickle files to fasten future usage
-    if ReadWrite:
+    if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
                                    model, log=False)
 
@@ -423,6 +444,8 @@ class UFOMG5Converter(object):
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
+                                  # only trigger if all particles are of QCD type (not h>gg)
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -524,6 +547,14 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if self.non_qcd_gluon_emission:
+            logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
+            "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
+            "  Use such features with care.", self.non_qcd_gluon_emission)
+
+            self.model['allow_pickle'] = False 
+            self.model['limitations'].append('MLM')
+            
         if self.perturbation_couplings:
             try:
                 self.ufomodel.add_NLO()
@@ -1276,6 +1307,7 @@ class UFOMG5Converter(object):
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
         
+     
         
         
         # Now consider the name only
@@ -1301,10 +1333,18 @@ class UFOMG5Converter(object):
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
-                if '1' in order:
+
+                if '1' in coupling.order:
                     raise InvalidModel, '''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
+                # check that gluon emission from quark are QCD tagged
+                if 21 in [particle.pdg_code for particle in interaction_info.particles] and\
+                    'QCD' not in  coupling.order:
+                    col = [par.get('color') for par in particles]
+                    if 1 not in col:
+                        self.non_qcd_gluon_emission +=1
+       
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = '%s%s' % \
                                                (coupling_sign,coupling.name)
@@ -1322,7 +1362,8 @@ class UFOMG5Converter(object):
                     order_to_int[order] = interaction                        
                     # add to the interactions
                     self.interactions.append(interaction)
-        
+
+            
         # check if this interaction conserve the charge defined
  #       if type=='base':
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -1335,7 +1376,7 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
-        
+
         
         
     def get_sign_flow(self, flow, nb_fermion):
@@ -1922,6 +1963,7 @@ class RestrictModel(model_reader.ModelReader):
                 logger.debug('coupling with small value %s: %s treated as zero' %
                              (name, value))
                 zero_coupling.append(name)
+                continue
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
@@ -2216,8 +2258,10 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 arg = 'width'
             change_name = [p.name for (p,f) in parameters[1:]]
+            factor_for_name = [f for (p,f)  in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
-                                                       if p[arg] in change_name]
+                                                       if p[arg] in change_name and 
+                                                       factor_for_name[change_name.index(p[arg])]==1]
             
     def remove_interactions(self, zero_couplings):
         """ remove the interactions and particle counterterms 

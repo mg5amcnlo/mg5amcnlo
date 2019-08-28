@@ -26,8 +26,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Binaries
 
-BINARIES = $(BINDIR)gen_ximprove $(BINDIR)combine_events \
-           $(BINDIR)gensudgrid $(BINDIR)combine_runs
+BINARIES = $(BINDIR)gen_ximprove $(BINDIR)gensudgrid $(BINDIR)combine_runs
 
 # Compile commands
 
@@ -54,8 +53,8 @@ $(LIBDIR)libbias.$(libext): BIAS/dummy
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(LDFLAGS) -o $@ $^
-$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc $(LIBDIR)libbias.$(libext)
-			 $(FC) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS) -lbias
+#$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc $(LIBDIR)libbias.$(libext)
+#			 $(FC) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS) -lbias
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
 	$(FC) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf) $(LDFLAGS)
 
@@ -66,7 +65,7 @@ DiscreteSampler.o: StringCast.o
 invarients.o: invarients.f genps.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
 gen_ximprove.o: gen_ximprove.f run_config.inc run_card.inc
-combine_events.o: combine_events.f run_config.inc run_card.inc
+#combine_events.o: combine_events.f run_config.inc run_card.inc
 combine_runs.o: combine_runs.f run_config.inc run_card.inc
 select_events.o: select_events.f run_config.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc run_config.inc

@@ -86,3 +86,13 @@ c     global variable to set (or not)
       shat = x(1)*x(2)*ebeam(1)*ebeam(2)
       return 
       end
+
+
+      logical  function dummy_boostframe()
+      implicit none
+c
+c      
+      dummy_boostframe = .false.
+      return
+      end
+      

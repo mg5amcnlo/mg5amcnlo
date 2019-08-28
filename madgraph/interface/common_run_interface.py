@@ -1586,6 +1586,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
+        logger.info("   --weight_format=\"%(id)i\"  # allow to customise the name of the weight. The resulting name SHOULD be unique.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1604,6 +1605,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
         logger.info("       PATTERN  : keep/remove all the weights matching the (python) regular expression.")
         logger.info("       note that multiple entry of those arguments are allowed")
+        logger.info("")
+        logger.info("   Input for weight format")
+        logger.info("     The parameter will be interpreted by python using: https://docs.python.org/2/library/stdtypes.html#string-formatting")
+        logger.info("     The allowed parameters are 'muf','mur','pdf','dyn','alps','id'") 
     def complete_systematics(self, text, line, begidx, endidx):
         """auto completion for the systematics command"""
  
@@ -1669,7 +1674,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
-                                 '--remove_wgts=', '--keep_wgts','--start_id='))
+                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
@@ -1740,7 +1745,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             opts.append('--from_card=internal')
             
             # Check that all pdfset are correctly installed
-            if 'sys_pdf' in self.run_card:
+            if 'systematics_arguments' in self.run_card.user_set:
+                pdf = [a[6:] for a in self.run_card['systematics_arguments']
+                         if a.startswith('--pdf=')]
+                lhaid += [t.split('@')[0] for p in pdf for t in p.split(',') 
+                                            if t not in ['errorset', 'central']]                
+            elif 'sys_pdf' in self.run_card.user_set:
                 if '&&' in self.run_card['sys_pdf']:
                     if isinstance(self.run_card['sys_pdf'], list):
                         line = ' '.join(self.run_card['sys_pdf'])
@@ -1759,7 +1769,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
         except Exception, error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
@@ -1788,6 +1798,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
+            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
+                if input.endswith('.gz'):
+                    misc.gunzip(input)
+                    input = input[:-3]
+                    
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
@@ -2260,8 +2275,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-
-
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
 
@@ -2280,9 +2293,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd(line, model=opts['model'])
+        out = cmd.exec_cmd(line, model=opts['model'])
+        
+    
         self.child = None
         del cmd
+        return out
+        
+        
 
     ############################################################################ 
     def do_print_results(self, line):
@@ -3309,7 +3327,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
             if mass and abs(width/mass) < 1e-12:
-                logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if hasattr(interface, 'run_card') and isinstance(interface.run_card, banner_mod.RunCardLO):
+                    if interface.run_card['small_width_treatment'] < 1e-12:
+                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                else:
+                    logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
                     CommonRunCmd.sleep_for_error = False
@@ -3670,7 +3692,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         madspin_cmd.mg5cmd.options.update(self.options)
         for key, value in self.options.items():
             if isinstance(value, str):
-                madspin_cmd.mg5cmd.exec_cmd( 'set %s %s' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
+                madspin_cmd.mg5cmd.exec_cmd( 'set %s %s --no_save' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
         madspin_cmd.cluster = self.cluster
         
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
@@ -3999,9 +4021,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.proc_characteristics
 
 
-    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
+    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
-        into lib/PDFsets"""
+        into lib/PDFsets.
+        if require_local is False, just ensure that the pdf is in pdfsets_dir 
+        """
 
         if not hasattr(self, 'lhapdf_pdfsets'):
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
@@ -4073,7 +4097,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             os.remove(pjoin(pdfsets_dir, name))
                     except Exception, error:
                         logger.debug('%s', error)
-        
+            if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
+                                    os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                continue
             #check that the pdfset is not already there
             elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
@@ -4105,23 +4131,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """
 
         if not lhapdf_version:
-            lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
-                        
-                        
+            CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
+
         if not pdfsets_dir:
-            if 'LHAPATH' in os.environ:
-                for p in os.environ['LHAPATH'].split(':'):
-                    if os.path.exists(p):
-                        pdfsets_dir = p
-                        break
-                else:
-                    del os.environ['LHAPATH'] 
-                    pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()                    
-            else:
-                pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsets_dir = CommonRunCmd.get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version)
 
         if isinstance(filename, int):
             pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
@@ -4168,6 +4181,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            os.path.isdir(pjoin(pdfsets_dir, filename)):
             logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
+            
         #otherwise (if v5) save it locally
         elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
@@ -4190,6 +4204,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \
                         % (filename, pdfsets_dir))  
+            elif 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+                
+                if pdfsets_dir in os.environ['LHAPDF_DATA_PATH'].split(':'):
+                    lhapath = os.environ['LHAPDF_DATA_PATH'].split(':')
+                    lhapath = [p for p in lhapath if os.path.exists(p)]
+                    lhapath.remove(pdfsets_dir)
+                    os.environ['LHAPDF_DATA_PATH'] = ':'.join(lhapath)
+                    if lhapath:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    else:
+                        raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir) 
+                else:
+                    return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
             elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
                 misc.sprint(os.environ['LHAPATH'], '-> retry')
                 if pdfsets_dir in os.environ['LHAPATH'].split(':'):
@@ -4231,6 +4268,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     @staticmethod
     def get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version):
 
+
         if lhapdf_version.startswith('5.'):
             if os.path.exists('%s.index' % pdfsets_dir):
                 indexfile = '%s.index' % pdfsets_dir
@@ -4265,38 +4303,47 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return lhapdf_pdfsets
 
+    @staticmethod
+    def get_lhapdf_version_static(lhapdf_config):
+        """returns the lhapdf version number"""
+
+        try:
+            lhapdf_version = \
+                    subprocess.Popen([lhapdf_config, '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+        except OSError, error:
+            if error.errno == 2:
+                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+            else:
+                raise
+                
+        # this will be removed once some issues in lhapdf6 will be fixed
+        if lhapdf_version.startswith('6.0'):
+            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
+        return lhapdf_version
+
 
     def get_lhapdf_version(self):
         """returns the lhapdf version number"""
         if not hasattr(self, 'lhapdfversion'):
-            try:
-                self.lhapdf_version = \
-                    subprocess.Popen([self.options['lhapdf'], '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
-            except OSError, error:
-                if error.errno == 2:
-                    raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
-                else:
-                    raise
-                
-        # this will be removed once some issues in lhapdf6 will be fixed
-        if self.lhapdf_version.startswith('6.0'):
-            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
+            self.lhapdf_version = self.get_lhapdf_version_static(self.options['lhapdf'])
         return self.lhapdf_version
 
-
-    def get_lhapdf_pdfsetsdir(self):
-        lhapdf_version = self.get_lhapdf_version()
+    @staticmethod
+    def get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version=None):
+        """ """
+        if not lhapdf_version:
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static()
 
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
             datadir = os.environ['LHAPDF_DATA_PATH']
         elif lhapdf_version.startswith('5.'):
-            datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+            datadir = subprocess.Popen([lhapdf_config, '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
 
         elif lhapdf_version.startswith('6.'):
-            datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+            datadir = subprocess.Popen([lhapdf_config, '--datadir'],
                          stdout = subprocess.PIPE).stdout.read().strip()
         
         if ':' in datadir:
@@ -4307,6 +4354,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return None
         
         return datadir
+
+    def get_lhapdf_pdfsetsdir(self):
+        
+        lhapdf_version = self.get_lhapdf_version()
+        return self.get_lhapdf_pdfsetsdir_static(self.options['lhapdf'], lhapdf_version)
 
     ############################################################################
     def get_Pdir(self):
@@ -4471,10 +4523,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if from_banner is None:
             self.from_banner = {}
             return
-        misc.sprint(from_banner)
+
         self.from_banner = {}
-        for card in from_banner:
-            self.from_banner[card] = banner.charge_card(card)
+        try:
+            for card in from_banner:
+                self.from_banner[card] = banner.charge_card(card)
+        except KeyError:
+            if from_banner == ['param', 'run'] and banner.keys() == ['mgversion']:
+                if self.mother_interface:
+                    results = self.mother_interface.results
+                    run_name = self.mother_interface.run_name 
+                    run_tag = self.mother_interface.run_tag
+                    banner = banner_mod.recover_banner(results, 'parton', run_name, run_tag)
+                    self.mother_interface.banner = banner
+                    return self.init_from_banner(from_banner, banner)
+                else:
+                    raise
+
         return self.from_banner
     
 
@@ -5403,7 +5468,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
-                    val = args[start+1]
+                    val = ' '.join(args[start+1:])
                 self.setR(args[start], val)
             self.modified_card.add('run') # delayed writing of the run_card
         # special mode for set run_card nocut T (generated by set no_parton_cut
@@ -5575,7 +5640,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 args_str = ' '.join(str(a) for a in args[start+1:len(args)])
                 self.shower_card.set_param(args[start],args_str,self.paths['shower'])
-     
+
         # MadLoop Parameter  ---------------------------------------------------
         elif self.has_ml and args[start] in self.ml_vars \
                                                and card in ['', 'MadLoop_card']:
@@ -5758,22 +5823,53 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
                 if mass:
                     if abs(width/mass) < self.run_card['small_width_treatment']:
-                        logger.warning("Particle %s will use a fake width  ( %s instead of %s ).\n" +
-                          "Cross-section will be rescaled according to NWA if needed."  +
-                          "To force exact treatment reduce the value of 'small_width_treatment' parameter of the run_card",
-                          param.lhacode[0], mass*self.run_card['small_width_treatment'], width)
+                        logger.warning("Particle %s with small width detected (%s): See https://answers.launchpad.net/mg5amcnlo/+faq/3053 to learn the special handling of that case",
+                                    param.lhacode[0], width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                     if CommonRunCmd.sleep_for_error:
                         time.sleep(5)
                         CommonRunCmd.sleep_for_error = False
-
+                        
+            # @LO if PY6 shower => event_norm on sum
+            if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
+                if self.run_card['event_norm'] != 'sum':
+                    logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm sum') 
+            # @LO if PY6 shower => event_norm on sum
+            elif 'pythia8_card.dat' in self.cards:
+                if self.run_card['event_norm'] == 'sum':
+                    logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
+                    self.do_set('run_card event_norm average')  
+                
+            if 'MLM' in proc_charac['limitations']:
+                if self.run_card['dynamical_scale_choice'] == -1:
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n"+\
+                      "You can NOT run with CKKW dynamical scale for this model. Please choose another one." 
+                if self.run_card['ickkw']:
+                    raise InvalidCmd, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                        "As your process seems to be impacted by the issue,\n" +\
+                      "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                
 
         ########################################################################
         #       NLO specific check
         ########################################################################
         # For NLO run forbid any pdg specific cut on massless particle
         if isinstance(self.run_card,banner_mod.RunCardNLO):
+            
+            try:
+                proc_charac = self.mother_interface.proc_characteristics
+            except:
+                proc_charac = None
+
+            if proc_charac and 'MLM' in proc_charac['limitations']:
+                if self.run_card['ickkw']:
+                    raise Exception, "Your model is identified as not fully supported within MG5aMC.\n" +\
+                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model" 
+                            
+            
             for pdg in set(self.run_card['pt_min_pdg'].keys()+self.run_card['pt_max_pdg'].keys()+
                            self.run_card['mxx_min_pdg'].keys()): 
             
@@ -5782,9 +5878,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.param_card.get_value('mass', int(pdg), default=0) ==0:
                     raise Exception, "For NLO runs, you can use PDG specific cuts only for massive particles: (failed for %s)" % pdg
         
-        # if NLO reweighting is ON: ensure that we keep the rwgt information
-        if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
-            isinstance(self.run_card,banner_mod.RunCardNLO) and \
+            # if NLO reweighting is ON: ensure that we keep the rwgt information
+            if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
                 re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO|NLO_tree)\s*(?:#|$)''', re.M+re.I)
@@ -5794,25 +5889,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:BOLD' )
                     self.do_set('run_card store_rwgt_info True')
         
-        # if external computation for the systematics are asked then switch 
-        #automatically the book-keeping of the weight for NLO
-        if 'run' in self.allow_arg and \
-                    self.run_card['systematics_program'] == 'systematics' and \
-                    isinstance(self.run_card,banner_mod.RunCardNLO) and \
-                    not self.run_card['store_rwgt_info']:
-            logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
-            self.do_set('run_card store_rwgt_info True')
+            # if external computation for the systematics are asked then switch 
+            #automatically the book-keeping of the weight for NLO
+            if 'run' in self.allow_arg and \
+                        self.run_card['systematics_program'] == 'systematics'  and \
+                        not self.run_card['store_rwgt_info']:
+                logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
+                self.do_set('run_card store_rwgt_info True')
         
-        # @LO if PY6 shower => event_norm on sum
-        if 'pythia_card.dat' in self.cards and 'run' in self.allow_arg:
-            if self.run_card['event_norm'] != 'sum':
-                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm sum') 
-        # @LO if PY6 shower => event_norm on sum
-        elif 'pythia8_card.dat' in self.cards:
-            if self.run_card['event_norm'] == 'sum':
-                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
-                self.do_set('run_card event_norm average')         
+       
         
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
@@ -5951,7 +6036,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif pattern_width.search(param_text):
                 self.do_compute_widths('')
                 self.param_card = param_card_mod.ParamCard(self.paths['param'])
-        
+                
             # calling the routine doing the work    
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
                                    self.paths['param'], timer)
@@ -6001,7 +6086,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if name in self.modified_card:
                 self.modified_card.remove(name)
         else:
-            raise Exception, "Need to add the associate writter proxy"
+            raise Exception, "Need to add the associate writter proxy for %s" % name
         
     def write_card_run(self):
         """ write the run_card """
@@ -6319,9 +6404,29 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             line += ' --nlo'
 
         try:
-            return self.mother_interface.do_compute_widths(line)
+            out = self.mother_interface.do_compute_widths(line)
         except InvalidCmd, error:
             logger.error("Invalid command: %s " % error)
+        else:
+            if hasattr(self, 'run_card'):
+                for pid, info in out.items():
+                    total = 0
+                    for key, partial in info:
+                        total += partial
+                    mass = self.param_card.get_value('mass', pid)
+                    try:
+                        small_width_treatment = self.run_card['small_width_treatment']
+                    except Exception: #NLO
+                        small_width_treatment = 0
+                    
+                    if total and total/mass < small_width_treatment:
+                        text = "Particle %s with very small width (%g): Learn about special handling here: https://answers.launchpad.net/mg5amcnlo/+faq/3053"
+                        logger.warning(text,pid,total)
+                    elif total and total/mass < 1e-11:
+                        text = "Particle %s with very small width (%g): Numerical inaccuracies can occur if that particle is in a s-channel"
+                        logger.critical(text,pid,total)                        
+                        
+            
 
     def help_compute_widths(self):
         signal.alarm(0) # avoid timer if any
