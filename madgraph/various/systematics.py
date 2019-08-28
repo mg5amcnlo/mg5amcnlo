@@ -59,6 +59,7 @@ class Systematics(object):
                  only_beam=False,
                  ion_scaling=True,
                  weight_format=None,
+                 weight_info=None,
                  ):
 
         # INPUT/OUTPUT FILE
@@ -68,6 +69,7 @@ class Systematics(object):
             self.input = input_file
         self.output_path = output_file
         self.weight_format = weight_format
+        self.weight_info_format = weight_info
         if output_file != None:
             if isinstance(output_file, str):
                 if output_file == input_file:
@@ -398,7 +400,6 @@ class Systematics(object):
         #print "normalisation is ", norm
         #print "nb_event is ", nb_event
     
-        misc.sprint(len(all_cross))
         max_scale, min_scale = 0,sys.maxint
         max_alps, min_alps = 0, sys.maxint
         max_dyn, min_dyn = 0,sys.maxint
@@ -616,6 +617,8 @@ class Systematics(object):
                 tag += 'PDF="%s" ' % pdf.lhapdfID
             
             wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
+            tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
+            info = self.get_wgt_info(mur, muf, alps, dyn, pdf, cid)
             text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
             cid+=1
         
@@ -671,6 +674,37 @@ class Systematics(object):
         else:
             wgt_name = cid
         return wgt_name
+    
+    def get_wgt_info(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_info_format:            
+            info =  self.weight_info_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid, 's':' ', 'n':'\n'}
+        else:
+            info = '',''
+            if mur!=1.:
+                info += 'MUR=%s ' % mur
+            if muf!=1.:
+                info += 'MUF=%s ' % muf 
+            if alps!=1.:
+                info += 'alpsfact=%s ' % alps
+            if dyn!=-1.:
+                info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
+            if pdf != self.orig_pdf:
+                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+
+        return info
+
+    def get_wgt_tag (self, mur, muf, alps, dyn, pdf, cid=0):
+            tags = []
+            tags.append('MUR="%s" ' % mur)
+            tags.append('MUF="%s" ' % muf)
+            if alps!=1.:
+                tags.append('ALPSFACT="%s" ' % alps)
+            if dyn!=-1.:
+                tags.append('DYN_SCALE="%s" ' % dyn)
+            tags.append('PDF="%s" ' % pdf.lhapdfID)
+            return " ".join(tags)
+     
 
     def get_id(self):
         

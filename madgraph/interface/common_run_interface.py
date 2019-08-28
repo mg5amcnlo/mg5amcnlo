@@ -1584,6 +1584,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
         logger.info("   --weight_format=\"%(id)i\"  # allow to customise the name of the weight. The resulting name SHOULD be unique.")
+        logger.info("   --weight_info=  # allow to customise the text describing the weights.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1671,7 +1672,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
-                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format='))
+                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format=',
+                                 '--weight_info='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
