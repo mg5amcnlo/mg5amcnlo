@@ -1056,6 +1056,8 @@ c f_* multiplication factors for Born and nbody
       common/pborn/    p_born
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/ p_born_ev
+      double precision p_ev(0:3,nexternal)
+      common/pev/      p_ev
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
@@ -1129,7 +1131,7 @@ c use the Born computed with those as the mapping.
             pas(0:3,1:nexternal-1)=p_born_ev(0:3,1:nexternal-1)
             call set_alphas(pas)
             call sborn(p_born_ev,wgt_c)
-            call set_alphas(p1_cnt(0,1,0))
+            call set_alphas(p_ev)
             calculatedBorn=.false.
          elseif(p_born_ev(0,1).lt.0d0)then
             if (enhance.ne.0d0) then 
