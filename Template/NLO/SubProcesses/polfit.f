@@ -15,7 +15,7 @@
       parameter (maxdeg=20)
       real*8 absXS,virt,ave_fun,fun_at_x,eps,sum_w,yfit,x(*)
       logical fit_done,verbose
-      parameter (verbose=.true.)
+      parameter (verbose=.false.)
       character(len=3) :: dummy
       save
       maxpoint=npoints
