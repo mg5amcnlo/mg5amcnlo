@@ -560,10 +560,6 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1:
-                if pdf.lhapdfID < 0:
-                    for central,sets in self.pdfsets.items():
-                        if pdf in sets.set():
-                            misc.sprint(central)
                 
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
@@ -581,8 +577,7 @@ class Systematics(object):
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
-                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
-                    misc.sprint(pdf.lhapdfID)
+                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:)
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:
@@ -680,7 +675,7 @@ class Systematics(object):
         if self.weight_info_format:            
             info =  self.weight_info_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid, 's':' ', 'n':'\n'}
         else:
-            info = '',''
+            info = ''
             if mur!=1.:
                 info += 'MUR=%s ' % mur
             if muf!=1.:

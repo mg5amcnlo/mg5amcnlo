@@ -4129,7 +4129,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """
 
         if not lhapdf_version:
-            CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
 
         if not pdfsets_dir:
             pdfsets_dir = CommonRunCmd.get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version)
@@ -4266,7 +4266,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     @staticmethod
     def get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version):
 
-
         if lhapdf_version.startswith('5.'):
             if os.path.exists('%s.index' % pdfsets_dir):
                 indexfile = '%s.index' % pdfsets_dir
@@ -4331,7 +4330,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version=None):
         """ """
         if not lhapdf_version:
-            lhapdf_version = CommonRunCmd.get_lhapdf_version_static()
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
 
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
