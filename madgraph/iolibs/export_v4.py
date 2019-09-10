@@ -6051,10 +6051,15 @@ class UFO_model_to_mg4(object):
             fsock.writelines("aS = G**2/4/pi\n")
         if mp:
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
+
+        # these are the parameters needed for the loops
+        ct_params = [param for param in self.params_dep \
+                if self.check_needed_param(param.name) and \
+                   param.name.lower() in self.allCTparameters]
+
         for param in self.params_dep:
-            # check whether the parameter is a CT parameter
-            # if yes,just used the needed ones
-            if not self.check_needed_param(param.name):
+            # skip the CT parameters, which have already been done before
+            if not self.check_needed_param(param.name) or param in ct_params:
                 continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
@@ -6062,6 +6067,20 @@ class UFO_model_to_mg4(object):
             elif mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))
+
+        fsock.write_comments('\nParameters that should be updated for the loops.\n')
+
+        # do not skip the evaluation of these parameters in MP
+        if not mp and ct_params: fsock.writelines('if (updateloop) then')
+        for param in ct_params:
+            if dp:
+                fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+            elif mp:
+                fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
+                                            self.mp_p_to_f.parse(param.expr)))
+
+        if not mp and ct_params: fsock.writelines('endif')
 
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
 
@@ -6165,7 +6184,9 @@ class UFO_model_to_mg4(object):
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
-        fsock.writelines("""include \'input.inc\'
+        fsock.writelines("""logical updateloop
+                            common /to_updateloop/updateloop
+                            include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
@@ -6196,6 +6217,8 @@ class UFO_model_to_mg4(object):
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
+                            logical updateloop
+                            common /to_updateloop/updateloop
                             include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
