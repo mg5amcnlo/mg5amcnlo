@@ -4288,31 +4288,36 @@ c Skip if unphysical shower variables
 c Definition and initialisation of variables
       lzone=.true.
       do i=0,3
-         pifat(i)=p_born(i,ifat)
-         pip(i)  =p_born(i,ip)
+         pifat(i)=p_born(i,ifat) ! father momentum (Born level)
+         pip(i)  =p_born(i,ip) ! partner momentum (Born level)
          psum(i) =pifat(i)+pip(i) 
       enddo
       max_scale=scalemax
-      xmp2=dot(pip,pip)
-      e0sq=dot(pip,pifat)
-      theta2p=get_angle(pip,pifat)
+      xmp2=dot(pip,pip) ! mass squared of the partner
+      e0sq=dot(pip,pifat) ! father-partner dot product (Born level)
+      theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
       theta2p=theta2p**2
-      xmm2=xm12*(4-ileg)
-      xmr2=xm22*(4-ileg)-xm12*(3-ileg)
-      ww=w1*(4-ileg)-w2*(3-ileg)
-      Q2=dot(psum,psum)
+      xmm2=xm12*(4-ileg) ! emitter mass squared
+      xmr2=xm22*(4-ileg)-xm12*(3-ileg) ! global-recoiler mass squared
+      ww=w1*(4-ileg)-w2*(3-ileg) ! FKS parent/sister dot product
+      Q2=dot(psum,psum) ! parent dipole mass squared (Born level)
       lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
       beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
+        ! quantity used in the z boundaries for Pythia6 and Pythia8
       wcc=1d0
       ycc=1-parp67*x/(1-x)**2/2
       mdip  =sqrt((sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2)
-      mdip_g=sqrt((sqrt(s)-sqrt(xmr2))**2-xmm2)
+        ! mdip corresponds to sqrt(dip.m2DipCorr)
+        ! (around line 2305 in Pythia TimeShower.cc)
+      mdip_g=sqrt((sqrt(s) -sqrt(xmr2))**2-xmm2)
+        ! Global-recoil adaption of the above
       zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
       zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
-      zp2=(1+beta)/2
-      zm2=(1-beta)/2
-      zp3=(1+sqrt(1-4*xi/mdip_g**2))/2
-      zm3=(1-sqrt(1-4*xi/mdip_g**2))/2
+      zp2=(1+beta)/2 ! These are the solutions of equation q2 s == z(1-z)(s+q2-xmr2)^2
+      zm2=(1-beta)/2 ! where q2 = (p_i_FKS + p_j_FKS)^2
+                     ! Note that this is the global-recoil analogue of eq. (24) in 0408302
+      zp3=(1+sqrt(1-4*xi/mdip_g**2))/2 ! These are the analogous of eq. (23) in 0408302
+      zm3=(1-sqrt(1-4*xi/mdip_g**2))/2 ! for the global recoil
 
 c Dead zones
 c IMPLEMENT QED DZ's!
@@ -4360,7 +4365,9 @@ c
          if(ileg.le.2.and.z.gt.1-sqrt(xi/z/s)*
      &      (sqrt(1+xi/4/z/s)-sqrt(xi/4/z/s)))lzone=.false.
          if(ileg.gt.2)then
-            max_scale=min(min(scalemax,mdip/2),mdip_g/2)
+            max_scale=min(min(scalemax,mdip/2),mdip_g/2) ! Pythia as well
+   ! in the global recoil scheme, constrains radiation to be softer than local
+   ! dipole mass divided by two 
             if(z.gt.min(zp2,zp3).or.z.lt.max(zm2,zm3))lzone=.false.
          endif
          if(.not.dampMCsubt)then
