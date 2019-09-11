@@ -5974,7 +5974,17 @@ class UFO_model_to_mg4(object):
                 
         # First make sure it is a CTparameter
         if param not in self.allCTparameters and \
-           cjg_param not in self.allCTparameters:
+                                          cjg_param not in self.allCTparameters:
+            if hasattr(self.model, "notused_ct_params"):
+                if param.endswith(('_fin_','_1eps_','_2eps_')):
+                    limit = -2
+                elif param.endswith(('_1eps','_2eps')):
+                    limit =-1
+                else:
+                    limit = 0
+                base = '_'.join(param.split('_')[1:limit])
+                if base in self.model.notused_ct_params:
+                    return False
             return True
         
         # Now check if it is in the list of CTparameters actually used
@@ -6056,7 +6066,9 @@ class UFO_model_to_mg4(object):
         ct_params = [param for param in self.params_dep \
                 if self.check_needed_param(param.name) and \
                    param.name.lower() in self.allCTparameters]
-
+        
+        ct_params2 = [n.lower() for n in self.allCTparameters]
+        
         for param in self.params_dep:
             # skip the CT parameters, which have already been done before
             if not self.check_needed_param(param.name) or param in ct_params:
