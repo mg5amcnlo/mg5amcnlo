@@ -6063,11 +6063,12 @@ class UFO_model_to_mg4(object):
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
 
         # these are the parameters needed for the loops
-        ct_params = [param for param in self.params_dep \
+        if hasattr(self, 'allCTparameters') and self.allCTparameters:
+            ct_params = [param for param in self.params_dep \
                 if self.check_needed_param(param.name) and \
                    param.name.lower() in self.allCTparameters]
-        
-        ct_params2 = [n.lower() for n in self.allCTparameters]
+        else:
+            ct_params = []
         
         for param in self.params_dep:
             # skip the CT parameters, which have already been done before
