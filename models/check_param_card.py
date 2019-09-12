@@ -93,6 +93,9 @@ class Parameter (object):
             data, self.comment = text.split('#',1)
         else:
             data, self.comment = text, ""
+            
+        if ']]>' in data:
+            data = data.split(']]>',1)[0]
 
 
         data = data.split()

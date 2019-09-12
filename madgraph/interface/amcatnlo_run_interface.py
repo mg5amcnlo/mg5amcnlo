@@ -4465,7 +4465,34 @@ RESTART = %(mint_mode)s
                                              self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
-        content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
+
+        try:
+            aewm1 = self.banner.get_detail('param_card', 'sminputs', 1).value
+            raise KeyError
+        except KeyError:
+            mod = self.get_model()
+            if not hasattr(mod, 'parameter_dict'):
+                from models import model_reader
+                mod = model_reader.ModelReader(mod)
+                mod.set_parameters_and_couplings(self.banner.param_card)
+            aewm1 = 0
+            for key in ['aEWM1', 'AEWM1', 'aEWm1', 'aewm1']:
+                if key in mod['parameter_dict']:
+                    aewm1 = mod['parameter_dict'][key]
+                    break
+                elif 'mdl_%s' % key in mod['parameter_dict']:
+                    aewm1 = mod['parameter_dict']['mod_%s' % key]
+                    break
+            else:
+                for key in ['aEW', 'AEW', 'aEw', 'aew']:
+                    if key in mod['parameter_dict']:
+                        aewm1 = 1./mod['parameter_dict'][key]
+                        break
+                    elif 'mdl_%s' % key in mod['parameter_dict']:
+                        aewm1 = 1./mod['parameter_dict']['mod_%s' % key]
+                        break 
+           
+        content += 'ALPHAEW=%s\n' % aewm1
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
         #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
@@ -5540,7 +5567,7 @@ RESTART = %(mint_mode)s
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
-                    answer = self.ask(question, 'n', answers, alias=alias)
+                    answer = self.ask(question, 'n', answers)
                     if answer == 'n':
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)

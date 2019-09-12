@@ -108,7 +108,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.has_nlo = False
         self.rwgt_dir = None
         self.exitted = False # Flag to know if do_quit was already called.
-        
+        self.keep_ordering = False
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -354,6 +354,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.has_standalone_dir:
                 self.terminate_fortran_executables()
                 self.has_standalone_dir = False
+        elif args[0] == "keep_ordering":
+            self.keep_ordering = banner.ConfigFile.format_variable(args[1], bool, "keep_ordering")
         elif args[0] == "process":
             nb_f2py_module += 1
             if self.has_standalone_dir:
@@ -420,12 +422,13 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 raise self.InvalidCmd("No events files defined.")
             
-        opts = {'rwgt_name':None}
+        opts = {'rwgt_name':None, 'rwgt_info':None}
         if any(a.startswith('--') for a in args):
             for a in args[:]:
                 if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
                     opts[key] = value .replace("'","") .replace('"','')
+        misc.sprint(opts)
         return opts
 
     def help_launch(self):
@@ -461,7 +464,8 @@ class ReweightInterface(extended_cmd.Cmd):
         opts = self.check_launch(args)
         if opts['rwgt_name']:
             self.options['rwgt_name'] = opts['rwgt_name']
-
+        if opts['rwgt_info']:
+            self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.has_standalone_dir:                           
@@ -747,7 +751,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if 'initrwgt' in self.banner and self.output_type == 'default': 
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
-                misc.sprint(blockpat, self.banner['initrwgt'])
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
                 pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
@@ -794,8 +797,12 @@ class ReweightInterface(extended_cmd.Cmd):
             tag = self.options['rwgt_name']
         else:
             tag = str(rewgtid)
-        
-        if not self.second_model and not self.dedicated_path:
+
+        if 'rwgt_info' in self.options and self.options['rwgt_info']:
+            card_diff = self.options['rwgt_info']
+            for name in type_rwgt:
+                mg_rwgt_info.append((tag, name, self.options['rwgt_info']))
+        elif not self.second_model and not self.dedicated_path:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  self.new_param_card
             card_diff = old_param.create_diff(new_param)
@@ -1144,6 +1151,9 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_retry, sleep = 5, 20 
         
         tag, order = event.get_tag_and_order()
+        if self.keep_ordering:
+            old_tag = tuple(tag)
+            tag = (tag[0], tuple(order[1])) 
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
             hypp_id = int(hypp_id[1:])
@@ -1404,6 +1414,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
+        commandline = re.sub('@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem'] or mgcmd.options['pjfry']:
@@ -1776,7 +1787,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     outgoing = pdg[2:]
                 order = (list(incoming), list(outgoing))
                 incoming.sort()
-                outgoing.sort()
+                if not self.keep_ordering:
+                    outgoing.sort()
                 tag = (tuple(incoming), tuple(outgoing))
                 if 'virt' in onedir:
                     tag = (tag, 'V')
@@ -1797,10 +1809,12 @@ class ReweightInterface(extended_cmd.Cmd):
                             misc.sprint(order, pdir,)
                             raise Exception                                
                     else: 
+                        misc.sprint(all_prefix[all_pdgs.index(pdg)])
+                        misc.sprint(all_prefix[all_pdgs.index(oldpdg)])
                         misc.sprint(tag, onedir)
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
-                        raise Exception
+                        raise Exception, "two different matrix-element have the same initial/final state. Leading to an ambiguity. If your events are ALWAYS written in the correct-order (look at the numbering in the Feynman Diagram). Then you can add inside your reweight_card the line 'change keep_ordering True'." 
 
                 data[tag] = order, pdir, hel
              

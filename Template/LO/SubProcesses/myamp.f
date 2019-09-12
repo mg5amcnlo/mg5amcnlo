@@ -430,7 +430,7 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
      $              i.ne.-(nexternal-(nincoming+1)))then
                   a=prmass(i,iconfig)**2/stot
                   xo = min(xm(i)**2/stot, 1-1d-8)
-                  if (xo.eq.0d0) xo=1d0/stot
+                  if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
                   call setgrid(-i,xo,a,1)
                endif
 c     Set spmass for BWs
@@ -456,7 +456,7 @@ c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
                     xo = (MMJJ * 0.8)**2/stot
                  endif
               endif
-              if (xo.eq.0d0) xo=1d0/stot
+              if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
 c              if (prwidth_tmp(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -501,7 +501,7 @@ c            write(*,*) 'Using 2',l2,x2
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
             xo = xo*xo/stot
             if (xo.eq.0d0)then
-               xo=1d0/stot
+               xo=1/10000d0
                write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to ', xo
             endif

@@ -26,7 +26,6 @@
 #*********************************************************************
 # Number of events and rnd seed                                      *
 # Warning: Do not generate more than 1M events in a single run       *
-# If you want to run Pythia, avoid more than 50k events in a run.    *
 #*********************************************************************
   %(nevents)s = nevents ! Number of unweighted events requested 
   %(iseed)s   = iseed   ! rnd seed (0=assigned automatically=default))
@@ -121,19 +120,7 @@ $ion_pdf
  %(missetmax)s  = missetmax ! maximum missing Et (sum of neutrino's momenta)
  %(pt_min_pdg)s = pt_min_pdg ! pt cut for other particles (use pdg code). Applied on particle and anti-particle
  %(pt_max_pdg)s	= pt_max_pdg ! pt cut for other particles (syntax e.g. {6: 100, 25: 50}) 
-#*********************************************************************
-# Minimum and maximum E's (in the center of mass frame)              *
-#*********************************************************************
-  %(ej)s  = ej     ! minimum E for the jets 
-  %(eb)s  = eb     ! minimum E for the b 
-  %(ea)s  = ea     ! minimum E for the photons 
-  %(el)s  = el     ! minimum E for the charged leptons 
-  %(ejmax)s   = ejmax ! maximum E for the jets
- %(ebmax)s   = ebmax ! maximum E for the b
- %(eamax)s   = eamax ! maximum E for the photons
- %(elmax)s   = elmax ! maximum E for the charged leptons
- %(e_min_pdg)s = e_min_pdg ! E cut for other particles (use pdg code). Applied on particle and anti-particle
- %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50}) 
+$ecut
 #*********************************************************************
 # Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
 #*********************************************************************
