@@ -4,6 +4,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      include up to 2.6.7
      RF: improved the behaviour for integration channels that give zero cross section
      RF: Rewritten the mint integrator package. Makes for easier extensions.
+     RF: Fixed a problem related to the multi-channel enhancement factor for
+         NLO runs that only appeared in BSM theories (or EFTs)
 
 3.0.1 
      include up to 2.6.4

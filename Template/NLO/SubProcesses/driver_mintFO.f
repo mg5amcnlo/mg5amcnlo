@@ -427,6 +427,7 @@ c The nbody contributions
          pass_cuts_check=.true.
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
+         call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
             call compute_born
          endif
@@ -472,6 +473,7 @@ c The n+1-body contributions (including counter terms)
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
+            call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
             call set_cms_stuff(ione)
             call compute_collinear_counter_term(0d0)
@@ -483,6 +485,7 @@ c The n+1-body contributions (including counter terms)
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)
+            call include_multichannel_enhance(2)
             call compute_real_emission(p,1d0)
          endif
       enddo
