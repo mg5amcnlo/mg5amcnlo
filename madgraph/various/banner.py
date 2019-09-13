@@ -2858,7 +2858,7 @@ class RunCardLO(RunCard):
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum')
         #cut
-        self.add_param("auto_ptj_mjj", False)
+        self.add_param("auto_ptj_mjj", True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False)
         self.add_param("nhel", 0, include=False)
@@ -3251,6 +3251,7 @@ class RunCardLO(RunCard):
                 self['drjj'] = 0
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
+                self['systematics_arguments'].append('--alps=0.5,1,2')
                 
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
