@@ -921,8 +921,8 @@ class AskRunNLO(cmd.ControlSwitch):
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
         
-        self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
+        self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
@@ -957,6 +957,10 @@ class AskRunNLO(cmd.ControlSwitch):
             self.available_module.add('PY8')
         if options['hwpp_path'] and options['thepeg_path'] and options['hepmc_path']:
             self.available_module.add('HW7')
+            
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))):
+            self.available_module.add('StdHEP')
 #
 #   shorcut
 #
@@ -1127,11 +1131,15 @@ class AskRunNLO(cmd.ControlSwitch):
             self.allowed_shower = ['OFF']
             return ['OFF']
         else:
-            allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            if 'StdHEP' in self.available_module:
+                allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            else:
+                allowed = ['OFF']
             if 'PY8' in self.available_module:
                 allowed.append('PYTHIA8')
             if 'HW7' in self.available_module:
                 allowed.append('HERWIGPP')
+            
             
             self.allowed_shower = allowed
             
@@ -5096,12 +5104,20 @@ RESTART = %(mint_mode)s
             not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
             if  os.path.exists(pjoin(sourcedir,'StdHEP')):
                 logger.info('Compiling StdHEP (can take a couple of minutes) ...')
-                misc.compile(['StdHEP'], cwd = sourcedir)
-                logger.info('          ...done.')      
+                try:
+                    misc.compile(['StdHEP'], cwd = sourcedir)
+                except Exception as error:
+                    logger.debug(str(error))
+                    logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
+                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                else:
+                    logger.info('          ...done.')      
             else:
-                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                logger.warning('Could not compile StdHEP because its'+\
                    ' source directory could not be found in the SOURCE folder.\n'+\
-                             " Check the MG5_aMC option 'output_dependencies.'")
+                             " Check the MG5_aMC option 'output_dependencies'.\n"+\
+                   " This will prevent the use of HERWIG6/Pythia6 shower.")
+
 
         # make CutTools (only necessary with MG option output_dependencies='internal')
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
