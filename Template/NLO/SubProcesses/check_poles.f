@@ -3,6 +3,7 @@ c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
       use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -64,7 +65,6 @@ cc
       common /to_polecheck/force_polecheck, polecheck_passed
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
-      include 'FKSParams.inc'
       
 C-----
 C  BEGIN CODE

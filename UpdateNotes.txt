@@ -6,6 +6,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      RF: Rewritten the mint integrator package. Makes for easier extensions.
      RF: Fixed a problem related to the multi-channel enhancement factor for
          NLO runs that only appeared in BSM theories (or EFTs)
+     RF: In the virt-tricks, replaced the grids for the virtuals with a
+         polynomial fit, which is more precise and allows for a reduction of
+         the number of calls to the virtual. However, requires to save all the
+         phase-space points for which the virtual has been computed to disk,
+         hence requires more disk space and memory for highly-accurate
+         runs. Can be disabled in the FKS_params.dat card, if disk space
+         and/or memory use needs to be limited.
 
 3.0.1 
      include up to 2.6.4

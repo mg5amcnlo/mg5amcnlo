@@ -64,8 +64,8 @@
 ! nintegrals>6 : virtual and born order by order
 !
 
-
 module mint_module
+  use FKSParams ! contains use_poly_virtual
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -92,7 +92,7 @@ module mint_module
   integer, dimension(maxchannels), public :: iconfigs
   double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult
   double precision, dimension(0:n_ave_virt,maxchannels), public :: average_virtual
-  double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint
+  double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
   logical :: only_virt,new_point,pass_cuts_check
@@ -340,9 +340,13 @@ contains
        ! overwrite xgrid with the new xgrid
        if (regridded(kchan)) xgrid(1:nint_used,1:ndim,kchan)=xgrid_new(1:nint_used,1:ndim)
     enddo
-    do k_ord_virt=0,n_ord_virt
-       call regrid_ave_virt(k_ord_virt)
-    enddo
+    if (use_poly_virtual) then
+       call do_polyfit()
+    else
+       do k_ord_virt=0,n_ord_virt
+          call regrid_ave_virt(k_ord_virt)
+       enddo
+    endif
 ! Regrid the MC over integers (used for the MC over FKS dirs)
     call regrid_MC_integer
   end subroutine update_integration_grids
@@ -664,10 +668,18 @@ contains
           isix=2*k_ord_virt+6
        endif
        if (f(ithree).ne.0d0) then
-          f(isix)=f(isix)/virtual_fraction(ichan)
-          virtual=(f(ithree)+average_virtual(k_ord_virt,ichan)*f(isix))*virtual_fraction(ichan)
-          born=f(isix)*virtual_fraction(ichan)
-          call fill_ave_virt(x,k_ord_virt,virtual,born)
+          born=f(isix)
+          ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
+          if (use_poly_virtual) then
+             virtual=f(ithree)*virtual_fraction(ichan)+ &
+                  polyfit(k_ord_virt)*f(isix)
+             call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
+                  virtual/born,born/wgt_mult)
+          else
+             virtual=f(ithree)*virtual_fraction(ichan)+ &
+                  average_virtual(k_ord_virt,ichan)*f(isix)
+             call fill_ave_virt(x,k_ord_virt,virtual,born)
+          endif
        else
           f(isix)=0d0
        endif
@@ -801,7 +813,11 @@ contains
        if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=nhits(icell(kdim),kdim,ichan)+1
     enddo
     do k_ord_virt=0,n_ord_virt
-       call get_ave_virt(x,k_ord_virt)
+       if (use_poly_virtual) then
+          call get_polyfit(ichan,k_ord_virt,x(1:ndim-3),polyfit(k_ord_virt))
+       else
+          call get_ave_virt(x,k_ord_virt)
+       endif
     enddo
   end subroutine get_random_x
   
@@ -988,14 +1004,18 @@ contains
 
   subroutine reset_mint_grids
     implicit none
-    integer :: kdim,kchan,kint,k_ord_virt
+    integer :: kdim,kchan,kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
     nhits(1:nint_used,1:ndim,1:nchans)=0
     regridded(1:nchans)=.true.
     nhits_in_grids(1:nchans)=0
-    call init_ave_virt
+    if (use_poly_virtual) then
+       call init_polyfit(ndim-3,nchans,n_ord_virt,1000)
+    else
+       call init_ave_virt
+    endif
     ans_chan(0:nchans)=0d0
     if (double_events) then
        ! when double events, start with the very first channel only. For the
@@ -1032,11 +1052,13 @@ contains
              write (12,*) 'MAX',(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
-       do j=1,nintervals_virt
-          do k=0,n_ord_virt
-             write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim)
+       if (.not.use_poly_virtual) then
+          do j=1,nintervals_virt
+             do k=0,n_ord_virt
+                write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim)
+             enddo
           enddo
-       enddo
+       endif
        if (imode.ge.1) then
           write (12,*) 'MAX',ymax_virt(kchan)
        endif
@@ -1046,6 +1068,7 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     write (12,*) 'IDE',(ifold(i),i=1,ndim)
+    if (use_poly_virtual) call save_polyfit(12)
     close (12)
   end subroutine write_grids_to_file
   
@@ -1053,6 +1076,7 @@ contains
 ! Read the MINT integration grids from file
     implicit none
     integer :: i,j,k,kchan,idum
+    integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
     open (unit=12, file='mint_grids',status='old')
     ans(1,0)=0d0
@@ -1066,11 +1090,13 @@ contains
              read (12,*) dummy,(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
-       do j=1,nintervals_virt
-          do k=0,n_ord_virt
-             read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
+       if (.not.use_poly_virtual) then
+          do j=1,nintervals_virt
+             do k=0,n_ord_virt
+                read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
+             enddo
           enddo
-       enddo
+       endif
        if (imode.ge.2) then
           read (12,*) dummy,ymax_virt(kchan)
        endif
@@ -1083,6 +1109,18 @@ contains
     enddo
     read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
+    ! polyfit stuff:
+    if (use_poly_virtual) then
+       do kchan=1,nchans
+          read (12,*) dummy,points(kchan)
+       enddo
+       do kchan=1,nchans
+          backspace(12)
+       enddo
+       call init_polyfit(ndim-3,nchans,n_ord_virt,maxval(points(1:nchans)))
+       call restore_polyfit(12)
+       call do_polyfit()
+    endif
     close (12)
 ! check for zero cross-section: if restoring grids corresponding to
 ! sigma=0, just terminate the run

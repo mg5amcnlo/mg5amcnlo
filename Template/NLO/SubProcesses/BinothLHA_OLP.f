@@ -6,11 +6,11 @@ c also the born_wgt is passed to this subroutine.
 c
 C************************************************************************
 c
+      use FKSParams
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include "Binoth_proc.inc"
-      include "FKSParams.inc"
       double precision pi
       parameter (pi=3.1415926535897932385d0)
       double precision pin(0:3,nexternal-1),p(0:4,nexternal-1)

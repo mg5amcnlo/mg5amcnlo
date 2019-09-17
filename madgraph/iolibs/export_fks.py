@@ -624,8 +624,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'FKS_params.dat',
                      'initial_states_map.dat',
                      'OLE_order.olc',
-                     'FKSParams.inc',
-                     'FKSParamReader.f',
+                     'FKSParams.f90',
                      'cuts.inc',
                      'unlops.inc',
                      'pythia_unlops.f',
@@ -688,7 +687,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
-                     'timing_variables.inc']
+                     'timing_variables.inc',
+                     'polfit.f']
 
         for file in linkfiles:
             ln('../' + file , '.')
@@ -1149,24 +1149,26 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         amp_split_size=len(amp_split_orders)
 
-        text = 'C The orders to be integrated for the Born and at NLO\n'
+        text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
         text += 'character*3 ordernames(nsplitorders)\n'
         text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
-        text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
+        text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
         text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
-        text += 'C The position of the QCD /QED orders in the array\n'
+        text += '! The position of the QCD /QED orders in the array\n'
         text += 'integer qcd_pos, qed_pos\n'
-        text += 'C if = -1, then it is not in the split_orders\n'
+        text += '! if = -1, then it is not in the split_orders\n'
         text += 'parameter (qcd_pos = %d)\n' % qcd_pos
         text += 'parameter (qed_pos = %d)\n' % qed_pos
-        text += 'C this is to keep track of the various coupling combinations entering each ME\n'
+        text += '! this is to keep track of the various \n'
+        text += '! coupling combinations entering each ME\n'
         text += 'integer amp_split_size, amp_split_size_born\n'
         text += 'parameter (amp_split_size = %d)\n' % amp_split_size
-        text += 'parameter (amp_split_size_born = %d) ! the first entries in amp_split are for the born\n' % amp_split_size_born
+        text += '! the first entries in the next line in amp_split are for the born \n'
+        text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'

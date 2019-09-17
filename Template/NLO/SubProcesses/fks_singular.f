@@ -1456,6 +1456,7 @@ c     ipr(icontr): for separate_flavour_configs: the iproc of current
 c        contribution
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1463,7 +1464,6 @@ c        contribution
       include 'coupl.inc'
       include 'fks_info.inc'
       include 'q_es.inc'
-      include 'FKSParams.inc'
       include 'orders.inc'
       integer type,i,j
       logical foundIt,foundOrders
@@ -1651,6 +1651,7 @@ c or to fill histograms.
       use weight_lines
       use extra_weights
       use mint_module
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1658,7 +1659,6 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
-      include 'FKSParams.inc'
       integer orders(nsplitorders)
       integer i,j,k,iamp,icontr_orig
       logical virt_found
@@ -2011,11 +2011,11 @@ c Use the saved weight_lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer i,kr,kf,iwgt_save,dd
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales),c_mu2_r
@@ -2094,11 +2094,11 @@ c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
 c computations (ickkw.eq.-1).
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer i,ks,kh,iwgt_save
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
@@ -2200,11 +2200,11 @@ c Use the saved weight_lines info to perform PDF reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
       use extra_weights
+      use FKSParams
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'FKSParams.inc'
       include 'genps.inc'
       integer n,izero,i,nn
       parameter (izero=0)
@@ -5877,12 +5877,22 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-               virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
+               if (use_poly_virtual) then
+                  virt_wgt=virt_wgt-polyfit(0)*born_wgt
+               else
+                  virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
+               endif
                do iamp=1,amp_split_size
                   if (amp_split_virt(iamp).eq.0d0) cycle
+                  if (use_poly_virtual) then
+                     amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $                    polyfit(iamp)
+     $                    *amp_split_born_for_virt(iamp)
+               else
                   amp_split_virt(iamp)=amp_split_virt(iamp)-
      $                 average_virtual(iamp,ichan)
      $                 *amp_split_born_for_virt(iamp)
+                  endif
                enddo
             endif
             if (abrv.ne.'virt') then
@@ -5902,12 +5912,21 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $        amp_split_virt_save(1:amp_split_size)
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
-         avv_wgt=average_virtual(0,ichan)*born_wgt
-         do iamp=1, amp_split_size
-            if (amp_split_born_for_virt(iamp).eq.0d0) cycle
-            amp_split_avv(iamp)= average_virtual(iamp,ichan)
-     $           *amp_split_born_for_virt(iamp)
-         enddo
+         if (use_poly_virtual) then
+            avv_wgt=polyfit(0)*born_wgt
+            do iamp=1, amp_split_size
+               if (amp_split_born_for_virt(iamp).eq.0d0) cycle
+               amp_split_avv(iamp)= polyfit(iamp)
+     $              *amp_split_born_for_virt(iamp)
+            enddo
+         else
+            avv_wgt=average_virtual(0,ichan)*born_wgt
+            do iamp=1, amp_split_size
+               if (amp_split_born_for_virt(iamp).eq.0d0) cycle
+               amp_split_avv(iamp)= average_virtual(iamp,ichan)
+     $              *amp_split_born_for_virt(iamp)
+            enddo
+         endif
       endif
 
 c eq.(MadFKS.C.13)
