@@ -2714,6 +2714,8 @@ class RunCard(ConfigFile):
             targettype = type(self[name])
             if targettype == bool:
                 self[name] = False
+            if targettype == dict:
+                self[name] = '{}'
             elif 'min' in name:
                 self[name] = 0
             elif 'max' in name:
@@ -3004,13 +3006,13 @@ class RunCardLO(RunCard):
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True)
-        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True)
-        self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('eta_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('eta_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
         self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
@@ -3814,9 +3816,9 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         #hidden parameter that are transfer to the fortran code

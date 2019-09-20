@@ -62,6 +62,7 @@ class Systematics(object):
                  weight_info=None,
                  ):
 
+
         # INPUT/OUTPUT FILE
         if isinstance(input_file, str):
             self.input = lhe_parser.EventFile(input_file)
@@ -761,7 +762,7 @@ class Systematics(object):
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
-        
+
         if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
             return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
         
@@ -802,10 +803,10 @@ class Systematics(object):
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
-        
+      
         if (pdf, pdg,x,scale, beam) in self.pdfQ2:
             return self.pdfQ2[(pdf, pdg,x,scale,beam)]
-        
+
         if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
             nb_p = self.banner.run_card["nb_proton%s" % beam]
             nb_n = self.banner.run_card["nb_neutron%s" % beam]
@@ -866,6 +867,8 @@ class Systematics(object):
                 mur = event.get_ht_scale(0.5)
             elif dyn == 4:
                 mur = event.get_sqrts_scale(1.)
+            if math.isnan(mur):
+                return mur
             muf1 = mur
             muf2 = mur
             loinfo = dict(loinfo)
