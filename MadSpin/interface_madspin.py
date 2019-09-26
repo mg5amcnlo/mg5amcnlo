@@ -1539,6 +1539,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event_decay is a dict pdg -> list of event file (contain the decay)
         
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
+            return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+        
         nevents = self.options['Nevents_for_max_weigth']
         if nevents == 0 :
             nevents = 75
@@ -1580,6 +1583,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
             if all_maxwgt[1] > base_max_weight:
                 base_max_weight = 1.05 * all_maxwgt[1]
+        misc.sprint(base_max_weight)
+        if self.options['ms_dir']:
+            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
             
             
