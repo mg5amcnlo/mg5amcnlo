@@ -458,7 +458,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                          'loop_orders':vertex.get('loop_orders')}
         else:
             # Not that it is going to be used here, but it might be eventually
-            inter = model.get_interaction(vertex.get('id'))
+            #inter = model.get_interaction(vertex.get('id'))
             loop_info = {}
 
         if last_vertex:
@@ -683,12 +683,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # antiparticle are incoming, and vice versa for
                 # outgoing
                 if self.is_fermion():
-                    # L is interpreted as longitudinal -> correct here for fermion
                     if leg.get('polarization'):
                         pol = list(leg.get('polarization'))
-                        if 0 in leg.get('polarization'):
-                            pol.remove(0)
-                            pol.append(-1)
                         self.set('polarization', pol) 
                     
                     if leg.get('state') == False and \
@@ -1101,10 +1097,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             #                   lambda p1, p2: p1.get('spin') - p2.get('spin'))
             if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
                    and self.get('pdg_code') == \
-                   particles[1].get_anti_pdg_code()\
-                   and not self.get('coupling')[0].startswith('-'):
-                # We need a minus sign in front of the coupling
-                self.set('coupling', ['-%s'%c for c in self.get('coupling')])
+                   particles[1].get_anti_pdg_code():            
+                if not hasattr(self, 'flipped') or not self.flipped:
+                    self.flipped = True 
+                    self.set('coupling', ['-%s' % c if not c.startswith('-') else c[1:] for c in self.get('coupling')])
+                
 
     def set_octet_majorana_coupling_sign(self):
         """For octet Majorana fermions, need an extra minus sign in
@@ -1115,9 +1112,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
-               [m.get('color') for m in self.get('mothers')] == [8, 8] and \
-               not self.get('coupling')[0].startswith('-'):
-            self.set('coupling', ['-%s' % c for c in self.get('coupling')])
+               [m.get('color') for m in self.get('mothers')] == [8, 8]:
+            if not hasattr(self, 'flipped') or not self.flipped:
+                self.flipped = True 
+                self.set('coupling', ['-%s' % c if not c.startswith('-') else c[1:] for c in self.get('coupling')])
+
+            else:
+                return
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -4998,7 +4999,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return output
 
-    def get_used_couplings(self):
+    def get_used_couplings(self, output=str):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
 
@@ -5006,7 +5007,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') not in [0,-1]]
         #some coupling have a minus one associated -> need to remove those
-        return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+        if output == str:
+            return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+        elif output=="set":
+            return set(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
 
 
     def get_mirror_processes(self):

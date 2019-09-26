@@ -213,11 +213,13 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y @1')
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y, (e+ > e-, e-> ta) @1')
         cmd.check_process_format('e+ e- > Z{L}, Z > mu+ mu- @1')
+        cmd.check_process_format('e+ e- > Z{0}, Z > mu+ mu- @1')
         cmd.check_process_format('e+{L} e- > mu+{L} mu-{R} @1')
         cmd.check_process_format('e+ e- > t{L} t~ Z{L}, t > mu+ mu- @1')
         cmd.check_process_format('g g > Z Z [ noborn=QCD] @1')
         cmd.check_process_format('u u~ > w+{L} [QCD]')
         cmd.check_process_format('u u~ > e+{L} vl [QCD]')
+        
         # unvalid syntax
         self.wrong(cmd.check_process_format, ' e+ e-')
         self.wrong(cmd.check_process_format, ' e+ e- > e+ e-,')

@@ -284,12 +284,13 @@ class Event:
         line_type = 'none' # support type: init / event / rwgt
         self.diese = ''
         for line in self.inputfile:
+            origline = line
             line = line.lower()
             if line=="":
                 continue 
             # Find special tag in the line
             if line[0]=="#":
-                self.diese+=line
+                self.diese+=origline
                 continue
             if '<event' in line:
                 #start new_event
@@ -319,7 +320,7 @@ class Event:
             if line_type == 'none':
                 continue
             elif line_type == 'other_block':
-                self.diese += line
+                self.diese += origline
             # read the line and assign the date accordingly                
             elif line_type == 'init':
                 line_type = 'event'

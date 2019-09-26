@@ -1486,11 +1486,17 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
+        if args[0] in ['low_mem_multicore_nlo_generation']:
+            if sys.version_info[0] == 2 and sys.version_info[1] == 6:
+                raise self.InvalidCmd('python2.6 does not support such functionalities please use python2.7')
+        
+
         if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
+
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
@@ -4728,6 +4734,7 @@ This implies that with decay chains:
             if '{' in part_name:
                 part_name, pol = part_name.split('{',1)
                 pol, rest = pol.split('}',1)
+                spin = self._curr_model.get_particle(part_name).get('spin')
                 if rest:
                     raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
                 ignore  =False
@@ -4736,13 +4743,21 @@ This implies that with decay chains:
                         ignore= False
                         continue
                     if p in ['t','T']:
-                        polarization += [1,-1]
+                        if spin == 3:
+                            polarization += [1,-1]
+                        else:
+                            raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
                     elif p in ['l', 'L']:
-                        polarization += [0]
+                        if spin == 3:
+                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                        polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
                     elif p in ["A",'a']:
-                        polarization += [99]
+                        if spin == 3:
+                            polarization += [99]
+                        else:
+                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
                     elif p in ['+']:
                         if i +1 < len(pol) and pol[i+1].isdigit():
                             p = int(pol[i+1])
@@ -4761,8 +4776,11 @@ This implies that with decay chains:
                             ignore = True
                         else:
                             polarization += [-1]
-                    elif p in [0]:
-                        polarization += [0]
+                    elif p in [0,'0']:
+                        if spin in [1,2]:
+                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                        else:
+                            polarization += [0]
                     elif p.isdigit():
                         p = int(p)
                         if abs(p) > 3: 
@@ -4813,7 +4831,7 @@ This implies that with decay chains:
             split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
             try:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
-                                       self._curr_model['order_hierarchy']
+                                       self._curr_model.get('order_hierarchy')
                                        [elem if not elem.endswith('.sqrt') else elem[:-5]])
             except KeyError:
                 raise self.InvalidCmd, "The loaded model does not defined a "+\
@@ -7387,7 +7405,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
                 # importing a loop model from MG5
-                MadGraphCmd.do_import(self,'model %s' %model_name, force=True)
+                if 'modelname' in self.history.get('full_model_line'):
+                    opts = '--modelname'
+                else:
+                    opts=''
+                MadGraphCmd.do_import(self,'model %s %s' % (model_name, opts), force=True)
             elif log:
                 logger.info('Note that you have to reload the model')
 
@@ -8227,7 +8249,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
                                                        opts['path'], opts['output'])
                 if float(opts['body_decay']) == 2:
-                    return
+                    return  decay_info
         else:
             skip_2body = True
 
@@ -8248,7 +8270,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             
             
             
-            return
+            return  decay_info
 
         # Do the MadEvent integration!!
         with misc.TMP_directory(dir=os.getcwd()) as path:
@@ -8327,7 +8349,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
             check_param_card.convert_to_slha1(opts['output'])
-        return
+        return decay_info
 
 
 

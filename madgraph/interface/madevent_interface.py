@@ -2567,7 +2567,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
 
-                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                if switch_mode['analysis'] == 'ExRoot':
                     input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
                     output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
                     self.create_root_file(input , output)
@@ -3562,11 +3562,9 @@ Beware that this can be dangerous for local multicore runs.""")
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
-
         self.update_status('Combining Events', level='parton')
 
         
-
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
     
@@ -3592,7 +3590,9 @@ Beware that this can be dangerous for local multicore runs.""")
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir in self.get_Gdir():
+        Gdirs = self.get_Gdir()
+        Gdirs.sort()
+        for Gdir in Gdirs:
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
@@ -3601,7 +3601,6 @@ Beware that this can be dangerous for local multicore runs.""")
                              result.get('xerru'),
                              result.get('axsec')
                              )
-
                 sum_xsec += result.get('xsec')
                 sum_xerru.append(result.get('xerru'))
                 sum_axsec += result.get('axsec')
@@ -3626,7 +3625,6 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
-        
         if partials:
             for i in range(partials):
                 try:
@@ -5633,7 +5631,6 @@ tar -czf split_$1.tar.gz split_$1
         elif self.run_card['python_seed'] >= 0:
             import random
             random.seed(self.run_card['python_seed'])
-                                                               
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
@@ -6239,7 +6236,7 @@ tar -czf split_$1.tar.gz split_$1
         
         if not banner:
             banner = self.banner
-        
+            
         if auto:
             self.ask_edit_cards(cards, from_banner=['param', 'run'], 
                                 mode='auto', plot=(pythia_version==6), banner=banner
@@ -6616,7 +6613,9 @@ class GridPackCmd(MadEventCmd):
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir in self.get_Gdir():
+        Gdirs = self.get_Gdir()
+        Gdirs.sort()
+        for Gdir in Gdirs:
             #mfactor already taken into accoun in auto_dsig.f
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
@@ -6644,7 +6643,8 @@ class GridPackCmd(MadEventCmd):
         
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
-            
+        
+        self.banner.add_generation_info(sum_xsec, self.nb_event)
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
@@ -6659,7 +6659,7 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(outdir, self.run_name, "partials%s.lhe" % i))
                    
         self.results.add_detail('nb_event', nb_event)
-    
+        self.banner.add_generation_info(sum_xsec, nb_event)
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
 

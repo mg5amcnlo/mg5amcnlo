@@ -26,7 +26,6 @@
 #*********************************************************************
 # Number of events and rnd seed                                      *
 # Warning: Do not generate more than 1M events in a single run       *
-# If you want to run Pythia, avoid more than 50k events in a run.    *
 #*********************************************************************
   %(nevents)s = nevents ! Number of unweighted events requested 
   %(iseed)s   = iseed   ! rnd seed (0=assigned automatically=default))

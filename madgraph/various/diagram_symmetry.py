@@ -348,13 +348,18 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
         interaction color, mass, width."""
 
         inter = model.get_interaction(vertex.get('id'))
-                   
+            
         if last_vertex:
             return (0,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            try:
+                QCD = inter.get('orders')['QCD']
+            except Exception, error:
+                QCD = 0
+
             return ((part.get('color'),
-                     part.get('mass'), part.get('width')),)
+                     part.get('mass'), part.get('width'), QCD),)
 
 def find_symmetry_subproc_group(subproc_group):
     """Find symmetric configs by directly comparing the configurations

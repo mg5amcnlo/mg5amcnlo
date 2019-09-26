@@ -32,7 +32,7 @@ void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches
 // Set couplings that are unchanged during the run
 void setIndependentCouplings();
 // Set parameters that are changed event by event
-//void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
+void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
 // TMP: hardcoded bogus implementation with no arguments since this
 // is being called from within the matrix elements.
 void setDependentParameters() {};

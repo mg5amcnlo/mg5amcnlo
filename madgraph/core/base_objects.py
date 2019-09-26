@@ -1024,6 +1024,20 @@ class Model(PhysicsObject):
     
     mg5_name = False #store if particle name follow mg5 convention
     
+    def __init__(self, init_dict={}):
+        """Creates a new particle object. If a dictionary is given, tries to 
+        use it to give values to properties."""
+
+        dict.__init__(self)
+        self.default_setup()
+
+        assert isinstance(init_dict, dict), \
+                            "Argument %s is not a dictionary" % repr(init_dict)
+
+
+        for item in init_dict.keys():
+            self[item] = init_dict[item]
+    
     def default_setup(self):
 
         self['name'] = ""
@@ -1045,6 +1059,8 @@ class Model(PhysicsObject):
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
+        self['allow_pickle'] = True
+        self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         

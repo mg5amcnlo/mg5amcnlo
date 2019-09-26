@@ -847,6 +847,19 @@ class FKSHelasRealProcess(object): #test written
     def __eq__(self, other):
         """Equality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
+        
+        if self.__dict__ == other.__dict__:
+            return True
+        else:
+#            failed = []
+#            for key in self.__dict__:
+#                if self.__dict__[key] != other.__dict__[key]:
+#                    failed.append(key)
+#            import madgraph.various.misc as misc
+
+            return False
+                
+        
         return self.__dict__ == other.__dict__
     
     def __ne__(self, other):

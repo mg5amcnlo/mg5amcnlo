@@ -308,9 +308,9 @@ class OLDMG5Comparator(unittest.TestCase):
     def create_short_polarization(self):
         """Test a short list of processes with polarization"""
         # Create a list of processes to check automatically
-        my_proc_list = ['u u~ > w+{T} w-{TL}', 
+        my_proc_list = ['u u~ > w+{T} w-{T0}', 
                         ' u d~ > w+{T}, w+ > e+ ve',
-                        ' u d~ > w+{L}, w+ > e+ ve',
+                        ' u d~ > w+{0}, w+ > e+ ve',
                         ' g g > t{L} t~{R}, t > w+ b, t~ > w- b~'
                         'W+{T} > e+ ve',
                         'e+{L} e-{R} > mu+ mu-',
