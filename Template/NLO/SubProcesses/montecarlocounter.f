@@ -4143,8 +4143,8 @@ c
          do j=i+1,nexternal-1
             ref_sc_a(i,j)=sqrt( max(0d0,(p(0,i)+p(0,j))**2-(p(1,i)+p(1,j))**2
      &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
-            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
-            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
+c$$$            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
+c$$$            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
             ref_sc_a(j,i)=ref_sc_a(i,j)
          enddo
       enddo
