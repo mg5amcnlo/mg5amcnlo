@@ -1939,6 +1939,10 @@ c Store the corresponding Sudakov type in isudtype(*)
             if(xscales2(i,j).eq.-1d0)cycle
             if(dzones2(i,j))then
                i_dipole_dead_counter=i_dipole_dead_counter+1
+               if (isspecial(jflow) .and. idup_s(i).eq.21) then
+c double colour connection, count twice
+                  i_dipole_dead_counter=i_dipole_dead_counter+1
+               endif
                cycle
             endif
             icount=icount+1
