@@ -332,8 +332,6 @@ extern "C" void appl_init_() {
 				      filename, order_ids);
     // Use the reweighting function
     grid_obs[grid_obs.size()-1].reweight(true);
-    // The grid is an aMC@NLO type
-    grid_obs[grid_obs.size()-1].amcatnlo();
     // Add documentation
     grid_obs[grid_obs.size()-1].addDocumentation(Banner());
   }
