@@ -1606,6 +1606,7 @@ class Model(PhysicsObject):
         if hasattr(self,'map_CTcoup_CTparam'):
             # If the map for the dependence of couplings to CTParameters has
             # been defined, we must apply the renaming there as well. 
+
             self.map_CTcoup_CTparam = dict( (coup_name, 
             [change[name] if (name in change) else name for name in params]) 
                   for coup_name, params in self.map_CTcoup_CTparam.items() )

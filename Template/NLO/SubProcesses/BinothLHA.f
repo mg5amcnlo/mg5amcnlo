@@ -71,6 +71,9 @@ c statistics for MadLoop
       integer ret_code_common
       common /to_ret_code/ret_code_common
       double precision born_hel_from_virt
+
+      logical updateloop
+      common /to_updateloop/updateloop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -79,7 +82,11 @@ c masses
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
+      ! force to update also loop-related parameters
+      updateloop=.true.
       call update_as_param()
+      updateloop=.false.
+
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
       virt_wgt= 0d0

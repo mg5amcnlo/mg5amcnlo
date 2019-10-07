@@ -20,9 +20,16 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
+      logical updateloop
+      common /to_updateloop/updateloop
+
       %(load_card)s
+      ! also loop parameters should be initialised here
+      updateloop=.true.
       include 'param_read.inc'
       call coup()
+
+      updateloop=.false.
 
       return
 
