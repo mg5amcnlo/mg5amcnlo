@@ -320,7 +320,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if model_name in line:
                     final_model = True
                     
-            
                 
     def import_model(self, args):
         """syntax: import model NAME CARD_PATH

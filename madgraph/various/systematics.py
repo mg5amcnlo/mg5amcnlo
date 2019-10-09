@@ -577,7 +577,7 @@ class Systematics(object):
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
-                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:)
+                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:

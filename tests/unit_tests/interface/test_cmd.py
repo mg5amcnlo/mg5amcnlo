@@ -325,4 +325,8 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
         output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
         self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
         
-        
+        output = self.cmd.get_final_part('p p > Z{L} j')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 23]))         
+
+        output = self.cmd.get_final_part('p p > Z{L} j, Z > e+ e-')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11])) 
