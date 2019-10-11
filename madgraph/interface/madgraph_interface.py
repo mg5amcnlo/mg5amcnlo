@@ -1452,8 +1452,11 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
         if args[0] in ['low_mem_multicore_nlo_generation']:
-            if sys.version_info[0] == 2 and sys.version_info[1] == 6:
-                raise self.InvalidCmd('python2.6 does not support such functionalities please use python2.7')
+            if sys.version_info[0] == 2:
+                if  sys.version_info[1] == 6:
+                    raise Exception('python2.6 does not support such functionalities please use python2.7')
+            else:
+                raise Exception('python3.x does not support such functionalities please use python2.7')
         
 
         if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
@@ -7331,6 +7334,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options['f2py_compiler'] = None
             
         elif args[0] == 'loop_optimized_output':
+
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()

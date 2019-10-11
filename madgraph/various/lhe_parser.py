@@ -370,7 +370,6 @@ class EventFile(object):
 
         return events
     
-
     
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
@@ -1308,10 +1307,10 @@ class Event(list):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-        
+
         if not isinstance(text, list):
             text = text.split('\n')
-        
+
         for line in text:
             line = line.strip()
             if not line: 
@@ -1825,6 +1824,9 @@ class Event(list):
     def check(self):
         """check various property of the events"""
         
+        # check that relative error is under control
+        threshold = 5e-7
+        
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
         absE, abspx, abspy, abspz = 0,0,0,0
@@ -1842,8 +1844,14 @@ class Event(list):
             abspx += abs(particle.px)
             abspy += abs(particle.py)
             abspz += abs(particle.pz)
-        # check that relative error is under control
-        threshold = 5e-7
+            # check mass
+            fourmass = FourMomentum(particle).mass
+            
+            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
+                raise Exception("Do not have correct mass lhe: %s momentum: %s" % (particle.mass, fourmass))
+            
+                
+
         if E/absE > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
@@ -1858,7 +1866,10 @@ class Event(list):
             raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
             
         #2. check the color of the event
-        self.check_color_structure()            
+        self.check_color_structure() 
+        
+        #3. check mass
+                   
          
     def assign_scale_line(self, line):
         """read the line corresponding to global event line

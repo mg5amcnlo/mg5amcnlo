@@ -67,6 +67,8 @@ class Systematics(object):
                  log=lambda x: sys.stdout.write(str(x)+'\n'),
                  only_beam=False,
                  ion_scaling=True,
+                 weight_format=None,
+                 weight_info=None,
                  ):
 
         # INPUT/OUTPUT FILE
@@ -75,6 +77,8 @@ class Systematics(object):
         else:
             self.input = input_file
         self.output_path = output_file
+        self.weight_format = weight_format
+        self.weight_info_format = weight_info
         if output_file != None:
             if isinstance(output_file, str):
                 if output_file == input_file:
@@ -334,7 +338,8 @@ class Systematics(object):
         else:
             lowest_id = self.get_id()        
 
-        ids = [lowest_id+i for i in range(len(self.args)-1)]
+        ids = [self.get_wgt_name(*self.args[i][:5], cid=lowest_id+i) for i in range(len(self.args)-1)]
+        #ids = [lowest_id+i for i in range(len(self.args)-1)]
         all_cross = [0 for i in range(len(self.args))]
         
         self.input.parsing = False
@@ -564,10 +569,6 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1:
-                if pdf.lhapdfID < 0:
-                    for central,sets in self.pdfsets.items():
-                        if pdf in sets.set():
-                            misc.sprint(central)
                 
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
@@ -585,8 +586,7 @@ class Systematics(object):
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
-                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
-                    misc.sprint(pdf.lhapdfID)
+                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:)
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:
@@ -619,8 +619,11 @@ class Systematics(object):
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
-                
-            text +='<weight id="%s" %s> %s </weight>\n' % (cid, tag, info)
+            
+            wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
+            tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
+            info = self.get_wgt_info(mur, muf, alps, dyn, pdf, cid)
+            text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
             cid+=1
         
         if in_scale or in_alps or in_pdf:
@@ -668,6 +671,44 @@ class Systematics(object):
         
         return lowest_id
         
+    def get_wgt_name(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_format:            
+            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid}
+        else:
+            wgt_name = cid
+        return wgt_name
+    
+    def get_wgt_info(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_info_format:            
+            info =  self.weight_info_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid, 's':' ', 'n':'\n'}
+        else:
+            info = ''
+            if mur!=1.:
+                info += 'MUR=%s ' % mur
+            if muf!=1.:
+                info += 'MUF=%s ' % muf 
+            if alps!=1.:
+                info += 'alpsfact=%s ' % alps
+            if dyn!=-1.:
+                info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
+            if pdf != self.orig_pdf:
+                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+
+        return info
+
+    def get_wgt_tag (self, mur, muf, alps, dyn, pdf, cid=0):
+            tags = []
+            tags.append('MUR="%s" ' % mur)
+            tags.append('MUF="%s" ' % muf)
+            if alps!=1.:
+                tags.append('ALPSFACT="%s" ' % alps)
+            if dyn!=-1.:
+                tags.append('DYN_SCALE="%s" ' % dyn)
+            tags.append('PDF="%s" ' % pdf.lhapdfID)
+            return " ".join(tags)
+     
 
     def get_id(self):
         

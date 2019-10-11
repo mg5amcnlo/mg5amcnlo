@@ -27,6 +27,7 @@ import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.various.misc as misc
 import copy
 import logging
 import array
@@ -37,7 +38,8 @@ import six.moves.cPickle
 import itertools
 import os
 from six.moves import zip
-
+from madgraph import MG5DIR
+pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
 
 
@@ -45,7 +47,6 @@ logger = logging.getLogger('madgraph.fks_helas_objects')
 def async_generate_real(args):
     i = args[0]
     real_amp = args[1]
-
     #amplitude generation
     amplitude = real_amp.generate_real_amplitude()
     helasreal = helas_objects.HelasMatrixElement(amplitude)
@@ -73,7 +74,8 @@ def async_generate_real(args):
 
     outdata = [amplitude,helasreal]
 
-    output = tempfile.NamedTemporaryFile(delete = False)   
+    output = tempfile.NamedTemporaryFile(delete = False)
+
     six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
@@ -92,7 +94,7 @@ def async_generate_born(args):
 
     logger.info('Generating born %s' % \
             born.born_proc.nice_string(print_weighted=False).replace('Process', 'process'))
-    
+
     #load informations on reals from temp files
     helasreal_list = []
     for amp in born.real_amps:
@@ -134,7 +136,8 @@ def async_generate_born(args):
     
     outdata = helasfull
     
-    output = tempfile.NamedTemporaryFile(delete = False)   
+    output = tempfile.NamedTemporaryFile(delete = False)  
+    misc.sprint("trying born dump?") 
     six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
@@ -190,7 +193,8 @@ def async_finalize_matrix_elements(args):
     #data to write to file
     outdata = me
 
-    output = tempfile.NamedTemporaryFile(delete = False)   
+    output = tempfile.NamedTemporaryFile(delete = False)
+    misc.sprint("finalize")   
     six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
@@ -286,13 +290,19 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             logger.info('Generating real matrix elements...')
+            import sys
+            misc.sprint(sys.path)
+            import time
             try:
                 # the very large timeout passed to get is to be able to catch
                 # KeyboardInterrupts
-                realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
+                modelpath = born_procs[0].born_proc['model'].get('modelpath')
+                #model = self.get('processes')[0].get('model')
+                with misc.TMP_variable(sys, 'path', sys.path + [pjoin(MG5DIR, 'models'), modelpath]):
+                    realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
             except KeyboardInterrupt:
                 pool.terminate()
-                raise KeyboardInterrupt 
+                raise KeyboardInterrupt
 
             realmapfiles = []
             for realout in realmapout:
@@ -416,6 +426,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
+            
         
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

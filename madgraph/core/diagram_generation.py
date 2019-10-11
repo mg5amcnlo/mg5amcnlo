@@ -1645,6 +1645,10 @@ class MultiProcess(base_objects.PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['process_definitions', 'amplitudes']
+    
+    def get_model(self):
+        
+        return self['process_definitions'][0]['model']
 
     @classmethod
     def generate_multi_amplitudes(cls,process_definition,
