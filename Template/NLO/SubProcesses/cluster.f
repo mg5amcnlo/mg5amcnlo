@@ -416,9 +416,9 @@ c     the renormalisation scale.
       expanded_exponent_sudakov=0d0
       qcd_fac_scale=0d0    ! factorisation scale
       qcd_ren_scale(0)=1d0 ! renormalisation scale for 'central process'
-      if (skip_first) then ! if .true., skip the first
-         first=0      ! 'startQCDvertex'. Useful for FxFx/MINLO
-      else                 ! real emission.
+      if (skip_first) then ! If .true., skip the first 'startQCDvertex':
+         first=0           ! useful for FxFx/MINLO real emission.
+      else
          first=-1
       endif
       call fill_type(next,ipdg,type,mass)
@@ -1352,11 +1352,12 @@ CCCCCCCCCCCCCCC -- SUDAKOV FUNCTIONS -- CCCCCCCCCCCCCCCC
 
       subroutine QCDsudakov(q0,q2,q1,next,type,mass,QCDsudakov_exp
      $     ,expanded_QCDsudakov_exp)
-c Wrapper function for computing the sudakov. It checks for identical
-c type and mass, and makes sure to use cached ones if already
-c computed. It adds the results to the QCDsudakov_exp and
-c expanded_QCDsudakov_exp (the latter containing the strict O(alpha_s)
-c expansion of the former.
+c Wrapper function for computing the sudakov for the particles listed in
+c itype(). It checks for identical type and mass, and makes sure to use
+c cached ones if already computed. It adds the results to the
+c QCDsudakov_exp and expanded_QCDsudakov_exp (the latter containing the
+c strict O(alpha_s) expansion of the former, needed to subtract double
+c counting with NLO corrections to the main process).
       implicit none
       integer i,j,next,type(0:next)
       double precision q0,q2,q1,mass(next),tmp1(next),tmp2(next)
