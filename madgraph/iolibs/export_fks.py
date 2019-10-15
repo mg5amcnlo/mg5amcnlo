@@ -871,7 +871,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 else:
                     logger.info('Done.')
             if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):
-                misc.sprint('linking them')
                 #then link the libraries in the exported dir
                 files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
                                          pjoin(self.dir_path, 'MCatNLO', 'lib'))
