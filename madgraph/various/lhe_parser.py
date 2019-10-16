@@ -272,16 +272,16 @@ class EventFile(object):
         """get next event"""
 
         if not self.eventgroup:
-            text = ''
+            text = []
             line = ''
             mode = 0
             while '</event>' not in line:
                 line = super(EventFile, self).next()
                 if '<event' in line:
                     mode = 1
-                    text = ''
+                    text = []
                 if mode:
-                    text += line
+                    text.append(line)
             if self.parsing:
                 out = Event(text)
                 if len(out) == 0  and not self.allow_empty_event:
@@ -291,7 +291,7 @@ class EventFile(object):
                 return text
         else:
             events = []
-            text = ''
+            text = []
             line = ''
             mode = 0
             while '</eventgroup>' not in line:
@@ -300,17 +300,17 @@ class EventFile(object):
                     events=[]
                     text = ''
                 elif '<event' in line:
-                    text=''
-                    mode=1
+                    text = []
+                    mode = 1
                 elif '</event>' in line:
                     if self.parsing:
                         events.append(Event(text))
                     else:
                         events.append(text)
-                    text = ''
+                    text = []
                     mode = 0
                 if mode:
-                    text += line  
+                    text.append(line)  
             if len(events) == 0:
                 return self.next()
             return events
@@ -1236,7 +1236,11 @@ class Event(list):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-        for line in text.split('\n'):
+        try:
+            text = text.split('\n')
+        except Exception:
+            pass
+        for line in text:
             line = line.strip()
             if not line: 
                 continue
@@ -1749,6 +1753,9 @@ class Event(list):
     def check(self):
         """check various property of the events"""
         
+        # check that relative error is under control
+        threshold = 5e-7
+        
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
         absE, abspx, abspy, abspz = 0,0,0,0
@@ -1766,8 +1773,14 @@ class Event(list):
             abspx += abs(particle.px)
             abspy += abs(particle.py)
             abspz += abs(particle.pz)
-        # check that relative error is under control
-        threshold = 5e-7
+            # check mass
+            fourmass = FourMomentum(particle).mass
+            
+            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
+                raise Exception, "Do not have correct mass lhe: %s momentum: %s" % (particle.mass, fourmass)
+            
+                
+
         if E/absE > threshold:
             logger.critical(self)
             raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
@@ -1782,7 +1795,10 @@ class Event(list):
             raise Exception, "Do not conserve Pz %s, %s" % (pz/abspz, pz)
             
         #2. check the color of the event
-        self.check_color_structure()            
+        self.check_color_structure() 
+        
+        #3. check mass
+                   
          
     def assign_scale_line(self, line):
         """read the line corresponding to global event line

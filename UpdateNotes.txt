@@ -1,5 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.6.7(16/10/19)
+      OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
+      OM: Fix a bug introduced in 2.6.6 related to the restriction of model which was leading to wrong result for re-weighitng with loop model (but impact can in principle be not limited to re-weighting).
+      OM: systematics now supports the option --weight_format and --weight_info (see help command for details)
+      OM: set the auto_ptj_mjj variable to True by default
+      OM: the systematics_arguments default value is modified in presence of matching/merging.
+      OM: reweight: add an option --rwgt_info to allow to customise the banner information associate to that weight
+      RF: Fixed a bug in the warning when using FxFx in conjunction with Herwig++/Herwig7. Also, with latest version of
+          Herwig7.1.x, the FxFx needed files are compiled by default with in the Herwig code. Thanks Andreas Papaefstathiou.
+
 2.6.6(28/07/19)
       OM: Bug in the edition of the shower_card. The set command of logical parameter was never setting the 
           parameter to False. (Thanks to Richard Ruiz) 

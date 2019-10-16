@@ -2567,7 +2567,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
 
-                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                if switch_mode['analysis'] == 'ExRoot':
                     input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
                     output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
                     self.create_root_file(input , output)

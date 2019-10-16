@@ -1408,6 +1408,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
+
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)
@@ -1424,7 +1425,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         #4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
-        
         
         #5. generate the decay 
         orig_lhe.seek(0)
@@ -1539,6 +1539,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event_decay is a dict pdg -> list of event file (contain the decay)
         
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
+            return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+        
         nevents = self.options['Nevents_for_max_weigth']
         if nevents == 0 :
             nevents = 75
@@ -1547,7 +1550,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("Estimating the maximum weight")
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
-
 
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
@@ -1561,7 +1563,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 base_event = base_event[0]
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
-                #carefull base_event is modified by the following function                  
+                #carefull base_event is modified by the following function 
                 _, wgt = self.get_onshell_evt_and_wgt(base_event, decays)
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
@@ -1581,6 +1583,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
             if all_maxwgt[1] > base_max_weight:
                 base_max_weight = 1.05 * all_maxwgt[1]
+        if self.options['ms_dir']:
+            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
             
             
@@ -1602,13 +1606,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
-        
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
             production_me = self.calculate_matrix_element(production)
             production.me_wgt = production_me
-            
         decay_me = 1.0
         for pdg in decays:
             for dec in decays[pdg]:
@@ -1636,7 +1638,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             final = tuple(-i for i in final)
             tag = (init, final)
             orig_order = self.all_me[tag]['order']
-            
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)
@@ -1651,11 +1652,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             
             mymod = __import__("%s.matrix2py" % (pdir))
             reload(mymod)
-            mymod = getattr(mymod, 'matrix2py')  
+            mymod = getattr(mymod, 'matrix2py')
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_value  
+                    if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
+                            os.path.exists(pjoin(self.path_me,'param_card.dat')):
+                        mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                    else:
+                        mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
+            self.all_f2py[pdir] = mymod.get_value 
             return self.calculate_matrix_element(event)
         
         

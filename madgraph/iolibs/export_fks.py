@@ -849,7 +849,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         base_compiler= ['FC=g77','FC=gfortran']
         
         StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
-        
         if output_dependencies == 'external':
             # check if stdhep has to be compiled (only the first time)
             if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
@@ -862,12 +861,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     open(path, 'w').writelines(text)
 
                 logger.info('Compiling StdHEP. This has to be done only once.')
-                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                logger.info('Done.')
-            #then link the libraries in the exported dir
-            files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
+                try:
+                    misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
+                except Exception as error:
+                    logger.debug(str(error))
+                    logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
+                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                else:
+                    logger.info('Done.')
+            if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):
+                #then link the libraries in the exported dir
+                files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
                                          pjoin(self.dir_path, 'MCatNLO', 'lib'))
-            files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
+                files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
                                          pjoin(self.dir_path, 'MCatNLO', 'lib'))
 
         elif output_dependencies == 'internal':

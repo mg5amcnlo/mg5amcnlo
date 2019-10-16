@@ -1583,6 +1583,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --start_id=       # define the starting digit for the additial weight. If not specify it is determine automatically")
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
+        logger.info("   --weight_format=\"%(id)i\"  # allow to customise the name of the weight. The resulting name SHOULD be unique.")
+        logger.info("   --weight_info=  # allow to customise the text describing the weights.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1601,6 +1603,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("       id1,id2  : keep/remove all the weights between those two values --included--")
         logger.info("       PATTERN  : keep/remove all the weights matching the (python) regular expression.")
         logger.info("       note that multiple entry of those arguments are allowed")
+        logger.info("")
+        logger.info("   Input for weight format")
+        logger.info("     The parameter will be interpreted by python using: https://docs.python.org/2/library/stdtypes.html#string-formatting")
+        logger.info("     The allowed parameters are 'muf','mur','pdf','dyn','alps','id'") 
     def complete_systematics(self, text, line, begidx, endidx):
         """auto completion for the systematics command"""
  
@@ -1666,7 +1672,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
-                                 '--remove_wgts=', '--keep_wgts','--start_id='))
+                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format=',
+                                 '--weight_info='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
@@ -4122,23 +4129,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """
 
         if not lhapdf_version:
-            lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
-                        
-                        
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
+
         if not pdfsets_dir:
-            if 'LHAPATH' in os.environ:
-                for p in os.environ['LHAPATH'].split(':'):
-                    if os.path.exists(p):
-                        pdfsets_dir = p
-                        break
-                else:
-                    del os.environ['LHAPATH'] 
-                    pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()                    
-            else:
-                pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsets_dir = CommonRunCmd.get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version)
 
         if isinstance(filename, int):
             pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
@@ -4185,6 +4179,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            os.path.isdir(pjoin(pdfsets_dir, filename)):
             logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
+            
         #otherwise (if v5) save it locally
         elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
@@ -4207,6 +4202,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \
                         % (filename, pdfsets_dir))  
+            elif 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+                
+                if pdfsets_dir in os.environ['LHAPDF_DATA_PATH'].split(':'):
+                    lhapath = os.environ['LHAPDF_DATA_PATH'].split(':')
+                    lhapath = [p for p in lhapath if os.path.exists(p)]
+                    lhapath.remove(pdfsets_dir)
+                    os.environ['LHAPDF_DATA_PATH'] = ':'.join(lhapath)
+                    if lhapath:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
+                        return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
+                    else:
+                        raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir) 
+                else:
+                    return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, None, 
+                                                              filename, 
+                                        lhapdf_version, alternate_path)
             elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
                 misc.sprint(os.environ['LHAPATH'], '-> retry')
                 if pdfsets_dir in os.environ['LHAPATH'].split(':'):
@@ -4282,38 +4300,47 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return lhapdf_pdfsets
 
+    @staticmethod
+    def get_lhapdf_version_static(lhapdf_config):
+        """returns the lhapdf version number"""
+
+        try:
+            lhapdf_version = \
+                    subprocess.Popen([lhapdf_config, '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+        except OSError, error:
+            if error.errno == 2:
+                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+            else:
+                raise
+                
+        # this will be removed once some issues in lhapdf6 will be fixed
+        if lhapdf_version.startswith('6.0'):
+            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
+        return lhapdf_version
+
 
     def get_lhapdf_version(self):
         """returns the lhapdf version number"""
         if not hasattr(self, 'lhapdfversion'):
-            try:
-                self.lhapdf_version = \
-                    subprocess.Popen([self.options['lhapdf'], '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
-            except OSError, error:
-                if error.errno == 2:
-                    raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
-                else:
-                    raise
-                
-        # this will be removed once some issues in lhapdf6 will be fixed
-        if self.lhapdf_version.startswith('6.0'):
-            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
+            self.lhapdf_version = self.get_lhapdf_version_static(self.options['lhapdf'])
         return self.lhapdf_version
 
-
-    def get_lhapdf_pdfsetsdir(self):
-        lhapdf_version = self.get_lhapdf_version()
+    @staticmethod
+    def get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version=None):
+        """ """
+        if not lhapdf_version:
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
 
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
             datadir = os.environ['LHAPDF_DATA_PATH']
         elif lhapdf_version.startswith('5.'):
-            datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+            datadir = subprocess.Popen([lhapdf_config, '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
 
         elif lhapdf_version.startswith('6.'):
-            datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+            datadir = subprocess.Popen([lhapdf_config, '--datadir'],
                          stdout = subprocess.PIPE).stdout.read().strip()
         
         if ':' in datadir:
@@ -4324,6 +4351,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return None
         
         return datadir
+
+    def get_lhapdf_pdfsetsdir(self):
+        
+        lhapdf_version = self.get_lhapdf_version()
+        return self.get_lhapdf_pdfsetsdir_static(self.options['lhapdf'], lhapdf_version)
 
     ############################################################################
     def get_Pdir(self):

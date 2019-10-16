@@ -88,7 +88,8 @@ class ReweightInterface(extended_cmd.Cmd):
         self.multicore=False
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
-                        'rwgt_name':None}
+                        'rwgt_name':None,
+                        "allow_missing_finalstate":False}
 
         self.events_file = None
         self.processes = {}
@@ -356,6 +357,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.has_standalone_dir = False
         elif args[0] == "keep_ordering":
             self.keep_ordering = banner.ConfigFile.format_variable(args[1], bool, "keep_ordering")
+        elif args[0] == "allow_missing_finalstate":
+            self.options["allow_missing_finalstate"] = banner.ConfigFile.format_variable(args[1], bool, "allow_missing_finalstate")
         elif args[0] == "process":
             nb_f2py_module += 1
             if self.has_standalone_dir:
@@ -422,12 +425,13 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 raise self.InvalidCmd("No events files defined.")
             
-        opts = {'rwgt_name':None}
+        opts = {'rwgt_name':None, 'rwgt_info':None}
         if any(a.startswith('--') for a in args):
             for a in args[:]:
                 if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
                     opts[key] = value .replace("'","") .replace('"','')
+
         return opts
 
     def help_launch(self):
@@ -463,7 +467,8 @@ class ReweightInterface(extended_cmd.Cmd):
         opts = self.check_launch(args)
         if opts['rwgt_name']:
             self.options['rwgt_name'] = opts['rwgt_name']
-
+        if opts['rwgt_info']:
+            self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.has_standalone_dir:                           
@@ -795,8 +800,12 @@ class ReweightInterface(extended_cmd.Cmd):
             tag = self.options['rwgt_name']
         else:
             tag = str(rewgtid)
-        
-        if not self.second_model and not self.dedicated_path:
+
+        if 'rwgt_info' in self.options and self.options['rwgt_info']:
+            card_diff = self.options['rwgt_info']
+            for name in type_rwgt:
+                mg_rwgt_info.append((tag, name, self.options['rwgt_info']))
+        elif not self.second_model and not self.dedicated_path:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  self.new_param_card
             card_diff = old_param.create_diff(new_param)
@@ -1158,8 +1167,15 @@ class ReweightInterface(extended_cmd.Cmd):
         if (not self.second_model and not self.second_process and not self.dedicated_path) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
-            orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
-            
+            try:
+                orig_order, Pdir, hel_dict = self.id_to_path_second[tag]
+            except KeyError:
+                if self.options['allow_missing_finalstate']:
+                    return 0.0
+                else:
+                    logger.critical('The following initial/final state %s can not be found in the new model/process. If you want to set the weights of such events to zero use "change allow_missing_finalstate False"', tag)
+                    raise Exception
+
         base = os.path.basename(os.path.dirname(Pdir))
         if '_second' in base:
             moduletag = (base, 2)

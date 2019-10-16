@@ -403,6 +403,20 @@ c       exotic q > gluon q'
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
          ipart(2,imo)=ipart(1,ida2)
+      else if (abs(get_color(idmo)).eq.3.and.abs(get_color(idda1)).eq.3.and.abs(get_color(idda2)).eq.3)then
+c     EPSILON^IJK color structure -- handle it as photon emission --
+         ipart(1,imo)=ipart(1,ida1)
+         ipart(2,imo)=0
+      else if (abs(get_color(idmo)).eq.6.and.abs(get_color(idda1)).eq.3.and.abs(get_color(idda2)).eq.3)then
+c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+          ipart(1,imo)=ipart(1,ida1)
+          ipart(2,imo)=ipart(1,ida2)
+        else
+          ipart(1,imo)=ipart(1,ida2)
+          ipart(2,imo)=ipart(1,ida1)
+        endif
       else
          write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
          write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
