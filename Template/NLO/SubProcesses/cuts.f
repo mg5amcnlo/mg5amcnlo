@@ -466,6 +466,11 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       logical passcuts_user
       external passcuts_user
+      integer                              nFxFx_ren_scales
+      double precision     FxFx_ren_scales(0:nexternal),
+     $                     FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
+     $                     FxFx_fac_scale
       call cpu_time(tBefore)
 c Make sure have reasonable 4-momenta
       if (p(0,1) .le. 0d0) then
@@ -481,6 +486,26 @@ c Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+
+
+      if (ickkw.eq.3) then
+         if (FxFx_ren_scales(nFxFx_ren_scales).gt.ptj) then
+            passcuts=.true.
+         else
+            passcuts=.false.
+         endif
+
+c$$$         do i=1,nexternal
+c$$$            write (*,*) i,idup(i,1),p(0:3,i)
+c$$$         enddo
+c$$$         write (*,*) passcuts,nFxFx_ren_scales
+c$$$     $        ,FxFx_ren_scales(nFxFx_ren_scales),ptj
+c$$$         write (*,*) ''
+
+         return
+      endif
+      
+
       rwgt=1d0
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
       chybst=cosh(ybst_til_tolab)

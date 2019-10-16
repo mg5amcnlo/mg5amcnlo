@@ -413,9 +413,9 @@ c The nbody contributions
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
+      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
          if (abrv(1:2).ne.'vi') then
             call compute_born
@@ -447,12 +447,13 @@ c The n+1-body contributions (including counter terms)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
+         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          call set_cms_stuff(mohdr)
+         if (ickkw.eq.3) call set_FxFx_scale(3,p)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call compute_soft_counter_term(0d0)
             call set_cms_stuff(ione)
@@ -462,7 +463,6 @@ c The n+1-body contributions (including counter terms)
          endif
          if (passcuts_n1body) then
             call set_cms_stuff(mohdr)
-            if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)
             call compute_real_emission(p,1d0)
          endif

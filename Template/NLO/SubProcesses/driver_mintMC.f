@@ -843,9 +843,9 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
-            if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             if (abrv(1:2).ne.'vi') then
                call compute_born
@@ -881,12 +881,6 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-c check if event or counter-event passes cuts
-            call set_cms_stuff(izero)
-            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-            call set_cms_stuff(mohdr)
-            passcuts_n1body=passcuts(p,rwgt)
-            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
@@ -911,15 +905,23 @@ c         X       X  |     X
 c
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p)
-               if (passcuts_nbody .and. abrv.ne.'real') then
+c$$$               if (passcuts_nbody .and. abrv.ne.'real') then
                   call set_cms_stuff(izero)
                   call set_FxFx_scale(2,p1_cnt(0,1,0))
-               endif
+c$$$               endif
                if (p(0,1).gt.0d0) then
                   call set_cms_stuff(mohdr)
                   call set_FxFx_scale(3,p)
                endif
             endif               
+c check if event or counter-event passes cuts
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             if (passcuts_nbody .and. abrv.ne.'real') then
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
