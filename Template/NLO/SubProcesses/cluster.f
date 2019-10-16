@@ -1407,7 +1407,11 @@ c        flavour
             cycle
          elseif (get_mass_from_id(ipdg(i)).ne.0d0) then
             ! massive (coloured) particles do not need matching
-            need_matching(i)=0
+            if (get_color(ipdg(i)).ne.0) then
+               need_matching(i)=-1
+            else
+               need_matching(i)=0
+            endif
             cycle
          elseif (ipdg(i).eq.21) then
             ! gluons always need to be matched
@@ -1430,7 +1434,8 @@ c        flavour
             ! s-channel. Check points 2 and 3 of the Algorithm
             do j=3,next
                if (.not.btest(cij,j-1)) cycle
-               if (need_matching(j).ne.0) cycle
+               if ( need_matching(j).ne.0 .and.
+     &              need_matching(j).ne.-1) cycle
                ! found a particle that does not require matching in the
                ! clustering. Hence, set all that have not yet been set
                ! as requiring anti-matching
@@ -1454,7 +1459,8 @@ c        flavour
      &           get_mass_from_id(id1).eq.0d0) then
                do j=3,next
                   if (.not.btest(cij,j-1)) cycle
-                  if (need_matching(j).ne.0) cycle
+                  if ( need_matching(j).ne.0 .and.
+     &                 need_matching(j).ne.-1) cycle
                   ! found a particle that does not require matching in
                   ! the clustering. Hence, set all that have not yet
                   ! been set as requiring anti-matching
