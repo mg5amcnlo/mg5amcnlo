@@ -34,7 +34,7 @@ C given by the to_mconfigs common block.
      $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_pdg(3*3*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_conf,iconf,cluster_ij(max_branch),iord(0:max_branch)
-     $     ,nqcdrenscale,iconfig
+     $     ,nqcdrenscale,iconfig,need_matching(nexternal)
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
@@ -101,9 +101,9 @@ c form factor and renormalisation and factorisation scales.
       endif
       call set_array_indices(iproc,cluster_conf,il_list,il_pdg)
       call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
-     $     ,cluster_list(il_list),cluster_pdg(il_pdg),cluster_scales
-     $     ,iord,sudakov,expanded_sudakov,nqcdrenscale,qcd_ren_scale
-     $     ,qcd_fac_scale)
+     $     ,cluster_pdg(il_pdg),cluster_scales,iord,sudakov
+     $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
+     $     ,need_matching)
       return
       end
       
@@ -394,12 +394,12 @@ c     cluster_scale (irrespective if that is an initial scale
 c     splitting). In case there is no valid QCD-vertex, its set equal to
 c     the renormalisation scale.
       subroutine Reweighting(next,p,nbr,skip_first,cluster_ij,ipdg
-     $     ,cluster_list,cluster_pdg,cluster_scales,iord,sudakov
-     $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale)
+     $     ,cluster_pdg,cluster_scales,iord,sudakov,expanded_sudakov
+     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
       implicit none
-      integer next,i,j,nbr,cluster_ij(nbr),cluster_list(2*nbr)
-     $     ,iord(0:nbr),cluster_pdg(0:2,0:2*nbr),type(0:next)
-     $     ,nqcdrenscale,nqcdrenscalecentral,ipdg(next),first
+      integer next,i,j,nbr,cluster_ij(nbr),iord(0:nbr),cluster_pdg(0:2
+     $     ,0:2*nbr),type(0:next),nqcdrenscale,nqcdrenscalecentral
+     $     ,ipdg(next),first,need_matching(next)
       double precision prev_qcd_scale,hard_qcd_scale,sudakov
      $     ,expanded_sudakov,mass(next),exponent_sukodav,QCDsukakov_exp
      $     ,cluster_scales(0:nbr),qcd_ren_scale(0:nbr),lowest_qcd_scale
@@ -541,6 +541,10 @@ c factorisation scale if need be)
       if (qcd_fac_scale.eq.0) then
          qcd_fac_scale=qcd_ren_scale(0)
       endif
+
+c Determine which particles need clustering and which do not
+      call matching_particles(next,nbr,ipdg,cluster_pdg,cluster_ij,iord
+     $     ,need_matching)
       return
       end
 
@@ -1346,7 +1350,141 @@ c        flavour
       endif
       end
       
+
+      subroutine matching_particles(next,nbr,ipdg,cluster_pdg
+     $     ,cluster_ij,iord,need_matching)
+      ! determines which particles need matching (i.e. a correspondence
+      ! at the level of shower jet with particle jets a la MLM) and
+      ! which need 'anti-matching' (this particle cannot be part of a
+      ! jet that is matched to another parton)
+      !
+      ! The code fills the array:
+      !
+      ! need_matching= 0 : particle does not require matching (it is
+      !                    massive or not colour-charged)
+      ! need_matching= 1 : particle requires matching
+      ! need_matching=-1 : particle is massless colour-charged, but does
+      !                     not require matching (i.e., it is
+      !                    'anti-matched')
+      !
+      ! The algorithm:
+      !
+      ! 0. All non-QCD particles, and all massive particles do not
+      !    require matching.
+      ! 1. All final state gluons require matching.
+      ! 2. All particles that are part of an s-channel clustering, and
+      !    there is a particle among them that does not require
+      !    matching: mark all not-yet-labeled particles as NOT requiring
+      !    matching.
+      ! 3. All particles that are part of an s-channel clustering, and
+      !    there is NOT a particle among them that does not require
+      !    matching, and the mother is a gluon: mark all not-yet-labeled
+      !    particles as require matching.
+      ! 4. If the clustering includes an initial-state particle, and
+      !    there is NOT a particle among them that does not require
+      !    matching and t-channel and initial state particle are
+      !    massless: mark all not-yet-labeled particles as requiring
+      !    matching.
+      !    If, instead, the t-channel or the initial state particle are
+      !    massive: mark the not-yet-labeled particles as NOT requiring
+      !    matching.
+      !
+      ! NOTE: this function only works correctly for MAXIMALLY QCD-LIKE
+      ! PROCESSES.
+      !
+      implicit none
+      integer next,nbr,cluster_pdg(0:2,nbr),cluster_ij(nbr),iord(0:nbr)
+     $     ,need_matching(next),ipdg(next),i,j,k,cij,imo,id1,id2,ii
+     $     ,get_color
+      logical s_chan,IR_cluster
+      double precision get_mass_from_id
+      external IR_cluster,get_mass_from_id,get_color
+      need_matching(1:next)=-99
+      do i=3,next
+         if (get_color(ipdg(i)).eq.0) then
+            ! no matching needed for non-coloured particles
+            need_matching(i)=0
+            cycle
+         elseif (get_mass_from_id(ipdg(i)).ne.0d0) then
+            ! massive (coloured) particles do not need matching
+            need_matching(i)=0
+            cycle
+         elseif (ipdg(i).eq.21) then
+            ! gluons always need to be matched
+            need_matching(i)=1
+            cycle
+         endif
+      enddo
+      do ii=1,nbr+1
+         i=mod(ii,nbr+1) ! i=1,2,3,..,nbr,0
+         if (i.ne.0) then
+            cij=cluster_ij(i)
+         else
+            cij=maskr(next+1) ! include everything in final 2->1 process
+         endif
+         s_chan=btest(cij,0).or.btest(cij,1)
+         imo=cluster_pdg(0,iord(i))
+         id1=cluster_pdg(1,iord(i))
+         id2=cluster_pdg(2,iord(i))
+         if (s_chan) then
+            ! s-channel. Check points 2 and 3 of the Algorithm
+            do j=3,next
+               if (.not.btest(cij,j-1)) cycle
+               if (need_matching(j).ne.0) cycle
+               ! found a particle that does not require matching in the
+               ! clustering. Hence, set all that have not yet been set
+               ! as requiring anti-matching
+               do k=3,next
+                  if (.not.btest(cij,k-1)) cycle
+                  if (need_matching(k).eq.-99) need_matching(k)=-1
+               enddo
+               exit
+            enddo
+            if (imo.eq.21 .and. IR_cluster(imo,id1,id2,.true.)) then
+               ! massless g->qqbar splitting. Hence, set all that have
+               ! not yet been set as requiring matching
+               do k=3,next
+                  if (.not.btest(cij,k-1)) cycle
+                  if (need_matching(k).eq.-99) need_matching(k)=1
+               enddo
+            endif
+         else ! i.e., a clustering with initial state t-channel. Check
+              ! points 4 of the algorithm
+            if ( get_mass_from_id(imo).eq.0d0 .and.
+     &           get_mass_from_id(id1).eq.0d0) then
+               do j=3,next
+                  if (.not.btest(cij,j-1)) cycle
+                  if (need_matching(j).ne.0) cycle
+                  ! found a particle that does not require matching in
+                  ! the clustering. Hence, set all that have not yet
+                  ! been set as requiring anti-matching
+                  do k=3,next
+                     if (.not.btest(cij,k-1)) cycle
+                     if (need_matching(k).eq.-99) need_matching(k)=-1
+                  enddo
+                  exit
+               enddo
+               ! if particles were not set, there was no particle that
+               ! did not require matching. Hence, all non-set particles
+               !  here require matching.
+               do k=3,next
+                  if (.not.btest(cij,k-1)) cycle
+                  if (need_matching(k).eq.-99) need_matching(k)=1
+               enddo
+            else
+               ! mother, or initial state is not massless. Hence, set
+               ! all that have not yet been set as not requiring
+               ! matching
+               do k=3,next
+                  if (.not.btest(cij,k-1)) cycle
+                  if (need_matching(k).eq.-99) need_matching(k)=-1
+               enddo
+            endif
+         endif
+      enddo
+      end
       
+
 CCCCCCCCCCCCCCC -- SUDAKOV FUNCTIONS -- CCCCCCCCCCCCCCCC
 
       subroutine QCDsudakov(q0,q2,q1,next,type,mass,QCDsudakov_exp
