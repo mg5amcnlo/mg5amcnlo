@@ -1422,7 +1422,7 @@ c        flavour
          else
             cij=maskr(next+1) ! include everything in final 2->1 process
          endif
-         s_chan=btest(cij,0).or.btest(cij,1)
+         s_chan=.not.(btest(cij,0).or.btest(cij,1))
          imo=cluster_pdg(0,iord(i))
          id1=cluster_pdg(1,iord(i))
          id2=cluster_pdg(2,iord(i))
