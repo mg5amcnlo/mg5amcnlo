@@ -362,8 +362,7 @@ c final 2->2 process is s-channel QCD process (e.g. qqbar->ttbar),
 c update the central hard scale and the final cluster scale to the
 c geometric mean of the transverse masses in the 2->2 system.
       call update_cluster_scales(nbr,p_inter,cluster_scales
-     $     ,cluster_pdg(0,0,cluster_conf),cluster_ij,cluster_list(1
-     $     ,cluster_conf),iord)
+     $     ,cluster_pdg(0,0,cluster_conf),cluster_ij,iord)
       return
       end
 
@@ -908,14 +907,14 @@ c cluster_pdg). This allows for easy access to PDG numbers etc.
       end
 
       subroutine update_cluster_scales(nbr,p_inter,cluster_scales
-     $     ,cluster_pdg,cluster_ij,cluster_list,iord)
+     $     ,cluster_pdg,cluster_ij,iord)
 c Updates the clustering scale to be abs(2*p1.p2) for clusterings that
 c involve exaclty 2 QCD partons. This will be the correct hard scale in
 c the Sudakov Form Factors (for both massless and massive quarks and
 c gluons).
       implicit none
       integer i,j,k,cij,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr)
-     $     ,iord(0:nbr),next,get_color,cluster_list(2*nbr),iqcd(0:2)
+     $     ,iord(0:nbr),next,get_color,iqcd(0:2)
       double precision cluster_scales(0:nbr),dot,p_inter(0:4,0:2,0:nbr)
      $     ,djb_clus
       logical QCDchangeline,QCDvertex
