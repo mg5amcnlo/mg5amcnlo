@@ -121,11 +121,16 @@ def get_pkg_info(info_str=None):
 
     if info_str:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
+        return info_dict
 
+    if PACKAGE_INFO:
+        return PACKAGE_INFO
+    
     elif MADEVENT:
         info_dict ={}
         info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
-        info_dict['date'] = '20xx-xx-xx'                        
+        info_dict['date'] = '20xx-xx-xx'
+        PACKAGE_INFO = info_dict                        
     else:
         if PACKAGE_INFO:
             return PACKAGE_INFO
@@ -867,10 +872,10 @@ def check_system_error(value=1):
                 return f(arg, *args, **opt)
             except OSError, error:
                 logger.debug('try to recover from %s' % error)
-                if isinstance(arg, list):
+                if isinstance(arg, (list,tuple)):
                     prog =  arg[0]
                 else:
-                    prog = arg[0]
+                    prog = arg
                 
                 # Permission denied
                 if error.errno == 13:     
@@ -1704,10 +1709,49 @@ class EasterEgg(object):
                    "May the mass times acceleration be with you.",
                    "NOTE: This product may actually be nine-dimensional. If this is the case, functionality is not affected by the extra five dimensions.",
                    "IMPORTANT: This product is composed of 100%% matter: It is the responsibility of the User to make sure that it does not come in contact with antimatter.",
+                   "",
                    'The fish are out of jokes. See you next year for more!'],
-         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work.'],
-         'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
+#         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work.'],
+#         'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
                }
+
+    default_banner_1 =  "************************************************************\n" + \
+        "*                                                          *\n" + \
+        "*                     W E L C O M E to                     *\n" + \
+        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
+        "*                                                          *\n" + \
+        "*                                                          *\n" 
+
+
+    default_banner_2 =        "*                                                          *\n" + \
+        "%s" + \
+        "*                                                          *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                            and                           *\n" + \
+        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
+        "*                                                          *\n" + \
+        "*               Type 'help' for in-line help.              *\n" + \
+        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
+        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
+        "*                                                          *\n" + \
+        "************************************************************"
+
+    May4_banner = "*                           _____                          *\n" + \
+        "*                       ,-~\"     \"~-.                      *\n" + \
+        "*        *            ,^ ___         ^.             *      *\n" + \
+        "*          *         / .^   ^.         \         *         *\n" + \
+        "*            *      Y  l  o  !          Y      *           *\n" + \
+        "*              *   l_  `.___.'         _,[   *             *\n" + \
+        "*                * |^~\"--------------~\"\"^| *               *\n" + \
+        "*              *   !     May the 4th     !   *             *\n" + \
+        "*            *       \                 /       *           *\n" + \
+        "*          *          ^.             .^          *         *\n" + \
+        "*        *              \"-.._____.,-\"              *       *\n"
+
+    special_banner = {(4,5): May4_banner}
+
     
     def __init__(self, msgtype):
 
@@ -1726,6 +1770,9 @@ class EasterEgg(object):
                         msg = choices[random.randint(0,len(choices)-2)]
                     EasterEgg.message_aprilfirst[msgtype].remove(msg)
                     
+            elif msgtype=='loading' and date in self.special_banner:
+                self.change_banner(date)
+                return
             else:
                 return
             if MADEVENT:
@@ -1749,6 +1796,13 @@ class EasterEgg(object):
         except:
             pass
             
+    def change_banner(self, date):
+        if MADEVENT:
+            return
+        import madgraph.interface.madgraph_interface as madgraph_interface
+        madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
+        
+
     def call_apple(self, msg):
         
         #1. control if the volume is on or not
@@ -1788,17 +1842,6 @@ class EasterEgg(object):
         # go fishing
         fishCmd = fishPole + fishPath + " " + msg
         os.system(fishCmd)
-
-
-if __debug__:
-    try:
-        import os 
-        import pwd
-        username =pwd.getpwuid( os.getuid() )[ 0 ]
-        if 'hirschi' in username or 'vryonidou' in username and __debug__:
-            EasterEgg('loading')
-    except:
-        pass
 
 
 def get_older_version(v1, v2):

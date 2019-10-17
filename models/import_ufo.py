@@ -106,11 +106,18 @@ def get_model_db():
     r = random.randint(0,1)
     r = [r, (1-r)]
 
+    if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+        data_path.append(os.environ['MG5aMC_WWW']+'/models_db.dat')
+        r.insert(0, 2)
+
+
     for index in r:
         cluster_path = data_path[index]
         try:
             data = urllib.urlopen(cluster_path)
         except Exception:
+            continue
+        if data.getcode() != 200:
             continue
         break
     else:
@@ -121,6 +128,11 @@ def get_model_db():
 def import_model_from_db(model_name, local_dir=False):
     """ import the model with a given name """
 
+    if os.path.sep in model_name and os.path.exists(os.path.dirname(model_name)):
+        target = os.path.dirname(model_name)
+        model_name = os.path.basename(model_name)
+    else:
+        target = None
     data =get_model_db()
     link = None
     for line in data:
@@ -129,17 +141,29 @@ def import_model_from_db(model_name, local_dir=False):
             link = split[1]
             break
     else:
-        logger.debug('no model with that name found online')
+        logger.debug('no model with that name (%s) found online', model_name)
         return False
     
     #get target directory
-    # 1. PYTHONPATH containing UFO
+    # 1. PYTHONPATH containing UFO --only for omattelaer user
     # 2. models directory
-    target = None 
-    if 'PYTHONPATH' in os.environ and not local_dir:
+    
+    username = ''
+    if not target:
+        try:
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ]  
+        except Exception, error:
+            misc.sprint(str(error))
+            username = ''
+    if username in ['omatt', 'mattelaer', 'olivier'] and target is None and \
+                                    'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
-            if 'UFO' in os.path.basename(directory) and os.path.exists(directory):
-                target= directory 
+            #condition only for my setup --ATLAS did not like it
+            if 'UFOMODEL' == os.path.basename(directory) and os.path.exists(directory) and\
+                misc.glob('*/couplings.py', path=directory) and 'matt' in directory:
+                target= directory
+                   
     if target is None:
         target = pjoin(MG5DIR, 'models')    
     try:
@@ -398,7 +422,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     # save in a pickle files to fasten future usage
-    if ReadWrite:
+    if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
                                    model, log=False)
 
@@ -420,6 +444,8 @@ class UFOMG5Converter(object):
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
+                                  # only trigger if all particles are of QCD type (not h>gg)
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -521,6 +547,14 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if self.non_qcd_gluon_emission:
+            logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
+            "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
+            "  Use such features with care.", self.non_qcd_gluon_emission)
+
+            self.model['allow_pickle'] = False 
+            self.model['limitations'].append('MLM')
+            
         if self.perturbation_couplings:
             try:
                 self.ufomodel.add_NLO()
@@ -646,14 +680,15 @@ class UFOMG5Converter(object):
                 continue
             names = [interaction['lorentz'][i] for i in to_lor[key]]
             names.sort()
-            
+            if self.lorentz_info[names[0]].get('structure') == 'external':
+                continue
             # get name of the new lorentz
             if tuple(names) in self.lorentz_combine:
                 # already created new loretnz
                 new_name = self.lorentz_combine[tuple(names)]
             else:
                 new_name = self.add_merge_lorentz(names)
-                
+
             # remove the old couplings 
             color, coup = key
             to_remove = [(color, lor) for lor in to_lor[key]]  
@@ -696,7 +731,12 @@ class UFOMG5Converter(object):
         # load the associate lorentz expression
         new_struct = ' + '.join([self.lorentz_info[n].get('structure') for n in names])
         spins = self.lorentz_info[names[0]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfactors = sum([ self.lorentz_info[n].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n], 'formfactors') \
+                            and self.lorentz_info[n].get('formfactors') \
+                      ],[])
+                        
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfactors)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
@@ -1264,6 +1304,7 @@ class UFOMG5Converter(object):
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
         
+     
         
         
         # Now consider the name only
@@ -1289,10 +1330,18 @@ class UFOMG5Converter(object):
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
-                if '1' in order:
+
+                if '1' in coupling.order:
                     raise InvalidModel, '''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
+                # check that gluon emission from quark are QCD tagged
+                if 21 in [particle.pdg_code for particle in interaction_info.particles] and\
+                    'QCD' not in  coupling.order:
+                    col = [par.get('color') for par in particles]
+                    if 1 not in col:
+                        self.non_qcd_gluon_emission +=1
+       
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = '%s%s' % \
                                                (coupling_sign,coupling.name)
@@ -1310,7 +1359,8 @@ class UFOMG5Converter(object):
                     order_to_int[order] = interaction                        
                     # add to the interactions
                     self.interactions.append(interaction)
-        
+
+            
         # check if this interaction conserve the charge defined
  #       if type=='base':
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -1323,7 +1373,7 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
-        
+
         
         
     def get_sign_flow(self, flow, nb_fermion):
@@ -1368,15 +1418,19 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
-    def add_lorentz(self, name, spins , expr):
+    def add_lorentz(self, name, spins , expr, formfact=None):
         """ Add a Lorentz expression which is not present in the UFO """
 
+        logger.debug('MG5 converter defines %s to %s', name, expr)
         assert name not in [l.name for l in self.model['lorentz']]
         with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
                                self.model['lorentz']):
             new = self.model['lorentz'][0].__class__(name = name,
                     spins = spins,
                     structure = expr)
+            if formfact:
+                new.formfactors = formfact
+
         assert name in [l.name for l in self.model['lorentz']]
         assert name not in [l.name for l in self.ufomodel.all_lorentz]
         #self.model['lorentz'].append(new) # already done by above command
@@ -1906,6 +1960,7 @@ class RestrictModel(model_reader.ModelReader):
                 logger.debug('coupling with small value %s: %s treated as zero' %
                              (name, value))
                 zero_coupling.append(name)
+                continue
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
@@ -1973,7 +2028,7 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
-        
+
         return null_parameters, one_parameters
     
     def apply_conditional_simplifications(self, modified_params,
@@ -2200,8 +2255,10 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 arg = 'width'
             change_name = [p.name for (p,f) in parameters[1:]]
+            factor_for_name = [f for (p,f)  in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
-                                                       if p[arg] in change_name]
+                                                       if p[arg] in change_name and 
+                                                       factor_for_name[change_name.index(p[arg])]==1]
             
     def remove_interactions(self, zero_couplings):
         """ remove the interactions and particle counterterms 
@@ -2301,7 +2358,9 @@ class RestrictModel(model_reader.ModelReader):
                 particle['width'] = 'ZERO'
             if particle['width'] in one_parameters:
                 one_parameters.remove(particle['width'])                
-                
+            if particle['mass'] in one_parameters:
+                one_parameters.remove(particle['mass'])                
+
         for pdg, particle in self['particle_dict'].items():
             if particle['mass'] in zero_parameters:
                 particle['mass'] = 'ZERO'
@@ -2340,6 +2399,13 @@ class RestrictModel(model_reader.ModelReader):
                     for coupling in coupling_list:
                         for use in  re_pat.findall(coupling.expr):
                             used.add(use)
+                
+                # check in form-factor
+                for lor in self['lorentz']:
+                    if hasattr(lor, 'formfactors') and lor.formfactors:
+                        for ff in lor.formfactors:
+                            for use in  re_pat.findall(ff.value):
+                                used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         
@@ -2484,16 +2550,26 @@ class RestrictModel(model_reader.ModelReader):
         if any( n.startswith('d') for n in names ):
             new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
         spins = self.lorentz_info[names[0][1:]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfact = sum([ self.lorentz_info[n[1:]].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n[1:]], 'formfactors') \
+                              and self.lorentz_info[n[1:]].get('formfactors') \
+                       ],[])
+
+
+
+ 
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfact)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
     
-    def add_lorentz(self, name, spin, struct):
+    def add_lorentz(self, name, spin, struct, formfact=None):
         """adding lorentz structure to the current model"""
         new = self['lorentz'][0].__class__(name = name,
                                            spins = spin,
                                            structure = struct)
+        if formfact:
+            new.formfactors = formfact
         self['lorentz'].append(new)
         self.create_lorentz_dict()
         

@@ -664,14 +664,21 @@ c  check for other PDG particle
          endif
       enddo
 
-c     ensure symmetry of s_min(i,j)
+c     ensure symmetry of s_min(i,j) + mass effect
       do i=nincoming+1,nexternal-1
         do j=nincoming+1,nexternal-1
            if(j.lt.i)then
-               s_min(i,j) = max(s_min(j,i),s_min(i,j))
+               s_min(i,j) = max(s_min(j,i), s_min(i,j), (pmass(i)+pmass(j))**2)
             endif
         enddo
       enddo
+
+c     ensure that smin is bigger than mass threshold
+      smin_p = 0d0
+      do i=nincoming+1, nexternal
+         smin_p = smin_p + pmass(i)
+      enddo
+      smin = max(smin, smin_p**2)
       write(*,*) "Define smin to", smin
 
 c Check that results are consistent among all the grouped subprocesses
