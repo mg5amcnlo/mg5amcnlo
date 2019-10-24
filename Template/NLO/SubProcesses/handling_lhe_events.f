@@ -812,8 +812,10 @@ c Write the <scales> block only for scales related to valid colour lines
      &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
      &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
      &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
-                  if(are_col_conn(i,j).and.SCALUP_a(i,j).lt.scaleMCcut)then
+                  if(are_col_conn(i,j) .and. SCALUP_a(i,j)
+     $                 .lt.scaleMCcut)then
                      write(*,*)'Colour error in write_lhef_event',i,j
+     $                    ,scalup_a(i,j)
                      stop
                   endif
                   if(are_col_conn(i,j))then

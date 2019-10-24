@@ -2699,7 +2699,7 @@ c PS point that should be written in the event file.
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
       double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
-      common /cshowerscale/SCALUP_a
+      common /cshowerscale_a/SCALUP_a
       integer colour_connections(2,nexternal)
       common /colour_connections_to_write/ colour_connections
       call cpu_time(tBefore)
@@ -3287,7 +3287,9 @@ c H events
 c Safety measures
             SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
      &                             sqrt((1d0-xi_i_fks_ev)*shat_ev))
-            SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
+            if (SCALUP_a(iFKS,i,j).ne.-1d0) then
+               SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
+            endif
          enddo
       enddo
 c
