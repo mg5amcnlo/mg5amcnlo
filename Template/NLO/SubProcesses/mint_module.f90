@@ -627,7 +627,7 @@ contains
          ( (nit.eq.1 .and. ichan.eq.nchans) .or. nit.gt.1 )  ) then
 ! zero cross-section: warn the user in the log, but print everything
 ! and save files/grids as any other run
-       write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
+       write (*,*) 'THE INTEGRAL APPEARS TO BE ZERO: END THE RUN GRACEFULLY'
        write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '  &
             ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
        call close_run_zero_res
@@ -1439,6 +1439,7 @@ contains
 
   subroutine close_run_zero_res
     implicit none
+    integer kchan
     xgrid(0:nintervals,1:ndim,1:nchans)=0d0
     ymax(1:nintervals,1:ndim,1:nchans)=0d0
     ave_virt(1:nintervals_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
@@ -1450,6 +1451,12 @@ contains
     average_virtual(0,1:nchans)=0d0
     call write_grids_to_file
     call write_results
+    open (unit=12, file='res.dat',status='unknown')
+    do kchan=0,nchans
+       write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan) &
+            ,itmax,ncalls0,0d0
+    enddo
+    close(12)
   end subroutine close_run_zero_res
 
   function ran3(even)
