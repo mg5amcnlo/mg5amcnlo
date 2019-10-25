@@ -1439,7 +1439,7 @@ contains
 
   subroutine close_run_zero_res
     implicit none
-    integer kchan
+    integer :: kchan
     xgrid(0:nintervals,1:ndim,1:nchans)=0d0
     ymax(1:nintervals,1:ndim,1:nchans)=0d0
     ave_virt(1:nintervals_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
