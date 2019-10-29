@@ -1004,7 +1004,7 @@ contains
 
   subroutine reset_mint_grids
     implicit none
-    integer :: kdim,kchan,kint
+    integer :: kdim,kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
@@ -1016,6 +1016,8 @@ contains
     else
        call init_ave_virt
     endif
+    virtual_fraction(1:nchans)=max(virt_fraction,min_virt_fraction)
+    average_virtual(0:n_ave_virt,1:nchans)=0d0
     ans_chan(0:nchans)=0d0
     if (double_events) then
        ! when double events, start with the very first channel only. For the
@@ -1447,7 +1449,7 @@ contains
     ans(1:nintegrals,1:nchans)=0d0
     unc(1:nintegrals,1:nchans)=0d0
     nhits_in_grids(1:nchans)=0
-    virtual_fraction(1:nchans)=1
+    virtual_fraction(1:nchans)=1d0
     average_virtual(0,1:nchans)=0d0
     call write_grids_to_file
     call write_results

@@ -530,7 +530,7 @@ C
       SIG = SIGPAS
       GO TO 33
  30   IERR = 2
-      write (*,*) 'SLATEC', 'POLFIT', 'INVALID INPUT PARAMETER.', 2,
+      write (*,*) 'SLATEC POLFIT INVALID INPUT PARAMETER.', 2,
      +     1
       stop 1
       GO TO 37
@@ -704,16 +704,16 @@ C
 C
  11   WRITE (XERN1, '(I8)') L
       WRITE (XERN2, '(I8)') NORD
-      write (*,*) 'SLATEC', 'PVALUE',
+      write (*,*) 'SLATEC PVALUE '//
      *   'THE ORDER OF POLYNOMIAL EVALUATION, L = ' // XERN1 //
      *   ' REQUESTED EXCEEDS THE HIGHEST ORDER FIT, NORD = ' // XERN2 //
-     *     ', COMPUTED BY POLFIT -- EXECUTION TERMINATED.', 8, 2
+     *   ', COMPUTED BY POLFIT -- EXECUTION TERMINATED.', 8, 2
       stop 1
       RETURN
 C
- 12   write (*,*)  'SLATEC', 'PVALUE',
+ 12   write (*,*)  'SLATEC PVALUE '//
      +    'INVALID INPUT PARAMETER.  ORDER OF POLYNOMIAL EVALUATION ' //
-     +     'REQUESTED IS NEGATIVE -- EXECUTION TERMINATED.', 2, 2
+     +    'REQUESTED IS NEGATIVE -- EXECUTION TERMINATED.', 2, 2
       stop 1
       RETURN
       END
