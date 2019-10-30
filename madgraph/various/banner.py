@@ -3107,6 +3107,14 @@ class RunCardLO(RunCard):
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
+            
+        # if heavy ion mode use for one beam, forbis lpp!=1
+        if self['lpp1'] !=1:
+            if self['nb_proton1'] != 1 or self['nb_neutron1'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp1=1"
+        if self['lpp2'] !=1:
+            if self['nb_proton2'] != 1 or self['nb_neutron2'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp1=1"            
    
     def update_system_parameter_for_include(self):
         
