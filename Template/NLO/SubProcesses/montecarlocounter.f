@@ -557,6 +557,8 @@ c Should be zero if there are no jets at the Born
      &     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
 
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
@@ -686,6 +688,15 @@ c terms when the radiation is hard.
          return
       endif
 
+      if (btest(MCcntcalled,2)) then
+         write (*,*) 'Third bit of MCcntcalled should not be set yet'
+     $        ,MCcntcalled
+         stop 1
+      endif
+
+      MCcntcalled=MCcntcalled+4
+      
+      
 c Shower variables
       if(shower_mc.eq.'HERWIGPP')then
          ztmp=zHWPP(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
@@ -1095,6 +1106,8 @@ c fills arrays relevant to shower scales, and computes Delta
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
      #                emscasharp_a,scalemin_a,scalemax_a
       common/cqMC/qMC
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -1395,8 +1408,6 @@ c Assign flow on statistical basis
             wgt11=wgt11+jamp2(jflow)
          enddo
       endif
-         
-
 c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
       if(dampMCsubt.and.wgt.gt.1d-30)then
         rrnd=ran2()
@@ -2259,6 +2270,14 @@ c End of primary loop over i
         scltarget=-1.d8
         sclstart=-1.d8
       endif
+
+
+      if (btest(MCcntcalled,3)) then
+         write (*,*) 'Fourth bit of MCcntcalled should not '/
+     $        /'have been set yet',MCcntcalled
+         stop 1
+      endif
+      MCcntcalled=MCcntcalled+8
 
 
 cSF THE FOLLOWING MIGHT READ

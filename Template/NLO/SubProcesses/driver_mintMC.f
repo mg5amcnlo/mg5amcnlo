@@ -779,7 +779,7 @@ c
       common /cfl/fold,ifold_counter
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      logical              MCcntcalled
+      integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
@@ -858,7 +858,7 @@ c "npNLO".
             born_wgt_mint=0d0
             virtual_over_born=0d0
          endif
-         MCcntcalled=.false.
+         MCcntcalled=0
          wgt_me_real=0d0
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
@@ -926,7 +926,7 @@ c for different nFKSprocess.
             probne=1d0
             gfactsf=1.d0
             gfactcl=1.d0
-            MCcntcalled=.false.
+            MCcntcalled=0
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(ndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if

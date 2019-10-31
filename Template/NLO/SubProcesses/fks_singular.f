@@ -338,13 +338,10 @@ c respectively.
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision    xm12
-      integer                  ileg
-      common/cscaleminmax/xm12,ileg
       integer           fks_j_from_i(nexternal,0:nexternal)
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      logical              MCcntcalled
+      integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
@@ -376,11 +373,11 @@ c -- call to MC counterterm functions
       xmcxsec=0d0
       xmcxsec2=0d0
       do cflows=1,max_bcol
-         if(is_pt_hard)cycle
+         if(is_pt_hard)exit
          N_p=1d0
          if(isspecial(cflows))N_p=2d0
          do npartner=1,ipartners(0)
-            if(is_pt_hard)cycle
+            if(is_pt_hard)exit
             factor=1d0
 c
             call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
@@ -411,7 +408,16 @@ c     positivity check
             endif
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec
+     $     ,xmcxsec2,MCsec,probne)
+
+      if (btest(Mccntcalled,4)) then
+         write (*,*) 'Fifth bit of MCcntcalled should not '/
+     $        /'have been set yet',MCcntcalled
+         stop 1
+      endif
+      if (is_pt_hard) MCcntcalled=MCcntcalled+16
+      
 c -- end of call to MC counterterm functions
 
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
@@ -422,12 +428,6 @@ c -- end of call to MC counterterm functions
       endif
       if (sevmc.eq.0d0) return
 
-      MCcntcalled=.true.
-      if(ileg.gt.4 .or. ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
-     $        ileg
-         stop 1
-      endif
       if (passcuts .and. flagmc) then
          g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
@@ -2077,44 +2077,19 @@ c FKS configuration that is included in the current PS point.
       include 'nexternal.inc'
       include 'run.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,k,iFKS,Hevents,izero,mohdr
-      double precision ddum(6),p(0:3,nexternal)
-      logical ldum
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     &                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      double precision    xm12
-      integer                  ileg
-      common/cscaleminmax/xm12,ileg
-      character*4      abrv
-      common /to_abrv/ abrv
-      logical              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
+      integer i,j,k,iFKS,izero,mohdr
+      double precision p(0:3,nexternal)
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
       double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
       common /cshowerscale_a/SCALUP_a
       parameter (izero=0,mohdr=-100)
       integer ifold_counter
-c Compute the shower starting scale including the shape function
-      if ( (.not. MCcntcalled) .and.
-     &     abrv.ne.'born' .and. ickkw.ne.4) then
-         if(p(0,1).ne.-99d0)then
-            call set_cms_stuff(mohdr)
-            call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
-            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
-            call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,p,ileg,
-     &           xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6)
-     &           ,ldum)
-         endif
-      endif
+c     Compute the shower starting scale including the shape function
       call set_cms_stuff(izero)
-      call set_shower_scale(iFKS*2-1,.false.)
+      call set_shower_scale(p,iFKS*2-1,.false.)
       call set_cms_stuff(mohdr)
-      call set_shower_scale(iFKS*2,.true.)
-      
+      call set_shower_scale(p,iFKS*2,.true.)
 c loop over all the contributions and update the relevant ones
 c (i.e. when nFKS(i)=iFKS and ifold_cnt(i)=ifold_counter)
       do i=1,icontr
@@ -3192,13 +3167,14 @@ c
       end
 
 
-      subroutine set_shower_scale(iFKS,Hevents)
+      subroutine set_shower_scale(p,iFKS,Hevents)
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
+      include 'run.inc'
       integer iFKS,i,j
-      logical Hevents
-      double precision xi_i_fks_ev,y_ij_fks_ev
+      logical Hevents,ldum
+      double precision xi_i_fks_ev,y_ij_fks_ev,p(0:3,nexternal),ddum(6)
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision sqrtshat_ev,shat_ev
@@ -3223,70 +3199,132 @@ c
      &     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
-
+      integer izero,mohdr
+      parameter (izero=0,mohdr=-100)
       double precision xm12
       integer ileg
-      common/cscaleminmax/xm12,ileg
       double precision SCALUP_tmp_S(nexternal,nexternal)
       double precision SCALUP_tmp_H(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+
 c
-c One scale per event
-      SCALUP(iFKS)=0d0
-c S events
-      if(.not.Hevents)then
-         if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
-     &        dampMCsubt.and.emsca.ne.0d0)then
-            SCALUP(iFKS)=min(emsca,scalemax)
-         else
-            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
-     $           ,scalemax,ileg,xm12)
-            SCALUP(iFKS)=scalemax
-         endif
-         SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
-c H events
-      else
-         if(dampMCsubt.and.emsca.ne.0d0)then
-            SCALUP(iFKS)=scalemax
-         else
-            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
-     $           ,scalemax,ileg,xm12)
-            SCALUP(iFKS)=scalemax
-         endif
-         SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS),
-     &                    ref_H_scale(iFKS)-min(emsca,scalemax)))
+      if (.not.dampMCsubt) then
+         write (*,*) 'ERROR: dampMCsubt should be true'
+         stop 1
       endif
+! 1st bit of MCcntcalled: call to set_shower_scale_noshape for S-event (or Born) done
+! 2nd bit of MCcntcalled: call to set_shower_scale_noshape for H-event done
+! 3rd bit of MCcntcalled: call to xmcsubt done (and is_pt_hard == false)
+! 4th bit of MCcntcalled: call to complete_xmcsubt done
+! 5th bit of MCcntcalled: is_pt_hard==True      
+
+! initialize to zero
+      SCALUP(iFKS)=0d0
+      SCALUP_a(iFKS,1:nexternal,1:nexternal)=0d0
+      
+      if (MCcntcalled.eq.15) then
+         ! both complete_xmcsubt and MC counter have been called. Set
+         ! scales based on emsca and scalemax (for SCALUP), except for
+         ! scale-array for H-events, which is based on what's returned
+         ! by pythia.
+         if (.not. Hevents) then
+            SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
+            do i=1,nexternal
+               do j=1,nexternal
+                  if(j.eq.i)cycle
+                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_S(i,j)
+               enddo
+            enddo
+         else
+            SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
+     $                   ref_H_scale(iFKS)-min(emsca,scalemax)))
+            do i=1,nexternal
+               do j=1,nexternal
+                  if(j.eq.i)cycle
+                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_H(i,j)
+               enddo
+            enddo
+         endif
+      elseif (MCcntcalled.eq.3 .or. MCcntcalled.eq.1) then
+         ! Either we're doing Born, or MC counter terms have not been
+         ! called.
+         ! If Born: just use shower_S_scale (i.e., shower scale without
+         ! shape)
+         ! Else: set emsca and scaleminmax, and include them in the
+         ! shower scale (if momenta are defined, else don't use shape)
+         if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
+            call set_cms_stuff(mohdr)
+            call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
+            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+            call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat_ev,p
+     $           ,ileg,xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5)
+     $           ,ddum(6),ldum)
+            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
+     $           ,scalemax,ileg,xm12)
+            call assign_scaleminmax_array(shat_ev,xi_i_fks_ev
+     $           ,scalemin_a,scalemax_a,ileg,xm12)
+            if (.not. Hevents) then
+               SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
+               do i=1,nexternal
+                  do j=1,nexternal
+                     if(j.eq.i)cycle
+                     SCALUP_a(iFKS,i,j)=min(emsca_a(i,j),
+     $                    scalemax_a(i,j))
+                  enddo
+               enddo
+            else
+               SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
+     $              ref_H_scale(iFKS)-min(emsca,scalemax)))
+               do i=1,nexternal
+                  do j=1,nexternal
+                     if(j.eq.i)cycle
+                     SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
+                  enddo
+               enddo
+            endif
+         else ! abrv.eq.Born .or. p(0,1).eq.-99
+            SCALUP(iFKS)=shower_S_scale(iFKS)
+            do i=1,nexternal
+               do j=1,nexternal
+                  if(j.eq.i)cycle
+                  SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+               enddo
+            enddo
+         endif
+      elseif (MCcntcalled.eq.19) then
+         ! is_pt_hard is true. Use shower_s_scale and shower_h_scale for
+         ! S and H events respectively. Hence, no shape function
+         ! included.
+         if (.not. Hevents) then
+            SCALUP(iFKS)=shower_S_scale(iFKS)
+            do i=1,nexternal
+               do j=1,nexternal
+                  if(j.eq.i)cycle
+                  SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+               enddo
+            enddo
+         else
+            SCALUP(iFKS)=shower_H_scale(iFKS)
+            do i=1,nexternal
+               do j=1,nexternal
+                  if(j.eq.i)cycle
+                  SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS)
+               enddo
+            enddo
+         endif
+      else
+         write (*,*) 'ERROR: MCcntcalled assigned wrongly.',MCcntcalled
+      endif
+      
 c Safety measure
       SCALUP(iFKS)=max(SCALUP(iFKS),scaleMCcut)
-c
-c Multiple scales per event
       do i=1,nexternal
          do j=1,nexternal
             if(j.eq.i)cycle
-            SCALUP_a(iFKS,i,j)=0d0
-c S events
-            if(.not.Hevents)then
-               if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
-     &         dampMCsubt.and.emsca_a(i,j).ne.0d0)then
-                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_S(i,j)
-               else
-                  call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a
-     $            ,scalemax_a,ileg,xm12)
-                  SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
-               endif
-c H events
-            else
-               if(dampMCsubt.and.emsca_a(i,j).ne.0d0)then
-                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_H(i,j)
-               else
-                  call assign_scaleminmax_array(shat_ev,xi_i_fks_ev,scalemin_a(i,j)
-     $            ,scalemax_a(i,j),ileg,xm12)
-                  SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
-               endif
-            endif
-c Safety measures
             SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
-     &                             sqrt((1d0-xi_i_fks_ev)*shat_ev))
+     &                            sqrt((1d0-xi_i_fks_ev)*shat_ev))
             if (SCALUP_a(iFKS,i,j).ne.-1d0) then
                SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
             endif
@@ -3318,6 +3356,8 @@ c
      &     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
       double precision ptparton,pt,pp(0:3,nexternal),ppp(0:3,nexternal)
       external pt
 c jet cluster algorithm
@@ -3326,6 +3366,12 @@ c jet cluster algorithm
      $     ,palg,amcatnlo_fastjetdmergemax,di(nexternal)
       external amcatnlo_fastjetdmergemax
 
+      if (btest(iFKS,0)) then
+         MCcntcalled=MCcntcalled+1
+      else
+         MCcntcalled=MCcntcalled+2
+      endif
+      
 c Initialise
       NN=0
       ppp=0d0
