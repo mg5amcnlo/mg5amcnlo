@@ -756,7 +756,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception, error:
         # Cannot probe the compiler, assume not clang then
         return False
-    return 'LLVM' in output
+    return 'LLVM' in output or "clang" in output
 
 def detect_cpp_std_lib_dependence(cpp_compiler):
     """ Detects if the specified c++ compiler will normally link against the C++
