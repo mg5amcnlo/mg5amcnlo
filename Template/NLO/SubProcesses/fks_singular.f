@@ -3280,7 +3280,7 @@ c
                do i=1,nexternal
                   do j=1,nexternal
                      if(j.eq.i)cycle
-                     SCALUP_a(iFKS,i,j)=scalemax_a(i,j)
+                     SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS) ! we don't need the shape here
                   enddo
                enddo
             endif
