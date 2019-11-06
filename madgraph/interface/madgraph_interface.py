@@ -88,6 +88,8 @@ import madgraph.various.banner as banner_module
 import madgraph.various.misc as misc
 import madgraph.various.cluster as cluster
 
+import madgraph.fks.fks_tag as fks_tag
+
 import models as ufomodels
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
@@ -4697,8 +4699,18 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            # check if the particle is tagged (!PART!)
+            if part_name.startswith('!') and part_name.endswith('!'):
+                part_name = part_name[1:-1]
+                is_tagged = True
+            else:
+                is_tagged = False
+
             mylegids = []
             if part_name in self._multiparticles:
+                if is_tagged:
+                    raise self.InvalidCmd,\
+                            "Multiparticles cannot be tagged"
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd,\
                           "Multiparticle %s is or-multiparticle" % part_name + \
@@ -4716,8 +4728,17 @@ This implies that with decay chains:
                     mylegids.append(mypart.get_pdg_code())
 
             if mylegids:
-                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state}))
+                if LoopOption in ['virt','sqrvirt','tree','noborn']:
+                    if is_tagged:
+                        raise self.InvalidCmd,\
+                            "%s mode does not handle tagged particles" % LoopOption
+
+                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                            'state':state}))
+                else:
+                    myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
+                                                          'state':state,
+                                                          'is_tagged':is_tagged}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 

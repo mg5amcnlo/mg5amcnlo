@@ -511,6 +511,13 @@ class FKSProcess(object):
                     leg in self.born_amp['process']['legs']]                    
 
 
+    def get_is_tagged(self):
+        """return the list of the 'is_tagged' keys
+        of each leg in born_amp"""
+        return [leg.get('is_tagged') for \
+                    leg in self.born_amp['process']['legs']]                    
+
+
     def get_leglist(self):
         """return the leg list
         for the born amp"""
