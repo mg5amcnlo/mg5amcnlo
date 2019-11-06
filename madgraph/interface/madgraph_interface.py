@@ -4706,8 +4706,14 @@ This implies that with decay chains:
             else:
                 is_tagged = False
 
+            # check that only final-state particles are tagged
+            if is_tagged and not state:
+                raise self.InvalidCmd,\
+                            "initial particles cannot be tagged"
+
             mylegids = []
             if part_name in self._multiparticles:
+                # multiparticles cannot be tagged
                 if is_tagged:
                     raise self.InvalidCmd,\
                             "Multiparticles cannot be tagged"
@@ -4729,6 +4735,7 @@ This implies that with decay chains:
 
             if mylegids:
                 if LoopOption in ['virt','sqrvirt','tree','noborn']:
+                    # check that no tagged particles exist in this mode
                     if is_tagged:
                         raise self.InvalidCmd,\
                             "%s mode does not handle tagged particles" % LoopOption
