@@ -1754,7 +1754,7 @@ class Event(list):
         """check various property of the events"""
         
         # check that relative error is under control
-        threshold = 5e-7
+        threshold = 1e-6
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1777,7 +1777,7 @@ class Event(list):
             fourmass = FourMomentum(particle).mass
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception, "Do not have correct mass lhe: %s momentum: %s" % (particle.mass, fourmass)
+                raise Exception, "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass))
             
                 
 

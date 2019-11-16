@@ -190,12 +190,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
 
-            if 'OLP' in self.mother.options:
+            if self.mother and 'OLP' in self.mother.options:
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
                     self.rwgt_mode = 'LO'
             
-            if 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
+            if self.mother and 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
                 logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
                 self.rwgt_mode = 'LO'
         else:
