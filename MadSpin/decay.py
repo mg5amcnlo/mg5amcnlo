@@ -3922,7 +3922,8 @@ class decay_all_events(object):
                 
         self.cross = 0
         self.error = 0
-        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())):
+        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())) \
+                                 and not self.options['onlyhelicity']:
             new_init =''
             curr_proc = 0
             has_missing=False
