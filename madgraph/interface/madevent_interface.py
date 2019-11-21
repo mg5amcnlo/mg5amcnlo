@@ -4503,9 +4503,11 @@ tar -czf split_$1.tar.gz split_$1
                             else:
                                 ln(in_file,selected_cwd)                                
                         in_files  = []
+                        wrapper_path = os.path.basename(wrapper_path)
                     else:
                         out_files = ['split_%d.tar.gz'%i]
                         selected_cwd = parallelization_dir
+
                     self.cluster.submit2(wrapper_path, 
                             argument=[str(i)], cwd=selected_cwd, 
                             input_files=in_files,
