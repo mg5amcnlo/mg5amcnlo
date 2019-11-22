@@ -185,8 +185,10 @@ extern "C" void appl_init_() {
         nlo_power = std::max(nlo_power, sum);
     }
 
-    // TODO: we assume that there is always at least one LO, and also at least one NLO
-    assert( nlo_power == (lo_power + 2) );
+    // TODO: are there any situations is which there are NLOs but no LOs?
+
+    // we assume that there is always at least one LO, and zero or one NLO
+    assert( (nlo_power == (lo_power + 2)) || (nlo_power == lo_power) );
 
     std::vector<appl::order_id> order_ids;
     order_ids.reserve(appl_common_fixed_.amp_split_size);
