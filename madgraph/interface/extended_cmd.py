@@ -645,7 +645,7 @@ class BasicCmd(OriginalCmd):
     def split_arg(line):
         """Split a line of arguments"""
         
-        split = line.split()
+        split = re.findall(r"(?:[^\s,'\"]|(?:'|\")(?:\\.|[^\"'])*(?:\"|'))+",line)
         out=[]
         tmp=''
         for data in split:

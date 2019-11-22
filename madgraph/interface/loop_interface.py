@@ -822,7 +822,12 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             # Extract potential loop_filter          
             for arg in args:
                 if arg.startswith('--loop_filter='):
-                    loop_filter = arg[14:]
+                    start = arg[14]
+                    end = arg[-1]
+                    if start == end and start in ["'", '"']:
+                        loop_filter = arg[15:-1]
+                    else:
+                        loop_filter = arg[14:]
                 if not isinstance(self, extended_cmd.CmdShell):
                     raise self.InvalidCmd, "loop_filter is not allowed in web mode"
             args = [a for a in args if not a.startswith('--loop_filter=')]
