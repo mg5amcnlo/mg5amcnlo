@@ -3706,8 +3706,17 @@ This implies that with decay chains:
             logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
+        if madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool:
+            options.horizontal = True
+            options.external = True  
+            options.max_size = 0.3 
+            options.add_gap = 0.5
+            misc.sprint(options)     
         options = draw_lib.DrawOption(options)
         start = time.time()
+
+
+            
 
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
@@ -4691,6 +4700,7 @@ This implies that with decay chains:
                 continue
 
             mylegids = []
+            duplicate =1
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd,\
@@ -4705,11 +4715,29 @@ This implies that with decay chains:
                       "No pdg_code %s in model" % part_name
             else:
                 mypart = self._curr_model['particles'].get_copy(part_name)
+                
                 if mypart:
                     mylegids.append(mypart.get_pdg_code())
+                else:
+                    # check for duplication flag!
+                    if part_name[0].isdigit():
+                        i=0
+                        while part_name[:i+1].isdigit(): 
+                            i+=1
+                        duplicate, part_name = int(part_name[:i]), part_name[i:]
+                        if part_name in self._multiparticles:
+                            if isinstance(self._multiparticles[part_name][0], list):
+                                raise self.InvalidCmd,\
+                                      "Multiparticle %s is or-multiparticle" % part_name + \
+                                      " which can be used only for required s-channels"
+                            mylegids.extend(self._multiparticles[part_name])                        
+                        else:
+                            mypart = self._curr_model['particles'].get_copy(part_name)
+                            mylegids.append(mypart.get_pdg_code())
 
             if mylegids:
-                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                for _ in range(duplicate):
+                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name

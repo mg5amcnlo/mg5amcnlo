@@ -1759,6 +1759,7 @@ class EasterEgg(object):
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
             if date in [(1,4)]:
+                madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool = True
                 if msgtype in EasterEgg.message_aprilfirst:
                     choices = EasterEgg.message_aprilfirst[msgtype]
                     if len(choices) == 0:
