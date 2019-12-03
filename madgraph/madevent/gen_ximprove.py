@@ -883,7 +883,7 @@ class gen_ximprove(object):
                 logger.info("running for accuracy %s%%" % (self.err_goal*100))
                 self.gen_events = False
             elif self.err_goal >= 1:
-                logger.info("Generating %s unweigthed events." % self.err_goal)
+                logger.info("Generating %s unweighted events." % self.err_goal)
                 self.gen_events = True
                 self.err_goal = self.err_goal * self.gen_events_security # security
                 
