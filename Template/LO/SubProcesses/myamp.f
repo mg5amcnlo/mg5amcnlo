@@ -514,7 +514,7 @@ c               read(*,*) xo
          endif
       enddo
 c     Perform setting for shat (PDF BW or 1/s)
-      if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
+      if (abs(lpp(1)) .ge. 1 .or. abs(lpp(2)) .ge. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
          xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
