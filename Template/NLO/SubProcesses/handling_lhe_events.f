@@ -660,6 +660,8 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
       include './run.inc'
       include 'unlops.inc'
 c     if event_id is zero or positive (that means that there was a call
@@ -794,6 +796,9 @@ c
             endif
          endif
       endif
+      if (ickkw.eq.3) then
+         write(ifile,'(a)') trim(adjustl(ptclusstring))
+      endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -833,6 +838,8 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -937,6 +944,9 @@ c
                read(ifile,'(a)')string
             endif
          endif
+         if (ickkw.eq.3) then
+            read(ifile,'(a)') ptclusstring
+         endif
          read(ifile,'(a)')string
       else
          string=buff(1:len_trim(buff))
@@ -982,6 +992,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/event_attributes/nattr,npNLO,npLO
       include 'unlops.inc'
       include 'run.inc'
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -1092,6 +1104,9 @@ c
                endif
                read(ifile,'(a)')string
             endif
+         endif
+         if (ickkw.eq.3) then
+            read(ifile,'(a)') ptclusstring
          endif
          read(ifile,'(a)')string
       else

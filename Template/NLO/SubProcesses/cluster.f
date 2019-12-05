@@ -1,5 +1,5 @@
       subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale)
+     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C alpha_S scale setting. Should be called with iproc=0 for n-body
 C contributions and iproc=nFKSprocess for the real-emissions. These
@@ -100,10 +100,11 @@ c form factor and renormalisation and factorisation scales.
          skip_first=.true.
       endif
       call set_array_indices(iproc,cluster_conf,il_list,il_pdg)
+      need_matching(1:nexternal)=-99
       call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
      $     ,cluster_pdg(il_pdg),cluster_scales,iord,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
-     $     ,need_matching)
+     $     ,need_matching(1))
       return
       end
       
@@ -1399,15 +1400,14 @@ c        flavour
       logical s_chan,IR_cluster
       double precision get_mass_from_id
       external IR_cluster,get_mass_from_id,get_color
-      need_matching(1:next)=-99
       do i=3,next
-         if (get_color(ipdg(i)).eq.0) then
+         if (get_color(ipdg(i)).eq.1) then
             ! no matching needed for non-coloured particles
             need_matching(i)=0
             cycle
          elseif (get_mass_from_id(ipdg(i)).ne.0d0) then
             ! massive (coloured) particles do not need matching
-            if (get_color(ipdg(i)).ne.0) then
+            if (get_color(ipdg(i)).ne.1) then
                need_matching(i)=-1
             else
                need_matching(i)=0

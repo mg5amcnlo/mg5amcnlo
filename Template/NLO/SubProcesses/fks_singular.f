@@ -523,6 +523,9 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
+      integer need_matching(nexternal)
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
       call cpu_time(tBefore)
       ktscheme=1
       if (iterm.eq.0) then
@@ -544,7 +547,7 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
          if (.not.already_set) then
             call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
      $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1))
+     $           ,fxfx_fac_scale(1),need_matching)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
 c$$$            if (.not. setclscales(p1_cnt(0,1,0))) then
 c$$$               write (*,*) 'ERROR in setclscales izero'
@@ -554,6 +557,7 @@ c$$$            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
 c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
+            need_matching_S(1:nexternal)=need_matching(1:nexternal)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -602,9 +606,10 @@ c$$$            endif
 c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
             call cluster_and_reweight(nFKSprocess,rewgt_mohdr
      $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1))
+     $           ,fxfx_fac_scale(1),need_matching)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
+            need_matching_H(1:nexternal)=need_matching(1:nexternal)
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
@@ -1111,6 +1116,8 @@ c     the iproc contribution
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       double precision     iden_comp
       common /c_iden_comp/ iden_comp
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -1174,6 +1181,7 @@ c subtr term
             enddo
          enddo
          H_event(icontr)=.true.
+         need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14 .or. type.eq.15)then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
@@ -1184,6 +1192,7 @@ c and MC subtraction terms.
             enddo
          enddo
          H_event(icontr)=.false.
+         need_match(1:nexternal,icontr)=need_matching_S(1:nexternal)
       else
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
@@ -2255,6 +2264,8 @@ c PS point that should be written in the event file.
       common/c_nFKSprocess/nFKSprocess
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
@@ -2301,6 +2312,7 @@ c found the contribution that should be written:
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
+      need_matching(1:nexternal)=need_match(1:nexternal,icontr_picked)
       call cpu_time(tAfter)
       t_p_unw=t_p_unw+(tAfter-tBefore)
       return

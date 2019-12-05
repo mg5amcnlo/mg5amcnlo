@@ -119,6 +119,14 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+c pt_clust string
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
+      double precision ptclus
+      CHARACTER temp*600,temp0*7,integ*1,float*18
+      CHARACTER integfour*4      
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
 c
 c Set the leshouche info and fks info
 c
@@ -570,6 +578,39 @@ c
             pb(j,ito(i))=pb(j,i)
          enddo
       enddo
+
+
+! write the ptclusstring that knows about which partons should be
+! considered in the MLM-like matching
+      if (ickkw.eq.3) then
+         if (nincoming.ne.2) then
+            write (*,*) 'Need to incoming particles with ickkw=3 '/
+     $           /'(add_write_info.f)'
+            stop
+         endif
+         temp0='<scales '
+         temp=''
+         write (*,*) need_matching(3:nexpart)
+         do i=nincoming+1,nexpart
+            integfour=''
+            float=''
+            if (need_matching(i).eq.1) then
+               ptclus=1d0
+            else
+               if (nincoming.ne.2) then
+                  write (*,*) 'need two incoming particles '/
+     $                 /'in add_write_info.f'
+                  stop 1
+               endif
+               ptclus=sqrt(4d0*ebeam(1)*ebeam(2))
+            endif
+            Write(float,'(f16.5)') ptclus
+            write(integfour,'(i4)') ito(i)
+            temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
+     $           /' ="'//trim(adjustl(float))//'"'
+         enddo
+         ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
+      endif
 c
 c     Set the number of particles that needs to be written in event file
 c
