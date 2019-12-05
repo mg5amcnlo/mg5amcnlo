@@ -590,7 +590,6 @@ c
          endif
          temp0='<scales '
          temp=''
-         write (*,*) need_matching(3:nexpart)
          do i=nincoming+1,nexpart
             integfour=''
             float=''
