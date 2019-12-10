@@ -825,7 +825,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk
-      character*140 buff
+      character*1000 buff
       character*80 string
       character*12 dummy12
       character*2 dummy2
@@ -949,6 +949,10 @@ c
          endif
          read(ifile,'(a)')string
       else
+         if (ickkw.eq.3) then
+            ptclusstring=buff
+            read(ifile,'(a)')buff
+         endif
          string=buff(1:len_trim(buff))
          buff=' '
       endif
@@ -977,7 +981,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk
-      character*140 buff
+      character*1000 buff
       character*80 string
       character*12 dummy12
       character*2 dummy2
@@ -1110,6 +1114,10 @@ c
          endif
          read(ifile,'(a)')string
       else
+         if (ickkw.eq.3) then
+            ptclusstring=buff
+            read(ifile,'(a)')buff
+         endif
          string=buff(1:len_trim(buff))
          buff=' '
       endif
