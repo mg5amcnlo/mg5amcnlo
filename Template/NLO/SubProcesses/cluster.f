@@ -1394,31 +1394,52 @@ c        flavour
       ! PROCESSES.
       !
       implicit none
-      integer next,nbr,cluster_pdg(0:2,nbr),cluster_ij(nbr),iord(0:nbr)
+      integer next,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr),iord(0:nbr)
      $     ,need_matching(next),ipdg(next),i,j,k,cij,imo,id1,id2,ii
-     $     ,get_color
+     $     ,get_color,matching_sum
       logical s_chan,IR_cluster
       double precision get_mass_from_id
       external IR_cluster,get_mass_from_id,get_color
+c First loop to assign the matching condition
       do i=3,next
-         if (get_color(ipdg(i)).eq.1) then
+c Color is 1,3,8 for singlet(no QCD),triplet(quark),octet(gluon)
+         if (get_color(ipdg(i)).eq.1) then ! non-coloured
             ! no matching needed for non-coloured particles
             need_matching(i)=0
             cycle
-         elseif (get_mass_from_id(ipdg(i)).ne.0d0) then
-            ! massive (coloured) particles do not need matching
-            if (get_color(ipdg(i)).ne.1) then
+         elseif (abs(get_color(ipdg(i))).eq.3) then ! quark/antiquark
+            ! massive (triplet coloured) particles do not need matching
+            if (get_mass_from_id(ipdg(i)).ne.0d0) then
                need_matching(i)=-1
             else
-               need_matching(i)=0
+               need_matching(i)=-99 ! massless quark, undecided yet
             endif
             cycle
-         elseif (ipdg(i).eq.21) then
-            ! gluons always need to be matched
-            need_matching(i)=1
+         elseif (get_color(ipdg(i)).eq.8) then ! gluon or BSM massive octet
+             ! massive (octet coloured) particles do not need matching
+            if (get_mass_from_id(ipdg(i)).ne.0d0) then
+               need_matching(i)=-1
+            else
+               need_matching(i)=1 ! ! gluons always need to be matched
+            endif 
             cycle
+         else
+c Stop if a particle passed all the previous statements
+         write (*,*) 'Unknown particle, pdgid=',ipdg(i),'color=',get_color(ipdg(i))
+         stop
          endif
       enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+      matching_sum=0
+      do i = 3,next
+         matching_sum=matching_sum+need_matching(i)
+      enddo
+      if (matching_sum.gt.-80) then
+         do i = 3,next
+         enddo
+         return
+      endif
+c Second loop to assign the matching condition
       do ii=1,nbr+1
          i=mod(ii,nbr+1) ! i=1,2,3,..,nbr,0
          if (i.ne.0) then
@@ -1443,6 +1464,16 @@ c        flavour
                   if (.not.btest(cij,k-1)) cycle
                   if (need_matching(k).eq.-99) need_matching(k)=-1
                enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+               matching_sum=0
+               do i = 3,next
+                  matching_sum=matching_sum+need_matching(i)
+               enddo
+               if (matching_sum.gt.-80) then
+                  do i = 3,next
+                  enddo
+                  return
+               endif
                exit
             enddo
             if (imo.eq.21 .and. IR_cluster(imo,id1,id2,.true.)) then
@@ -1452,6 +1483,16 @@ c        flavour
                   if (.not.btest(cij,k-1)) cycle
                   if (need_matching(k).eq.-99) need_matching(k)=1
                enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+               matching_sum=0
+               do i = 3,next
+                  matching_sum=matching_sum+need_matching(i)
+               enddo
+               if (matching_sum.gt.-80) then
+                  do i = 3,next
+                  enddo
+                  return
+               endif
             endif
          else ! i.e., a clustering with initial state t-channel. Check
               ! points 4 of the algorithm
@@ -1468,6 +1509,16 @@ c        flavour
                      if (.not.btest(cij,k-1)) cycle
                      if (need_matching(k).eq.-99) need_matching(k)=-1
                   enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+                  matching_sum=0
+                  do i = 3,next
+                     matching_sum=matching_sum+need_matching(i)
+                  enddo
+                  if (matching_sum.gt.-80) then
+                     do i = 3,next
+                     enddo
+                     return
+                  endif
                   exit
                enddo
                ! if particles were not set, there was no particle that
@@ -1477,6 +1528,16 @@ c        flavour
                   if (.not.btest(cij,k-1)) cycle
                   if (need_matching(k).eq.-99) need_matching(k)=1
                enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+               matching_sum=0
+               do i = 3,next
+                  matching_sum=matching_sum+need_matching(i)
+               enddo
+               if (matching_sum.gt.-80) then
+                  do i = 3,next
+                  enddo
+                  return
+               endif
             else
                ! mother, or initial state is not massless. Hence, set
                ! all that have not yet been set as not requiring
@@ -1485,11 +1546,27 @@ c        flavour
                   if (.not.btest(cij,k-1)) cycle
                   if (need_matching(k).eq.-99) need_matching(k)=-1
                enddo
+c Check and return if everything is already assigned a need_matching -1,0,1
+               matching_sum=0
+               do i = 3,next
+                  matching_sum=matching_sum+need_matching(i)
+               enddo
+               if (matching_sum.gt.-80) then
+                  do i = 3,next
+                  enddo
+                  return
+               endif
             endif
          endif
       enddo
+c Uncomment to print all the particle info to check
+c      write (*,*) 'pdgid=',ipdg(1),'color=',get_color(ipdg(1))
+c      write (*,*) 'pdgid=',ipdg(2),'color=',get_color(ipdg(2))
+c      write (*,*) '---final states'
+c      do i = 3,next
+c        write (*,*) 'pdgid=',ipdg(i),'need matching=',need_matching(i)
+c      enddo
       end
-      
 
 CCCCCCCCCCCCCCC -- SUDAKOV FUNCTIONS -- CCCCCCCCCCCCCCCC
 
