@@ -970,6 +970,11 @@ c particles, and the mother [cluster_pdg(0,0)] is the outgoing one.
       cluster_pdg(1,0)=ipdg(1)
       cluster_pdg(2,0)=ipdg(2)
       cluster_pdg(0,0)=0 ! bogus value for mother. Will be updated below
+      if (nbr.eq.0) then
+         ! in case we have a 2->1 process, the assignment is trivial
+         cluster_pdg(0,0)=ipdg(3)
+         return
+      endif
       ! Loop over all the clusterings. Everytime there is a cluster with
       ! any of the two incoming lines, update the cluster_pdg(1:2,0)
       do i=1,nbr
