@@ -360,7 +360,7 @@ c respectively.
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision emscwgt(nexternal)
-      double precision MCsec(nexternal-1,max_bcol)
+      double precision MCsec(nexternal-1,max_bcol),sumMCsec
       double precision xmcxsec2(max_bcol)
       double precision tiny
       parameter (tiny=1d-7)
@@ -372,6 +372,8 @@ c -- call to MC counterterm functions
       is_pt_hard=.false.
       xmcxsec=0d0
       xmcxsec2=0d0
+      MCsec=0d0
+      sumMCsec=0d0
       do cflows=1,max_bcol
          if(is_pt_hard)exit
          N_p=1d0
@@ -384,30 +386,40 @@ c
      &           nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).eq.0)factor=0d0
-            MCsec(npartner,cflows)=0d0
             if(colorflow(npartner,cflows).ne.0)then
-               MCsec(npartner,cflows)=factor*
+               MCsec(npartner,colorflow(npartner,cflows))=factor*
      &         (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
      &         xkernazi(1)*N_p*bornbarstilde(colorflow(npartner,cflows)))
-            endif
-            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
-            xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
-c     positivity check
-            if(xmcxsec(npartner).le.-tiny)then
-               write(*,*)'Negative xmcxsec',npartner,xmcxsec(npartner)
-               stop
-            elseif(xmcxsec(npartner).le.0d0)then
-               xmcxsec(npartner)=0d0
-            endif
-            if(xmcxsec2(cflows).le.-tiny)then
-               write(*,*)'Negative xmcxsec2',cflows,xmcxsec2(cflows)
-               stop
-            elseif(xmcxsec2(cflows).le.0d0)then
-               xmcxsec2(cflows)=0d0
+               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,colorflow(npartner,cflows))
+               xmcxsec2(colorflow(npartner,cflows))=xmcxsec2(colorflow(npartner,cflows))
+     &                                            +MCsec(npartner,colorflow(npartner,cflows))
+               sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner,cflows))
             endif
          enddo
       enddo
+c
+c     positivity check
+      if(sumMCsec.lt.0d0)then
+         write(*,*)'Negative sumMCsec',sumMCsec
+         stop
+      elseif(sumMCsec.gt.0d0) then
+         do cflows=1,max_bcol
+            do npartner=1,ipartners(0)
+               if(xmcxsec(npartner)/sumMCsec.le.-tiny)then
+                  write(*,*)'Negative xmcxsec',npartner,xmcxsec(npartner)
+                  stop
+               elseif(xmcxsec(npartner).le.0d0)then
+                  xmcxsec(npartner)=0d0
+               endif
+               if(xmcxsec2(cflows)/sumMCsec.le.-tiny)then
+                  write(*,*)'Negative xmcxsec2',cflows,xmcxsec2(cflows)
+                  stop
+               elseif(xmcxsec2(cflows).le.0d0)then
+                  xmcxsec2(cflows)=0d0
+               endif
+            enddo
+         enddo
+      endif
       if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec
      $     ,xmcxsec2,MCsec,probne)
 
