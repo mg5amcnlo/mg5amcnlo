@@ -5970,7 +5970,7 @@ tar -czf split_$1.tar.gz split_$1
                 except:
                     pass
             else:
-                misc.gzip(input,keep=False)
+                misc.gzip(input)
             
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
