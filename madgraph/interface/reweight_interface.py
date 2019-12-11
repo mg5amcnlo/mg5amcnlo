@@ -650,15 +650,15 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             for key in output:
-                output[key].write('</LesHouchesEvents>\n')
-                output.close()
+                #output[key].write('</LesHouchesEvents>\n')
+                #output.close()
                 lhe = lhe_parser.EventFile(output[key].name)
                 nb_event = lhe.unweight(target)
                 if self.mother and  hasattr(self.mother, 'results'):
                     results = self.mother.results
                     results.add_detail('nb_event', nb_event)
                     results.current.parton.append('lhe')
-                logger.info('Event %s is now unweighted under the new theory' % lhe.name)                
+                logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
         else:
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
@@ -1803,7 +1803,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 if 'virt' in onedir:
                     tag = (tag, 'V')
                 prefix = all_prefix[i]
-                hel = hel_dict[prefix]
+                if prefix in hel_dict:
+                    hel = hel_dict[prefix]
+                else:
+                    hel = {}
                 if tag in data:
                     oldpdg = data[tag][0][0]+data[tag][0][1]
                     if all_prefix[all_pdgs.index(pdg)] == all_prefix[all_pdgs.index(oldpdg)]:

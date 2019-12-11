@@ -3608,7 +3608,8 @@ RESTART = %(mint_mode)s
         """
         scale_pdf_info=[]
         if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
-           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1\
+           or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
