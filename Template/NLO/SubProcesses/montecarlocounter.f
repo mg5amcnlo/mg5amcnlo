@@ -354,6 +354,7 @@ c True MC subtraction term
       is_pt_hard=.false.
       xmcxsec=0d0
       xmcxsec2=0d0
+      MCsec=0d0
       do cflows=1,max_bcol
          if(is_pt_hard)cycle
          N_p=1d0
@@ -366,15 +367,14 @@ c
      &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &           bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).eq.0)factor=0d0
-            MCsec(npartner,cflows)=0d0
             if(colorflow(npartner,cflows).ne.0)then
-               MCsec(npartner,cflows)=factor*
+               MCsec(npartner,colorflow(npartner,cflows))=factor*
      &         (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
      &         xkernazi(1)*N_p*bornbarstilde(colorflow(npartner,cflows)))
+               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,colorflow(npartner,cflows))
+               xmcxsec2(colorflow(npartner,cflows))=xmcxsec2(colorflow(npartner,cflows))
+     &                                            +MCsec(npartner,colorflow(npartner,cflows))
             endif
-            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,cflows)
-            xmcxsec2(cflows)=xmcxsec2(cflows)+MCsec(npartner,cflows)
          enddo
       enddo
       if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,
