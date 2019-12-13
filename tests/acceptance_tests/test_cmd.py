@@ -51,7 +51,8 @@ class TestCmdShell1(unittest.TestCase):
     
     @staticmethod
     def join_path(*path):
-        """join path and treat spaces"""     
+        """join path and treat spaces"""   
+
         combine = os.path.join(*path)
         return combine.replace(' ','\ ')        
     
@@ -245,7 +246,7 @@ class TestCmdShell2(unittest.TestCase,
         
     def tearDown(self):
         if not self.debugging and os.path.exists(self.out_dir):
-            shutil.rmtree(self.tmpdir)
+            shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -344,7 +345,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n')
+        proc.communicate('100 2 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -410,7 +411,7 @@ class TestCmdShell2(unittest.TestCase,
         os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
-                            self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
+                            TestCmdShell1.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
         self.cmd = Cmd.MasterCmd()
@@ -755,7 +756,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n')
+        proc.communicate('100 2 0.1 .false.\n'.encode())
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -958,7 +959,7 @@ C
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -984,6 +985,7 @@ C
                             stdout=subprocess.PIPE)
         #output = p.stdout.read()
         for line in p.stdout:
+            line = line.decode('utf8')
             if 'Matrix element' in line:
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
@@ -999,6 +1001,7 @@ C
                             stdout=subprocess.PIPE)
         #output = p.stdout.read()
         for line in p.stdout:
+            line = line.decode('utf8')
             if 'Matrix element' in line:
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
@@ -1118,7 +1121,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -1192,7 +1195,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
 
 
@@ -1284,7 +1287,7 @@ P1_qq_wp_wp_lvl
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -1366,7 +1369,7 @@ P1_qq_wp_wp_lvl
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         
         # Check that madevent compiles

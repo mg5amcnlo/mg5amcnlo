@@ -350,6 +350,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         nb_value = 0
         checked_solutions = list(solutions.keys())
         for line in testprog.stdout:
+            line = line.decode()
             self.assertTrue('Warning' not in line)
             if '=' not in line:
                 continue

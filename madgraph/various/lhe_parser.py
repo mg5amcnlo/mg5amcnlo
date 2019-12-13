@@ -40,6 +40,9 @@ import gzip
 from . import banner as banner_mod
 logger = logging.getLogger("madgraph.lhe_parser")
 
+if six.PY3:
+    unicode = str
+
 class Particle(object):
     """ """
     # regular expression not use anymore to speed up the computation
@@ -214,6 +217,7 @@ class EventFile(object):
             except IOError as error:
                 raise
             except Exception as error:
+                misc.sprint(error)
                 if mode == 'r':
                     misc.gunzip(path)
                 return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
@@ -412,16 +416,17 @@ class EventFile(object):
         """
         if isinstance(event, Event):
             if self.eventgroup:
-                self.write('<eventgroup>\n%s\n</eventgroup>\n' % event)
+                tmp = '<eventgroup>\n%s\n</eventgroup>\n' % event
+                self.write(tmp.encode())
             else:
-                self.write(str(event))
+                self.write(str(event).encode())
         elif isinstance(event, list):
             if self.eventgroup:
-                self.write('<eventgroup>\n')
+                self.write('<eventgroup>\n'.encode())
             for evt in event:
-                self.write(str(evt))
+                self.write(str(evt).encode())
             if self.eventgroup:
-                self.write('</eventgroup>\n')
+                self.write('</eventgroup>\n'.encode())
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):
@@ -877,6 +882,7 @@ class EventFileGzip(EventFile, gzip.GzipFile):
             super(EventFileGzip, self).write(text)
         except:
             super(EventFileGzip, self).write(text.encode('utf-8'))
+
     
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""
@@ -1173,6 +1179,7 @@ class MultiEventFile(EventFile):
         (stop to write event when target is reached)
         """
 
+
         if isinstance(get_wgt, (str,unicode)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
@@ -1216,7 +1223,12 @@ class MultiEventFile(EventFile):
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
         
-        if isinstance(path, (str,unicode)):
+        try:
+            str_type = (str,unicode)
+        except NameError:
+            str_type = (str)
+        
+        if isinstance(path, str_type):
             out = EventFile(path, 'w')
             if self.parsefile and not banner:    
                 banner = self.files[0].banner

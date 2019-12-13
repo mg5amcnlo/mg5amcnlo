@@ -1470,10 +1470,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise self.InvalidCmd('Events file %s does not exist' % event_path)
         elif event_path.endswith(".gz"):
-             misc.gunzip(event_path)
-             event_path = event_path[:-3]
+            misc.gunzip(event_path, keep=True)
+            event_path = event_path[:-3]
 
-             
+        
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
 
         mode = mode.lower()
@@ -1520,6 +1520,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('End Plots for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
+        
 
         return True
 
@@ -2021,7 +2022,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     command.append('-from_cards')
                 p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
                 while p.poll() is None:
-                    line = p.stdout.readline()
+                    line = p.stdout.readline().decode()
                     if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
                        not '***********' in line:
                             print(line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:',''))

@@ -1140,6 +1140,7 @@ class TMP_variable(object):
 def gunzip(path, keep=False, stdout=None):
     """ a standard replacement for os.system('gunzip -f %s.gz ' % event_path)"""
 
+    
     if not path.endswith(".gz"):
         if os.path.exists("%s.gz" % path):
             path = "%s.gz" % path
@@ -1164,14 +1165,16 @@ def gunzip(path, keep=False, stdout=None):
         raise
     else:    
         try:    
-            open(stdout,'w').write(gfile.read().decode('utf-8'))
-        except IOError:
+            open(stdout,'w').write(gfile.read().decode())
+        except IOError as error:
+            sprint(error)
             # this means that the file is actually not gzip
             if stdout == path:
                 return
             else:
                 files.cp(path, stdout)
-            
+    finally:
+        gfile.close()    
     if not keep:
         os.remove(path)
     return 0
@@ -1194,13 +1197,15 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read())
+        ziplib.open(stdout,"w").write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
         if error:
             raise
-    else:
+        else:
+            return
+    finally:
         os.remove(path)
     
 #

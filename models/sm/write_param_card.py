@@ -84,7 +84,8 @@ class ParamCardWriter(object):
             self.write_block(lhablock)
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
-            need_writing.sort(self.order_param)
+            from functools import cmp_to_key
+            need_writing.sort(key=cmp_to_key(self.order_param))
             [self.write_param(param, lhablock) for param in need_writing]
             
             if self.generic_output:

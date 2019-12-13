@@ -1354,7 +1354,12 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
         model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
         if os.path.isfile(model_pkl):
-            self.model = save_load_object.load_from_file(model_pkl)
+            try:
+                self.model = save_load_object.load_from_file(model_pkl)
+            except:
+                sm_path = import_ufo.find_ufo_path('sm')
+                self.model = import_ufo.import_model(sm_path)
+                self.model = save_load_object.load_from_file(model_pkl)                
         else:
             sm_path = import_ufo.find_ufo_path('sm')
             self.model = import_ufo.import_model(sm_path)

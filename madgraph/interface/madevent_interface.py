@@ -3794,7 +3794,10 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(finput):
                 logger.debug("File %s exists BAAAAD. Not move anymore!" % pjoin(E_path, name))
             if os.path.exists(foutput):
-                misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
+                if os.path.exists("%s.gz" % foutput):
+                    os.remove(foutput)
+                else:
+                    misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
         #        if os.path.exists(pjoin(O_path, '%s.gz' % name)):
         #            os.remove(pjoin(O_path, '%s.gz' % name))
         #        input = pjoin(E_path, name)
@@ -7059,8 +7062,8 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+    if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6, 2.7 or python 3.7 or later).\n'+\
                'Please upgrate your version of python.')
 
     import os

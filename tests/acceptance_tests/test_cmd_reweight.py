@@ -156,7 +156,6 @@ class TestMECmdRWGT(unittest.TestCase):
         """ testing that we can reweight the tt~ sample when increasing the top mass
         """
         me_cmd = self.get_MEcmd(pjoin(_pickle_path, 'ttbar.lhe.gz'))
-        misc.sprint(pjoin(_pickle_path, 'ttbar.lhe.gz'))
         cmd_lines = """
         change output 2.0
         launch
@@ -367,7 +366,7 @@ class TestMECmdRWGT(unittest.TestCase):
             m_opts['lhapdf'] = True
             m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
             m_opts['llhapdf'] = subprocess.Popen([interface.options['lhapdf'], '--libs'], 
-                    stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+                    stdout = subprocess.PIPE).stdout.read().strip().split()[0].decode()
             m_opts['f2pymode'] = True
         else:
             raise Exception("need LHAPDF")
@@ -392,9 +391,9 @@ class TestMECmdRWGT(unittest.TestCase):
                 while '.' in tmp_mod_name:
                     tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                     del sys.modules[tmp_mod_name]
-                mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                mymod = __import__(mod_name, globals(), locals(), [])  
             else:
-                mymod = __import__(mod_name, globals(), locals(), [],-1) 
+                mymod = __import__(mod_name, globals(), locals(), []) 
                 
             mymod =  mymod.Source.rwgt2py
             #mymod.initialise([1,1], 244600)

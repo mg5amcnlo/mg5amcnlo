@@ -30,6 +30,7 @@ from subprocess import Popen, PIPE, STDOUT
 from six.moves import map
 from six.moves import range
 from six.moves import zip
+import six
 
 
 pjoin = os.path.join
@@ -432,7 +433,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
                     opts[key] = value .replace("'","") .replace('"','')
-        misc.sprint(opts)
         return opts
 
     def help_launch(self):
@@ -1245,7 +1245,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
             logger.info('Computed cross-section:')
             keys = list(self.all_cross_section.keys())
-            keys.sort()
+            keys.sort(key=lambda x: str(x))
             for key in keys:
                 if key == 'orig':
                     continue
@@ -1613,7 +1613,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if path_me not in sys.path:
                     sys.path.insert(0, os.path.realpath(path_me))
                 with misc.chdir(pjoin(path_me)):
-                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [])
                     mymod =  mymod.Source.rwgt2py
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise([self.banner.run_card['lpp1'], 
@@ -1739,10 +1739,15 @@ class ReweightInterface(extended_cmd.Cmd):
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                        if True:#six.PY3:
+                            mymod = __import__(mod_name, globals(), locals(), [])
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1)  
                     else:
-                        mymod = __import__(mod_name, globals(), locals(), [],-1)    
-                    
+                        if True:#six.PY3:
+                            mymod = __import__(mod_name, globals(), locals(), [])    
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1) 
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 
@@ -1760,7 +1765,9 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             all_pdgs = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
-            all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
+                
+                
             prefix_set = set(all_prefix)
 
 

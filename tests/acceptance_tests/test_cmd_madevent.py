@@ -73,7 +73,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = True
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -475,6 +475,7 @@ class TestMECmdShell(unittest.TestCase):
         target = 440.779
         self.assertTrue(misc.equal(target, val1, 4*err1))                
         
+
         # run madspin
         fsock = open(pjoin(self.run_dir, 'Cards', 'madspin_card.dat'),'w')
         fsock.write('decay t > w+ b \n launch')

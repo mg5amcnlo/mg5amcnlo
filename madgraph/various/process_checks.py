@@ -82,6 +82,9 @@ import six
 StringIO = six
 from six.moves import range
 from six.moves import zip
+import io
+file = io.FileIO
+
 
 ADDED_GLOBAL = []
 
@@ -818,13 +821,15 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         
         # output is supposed to be a file, if it is its content directly then
         # I change it to be the list of line.
-        if isinstance(output,file) or isinstance(output,list):
+        if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
         elif isinstance(output,str):
             text=output.split('\n')
+        elif isinstance(output, bytes):
+            text=output.decode().split('\n')
         else:
             raise MadGraph5Error('Type for argument output not supported in'+\
-                                                          ' parse_check_output.')
+                                                          ' parse_check_output: %s' % type(output))
         for line in text:
             splitline=line.split()
             if len(splitline)==0:

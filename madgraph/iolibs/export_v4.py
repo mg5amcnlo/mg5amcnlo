@@ -2150,9 +2150,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             for ii,pdgs in enumerate(current):
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
                 if ii==0:
-                    text.append( ' if(%s) then ! %i' % (condition, i))
+                    text.append( ' if(%s) then ! %i' % (condition, ii))
                 else:
-                    text.append( ' else if(%s) then ! %i' % (condition,i))
+                    text.append( ' else if(%s) then ! %i' % (condition,ii))
                 text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[pdgs][0])
             text.append(' endif')
         #close the function

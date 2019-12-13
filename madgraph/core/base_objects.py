@@ -3152,11 +3152,7 @@ class Process(PhysicsObject):
         prevleg = None
         if pdg_order:
             legs = [l for l in self['legs'][1:]]
-            def order_leg(l1,l2):
-                id1 = l1.get('id')
-                id2 = l2.get('id')
-                return id2-id1
-            legs.sort(cmp=order_leg)
+            legs.sort(key=lambda x: x.get('id'))
             legs.insert(0, self['legs'][0])
         else:
             legs = self['legs']

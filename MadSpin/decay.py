@@ -1569,7 +1569,7 @@ class width_estimate(object):
         
         label2pid = self.label2pid
         pid2label = self.label2pid
-        for res in self.br.keys():
+        for res in list(self.br.keys()):
             particle=self.model.get_particle(label2pid[res])
             if particle['self_antipart']: 
                 continue
@@ -2725,7 +2725,7 @@ class decay_all_events(object):
                 if self.all_ME.has_particles_ambiguity:
                     final_states.add(self.pid2label[-1*self.pid2label[label]])
                 final_states.add(label)
-        for key in self.list_branches.keys():
+        for key in list(self.list_branches.keys()):
             if key not in final_states and key not in self.mgcmd._multiparticles:
                 if (len(self.list_branches)>1):
                     del self.list_branches[key]
@@ -3149,7 +3149,6 @@ class decay_all_events(object):
                     continue # No decay for this process
                 atleastonedecay = True
                 weight = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
-                
                     #weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
                 if tag in max_decay:
                     max_decay[tag] = max([max_decay[tag], weight])
@@ -3301,13 +3300,16 @@ class decay_all_events(object):
             tmpdir = path
 
             executable_prod="./check"
+            my_env = os.environ.copy()
+            my_env["GFORTRAN_UNBUFFERED_ALL"] = "y"
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
+                                          stderr=STDOUT, cwd=tmpdir, env=my_env)
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
-
+            
         try:
-            external.stdin.write(stdin_text)
+            external.stdin.write(stdin_text.encode())
+            external.stdin.flush()
         except IOError:
             if not first:
                 raise
@@ -3392,15 +3394,15 @@ class decay_all_events(object):
             self.calculator[(mode, production)] = external 
             self.calculator_nbcall[(mode, production)] = 1       
 
-        external.stdin.write(stdin_text)
+        external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline())
+            info = int(external.stdout.readline().decode())
             nb_output = abs(info)+1
         else:
             info = 1
             nb_output = 1
          
-        prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
+        prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)

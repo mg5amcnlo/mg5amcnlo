@@ -603,8 +603,9 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
-                                 a1.get_number_of_diagrams())
+            self._curr_amps.sort(key=lambda x: x.get_number_of_diagrams())
+                
+
 
             cpu_time1 = time.time()
             ndiags = 0

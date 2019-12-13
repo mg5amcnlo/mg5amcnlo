@@ -1473,7 +1473,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     wgts[key] *= self.branching_ratio            
             output_lhe.write_events(full_evt)
             
-        output_lhe.write('</LesHouchesEvents>\n')    
+        output_lhe.write('</LesHouchesEvents>\n'.encode())    
         self.efficiency = 1 # to let me5 to write the correct number of events
 #        misc.sprint('Done so far. output written in %s' % output_lhe.name)
         
@@ -1654,7 +1654,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
             
             mymod = __import__("%s.matrix2py" % (pdir))
-            reload(mymod)
+            try:
+                reload(mymod)
+            except Exception:
+                from importlib import reload
+                reload(mymod)
             mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):

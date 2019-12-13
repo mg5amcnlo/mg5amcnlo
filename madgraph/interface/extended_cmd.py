@@ -1333,6 +1333,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
+                raise 
                 sys.exit(str(error))
             elif self.options['crash_on_error'] == 'never':
                 return False

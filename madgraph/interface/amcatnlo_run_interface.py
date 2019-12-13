@@ -3614,13 +3614,13 @@ RESTART = %(mint_mode)s
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
         if event_norm.lower() == 'sum':
-            p.communicate(input = '1\n')
+            p.communicate(input = '1\n'.encode())
         elif event_norm.lower() == 'unity':
-            p.communicate(input = '3\n')
+            p.communicate(input = '3\n'.encode())
         elif event_norm.lower() == 'bias':
-            p.communicate(input = '0\n')
+            p.communicate(input = '0\n'.encode())
         else:
-            p.communicate(input = '2\n')
+            p.communicate(input = '2\n'.encode())
 
         #get filename from collect events
         filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
@@ -4500,7 +4500,7 @@ RESTART = %(mint_mode)s
         for evt_file in evt_files:
             last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
                     pjoin(self.me_dir, 'SubProcesses', evt_file)], \
-                    stdout = subprocess.PIPE).stdout.read().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode().strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
