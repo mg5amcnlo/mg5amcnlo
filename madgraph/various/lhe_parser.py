@@ -12,9 +12,6 @@ import os
 import shutil
 import sys
 import six
-if True:#six.PY3:
-    import io
-    file = io.FileIO
 from six.moves import filter
 from six.moves import range
 from six.moves import zip
@@ -34,10 +31,26 @@ if '__main__' == __name__:
     else:
         __package__ = "madgraph.various"
 
-from . import misc
+try:
+    import madgraph
+except ImportError:
+    from . import misc
+    from . import banner as banner_mod
+else:
+    import madgraph.various.misc as misc
+    import madgraph.various.banner as banner_mod
 import logging
 import gzip
-from . import banner as banner_mod
+
+
+try:
+    import madgraph.various.hepmc_parser as hepmc_parser
+except Exception as error:
+    hepmc_parser = False
+    misc.sprint(error)
+    pass
+
+
 logger = logging.getLogger("madgraph.lhe_parser")
 
 if six.PY3:
@@ -74,26 +87,20 @@ class Particle(object):
             if event:
                 self.event = event
             return
-        else:
-            try:
-                import madgraph.various.hepmc_parser as hepmc_parser
-            except Exception:
-                pass
-            else:
-                if isinstance(line, hepmc_parser.HEPMC_Particle):
-                    self.event = event
-                    self.event_id = len(event) #not yet in the event
-                    for key in ['pid', 'status', 'E','px','py','pz','mass']:
-                        setattr(self, key, getattr(line, key))
-                    self.mother1 = 1
-                    self.mother2 = 1
-                    self.color1 = 0
-                    self.color2 = 0
-                    self.vtim = 0
-                    self.comment = ''
-                    self.helicity = 9
-                    self.rwgt = 0
-                    return
+        elif hepmc_parser and isinstance(line, hepmc_parser.HEPMC_Particle):
+            self.event = event
+            self.event_id = len(event) #not yet in the event
+            for key in ['pid', 'status', 'E','px','py','pz','mass']:
+                setattr(self, key, getattr(line, key))
+            self.mother1 = 1
+            self.mother2 = 1
+            self.color1 = 0
+            self.color2 = 0
+            self.vtim = 0
+            self.comment = ''
+            self.helicity = 9
+            self.rwgt = 0
+            return
 
                 
         self.event = event
@@ -199,64 +206,62 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
     allow_empty_event = False
+    encoding = 'ascii'
 
-    def __new__(self, path, mode='r', *args, **opt):
-        
-        
+    def __init__(self, path, mode='r', *args, **opt):
+        """open file and read the banner [if in read mode]"""
+
         if mode in ['r','rb']:
             mode ='r'
-
+        self.mode = mode
+        
+        self.to_zip = False
+        self.zip_mode = False
+        
         if not path.endswith(".gz"):
-            return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
+            #if six.PY2:
+            self.file = open(path, mode, *args, **opt)
+            #else:
+            #    if 'b' in mode:
+            #        self.file = open(path, mode, buffering=65536, *args, **opt)
+            #    else:
+            #        self.file = open(path, mode, newline='\n', *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
-            return EventFile.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            
+            self.file = open(path[:3], mode, *args, **opt)
+            path = path[:3]
+        else:            
             try:
-                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+                self.file =  gzip.GzipFile(path, mode, *args, **opt)
+                self.zip_mode =True
             except IOError as error:
                 raise
             except Exception as error:
                 misc.sprint(error)
                 if mode == 'r':
                     misc.gunzip(path)
-                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
+                else:
+                    self.to_zip = True
+                self.file = open(path[:3], mode, *args, **opt)
+                path = path[:3]                
 
-
-    def __init__(self, path, mode='r', *args, **opt):
-        """open file and read the banner [if in read mode]"""
 
         self.path = path
-        self.to_zip = False
-        if path.endswith('.gz') and mode == 'w' and\
-                                              isinstance(self, EventFileNoGzip):
-            path = path[:-3]
-            self.to_zip = True # force to zip the file at close() with misc.gzip
+
         
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
-        try:
-            super(EventFile, self).__init__(path, mode, *args, **opt)
-        except TypeError:
-            super(EventFile, self).__init__()
-        except IOError:
-            if '.gz' in path and isinstance(self, EventFileNoGzip) and\
-                mode == 'r' and os.path.exists(path[:-3]):
-                super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
-            else:
-                raise
         
         self.banner = ''
-        if mode == 'r':
+        if mode in ['r', 'rb']:
             line = ''
             while '</init>' not in line.lower():
-                line = self.readline()
+                line = self.file.readline()
                 if not line:
                     self.seek(0)
                     self.banner = ''
                     break 
-
-                line = str(line.decode('utf-8'))
+                if 'b' in mode or self.zip_mode:
+                    line = str(line.decode(self.encoding))
                 if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
@@ -273,6 +278,14 @@ class EventFile(object):
         output = banner.Banner()
         output.read_banner(self.banner)
         return output
+ 
+    @property
+    def name(self):
+        return self.file.name
+
+    @property
+    def closed(self):
+        return self.file.closed
 
     @property
     def cross(self):
@@ -287,7 +300,7 @@ class EventFile(object):
         return self._cross
     
     def __len__(self):
-        if self.closed:
+        if self.file.closed:
             return 0
         if hasattr(self,"len"):
             return self.len
@@ -320,10 +333,11 @@ class EventFile(object):
         
         while True:
             # reading the next line of the file
-            line = self.readline()
+            line = self.file.readline()
             if not line:
                 raise StopIteration
-            line = line.decode('utf-8')
+            if 'b' in self.mode or self.zip_mode:
+                line = line.decode(self.encoding)
             
             if '<event' in line:
                 mode = 1
@@ -349,10 +363,11 @@ class EventFile(object):
         while '</eventgroup>' not in line:
             
             # reading the next line of the file
-            line = self.readline()
+            line = self.file.readline()
             if not line:
                 raise StopIteration
-            line = line.decode('utf-8')
+            if 'b' in self.mode:
+                line = line.decode(self.encoding)
             
             if '<eventgroup' in line:
                 events=[]
@@ -673,9 +688,9 @@ class EventFile(object):
                 if not partition is None and (nb_file+1>len(partition)):
                     return nb_file
                 if zip:
-                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.name, nb_file)),'w')
+                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.path, nb_file)),'w')
                 else:
-                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.name, nb_file)),'w')                    
+                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.path, nb_file)),'w')                    
                 current.write(self.banner)
             current.write(str(event))
         if i!=0:
@@ -859,43 +874,38 @@ class EventFile(object):
             
             
         return self.alpsrunner(scale)
-            
-            
-            
-        
-        
-        
     
-    
-class EventFileGzip(EventFile, gzip.GzipFile):
-    """A way to read/write a gzipped lhef event"""
-    
+    def seek(self, *args, **opts):
+        return self.file.seek(*args, **opts)
     
     def tell(self):
-        currpos = super(EventFileGzip, self).tell()
-        if not currpos:
-            currpos = self.size
-        return currpos
-    
+        if self.zipmode:
+            currpos = self.file.tell()
+            if not currpos:
+                currpos = self.size
+            return currpos  
+        else: 
+            self.file.tell()          
+            
     def write(self, text):
-        try:
-            super(EventFileGzip, self).write(text)
-        except:
-            super(EventFileGzip, self).write(text.encode('utf-8'))
-
-    
-class EventFileNoGzip(EventFile, file):
-    """A way to read a standard event file"""
-    
+        
+        if self.zip_mode or 'b' in self.mode:
+            self.file.write(text.encode()) 
+        else:
+            self.file.write(text)           
+        
     def close(self,*args, **opts):
         
-        out = super(EventFileNoGzip, self).close(*args, **opts)
+        out = self.file.close(*args, **opts)
         if self.to_zip:
-            misc.gzip(self.name)
-
+            misc.gzip(self.path)
+            
+    def __del__(self):
+        try:
+            self.file.close()
+        except Exception:
+            pass
         
-    #def read(self):
-    #    return file.read(self)
     
 class MultiEventFile(EventFile):
     """a class to read simultaneously multiple file and read them in mixing them.
@@ -942,8 +952,8 @@ class MultiEventFile(EventFile):
         if across == 0:
             # No event linked to this channel -> so no need to include it
             return 
-        
-        obj = EventFile(path)
+        misc.gzip(path)
+        obj = EventFile(path+'.gz')
         obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
@@ -1002,7 +1012,7 @@ class MultiEventFile(EventFile):
         grouped_cross = {}
         grouped_error = {}
         for i,ff in enumerate(self.files):
-            filename = ff.name
+            filename = ff.path
             from_init = False
             Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')]
             if Pdir:
@@ -1279,7 +1289,7 @@ class MultiEventFile(EventFile):
         """ """
         if self.parsefile:
             for f in self.files:
-                os.remove(f.name)
+                os.remove(f.path)
         else:
             for f in self.files:
                 os.remove(f)
@@ -2415,53 +2425,6 @@ class Event(list):
         out = ''.join(out).replace('e','d')
         return out    
 
-class WeightFile(EventFile):
-    """A class to allow to read both gzip and not gzip file.
-       containing only weight from pythia --generated by SysCalc"""
-
-    def __new__(self, path, mode='r', *args, **opt):
-        if  path.endswith(".gz"):
-            try:
-                return gzip.GzipFile.__new__(WeightFileGzip, path, mode, *args, **opt)
-            except IOError as error:
-                raise
-            except Exception as error:
-                if mode == 'r':
-                    misc.gunzip(path)
-                return file.__new__(WeightFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            return file.__new__(WeightFileNoGzip, path, mode, *args, **opt)
-    
-    
-    def __init__(self, path, mode='r', *args, **opt):
-        """open file and read the banner [if in read mode]"""
-        
-        super(EventFile, self).__init__(path, mode, *args, **opt)
-        self.banner = ''
-        if mode == 'r':
-            line = ''
-            while '</header>' not in line.lower():
-                try:
-                    line  = next(super(EventFile, self))
-                except StopIteration:
-                    self.seek(0)
-                    self.banner = ''
-                    break 
-                if "<event" in line.lower():
-                    self.seek(0)
-                    self.banner = ''
-                    break                     
-
-                self.banner += line
-
-
-class WeightFileGzip(WeightFile, EventFileGzip):
-    pass
-
-class WeightFileNoGzip(WeightFile, EventFileNoGzip):
-    pass
-
-
 class FourMomentum(object):
     """a convenient object for 4-momenta operation"""
     
@@ -3176,18 +3139,21 @@ class NLO_PARTIALWEIGHT(object):
 if '__main__' == __name__:   
     
     if False:
-        lhe = EventFile('unweighted_events.lhe.gz')
+        lhe = EventFile('unweighted_events.lhe')
         #lhe.parsing = False
         start = time.time()
         for event in lhe:
-            event.parse_lo_weight()
-        print('old method -> ', time.time()-start)
-        lhe = EventFile('unweighted_events.lhe.gz')
+            pass
+        s = time.time()
+        print(s-start)
+#            event.parse_lo_weight()
+#        print('old method -> ', time.time()-start)
+#        lhe = EventFile('unweighted_events.lhe.gz')
         #lhe.parsing = False
-        start = time.time()
-        for event in lhe:
-            event.parse_lo_weight_test()
-        print('new method -> ', time.time()-start)    
+#        start = time.time()
+#        for event in lhe:
+#            event.parse_lo_weight_test()
+#        print('new method -> ', time.time()-start)    
     
 
     # Example 1: adding some missing information to the event (here distance travelled)

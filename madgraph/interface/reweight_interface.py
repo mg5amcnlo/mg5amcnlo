@@ -524,7 +524,7 @@ class ReweightInterface(extended_cmd.Cmd):
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
         if self.output_type == "default":
-            output = open( self.lhe_input.name +'rw', 'w')
+            output = open( self.lhe_input.path +'rw', 'w')
             #write the banner to the output file
             self.banner.write(output, close_tag=False)
         else:

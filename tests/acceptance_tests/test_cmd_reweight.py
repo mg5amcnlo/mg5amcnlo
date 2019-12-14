@@ -62,7 +62,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = True
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -333,6 +333,7 @@ class TestMECmdRWGT(unittest.TestCase):
         for i,event in enumerate(lhe):
             
             rwgt_data = event.parse_reweight()
+            misc.sprint(rwgt_data)
             self.assertTrue('SINGLE' in rwgt_data)
             self.assertTrue('NAME_0' in rwgt_data)
             self.assertTrue('NAME_1' in rwgt_data)

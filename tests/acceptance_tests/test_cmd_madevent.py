@@ -73,7 +73,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = True
+        self.debugging = False
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
