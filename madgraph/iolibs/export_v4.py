@@ -231,7 +231,9 @@ class ProcessExporterFortran(VirtualExporter):
           
     
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
-        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        shutil.copyfile(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'),
+                        pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        
         
         
     #===========================================================================
