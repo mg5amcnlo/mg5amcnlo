@@ -2275,7 +2275,7 @@ class RunCard(ConfigFile):
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
-        self.cut_class = collections.defaultdict(itertools.repeat(True).next)
+        self.cut_class = {} 
         self.warned=False
 
 
@@ -2354,9 +2354,10 @@ class RunCard(ConfigFile):
 
     def valid_line(self, line, tmp):
         template_options = tmp
+        default = template_options['default']
         if line.startswith('#IF('):
             cond = line[4:line.find(')')]
-            if template_options[cond]:
+            if template_options.get(cond,  default):
                 return True
             else:
                 return False
@@ -2369,7 +2370,7 @@ class RunCard(ConfigFile):
                 return True
             
             
-            if template_options[cond] or cond is True:
+            if template_options.get(cond, default) or cond is True:
                 return True
             else:
                 return False 
@@ -3341,6 +3342,8 @@ class RunCardLO(RunCard):
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
                 self['systematics_arguments'].append('--alps=0.5,1,2')
+                self.display_block.append('MLM')
+                self.display_block.append('CKKW')
                 
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
@@ -3392,7 +3395,7 @@ class RunCardLO(RunCard):
                         one_proc_cut['L'] += 1 
             for key, nb in one_proc_cut.items():
                 cut_class[key] = max(cut_class[key], nb)
-            self.cut_class = cut_class
+            self.cut_class = dict(cut_class)
                                    
     def write(self, output_file, template=None, python_template=False,
               **opt):
@@ -3409,17 +3412,17 @@ class RunCardLO(RunCard):
                 python_template = False
                 
 
-        hid_lines = collections.defaultdict(itertools.repeat(True).next)
+        hid_lines = {'default':True}#collections.defaultdict(itertools.repeat(True).next)
         if isinstance(output_file, str):
             if 'default' in output_file:
                 if self.cut_class:
-                    hid_lines = collections.defaultdict(bool)
+                    hid_lines['default'] = False
                     for key in self.cut_class:
                         nb = self.cut_class[key]
                         for i in range(1,nb+1):
                             hid_lines[key*i] = True
                     for k1,k2 in ['bj', 'bl', 'al', 'jl', 'ab', 'aj']:
-                        if self.cut_class[k1] and self.cut_class[k2]:
+                        if self.cut_class.get(k1) and self.cut_class.get(k2):
                             hid_lines[k1+k2] = True
 
         super(RunCardLO, self).write(output_file, template=template,
