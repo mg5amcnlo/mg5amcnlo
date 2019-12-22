@@ -2949,7 +2949,7 @@ class RunCardLO(RunCard):
         self.add_param("pta", 10.0, cut='a')
         self.add_param("ptl", 10.0, cut='l')
         self.add_param("misset", 0.0, cut='n')
-        self.add_param("ptheavy", 0.0, cut=True,                                comment='this cut apply on particle heavier than 10 GeV')
+        self.add_param("ptheavy", 0.0, cut='H',                                comment='this cut apply on particle heavier than 10 GeV')
         self.add_param("ptonium", 1.0, legacy=True)
         self.add_param("ptjmax", -1.0, cut='j')
         self.add_param("ptbmax", -1.0, cut='b')
@@ -3170,10 +3170,12 @@ class RunCardLO(RunCard):
                 import time
                 time.sleep(5)
             if self['drjj'] != 0:
-                logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+                if 'drjj' in self.user_set:
+                    logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
             if self['drjl'] != 0:
-                logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+                if 'drjl' in self.user_set:
+                    logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
                 self['drjl'] = 0    
             if not self['auto_ptj_mjj']:         
                 if self['mmjj'] > self['xqcut']:
@@ -3375,8 +3377,8 @@ class RunCardLO(RunCard):
         for proc in proc_def:
             for oneproc in proc:
                 one_proc_cut = collections.defaultdict(int)
-                ids = oneproc.get_final_ids()
-                if oneproc['is_decay_chain']:
+                ids = oneproc.get_final_ids_after_decay()
+                if oneproc['decay_chains']:
                     cut_class['d']  = 1
                 for pdg in ids:
                     if pdg == 22:
@@ -3393,9 +3395,13 @@ class RunCardLO(RunCard):
                     elif abs(pdg) in [12,14,16]:
                         one_proc_cut['n'] += 1
                         one_proc_cut['L'] += 1 
+                    elif str(oneproc.get('model').get_particle(pdg)['mass']) != 'ZERO':
+                        one_proc_cut['H'] += 1
+                        
             for key, nb in one_proc_cut.items():
                 cut_class[key] = max(cut_class[key], nb)
             self.cut_class = dict(cut_class)
+            self.cut_class[''] = True #avoid empty
                                    
     def write(self, output_file, template=None, python_template=False,
               **opt):
