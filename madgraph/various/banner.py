@@ -2714,6 +2714,8 @@ class RunCard(ConfigFile):
             targettype = type(self[name])
             if targettype == bool:
                 self[name] = False
+            if targettype == dict:
+                self[name] = '{}'
             elif 'min' in name:
                 self[name] = 0
             elif 'max' in name:
@@ -2872,7 +2874,7 @@ class RunCardLO(RunCard):
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum')
         #cut
-        self.add_param("auto_ptj_mjj", False)
+        self.add_param("auto_ptj_mjj", True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False)
         self.add_param("nhel", 0, include=False)
@@ -3018,13 +3020,13 @@ class RunCardLO(RunCard):
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True)
-        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True)
-        self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('eta_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('eta_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
         self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
@@ -3119,7 +3121,16 @@ class RunCardLO(RunCard):
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
-   
+            
+        # if heavy ion mode use for one beam, forbis lpp!=1
+        if self['lpp1'] not in [1,2]:
+            if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp1=1/2"
+        if self['lpp2'] not in [1,2]:
+            if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp2=1/2"   
+
+
     def update_system_parameter_for_include(self):
         
         # polarization
@@ -3268,6 +3279,7 @@ class RunCardLO(RunCard):
                 self['drjj'] = 0
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
+                self['systematics_arguments'].append('--alps=0.5,1,2')
                 
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
@@ -3848,9 +3860,9 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         #hidden parameter that are transfer to the fortran code
@@ -3866,7 +3878,10 @@ class RunCardNLO(RunCard):
         super(RunCardNLO, self).check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
-        if self['lpp1']==0 and self['lpp2']==0:
+        if self['lpp1']!=1 or self['lpp2']!=1:
+            if self['lpp1'] == 1 or self['lpp2']==1:
+                raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
+            
             if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]

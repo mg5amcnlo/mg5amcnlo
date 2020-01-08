@@ -88,7 +88,8 @@ class ReweightInterface(extended_cmd.Cmd):
         self.multicore=False
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
-                        'rwgt_name':None}
+                        'rwgt_name':None,
+                        "allow_missing_finalstate":False}
 
         self.events_file = None
         self.processes = {}
@@ -190,12 +191,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
 
-            if 'OLP' in self.mother.options:
+            if self.mother and 'OLP' in self.mother.options:
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
                     self.rwgt_mode = 'LO'
             
-            if 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
+            if self.mother and 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
                 logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
                 self.rwgt_mode = 'LO'
         else:
@@ -357,6 +358,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.has_standalone_dir = False
         elif args[0] == "keep_ordering":
             self.keep_ordering = banner.ConfigFile.format_variable(args[1], bool, "keep_ordering")
+        elif args[0] == "allow_missing_finalstate":
+            self.options["allow_missing_finalstate"] = banner.ConfigFile.format_variable(args[1], bool, "allow_missing_finalstate")
         elif args[0] == "process":
             nb_f2py_module += 1
             if self.has_standalone_dir:
@@ -431,7 +434,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
                     opts[key] = value .replace("'","") .replace('"','')
-        misc.sprint(opts)
+
         return opts
 
     def help_launch(self):
@@ -650,15 +653,15 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             for key in output:
-                output[key].write('</LesHouchesEvents>\n')
-                output.close()
+                #output[key].write('</LesHouchesEvents>\n')
+                #output.close()
                 lhe = lhe_parser.EventFile(output[key].name)
                 nb_event = lhe.unweight(target)
                 if self.mother and  hasattr(self.mother, 'results'):
                     results = self.mother.results
                     results.add_detail('nb_event', nb_event)
                     results.current.parton.append('lhe')
-                logger.info('Event %s is now unweighted under the new theory' % lhe.name)                
+                logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
         else:
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
@@ -1167,8 +1170,15 @@ class ReweightInterface(extended_cmd.Cmd):
         if (not self.second_model and not self.second_process and not self.dedicated_path) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
-            orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
-            
+            try:
+                orig_order, Pdir, hel_dict = self.id_to_path_second[tag]
+            except KeyError:
+                if self.options['allow_missing_finalstate']:
+                    return 0.0
+                else:
+                    logger.critical('The following initial/final state %s can not be found in the new model/process. If you want to set the weights of such events to zero use "change allow_missing_finalstate False"', tag)
+                    raise Exception
+
         base = os.path.basename(os.path.dirname(Pdir))
         if '_second' in base:
             moduletag = (base, 2)
@@ -1816,7 +1826,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 if 'virt' in onedir:
                     tag = (tag, 'V')
                 prefix = all_prefix[i]
-                hel = hel_dict[prefix]
+                if prefix in hel_dict:
+                    hel = hel_dict[prefix]
+                else:
+                    hel = {}
                 if tag in data:
                     oldpdg = data[tag][0][0]+data[tag][0][1]
                     if all_prefix[all_pdgs.index(pdg)] == all_prefix[all_pdgs.index(oldpdg)]:

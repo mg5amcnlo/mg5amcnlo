@@ -3941,8 +3941,11 @@ Beware that this can be dangerous for local multicore runs.""")
         tag = self.run_tag
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
-
-        if PY8_Card['HEPMCoutput:file']=='auto':
+        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove']:
+            if PY8_Card['HEPMCoutput:file'] == 'autoremove':
+                self.to_store.append('nopy8')
+            elif 'nopy8' in self.to_store:
+                self.to_store.remove('nopy8')
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
@@ -4503,9 +4506,11 @@ tar -czf split_$1.tar.gz split_$1
                             else:
                                 ln(in_file,selected_cwd)                                
                         in_files  = []
+                        wrapper_path = os.path.basename(wrapper_path)
                     else:
                         out_files = ['split_%d.tar.gz'%i]
                         selected_cwd = parallelization_dir
+
                     self.cluster.submit2(wrapper_path, 
                             argument=[str(i)], cwd=selected_cwd, 
                             input_files=in_files,
@@ -4655,11 +4660,23 @@ tar -czf split_$1.tar.gz split_$1
                         ######################################################################
                         for hepmc_file in all_hepmc_files:
                             # Remove in an efficient way the starting and trailing HEPMC tags
-                            if sys.platform == 'darwin':
+                            # check for support of negative argument in head
+                            pid = os.system('head -n -1 %s &> /dev/null' % __file__)
+                            if pid == 0:
+                                os.system('head -n -1 %s | tail -n +%d > %s/tmpfile' % 
+                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)))
+                                misc.call(['mv', 'tmp', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
+                            elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
                                         (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
                             else:
+                                
+                                
+                                os.system('head -n -1')
+                                os.system(' '.join(['head','-n','-1',hepmc_file,'|','tail','-n','+'+str(n_head),'>','tmpfile']))
+                                os.system(' '.join(['mv','tmpfile',hepmc_file]))
+                                
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))
@@ -5327,16 +5344,19 @@ tar -czf split_$1.tar.gz split_$1
             misc.gzip(pjoin(p,'pythia_events.hep'), 
                       stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
 
-        if 'pythia8' in self.to_store:            
+        if 'pythia8' in self.to_store:
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
             self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
-                self.update_status('Storing Pythia8 files of previous run', 
-                                                     level='pythia', error=True)
-                misc.gzip(file_path,stdout=file_path)
+                if 'nopy8' in self.to_store:
+                    os.remove(file_path)
+                else:   
+                    self.update_status('Storing Pythia8 files of previous run', 
+                                                         level='pythia', error=True)
+                    misc.gzip(file_path,stdout=file_path)
     
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
@@ -5968,7 +5988,7 @@ tar -czf split_$1.tar.gz split_$1
                 except:
                     pass
             else:
-                misc.gzip(input,keep=False)
+                misc.gzip(input)
             
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):

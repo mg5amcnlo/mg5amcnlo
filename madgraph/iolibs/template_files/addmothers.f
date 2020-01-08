@@ -332,7 +332,11 @@ c     Add new color indices to list of color indices
 c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
 c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           if(is_LC)then
-          if(mo_color.eq.1) then ! color singlet
+          if (icolmp(1,1).eq.1000.or.icolmp(2,1).eq.1000)then
+             if (jpart(6,i).eq.2)then
+               stop 5
+            endif
+          elseif(mo_color.eq.1) then ! color singlet
              maxcolor=elim_indices(0,0,ncolmp,icolmp,i,icolalt,
      $            is_colors,maxcolor)
           elseif(mo_color.eq.-3) then ! color anti-triplet
