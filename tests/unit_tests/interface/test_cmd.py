@@ -251,6 +251,17 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_output([])
         
         self.assertNotEqual('tmp', cmd._export_dir)
+        
+    @test_aloha.set_global()
+    def test_simple_generate(self):
+        """check that simple syntax goes trough and return expected process"""
+           
+        cmd = self.cmd
+        self.do('generate 2p > 2j')
+        self.assertTrue(cmd._curr_amps)
+        proc = cmd._curr_amps[0].get('process').get('legs')
+        self.assertEqual(len(proc), 4)
+        
 
 
 class TestExtendedCmd(unittest.TestCase):
@@ -325,7 +336,10 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
         self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
         
         output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
-        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
+        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5])) 
+        
+        output = self.cmd.get_final_part('p p > 2Z')
+        self.assertEqual(output, set([23]))        
         
         output = self.cmd.get_final_part('p p > Z{L} j')
         self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 23]))         
