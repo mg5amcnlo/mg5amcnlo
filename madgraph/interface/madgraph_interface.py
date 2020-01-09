@@ -1499,8 +1499,8 @@ This will take effect only in a NEW terminal
 
 
         if args[0] in ['gauge']:
-            if args[1] not in ['unitary','Feynman']:
-                raise self.InvalidCmd('gauge needs argument unitary or Feynman.')
+            if args[1] not in ['unitary','Feynman', 'axial']:
+                raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -2523,7 +2523,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1].lower() == 'ewscheme':
                 return self.list_completion(text, ["external"])
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman','default'])
+                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'output_dependencies':
@@ -4295,7 +4295,7 @@ This implies that with decay chains:
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)
+                myprocdef_feyn = self.extract_process(line)              
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
@@ -4314,7 +4314,7 @@ This implies that with decay chains:
                                                 reuse = options['reuse'],
                                                 output_path = output_path,
                                                 cmd = self)
-
+            
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
             nb_processes += len(gauge_result_no_brs)            
@@ -4461,7 +4461,7 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman):\n'
+            text += 'Gauge results (switching between Unitary/Feynman/PS gauge):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -5386,7 +5386,7 @@ This implies that with decay chains:
                 if os.path.sep in args[1] and "import" in self.history[-1]:
                     self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
 
-                if self.options['gauge']=='unitary':
+                if self.options['gauge'] in ['unitary', 'axial']:
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
                          self._curr_model.get('perturbation_couplings') not in \
@@ -7403,6 +7403,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not self._curr_model:
                 if args[1] == 'unitary':
                     aloha.unitary_gauge = True
+                elif args[1] == 'axial':
+                    aloha.unitary_gauge = 2 
                 else:
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
@@ -7418,6 +7420,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+                                           % self._curr_model.get('name'))
+            elif args[1] == 'axial':
+                if 0 in self._curr_model.get('gauge'):
+                    aloha.unitary_gauge = 2
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
             else:
                 if 1 in self._curr_model.get('gauge'):

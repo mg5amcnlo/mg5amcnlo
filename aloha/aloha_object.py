@@ -69,6 +69,43 @@ class P(aloha_lib.FactoryLorentz):
     def get_unique_name(self, lorentz1, particle):
         return '_P^%s_%s' % (particle, lorentz1)
 
+
+
+#===============================================================================
+# PBar (Momenta = (E, -Px, -Py, -Pz)
+#===============================================================================
+class L_PBar(aloha_lib.LorentzObject):
+    """ Helas Object for an Impulsion """
+    
+    contract_first = 1
+    
+    def __init__(self, name, lorentz1, particle):
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self, name,[lorentz1], [],['PB%s'%particle])
+        aloha_lib.KERNEL.add_tag((name,))
+    
+    def create_representation(self):
+        self.sub0 = aloha_lib.DVariable('P%s_0' % self.particle)
+        self.sub1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        self.sub2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        self.sub3 = aloha_lib.DVariable('P%s_3' % self.particle)
+
+        self.representation= aloha_lib.LorentzObjectRepresentation(
+                                    {(0,): self.sub0, (1,): -self.sub1, \
+                                     (2,): -self.sub2, (3,): -self.sub3},                              
+                                    self.lorentz_ind, [])
+
+
+class PBar(aloha_lib.FactoryLorentz):
+    """ Helas Object for an Impulsion """
+    
+    object_class = L_PBar
+    
+    #def __init__(self, lorentz1, particle):
+    @classmethod
+    def get_unique_name(self, lorentz1, particle):
+        return '_PB^%s_%s' % (particle, lorentz1)
+
 #===============================================================================
 # P (Momenta)
 #===============================================================================
