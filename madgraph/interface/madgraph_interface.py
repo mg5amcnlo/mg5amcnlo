@@ -1077,12 +1077,16 @@ class CheckValidForCmd(cmd.CheckCmd):
             valid = False
             if 'noborn' in process:
                 valid = True
-                
+            else:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+
+            # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
             if '=' in order:
                 order = order.split('=')[1]
             if order.strip().lower() != 'qcd':
                 raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+
 
             for p in particles_parts[1].split():
                 if '{' in p:
@@ -4684,6 +4688,7 @@ This implies that with decay chains:
                 else:
                     orders[order]=99
         
+
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()

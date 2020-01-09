@@ -257,6 +257,7 @@ class TestValidCmd(unittest.TestCase):
         """check that simple syntax goes trough and return expected process"""
            
         cmd = self.cmd
+        self.do('import model sm')
         self.do('generate 2p > 2j')
         self.assertTrue(cmd._curr_amps)
         proc = cmd._curr_amps[0].get('process').get('legs')
@@ -348,7 +349,7 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
         self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11])) 
         
         output = self.cmd.get_final_part('p p > 2Z{L} ')
-        self.assertEqual(output, [23])         
+        self.assertEqual(output, set([23]))         
 
         output = self.cmd.get_final_part('p p > 2Z{L} j, Z > e+ e-')
         self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11]))         
