@@ -4743,14 +4743,24 @@ This implies that with decay chains:
             if '{' in part_name:
                 part_name, pol = part_name.split('{',1)
                 pol, rest = pol.split('}',1)
-                try:
-                    spin = self._curr_model.get_particle(part_name).get('spin')
-                except AttributeError:
-                    spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[part_name]])
-                    if len(spins) > 1:
-                        raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
-                    else:
-                        spin = spins.pop()
+                
+                no_dup_name = part_name
+                while True:
+                    try:
+                        spin = self._curr_model.get_particle(no_dup_name).get('spin')
+                        break
+                    except AttributeError:
+                        if no_dup_name in self._multiparticles:
+                            spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[no_dup_name]])
+                            if len(spins) > 1:
+                                raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
+                            else:
+                                spin = spins.pop()
+                                break
+                        elif no_dup_name[0].isdigit():
+                            no_dup_name = no_dup_name[1:]
+                        else:
+                            raise
                 if rest:
                     raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
                 ignore  =False

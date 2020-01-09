@@ -217,8 +217,8 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_process_format('e+{L} e- > mu+{L} mu-{R} @1')
         cmd.check_process_format('e+ e- > t{L} t~ Z{L}, t > mu+ mu- @1')
         cmd.check_process_format('g g > Z Z [ noborn=QCD] @1')
-        cmd.check_process_format('u u~ > w+{L} [QCD]')
-        cmd.check_process_format('u u~ > e+{L} vl [QCD]')
+        cmd.check_process_format('u u~ > 2w+ 2j')
+        cmd.check_process_format('u u~ > 2w+{0} 2j')
         
         # unvalid syntax
         self.wrong(cmd.check_process_format, ' e+ e-')
@@ -236,6 +236,8 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, 'e+ e- > Z > mu+ mu- $ W+{L}')
         self.wrong(cmd.check_process_format, 'u u~ > t{L} t~ [QCD]')
         self.wrong(cmd.check_process_format, 'u u~ > W+{L} vl [ QED QCD]')
+        self.wrong(cmd.check_process_format,'u u~ > w+{L} [QCD]')
+        self.wrong(cmd.check_process_format,'u u~ > e+{L} vl [QCD]')
         
     @test_aloha.set_global()
     def test_output_default(self):
@@ -330,3 +332,9 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
 
         output = self.cmd.get_final_part('p p > Z{L} j, Z > e+ e-')
         self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11])) 
+        
+        output = self.cmd.get_final_part('p p > 2Z{L} ')
+        self.assertEqual(output, [23])         
+
+        output = self.cmd.get_final_part('p p > 2Z{L} j, Z > e+ e-')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11]))         
