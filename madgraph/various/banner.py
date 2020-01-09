@@ -3279,17 +3279,36 @@ class RunCardLO(RunCard):
             self['use_syst'] = False
         else:
             # check for beam_id
+            # check for beam_id
             beam_id = set()
-            for proc in proc_def:
+            beam_id_split = [set(), set()]
+            for proc in proc_def:   
                 for oneproc in proc:
-                    for leg in oneproc['legs']:
+                    for i,leg in enumerate(oneproc['legs']):
                         if not leg['state']:
+                            beam_id_split[i].add(leg['id'])
                             beam_id.add(leg['id'])
+
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
-                pass
+            
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+                # check for e p collision
+                if any(id  in beam_id for id in [11,-11,13,-13]):
+                    self.display_block.append('beam_pol')
+                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13]):
+                        self['lpp1'] = 0  
+                        self['lpp2'] = 1 
+                        self['ebeam1'] = '1k'  
+                        self['ebeam2'] = '6500'  
+                    else:
+                        self['lpp1'] = 1  
+                        self['lpp2'] = 0  
+                        self['ebeam1'] = '6500'  
+                        self['ebeam2'] = '1k'  
+            
             elif 11 in beam_id or -11 in beam_id:
                 self['lpp1'] = 0
                 self['lpp2'] = 0
@@ -3303,7 +3322,35 @@ class RunCardLO(RunCard):
                 self['lpp2'] = 0    
                 self['use_syst'] = False   
                 self.display_block.append('beam_pol')         
-                
+            
+            # automatic polarisation of the beam if neutrino beam  
+            if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
+                self.display_block.append('beam_pol')
+                if any(id  in beam_id_split[0] for id in [12,14,16]):
+                    self['lpp1'] = 0   
+                    self['ebeam1'] = '1k'  
+                    self['polbeam1'] = -100
+                    if not all(id  in beam_id_split[0] for id in [12,14,16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')
+                elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                    self['lpp1'] = 0   
+                    self['ebeam1'] = '1k'  
+                    self['polbeam1'] = 100
+                    if not all(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
+                if any(id  in beam_id_split[1] for id in [12,14,16]):
+                    self['lpp2'] = 0   
+                    self['ebeam2'] = '1k'  
+                    self['polbeam2'] = -100
+                    if not all(id  in beam_id_split[1] for id in [12,14,16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+                if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                    self['lpp2'] = 0   
+                    self['ebeam2'] = '1k'  
+                    self['polbeam2'] = 100
+                    if not all(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+            
         # Check if need matching
         min_particle = 99
         max_particle = 0
