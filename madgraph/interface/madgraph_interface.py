@@ -5070,6 +5070,12 @@ This implies that with decay chains:
                 final.add(pids[particle])
             elif particle in self._multiparticles:
                 final.update(set(self._multiparticles[particle]))
+            elif particle[0].isdigit():
+                if particle[1:] in pids:
+                    final.add(pids[particle[1:]])
+                elif particle in self._multiparticles:
+                    final.update(set(self._multiparticles[particle[1:]]))                
+
         return final
 
     def extract_particle_ids(self, args):

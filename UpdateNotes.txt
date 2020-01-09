@@ -1,5 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.7.0()
+     OM: Allow for a new syntax:
+         generate p p > 3j replaces p p > j j j 
+
+
 2.6.7(16/10/19)
       OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
       OM: Fix a bug introduced in 2.6.6 related to the restriction of model which was leading to wrong result for re-weighitng with loop model (but impact can in principle be not limited to re-weighting).
