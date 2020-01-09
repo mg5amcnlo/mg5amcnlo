@@ -4721,10 +4721,7 @@ This implies that with decay chains:
                 else:
                     # check for duplication flag!
                     if part_name[0].isdigit():
-                        i=0
-                        while part_name[:i+1].isdigit(): 
-                            i+=1
-                        duplicate, part_name = int(part_name[:i]), part_name[i:]
+                        duplicate, part_name = int(part_name[0]), part_name[1:]
                         if part_name in self._multiparticles:
                             if isinstance(self._multiparticles[part_name][0], list):
                                 raise self.InvalidCmd,\
