@@ -667,6 +667,7 @@ def to_leg(fksleg):
          'number': fksleg.get('number'),
          'state': fksleg.get('state'),
          'from_group': fksleg.get('from_group'),
+         'polarization': fksleg.get('polarization')
           })
     return leg
 

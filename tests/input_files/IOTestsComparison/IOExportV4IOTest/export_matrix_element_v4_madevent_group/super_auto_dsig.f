@@ -72,6 +72,10 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+      INTEGER NB_SPIN_STATE(2)
+      DATA  NB_SPIN_STATE /2,2/
+      COMMON /NB_HEL_STATE/ NB_SPIN_STATE
+
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
 C     ICONFIG has this config number
@@ -140,10 +144,12 @@ C       Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative summed weights:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(4E12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1
-     $     ,MAXSPROC)
-        ENDDO
+        IF (SUMPROB.NE.0D0)THEN
+          DO J=1,SYMCONF(0)
+            WRITE(*,'(4E12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1
+     $       ,MAXSPROC)
+          ENDDO
+        ENDIF
         SUMPROB=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
@@ -153,10 +159,12 @@ C       Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative number of events:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(4E12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1
-     $     ,MAXSPROC)
-        ENDDO
+        IF (SUMPROB.NE.0D0)THEN
+          DO J=1,SYMCONF(0)
+            WRITE(*,'(4E12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1
+     $       ,MAXSPROC)
+          ENDDO
+        ENDIF
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
           WRITE(*,'(4I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
@@ -486,7 +494,6 @@ C       Flip back local momenta P1 if cached
       RETURN
 
       END
-
 
 C     -----------------------------------------
 C     Subroutine to map three positive integers

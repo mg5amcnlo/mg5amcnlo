@@ -1062,6 +1062,49 @@ class CheckValidForCmd(cmd.CheckCmd):
             if re.search('\D\$', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
+                
+        # '{}' should only be used for onshell particle (including initial/final state)
+        # check first that polarization are not include between > >
+        if nbsep == 2:
+            if '{' in particles_parts[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used as required s-channel')
+        split = re.split('\D[$|/]',particles_parts[-1],1)
+        if len(split)==2:
+            if '{' in split[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
+            
+        if '[' in process and '{' in process:
+            valid = False
+            if 'noborn' in process:
+                valid = True
+            else:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+
+            # below are the check when [QCD] will be valid for computation            
+            order = process.split('[')[1].split(']')[0]
+            if '=' in order:
+                order = order.split('=')[1]
+            if order.strip().lower() != 'qcd':
+                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+
+
+            for p in particles_parts[1].split():
+                if '{' in p:
+                    part = p.split('{')[0]
+                else:
+                    continue
+                if self._curr_model:
+                    p = self._curr_model.get_particle(part)
+                    if not p:
+                        if part in self._multiparticles:
+                            for part2 in self._multiparticles[part]:
+                                p = self._curr_model.get_particle(part2)
+                                if p.get('color') != 1:
+                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                        continue
+                    if p.get('color') != 1:
+                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+        
 
 
     def check_tutorial(self, args):
@@ -4645,6 +4688,7 @@ This implies that with decay chains:
                 else:
                     orders[order]=99
         
+
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -4700,6 +4744,82 @@ This implies that with decay chains:
                 continue
 
             mylegids = []
+            polarization = []
+            if '{' in part_name:
+                part_name, pol = part_name.split('{',1)
+                pol, rest = pol.split('}',1)
+                
+                no_dup_name = part_name
+                while True:
+                    try:
+                        spin = self._curr_model.get_particle(no_dup_name).get('spin')
+                        break
+                    except AttributeError:
+                        if no_dup_name in self._multiparticles:
+                            spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[no_dup_name]])
+                            if len(spins) > 1:
+                                raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
+                            else:
+                                spin = spins.pop()
+                                break
+                        elif no_dup_name[0].isdigit():
+                            no_dup_name = no_dup_name[1:]
+                        else:
+                            raise
+                if rest:
+                    raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
+                ignore  =False
+                for i,p in enumerate(pol):
+                    if ignore or p==',':
+                        ignore= False
+                        continue
+                    if p in ['t','T']:
+                        if spin == 3:
+                            polarization += [1,-1]
+                        else:
+                            raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
+                    elif p in ['l', 'L']:
+                        if spin == 3:
+                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                        polarization += [-1]
+                    elif p in ['R','r']:
+                        polarization += [1]
+                    elif p in ["A",'a']:
+                        if spin == 3:
+                            polarization += [99]
+                        else:
+                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
+                    elif p in ['+']:
+                        if i +1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(p)
+                            ignore = True
+                        else:
+                            polarization += [1]
+                    elif p in ['-']:
+                        if i+1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(-p)
+                            ignore = True
+                        else:
+                            polarization += [-1]
+                    elif p in [0,'0']:
+                        if spin in [1,2]:
+                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                        else:
+                            polarization += [0]
+                    elif p.isdigit():
+                        p = int(p)
+                        if abs(p) > 3: 
+                            raise self.InvalidCmd("polarization are between -3 and 3")
+                        polarization.append(p)
+                    else:
+                        raise self.InvalidCmd('Invalid Polarization')
+
             duplicate =1
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
@@ -4735,7 +4855,8 @@ This implies that with decay chains:
             if mylegids:
                 for _ in range(duplicate):
                     myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state}))
+                                                        'state':state,
+                                                        'polarization': polarization}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
@@ -5063,6 +5184,8 @@ This implies that with decay chains:
         final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
+            if '{' in particle:
+                particle = particle.split('{')[0]
             if particle in pids:
                 final.add(pids[particle])
             elif particle in self._multiparticles:

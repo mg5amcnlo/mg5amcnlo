@@ -627,7 +627,6 @@ class Amplitude(base_objects.PhysicsObject):
         leglist = self.copy_leglist(process.get('legs'))
 
         for leg in leglist:
-            
             # For the first step, ensure the tag from_group 
             # is true for all legs
             leg.set('from_group', True)
@@ -1690,36 +1689,42 @@ class MultiProcess(base_objects.PhysicsObject):
         # identifying identical matrix elements already at this stage.
         model = process_definition['model']
         
+        islegs = [leg for leg in process_definition['legs'] \
+                 if leg['state'] == False]
+        fslegs = [leg for leg in process_definition['legs'] \
+                 if leg['state'] == True]        
+        
         isids = [leg['ids'] for leg in process_definition['legs'] \
                  if leg['state'] == False]
-        fsids = [leg['ids'] for leg in process_definition['legs'] \
+        fsids = [leg['ids']  for leg in process_definition['legs'] \
+                 if leg['state'] == True]
+        polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
         # Generate all combinations for the initial state
-        
         for prod in itertools.product(*isids):
             islegs = [\
-                    base_objects.Leg({'id':id, 'state': False}) \
-                    for id in prod]
+                    base_objects.Leg({'id':id, 'state': False, 
+                                      'polarization': islegs[i]['polarization']})
+                    for i,id in enumerate(prod)]
 
             # Generate all combinations for the final state, and make
             # sure to remove double counting
 
-            red_fsidlist = []
+            red_fsidlist = set()
 
             for prod in itertools.product(*fsids):
-
+                tag = zip(prod, polids)
+                tag = sorted(tag)
                 # Remove double counting between final states
-                if tuple(sorted(prod)) in red_fsidlist:
+                if tuple(tag) in red_fsidlist:
                     continue
                 
-                red_fsidlist.append(tuple(sorted(prod)));
-                
+                red_fsidlist.add(tuple(tag))
                 # Generate leg list for process
                 leg_list = [copy.copy(leg) for leg in islegs]
-                
                 leg_list.extend([\
-                        base_objects.Leg({'id':id, 'state': True}) \
-                        for id in prod])
+                        base_objects.Leg({'id':id, 'state': True, 'polarization': fslegs[i]['polarization']}) \
+                        for i,id  in enumerate(prod)])
                 
                 legs = base_objects.LegList(leg_list)
 

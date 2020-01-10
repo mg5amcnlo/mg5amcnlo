@@ -1734,11 +1734,14 @@ class Event(list):
         """modify the current event to boost it according to the current filter"""
         if filter is None:
             filter = lambda p: p.status==-1
-            
-        pboost = FourMomentum()
-        for p in self:
-            if filter(p):
-                pboost += p
+        
+        if not isinstance(filter, FourMomentum):
+            pboost = FourMomentum()
+            for p in self:
+                if filter(p):
+                    pboost += p
+        else:
+            pboost = FourMomentum(pboost)
 
         # change sign of three-component due to helas convention
         pboost.px *=-1

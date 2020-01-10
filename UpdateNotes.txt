@@ -1,8 +1,16 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+
 2.7.0()
      OM: Allow for a new syntax:
          generate p p > 3j replaces p p > j j j 
+      OM: Allow syntax for (fully) polarized particles at LO:
+           ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
+               p p > w+{T} w-{0} j j, w+ > e+ ve, w- > j j
+      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
+          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
+          (This allow to fasten the computation of such zero contribution)
 
 
 2.6.7(16/10/19)
@@ -29,7 +37,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Any number in the cards (not only integer) can use multiplication, division and k/M suffix for times 1000 and 1 million respectively
       OM: Energy cut (at LO) are now hidden by default for LHC type of run but visible for lepton collider ones.
       OM: Same for beam polarization
-
 
 2.6.5 (03/02/19)
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--

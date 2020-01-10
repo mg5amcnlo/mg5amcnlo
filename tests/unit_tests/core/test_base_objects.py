@@ -1010,7 +1010,8 @@ class LegTest(unittest.TestCase):
                       'state':True,
                       'from_group':False,
                       'onshell':None,                       
-                      'loop_line':False}
+                      'loop_line':False,
+                      'polarization':[]}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -1085,14 +1086,16 @@ class LegTest(unittest.TestCase):
     def test_representation(self):
         """Test leg object string representation."""
 
-        goal = "{\n"
-        goal = goal + "    \'id\': 3,\n"
-        goal = goal + "    \'number\': 5,\n"
-        goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False,\n" 
-        goal = goal + "    \'loop_line\': False,\n"
-        goal = goal + "    \'onshell\': None\n}"
-
+        goal ="""{
+    'id': 3,
+    'number': 5,
+    'state': True,
+    'from_group': False,
+    'loop_line': False,
+    'onshell': None,
+    'polarization': []
+}"""
+        
         self.assertEqual(goal, str(self.myleg))
 
     def test_leg_list(self):
@@ -1155,7 +1158,8 @@ class MultiLegTest(unittest.TestCase):
     def setUp(self):
 
         self.mydict = {'ids':[3, 2, 5],
-                      'state':True}
+                      'state':True,
+                      'polarization':[]}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
 
@@ -1227,10 +1231,12 @@ class MultiLegTest(unittest.TestCase):
     def test_representation(self):
         """Test multi_leg object string representation."""
 
-        goal = "{\n"
-        goal = goal + "    \'ids\': [3, 2, 5],\n"
-        goal = goal + "    \'state\': True\n}"
 
+        goal ="""{
+    'ids': [3, 2, 5],
+    'state': True,
+    'polarization': []
+}"""
         self.assertEqual(goal, str(self.my_multi_leg))
 
     def test_multi_leg_list(self):

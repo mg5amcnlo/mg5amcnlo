@@ -39,6 +39,7 @@
      %(ebeam1)s     = ebeam1  ! beam 1 total energy in GeV
      %(ebeam2)s     = ebeam2  ! beam 2 total energy in GeV
 $beam_pol
+$frame
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
