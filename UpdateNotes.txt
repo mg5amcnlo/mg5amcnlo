@@ -11,6 +11,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: distinguish in the code if zero contribution are related to no point passing cuts or if
           they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
           (This allow to fasten the computation of such zero contribution)
+      OM: The default run_card.dat is now by default even more specific to your process. 
+          Nearly all the cut are now hidden by default if they do not impact your current process.
+          This allows to have less information by default in the run_card which should simplifies its 
+          readibility. 
+
 
 
 2.6.7(16/10/19)
