@@ -304,8 +304,13 @@ in presence of majorana particle/flow violation"""
                 # check if we need a special propagator
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
-                    massless = True
-                    self.denominator = None
+                    if spin == 3 and aloha.unitary_gauge == 2:
+                        misc.sprint(spin)
+                        lorentz *= complex(0,1) * self.get_custom_propa('1PS', spin, id)
+                        continue
+                    else:
+                        massless = True
+                        self.denominator = None
                 elif propa == []:
                     massless = False
                     self.denominator = None
@@ -467,6 +472,9 @@ in presence of majorana particle/flow violation"""
             else:
                 numerator =  "VFM(1,id)*VFMC(2,id)"
             denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1PS":
+            numerator = "(-1*(P(-1,id)*PBar(-1,id)) * Metric(1, 2) + P(1,id)*PBar(2,id) + PBar(1,id)*P(2,id))"
+            denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
         else:
             raise Exception
 
