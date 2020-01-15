@@ -3,7 +3,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 2.7.0()
-     OM: Allow for a new syntax:
+      OM: Allow for a new syntax:
          generate p p > 3j replaces p p > j j j 
       OM: Allow syntax for (fully) polarized particles at LO:
            ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
@@ -15,7 +15,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           Nearly all the cut are now hidden by default if they do not impact your current process.
           This allows to have less information by default in the run_card which should simplifies its 
           readibility. 
-
+      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
 
 
 2.6.7(16/10/19)

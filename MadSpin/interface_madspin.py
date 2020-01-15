@@ -1457,7 +1457,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event,production in enumerate(orig_lhe):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
-            if curr_event and self.efficiency:# and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
+            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
             else:
                 logger.info("next event [%s]", time.time()-start)

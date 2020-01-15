@@ -1199,7 +1199,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # For 2>N pass in the center of mass frame
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
-        if (hypp_id == 0 and ('fram_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
+        if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
             import copy
             new_event = copy.deepcopy(event)
             pboost = FourMomenta()

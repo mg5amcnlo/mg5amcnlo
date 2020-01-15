@@ -98,8 +98,6 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        read(56,*) P_seed
        close(56)
        iseed = iseed + P_seed
-c       open(unit=999,file="/data/DOC/sujays/divisors")
-c       open(unit=999,file="/home/sujay/Downloads/momentaboost")
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
 c
@@ -260,35 +258,14 @@ c           enddo
 
            cycle
            endif
-           !do j=1,nexternal
-           !   write (*,*) (pfull(k,j), k=0,3)  
-           !enddo
-
-c=======================Modified part=================================
-
           
            call  boost_to_frame(pfull, frame_id, P2)
            call SMATRIX(P2,M_full)
 
-
-c           call SMATRIX_PROD(pprod,M_prod)
-c           write(999,*) (M_prod)
-c           write(999,*) "---------after-boost------"
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
            call SMATRIX_PROD(P2,M_prod)
 
 
-
-c          do j=1,nexternal
-c              write (999,*) (P2(k,j), k=0,3)
-c           enddo
-c              write(999,*) (M_prod)
-c           do j=1,nexternal_prod
-c              write (999,*) (pprod(k,j), k=0,3)
-c           enddo
-c           close(999)
-
-c==========================================================================
 
            weight=M_full*jac/M_prod
            if (weight.gt.maxweight) then
@@ -393,31 +370,14 @@ c        initialize the helicity amps
              cycle
            endif
 
-c=======================Modified part=================================
-
-
            call  boost_to_frame(pfull, frame_id, P2)
            call SMATRIX(P2,M_full)
 
 
-c           call SMATRIX_PROD(pprod,M_prod)
-c           write(999,*) (M_prod)
-c           write(999,*) "---------after-boost------"
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
            call SMATRIX_PROD(P2,M_prod)
 
 
-
-c          do j=1,nexternal
-c              write (999,*) (P2(k,j), k=0,3)
-c           enddo
-c              write(999,*) (M_prod)
-c           do j=1,nexternal_prod
-c              write (999,*) (pprod(k,j), k=0,3)
-c           enddo
-c           close(999)
-
-c==========================================================================
            weight=M_full*jac/M_prod
 
            if (weight.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
