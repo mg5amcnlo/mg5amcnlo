@@ -2853,8 +2853,7 @@ class RunCardLO(RunCard):
                                ! in which to evaluate the matrix-element
                                ! [1,2] means the partonic center of mass 
 """, 
-    template_off= ''),
-    ],        
+    template_off= ''),        
 #    MERGING BLOCK:  MLM           
         runblock(name='MLM', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
             template_on=\
