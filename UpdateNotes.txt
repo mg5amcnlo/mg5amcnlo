@@ -5,17 +5,20 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.7.0()
       OM: Allow for a new syntax:
          generate p p > 3j replaces p p > j j j 
-      OM: Allow syntax for (fully) polarized particles at LO:
+      OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]
            ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
                p p > w+{T} w-{0} j j, w+ > e+ ve, w- > j j
-      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
-          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
-          (This allow to fasten the computation of such zero contribution)
+      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
+          via "set gauge axial"
+      OM: Support for elastic photon from heavy ion implemented. For PA collision, you have to generate your diagram
+          with "set group_subprocesses False"
       OM: The default run_card.dat is now by default even more specific to your process. 
           Nearly all the cut are now hidden by default if they do not impact your current process.
           This allows to have less information by default in the run_card which should simplifies its 
           readibility. 
-      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
+      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
+          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
+          (This allow to fasten the computation of such zero contribution)
 
 
 2.6.7(16/10/19)

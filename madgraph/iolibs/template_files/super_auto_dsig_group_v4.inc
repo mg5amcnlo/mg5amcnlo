@@ -444,6 +444,9 @@ C       Flip CM_RAP (to get rapidity right)
       DSIGPROC=0D0
 
       IF (PASSCUTS(P1)) THEN
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12)then
+        nb_pass_cuts = nb_pass_cuts + 1
+      endif
 %(call_dsig_proc_lines)s
       ENDIF
 

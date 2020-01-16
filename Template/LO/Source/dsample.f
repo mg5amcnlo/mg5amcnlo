@@ -134,7 +134,6 @@ c
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
-               nb_pass_cuts = nb_pass_cuts + 1
                fx = dsig(p,wgt,0) !Evaluate function
                wgt = wgt*fx
                if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
@@ -1760,7 +1759,7 @@ c         if (kn .eq. events) then
             call none_pass(max_events)
          endif
          if (iteration.eq.1) then
-           if (nb_pass_cuts.eq.1000 .and. non_zero.eq.0) then
+           if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
               call none_pass(1000)
            endif
          endif
@@ -2279,6 +2278,11 @@ c----
          write(*,*) nb_pass_cuts, 
      &    ' points passed the cut but all returned zero'
          write(*,*) 'therefore considering this contribution as zero'
+      else if (nb_pass_cuts.gt.0.and.nb_pass_cuts.lt.1000)then
+         write(*,*) 'only', nb_pass_cuts, 
+     &    ' points passed the cut and they all returned zero'
+         write(*,*) 'therefore considering this contribution as zero'
+         write(*,*) 'Loosen cuts or increase max_events if you believe this is not zero'
       else
          write(*,*) 'No points passed cuts!'
          write(*,*) 'Loosen cuts or increase max_events',max_events
