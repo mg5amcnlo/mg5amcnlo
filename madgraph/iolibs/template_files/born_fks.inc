@@ -25,7 +25,6 @@ C ARGUMENTS
 C  
       REAL*8 P1(0:3,NEXTERNAL-1)
       COMPLEX*16 ANS(2)
-
 C  
 C LOCAL VARIABLES 
 C  
@@ -35,8 +34,6 @@ C
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
-      real*8 T_SAVE(NCOMB,2)
-      real*8 T_SUM(2)
 %(helicity_lines)s
 %(den_factor_lines)s
 %(ij_lines)s
@@ -108,8 +105,6 @@ C ----------
       ANS(1) = 0D0
       ANS(2) = 0D0
       hel_fac=1d0
-      T_SUM(1) = 0d0
-      T_SUM(2) = 0d0
       DO IHEL=1,NCOMB
         ! the following lines are to avoid segfaults when glu_ij=0
         cond_ij=skip(nfksprocess).eq.0
@@ -117,32 +112,17 @@ C ----------
         !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
-	    ANS(1) = ANS(1) + BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns) 
-	   ANS(2)=ANS(2)+ BORNTILDE 
-            T_SAVE(IHEL,1) = borns(1)
-	    T_SAVE(IHEL,2) = borns(2)
-	    T_SUM(1) = T_SUM(1) + DABS(borns(1))
-	    T_SUM(2) = T_SUM(2) + DABS(borns(2))
-	  ENDIF
-	  else	
-            T_SAVE(IHEL,1) = 0d0
-            T_SAVE(IHEL,2) = 0d0
-        ENDIF
-      ENDDO
-
-      IF(ntry(nFKSprocess).LT.2) then
-	    if (T_SUM(2).lt.1e-10*T_SUM(1)) T_SUM(2) = T_SUM(1)	
-	do IHEL=1,NCOMB
-            if ( DABS(T_SAVE(IHEL,1)).gt.DABS(T_SUM(1))*1d-8/NCOMB)then
+            ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
+            ANS(2)=ANS(2)+BORNTILDE
+            if ( borns(1).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
               GOODHEL(IHEL,nFKSprocess)=.TRUE.
             endif
-
-            if ( DABS(T_SAVE(IHEL,2)).gt.DABS(T_SUM(2))*1d-8/NCOMB)then
+            if ( borns(2).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
               GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
             endif
-	 enddo	
-       endif
-
+	  ENDIF
+        ENDIF
+      ENDDO
       ANS(1)=ANS(1)/DBLE(IDEN)
       ANS(2)=ANS(2)/DBLE(IDEN)
       wgt_me_born=dble(ans(1))
