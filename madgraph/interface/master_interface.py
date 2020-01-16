@@ -200,8 +200,8 @@ class Switcher(object):
     def do_add(self, line, *args, **opts):
         
         allow_switch = True
-        if self._curr_proc_defs:
-           allow_switch = False
+        if self._curr_amps:
+            allow_switch = False
         
         argss = cmd.Cmd.split_arg(line)
         if len(argss)>=1 and argss[0] in ['process','timing','profile']:

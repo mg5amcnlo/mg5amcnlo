@@ -626,6 +626,8 @@ def pid_exists(pid):
     else:
         return True
 
+
+
 #===============================================================================
 # mute_logger (designed to work as with statement)
 #===============================================================================
@@ -769,7 +771,9 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
-    return 'LLVM' in str(output)
+
+    return 'LLVM' in str(output) or "clang" in str(output)
+
 
 def detect_cpp_std_lib_dependence(cpp_compiler):
     """ Detects if the specified c++ compiler will normally link against the C++
@@ -1790,6 +1794,7 @@ class EasterEgg(object):
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
             if date in [(1,4)]:
+                madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool = True
                 if msgtype in EasterEgg.message_aprilfirst:
                     choices = EasterEgg.message_aprilfirst[msgtype]
                     if len(choices) == 0:

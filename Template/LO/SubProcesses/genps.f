@@ -1264,5 +1264,47 @@ c      eta = 0d0
       END
       
 
+C     -----------------------------------------
+C     Subroutine to return momenta in a dedicated frame
+C     frame_id is the tag of the particle to put at rest
+C     frame_id follow the convention of cluster.f (sum 2**(N-1))
+C     -----------------------------------------
+
+      subroutine boost_to_frame(P1, frame_id, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id
+
+      integer ids(nexternal)
+      integer i,j
+
+c     uncompress
+      call mapid(frame_id, ids)
+      pboost(:) = 0d0
+      p2(:,:) = 0d0
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal
+       if (ids(i).eq.1)then
+            do j=0,3
+	           Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3	
+          Pboost(j) = -1 * Pboost(j)
+      enddo	    
+      do i=1, nexternal
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo   
+      return
+      end
+
+
 
 

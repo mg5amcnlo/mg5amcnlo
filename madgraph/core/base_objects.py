@@ -26,6 +26,7 @@ import re
 import six
 StringIO = six
 import madgraph.core.color_algebra as color
+import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
 from six.moves import range
@@ -1916,6 +1917,8 @@ class Leg(PhysicsObject):
         self['from_group'] = True
         # onshell: decaying leg (True), forbidden s-channel (False), none (None)
         self['onshell'] = None
+        # filter on the helicty
+        self['polarization'] = []
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -1924,31 +1927,41 @@ class Leg(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("%s is not a valid integer for leg id" % str(value))
 
-        if name == 'state':
+        elif name == 'state':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid leg state (True|False)" % \
                                                                     str(value))
 
-        if name == 'from_group':
+        elif name == 'from_group':
             if not isinstance(value, bool) and value != None:
                 raise self.PhysicsObjectError("%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value))
 
-        if name == 'loop_line':
+        elif name == 'loop_line':
             if not isinstance(value, bool) and value != None:
                 raise self.PhysicsObjectError("%s is not a valid boolean for leg flag loop_line" % \
                                                                     str(value))
 
-        if name == 'onshell':
+        elif name == 'onshell':
             if not isinstance(value, bool) and value != None:
                 raise self.PhysicsObjectError("%s is not a valid boolean for leg flag onshell" % \
                                                                     str(value))
+        
+        elif name == 'polarization':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            for i in value:
+                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                    raise self.PhysicsObjectError( \
+                          "%s is not a valid polarization" % str(value))
+                                                                    
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell']
+        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
@@ -2108,6 +2121,7 @@ class MultiLeg(PhysicsObject):
 
         self['ids'] = []
         self['state'] = True
+        self['polarization'] = []
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -2119,6 +2133,15 @@ class MultiLeg(PhysicsObject):
                 if not isinstance(i, int):
                     raise self.PhysicsObjectError("%s is not a valid list of integers" % str(value))
 
+        if name == 'polarization':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            for i in value:
+                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                    raise self.PhysicsObjectError( \
+                          "%s is not a valid polarization" % str(value))
+
         if name == 'state':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid leg state (initial|final)" % \
@@ -2129,7 +2152,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state']
+        return ['ids', 'state','polarization']
 
 #===============================================================================
 # LegList
@@ -3415,13 +3438,11 @@ class Process(PhysicsObject):
 
         final_legs = [leg for leg in self.get_legs_with_decays() if leg.get('state') == True]
 
-        identical_indices = {}
+        identical_indices = collections.defaultdict(int)
         for leg in final_legs:
-            if leg.get('id') in identical_indices:
-                identical_indices[leg.get('id')] = \
-                                    identical_indices[leg.get('id')] + 1
-            else:
-                identical_indices[leg.get('id')] = 1
+            key = (leg.get('id'), tuple(leg.get('polarization')))
+            identical_indices[key] += 1
+
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
 
@@ -3770,18 +3791,19 @@ class ProcessDefinition(Process):
         
         # First make sure that the desired particle ids belong to those defined
         # in this process definition.
-        my_isids = [leg.get('ids') for leg in self.get('legs') \
-              if not leg.get('state')]
-        my_fsids = [leg.get('ids') for leg in self.get('legs') \
-             if leg.get('state')]            
-        for i, is_id in enumerate(initial_state_ids):
-            assert is_id in my_isids[i]
-        for i, fs_id in enumerate(final_state_ids):
-            assert fs_id in my_fsids[i]
+        if __debug__:
+            my_isids = [leg.get('ids') for leg in self.get('legs') \
+                  if not leg.get('state')]
+            my_fsids = [leg.get('ids') for leg in self.get('legs') \
+                 if leg.get('state')]            
+            for i, is_id in enumerate(initial_state_ids):
+                assert is_id in my_isids[i]
+            for i, fs_id in enumerate(final_state_ids):
+                assert fs_id in my_fsids[i]
         
         return self.get_process_with_legs(LegList(\
-               [Leg({'id': id, 'state':False}) for id in initial_state_ids] + \
-               [Leg({'id': id, 'state':True}) for id in final_state_ids]))
+               [Leg({'id': id, 'state':False, 'polarization':[]}) for id in initial_state_ids] + \
+               [Leg({'id': id, 'state':True, 'polarization':[]}) for id in final_state_ids]))
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison

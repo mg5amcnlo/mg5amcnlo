@@ -47,7 +47,7 @@ try:
     import madgraph.various.hepmc_parser as hepmc_parser
 except Exception as error:
     hepmc_parser = False
-    misc.sprint(error)
+    misc.sprint("No hepmc reader since", error)
     pass
 
 
@@ -1827,11 +1827,14 @@ class Event(list):
         """modify the current event to boost it according to the current filter"""
         if filter is None:
             filter = lambda p: p.status==-1
-            
-        pboost = FourMomentum()
-        for p in self:
-            if list(filter(p)):
-                pboost += p
+        
+        if not isinstance(filter, FourMomentum):
+            pboost = FourMomentum()
+            for p in self:
+                if list(filter(p)):
+                    pboost += p
+        else:
+            pboost = FourMomentum(pboost)
 
         # change sign of three-component due to helas convention
         pboost.px *=-1
@@ -1847,7 +1850,7 @@ class Event(list):
         """check various property of the events"""
         
         # check that relative error is under control
-        threshold = 5e-7
+        threshold = 1e-6
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1870,8 +1873,7 @@ class Event(list):
             fourmass = FourMomentum(particle).mass
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception("Do not have correct mass lhe: %s momentum: %s" % (particle.mass, fourmass))
-            
+                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
                 
 
         if E/absE > threshold:

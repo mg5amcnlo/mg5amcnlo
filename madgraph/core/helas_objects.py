@@ -639,6 +639,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # conjugate_indices is a list [1,2,...] with fermion lines
         # that need conjugates. Default is "None"
         self['conjugate_indices'] = None
+        #
+        #
+        self['polarization'] = []
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -653,6 +656,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 leg = arguments[0]
                 interaction_id = arguments[1]
                 model = arguments[2]
+                
                 # decay_ids is the pdg codes for particles with decay
                 # chains defined
                 decay_ids = []
@@ -673,11 +677,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # the decay is applied
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
-
+                else:
+                    if 99 in leg.get('polarization'):
+                        raise Exception("polarization A only valid for propagator.")
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing
                 if self.is_fermion():
+                    if leg.get('polarization'):
+                        pol = list(leg.get('polarization'))
+                        self.set('polarization', pol) 
+                    
                     if leg.get('state') == False and \
                            self.get('is_part') or \
                            leg.get('state') == True and \
@@ -685,11 +695,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('state', 'incoming')
                     else:
                         self.set('state', 'outgoing')
+                else:
+                    self.set('polarization', leg.get('polarization'))
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
         else:
             super(HelasWavefunction, self).__init__()
+
+
 
     def filter(self, name, value):
         """Filter for valid wavefunction property values."""
@@ -698,16 +712,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if not isinstance(value, base_objects.Particle):
                 raise self.PhysicsObjectError("%s tag %s is not a particle" % (name, repr(value)))            
 
-        if name == 'is_part':
+        elif name == 'is_part':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s tag %s is not a boolean" % (name, repr(value)))
 
-        if name == 'interaction_id':
+        elif name == 'interaction_id':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("%s is not a valid integer " % str(value) + \
                         " for wavefunction interaction id")
 
-        if name == 'pdg_codes':
+        elif name == 'pdg_codes':
             #Should be a list of strings
             if not isinstance(value, list):
                 raise self.PhysicsObjectError("%s is not a valid list of integers" % str(value))
@@ -715,7 +729,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not isinstance(mystr, int):
                     raise self.PhysicsObjectError("%s is not a valid integer" % str(mystr))
 
-        if name == 'orders':
+        elif name == 'orders':
             #Should be a dict with valid order names ask keys and int as values
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError("%s is not a valid dict for coupling orders" % \
@@ -727,12 +741,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     raise self.PhysicsObjectError("%s is not a valid integer" % str(value[order]))
 
 
-        if name == 'inter_color':
+        elif name == 'inter_color':
             # Should be None or a color string
             if value and not isinstance(value, color.ColorString):
                     raise self.PhysicsObjectError("%s is not a valid Color String" % str(value))
 
-        if name == 'lorentz':
+        elif name == 'lorentz':
             #Should be a list of string
             if not isinstance(value, list):
                     raise self.PhysicsObjectError("%s is not a valid list" % str(value))
@@ -740,7 +754,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if not isinstance(name, str):
                     raise self.PhysicsObjectError("%s doesn't contain only string" % str(value))
 
-        if name == 'coupling':
+        elif name == 'coupling':
             #Should be a list of string
             if not isinstance(value, list):
                 raise self.PhysicsObjectError("%s is not a valid coupling string" % str(value))
@@ -750,11 +764,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if len(value) == 0:
                 raise self.PhysicsObjectError("%s should have at least one value" % str(value))
 
-        if name == 'color_key':
+        elif name == 'color_key':
             if value and not isinstance(value, int):
                 raise self.PhysicsObjectError("%s is not a valid integer" % str(value))
 
-        if name == 'state':
+        elif name == 'state':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError("%s is not a valid string for wavefunction state" % \
                                                                     str(value))
@@ -762,55 +776,65 @@ class HelasWavefunction(base_objects.PhysicsObject):
                              'intermediate', 'initial', 'final']:
                 raise self.PhysicsObjectError("%s is not a valid wavefunction " % str(value) + \
                         "state (incoming|outgoing|intermediate)")
-        if name == 'leg_state':
+        elif name == 'leg_state':
             if value not in [False, True]:
                 raise self.PhysicsObjectError("%s is not a valid wavefunction " % str(value) + \
                         "state (incoming|outgoing|intermediate)")
-        if name in ['fermionflow']:
+        elif name in ['fermionflow']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("%s is not a valid integer" % str(value))
             if not value in [-1, 1]:
                 raise self.PhysicsObjectError("%s is not a valid sign (must be -1 or 1)" % str(value))
 
-        if name in ['number_external', 'number']:
+        elif name in ['number_external', 'number']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("%s is not a valid integer" % str(value) + \
                         " for wavefunction number")
 
-        if name == 'mothers':
+        elif name == 'mothers':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError("%s is not a valid list of mothers for wavefunction" % \
                       str(value))
 
-        if name in ['decay']:
+        elif name in ['decay']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid bool" % str(value) + \
                         " for decay")
         
-        if name in ['onshell']:
+        elif name in ['onshell']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid bool" % str(value) + \
                         " for onshell")
 
-        if name in ['is_loop']:
+        elif name in ['is_loop']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid bool" % str(value) + \
                         " for is_loop")
                         
-        if name == 'conjugate_indices':
+        elif name == 'conjugate_indices':
             if not isinstance(value, tuple) and value != None:
                 raise self.PhysicsObjectError("%s is not a valid tuple" % str(value) + \
                         " for conjugate_indices")
 
-        if name == 'rank':
+        elif name == 'rank':
             if not isinstance(value, int) and value != None:
                 raise self.PhysicsObjectError("%s is not a valid int" % str(value) + \
                         " for the rank")
 
-        if name == 'lcut_size':
+        elif name == 'lcut_size':
             if not isinstance(value, int) and value != None:
-                raise self.PhysicsObjectError("%s is not a valid int" % str(value) + \
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid int" % str(value) + \
                         " for the lcut_size")
+                        
+        elif name == 'polarization':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            for i in value:
+                if i not in [-1, 1, 2, -2, 3, -3, 0, 99]:
+                    raise self.PhysicsObjectError( \
+                      "%s is not a valid polarization" % str(value))
 
         return True
 
@@ -887,7 +911,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('antiparticle', model.get('particle_dict')[-value])
                 return True
             else:
-                six.reraise(self.PhysicsObjectError, "%s not allowed name for 3-argument set", name)
+                six.reraise(self.PhysicsObjectError("%s not allowed name for 3-argument set", name))
         else:
             return super(HelasWavefunction, self).set(name, value)
 
@@ -1538,6 +1562,32 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['propa'] = self.get('particle').get('propagator')
         if output['propa'] not in ['', None]:
             output['propa'] = 'P%s' % output['propa']
+            if self.get('polarization'):
+                raise InvalidCmd( 'particle with custom propagator can not have polarization')
+        elif self.get('polarization'):
+            if self.get('polarization') == [0]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handle for decay particle')
+                output['propa'] = 'P1L' 
+            elif self.get('polarization') == [1,-1]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handle for decay particle')
+                output['propa'] = 'P1T'
+            elif self.get('polarization') == [99]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd('polarization not handle for decay particle')
+                output['propa'] = 'P1A'
+            elif self.get('polarization') == [1]:
+                if self.get('spin') != 2:
+                    raise InvalidCmd( 'polarization not handle for decay particle')
+                output['propa'] = 'P1P'
+            elif self.get('polarization') == [-1]:
+                if self.get('spin') != 2:
+                    raise InvalidCmd( 'Left polarization not handle for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
+                output['propa'] = 'P1M'
+            else:            
+                raise InvalidCmd( 'polarization not handle for decay particle')
+            
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
@@ -1612,16 +1662,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Sort according to spin and flow direction
         res.sort()
         res.append(self.get_spin_state_number())
-        res.append(self.find_outgoing_number())
+        outgoing =self.find_outgoing_number()
+        res.append(outgoing)
 
         if self['is_loop']:
             res.append(self.get_loop_index())
             if not self.get('mothers'):
                 res.append(self.get('is_part'))
 
+        res.append(tuple(self.get('polarization')) )
+
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
             res.append(self.get('conjugate_indices'))
+            
+
+        
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -1745,6 +1801,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if self.get('particle').get('propagator') not in ['', None]:
             tags.append('P%s' % str(self.get('particle').get('propagator')))
+        elif self.get('polarization'):
+            if self.get('polarization') == [0]:
+                tags.append('P1L') 
+            elif self.get('polarization') == [1,-1]:
+                tags.append('P1T')
+            elif self.get('polarization') == [99]:
+                tags.append('P1A')
+            elif self.get('polarization') == [1]:
+                tags.append('P1P')
+            elif self.get('polarization') == [-1]:
+                tags.append('P1M')
+            else:
+                raise InvalidCmd( 'polarization not handle for decay particle')
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
@@ -2667,7 +2736,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
                 return True
             else:
-                six.reraise(self.PhysicsObjectError, "%s not allowed name for 3-argument set", name)
+                six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
         else:
             return super(HelasAmplitude, self).set(name, value)
 
@@ -3748,7 +3817,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                           [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers') and \
                                  wf.get('number_external') == number]]
 
-
         # Keep track of wavefunction and amplitude numbers, to ensure
         # unique numbers for all new wfs and amps during manipulations
         numbers = [self.get_all_wavefunctions()[-1].get('number'),
@@ -3909,6 +3977,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            amplitudes which have this wavefunction as mother.
         """
 
+        #check that decay does not specify polarization
+        wfs = filter(lambda w: w.get('state') == 'initial' , decay.get('diagrams')[0].get('wavefunctions'))
+        if any(wf.get('polarization') for wf in wfs):
+            raise InvalidCmd( 'In decay-chain polarization can only be specified in production not in decay. Please Retry')
+
+        
         len_decay = len(decay.get('diagrams'))
 
         number_external = old_wfs[0].get('number_external')
@@ -4153,6 +4227,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
                     old_wf_index = [wf.get('number') for wf in \
                                     diagram_wfs].index(old_wf.get('number'))
+                                    
+                    old_wf_pol = diagram_wfs[old_wf_index].get('polarization')
+                    for w in final_decay_wfs:
+                        w.set('polarization', old_wf_pol)
+                    
 
                     diagram_wfs = diagram_wfs[0:old_wf_index] + \
                                   decay_diag_wfs + diagram_wfs[old_wf_index:]
@@ -4353,6 +4432,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Insert decay chain by simply modifying wavefunction. This
         is possible only if there is only one diagram in the decay."""
 
+
         for key in old_wf.keys():
             old_wf.set(key, new_wf[key])
 
@@ -4471,6 +4551,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             mothers.append(wf)
 
         return mothers
+    
+
 
     def get_num_configs(self):
         """Get number of diagrams, which is always more than number of
@@ -4569,11 +4651,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             return None
 
         model = self.get('processes')[0].get('model')
+        hel_per_part = [ len(wf.get('polarization')) if wf.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states())
+            for wf in self.get_external_wavefunctions()]
 
         return reduce(lambda x, y: x * y,
-                      [ len(model.get('particle_dict')[wf.get('pdg_code')].\
-                            get_helicity_states())\
-                        for wf in self.get_external_wavefunctions() ], 1)
+                      hel_per_part)
 
     def get_helicity_matrix(self, allow_reverse=True):
         """Gives the helicity matrix for external wavefunctions"""
@@ -4583,22 +4667,43 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         process = self.get('processes')[0]
         model = process.get('model')
+        hel_per_part = [ wf.get('polarization') if wf.get('polarization') 
+                        else model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)
+            for wf in self.get_external_wavefunctions()]
+        return itertools.product(*hel_per_part)
 
-        return itertools.product(*[ model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)\
-                                  for wf in self.get_external_wavefunctions()])
 
     def get_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
         state spin only """
         
         model = self.get('processes')[0].get('model')
-        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False]
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  leg.get('id')].get_helicity_states())
+            for leg in initial_legs]
         
-        return reduce(lambda x, y: x * y,
-                      [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
-                        for leg in initial_legs ])
+        return reduce(lambda x, y: x * y, hel_per_part, 1)
+
+    def get_spin_state_initial(self):
+        """Gives (number of state for each initial particle)"""
+
+        model = self.get('processes')[0].get('model')
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  leg.get('id')].get_helicity_states())
+            for leg in initial_legs]
+        
+        if len(hel_per_part) == 1:
+            hel_per_part.append(0)
+        
+        return hel_per_part
+
 
     def get_beams_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
@@ -4632,7 +4737,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             
         spin_factor = reduce(lambda x, y: x * y,
                              [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
+                                   get_helicity_states()) 
+                              if not leg.get('polarization') else 
+                              len(leg.get('polarization'))
                                for leg in initial_legs ])
 
         return spin_factor * color_factor * self['identical_particle_factor']
