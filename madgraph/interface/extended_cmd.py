@@ -2649,9 +2649,10 @@ class ControlSwitch(SmartQuestion):
             line= [l for l in line.split(';') if l][-1] 
         if line in self.quit_on:
             return True
-        self.create_question()
-        return self.reask(True)
-        
+        if self.value != 'reask':
+            self.create_question()
+            return self.reask(True)
+        return
 
     def set_switch(self, key, value, user=True):
         """change a switch to a given value"""

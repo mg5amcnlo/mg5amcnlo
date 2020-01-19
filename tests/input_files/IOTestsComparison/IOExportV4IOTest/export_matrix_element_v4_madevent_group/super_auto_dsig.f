@@ -479,6 +479,9 @@ C       Flip CM_RAP (to get rapidity right)
       DSIGPROC=0D0
 
       IF (PASSCUTS(P1)) THEN
+        IF (IMODE.EQ.0D0.AND.NB_PASS_CUTS.LT.2**12)THEN
+          NB_PASS_CUTS = NB_PASS_CUTS + 1
+        ENDIF
         IF(IPROC.EQ.1) DSIGPROC=DSIG1(P1,WGT,IMODE)  ! u u~ > u u~
         IF(IPROC.EQ.2) DSIGPROC=DSIG2(P1,WGT,IMODE)  ! u u~ > d d~
       ENDIF

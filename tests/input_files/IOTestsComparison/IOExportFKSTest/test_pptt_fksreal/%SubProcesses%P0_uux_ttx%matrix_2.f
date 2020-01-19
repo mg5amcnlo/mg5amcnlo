@@ -77,8 +77,8 @@ C     ----------
       NTRY=NTRY+1
       ANS = 0D0
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 10) THEN
-          IF (NTRY.LT.10) THEN
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+          IF (NTRY.LT.2) THEN
 C           for the first ps-point, check for helicities that give
 C           identical matrix elements
             T=MATRIX_2(P ,NHEL(1,IHEL))
@@ -104,18 +104,11 @@ C             if two helicity states are identical, dont recompute
           ENDIF
 C         add to the sum of helicities
           ANS=ANS+T
+          IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
+            GOODHEL(IHEL)=.TRUE.
+          ENDIF
         ENDIF
       ENDDO
-
-      IF ( NTRY .LT. 10) THEN
-        DO IHEL=1,NCOMB
-          IF (.NOT.GOODHEL(IHEL) .AND. (DABS(T_SAVE(IHEL)).GT.ANS*1D-8
-     $     /NCOMB)) THEN
-            GOODHEL(IHEL) = .TRUE.
-          ENDIF
-        ENDDO
-      ENDIF
-
       ANS=ANS/DBLE(IDEN)
       WGT_ME_REAL=ANS
       END
