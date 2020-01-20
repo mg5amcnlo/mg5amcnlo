@@ -1,5 +1,26 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+
+2.7.0(20/01/10)
+      OM: Allow for a new syntax in presence of multi-jet/lepton process:
+         generate p p > 3j replaces p p > j j j 
+      OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]
+           ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
+               p p > w+{T} w-{0} j j, w+ > e+ ve, w- > j j
+      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
+          via "set gauge axial"
+      OM: Support for elastic photon from heavy ion implemented. For PA collision, you have to generate your diagram
+          with "set group_subprocesses False"
+      OM: The default run_card.dat is now by default even more specific to your process. 
+          Nearly all the cuts are now hidden by default if they do not impact your current process.
+          This allows to have less information by default in the run_card which should simplifies its 
+          readibility. 
+      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
+          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
+          (This allow to fasten the computation of such zero contribution)
+
+
 2.6.7(16/10/19)
       OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
       OM: Fix a bug introduced in 2.6.6 related to the restriction of model which was leading to wrong result for re-weighitng with loop model (but impact can in principle be not limited to re-weighting).
@@ -24,7 +45,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Any number in the cards (not only integer) can use multiplication, division and k/M suffix for times 1000 and 1 million respectively
       OM: Energy cut (at LO) are now hidden by default for LHC type of run but visible for lepton collider ones.
       OM: Same for beam polarization
-
 
 2.6.5 (03/02/19)
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--

@@ -1062,6 +1062,49 @@ class CheckValidForCmd(cmd.CheckCmd):
             if re.search('\D\$', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
+                
+        # '{}' should only be used for onshell particle (including initial/final state)
+        # check first that polarization are not include between > >
+        if nbsep == 2:
+            if '{' in particles_parts[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used as required s-channel')
+        split = re.split('\D[$|/]',particles_parts[-1],1)
+        if len(split)==2:
+            if '{' in split[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
+            
+        if '[' in process and '{' in process:
+            valid = False
+            if 'noborn' in process:
+                valid = True
+            else:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+
+            # below are the check when [QCD] will be valid for computation            
+            order = process.split('[')[1].split(']')[0]
+            if '=' in order:
+                order = order.split('=')[1]
+            if order.strip().lower() != 'qcd':
+                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+
+
+            for p in particles_parts[1].split():
+                if '{' in p:
+                    part = p.split('{')[0]
+                else:
+                    continue
+                if self._curr_model:
+                    p = self._curr_model.get_particle(part)
+                    if not p:
+                        if part in self._multiparticles:
+                            for part2 in self._multiparticles[part]:
+                                p = self._curr_model.get_particle(part2)
+                                if p.get('color') != 1:
+                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                        continue
+                    if p.get('color') != 1:
+                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+        
 
 
     def check_tutorial(self, args):
@@ -1460,8 +1503,8 @@ This will take effect only in a NEW terminal
 
 
         if args[0] in ['gauge']:
-            if args[1] not in ['unitary','Feynman']:
-                raise self.InvalidCmd('gauge needs argument unitary or Feynman.')
+            if args[1] not in ['unitary','Feynman', 'axial']:
+                raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -2484,7 +2527,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1].lower() == 'ewscheme':
                 return self.list_completion(text, ["external"])
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman','default'])
+                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'output_dependencies':
@@ -3706,8 +3749,17 @@ This implies that with decay chains:
             logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
+        if madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool:
+            options.horizontal = True
+            options.external = True  
+            options.max_size = 0.3 
+            options.add_gap = 0.5
+            misc.sprint(options)     
         options = draw_lib.DrawOption(options)
         start = time.time()
+
+
+            
 
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
@@ -4247,7 +4299,7 @@ This implies that with decay chains:
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)
+                myprocdef_feyn = self.extract_process(line)              
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
@@ -4266,7 +4318,7 @@ This implies that with decay chains:
                                                 reuse = options['reuse'],
                                                 output_path = output_path,
                                                 cmd = self)
-
+            
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
             nb_processes += len(gauge_result_no_brs)            
@@ -4413,7 +4465,7 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman):\n'
+            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -4636,6 +4688,7 @@ This implies that with decay chains:
                 else:
                     orders[order]=99
         
+
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -4691,6 +4744,83 @@ This implies that with decay chains:
                 continue
 
             mylegids = []
+            polarization = []
+            if '{' in part_name:
+                part_name, pol = part_name.split('{',1)
+                pol, rest = pol.split('}',1)
+                
+                no_dup_name = part_name
+                while True:
+                    try:
+                        spin = self._curr_model.get_particle(no_dup_name).get('spin')
+                        break
+                    except AttributeError:
+                        if no_dup_name in self._multiparticles:
+                            spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[no_dup_name]])
+                            if len(spins) > 1:
+                                raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
+                            else:
+                                spin = spins.pop()
+                                break
+                        elif no_dup_name[0].isdigit():
+                            no_dup_name = no_dup_name[1:]
+                        else:
+                            raise
+                if rest:
+                    raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
+                ignore  =False
+                for i,p in enumerate(pol):
+                    if ignore or p==',':
+                        ignore= False
+                        continue
+                    if p in ['t','T']:
+                        if spin == 3:
+                            polarization += [1,-1]
+                        else:
+                            raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
+                    elif p in ['l', 'L']:
+                        if spin == 3:
+                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                        polarization += [-1]
+                    elif p in ['R','r']:
+                        polarization += [1]
+                    elif p in ["A",'a']:
+                        if spin == 3:
+                            polarization += [99]
+                        else:
+                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
+                    elif p in ['+']:
+                        if i +1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(p)
+                            ignore = True
+                        else:
+                            polarization += [1]
+                    elif p in ['-']:
+                        if i+1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(-p)
+                            ignore = True
+                        else:
+                            polarization += [-1]
+                    elif p in [0,'0']:
+                        if spin in [1,2]:
+                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                        else:
+                            polarization += [0]
+                    elif p.isdigit():
+                        p = int(p)
+                        if abs(p) > 3: 
+                            raise self.InvalidCmd("polarization are between -3 and 3")
+                        polarization.append(p)
+                    else:
+                        raise self.InvalidCmd('Invalid Polarization')
+
+            duplicate =1
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd,\
@@ -4705,12 +4835,28 @@ This implies that with decay chains:
                       "No pdg_code %s in model" % part_name
             else:
                 mypart = self._curr_model['particles'].get_copy(part_name)
+                
                 if mypart:
                     mylegids.append(mypart.get_pdg_code())
+                else:
+                    # check for duplication flag!
+                    if part_name[0].isdigit():
+                        duplicate, part_name = int(part_name[0]), part_name[1:]
+                        if part_name in self._multiparticles:
+                            if isinstance(self._multiparticles[part_name][0], list):
+                                raise self.InvalidCmd,\
+                                      "Multiparticle %s is or-multiparticle" % part_name + \
+                                      " which can be used only for required s-channels"
+                            mylegids.extend(self._multiparticles[part_name])                        
+                        else:
+                            mypart = self._curr_model['particles'].get_copy(part_name)
+                            mylegids.append(mypart.get_pdg_code())
 
             if mylegids:
-                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state}))
+                for _ in range(duplicate):
+                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                        'state':state,
+                                                        'polarization': polarization}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
@@ -5038,10 +5184,18 @@ This implies that with decay chains:
         final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
+            if '{' in particle:
+                particle = particle.split('{')[0]
             if particle in pids:
                 final.add(pids[particle])
             elif particle in self._multiparticles:
                 final.update(set(self._multiparticles[particle]))
+            elif particle[0].isdigit():
+                if particle[1:] in pids:
+                    final.add(pids[particle[1:]])
+                elif particle in self._multiparticles:
+                    final.update(set(self._multiparticles[particle[1:]]))                
+
         return final
 
     def extract_particle_ids(self, args):
@@ -5234,7 +5388,7 @@ This implies that with decay chains:
                 if os.path.sep in args[1] and "import" in self.history[-1]:
                     self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
 
-                if self.options['gauge']=='unitary':
+                if self.options['gauge'] in ['unitary', 'axial']:
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
                          self._curr_model.get('perturbation_couplings') not in \
@@ -7251,6 +7405,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not self._curr_model:
                 if args[1] == 'unitary':
                     aloha.unitary_gauge = True
+                elif args[1] == 'axial':
+                    aloha.unitary_gauge = 2 
                 else:
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
@@ -7266,6 +7422,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+                                           % self._curr_model.get('name'))
+            elif args[1] == 'axial':
+                if 0 in self._curr_model.get('gauge'):
+                    aloha.unitary_gauge = 2
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
             else:
                 if 1 in self._curr_model.get('gauge'):

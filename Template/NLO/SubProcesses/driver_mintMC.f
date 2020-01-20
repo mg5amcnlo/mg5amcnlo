@@ -141,7 +141,7 @@ c
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
-         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
       else
          doreweight=.false.
          do_rwgt_scale=.false.

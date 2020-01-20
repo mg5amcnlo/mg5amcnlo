@@ -30,11 +30,11 @@ c
             vc(2) = p(1)/p(0)
             vc(3) = p(2)/p(0)
             vc(4) = p(3)/p(0)
-         else
+      else
             vc(1) = p(0)/vmass
             vc(2) = p(1)/vmass
             vc(3) = p(2)/vmass
             vc(4) = p(3)/vmass
-         endif
+      endif
       return
       end

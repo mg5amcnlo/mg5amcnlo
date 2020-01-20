@@ -594,12 +594,12 @@ class ALOHAWriterForFortran(WriteALOHA):
         p = [] # a list for keeping track how to write the momentum
         
         signs = self.get_momentum_conservation_sign()
-        
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
                 out.write("    OM{0} = {1}\n    if (M{0}.ne.{1}) OM{0}={2}/M{0}**2\n".format( 
                          i+1, self.change_number_format(0), self.change_number_format(1)))
-            
+
+
             if i+1 == self.outgoing:
                 out_type = type
                 out_size = self.type_to_size[type] 
@@ -612,6 +612,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
         # define the resulting momenta
         if self.offshell:
+            
+            
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
             
@@ -622,6 +624,27 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
 
+            if "P1T" in self.tag or "P1L" in self.tag:
+                for i in range(1,4):
+                    P = "P%s" % (self.outgoing)
+                    value = ["1d-30", "0d0", "1d-15"]
+                    out.write("  IF (DABS(%(P)s(0))*1e-10.gt.DABS(%(P)s(%(i)s))) %(P)s(%(i)s)=%(val)s\n"
+                              % {"P": P, "i":i, 'val':value[i-1]})
+            i = self.outgoing -1
+            if self.declaration.is_used('Tnorm%s' % (i+1)):
+                out.write("    TNORM{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))\n".format(
+                        i+1))
+            if self.declaration.is_used('TnormZ%s' % (i+1)):
+                out.write("    TNORMZ{0} =  TNORM{0} - P{0}(3)\n".format(
+                        i+1))
+
+            if self.declaration.is_used('FWP%s' % (i+1)):
+                out.write("     FWP{0} = DSQRT(-P{0}(0) + TNORM{0})\n"\
+                          .format(i+1))
+            if self.declaration.is_used('FWM%s' % (i+1)):
+                out.write("     FWM{0} = DSQRT(-P{0}(0) - TNORM{0})\n"\
+                          .format(i+1))
+                #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
         # Returning result
         return out.getvalue()
@@ -715,7 +738,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
             if not abs(tmp - number) / abs(tmp + number) < 1e-8:
-                out = '%s%s' % (number, self.format)
+                if 'e' in str(number):
+                    out = str(number).replace('e','d')
+                else:
+                    out = '%s%s' % (number, self.format)
             else:
                 out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out
@@ -745,7 +771,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
-
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
@@ -774,7 +799,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
-            if 'L' not in self.tag:
+            is_loop = False
+            if 'L' in self.tag:
+                if self.tag.count('L') == 1 and 'PL' in self.tag:
+                    is_loop = False
+                else:
+                    is_loop = True
+                    
+            if not is_loop:
                 coeff = 'denom*'    
                 if not aloha.complex_mass:
                     if self.routine.denominator:
@@ -916,6 +948,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             writer.write_comments(commentstring)
             writer.writelines(text)
         return text
+
 
 class QP(object): 
     """routines for writing out Fortran"""

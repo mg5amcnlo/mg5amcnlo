@@ -48,3 +48,10 @@ if ReadWrite:
                     pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
     except Exception,error:
         pass
+  
+ADMIN_DEBUG = False  
+if os.path.exists(os.path.join(MG5DIR,'bin', 'create_release.py')):
+    if os.path.exists(os.path.join(MG5DIR,'.bzr')):
+        ADMIN_DEBUG = True
+    
+        

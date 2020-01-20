@@ -2245,7 +2245,7 @@ class decay_all_events(object):
             nb_mc_masses=len(indices_for_mc_masses)
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'])
+            stdin_text=' %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'])
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2373,7 +2373,7 @@ class decay_all_events(object):
         #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
         nb_mc_masses=0
         p, p_str=self.curr_event.give_momenta(event_map)
-        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0)
+        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, self.options['frame_id'])
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses
@@ -3278,8 +3278,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-
-        std_in=" %s  %s %s %s  \n" % ("1",BWcut, self.Ecollider, nbpoints)
+        std_in=" %s  %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)
@@ -3348,7 +3347,7 @@ class decay_all_events(object):
                 if nb < cut:
                     if key[0]=='full':
                         path=key[1]
-                        end_signal="5 0 0 0 \n"  # before closing, write down the seed 
+                        end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal)
                         ranmar_state=external.stdout.readline()
                         ranmar_file=pjoin(path,'ranmar_state.dat')
@@ -3922,7 +3921,8 @@ class decay_all_events(object):
                 
         self.cross = 0
         self.error = 0
-        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())):
+        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())) \
+                                 and not self.options['onlyhelicity']:
             new_init =''
             curr_proc = 0
             has_missing=False
@@ -3962,7 +3962,7 @@ class decay_all_events(object):
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0 0\n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     try:
                         external.stdin.write(stdin_text)
@@ -3989,7 +3989,7 @@ class decay_all_events(object):
             except Exception:
                 pass
             else:
-                stdin_text="5 0 0 0"
+                stdin_text="5 0 0 0 0"
                 external.stdin.write(stdin_text)
                 external.stdin.close()
                 external.stdout.close()

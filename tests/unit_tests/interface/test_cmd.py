@@ -204,6 +204,7 @@ class TestValidCmd(unittest.TestCase):
         """check if generate format are correctly supported"""
     
         cmd = self.cmd
+        cmd.do_import('sm')
         
         # valid syntax
         cmd.check_process_format('e+ e- > e+ e-')
@@ -211,6 +212,13 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_process_format('e+ e- > mu+ ta- / x $y @1')
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y @1')
         cmd.check_process_format('e+ e- > mu+ ta- $ x /y, (e+ > e-, e-> ta) @1')
+        cmd.check_process_format('e+ e- > Z{L}, Z > mu+ mu- @1')
+        cmd.check_process_format('e+ e- > Z{0}, Z > mu+ mu- @1')
+        cmd.check_process_format('e+{L} e- > mu+{L} mu-{R} @1')
+        cmd.check_process_format('e+ e- > t{L} t~ Z{L}, t > mu+ mu- @1')
+        cmd.check_process_format('g g > Z Z [ noborn=QCD] @1')
+        cmd.check_process_format('u u~ > 2w+ 2j')
+        cmd.check_process_format('u u~ > 2w+{0} 2j')
         
         # unvalid syntax
         self.wrong(cmd.check_process_format, ' e+ e-')
@@ -223,6 +231,13 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, ' e+ > e+, (e+ > e- / z, e- > top')   
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z{L} > mu+ mu-')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z > mu+ mu- / W+{L}')
+        self.wrong(cmd.check_process_format, 'e+ e- > Z > mu+ mu- $ W+{L}')
+        self.wrong(cmd.check_process_format, 'u u~ > t{L} t~ [QCD]')
+        self.wrong(cmd.check_process_format, 'u u~ > W+{L} vl [ QED QCD]')
+        self.wrong(cmd.check_process_format,'u u~ > w+{L} [QCD]')
+        self.wrong(cmd.check_process_format,'u u~ > e+{L} vl [QCD]')
         
     @test_aloha.set_global()
     def test_output_default(self):
@@ -236,6 +251,18 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_output([])
         
         self.assertNotEqual('tmp', cmd._export_dir)
+        
+    @test_aloha.set_global()
+    def test_simple_generate(self):
+        """check that simple syntax goes trough and return expected process"""
+           
+        cmd = self.cmd
+        self.do('import model sm')
+        self.do('generate 2p > 2j')
+        self.assertTrue(cmd._curr_amps)
+        proc = cmd._curr_amps[0].get('process').get('legs')
+        self.assertEqual(len(proc), 4)
+        
 
 
 class TestExtendedCmd(unittest.TestCase):
@@ -310,6 +337,19 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
         self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
         
         output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
-        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
+        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5])) 
         
+        output = self.cmd.get_final_part('p p > 2Z')
+        self.assertEqual(output, set([23]))        
         
+        output = self.cmd.get_final_part('p p > Z{L} j')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 23]))         
+
+        output = self.cmd.get_final_part('p p > Z{L} j, Z > e+ e-')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11])) 
+        
+        output = self.cmd.get_final_part('p p > 2Z{L} ')
+        self.assertEqual(output, set([23]))         
+
+        output = self.cmd.get_final_part('p p > 2Z{L} j, Z > e+ e-')
+        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11]))         
