@@ -2529,8 +2529,12 @@ c the momenta are identical.
             plot_id(i)=20 ! Born
          elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
+         elseif(itype(i).eq.5) then
+            plot_id(i)=13 ! collinear
+         elseif(itype(i).eq.6) then
+            plot_id(i)=14 ! soft collinear
          else
-            plot_id(i)=12 ! soft-virtual and counter terms
+            plot_id(i)=12 ! soft-virtual and soft counter terms
          endif
 c Loop over all previous icontr. If the plot_id, PDGs and momenta are
 c equal to a previous icountr, add the current weight to the plot_wgts
@@ -2540,12 +2544,12 @@ c contribution makes sure that it is added as a new element.
          do ii=1,i
             if (orderstag(ii).ne.orderstag(i)) cycle
             if (plot_id(ii).ne.plot_id(i)) cycle
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.pdg_equal(pdg_uborn(1,ii),pdg_uborn(1,i))) cycle
             else
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
             endif
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.momenta_equal_uborn(momenta(0,1,ii),momenta(0,1
      $              ,i),fks_j_d(nFKS(ii)),fks_i_d(nFKS(ii))
      $                 ,fks_j_d(nFKS(i)) ,fks_i_d(nFKS(i)))) cycle

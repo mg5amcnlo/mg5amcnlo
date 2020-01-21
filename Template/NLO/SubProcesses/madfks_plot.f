@@ -259,7 +259,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
 c Born, n-body or (n+1)-body contribution:
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
-      elseif(itype.eq.12)then
+      elseif(itype.ge.12 .and. itype.le.14)then
          ibody=2 ! n-body
       elseif(itype.eq.20)then
          ibody=3 ! Born
@@ -287,7 +287,16 @@ c Fill the arrays (momenta, status and PDG):
          p(4,i)=pmass(i)
       enddo
       if(iappl.ne.0)then
-         appl_itype     = ibody
+         appl_itype = ibody
+         if(ibody.eq.2)then
+c          collinear counterterm
+           if(itype.eq.13)then
+             appl_itype = 4
+c          solf-collinear counterterm
+           elseif(itype.eq.14)then
+             appl_itype = 5
+           endif
+         endif
          appl_amp_pos   = amp_pos_plot
          appl_www_histo = www(1)
       endif

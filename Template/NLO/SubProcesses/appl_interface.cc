@@ -349,7 +349,7 @@ extern "C" void appl_fill_() {
   //reco();
   // Check that itype ranges from 1 to 3.
   int itype = appl_common_histokin_.itype_histo;
-  if(itype != 1 && itype != 2 && itype != 3) {
+  if((itype < 1) || (itype > 5)) {
     std::cout << "amcblast ERROR: Invalid value of itype = " << itype << std::endl;
     exit(-10);
   }
@@ -417,21 +417,19 @@ extern "C" void appl_fill_() {
   // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
   // It uses all the CounterEvents (k=1,2,3) and the weights W0, WR and WF.
   else if(itype == 2) {
-    for(int k=1; k<=3; k++) {
-      x1     = appl_common_weights_.x1[k];
-      x2     = appl_common_weights_.x2[k];
-      if(k == 1)
-      {
-        static std::vector<std::vector<double>> x1Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        if(x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
-          return;
-        else
-        {
-          x1Saved[nh][grid_index] = x1;
-          x2Saved[nh][grid_index] = x2;
-        }
-      }
+    int k=1;
+    x1     = appl_common_weights_.x1[k];
+    x2     = appl_common_weights_.x2[k];
+    static std::vector<std::vector<double>> x1Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    static std::vector<std::vector<double>> x2Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    if(x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
+      return;
+    else
+    {
+      x1Saved[nh][grid_index] = x1;
+      x2Saved[nh][grid_index] = x2;
+    }
+    {
       scale2 = appl_common_weights_.muF2[k];
       ilumi  = appl_common_weights_.flavmap[k] - 1;
 
@@ -439,9 +437,9 @@ extern "C" void appl_fill_() {
 	std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2 << std::endl;
 	exit(-10);
       }
-      if(x1 == 0 && x2 == 0) continue;
+      if(x1 == 0 && x2 == 0) return;
 
-      if(fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol) continue;
+      if(fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol) return;
 
       // W0
       weight.at(ilumi) = W0[k];
@@ -488,7 +486,77 @@ extern "C" void appl_fill_() {
     grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index);
     weight.at(ilumi) = 0;
   }
+  else if(itype == 4) {
+    int k=2;
+    x1     = appl_common_weights_.x1[k];
+    x2     = appl_common_weights_.x2[k];
+    static std::vector<std::vector<double>> x1Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    static std::vector<std::vector<double>> x2Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    if(x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
+      return;
+    else
+    {
+      x1Saved[nh][grid_index] = x1;
+      x2Saved[nh][grid_index] = x2;
+    }
+    {
+      scale2 = appl_common_weights_.muF2[k];
+      ilumi  = appl_common_weights_.flavmap[k] - 1;
 
+      if(x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1) {
+	std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2 << std::endl;
+	exit(-10);
+      }
+      if(x1 == 0 && x2 == 0) return;
+
+      if(fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol) return;
+
+      // W0
+      weight.at(ilumi) = W0[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
+      weight.at(ilumi) = 0;
+      // WR
+      weight.at(ilumi) = WR[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+1);
+      weight.at(ilumi) = 0;
+      // WF
+      weight.at(ilumi) = WF[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+2);
+      weight.at(ilumi) = 0;
+    }
+  }
+  else if(itype == 5) {
+    int k=3;
+    x1     = appl_common_weights_.x1[k];
+    x2     = appl_common_weights_.x2[k];
+    static std::vector<std::vector<double>> x1Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    static std::vector<std::vector<double>> x2Saved(grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+    {
+      scale2 = appl_common_weights_.muF2[k];
+      ilumi  = appl_common_weights_.flavmap[k] - 1;
+
+      if(x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1) {
+	std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2 << std::endl;
+	exit(-10);
+      }
+      if(x1 == 0 && x2 == 0) return;
+
+      if(fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol) return;
+
+      // W0
+      weight.at(ilumi) = W0[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+0);
+      weight.at(ilumi) = 0;
+      // WR
+      weight.at(ilumi) = WR[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+1);
+      weight.at(ilumi) = 0;
+      // WF
+      weight.at(ilumi) = WF[k];
+      grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index+2);
+      weight.at(ilumi) = 0;
+    }
+  }
 }
 
 extern "C" void appl_fill_ref_() {
