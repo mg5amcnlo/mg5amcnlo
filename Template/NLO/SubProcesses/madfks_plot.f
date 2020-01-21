@@ -291,9 +291,9 @@ c Fill the arrays (momenta, status and PDG):
       if(iappl.ne.0)then
          appl_itype = ibody
          if(ibody.eq.2)then
-     ! special treatment for collinear
-     ! and soft collinear counterterms
-     ! (see comments inside the fill_plots subroutine)
+c      special treatment for collinear
+c      and soft collinear counterterms
+c      (see comments inside the fill_plots subroutine)
            if(itype.eq.13)then
             !collinear counterterm
              appl_itype = 4
