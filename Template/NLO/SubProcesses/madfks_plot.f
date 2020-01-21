@@ -256,7 +256,9 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer iappl
       common /for_applgrid/ iappl
       include "appl_common.inc"
-c Born, n-body or (n+1)-body contribution:
+c Born, n-body or (n+1)-body contribution. For more information
+C  about itype, see the comments about plot_id inside
+C  the fill_plot subroutine of fks_singular.f
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
       elseif(itype.ge.12 .and. itype.le.14)then
@@ -289,11 +291,14 @@ c Fill the arrays (momenta, status and PDG):
       if(iappl.ne.0)then
          appl_itype = ibody
          if(ibody.eq.2)then
-c          collinear counterterm
+     ! special treatment for collinear
+     ! and soft collinear counterterms
+     ! (see comments inside the fill_plots subroutine)
            if(itype.eq.13)then
+            !collinear counterterm
              appl_itype = 4
-c          solf-collinear counterterm
            elseif(itype.eq.14)then
+            !solf-collinear counterterm
              appl_itype = 5
            endif
          endif

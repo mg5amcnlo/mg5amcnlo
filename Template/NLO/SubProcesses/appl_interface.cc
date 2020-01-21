@@ -415,7 +415,7 @@ extern "C" void appl_fill_() {
     weight.at(ilumi) = 0;
   }
   // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
-  // It uses all the CounterEvents (k=1,2,3) and the weights W0, WR and WF.
+  // Soft CounterEvents (k=1) and uses all weights W0, WR and WF.
   else if(itype == 2) {
     int k=1;
     x1     = appl_common_weights_.x1[k];
@@ -486,6 +486,8 @@ extern "C" void appl_fill_() {
     grid_obs[nh].fill_grid(x1,x2,scale2,obs,&weight[0],grid_index);
     weight.at(ilumi) = 0;
   }
+  // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
+  // Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
   else if(itype == 4) {
     int k=2;
     x1     = appl_common_weights_.x1[k];
@@ -525,6 +527,8 @@ extern "C" void appl_fill_() {
       weight.at(ilumi) = 0;
     }
   }
+  // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
+  // Soft-Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
   else if(itype == 5) {
     int k=3;
     x1     = appl_common_weights_.x1[k];

@@ -2525,16 +2525,27 @@ c the momenta are identical.
          do j=1,iwgt
             plot_wgts(j,i)=0d0
          enddo
+         ! The following if lines have been changed with respect to the
+         ! usual (with just 3 plot ids: 20, 11 and 12):
+         !  The kinematics of soft and collinear counterterms may
+         !  be different, for those processes without soft singularities
+         !  from initial(final)-state configurations when the 
+         !  final(initial) confs are integrated (e.g. a a > e+ e-)
+         !  This gives no problem for normal histogramming (and in
+         !  fact plot_id 11 13 and 14 are merged into ibody=2 in
+         !  outfun, but it gives troubles e.g. with applgrid. 
+         !  Note that the separation between soft and soft-virtual
+         !  may not be needed in reality
          if (itype(i).eq.2) then
             plot_id(i)=20 ! Born
          elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
          elseif(itype(i).eq.5) then
-            plot_id(i)=13 ! collinear
+            plot_id(i)=13 ! collinear counter term
          elseif(itype(i).eq.6) then
-            plot_id(i)=14 ! soft collinear
+            plot_id(i)=14 ! soft collinear counter term
          else
-            plot_id(i)=12 ! soft-virtual and soft counter terms
+            plot_id(i)=12 ! soft-virtual and soft counter term
          endif
 c Loop over all previous icontr. If the plot_id, PDGs and momenta are
 c equal to a previous icountr, add the current weight to the plot_wgts
