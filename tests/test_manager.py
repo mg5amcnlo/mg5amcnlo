@@ -67,7 +67,7 @@ from madgraph import MG4DIR
 from madgraph.interface.extended_cmd import Cmd
 from madgraph.iolibs.files import cp, ln, mv
 import madgraph.various.misc as misc
-
+from tests import to_bypass
 
 #position of MG_ME
 MGME_dir = MG4DIR
@@ -84,6 +84,9 @@ _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
 _hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
 _hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
 _hc_comparison_modif_log = pjoin(_input_file_path,'IOTestsRefModifs.log')
+
+#_to_bypass = []
+#misc.sprint("define _to_bypass", id(_to_bypass))
 
 
 class MyTextTestRunner(unittest.TextTestRunner):
@@ -507,6 +510,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         shutil.rmtree(hc_comparison_files_BackUp)
 
 class TimeLimit(Exception): pass
+
 #===============================================================================
 # TestSuiteModified
 #===============================================================================
@@ -519,20 +523,26 @@ class TestSuiteModified(unittest.TestSuite):
     time_limit = 1
     mintime_limit=0
     time_db = {}
+    bypass = []
     stop_eval = False # bypass all following test when this is on True (but those in preserve)
 
     @tests.IOTests.set_global()
     def __call__(self, *args, **kwds):
 
-        bypass= []
+        bypass=list(TestSuiteModified.bypass) + to_bypass
         to_preserve=[]
 
 #        if 'TESTLHEParser' in str(self):
 #            TestSuiteModified.stop_eval = False
-
-        if any(name in str(self) for name in bypass):
+        if any(name in str(self) for name in bypass if isinstance(name,str)):
             MyTextTestRunner.stream.write('s')
-            return 
+            return
+        elif bypass:
+            fid = (self._tests[0]._testMethodName,self._tests[0]._testMethodDoc)
+            if fid in bypass:
+                MyTextTestRunner.bypassed.append(fid[0])
+                MyTextTestRunner.stream.write('B')
+                return                
 
         if  TestSuiteModified.stop_eval and \
                 all(name not in str(self) for name in to_preserve):
@@ -888,6 +898,15 @@ class IOTestFinder(TestFinder):
             logging.critical("file %s takes a long time to load (%.4fs)" % \
                                                          (pyname, time_to_load))
 
+def bypass_for_py3(fct):
+
+    if six.PY3:
+        to_bypass.append((fct.__name__, fct.__doc__))
+        #global BYPASS
+    
+    return fct
+
+            
 if __name__ == "__main__":
 
     help = """

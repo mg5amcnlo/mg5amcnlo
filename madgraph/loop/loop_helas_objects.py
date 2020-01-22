@@ -2583,7 +2583,6 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
             logger.debug('Computing the loop color basis')      
         
         # Define the objects stored in the contained color_information
-        misc.sprint(color_information)
         #for key in color_information:
         #    exec("global %s;%s=color_information['%s']"%(key,key,key), locals())
         list_colorize = color_information['list_colorize']
@@ -2607,10 +2606,9 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
         loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
                               matrix_element.get('base_amplitude'),
                               )
-        misc.sprint("pass here", 'list_colorize' in locals(),'list_colorize' in globals(), list_colorize )
         list_colorize = []#locals()['list_colorize']
         list_color_basis = []
-        #misc.sprint(locals()['list_colorize'])
+
         try:
             # If the loop color configuration of the ME has
             # already been considered before, recycle
@@ -2618,7 +2616,6 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
             loop_col_basis_index = list_colorize.index(loop_colorize_obj)
             loop_col_basis = list_color_basis[loop_col_basis_index]
         except ValueError as error:
-            misc.sprint(str(error),)
             # If not, create color basis accordingly
             list_colorize.append(loop_colorize_obj)
             loop_col_basis.build()

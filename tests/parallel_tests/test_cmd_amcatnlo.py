@@ -299,7 +299,6 @@ class MECmdShell(IOTests.IOTestManager):
         """tests if the p p > go go (in the mssm) process works"""
         start= time.time()
         self.generate(['p p > go go [real=QCD]'], 'MSSM_SLHA2')
-        misc.sprint( 'ppgg[real=QCD] generated in', time.time()-start)
 
 
         ####NLO
@@ -314,7 +313,6 @@ class MECmdShell(IOTests.IOTestManager):
 
         start = time.time()
         self.do('launch NLO -f')
-        misc.sprint( 'launch in NLO in ', time.time()-start)
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
@@ -332,7 +330,6 @@ class MECmdShell(IOTests.IOTestManager):
 
         start = time.time()
         self.do('launch aMC@NLO -fp')
-        misc.sprint( 'launch in aMC@NLO in ', time.time()-start)
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))

@@ -83,7 +83,8 @@ StringIO = six
 from six.moves import range
 from six.moves import zip
 import io
-file = io.FileIO
+if six.PY3:
+    file = io.FileIO
 
 
 ADDED_GLOBAL = []

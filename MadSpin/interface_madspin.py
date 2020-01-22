@@ -26,6 +26,7 @@ import shutil
 import sys
 import time
 import glob
+import six
 from six.moves import range
 
 
@@ -1672,11 +1673,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
             
             mymod = __import__("%s.matrix2py" % (pdir))
-            try:
-                reload(mymod)
-            except Exception:
+            if six.PY3:
                 from importlib import reload
-                reload(mymod)
+            else:
+                from imp import reload
+            reload(mymod)
             mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
