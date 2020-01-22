@@ -2,8 +2,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 
-2.7.0()
-      OM: Allow for a new syntax:
+2.7.0(20/01/10)
+      OM: Allow for a new syntax in presence of multi-jet/lepton process:
          generate p p > 3j replaces p p > j j j 
       OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]
            ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
@@ -13,7 +13,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Support for elastic photon from heavy ion implemented. For PA collision, you have to generate your diagram
           with "set group_subprocesses False"
       OM: The default run_card.dat is now by default even more specific to your process. 
-          Nearly all the cut are now hidden by default if they do not impact your current process.
+          Nearly all the cuts are now hidden by default if they do not impact your current process.
           This allows to have less information by default in the run_card which should simplifies its 
           readibility. 
       OM: distinguish in the code if zero contribution are related to no point passing cuts or if

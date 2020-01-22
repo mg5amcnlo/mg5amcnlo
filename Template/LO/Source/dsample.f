@@ -1518,7 +1518,7 @@ c     Constants
 c
       include 'genps.inc'
       integer    max_events
-      parameter (max_events=500000) !Maximum # events before get non_zero
+      parameter (max_events=5000000) !Maximum # events before get non_zero
 c
 c     Arguments
 c

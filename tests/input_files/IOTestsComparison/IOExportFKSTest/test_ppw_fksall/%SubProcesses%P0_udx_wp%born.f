@@ -28,7 +28,6 @@ C     ARGUMENTS
 C     
       REAL*8 P1(0:3,NEXTERNAL-1)
       COMPLEX*16 ANS(2)
-
 C     
 C     LOCAL VARIABLES 
 C     
@@ -38,8 +37,6 @@ C
       INTEGER NTRY(4)
       DATA NTRY /4*0/
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
-      REAL*8 T_SAVE(NCOMB,2)
-      REAL*8 T_SUM(2)
       DATA (NHEL(I,   1),I=1,3) / 1,-1,-1/
       DATA (NHEL(I,   2),I=1,3) / 1,-1, 0/
       DATA (NHEL(I,   3),I=1,3) / 1,-1, 1/
@@ -125,8 +122,6 @@ C     ----------
       ANS(1) = 0D0
       ANS(2) = 0D0
       HEL_FAC=1D0
-      T_SUM(1) = 0D0
-      T_SUM(2) = 0D0
       DO IHEL=1,NCOMB
           ! the following lines are to avoid segfaults when glu_ij=0
         COND_IJ=SKIP(NFKSPROCESS).EQ.0
@@ -137,33 +132,19 @@ C     ----------
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
      $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.
      $      2) ) THEN
-            ANS(1) = ANS(1) + BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE
-     $       ,BORNS)
-            ANS(2)=ANS(2)+ BORNTILDE
-            T_SAVE(IHEL,1) = BORNS(1)
-            T_SAVE(IHEL,2) = BORNS(2)
-            T_SUM(1) = T_SUM(1) + DABS(BORNS(1))
-            T_SUM(2) = T_SUM(2) + DABS(BORNS(2))
+            ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,BORNS)
+            ANS(2)=ANS(2)+BORNTILDE
+            IF ( BORNS(1).NE.0D0 .AND. .NOT. GOODHEL(IHEL,NFKSPROCESS)
+     $        ) THEN
+              GOODHEL(IHEL,NFKSPROCESS)=.TRUE.
+            ENDIF
+            IF ( BORNS(2).NE.0D0 .AND. .NOT. GOODHEL(IHEL
+     $       +SKIP(NFKSPROCESS),NFKSPROCESS) ) THEN
+              GOODHEL(IHEL+SKIP(NFKSPROCESS),NFKSPROCESS)=.TRUE.
+            ENDIF
           ENDIF
-        ELSE
-          T_SAVE(IHEL,1) = 0D0
-          T_SAVE(IHEL,2) = 0D0
         ENDIF
       ENDDO
-
-      IF(NTRY(NFKSPROCESS).LT.2) THEN
-        IF (T_SUM(2).LT.1E-10*T_SUM(1)) T_SUM(2) = T_SUM(1)
-        DO IHEL=1,NCOMB
-          IF ( DABS(T_SAVE(IHEL,1)).GT.DABS(T_SUM(1))*1D-8/NCOMB)THEN
-            GOODHEL(IHEL,NFKSPROCESS)=.TRUE.
-          ENDIF
-
-          IF ( DABS(T_SAVE(IHEL,2)).GT.DABS(T_SUM(2))*1D-8/NCOMB)THEN
-            GOODHEL(IHEL+SKIP(NFKSPROCESS),NFKSPROCESS)=.TRUE.
-          ENDIF
-        ENDDO
-      ENDIF
-
       ANS(1)=ANS(1)/DBLE(IDEN)
       ANS(2)=ANS(2)/DBLE(IDEN)
       WGT_ME_BORN=DBLE(ANS(1))
