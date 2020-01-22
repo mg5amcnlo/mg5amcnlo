@@ -227,8 +227,8 @@ class EventFile(object):
             #    else:
             #        self.file = open(path, mode, newline='\n', *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
-            self.file = open(path[:3], mode, *args, **opt)
-            path = path[:3]
+            self.file = open(path[:-3], mode, *args, **opt)
+            path = path[:-3]
         else:            
             try:
                 self.file =  gzip.GzipFile(path, mode, *args, **opt)
@@ -241,8 +241,8 @@ class EventFile(object):
                     misc.gunzip(path)
                 else:
                     self.to_zip = True
-                self.file = open(path[:3], mode, *args, **opt)
-                path = path[:3]                
+                self.file = open(path[:-3], mode, *args, **opt)
+                path = path[:-3]                
 
 
         self.path = path

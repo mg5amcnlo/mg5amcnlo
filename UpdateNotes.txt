@@ -1,6 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+python3:
+      OM: dropping function set low_mem_multicore_nlo
+      OM: dropping support for syscalc (c++ version)
+      OM: introduction of new setup variable
+          f2py_compiler_py2 and f2py_compiler_py3
+	  which will be used to overwrite f2py_compiler when using the associate python version
+
 
 2.7.0(20/01/10)
       OM: Allow for a new syntax in presence of multi-jet/lepton process:

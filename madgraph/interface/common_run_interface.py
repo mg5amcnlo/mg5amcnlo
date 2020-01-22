@@ -597,6 +597,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'lhapdf': 'lhapdf-config',
                        'timeout': 60,
                        'f2py_compiler':None,
+                       'f2py_compiler_py2':None,
+                       'f2py_compiler_py3':None,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
@@ -3192,7 +3194,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     tmp = args[1].lower()
                 else:
                     raise
-            self.options[args[0]] = tmp  
+            self.options[args[0]] = tmp 
+        elif args[0].startswith('f2py_compiler'):
+            to_do = True
+            if args[0].endswith('_py2') and six.PY3:
+                to_do = False
+            elif args[0].endswith('_py3') and six.PY2:
+                to_do = False
+            if to_do:
+                if args[1] == 'None':
+                    self.options['f2py_compiler'] = None
+                else:
+                    logger.info('set f2py compiler to %s' % args[1])
+                    self.options['f2py_compiler'] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = ast.literal_eval(args[1])

@@ -2010,7 +2010,7 @@ C     Number of configs
         self.assertTrue('F2PY=$(DEFAULT_F2PY_COMPILER)' in LO_text)
         self.assertTrue('FC=$(DEFAULT_F_COMPILER)' in LO_text)
         if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
-            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
+#            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
             self.assertTrue('DEFAULT_F_COMPILER=gfortran' in LO_text)            
 #            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
 #            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)

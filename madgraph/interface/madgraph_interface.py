@@ -2889,6 +2889,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'text_editor':None,
                        'fortran_compiler':None,
                        'f2py_compiler':None,
+                       'f2py_compiler_py2':None,
+                       'f2py_compiler_py3':None,
                        'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
@@ -7490,13 +7492,20 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options['fortran_compiler'] = None
         elif args[0] == 'default_unset_couplings':
             self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
-        elif args[0] == 'f2py_compiler':
-            if args[1] != 'None':
-                if log:
-                    logger.info('set f2py compiler to %s' % args[1])
-                self.options['f2py_compiler'] = args[1]
-            else:
-                self.options['f2py_compiler'] = None
+        elif args[0].startswith('f2py_compiler'):
+            to_do = True
+            if args[0].endswith('_py2') and six.PY3:
+                to_do = False
+            elif args[0].endswith('_py3') and six.PY2:
+                to_do = False
+            if to_do:
+                if args[1] != 'None':
+                    if log:
+                        logger.info('set f2py compiler to %s' % args[1])
+                
+                    self.options['f2py_compiler'] = args[1]
+                else:
+                    self.options['f2py_compiler'] = None
             
         elif args[0] == 'loop_optimized_output':
 
