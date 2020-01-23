@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """Unit test library for the export Pythia8 format routines"""
 
 from __future__ import absolute_import
@@ -24,7 +23,7 @@ import fractions
 import os
 import re
 import tests.IOTests as IOTests
-
+from tests import test_manager
 
 import tests.unit_tests as unittest
 
@@ -1372,6 +1371,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
 
+    @test_manager.bypass_for_py3
     def test_write_pythia8_parameter_files(self):
         """Test writing the Pythia model parameter files"""
 

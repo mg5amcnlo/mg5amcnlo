@@ -658,7 +658,7 @@ class TestFinder(list):
 
             if status == 'file':
                 self.collect_file(directory + '/' + name, local_check)
-            elif status == "module":
+            elif status == "module" and name != 'input_files':
                 self.collect_dir(directory + '/' + name, local_check)
 
         if move:
