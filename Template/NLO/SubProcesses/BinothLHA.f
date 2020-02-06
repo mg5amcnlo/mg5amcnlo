@@ -77,7 +77,7 @@ c statistics for MadLoop
       common /to_updateloop/updateloop
 
       integer get_n_tagged_photons
-      integer ntagph
+      integer ntagph, qed_pow_b
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -264,6 +264,8 @@ C Uncomment the lines below that apply to the case at hand
       do i = 1, AMP_SPLIT_SIZE_BORN 
         call amp_split_pos_to_orders(i, amp_orders)
         born_wgt = amp_split(i)
+        ! this is the number of powers of 'e' in the born
+        qed_pow_b = amp_orders(qed_pos)
         amp_orders(qed_pos) = amp_orders(qed_pos) + 2
 C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 C$$$        ! the following lines need to be uncommented when
@@ -285,11 +287,11 @@ C$$$     $      ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
         ! this is the contribution for the single pole
         amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
      $      amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) +
-     $      (nexternal-nincoming-1-ntagph) * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
+     $      (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
         ! and this to the finite part
         amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
      $      amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) +
-     $      (nexternal-nincoming-1-ntagph) * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+     $      (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
 
       enddo
 c======================================================================
