@@ -8,6 +8,7 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
+      include "../../Source/MODEL/input.inc"
       include 'born_nhel.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
@@ -74,9 +75,13 @@ c statistics for MadLoop
 
       logical updateloop
       common /to_updateloop/updateloop
+
+      integer get_n_tagged_photons
+      integer ntagph
 c masses
       include 'pmass.inc'
       data nbad / 0 /
+
 
       IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
@@ -93,8 +98,7 @@ c Ellis-Sexton scale)
       single  = 0d0
       double  = 0d0
       born_hel_from_virt = 0d0
-C     reset the amp_split array
-      amp_split(1:amp_split_size) = 0d0
+C     reset the various arrays
       amp_split_finite_ML(1:amp_split_size) = 0d0
       amp_split_poles_ML(1:amp_split_size,1) = 0d0
       amp_split_poles_ML(1:amp_split_size,2) = 0d0
@@ -251,6 +255,45 @@ c         firsttime_conversion=.false.
 c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
+
+c======================================================================
+c If there are tagged photon and other particles in the process, 
+C one must use a mixed Gmu-alpha0 renormalisation.
+C Uncomment the lines below that apply to the case at hand
+      ntagph = get_n_tagged_photons() 
+      do i = 1, AMP_SPLIT_SIZE_BORN 
+        call amp_split_pos_to_orders(i, amp_orders)
+        born_wgt = amp_split(i)
+        amp_orders(qed_pos) = amp_orders(qed_pos) + 2
+C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+C$$$        ! the following lines need to be uncommented when
+C$$$        ! one starts with a Gmu-scheme model
+C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+C$$$        ! this is the contribution for the single pole
+C$$$        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
+C$$$     $      amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) -
+C$$$     $      ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
+C$$$        ! and this to the finite part
+C$$$        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
+C$$$     $      amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) -
+C$$$     $      ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! the following lines need to be uncommented when
+        ! one starts with a alpha0-scheme model
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! this is the contribution for the single pole
+        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
+     $      amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) +
+     $      (nexternal-nincoming-1-ntagph) * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
+        ! and this to the finite part
+        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
+     $      amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) +
+     $      (nexternal-nincoming-1-ntagph) * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+
+      enddo
+c======================================================================
+
 c
 c Check poles for the first PS points when doing MC over helicities, and
 c for all phase-space points when not doing MC over helicities. Skip
@@ -263,7 +306,7 @@ c MadLoop initialization PS points.
          polecheck_passed = .true.
          ! loop over the full result and each of the amp_split
          ! contribution
-         do iamp=0,amp_split_size
+         do iamp=1,amp_split_size
           ! skip 0 contributions in the amp_split array
             if (iamp.ne.0) then
                if (amp_split_poles_FKS(iamp,1).eq.0d0.and.
@@ -512,6 +555,23 @@ c weight, screwing up the complete integration afterward.
          enddo
          virt_wgt=0d0
       endif
+      return
+      end
+
+
+      integer function get_n_tagged_photons()
+      implicit none
+      integer i
+      include "nexternal.inc"
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      get_n_tagged_photons = 0
+
+      do i = nincoming+1, nexternal
+        if (particle_tag(i)) 
+     $     get_n_tagged_photons = get_n_tagged_photons+1
+      enddo
+
       return
       end
 

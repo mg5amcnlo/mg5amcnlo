@@ -398,6 +398,7 @@ class FKSRealProcess(object):
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
+        self.particle_tags = [leg['is_tagged'] for leg in leglist]
         if not self.process['perturbation_couplings'] == ['QCD']:
             self.charges = [leg['charge'] for leg in leglist]
         else:

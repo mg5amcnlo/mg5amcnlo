@@ -43,7 +43,7 @@
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 0.003   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
+ 0.001   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)
 # These numbers are ignored except if req_acc_FO is equal to -1
  5000   = npoints_FO_grid  ! number of points to setup grids
@@ -59,13 +59,14 @@
 #***********************************************************************
  1   = lpp1    ! beam 1 type (0 = no PDF)
  1   = lpp2    ! beam 2 type (0 = no PDF)
- 4000.0   = ebeam1  ! beam 1 energy in GeV
- 4000.0   = ebeam2  ! beam 2 energy in GeV
+ 7000.0   = ebeam1  ! beam 1 energy in GeV
+ 7000.0   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
  lhapdf  = pdlabel ! PDF set
- 244800  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
+# 244800  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
+ 246800  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
               ! numbers for central PDF sets are allowed. Can be a list; 
               ! PDF sets beyond the first are included via reweighting.
 #***********************************************************************

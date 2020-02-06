@@ -2769,6 +2769,7 @@ Parameters              %(params)s\n\
             col_lines = []
             pdg_lines = []
             charge_lines = []
+            tag_lines = []
             fks_j_from_i_lines = []
             split_type_lines = []
             for i, info in enumerate(fks_info_list):
@@ -2782,6 +2783,9 @@ Parameters              %(params)s\n\
                     'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
                     % (i + 1, ', '.join('%19.15fd0' % charg\
                                         for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+                tag_lines.append( \
+                    'DATA (PARTICLE_TAG_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join(bool_dict[tag] for tag in fksborn.real_processes[info['n_me']-1].particle_tags) ))
                 fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
                                                 i + 1))
                 split_type_lines.append( \
@@ -2796,6 +2800,7 @@ Parameters              %(params)s\n\
             pdgs = [l.get('id') for l in bornproc.get('legs')] + [-21]
             colors = [l.get('color') for l in bornproc.get('legs')] + [8]
             charges = [l.get('charge') for l in bornproc.get('legs')] + [0.]
+            tags = [l.get('is_tagged') for l in bornproc.get('legs')] + [False]
 
             fks_i = len(colors)
             # fist look for a colored legs (set j to 1 otherwise)
@@ -2831,6 +2836,8 @@ Parameters              %(params)s\n\
                             % ', '.join([str(pdg) for pdg in pdgs])]
             charge_lines = ['DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                             % ', '.join('%19.15fd0' % charg for charg in charges)]
+            tag_lines = ['DATA (PARTICLE_TAG_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            %  ', '.join(bool_dict[tag] for tag in tags)]
             fks_j_from_i_lines = ['DATA (FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
                             % (fks_i, fks_j)]
             split_type_lines = [ \
@@ -2842,6 +2849,7 @@ Parameters              %(params)s\n\
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
         replace_dict['charge_lines'] = '\n'.join(charge_lines)
+        replace_dict['tag_lines'] = '\n'.join(tag_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
         replace_dict['split_type_lines'] = '\n'.join(split_type_lines)
 

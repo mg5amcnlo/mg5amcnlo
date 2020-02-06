@@ -5489,6 +5489,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision particle_charge(nexternal)
       common /c_charges/particle_charge
       include "run.inc"
@@ -5721,7 +5723,7 @@ C     skip particles which are not photons or charged
                   if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                 cycle
 C     set charge factors
-                  if (pdg_type(i).eq.22) then
+                  if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                      c_used = 0d0
                      gamma_used = gamma_ph
                      gammap_used = gammap_ph
@@ -6004,7 +6006,7 @@ C     skip particles which are not photons or charged
                      if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                    cycle
 C     set charge factors
-                     if (pdg_type(i).eq.22) then
+                     if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                         c_used = 0d0
                         gamma_used = gamma_ph
                         gammap_used = gammap_ph
@@ -6333,6 +6335,8 @@ c      include "fks.inc"
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       include 'coupl.inc'
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
@@ -6441,7 +6445,7 @@ c QED Born terms
             if (pdg_type(i).ne.22) then
               contr2=contr2-particle_charge(i)**2
               contr1=contr1-3d0/2d0*particle_charge(i)**2
-            else
+            elseif (.not.particle_tag(i)) then
               contr1=contr1-gamma_ph
             endif
           else

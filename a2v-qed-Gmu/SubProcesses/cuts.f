@@ -80,6 +80,7 @@ c are filled from the PDG codes (iPDG array) in this function.
       double precision pz(0:3)
       double precision delta_phi
       double precision dot
+      double precision ptgamma_hardest
 
       passcuts_user=.true. ! event is okay; otherwise it is changed
 
@@ -96,26 +97,25 @@ C***************************************************************
       pz(0:3) = 0d0
       do i = nincoming+1, nexternal
         if (abs(iPDG(i)).eq.12) then
-            !write(*,*) 'NEUTRINO', i, p(:,i)
             pz(0:3) = pz(0:3) + p(0:3,i)
         endif
       enddo
-      write(*,*) 'MZ', dsqrt(dot(pz,pz))
-      !write(*,*) 'PZ', pz
 
       ! find the photons
       ngamma = 0
+      ptgamma_hardest = 0d0
+      passcuts_user = .false.
       do i = nincoming+1, nexternal
         if (iPDG(i).eq.22) then
-          if (pt(p(0,i)).gt.ptgmin.and.abs(eta(p(0,i))).lt.etagamma.and.
-     $       delta_phi(p(0,i), pz).gt.2.6d0) then
-            ngamma = ngamma + 1
-            !write(*,*) 'AA', pt(p(0,i)), eta(p(0,i)),delta_phi(p(0,i), pz), ngamma
+          if (pt(p(0,i)).gt.ptgamma_hardest.and.pt(p(0,i)).gt.ptgmin) then
+              passcuts_user = abs(eta(p(0,i))).lt.etagamma.and.
+     $       delta_phi(p(0,i), pz).gt.2.6d0
+            ptgamma_hardest = pt(p(0,i))
           endif
         endif
       enddo
 
-      passcuts_user = ngamma.ge.1.and.pt(pz).gt.90d0
+      passcuts_user = passcuts_user.and.pt(pz).gt.90d0
          
       return
       end
