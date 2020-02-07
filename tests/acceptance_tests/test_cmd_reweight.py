@@ -137,8 +137,10 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if not self.debugging:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
@@ -165,7 +167,7 @@ class TestMECmdRWGT(unittest.TestCase):
         ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
         ff.write(cmd_lines)
         ff.close()
-        misc.sprint(self.run_dir)
+        #misc.sprint(self.run_dir)
         if 1:
         #with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
@@ -310,6 +312,7 @@ class TestMECmdRWGT(unittest.TestCase):
         """
         me_cmd = self.get_MEcmd(pjoin(_pickle_path, 'wj_zj.lhe.gz'))
         
+        
         cmd_lines = """
         launch --rwgt_name=SINGLE
         set aEWM1 150
@@ -321,9 +324,11 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if not self.debugging:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
             me_cmd.run_cmd('reweight run_01 --from_cards')
-            
 
 
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
@@ -333,7 +338,7 @@ class TestMECmdRWGT(unittest.TestCase):
         for i,event in enumerate(lhe):
             
             rwgt_data = event.parse_reweight()
-            misc.sprint(rwgt_data)
+            #misc.sprint(rwgt_data)
             self.assertTrue('SINGLE' in rwgt_data)
             self.assertTrue('NAME_0' in rwgt_data)
             self.assertTrue('NAME_1' in rwgt_data)

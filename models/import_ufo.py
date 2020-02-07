@@ -159,7 +159,7 @@ def import_model_from_db(model_name, local_dir=False):
         except Exception as error:
             misc.sprint(str(error))
             username = ''
-    if username in ['omatt', 'mattelaer', 'olivier'] and target is None and \
+    if username in ['omatt', 'mattelaer', 'olivier', 'omattelaer'] and target is None and \
                                     'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
             #condition only for my setup --ATLAS did not like it

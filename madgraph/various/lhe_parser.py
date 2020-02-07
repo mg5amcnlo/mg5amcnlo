@@ -432,16 +432,16 @@ class EventFile(object):
         if isinstance(event, Event):
             if self.eventgroup:
                 tmp = '<eventgroup>\n%s\n</eventgroup>\n' % event
-                self.write(tmp.encode())
+                self.write(tmp)
             else:
-                self.write(str(event).encode())
+                self.write(str(event))
         elif isinstance(event, list):
             if self.eventgroup:
-                self.write('<eventgroup>\n'.encode())
+                self.write('<eventgroup>\n')
             for evt in event:
-                self.write(str(evt).encode())
+                self.write(str(evt))
             if self.eventgroup:
-                self.write('</eventgroup>\n'.encode())
+                self.write('</eventgroup>\n')
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):

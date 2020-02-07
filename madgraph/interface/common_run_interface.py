@@ -595,6 +595,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'syscalc_path': './SysCalc',
                        'lhapdf': 'lhapdf-config',
+                       'lhapdf_py2': None,
+                       'lhapdf_py3': None,
                        'timeout': 60,
                        'f2py_compiler':None,
                        'f2py_compiler_py2':None,
@@ -2108,6 +2110,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         new_command.append('--multicore=create')
                     else:
                         stdout = devnull
+                        if six.PY3:
+                            stdout = subprocess.DEVNULL
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
@@ -3207,6 +3211,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 else:
                     logger.info('set f2py compiler to %s' % args[1])
                     self.options['f2py_compiler'] = args[1]
+        elif args[0].startswith('lhapdf'):
+            to_do = True
+            if args[0].endswith('_py2') and six.PY3:
+                to_do = False
+            elif args[0].endswith('_py3') and six.PY2:
+                to_do = False
+            if to_do and args[1] != 'None':
+                self.options[args[0]] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = ast.literal_eval(args[1])
@@ -4010,14 +4022,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
         lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
-                 stdout = subprocess.PIPE).stdout.read().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
 
         if lhapdf_version.startswith('5.'):
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
-                 stdout = subprocess.PIPE).stdout.read().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
         else:
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
-                 stdout = subprocess.PIPE).stdout.read().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
         
         self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
         # link the static library in lib
@@ -4220,11 +4232,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         lhapdf_version, alternate_path)
         elif lhapdf_version.startswith('6.'):
             # try to do a simple wget
-            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
-            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
-            misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
-            misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
+            import random
+            r = random.choice([0,1])
+            r = [r, 1-r]
+            for t in r:
+                if t ==0:
+                    wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
+                    wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+                else:
+                    wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
+                retcode = misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
+                if retcode:
+                    continue
+            
+                retcode = misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
                       cwd=pdfsets_dir)
+                if retcode:
+                    continue
+                break
+                
             if os.path.exists(pjoin(pdfsets_dir, filename)) or \
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \
@@ -4253,7 +4279,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                               filename, 
                                         lhapdf_version, alternate_path)
             elif 'LHAPATH' in os.environ and os.environ['LHAPATH']:
-                misc.sprint(os.environ['LHAPATH'], '-> retry')
                 if pdfsets_dir in os.environ['LHAPATH'].split(':'):
                     lhapath = os.environ['LHAPATH'].split(':')
                     lhapath = [p for p in lhapath if os.path.exists(p)]
@@ -4313,7 +4338,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         elif lhapdf_version.startswith('6.'):
             pdfsets_lines = \
-                    [l for l in open(pjoin(pdfsets_dir, 'pdfsets.index')).read().split('\n') if l.strip()]
+                    [l for l in open(pjoin(pdfsets_dir, 'pdfsets.index'),'r').read().split('\n') if l.strip()]
             lhapdf_pdfsets = dict( (int(l.split()[0]), 
                         {'lhaid': int(l.split()[0]),
                           'filename': l.split()[1]}) \
@@ -4331,10 +4356,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         try:
             lhapdf_version = \
                     subprocess.Popen([lhapdf_config, '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().strip()
+                        stdout = subprocess.PIPE).stdout.read().decode().strip()
         except OSError as error:
             if error.errno == 2:
-                raise Exception( 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf'])
+                raise Exception( 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % lhapdf_config)
             else:
                 raise
                 
@@ -4361,11 +4386,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             datadir = os.environ['LHAPDF_DATA_PATH']
         elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([lhapdf_config, '--pdfsets-path'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode().strip()
 
         elif lhapdf_version.startswith('6.'):
             datadir = subprocess.Popen([lhapdf_config, '--datadir'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode().strip()
         
         if ':' in datadir:
             for totry in datadir.split(':'):
@@ -4404,11 +4429,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if lhapdf_version.startswith('5.'):
             libdir = subprocess.Popen([self.options['lhapdf-config'], '--libdir'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode().strip()
 
         elif lhapdf_version.startswith('6.'):
             libdir = subprocess.Popen([self.options['lhapdf'], '--libs'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode().strip()
 
         return libdir
 

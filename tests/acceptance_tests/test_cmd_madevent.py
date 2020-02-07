@@ -401,9 +401,9 @@ class TestMECmdShell(unittest.TestCase):
         
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
         
-        self.check_parton_output(syst=True)
+        self.check_parton_output(syst=False)
         self.check_parton_output('run_02', target_event=44, syst=False)
-        self.check_pythia_output(syst=True)        
+        self.check_pythia_output(syst=False)        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
         self.assertNotEqual(f1.split('\n'), f2.split('\n'))

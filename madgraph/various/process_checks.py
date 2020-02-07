@@ -824,7 +824,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,str):
+        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, unicode)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode().split('\n')
@@ -1670,12 +1670,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # identical PS points with vec(p_1)=-vec(p_2), it is best not to remove
             # the helicityFilter double check
             if len(process['legs'])==3:
-              self.fix_MadLoopParamCard(dir_path, mp=False,
+                self.fix_MadLoopParamCard(dir_path, mp=False,
                               loop_filter=False, DoubleCheckHelicityFilter=True)
 
             StabChecker = subprocess.Popen([pjoin(dir_path,'StabilityCheckDriver')], 
                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                                                   cwd=dir_path)
+                                                                   cwd=dir_path, bufsize=0)
             start_index = len(DP_stability)
             if progress_bar!=None:
                     progress_bar.start()
@@ -1780,7 +1780,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                         StabChecker = subprocess.Popen(\
                                [pjoin(dir_path,'StabilityCheckDriver')], 
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
-                                           stderr=subprocess.PIPE, cwd=dir_path)
+                                           stderr=subprocess.PIPE, cwd=dir_path, bufsize=0)
                         continue
                     else:
                         raise
@@ -1807,7 +1807,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
             # Close the StabChecker process.
             if not interrupted:
-                StabChecker.stdin.write('y\n')
+                StabChecker.stdin.write('y\n'.encode())
             else:
                 StabChecker.kill()
         
@@ -1834,17 +1834,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         class. No compilation is necessary. The CT mode can be specified."""
 
         # Reset the stdin with EOF character without closing it.
-        StabChecker.stdin.write('\x1a')
-        StabChecker.stdin.write('1\n')
-        StabChecker.stdin.write('%d\n'%mode)   
-        StabChecker.stdin.write('%s\n'%PSpoint)
-        StabChecker.stdin.write('%.16E\n'%mu_r) 
-        StabChecker.stdin.write('%d\n'%hel)
-        StabChecker.stdin.write('%d\n'%split_orders)
+        StabChecker.stdin.write('\x1a'.encode())
+        StabChecker.stdin.write('1\n'.encode())
+        StabChecker.stdin.write(('%d\n'%mode).encode())   
+        StabChecker.stdin.write(('%s\n'%PSpoint).encode())
+        StabChecker.stdin.write(('%.16E\n'%mu_r).encode()) 
+        StabChecker.stdin.write(('%d\n'%hel).encode())
+        StabChecker.stdin.write(('%d\n'%split_orders).encode())
+        
 
         try:
+            #fsock = open('/tmp/log', 'w')
             while True:
-                output = StabChecker.stdout.readline()
+                output = StabChecker.stdout.readline().decode()
+                #fsock.write(output)
                 if output != '':
                     last_non_empty = output
                 if output==' ##TAG#RESULT_START#TAG##\n':
@@ -1852,28 +1855,28 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 # Break if the checker has crashed for some reason.
                 ret_code = StabChecker.poll()
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline()
+                    output = StabChecker.stdout.readline().decode()
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline()
+                    error = StabChecker.stderr.readline().decode()
                     raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
                                                (ret_code, last_non_empty, error))
                     
             res = ""
             while True:
-                output = StabChecker.stdout.readline()
+                output = StabChecker.stdout.readline().decode()
                 if output != '':
                     last_non_empty = output
-                if output==' ##TAG#RESULT_STOP#TAG##\n':
+                if str(output)==' ##TAG#RESULT_STOP#TAG##\n':
                     break
                 else:
                     res += output
-                ret_code = StabChecker.poll()                
+                ret_code = StabChecker.poll()               
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline()
+                    output = StabChecker.stdout.readline().decode()
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline()
+                    error = StabChecker.stderr.readline().decode()
                     raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
                                                (ret_code, last_non_empty, error))
 
@@ -2533,6 +2536,7 @@ def format_output(output,format):
 
 def output_profile(myprocdef, stability, timing, output_path, reusing=False):
     """Present the results from a timing and stability consecutive check"""
+    
 
     opt = timing['loop_optimized_output']
 
@@ -2623,16 +2627,15 @@ def output_stability(stability, output_path, reusing=False):
     
     def median(orig_list):
         """ Find the median of a sorted float list. """
-        list=copy.copy(orig_list)
-        list.sort()
-        if len(list)%2==0:
-            return (list[int((len(list)/2)-1)]+list[int(len(list)/2)])/2.0
+        tmp=copy.copy(orig_list)
+        tmp.sort()
+        if len(tmp)%2==0:
+            return (tmp[int((len(tmp)/2)-1)]+tmp[int(len(tmp)/2)])/2.0
         else:
-            return list[int((len(list)-1)/2)]
+            return tmp[int((len(tmp)-1)/2)]
 
     # Define shortcut
     f = format_output   
-        
     opt = stability['loop_optimized_output']
 
     mode = 'optimized' if opt else 'default'

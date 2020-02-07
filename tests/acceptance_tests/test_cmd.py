@@ -193,6 +193,8 @@ class TestCmdShell1(unittest.TestCase):
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
                     'f2py_compiler':None,
+                    'f2py_compiler_py2':None,
+                    'f2py_compiler_py3':None,
                     'cluster_retry_wait': 300,
                     'syscalc_path':'./SysCalc',
                     'collier':'./HEPTools/lib',

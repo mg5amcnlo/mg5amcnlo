@@ -699,6 +699,7 @@ class MultiCore(Cluster):
             opt = {'cwd': cwd, 
                    'stdout':stdout,
                    'stderr': stderr}
+
             self.queue.put((tag, prog, argument, opt))                                                                                                                                
             self.submitted.put(1)
             return tag

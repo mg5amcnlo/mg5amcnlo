@@ -246,7 +246,7 @@ def get_ninja_quad_prec_support(ninja_lib_path):
             p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
             output, error = p.communicate()
-            return 'TRUE' in output.upper()
+            return 'TRUE' in output.decode().upper()
         except Exception:
             pass
     
@@ -772,6 +772,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
         # Cannot probe the compiler, assume not clang then
         return False
 
+    output = output.decode()
     return 'LLVM' in str(output) or "clang" in str(output)
 
 
@@ -936,7 +937,7 @@ def call_stdout(arg, *args, **opt):
         arg[0] = './%s' % arg[0]
         out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
         
-    str_out = out.stdout.read().strip()
+    str_out = out.stdout.read().decode().strip()
     return str_out
     
 
@@ -988,58 +989,41 @@ def get_last_line(fsock):
     
     return tail(fsock, 1)[0]
 
-class BackRead(file):
-    """read a file returning the lines in reverse order for each call of readline()
-This actually just reads blocks (4096 bytes by default) of data from the end of
-the file and returns last line in an internal buffer."""
+
+#https://stackoverflow.com/questions/2301789/read-a-file-in-reverse-order-using-python
+def reverse_readline(filename, buf_size=8192):
+    """A generator that returns the lines of a file in reverse order"""
+    with open(filename) as fh:
+        segment = None
+        offset = 0
+        fh.seek(0, os.SEEK_END)
+        file_size = remaining_size = fh.tell()
+        while remaining_size > 0:
+            offset = min(file_size, offset + buf_size)
+            fh.seek(file_size - offset)
+            buffer = fh.read(min(remaining_size, buf_size))
+            remaining_size -= buf_size
+            lines = buffer.split('\n')
+            # The first line of the buffer is probably not a complete line so
+            # we'll save it and append it to the last line of the next buffer
+            # we read
+            if segment is not None:
+                # If the previous chunk starts right from the beginning of line
+                # do not concat the segment to the last line of new chunk.
+                # Instead, yield the segment first 
+                if buffer[-1] != '\n':
+                    lines[-1] += segment
+                else:
+                    yield segment
+            segment = lines[0]
+            for index in range(len(lines) - 1, 0, -1):
+                if lines[index]:
+                    yield lines[index]
+        # Don't yield None if the file was empty
+        if segment is not None:
+            yield segment
 
 
-    def readline(self):
-        """ readline in a backward way """
-        
-        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
-          self.blkcount = self.blkcount + 1
-          line = self.data[0]
-          try:
-            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-            self.data = (self.read(self.blksize) + line).split('\n')
-          except IOError:  # can't seek before the beginning of the file
-            self.seek(0)
-            data = self.read(self.size - (self.blksize * (self.blkcount-1))) + line
-            self.data = data.split('\n')
-    
-        if len(self.data) == 0:
-          return ""
-    
-        line = self.data.pop()
-        return line + '\n'
-
-    def __init__(self, filepos, blksize=4096):
-        """initialize the internal structures"""
-
-        # get the file size
-        self.size = os.stat(filepos)[6]
-        # how big of a block to read from the file...
-        self.blksize = blksize
-        # how many blocks we've read
-        self.blkcount = 1
-        file.__init__(self, filepos, 'rb')
-        # if the file is smaller than the blocksize, read a block,
-        # otherwise, read the whole thing...
-        if self.size > self.blksize:
-          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-        self.data = self.read(self.blksize).split('\n')
-        # strip the last item if it's empty...  a byproduct of the last line having
-        # a newline at the end of it
-        if not self.data[-1]:
-          self.data.pop()
-        
-    def next(self):
-        line = self.readline()
-        if line:
-            return line
-        else:
-            raise StopIteration
 
 
 def write_PS_input(filePath, PS):
@@ -1624,7 +1608,7 @@ class ProcessTimer:
     # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                   shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
-    stdout_list = flash.communicate()[0].split('\n')
+    stdout_list = flash.communicate()[0].decode().split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms
     vms_memory = 0
@@ -1844,6 +1828,7 @@ class EasterEgg(object):
         #1. control if the volume is on or not
         p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
         output, _  = p.communicate()
+        output = output.decode()
         #output volume:25, input volume:71, alert volume:100, output muted:true
         info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
         muted = False
@@ -2053,7 +2038,7 @@ def import_python_lhapdf(lhapdfconfig):
     use_lhapdf=False
     try:
         lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().strip()
+                                           stdout=subprocess.PIPE).stdout.read().decode().strip()
     except:
         use_lhapdf=False
         return False

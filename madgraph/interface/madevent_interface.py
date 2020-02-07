@@ -4958,10 +4958,11 @@ tar -czf split_$1.tar.gz split_$1
         # Find the matched cross-section
         if int(self.run_card['ickkw']):
             # read the line from the bottom of the file
-            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
-                                                         '%s_pythia.log' % tag))
+            #pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+            #                                             '%s_pythia.log' % tag))
             pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
-            for line in pythia_log:
+            for line in misc.reverse_readline(pjoin(self.me_dir,'Events', self.run_name, 
+                                                         '%s_pythia.log' % tag)):
                 info = pythiare.search(line)
                 if not info:
                     continue
@@ -4988,7 +4989,7 @@ tar -czf split_$1.tar.gz split_$1
                     self.results.add_detail('error_pythia', error_m)
                 break                 
 
-            pythia_log.close()
+            #pythia_log.close()
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -5348,7 +5349,7 @@ tar -czf split_$1.tar.gz split_$1
             t = tag
             self.to_store.remove('pythia')
             misc.gzip(pjoin(p,'pythia_events.hep'), 
-                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
+                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t),forceexternal=True)
 
         if 'pythia8' in self.to_store:
             p = pjoin(self.me_dir,'Events')

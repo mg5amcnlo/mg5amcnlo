@@ -2809,7 +2809,8 @@ RESTART = %(mint_mode)s
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
 
         while p.poll() is None:
-            line = p.stdout.readline()
+            line = p.stdout.readline().decode()
+            #misc.sprint(type(line))
             if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
                 print(line[:-1])
             elif __debug__ and line:

@@ -2494,7 +2494,6 @@ class decay_all_events(object):
             return decay_mapping
         
         BW_cut = self.options['BW_cut']       
-        
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
         for decay in self.all_decay.values():
@@ -2527,7 +2526,6 @@ class decay_all_events(object):
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
-                
                 
                 values = {}                
                 for i in range(len(decays)):
@@ -2562,7 +2560,6 @@ class decay_all_events(object):
                         comment+=  "%4e " % valid[(i,j)]
                     comment+= "|"+ os.path.basename(decays[i]['path'])                     
                     logger.debug(comment)
-            
             # store the result in the relation object. (using tag as key)
             for i in range(len(decays)):
                 tag_i = decays[i]['tag'][2:]
@@ -3286,10 +3283,12 @@ class decay_all_events(object):
                                path, std_in)
 
         return max_weight
-        
+    
+    nb_load = 0
     def loadfortran(self, mode, path, stdin_text, first=True):
         """ call the fortran executable """
 
+        self.nb_load +=1
         tmpdir = ''
         if ('full',path) in self.calculator:
             external = self.calculator[('full',path)]
@@ -3309,9 +3308,21 @@ class decay_all_events(object):
         try:
             external.stdin.write(stdin_text.encode())
             external.stdin.flush()
-        except IOError:
+        except IOError as error:
             if not first:
                 raise
+            try:
+                external.stdin.close()
+            except Exception as  error:
+                misc.sprint(error)
+            try:
+                external.stdout.close()
+            except Exception as error:
+                misc.sprint(error)
+            try:
+                external.stderr.close()
+            except Exception as error:
+                misc.sprint(error)
             try:
                 external.terminate()
             except:
@@ -3388,10 +3399,16 @@ class decay_all_events(object):
                 tmpdir = pjoin(self.path_me,'%s_me' % mode, 'SubProcesses',
                            production)
             executable_prod="./check"
-            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
+            my_env = os.environ.copy()
+            my_env["GFORTRAN_UNBUFFERED_ALL"] = "y"
+            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE,
+                                                      stderr=STDOUT, cwd=tmpdir,
+                                                      env=my_env,
+                                                      bufsize=0)
+            assert (mode, production) not in self.calculator
             self.calculator[(mode, production)] = external 
             self.calculator_nbcall[(mode, production)] = 1       
+
 
         external.stdin.write(stdin_text.encode())
         if mode == 'prod':
@@ -3400,15 +3417,19 @@ class decay_all_events(object):
         else:
             info = 1
             nb_output = 1
-         
-        prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
+        std = []
+        for i in range(nb_output):
+            external.stdout.flush()
+            line = external.stdout.readline().decode()
+            std.append(line)
+        prod_values = ' '.join(std)
+        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)
             print(stdin_text)
             os.system('lsof -p %s' % external.pid)
             return ' '.join(prod_values.split()[-1*(nb_output-1):])
-        
         if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than 100 calculator. Perform cleaning')
             nb_calls = list(self.calculator_nbcall.values())
@@ -3424,7 +3445,6 @@ class decay_all_events(object):
                     del self.calculator_nbcall[key]
                 else:
                     self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
-        
         if mode == 'prod':
             return prod_values
         else:
@@ -3964,30 +3984,45 @@ class decay_all_events(object):
             for (mode, path) in self.calculator:
                 if mode=='decay':
                     external = self.calculator[(mode, path)]
+                    try:
+                        external.stdin.close()
+                    except Exception as  error:
+                        misc.sprint(error)
+                        continue
+                    try:
+                        external.stdout.close()
+                    except Exception as error:
+                        misc.sprint(error)
+                        continue
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0 0\n"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0 0\n".encode()  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     try:
                         external.stdin.write(stdin_text)
-                    except Exception:
+                        external.stdin.flush() 
+                    except Exception as error:
+                        misc.sprint(error)
+                        raise
                         continue
-                    ranmar_state=external.stdout.readline()
+                    ranmar_state=external.stdout.readline().decode()
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)
                     ranmar.close()
                     try:
                         external.stdin.close()
-                    except Exception:
-                        continue
+                    except Exception as  error:
+                        misc.sprint(error)
                     try:
                         external.stdout.close()
-                    except Exception:
-                        continue
+                    except Exception as error:
+                        misc.sprint(error)                   
                     external.terminate()
                     del external
+                else:
+                    misc.sprint('not closed', mode, type(mode))
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]
@@ -4000,7 +4035,7 @@ class decay_all_events(object):
                 external.stdout.close()
                 external.terminate()       
                 del external
-
+            
         self.calculator = {}
 
 
@@ -4170,6 +4205,8 @@ class decay_all_events_onshell(decay_all_events):
 
     def compile(self):
         logger.info('Compiling code')
+        #my_env = os.environ.copy()
+        #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])        
         misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),

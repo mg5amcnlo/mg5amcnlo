@@ -2903,6 +2903,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'ninja':'./HEPTools/lib',
                        'collier':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
+                       'lhapdf_py2': None,
+                       'lhapdf_py3': None,
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
@@ -3764,8 +3766,7 @@ This implies that with decay chains:
             options.horizontal = True
             options.external = True  
             options.max_size = 0.3 
-            options.add_gap = 0.5
-            misc.sprint(options)     
+            options.add_gap = 0.5    
         options = draw_lib.DrawOption(options)
         start = time.time()
 
@@ -5719,7 +5720,7 @@ This implies that with decay chains:
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
             
         # Potential change in naming convention
-        name_map = {}
+        name_map = {'lhapdf6_py3': 'lhapdf6'}
         try:
             tool = name_map[tool_to_install]
         except:
@@ -5752,7 +5753,7 @@ This implies that with decay chains:
 
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
-            add_options.append('--mg5_path=%s'%MG5DIR)
+            #add_options.append('--mg5_path=%s'%MG5DIR)
             # Warn about the soft dependency to gnuplot
             if misc.which('gnuplot') is None:
                 logger.warning("==========")
@@ -5838,8 +5839,9 @@ This implies that with decay chains:
         else:
             logger.info('Now installing %s. Be patient...'%tool)
             # Make sure each otion in add_options appears only once
+            add_options.append('--mg5_path=%s'%MG5DIR)
             add_options = list(set(add_options))
-             # And that the option '--force' is placed last.
+            # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
@@ -5896,8 +5898,12 @@ This implies that with decay chains:
             self.advanced_install('mg5amc_py8_interface',
                               additional_options=add_options+['--force'])          
         elif tool == 'lhapdf6':
-            self.options['lhapdf'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
-            self.exec_cmd('save options %s lhapdf' % config_file)
+            if six.PY3:
+                self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
+                self.exec_cmd('save options %s lhapdf_py3' % config_file)
+            else:
+                self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
+                self.exec_cmd('save options %s lhapdf_py2' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6007,7 +6013,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
                 'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
-                'maddm':'maddm'
+                'maddm':'maddm',
+                'lhapdf6' : 'lhapdf6' if six.PY2 else 'lhapdf6_py3'
                 }
 
     def do_install(self, line, paths=None, additional_options=[]):
@@ -6099,7 +6106,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 raise MadGraph5Error('''Impossible to connect any of us servers.
                 Please check your internet connection or retry later''')
             for wwwline in data:
-                split = wwwline.split()
+                split = wwwline.decode().split()
                 if len(split)!=2:
                     if '--source' not in line:
                         source = {0:'uiuc',1:'ucl'}[index]
@@ -6136,6 +6143,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             add_options.extend(install_options['options_for_HEPToolsInstaller'])
             if not any(opt.startswith('--logging=') for opt in add_options):
                 add_options.append('--logging=%d' % logger.level)
+                
 
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = add_options)
@@ -7574,20 +7582,27 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
                             'You will NOT be able to run %s otherwise.\n'%args[0])
                 
-        elif args[0] == 'lhapdf':
-            try:
-                res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
-                                                             stderr=subprocess.PIPE)
-                logger.info('set lhapdf to %s' % args[1])
-                self.options[args[0]] = args[1]
-            except Exception:
-                res = 1
-            if res != 0:
-                logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
-                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
-                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
+        elif args[0].startswith('lhapdf'):
+            to_do = True
+            if args[0].endswith('_py2') and six.PY3:
+                to_do = False
+            elif args[0].endswith('_py3') and six.PY2:
+                to_do = False
+            if to_do:
+                try:
+                    res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
+                                                                 stderr=subprocess.PIPE)
+                    logger.info('set lhapdf to %s' % args[1])
+                    self.options['lhapdf'] = args[1]
+                    self.options[args[0]] = args[1]
+                except Exception:
+                    res = 1
+                if res != 0:
+                    logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                            'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                            '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                            'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                            ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
@@ -8505,7 +8520,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                   stdin=subprocess.PIPE,
                                   cwd=pjoin(model_path, 'SMWidth')).communicate()
         pattern = re.compile(r'''  decay\s+(\+?\-?\d+)\s+(\+?\-?\d+\.\d+E\+?\-?\d+)''',re.I)
-        width_list = pattern.findall(output)
+        width_list = pattern.findall(output.decode())
         width_dict = {}
         for pid,width in width_list:
             width_dict[int(pid)] = float(width)

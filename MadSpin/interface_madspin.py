@@ -1490,7 +1490,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     wgts[key] *= self.branching_ratio            
             output_lhe.write_events(full_evt)
             
-        output_lhe.write('</LesHouchesEvents>\n'.encode())    
+        output_lhe.write('</LesHouchesEvents>\n')    
         self.efficiency = 1 # to let me5 to write the correct number of events
 #        misc.sprint('Done so far. output written in %s' % output_lhe.name)
         

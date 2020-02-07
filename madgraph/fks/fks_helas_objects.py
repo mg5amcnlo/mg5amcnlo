@@ -137,7 +137,6 @@ def async_generate_born(args):
     outdata = helasfull
     
     output = tempfile.NamedTemporaryFile(delete = False)  
-    misc.sprint("trying born dump?") 
     six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
@@ -194,7 +193,6 @@ def async_finalize_matrix_elements(args):
     outdata = me
 
     output = tempfile.NamedTemporaryFile(delete = False)
-    misc.sprint("finalize")   
     six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     

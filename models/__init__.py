@@ -32,13 +32,13 @@ def load_model(name, decay=False):
     path_split = name.split(os.sep)
     if len(path_split) == 1:
         try:
-            with misc.TMP_variable(sys, 'path', [pjoin(MG5DIR, 'models'), pjoin(MG5DIR, 'models', name)]):  
+            with misc.TMP_variable(sys, 'path', [pjoin(MG5DIR, 'models'), pjoin(MG5DIR, 'models', name), MG5DIR]):  
                 model_pos = 'models.%s' % name
                 __import__(model_pos)
             return sys.modules[model_pos]
         except Exception as error:
             pass
-        for p in os.environ['PYTHONPATH']:
+        for p in os.environ['PYTHONPATH'].split(':'):
             new_name = os.path.join(p, name)
             try:
                 return load_model(new_name, decay)
