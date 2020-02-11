@@ -2380,7 +2380,8 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            if float(output.split()[1]) < 5. :
+            output.decode()
+            if not output or float(output.split()[1]) < 5. :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5

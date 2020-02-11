@@ -84,8 +84,6 @@ class Models4FermionTest(unittest.TestCase):
 
             values[model] = evaluator.evaluate_matrix_element(matrix_element,
                                                               p)[0]
-            import madgraph.various.misc as misc
-            misc.sprint(model, values[model])
             
         self.assertAlmostEqual(values['scalar'], values['4ferm'], 3)
 

@@ -197,7 +197,7 @@ class TestValidCmd(unittest.TestCase):
 
         target = set(['Not in help', 'Main commands', 'Documented commands'])
         self.assertEqual(target, category)
-        self.assertEqual(categories_nb['Not in help'], 25)
+        self.assertEqual(categories_nb['Not in help'], 29)
     
     
     

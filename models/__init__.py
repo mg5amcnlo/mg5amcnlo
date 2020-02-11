@@ -19,6 +19,11 @@ import os
 import sys
 import madgraph.various.misc as misc
 from madgraph import MG5DIR
+import six
+import logging
+
+logger = logging.getLogger('madgraph.models')
+
 pjoin = os.path.join
 
 def load_model(name, decay=False):
@@ -62,8 +67,14 @@ def load_model(name, decay=False):
             continue
 
     with misc.TMP_variable(sys, 'path', [os.sep.join(path_split[:-1]),os.sep.join(path_split)]):
-        __import__(path_split[-1])
-    
+        try:
+            __import__(path_split[-1])
+        except Exception as error:
+            if six.PY3:
+                logger.critical('It is likely that your UFO model is NOT python3 compatible.\n Most common issue with python2/3 compatibility can be solve with the "convert model" command of MG5aMC.')
+                logger.warning('If you want to try that automatic conversion please run:')
+                logger.warning('convert model %s' % '/'.join(path_split))
+            raise
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]

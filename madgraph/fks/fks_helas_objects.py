@@ -37,6 +37,7 @@ import tempfile
 import six.moves.cPickle
 import itertools
 import os
+import sys
 from six.moves import zip
 from madgraph import MG5DIR
 pjoin = os.path.join
@@ -288,8 +289,6 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             logger.info('Generating real matrix elements...')
-            import sys
-            misc.sprint(sys.path)
             import time
             try:
                 # the very large timeout passed to get is to be able to catch

@@ -219,13 +219,7 @@ class EventFile(object):
         self.zip_mode = False
         
         if not path.endswith(".gz"):
-            #if six.PY2:
             self.file = open(path, mode, *args, **opt)
-            #else:
-            #    if 'b' in mode:
-            #        self.file = open(path, mode, buffering=65536, *args, **opt)
-            #    else:
-            #        self.file = open(path, mode, newline='\n', *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
             self.file = open(path[:-3], mode, *args, **opt)
             path = path[:-3]

@@ -399,6 +399,12 @@ class Switcher(object):
 
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
+
+    def help_convert(self, *args, **opts):
+        return self.cmd.help_convert(self, *args, **opts)
+
+    def complete_convert(self, *args, **opts):
+        return self.cmd.complete_convert(self, *args, **opts)
         
     def complete_define(self, *args, **opts):
         return self.cmd.complete_define(self, *args, **opts)
@@ -463,7 +469,13 @@ class Switcher(object):
         
     def do_help(self, *args, **opts):
         return self.cmd.do_help(self, *args, **opts)
-        
+    
+    def do_convert(self, *args, **opts):
+        return self.cmd.do_convert(self, *args, **opts)
+
+    def do_convert_model(self, *args, **opts):
+        return self.cmd.do_convert_model(self, *args, **opts)
+    
     def do_history(self, *args, **opts):
         return self.cmd.do_history(self, *args, **opts) 
         

@@ -286,9 +286,21 @@ class OriginalCmd(object):
         dotext = 'do_'+text
         
         done = set() # store the command already handle
+        out = []
+        #misc.sprint([a for a in self.get_names() if a.startswith(dotext)])
+        for a in self.get_names():
+            if a.startswith(dotext) and a not in done and not done.add(a):
+                # to allow practical shortcut of type do_arg1_arg2 
+                # do not include such here
+                if ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done):
+                    done.add(a)
+                    out.append(a[3:])
+        return out
         
         return [a[3:] for a in self.get_names() 
-                if a.startswith(dotext) and a not in done and not done.add(a)]
+                if a.startswith(dotext) and a not in done and not done.add(a)
+                and ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done)
+                ]
 
     def complete(self, text, state):
         """Return the next possible completion for 'text'.

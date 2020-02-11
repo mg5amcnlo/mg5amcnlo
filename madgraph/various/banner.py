@@ -1004,7 +1004,6 @@ class ConfigFile(dict):
         pass
 
     def __copy__(self):
-        misc.sprint("in copy")
         return self.__class__(self)
 
     def __add__(self, other):
@@ -1028,7 +1027,7 @@ class ConfigFile(dict):
     def __iter__(self):
         
         for name in super(ConfigFile, self).__iter__():
-            yield self.lower_to_case[name]
+            yield self.lower_to_case[name.lower()]
         
         
         #iter = super(ConfigFile, self).__iter__()

@@ -4650,8 +4650,9 @@ tar -czf split_$1.tar.gz split_$1
                                 break
                         header.close()
                         tail = open(pjoin(tmp_dir,'tail.hepmc'),'w')
-                        n_tail = 0               
-                        for line in misc.BackRead(all_hepmc_files[-1]):
+                        n_tail = 0  
+                                     
+                        for line in misc.reverse_readline(all_hepmc_files[-1]):
                             if line.startswith('HepMC::'):
                                 n_tail += 1
                                 tail.write(line)

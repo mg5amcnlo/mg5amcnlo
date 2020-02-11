@@ -652,6 +652,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("                This allow to do \"import NAME\" to load that merge.")
         logger.info("   --recreate : Force to recreated the merge model even if the merge model directory already exists.")
         
+    def help_convert(self):
+        logger.info("syntax: convert model FULLPATH")
+        logger.info("modify (in place) the UFO model to make it compatible with both python2 and python3")
+        
     def help_compute_widths(self):
         logger.info("syntax: calculate_width PART [other particles] [OPTIONS]")
         logger.info("  Computes the width and partial width for a set of particles")
@@ -1926,6 +1930,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
+
     def nlo_completion(self,args,text,line,allowed_loop_mode=None):
         """ complete the nlo settings within square brackets. It uses the
          allowed_loop_mode for the proposed mode if specified, otherwise, it
@@ -2104,6 +2109,20 @@ class CompleteForCmd(cmd.CompleteCmd):
         #return self.list_completion(text, self._particle_names + \
         #                            self._multiparticles.keys() + couplings)
 
+    def complete_convert(self, text, line, begidx, endidx,formatting=True):
+        "Complete the compute_widths command"
+
+        args = self.split_arg(line[0:begidx])
+        
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['model'])
+        elif line[begidx-1] == os.path.sep:
+            current_dir = pjoin(*[a for a in args if a.endswith(os.path.sep)])
+            return self.path_completion(text, current_dir)
+        else:
+            return self.path_completion(text)
+        
 
     def complete_compute_widths(self, text, line, begidx, endidx,formatting=True):
         "Complete the compute_widths command"
@@ -3258,7 +3277,53 @@ This implies that with decay chains:
         self.exec_cmd('import model %s %s' % (new_model_name, opts), errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
+    
+    def do_convert(self, line):
+        """convert model FULLPATH
+           modify (in place) the UFO model to make it compatible with both python2 and python3
+        """
         
+        args = self.split_arg(line)
+        if hasattr(self, 'do_convert_%s' % args[0]):
+            getattr(self, 'do_convert_%s' % args[0])(args[1:])
+            
+    def do_convert_model(self, args):
+        "Not in help: shortcut for convert model"
+        
+        if not os.path.isdir(args[0]):
+            raise Exception( 'model to convert need to provide a full path')
+        model_dir = args[0]
+        
+        answer = self.ask('model conversion to support both py2 and py3 are done in place.\n They are NO guarantee of success.\n It can make the model to stop working under PY2 as well.\n Do you want to proceed?',
+                 'y', ['y','n'])
+        if answer != 'y':
+            return 
+        
+        #Object_library (.iteritems() -> .items())
+        text = open(pjoin(model_dir, 'object_library.py')).read()
+        text = text.replace('.iteritems()', '.items()')
+        text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
+        
+        # write_param_card.dat -> copy the one of the sm model
+        files.cp(pjoin(MG5DIR, 'models','sm','write_param_card.py'),
+                 pjoin(model_dir, 'write_param_card.py'))
+        
+        # __init__.py check that function_library and object_library are imported
+        text = open(pjoin(model_dir, '__init__.py')).read()
+        mod = False
+        to_check =  ['object_library', 'function_library']
+        for lib in to_check:
+            if 'import %s' % lib in text:
+                continue
+            mod = True
+            text = "import %s \n" % lib + text  
+        if mod:
+            open(pjoin(model_dir, '__init__.py'),'w').write(text)
+        
+        
+        
+        
+    
     # Define a multiparticle label
     def do_define(self, line, log=True):
         """Define a multiparticle"""
