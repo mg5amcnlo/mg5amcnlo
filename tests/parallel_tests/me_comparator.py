@@ -305,7 +305,7 @@ class MG4Runner(MERunner):
             output = subprocess.Popen('./check',
                         cwd=dir_name,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
-            return self.parse_check_output(output.read())
+            return self.parse_check_output(output.read().decode())
             output.close()
         except IOError:
             logging.warning("Error while executing ./check in %s" % shell_name)

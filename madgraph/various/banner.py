@@ -1341,7 +1341,7 @@ class ConfigFile(dict):
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
-        if not isinstance(value, str):
+        if (six.PY2 and not isinstance(value, (str,unicode)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end

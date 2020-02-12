@@ -41,6 +41,7 @@ import aloha.aloha_fct as aloha_fct
 
 import models as ufomodels
 import models.model_reader as model_reader
+import six
 from six.moves import range
 from six.moves import zip
 logger = logging.getLogger('madgraph.model')
@@ -339,6 +340,8 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'model_Feynman.pkl'
     if decay:
         pickle_name = 'dec_%s' % pickle_name
+    if six.PY3:
+        pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):

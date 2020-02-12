@@ -50,7 +50,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """build the directory for mg5 run in the old template"""
         if cls.old_mg5:
             return cls.old_mg5
-        print('create new parralel test')
+        
         init_dir = os.getcwd()
         os.chdir(MG5DIR)    
         # 1. bzr branch the present directory to a new directory

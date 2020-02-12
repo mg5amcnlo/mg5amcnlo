@@ -3750,7 +3750,7 @@ RESTART = %(mint_mode)s
         # add the HEPMC path of the pythia8 installation
         if shower == 'PYTHIA8':
             hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode().strip()
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
@@ -3828,7 +3828,7 @@ RESTART = %(mint_mode)s
                                 stdin=subprocess.PIPE,
                                 stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
                                 cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
+                p.communicate(input = ('events.lhe\n%d\n' % self.shower_card['nsplit_jobs']).encode())
                 logger.info('Splitting done.')
             event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name)) 
 
@@ -4056,7 +4056,7 @@ RESTART = %(mint_mode)s
                                            stdin=subprocess.PIPE,
                                            stdout=os.open(os.devnull, os.O_RDWR), 
                                            cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                            p.communicate(input = infile)
+                            p.communicate(input = infile.encode())
                             files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
@@ -4410,7 +4410,7 @@ RESTART = %(mint_mode)s
             # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().decode().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             if self.shower_card['pdfcode']==0:
@@ -4433,7 +4433,7 @@ RESTART = %(mint_mode)s
             # set instead.
             try:
                 lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                              stdout = subprocess.PIPE).stdout.read().strip()
+                                              stdout = subprocess.PIPE).stdout.read().decode().strip()
                 self.link_lhapdf(pjoin(self.me_dir, 'lib'))
                 content += 'LHAPDFPATH=%s\n' % lhapdfpath
                 pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -4592,7 +4592,7 @@ RESTART = %(mint_mode)s
         if any(self.run_card['reweight_pdf']):
             use_lhapdf=False
             lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().strip() 
+                                           stdout=subprocess.PIPE).stdout.read().decode().strip() 
 
             try:
                 candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
@@ -4731,7 +4731,7 @@ RESTART = %(mint_mode)s
             try:
                 last_line = subprocess.Popen(
                         ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
-                    stdout = subprocess.PIPE).stdout.read().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode().strip()
             except IOError:
                 pass
             if last_line != "</LesHouchesEvents>":

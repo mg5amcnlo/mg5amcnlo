@@ -1917,7 +1917,7 @@ class DiagramDrawer(object):
         if hasattr(self, 'draw_curved_' + line_type):
             getattr(self, 'draw_curved_' + line_type)(line, cercle)
         else:
-            self.draw_curved_straight(line, reduce)
+            self.draw_curved_straight(line, cercle)
             
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()

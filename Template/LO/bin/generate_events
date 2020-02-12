@@ -27,10 +27,17 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
 
-if sys.version_info[1] < 6:
-    sys.exit('MadEvent works with python 2.6/2.7 or python 3.7 or higher.\n\
+if sys.version_info[1] < 7:
+    sys.exit('MadEvent works with python 2.7/3.7 or higher.\n\
                Please upgrade your version of python.')
 
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip install six --user"\n'
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
+    
 # Check if optimize mode is (and should be) activated
 if __debug__ and (not os.path.exists(pjoin(root_path,'../..', 'bin','create_release.py'))):
     subprocess.call([sys.executable] + ['-O'] + sys.argv)
