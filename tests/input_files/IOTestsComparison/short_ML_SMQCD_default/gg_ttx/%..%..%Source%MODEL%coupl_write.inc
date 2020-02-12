@@ -29,7 +29,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       WRITE(*,2) 'UV_3Gg_1eps = ', UV_3GG_1EPS
       WRITE(*,2) 'UV_3Gb_1eps = ', UV_3GB_1EPS
       WRITE(*,2) 'UV_GQQg_1eps = ', UV_GQQG_1EPS
-      WRITE(*,2) 'UV_GQQq_1eps = ', UV_GQQQ_1EPS
+      WRITE(*,2) 'UV_GQQb_1eps = ', UV_GQQB_1EPS
       WRITE(*,2) 'UV_tMass_1eps = ', UV_TMASS_1EPS
       WRITE(*,2) 'UVWfct_b_0_1eps = ', UVWFCT_B_0_1EPS
-      WRITE(*,2) 'UVWfct_G_2_1eps = ', UVWFCT_G_2_1EPS
+      WRITE(*,2) 'UVWfct_G_1_1eps = ', UVWFCT_G_1_1EPS

@@ -4,8 +4,9 @@
 
 
 from __future__ import division
-from object_library import all_particles, Particle
-import parameters as Param
+from __future__ import absolute_import
+from .object_library import all_particles, Particle
+from . import parameters as Param
 
 FA = Particle(pdg_code = 9000001,
               name = 'FA',

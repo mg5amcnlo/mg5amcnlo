@@ -1,14 +1,19 @@
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import itertools
 import xml.etree.ElementTree as ET
 import math
-import StringIO
+
 import os
 import re
 import shutil
 import logging
 import random
+import six
+StringIO = six
+from six.moves import range
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 
@@ -123,7 +128,7 @@ class Parameter (object):
             precision = 6
         
         if format == 'float':
-            if self.lhablock == 'decay' and not isinstance(self.value,basestring):
+            if self.lhablock == 'decay' and not isinstance(self.value,six.string_types):
                 return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -174,7 +179,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise KeyError, 'id %s is not in %s' % (tuple(lhacode), self.name)
+                raise KeyError('id %s is not in %s' % (tuple(lhacode), self.name))
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
@@ -227,8 +232,8 @@ class Block(list):
             
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
-                raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
-                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
+                raise InvalidParamCard('%s %s is already define to %s impossible to assign %s' % \
+                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value))
             return
         list.append(self, obj)
         # update the dictionary of key
@@ -285,7 +290,7 @@ class Block(list):
                 pid = param.lhacode[0]
                 param.set_block('decay')
                 text += str(param)+ '\n'
-                if self.decay_table.has_key(pid):
+                if pid in self.decay_table:
                     text += str(self.decay_table[pid])+'\n'
             return text
         elif self.name.startswith('decay'):
@@ -486,7 +491,7 @@ class ParamCard(dict):
                 model_value = parameters[particle.get('mass')]
                 if isinstance(model_value, complex):
                     if model_value.imag > 1e-5 * model_value.real:
-                        raise Exception, "Mass should be real number: particle %s (%s) has mass: %s"  % (lhacode, particle.get('name'), model_value)
+                        raise Exception("Mass should be real number: particle %s (%s) has mass: %s"  % (lhacode, particle.get('name'), model_value))
                     model_value = model_value.real
                     
                 if not misc.equal(model_value, param_value, 4):
@@ -510,7 +515,7 @@ class ParamCard(dict):
                 model_value = parameters[particle.get('width')]
                 if isinstance(model_value, complex):
                     if model_value.imag > 1e-5 * model_value.real:
-                        raise Exception, "Width should be real number: particle %s (%s) has mass: %s" 
+                        raise Exception("Width should be real number: particle %s (%s) has mass: %s") 
                     model_value = model_value.real
                 if not misc.equal(abs(model_value), param_value, 4):
                     modify = True
@@ -537,7 +542,7 @@ class ParamCard(dict):
         if not outpath:
             return text
         elif isinstance(outpath, str):
-            file(outpath,'w').write(text)
+            open(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
     
@@ -683,14 +688,14 @@ class ParamCard(dict):
             return
         
         if len(internal_param)!=1:
-            raise InvalidParamCard,' The specified EW inputs has more than one'+\
-                ' unknown: [%s]'%(','.join([str(elem) for elem in internal_param]))
+            raise InvalidParamCard(' The specified EW inputs has more than one'+\
+                ' unknown: [%s]'%(','.join([str(elem) for elem in internal_param])))
         
         
         if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,)),
                                                              ('sminputs',(1,))]:
-            raise InvalidParamCard, ' The only EW input scheme currently supported'+\
-                        ' are those with either the W mass or GF left internal.'
+            raise InvalidParamCard(' The only EW input scheme currently supported'+\
+                        ' are those with either the W mass or GF left internal.')
         
         # Now if the Wmass is internal, then we must change the scheme
         if internal_param[0] == ('mass',(24,)):
@@ -717,7 +722,7 @@ class ParamCard(dict):
         
         
     def has_block(self, name):
-        return self.has_key(name)
+        return name in self
     
     def order_block(self):
         """ reorganize the block """
@@ -784,13 +789,13 @@ class ParamCard(dict):
         
         if not lhacode:
             logger.info("Information on block parameter %s:" % block, '$MG:color:BLUE')
-            print  str(self[block])
+            print(str(self[block]))
         elif default:
             pname2block, restricted = default.analyze_param_card()
             if (block, lhacode) in restricted:
                 logger.warning("This parameter will not be consider by MG5_aMC")
                 print( "    MadGraph will use the following formula:")
-                print restricted[(block, lhacode)]
+                print(restricted[(block, lhacode)])
                 print( "     Note that some code (MadSpin/Pythia/...) will read directly the value")  
             else:
                 for name, values in pname2block.items():
@@ -798,10 +803,10 @@ class ParamCard(dict):
                         valid_name = name
                         break
                 logger.info("Information for parameter %s of the param_card" % valid_name, '$MG:color:BLUE')
-                print("Part of Block \"%s\" with identification number %s" % (block, lhacode))        
-                print("Current value: %s" % self[block].get(lhacode).value)
-                print("Default value: %s" % default[block].get(lhacode).value)
-                print("comment present in the cards: %s " %  default[block].get(lhacode).comment)
+                print(("Part of Block \"%s\" with identification number %s" % (block, lhacode)))        
+                print(("Current value: %s" % self[block].get(lhacode).value))
+                print(("Default value: %s" % default[block].get(lhacode).value))
+                print(("comment present in the cards: %s " %  default[block].get(lhacode).comment))
 
             
      
@@ -856,7 +861,7 @@ class ParamCard(dict):
             if param.value != value:
                 error_msg = 'This card is not suitable to be convert to SLAH1\n'
                 error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
-                raise InvalidParamCard, error_msg   
+                raise InvalidParamCard(error_msg)   
             self.remove_param(block, lhacode)
 
 
@@ -923,7 +928,7 @@ class ParamCardIterator(ParamCard):
             else:
                 raise
         try:
-            out = iterator.next()
+            out = next(iterator)
         except StopIteration:
             del self.iterator
             raise
@@ -942,26 +947,26 @@ class ParamCardIterator(ParamCard):
                     try:
                         key, def_list = pattern.findall(param.value)[0]
                     except:
-                        raise Exception, "Fail to handle scanning tag: Please check that the syntax is valid"
+                        raise Exception("Fail to handle scanning tag: Please check that the syntax is valid")
                     if key == '': 
                         key = -1 * len(all_iterators)
                     if key not in all_iterators:
                         all_iterators[key] = []
                     try:
                         all_iterators[key].append( (param, eval(def_list)))
-                    except SyntaxError, error:
-                        raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
+                    except SyntaxError as error:
+                        raise Exception("Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error))
                 elif isinstance(param.value, str) and param.value.strip().lower().startswith('auto'):
                     self.autowidth.append(param)
-        keys = all_iterators.keys() # need to fix an order for the scan
+        keys = list(all_iterators.keys()) # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
-                self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
+                self.param_order.append("%s#%s" % (param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
             
         # do the loop
-        lengths = [range(len(all_iterators[key][0][1])) for key in keys]
+        lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
         for positions in itertools.product(*lengths):
             self.itertag = []
             if self.logging:
@@ -1010,7 +1015,7 @@ class ParamCardIterator(ParamCard):
         if order:
             keys = order
         else:
-            keys = self.cross[0].keys()
+            keys = list(self.cross[0].keys())
             if 'bench' in keys: keys.remove('bench')
             if 'run_name' in keys: keys.remove('run_name')
             keys.sort()
@@ -1276,8 +1281,8 @@ class ParamCardRule(object):
             else:
                 if value != 0:
                     if not modify:
-                        raise InvalidParamCard, 'parameter %s: %s is not at zero' % \
-                                    (block, ' '.join([str(i) for i in id])) 
+                        raise InvalidParamCard('parameter %s: %s is not at zero' % \
+                                    (block, ' '.join([str(i) for i in id]))) 
                     else:
                         param = card[block].get(id) 
                         param.value = 0.0
@@ -1307,8 +1312,8 @@ class ParamCardRule(object):
             else:   
                 if value != 1:
                     if not modify:
-                        raise InvalidParamCard, 'parameter %s: %s is not at one but at %s' % \
-                                    (block, ' '.join([str(i) for i in id]), value)         
+                        raise InvalidParamCard('parameter %s: %s is not at one but at %s' % \
+                                    (block, ' '.join([str(i) for i in id]), value))         
                     else:
                         param = card[block].get(id) 
                         param.value = 1.0
@@ -1343,9 +1348,9 @@ class ParamCardRule(object):
 
                 if value1 != value2:
                     if not modify:
-                        raise InvalidParamCard, 'parameter %s: %s is not to identical to parameter  %s' % \
+                        raise InvalidParamCard('parameter %s: %s is not to identical to parameter  %s' % \
                                     (block, ' '.join([str(i) for i in id1]),
-                                            ' '.join([str(i) for i in id2]))         
+                                            ' '.join([str(i) for i in id2])))         
                     else:
                         param = card[block].get(id1) 
                         param.value = value2
@@ -1372,9 +1377,9 @@ class ParamCardRule(object):
 
                 if value1 != -value2:
                     if not modify:
-                        raise InvalidParamCard, 'parameter %s: %s is not to opposite to parameter  %s' % \
+                        raise InvalidParamCard('parameter %s: %s is not to opposite to parameter  %s' % \
                                     (block, ' '.join([str(i) for i in id1]),
-                                            ' '.join([str(i) for i in id2]))         
+                                            ' '.join([str(i) for i in id2])))         
                     else:
                         param = card[block].get(id1) 
                         param.value = -value2
@@ -1648,8 +1653,8 @@ def convert_to_mg5card(path, outputpath=None, writting=True):
     ae = card['ae'].get([1, 1], default=0).value
     card.mod_param('ae', [1,1], 'te', [1,1], value= ae * ye, comment='T_e(Q) DRbar')
     if ae * ye:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter ae [1, 1] times ye [1,1] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [1, 1] times ye [1,1] should be 0''')
     card.remove_param('ae', [1,1])
     #2
     ye = card['ye'].get([2, 2], default=0).value
@@ -1657,8 +1662,8 @@ Parameter ae [1, 1] times ye [1,1] should be 0'''
     ae = card['ae'].get([2, 2], default=0).value
     card.mod_param('ae', [2,2], 'te', [2,2], value= ae * ye, comment='T_mu(Q) DRbar')
     if ae * ye:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter ae [2, 2] times ye [2,2] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [2, 2] times ye [2,2] should be 0''')
     card.remove_param('ae', [2,2])
     #3
     ye = card['ye'].get([3, 3], default=0).value
@@ -1670,8 +1675,8 @@ Parameter ae [2, 2] times ye [2,2] should be 0'''
     au = card['au'].get([1, 1], default=0).value
     card.mod_param('au', [1,1], 'tu', [1,1], value= au * yu, comment='T_u(Q) DRbar')
     if au * yu:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter au [1, 1] times yu [1,1] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter au [1, 1] times yu [1,1] should be 0''')
     card.remove_param('au', [1,1])
     #2
     ye = card['yu'].get([2, 2], default=0).value
@@ -1679,8 +1684,8 @@ Parameter au [1, 1] times yu [1,1] should be 0'''
     ae = card['au'].get([2, 2], default=0).value
     card.mod_param('au', [2,2], 'tu', [2,2], value= au * yu, comment='T_c(Q) DRbar')
     if au * yu:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter au [2, 2] times yu [2,2] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter au [2, 2] times yu [2,2] should be 0''')
     card.remove_param('au', [2,2])
     #3
     yu = card['yu'].get([3, 3]).value
@@ -1692,8 +1697,8 @@ Parameter au [2, 2] times yu [2,2] should be 0'''
     ad = card['ad'].get([1, 1], default=0).value
     card.mod_param('ad', [1,1], 'td', [1,1], value= ad * yd, comment='T_d(Q) DRbar')
     if ad * yd:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter ad [1, 1] times yd [1,1] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [1, 1] times yd [1,1] should be 0''')
     card.remove_param('ad', [1,1])
     #2
     ye = card['yd'].get([2, 2], default=0).value
@@ -1701,8 +1706,8 @@ Parameter ad [1, 1] times yd [1,1] should be 0'''
     ae = card['ad'].get([2, 2], default=0).value
     card.mod_param('ad', [2,2], 'td', [2,2], value= ad * yd, comment='T_s(Q) DRbar')
     if ad * yd:
-        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
-Parameter ad [2, 2] times yd [2,2] should be 0'''
+        raise InvalidParamCard('''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [2, 2] times yd [2,2] should be 0''')
     card.remove_param('ad', [2,2])
     #3
     yd = card['yd'].get([3, 3]).value

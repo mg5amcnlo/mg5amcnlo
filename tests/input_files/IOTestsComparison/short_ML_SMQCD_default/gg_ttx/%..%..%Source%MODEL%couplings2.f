@@ -56,5 +56,5 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       UV_3GG_1EPS = -MDL_G_UVG_1EPS_*G
       UV_3GB_1EPS = -MDL_G_UVB_1EPS_*G
       UV_GQQG_1EPS = MDL_COMPLEXI*MDL_G_UVG_1EPS_*G
-      UV_GQQQ_1EPS = MDL_COMPLEXI*MDL_G_UVQ_1EPS_*G
+      UV_GQQB_1EPS = MDL_COMPLEXI*MDL_G_UVB_1EPS_*G
       END

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 # Module
+from __future__ import absolute_import
+from __future__ import print_function
 import string
 import os
 import sys
@@ -11,10 +13,10 @@ from MW_param import go_to_main_dir
 
 def expand_all(echap=[]):
     go_to_main_dir()
-    print "copying files"
+    print("copying files")
     copy_file(echap)
     del_file()
-    print "modifying files"
+    print("modifying files")
     opt={}
     opt['nowarning']="""['DESACTIVATE_CUT','DESACTIVATE_BW_CUT','get_user_params','main_make','obj_for_MW']"""
     mod_file.mod_file('./Source/MadWeight/mod_file/MW_pos',opt=opt)

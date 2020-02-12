@@ -1,13 +1,21 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import array
 import copy
 import math
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+from functools import reduce
+
+import madgraph.various.misc as misc
 
 class PolynomialError(Exception): pass
 
 def get_number_of_coefs_for_rank(r):
     """ Returns the number of independent coefficients there is in a
     fully symmetric tensor of rank r """
-    return sum([((3+ri)*(2+ri)*(1+ri))/6 for ri in range(0,r+1)])
+    return sum([((3+ri)*(2+ri)*(1+ri))//6 for ri in range(0,r+1)])
 
 class Polynomial(object):
     """ A class to represent a polynomial in the loop momentum (4-vector) q 
@@ -53,8 +61,8 @@ class Polynomial(object):
 
         for i, ind in enumerate(new_indices_list):
             if ind>0:
-                res = res + (fact(ind+i)/(fact(i+1)*fact(ind - 1)))
-                
+                res = res + (fact(ind+i)//(fact(i+1)*fact(ind - 1)))
+         
         return res
 
     def get_coef_at_position(self, pos):
@@ -107,8 +115,7 @@ class Polynomial_naive_ordering(object):
         try:
             return self.coef_list.index(array.array('i',new_indices_list))
         except ValueError:
-            raise PolynomialError,\
-                "The index %s looked for could not be found"%str(indices_list)   
+            raise PolynomialError("The index %s looked for could not be found"%str(indices_list))   
 
     def get_coef_at_position(self, pos):
         """ Returns the coefficient at position pos in the one dimensional
@@ -131,8 +138,8 @@ class PolynomialRoutines(object):
             self.updater_max_rank = max_rank
         else:
             if updater_max_rank > max_rank:
-                raise PolynomialError, "The updater max rank must be at most"+\
-                                                " equal to the overall max rank"
+                raise PolynomialError("The updater max rank must be at most"+\
+                                                " equal to the overall max rank")
             else:
                 self.updater_max_rank = updater_max_rank            
         if coef_format=='complex*16':
@@ -146,8 +153,7 @@ class PolynomialRoutines(object):
             self.czero='(0.0e0,0.0e0)'
         self.line_split=line_split
         if max_rank<0:
-            raise PolynomialError, \
-                            "The rank of a q-polynomial should be 0 or positive"
+            raise PolynomialError("The rank of a q-polynomial should be 0 or positive")
         self.max_rank=max_rank
         self.pq=Polynomial(max_rank)
         
@@ -203,7 +209,7 @@ DATA NCOEF_R/%(ranks)s/"""%{'max_rank':self.max_rank,'ranks':','.join([
 
         for j, line in enumerate(mult_matrix):
             chunk_size = 20
-            for k in xrange(0, len(line), chunk_size):
+            for k in range(0, len(line), chunk_size):
                 polynomial_constant_lines.append(
                 "DATA COMB_COEF_POS(%3r,%3r:%3r) /%s/" % \
                 (j, k, min(k + chunk_size, len(line))-1,
@@ -279,7 +285,7 @@ C      ARGUMENTS
                 offset=get_number_of_coefs_for_rank(R-1)
             for i in range(offset,Ncoeff+offset):
                 indices_list=self.pq.get_coef_at_position(i)
-                sindices = map(lambda i: "q(%d)" % i, indices_list)
+                sindices = ["q(%d)" % i for i in indices_list]
                 coeff_list = []
                 for j in range(4):
                     qvalue = "q(%d)"%j
@@ -334,14 +340,15 @@ C        ARGUMENTS
         
         iregi_gen = FromIREGIFortranCodeGenerator(self.max_rank)
         for R in range(self.max_rank+1):
-            Ncoeff=((3+R)*(2+R)*(1+R))/6
+            Ncoeff=((3+R)*(2+R)*(1+R))//6
             if R == 0:
                 offset=0
             else:
                 offset=get_number_of_coefs_for_rank(R-1)
+
             for i in range(offset,Ncoeff+offset):
                 indices_list=self.pq.get_coef_at_position(i)
-                sindices = map(lambda i: "q(%d)" % i, indices_list)
+                sindices = ["q(%d)" % i for i in indices_list]
                 coeff_list = []
                 for j in range(4):
                     qvalue = "q(%d)"%j
@@ -453,11 +460,11 @@ C        ARGUMENTS
                 lst, dic = block_info[(R,k)]
                 dim = len(lst)
                 lab = 0
-                for indices in FromGolem95FortranCodeGenerator.select(range(d), k):
+                for indices in FromGolem95FortranCodeGenerator.select(list(range(d)), k):
                     lab += 1
-                    sindices = map(lambda i: "q(%d)" % i, indices)
+                    sindices = ["q(%d)" % i for i in indices]
                     for i in range(dim):
-                        coeff_str = "*".join(map(format_power,zip(sindices, lst[i])))
+                        coeff_str = "*".join(map(format_power,list(zip(sindices, lst[i]))))
                         ML_indices = sum(
                           [[ind]*lst[i][j] for j, ind in enumerate(indices)],[])
                         ML_coef_pos = self.pq.get_coef_position(ML_indices)
@@ -747,8 +754,7 @@ class FromIREGIFortranCodeGenerator():
         try:
             return self.coef_list.index(array.array('i',new_indices_list))
         except ValueError:
-            raise PolynomialError,\
-                "The index %s looked for could not be found"%str(indices_list)   
+            raise PolynomialError("The index %s looked for could not be found"%str(indices_list))   
 
     def get_coef_at_position(self, pos):
         """ Returns the coefficient at position pos in the one dimensional
@@ -868,9 +874,9 @@ class FromGolem95FortranCodeGenerator():
         LHS = []
         RHS = []
         for num_eq in range(l):
-            q = map(lambda i: cls.PRIMES[i], lst[num_eq])
+            q = [cls.PRIMES[i] for i in lst[num_eq]]
             coeffs = [
-                reduce(lambda x,y: x*y, map(lambda (b,e): b**e, zip(q, term)), 1)
+                reduce(lambda x,y: x*y, [b_e[0]**b_e[1] for b_e in zip(q, term)], 1)
                 for term in lst]
             LHS.append(coeffs)
             RHS.append(q)
@@ -906,16 +912,16 @@ if __name__ == '__main__':
     """I test here the write_golem95_mapping function"""
     
     P=Polynomial(7)
-    print "Coef (6,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0])
-    print "Coef (1,1,2,2) is at pos %s"%P.get_coef_position([0,1,2,2,3,3])
-    print "Coef (7,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0,0])
-    print "Coef (1,2,2,2) is at pos %s"%P.get_coef_position([0,1,1,2,2,3,3])
+    print("Coef (6,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0]))
+    print("Coef (1,1,2,2) is at pos %s"%P.get_coef_position([0,1,2,2,3,3]))
+    print("Coef (7,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0,0]))
+    print("Coef (1,2,2,2) is at pos %s"%P.get_coef_position([0,1,1,2,2,3,3]))
     
     sys.exit(0)
 
     max_rank=6
     FPR=FortranPolynomialRoutines(max_rank)
-    print "Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank
+    print("Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank)
 
     import os
     import sys

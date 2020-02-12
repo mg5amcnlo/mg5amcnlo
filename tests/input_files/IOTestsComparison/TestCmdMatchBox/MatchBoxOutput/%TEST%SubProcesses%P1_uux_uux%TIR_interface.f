@@ -489,33 +489,33 @@ C     Reduction Coefficient 1
       TIRCOEFS(0,1:3)=IREGICOEFS(0,1:3)
       IF(RANK.LE.0)RETURN
 C     Reduction Coefficient q(0)
-      TIRCOEFS(1,1:3)=IREGICOEFS(1,1:3)
+      TIRCOEFS(0,1:3)=IREGICOEFS(1,1:3)
 C     Reduction Coefficient q(1)
-      TIRCOEFS(2,1:3)=IREGICOEFS(2,1:3)
+      TIRCOEFS(1,1:3)=IREGICOEFS(2,1:3)
 C     Reduction Coefficient q(2)
-      TIRCOEFS(3,1:3)=IREGICOEFS(3,1:3)
+      TIRCOEFS(2,1:3)=IREGICOEFS(3,1:3)
 C     Reduction Coefficient q(3)
-      TIRCOEFS(4,1:3)=IREGICOEFS(4,1:3)
+      TIRCOEFS(3,1:3)=IREGICOEFS(4,1:3)
       IF(RANK.LE.1)RETURN
 C     Reduction Coefficient q(0)^2
-      TIRCOEFS(5,1:3)=IREGICOEFS(5,1:3)
+      TIRCOEFS(0,1:3)=IREGICOEFS(5,1:3)
 C     Reduction Coefficient q(0)*q(1)
-      TIRCOEFS(6,1:3)=IREGICOEFS(6,1:3)
+      TIRCOEFS(1,1:3)=IREGICOEFS(6,1:3)
 C     Reduction Coefficient q(1)^2
-      TIRCOEFS(7,1:3)=IREGICOEFS(9,1:3)
+      TIRCOEFS(1,1:3)=IREGICOEFS(9,1:3)
 C     Reduction Coefficient q(0)*q(2)
-      TIRCOEFS(8,1:3)=IREGICOEFS(7,1:3)
+      TIRCOEFS(2,1:3)=IREGICOEFS(7,1:3)
 C     Reduction Coefficient q(1)*q(2)
-      TIRCOEFS(9,1:3)=IREGICOEFS(10,1:3)
+      TIRCOEFS(2,1:3)=IREGICOEFS(10,1:3)
 C     Reduction Coefficient q(2)^2
-      TIRCOEFS(10,1:3)=IREGICOEFS(12,1:3)
+      TIRCOEFS(2,1:3)=IREGICOEFS(12,1:3)
 C     Reduction Coefficient q(0)*q(3)
-      TIRCOEFS(11,1:3)=IREGICOEFS(8,1:3)
+      TIRCOEFS(3,1:3)=IREGICOEFS(8,1:3)
 C     Reduction Coefficient q(1)*q(3)
-      TIRCOEFS(12,1:3)=IREGICOEFS(11,1:3)
+      TIRCOEFS(3,1:3)=IREGICOEFS(11,1:3)
 C     Reduction Coefficient q(2)*q(3)
-      TIRCOEFS(13,1:3)=IREGICOEFS(13,1:3)
+      TIRCOEFS(3,1:3)=IREGICOEFS(13,1:3)
 C     Reduction Coefficient q(3)^2
-      TIRCOEFS(14,1:3)=IREGICOEFS(14,1:3)
+      TIRCOEFS(3,1:3)=IREGICOEFS(14,1:3)
       IF(RANK.LE.2)RETURN
       END

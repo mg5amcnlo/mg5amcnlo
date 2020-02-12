@@ -13,12 +13,18 @@
 ##     - Class BackRead
 ##
 ##########################################################################
+from __future__ import absolute_import
 import sys
 import os
 import string
 import collections
 import itertools
 import copy
+from six.moves import range
+import six
+if six.PY3:
+    import io
+    file = io.IOBase
 
 class Multi_list(list):
     """ a list of list """
@@ -304,7 +310,7 @@ def get_all_permutations(cat_list):
     nb_cat = collections.defaultdict(list)
     for i,cat in enumerate(cat_list):
         nb_cat[cat].append(i+1) #+1 in order to be in Fortan convention
-    cat_names = nb_cat.keys()
+    cat_names = list(nb_cat.keys())
     # build an iterator for each category
     iterator = dict([(cat, itertools.permutations(value)) 
                                                for cat,value in nb_cat.items()])
@@ -312,7 +318,7 @@ def get_all_permutations(cat_list):
     permutations = [] # all possibility
     current = 0       # position of the last modify category
     #initialize all iterator to have starting point value
-    current_value = dict([(cat, list(it.next())) for cat,it in iterator.items()])
+    current_value = dict([(cat, list(next(it))) for cat,it in iterator.items()])
 
     while current < len(iterator):
         #store the current value
@@ -326,10 +332,10 @@ def get_all_permutations(cat_list):
             cat = cat_names[current]
             it  = iterator[cat]
             try:
-                new_val = it.next()
+                new_val = next(it)
             except StopIteration:
                 iterator[cat] = itertools.permutations(nb_cat[cat])
-                current_value[cat] = list(iterator[cat].next())
+                current_value[cat] = list(next(iterator[cat]))
                 current +=1
             else:
                 current_value[cat] = list(new_val)

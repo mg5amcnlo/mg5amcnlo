@@ -15,6 +15,7 @@
 
 """Unit test library to check that Loop UFO models are correctly imported """
 
+from __future__ import absolute_import
 import copy
 import itertools
 import logging

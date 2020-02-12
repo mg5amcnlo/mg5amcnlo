@@ -12,12 +12,37 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
+from six.moves import range
 
 class ParamCardWriterError(Exception):
     """ a error class for this file """
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
 
 class ParamCardWriter(object):
     """ A class for writting an update param_card for a given model """
@@ -73,7 +98,7 @@ class ParamCardWriter(object):
             for param in params:
                 out[param.name] = param
                 
-        if 'ZERO' not in out.keys():
+        if 'ZERO' not in list(out.keys()):
             zero = base_objects.ModelVariable('ZERO', '0', 'real')
             out['ZERO'] = zero
         return out
@@ -175,7 +200,7 @@ class ParamCardWriter(object):
             self.define_input_file(path)
   
         # order the parameter in a smart way
-        self.external.sort(self.order_param)
+        self.external.sort(key=cmp_to_key(self.order_param))
         todo_block= ['MASS', 'DECAY'] # ensure that those two block are always written
         
         cur_lhablock = ''
@@ -219,7 +244,7 @@ class ParamCardWriter(object):
             info = info[4:]
     
         if param.value.imag != 0:
-            raise ParamCardWriterError, 'All External Parameter should be real (not the case for %s)'%param.name
+            raise ParamCardWriterError('All External Parameter should be real (not the case for %s)'%param.name)
     
 
         # avoid to keep special value used to avoid restriction
@@ -250,22 +275,14 @@ class ParamCardWriter(object):
         else:
             return
         
-        text = ""
-        def sort(el1, el2):
-            (p1,n) =el1
-            (p2,n) = el2
-            if (p1["pdg_code"] -p2["pdg_code"]) > 0:
-                return 1
-            else:
-                return -1 
-        
-        data.sort(sort)
+        text = ""        
+        data.sort(key= lambda el: el[0]["pdg_code"])
         for part, param in data:
             # don't write the width of ghosts particles
             if part["type"] == "ghost":
                 continue
             if self.model['parameter_dict'][param.name].imag:
-                raise ParamCardWriterError, 'All Mass/Width Parameter should be real (not the case for %s)'%param.name
+                raise ParamCardWriterError('All Mass/Width Parameter should be real (not the case for %s)'%param.name)
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], param.expr.replace('mdl_',''))  
@@ -280,7 +297,7 @@ class ParamCardWriter(object):
     
         for part, param in data:
             if self.model['parameter_dict'][param.name].imag:
-                raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+                raise ParamCardWriterError('All Mass/Width Parameter should be real')
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], part[name].replace('mdl_',''))
@@ -336,5 +353,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat', generic=True)
-    print 'write ./param_card.dat'
+    print('write ./param_card.dat')
     

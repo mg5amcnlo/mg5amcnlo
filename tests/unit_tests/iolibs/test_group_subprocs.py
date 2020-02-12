@@ -15,7 +15,9 @@
 
 """Unit test library for the export v4 format routines"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os 
@@ -34,6 +36,7 @@ import madgraph.core.color_algebra as color
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
+from six.moves import range
 
 #===============================================================================
 # SubProcessGroupTest

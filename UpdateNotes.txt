@@ -1,6 +1,21 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+2.7.0.py3 (12/02/20):
+                        ** PARRALEL VERSION FOR PYTHON 3 **
+      ALL: Contains all feature of 2.7.0			
+      OM: Support for python3.7 in top of python 2.7
+          - python2.6  is not supported anymore
+	  - this requires the module "six" [pip install six --user]
+      OM: dropping function set low_mem_multicore_nlo
+      OM: dropping support for syscalc (c++ version)
+      OM: introduction of new setup variable
+          - f2py_compiler_py2 and f2py_compiler_py3
+	    which will be used to overwrite f2py_compiler when using the associate python version
+          - lhapdf_py2 and lhapdf_py3
+	    same for lhapdf
+      OM: introduction of a new command "convert model FULLPATH"
+          - try to convert a UFO model compatible to python2 only to a new model compatible both with
+	    Python2 and Python3 (no guarantee)
 
 2.7.0(20/01/10)
       OM: Allow for a new syntax in presence of multi-jet/lepton process:

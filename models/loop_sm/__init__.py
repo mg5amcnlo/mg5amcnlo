@@ -1,3 +1,4 @@
+#from __future__ import absolute_import
 import particles
 import couplings
 import CT_couplings
@@ -8,6 +9,8 @@ import vertices
 import CT_vertices
 import write_param_card
 import coupling_orders
+import object_library
+import function_library
 
 # model options
 gauge = [0, 1]

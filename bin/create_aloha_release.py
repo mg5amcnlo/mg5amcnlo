@@ -31,7 +31,9 @@ following actions:
 6. tar the ALOHA_vVERSION directory.
 """
 
+from __future__ import absolute_import
 import sys
+from six.moves import input
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
@@ -79,19 +81,19 @@ diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communic
 
 if diff_result:
     logging.warning("Directory is not up-to-date. The release follow the last commited version.")
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
 
 release_date = date.fromtimestamp(time.time())
-for line in file(os.path.join(MG5DIR,'VERSION')):
+for line in open(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
     if 'date' in line:
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
             logging.warning("WARNING: The release time information is : %s" % line)
-            answer = raw_input('Do you want to continue anyway? (y/n)')
+            answer = input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
 

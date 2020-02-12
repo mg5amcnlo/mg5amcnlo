@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 #  MZ, 2012-06-14
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import tarfile
+from six.moves import range
+from six.moves import input
 
 class SplitJobsError(Exception):
     pass
@@ -32,16 +36,16 @@ for line in nevents_lines:
                     %(dir, chann, ev_type))
 
 
-print 'nevents_unweighted read, found %d jobs with a total of %d events' % (len(jobs), tot_events)
+print('nevents_unweighted read, found %d jobs with a total of %d events' % (len(jobs), tot_events))
 
 max_dict = {}
 
 for (k, max_n) in max_events.items():
     if max_n:
-        print 'Max %s-events per channel found is %d' % (k, max_n)
+        print('Max %s-events per channel found is %d' % (k, max_n))
         max_dict[k] = max(max_n/20, 100)
         if max_dict[k]:
-            print 'Max number of events in splitted job is %d' % max_dict[k]
+            print('Max number of events in splitted job is %d' % max_dict[k])
 
 
 if len(sys.argv) == 2:
@@ -59,21 +63,21 @@ while True:
     ntot_dict = {}
     for k in max_dict.keys():
         ntot_dict[k] = sum(d['nsplit'] for d in jobs if d['type'] == k) 
-    print 'This will give:'
+    print('This will give:')
     for k, tot in ntot_dict.items():
         if tot:
-            print '  %d %s-events jobs' % (tot, k)
+            print('  %d %s-events jobs' % (tot, k))
     if len(sys.argv) == 2:
         break
-    yes = input('Is this acceptable? (1: yes 0: no) ')
+    yes = eval(input('Is this acceptable? (1: yes 0: no) '))
     if yes == 1:
         break
     
     for (k, max_n) in max_events.items():
         if max_n:
-            print 'Found %s-events' % k 
-            print 'Max %s-events per channel found is %d' % (k, max_n)
-            new_max = input('Give new maximum if you want to split jobs ') 
+            print('Found %s-events' % k) 
+            print('Max %s-events per channel found is %d' % (k, max_n))
+            new_max = eval(input('Give new maximum if you want to split jobs ')) 
             max_dict[k] = new_max
 
 
@@ -121,7 +125,7 @@ for job in jobs:
                     arcname=os.path.split(nevts_filename)[1])
             os.remove(nevts_filename)
         
-    print '%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events)
+    print('%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events))
 
 
 new_nevents_file = open('nevents_unweighted_splitted', 'w')
@@ -131,7 +135,7 @@ new_nevents_file.close()
 for dir in dirs:
     tar_dict[dir].close()
         
-print 'Done, total %d events' %  tot_events
+print('Done, total %d events' %  tot_events)
 
 
     

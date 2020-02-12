@@ -14,12 +14,14 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
 import string
 import os
 import re
 import sys
 
 import madgraph.various.misc as misc
+from six.moves import range
 
 template_text= string.Template("""
 <HTML> 

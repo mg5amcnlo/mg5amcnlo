@@ -16,12 +16,15 @@
 """Unit test library for the various properties of objects in 
    loop_diagram_generaiton"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import itertools
 import logging
 import math
 import os
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -2260,5 +2263,5 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
 if __name__ == '__main__':
         # Save this model so that it can be loaded by other loop tests
         save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),loadLoopModel())
-        print "test_toyLoopModel.pkl created."
+        print("test_toyLoopModel.pkl created.")
         #unittest.main()
