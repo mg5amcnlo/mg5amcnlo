@@ -3484,12 +3484,11 @@ c     S=A/(B-x) transformation:
           stop 1
         endif
       endif
-      jac = 1d0/(1d0-expo) * rnd ** (expo/(1d0-expo))
-      jac = 1d0/(1d0-expo) !!!* rnd ** (expo/(1d0-expo))
+      jac = 1d0/(1d0-expo) 
       ! then rescale it between xmin and 1
       x = x * (1d0 - xmin) + xmin
       omx = omx * (1d0 - xmin)
-      jac = jac * (1d0 - xmin)
+      jac = jac * (1d0 - xmin)**(1d0-expo)
 
       return 
       end
@@ -3521,6 +3520,10 @@ C dressed lepton stuff
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
 
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
 
       ! these common blocks are never used
       ! we leave them here for the moment 
@@ -3620,9 +3623,11 @@ C dressed lepton stuff
         ! generated, while in the ee case x1 and x2 are generated
         ! first.
 
-        call generate_x_ee(rnd1, max(s_sep_bw/stot, 0d0), x1_ee, omx1_ee, jac_ee)
+        call generate_x_ee(rnd1, max(s_sep_bw/stot, tau_born_lower_bound),
+     $      x1_ee, omx1_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, max(s_sep_bw/stot, 0d0), x2_ee, omx2_ee, jac_ee)
+        call generate_x_ee(rnd2, max(s_sep_bw/stot, tau_born_lower_bound/x1_ee),
+     $      x2_ee, omx2_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
       else if (.not.generate_x12) then 
           write(*,*) 'NOT GOOD HERE'
