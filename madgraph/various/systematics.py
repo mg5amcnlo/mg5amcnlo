@@ -42,7 +42,7 @@ import os
 import re
 import sys
 import time
-import StringIO
+from six import StringIO
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)
@@ -472,7 +472,7 @@ class Systematics(object):
   
         stdout.write('\n') 
                 
-        resume = StringIO.StringIO()
+        resume = StringIO()
                 
         resume.write( '#***************************************************************************\n')
         resume.write( "#\n")

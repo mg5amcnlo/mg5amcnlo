@@ -2034,9 +2034,10 @@ def import_python_lhapdf(lhapdfconfig):
             return None
         else:
             return python_lhapdf
-        
+
     use_lhapdf=False
     try:
+        
         lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
                                            stdout=subprocess.PIPE).stdout.read().decode().strip()
     except:
@@ -2049,7 +2050,7 @@ def import_python_lhapdf(lhapdfconfig):
         except OSError:
             candidates=[]
         for candidate in candidates:
-            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
                 try:
                     import lhapdf
@@ -2064,8 +2065,9 @@ def import_python_lhapdf(lhapdfconfig):
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
+        sprint(candidates, lhapdf_libdir+'64')
         for candidate in candidates:
-            if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
                 try:
                     import lhapdf

@@ -2453,6 +2453,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                      LoggerStream=logstream,forced=forced, 
                                                      no_compilation=not compilation)
         except Exception as e:
+            if six.PY3:
+                logger.info('MadAnalysis5 instalation not python3 compatible')
+                return None
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
             error=StringIO.StringIO()
             traceback.print_exc(file=error)
@@ -3218,7 +3221,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif args[0].endswith('_py3') and six.PY2:
                 to_do = False
             if to_do and args[1] != 'None':
-                self.options[args[0]] = args[1]
+                self.options['lhapdf'] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = ast.literal_eval(args[1])

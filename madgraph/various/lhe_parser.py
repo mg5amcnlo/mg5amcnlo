@@ -2198,14 +2198,14 @@ class Event(list):
                 #only case is a epsilon_ijk structure.
                 if len(canticolors) + len(mcolors) != 3:
                     logger.critical(str(self))
-                    raise Exception("Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs]))              
+                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
                 else:
                     popup_index += canticolors
             elif manticolors != []:
                 #only case is a epsilon_ijk structure.
                 if len(ccolors) + len(manticolors) != 3:
                     logger.critical(str(self))
-                    raise Exception("Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs]))              
+                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
                 else:
                     popup_index += ccolors
 
@@ -2427,7 +2427,7 @@ class FourMomentum(object):
     def __init__(self, obj=0, px=0, py=0, pz=0, E=0):
         """initialize the four momenta"""
 
-        if obj is 0 and E:
+        if obj == 0 and E:
             obj = E
          
         if isinstance(obj, (FourMomentum, Particle)):

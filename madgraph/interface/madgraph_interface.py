@@ -5854,7 +5854,7 @@ This implies that with decay chains:
                 try:
                     version = misc.Popen(
                            [lhapdf_config,'--version'], stdout=subprocess.PIPE)
-                    lhapdf_version = int(version.stdout.read()[0])
+                    lhapdf_version = int(version.stdout.read().decode()[0])
                     if lhapdf_version not in [5,6]:
                         raise 
                 except:

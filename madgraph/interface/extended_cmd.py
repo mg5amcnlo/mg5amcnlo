@@ -2043,7 +2043,7 @@ class CmdShell(Cmd):
     def do_shell(self, line):
         "Run a shell command"
 
-        if line.strip() is '':
+        if not line.strip():
             self.help_shell()
         else:
             logging.info("running shell command: " + line)
