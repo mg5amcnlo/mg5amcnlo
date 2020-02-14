@@ -59,7 +59,7 @@ class MERunner(object):
     setup_flag = False
 
     name = 'None'
-    model_dir = os.path.join(MG5DIR,'models')
+    model_dir = ''
 
     class MERunnerException(Exception):
         """Default Exception class for MERunner objects"""
