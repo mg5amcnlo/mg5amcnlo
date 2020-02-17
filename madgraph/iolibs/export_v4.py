@@ -6425,8 +6425,8 @@ class UFO_model_to_mg4(object):
         runparams = list(runparams)
         
         size = len(runparams) 
-        mat1=[[0*size]*size]
-        mat2=[[0*size]*size]
+        mat1=[[0]*size for _ in range(size)]
+        mat2=[[0]*size for _ in range(size)]
         mat3=0
         
         for elements in self.model["running_elements"]:
@@ -6454,13 +6454,10 @@ class UFO_model_to_mg4(object):
                     continue
                 elif len(params) !=2:
                     raise Exception, "Not supported type of running"
-                misc.sprint(params)
                 id1 = runparams.index(params[0])
                 id2 = runparams.index(params[1])
-                misc.sprint(id1, id2)
                 assert to_update[id1][id2] == 0
                 to_update[id1][id2] = eval(elements.value)*prefact
-                misc.sprint(to_update[id1][id2])
         
         data = {}
         data['block_nb'] = block_nb+1
