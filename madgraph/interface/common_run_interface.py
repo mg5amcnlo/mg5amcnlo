@@ -5551,6 +5551,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('%s is not part of block "%s" but "%s". please correct.' %
                                     (args[start+1], args[start], bname))
                     return
+            elif args[start+1] == 'scale':
+                self.modified_card.add('param')
+                self.setP(args[start], None, args[-1])
+                return
             else:
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
@@ -5835,9 +5839,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 except ValueError:
                     logger.warning('Invalid input: \'%s\' not valid intput.'% value)
 
-        logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value), '$MG:BOLD')
-        self.param_card[block].param_dict[lhaid].value = value
+        if lhaid:
+            logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
+                        (block, lhaid, value), '$MG:BOLD')
+            self.param_card[block].param_dict[lhaid].value = value
+        else:
+            logger.info('modify param_card information scale of BLOCK %s set to %s' %\
+                        (block, value), '$MG:BOLD')
+            self.param_card[block].scale = value            
     
     def check_card_consistency(self):
         """This is run on quitting the class. Apply here all the self-consistency
