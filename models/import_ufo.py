@@ -158,7 +158,6 @@ def import_model_from_db(model_name, local_dir=False):
             import pwd
             username =pwd.getpwuid( os.getuid() )[ 0 ]  
         except Exception as error:
-            misc.sprint(str(error))
             username = ''
     if username in ['omatt', 'mattelaer', 'olivier', 'omattelaer'] and target is None and \
                                     'PYTHONPATH' in os.environ and not local_dir:
@@ -863,7 +862,8 @@ class UFOMG5Converter(object):
 
         #check if we have scalar colored particle in the model -> issue with the running of alpha_s
         if particle['spin'] == 1 and particle['color'] != 1:
-            self.colored_scalar = True
+            if particle['type'] != 'ghost':
+                self.colored_scalar = True
 
         
         # Identify self conjugate particles
@@ -1602,7 +1602,6 @@ class OrganizeModelExpression:
                         all_elements.add(one_element.name)
             all_elements.union(self.track_dependant)
             self.track_dependant = list(all_elements)
-            misc.sprint(self.track_dependant)
 
         
     
@@ -1667,7 +1666,6 @@ class OrganizeModelExpression:
                         self.model.all_parameters if param.nature == 'external')
 
         if not present_aEWM1:
-            misc.sprint('reset aEM1')
             self.track_dependant = ['aS','Gf','MU_R']
 
         for param in self.model.all_parameters+additional_params:
@@ -1679,12 +1677,10 @@ class OrganizeModelExpression:
             else:
                 expr = self.shorten_expr(param.value)
                 depend_on = self.find_dependencies(expr)
-                misc.sprint(depend_on)
                 parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
             self.add_parameter(parameter)  
-        
-        misc.sprint(self.params.keys())   
+           
             
     def add_parameter(self, parameter):
         """ add consistently the parameter in params and all_expr.
@@ -1695,7 +1691,6 @@ class OrganizeModelExpression:
         if parameter.name in self.all_expr:
             return
         
-        misc.sprint(parameter.name, parameter.depend)
         self.all_expr[parameter.name] = parameter
         try:
             self.params[parameter.depend].append(parameter)
@@ -1758,7 +1753,6 @@ class OrganizeModelExpression:
                 self.couplings[depend_on] = [parameter]
             self.all_expr[coupling.value] = parameter 
         
-        misc.sprint(self.couplings.keys())               
 
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not

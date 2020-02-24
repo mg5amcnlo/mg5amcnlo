@@ -5610,7 +5610,6 @@ class UFO_model_to_mg4(object):
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
-        misc.sprint(self.PS_dependent_key)
         # Keep only separation in alphaS + running one        
         keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
@@ -5642,8 +5641,7 @@ class UFO_model_to_mg4(object):
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings)]
         #store the running parameter that are used
-        self.used_running_key = used_running_key  
-        misc.sprint(self.used_running_key)   
+        self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -6224,7 +6222,6 @@ class UFO_model_to_mg4(object):
         
         if self.model['running_elements']:
             running_block = self.model.get_running(self.used_running_key) 
-            misc.sprint(running_block)
             if running_block:
                 fsock.write_comments('calculate the running parameter')
             for i in range(len(running_block)):
@@ -6282,7 +6279,6 @@ class UFO_model_to_mg4(object):
 
             if self.model['running_elements']:
                 #running_block = self.model.get_running(self.used_running_key) 
-                misc.sprint(running_block)
                 if running_block:
                     fsock.write_comments('calculate the running parameter')
                     for i in range(len(running_block)):
@@ -6303,7 +6299,6 @@ class UFO_model_to_mg4(object):
         
         for block_nb, runparams in enumerate(running_block):
             text = self.write_one_running_block(block_nb, runparams)
-            misc.sprint(text)
             fsock.writelines(text)
             
     
@@ -6316,6 +6311,7 @@ class UFO_model_to_mg4(object):
 
       include '../alfas.inc'
       INCLUDE '%(mp)sinput.inc'
+      include '../cuts.inc'
       INCLUDE 'coupl.inc'
       double precision GMU
 
@@ -6327,7 +6323,7 @@ class UFO_model_to_mg4(object):
       logical first
       data first /.true./
       integer i,j,k
-      double precision G0
+      double precision G0,beta0
       data G0 /0d0/
       double precision r1,r2
       if (first) then
@@ -6335,8 +6331,9 @@ class UFO_model_to_mg4(object):
          G0 = SQRT(4.0D0*PI*ASMZ)
          first = .false.
       endif
-      r1 = (G0/GMU -1)
-      r2 = G0 * DLOG(G0/GMU)
+      beta0 = 11. - 2./3. * maxjetflavor
+      r1 = (1/GMU -1/G0)/ beta0
+      r2 = DLOG(G0/GMU)/beta0
       do j=1,%(size)i
          do i=1,%(size)i
             fullmat(j,i) = mat1(j,i) *r1 + mat2(j,i)*r2
@@ -6367,6 +6364,7 @@ class UFO_model_to_mg4(object):
       PARAMETER  (PI=3.141592653589793D0)
 
       include '../alfas.inc'
+      include '../cuts.inc'
       INCLUDE '%(mp)sinput.inc'
       INCLUDE 'coupl.inc'
       double precision GMU
@@ -6378,7 +6376,7 @@ class UFO_model_to_mg4(object):
       logical first
       data first /.true./
       integer i,j,k
-      double precision G0
+      double precision G0,beta0
       data G0 /0d0/
       double precision r1,r2
       if (first) then
@@ -6386,7 +6384,8 @@ class UFO_model_to_mg4(object):
          G0 = SQRT(4.0D0*PI*ASMZ)
          first = .false.
       endif
-      r2 = G0 * DLOG(G0/GMU)
+      beta0 = 11. - 2./3. * maxjetflavor
+      r2 = DLOG(G0/GMU) / beta0 
       do j=1,%(size)i
          do i=1,%(size)i
             fullmat(j,i) = mat2(j,i)*r2
