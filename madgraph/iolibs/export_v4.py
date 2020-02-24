@@ -6334,12 +6334,14 @@ class UFO_model_to_mg4(object):
       logical first
       data first /.true./
       integer i,j,k
-      double precision G0,beta0
+      double precision G0,beta0, alphas
+      external alphas
       data G0 /0d0/
       double precision r1,r2
       if (first) then
          %(initc0)s
-         G0 = SQRT(4.0D0*PI*ASMZ)
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
          first = .false.
       endif
       beta0 = 11. - 2./3. * maxjetflavor
@@ -6443,9 +6445,10 @@ class UFO_model_to_mg4(object):
       if (first) then
          C0 = %(mp)s%(initc0)s
          first = .false.
+         %(check_scale)s
       endif
       
-      %(mp)s%(assignc)s =  1/DSQRT( 1/C0/C0 - 2*mat3 *DLOG(MU_R/91.188))
+      %(mp)s%(assignc)s =  1/DSQRT( 1/C0/C0 - 2*mat3 *DLOG(MU_R/mdl__%(scale)s__scale))
       
       return
       end
