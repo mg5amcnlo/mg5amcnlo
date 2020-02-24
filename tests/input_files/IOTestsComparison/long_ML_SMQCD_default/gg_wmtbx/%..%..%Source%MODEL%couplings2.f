@@ -34,7 +34,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ ,DCMPLX(((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01*PI**2))
      $ *4.000000D+00*MDL_TF*REGLOG(DCMPLX(MDL_MB__EXP__2
      $ /MDL_MU_R__EXP__2))))
-      R2_SXCW = ((MDL_CKM22*MDL_EE*MDL_COMPLEXI)/(MDL_SW*MDL_SQRT__2))
+      R2_BXTW = ((MDL_CKM33*MDL_EE*MDL_COMPLEXI)/(MDL_SW*MDL_SQRT__2))
      $ *MDL_R2MIXEDFACTOR_FIN_
       GC_4 = -G
       GC_5 = MDL_COMPLEXI*G

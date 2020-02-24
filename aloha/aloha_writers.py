@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from six.moves import range
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
@@ -16,7 +18,7 @@ from numbers import Number
 from collections import defaultdict
 from fractions import Fraction
 # fast way to deal with string
-from cStringIO import StringIO
+from six import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
 import itertools
@@ -92,12 +94,12 @@ class WriteALOHA:
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start + self.momentum_size
         else:
-            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
-                    % (self.name, ind_name)                                 
+            raise Exception('WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
+                    % (self.name, ind_name))                                 
                                  
     def get_header_txt(self,mode=''): 
         """ Prototype for language specific header""" 
-        raise Exception, 'THis function should be overwritten'
+        raise Exception('THis function should be overwritten')
         return ''
     
     def get_declaration_txt(self):
@@ -110,7 +112,7 @@ class WriteALOHA:
 
     def get_momenta_txt(self):
         """ Prototype for the definition of the momenta"""
-        raise Exception, 'THis function should be overwritten'
+        raise Exception('THis function should be overwritten')
 
     def get_momentum_conservation_sign(self):
         """find the sign associated to the momentum conservation"""
@@ -208,8 +210,7 @@ class WriteALOHA:
         # couplings
         if  couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
-            detected_couplings.sort(coup_sort)
+            detected_couplings.sort(key=lambda x: x[4:])
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -532,7 +533,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                     (self.change_number_format(0),self.change_number_format(1)))
         if KERNEL.has_pi:
             out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
-        for type, name in self.declaration:
+        
+        
+        for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
@@ -594,12 +597,12 @@ class ALOHAWriterForFortran(WriteALOHA):
         p = [] # a list for keeping track how to write the momentum
         
         signs = self.get_momentum_conservation_sign()
-        
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
                 out.write("    OM{0} = {1}\n    if (M{0}.ne.{1}) OM{0}={2}/M{0}**2\n".format( 
                          i+1, self.change_number_format(0), self.change_number_format(1)))
-            
+
+
             if i+1 == self.outgoing:
                 out_type = type
                 out_size = self.type_to_size[type] 
@@ -612,6 +615,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
         # define the resulting momenta
         if self.offshell:
+            
+            
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
             
@@ -622,6 +627,27 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
 
+            if "P1T" in self.tag or "P1L" in self.tag:
+                for i in range(1,4):
+                    P = "P%s" % (self.outgoing)
+                    value = ["1d-30", "0d0", "1d-15"]
+                    out.write("  IF (DABS(%(P)s(0))*1e-10.gt.DABS(%(P)s(%(i)s))) %(P)s(%(i)s)=%(val)s\n"
+                              % {"P": P, "i":i, 'val':value[i-1]})
+            i = self.outgoing -1
+            if self.declaration.is_used('Tnorm%s' % (i+1)):
+                out.write("    TNORM{0} = DSQRT(P{0}(1)*P{0}(1)+P{0}(2)*P{0}(2)+P{0}(3)*P{0}(3))\n".format(
+                        i+1))
+            if self.declaration.is_used('TnormZ%s' % (i+1)):
+                out.write("    TNORMZ{0} =  TNORM{0} - P{0}(3)\n".format(
+                        i+1))
+
+            if self.declaration.is_used('FWP%s' % (i+1)):
+                out.write("     FWP{0} = DSQRT(-P{0}(0) + TNORM{0})\n"\
+                          .format(i+1))
+            if self.declaration.is_used('FWM%s' % (i+1)):
+                out.write("     FWM{0} = DSQRT(-P{0}(0) - TNORM{0})\n"\
+                          .format(i+1))
+                #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
         # Returning result
         return out.getvalue()
@@ -715,7 +741,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
             if not abs(tmp - number) / abs(tmp + number) < 1e-8:
-                out = '%s%s' % (number, self.format)
+                if 'e' in str(number):
+                    out = str(number).replace('e','d')
+                else:
+                    out = '%s%s' % (number, self.format)
             else:
                 out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out
@@ -726,7 +755,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         out = StringIO()
 
         if self.routine.contracted:
-            for name,obj in self.routine.contracted.items():
+            all_keys = list(self.routine.contracted.keys())
+            all_keys.sort()
+            for name in all_keys:
+                obj = self.routine.contracted[name]
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
                 
@@ -741,11 +773,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             else:
                 return +1
             
-        keys = self.routine.fct.keys()        
-        keys.sort(sort_fct)
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
-
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
@@ -774,7 +805,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
-            if 'L' not in self.tag:
+            is_loop = False
+            if 'L' in self.tag:
+                if self.tag.count('L') == 1 and 'PL' in self.tag:
+                    is_loop = False
+                else:
+                    is_loop = True
+                    
+            if not is_loop:
                 coeff = 'denom*'    
                 if not aloha.complex_mass:
                     if self.routine.denominator:
@@ -785,7 +823,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                                   {'i': self.outgoing, 'COUP': coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
 
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
@@ -814,7 +852,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 to_order[self.pass_to_HELAS(ind)] = \
                         '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
                         coeff, formatted)
-            key = to_order.keys()
+            key = list(to_order.keys())
             key.sort()
             for i in key:
                 out.write(to_order[i])
@@ -917,6 +955,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             writer.writelines(text)
         return text
 
+
 class QP(object): 
     """routines for writing out Fortran"""
     
@@ -973,7 +1012,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     expr = self.routine.expr[tuple(arg)]
                 except KeyError:
                     expr = None
-                for ind in self.routine.expr.values()[0].listindices():
+                for ind in list(self.routine.expr.values())[0].listindices():
                     if expr:
                         data = expr.get_rep(ind)
                     else:
@@ -1063,8 +1102,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         # couplings
         if couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
-            detected_couplings.sort(coup_sort)
+            coup_sort = lambda x,y: int(x[4:])-int(y[4:])  
+            detected_couplings.sort(key=lambda x: int(x[4:]) if x[4:] else 0 )
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -1434,7 +1473,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if add_i:
             out.write(self.ci_definition)
                     
-        for type, name in self.declaration:
+        for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
                 if name.startswith('P'):
@@ -1556,7 +1595,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
-                
+        
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
@@ -1587,10 +1626,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                       {'i': self.outgoing, 'coup': coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
 
                     out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
+
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
                     ptype = 'list_complex'
@@ -1909,7 +1949,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add(('fct', fct))
             return 'cmath.{0}(%s)'.format(fct)
         else:
-            raise Exception, "Unable to handle function name %s (no special rule defined and not in cmath)" % fct
+            raise Exception("Unable to handle function name %s (no special rule defined and not in cmath)" % fct)
     
     def define_expression(self):
         """Define the functions in a 100% way """
@@ -1917,7 +1957,11 @@ class ALOHAWriterForPython(WriteALOHA):
         out = StringIO()
 
         if self.routine.contracted:
-            for name,obj in self.routine.contracted.items():
+            keys = list( self.routine.contracted.keys())
+            keys.sort()
+            
+            for name in keys:
+                obj = self.routine.contracted[name]
                 out.write('    %s = %s\n' % (name, self.write_obj(obj)))
 
         def sort_fct(a, b):
@@ -1930,8 +1974,8 @@ class ALOHAWriterForPython(WriteALOHA):
             else:
                 return +1
             
-        keys = self.routine.fct.keys()        
-        keys.sort(sort_fct)
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
             format = '    %s = %s\n' % (name, self.get_fct_format(fct))
@@ -1970,7 +2014,7 @@ class ALOHAWriterForPython(WriteALOHA):
                           {'i': self.outgoing,'coup':coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')                
                     
                     out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s**2)\n' % 
                           {'i': self.outgoing,'coup':coup_name})                    
@@ -2195,6 +2239,13 @@ class Declaration_list(set):
             
         set.add(self,obj)
         
+    def tolist(self):
+
+        out = list(self)
+        out.sort(key=lambda n:n[1])
+        return out
+    
+        
 
 class WriterFactory(object):
     
@@ -2218,7 +2269,7 @@ class WriterFactory(object):
         elif language == 'gpu':
             return ALOHAWriterForGPU(data, outputdir)
         else:
-            raise Exception, 'Unknown output format'
+            raise Exception('Unknown output format')
 
 
     

@@ -18,6 +18,7 @@ evaluating amp2 values for permutations of momenta."""
 
 from __future__ import division
 
+from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -56,6 +57,8 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx
+from six.moves import range
+from six.moves import zip
 
 #===============================================================================
 # Logger for process_checks
@@ -114,7 +117,7 @@ def find_symmetry(matrix_element):
     
     for diag in diagrams:
         diagram_numbers.append(diag.get('number'))
-        permutations.append(range(nexternal))
+        permutations.append(list(range(nexternal)))
         if diag.get_vertex_leg_numbers()!=[] and \
                                   max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
@@ -126,7 +129,7 @@ def find_symmetry(matrix_element):
     if matrix_element.get("identical_particle_factor") == 1:
         return symmetry, \
                permutations,\
-               [range(nexternal)]
+               [list(range(nexternal))]
 
     logger.info("Finding symmetric diagrams for process %s" % \
                  matrix_element.get('processes')[0].nice_string().\
@@ -218,8 +221,8 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
     # Check for matrix elements with no identical particles
     if matrix_element.get("identical_particle_factor") == 1:
         return symmetry, \
-               [range(nexternal)]*len(symmetry),\
-               [range(nexternal)]
+               [list(range(nexternal))]*len(symmetry),\
+               [list(range(nexternal))]
 
     logger.info("Finding symmetric diagrams for process %s" % \
                  matrix_element.get('processes')[0].nice_string().\
@@ -249,7 +252,7 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
     signal.signal(signal.SIGALRM, handle_alarm)
     signal.alarm(max_time)
     try:
-        for perm in itertools.permutations(range(ninitial, nexternal)):
+        for perm in itertools.permutations(list(range(ninitial, nexternal))):
             if [equivalent_process.get('legs')[i].get('id') for i in perm] != \
                final_states:
                 # Non-identical particles permutated
@@ -280,7 +283,7 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
                 # Store initial amplitudes
                 amp2start = amp2
                 # Initialize list of permutations
-                perms = [range(nexternal) for i in range(len(amp2))]
+                perms = [list(range(nexternal)) for i in range(len(amp2))]
                 continue
 
             for i, val in enumerate(amp2):
@@ -355,7 +358,7 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             try:
                 QCD = inter.get('orders')['QCD']
-            except Exception, error:
+            except Exception:
                 QCD = 0
 
             return ((part.get('color'),
@@ -385,7 +388,7 @@ def find_symmetry_subproc_group(subproc_group):
 
     for idiag,diag in enumerate(diagrams):
         diagram_numbers.append(idiag+1)
-        permutations.append(range(nexternal))
+        permutations.append(list(range(nexternal)))
         if diag.get_vertex_leg_numbers()!=[] and \
                                   max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
@@ -467,7 +470,7 @@ def old_find_symmetry_subproc_group(subproc_group):
                sym_config < 0 and diagram_config_map[-sym_config-1] not in \
                me_config_dict[me_number]:
                 symmetry[isym] = 1
-                perms[isym]=range(nexternal)
+                perms[isym]=list(range(nexternal))
                 if sym_config < 0 and diagram_config_map[-sym_config-1] in \
                        me_config_dict[me_number]:
                     symmetry[-sym_config-1] -= 1
@@ -488,7 +491,7 @@ def old_find_symmetry_subproc_group(subproc_group):
     # Fill up all_symmetry and all_perms also for configs that have no symmetry
     for iconf in range(len(subproc_group.get('mapping_diagrams'))):
         all_symmetry.setdefault(iconf+1, 1)
-        all_perms.setdefault(iconf+1, range(nexternal))
+        all_perms.setdefault(iconf+1, list(range(nexternal)))
         # Since we don't want to multiply by symmetry factor here, set to 1
         if all_symmetry[iconf+1] > 1:
             all_symmetry[iconf+1] = 1
@@ -536,7 +539,7 @@ def find_matrix_elements_for_configs(subproc_group):
                 - matrix_elements[me1].get('identical_particle_factor'))\
                 or (len(me_config_dict[me2]) - len(me_config_dict[me1]))
 
-    sorted_mes = sorted([me for me in me_config_dict], me_sort)
+    sorted_mes = sorted([me for me in me_config_dict], key=misc.cmp_to_key(me_sort))
 
     # Reduce to minimal set of matrix elements
     latest_me = 0

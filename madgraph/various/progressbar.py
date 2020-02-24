@@ -39,6 +39,10 @@ The progressbar module is very easy to use, yet very powerful. And
 automatically supports features like auto-resizing when available.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
 __author__ = "Nilton Volpato"
 __author_email__ = "first-name dot last-name @ gmail.com"
 __date__ = "2006-05-07"
@@ -155,7 +159,7 @@ class Bar(ProgressBarWidgetHFill):
         self.left = left
         self.right = right
     def _format_marker(self, pbar):
-        if isinstance(self.marker, (str, unicode)):
+        if isinstance(self.marker, (str, six.text_type)):
             return self.marker
         else:
             return self.marker.update(pbar)
@@ -249,7 +253,7 @@ class ProgressBar(object):
                 r.append(w)
                 hfill_inds.append(i)
                 num_hfill += 1
-            elif isinstance(w, (str, unicode)):
+            elif isinstance(w, (str, six.text_type)):
                 r.append(w)
                 currwidth += len(w)
             else:
@@ -344,7 +348,7 @@ if __name__=='__main__':
             # do something
             pbar.update(1*i+1)
         pbar.finish()
-        print
+        print()
 
     def example1():
         widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
@@ -354,7 +358,7 @@ if __name__=='__main__':
             # do something
             pbar.update(10*i+1)
         pbar.finish()
-        print
+        print()
 
     def example2():
         class CrazyFileTransferSpeed(FileTransferSpeed):
@@ -373,7 +377,7 @@ if __name__=='__main__':
             # do something
             pbar.update(5*i+1)
         pbar.finish()
-        print
+        print()
 
     def example3():
         widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
@@ -382,7 +386,7 @@ if __name__=='__main__':
             # do something
             pbar.update(10*i+1)
         pbar.finish()
-        print
+        print()
 
     def example4():
         widgets = ['Test: ', Percentage(), ' ',
@@ -394,7 +398,7 @@ if __name__=='__main__':
             time.sleep(0.2)
             pbar.update(i)
         pbar.finish()
-        print
+        print()
 
     exampleVal()
     example1()

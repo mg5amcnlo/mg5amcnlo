@@ -15,6 +15,8 @@
 ################################################################################
 """ This is the main script in order to generate events in MadEvent """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import subprocess 
@@ -33,7 +35,7 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py'))):
-    print 'launch in debug mode'
+    print('launch in debug mode')
     subprocess.call([sys.executable] + ['-O'] + sys.argv)
     sys.exit()
 
@@ -50,7 +52,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print("For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -81,7 +83,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print('Running MG5 in debug mode')
 
 
 def set_configuration():
@@ -163,10 +165,10 @@ if '__main__' == __name__:
             launch.run_cmd('quit')
         except:
             pass
-    except MW.AlreadyRunning, error:
+    except MW.AlreadyRunning as error:
         logging.error(str(error))
         sys.exit()
-    except Exception, error:
+    except Exception as error:
         if os.path.exists(pjoin(root_path, 'RunWeb')): 
             os.remove(pjoin(root_path, 'RunWeb'))
         raise 

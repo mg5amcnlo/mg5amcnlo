@@ -8,6 +8,8 @@ C
 
         MP__G = 2 * SQRT(MP__AS*MP__PI)  ! for the first init
 
+        MP__MDL_CKM33 = 1.000000E+00_16
+
         MP__MDL_CONJG__CKM3X3 = 1.000000E+00_16
 
         MP__MDL_CKM22 = 1.000000E+00_16
@@ -17,8 +19,6 @@ C
         MP__MDL_CKM3X3 = 1.000000E+00_16
 
         MP__MDL_CONJG__CKM22 = 1.000000E+00_16
-
-        MP__MDL_CONJG__CKM33 = 1.000000E+00_16
 
         MP__MDL_NCOL = 3.000000E+00_16
 
@@ -171,9 +171,6 @@ C
 
       MP__MDL_G_UVG_1EPS_ = -((MP__MDL_G__EXP__2)/(2.000000E+00_16
      $ *4.800000E+01_16*MP__PI**2))*1.100000E+01_16*MP__MDL_CA
-
-      MP__MDL_G_UVQ_1EPS_ = ((MP__MDL_G__EXP__2)/(2.000000E+00_16
-     $ *4.800000E+01_16*MP__PI**2))*4.000000E+00_16*MP__MDL_TF
 
       MP__MDL_G_UVB_1EPS_ = ((MP__MDL_G__EXP__2)/(2.000000E+00_16
      $ *4.800000E+01_16*MP__PI**2))*4.000000E+00_16*MP__MDL_TF

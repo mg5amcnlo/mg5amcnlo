@@ -17,6 +17,7 @@
 for a diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
+from __future__ import absolute_import
 import copy
 import fractions
 import operator
@@ -26,6 +27,8 @@ import array
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
+from six.moves import range
+from functools import reduce
 
 #===============================================================================
 # ColorBasis
@@ -413,8 +416,7 @@ class ColorBasis(dict):
         # If more than one string at leading N...
         if len(res_cs) > 1 and any([not cs.near_equivalent(res_cs[0]) \
                                     for cs in res_cs]):
-            raise ColorBasis.ColorBasisError, \
-             "More than one color string with leading N coeff: %s" % str(res_cs)
+            raise ColorBasis.ColorBasisError("More than one color string with leading N coeff: %s" % str(res_cs))
 
         res_cs = res_cs[0]
 
@@ -423,13 +425,11 @@ class ColorBasis(dict):
         for col_obj in res_cs:
             if not isinstance(col_obj, color_algebra.T) and \
                    not col_obj.__class__.__name__.startswith('Epsilon'):
-                raise ColorBasis.ColorBasisError, \
-                  "Color flow decomposition %s contains non T/Epsilon elements" % \
-                                                                    str(res_cs)
+                raise ColorBasis.ColorBasisError("Color flow decomposition %s contains non T/Epsilon elements" % \
+                                                                    str(res_cs))
             if isinstance(col_obj, color_algebra.T) and len(col_obj) != 2:
-                raise ColorBasis.ColorBasisError, \
-                  "Color flow decomposition %s contains T's w/o 2 indices" % \
-                                                                    str(res_cs)
+                raise ColorBasis.ColorBasisError("Color flow decomposition %s contains T's w/o 2 indices" % \
+                                                                    str(res_cs))
 
         return res_cs
 
@@ -463,8 +463,7 @@ class ColorBasis(dict):
 
                 # Raise an error if external legs contain non supported repr
                 if abs(leg_repr) not in [1, 3, 6, 8]:
-                    raise ColorBasis.ColorBasisError, \
-        "Particle ID=%i has an unsupported color representation" % leg_repr
+                    raise ColorBasis.ColorBasisError("Particle ID=%i has an unsupported color representation" % leg_repr)
 
                 # Build the fake indices replacements for octets
                 if abs(leg_repr) == 8:
@@ -614,7 +613,7 @@ class ColorMatrix(dict):
                 if is_symmetric:
                     self.col_matrix_fixed_Nc[(i2, i1)] = result_fixed_Nc
                 # and update the inverted dict
-                if result_fixed_Nc in self.inverted_col_matrix.keys():
+                if result_fixed_Nc in list(self.inverted_col_matrix.keys()):
                     self.inverted_col_matrix[result_fixed_Nc].append((i1,
                                                                       i2))
                     if is_symmetric:

@@ -1,9 +1,11 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import logging.config
 import logging
 import pydoc
 import os
-import loop_me_comparator
-import me_comparator
+from . import loop_me_comparator
+from . import me_comparator
 import unittest
 import re
 import copy
@@ -109,7 +111,7 @@ def procToFolderName(proc, sqso = {}):
     for coup, value in sqso.items(): 
         parsed = sq_order_re.match(coup)
         if parsed is None:
-            raise MadGraph5Error, " Could not parse squared orders %s"%coup
+            raise MadGraph5Error(" Could not parse squared orders %s"%coup)
         res = res + "_%ssq%s%i"%(parsed.group('coup_name'),
                           sqso_strings[parsed.group('logical_operator')],value)
     return res
@@ -165,16 +167,16 @@ class ML5Test(unittest.TestCase):
 
         # Print out progress if it is a run for an individual process
         if len(my_proc_list)==1:
-            print "\n== %s =="%my_proc_list[0][0]
+            print("\n== %s =="%my_proc_list[0][0])
         else:
-            print "\n== %s =="%filename
+            print("\n== %s =="%filename)
         
         # Check if pickle exists, if not create it        
         if pickle_file!="" and not os.path.isfile(os.path.join(_pickle_path,pickle_file)):
-            print " => Computing reference evaluation with %s"%chosen_runner
+            print(" => Computing reference evaluation with %s"%chosen_runner)
             self.create_loop_pickle(my_proc_list, model,
                                              pickle_file, energy, chosen_runner)
-            print "\n => Done with %s evaluation"%chosen_runner
+            print("\n => Done with %s evaluation"%chosen_runner)
         # Load the stored runner
         if pickle_file != "":
             stored_runner = me_comparator.PickleRunner.find_comparisons(
@@ -214,10 +216,9 @@ class ML5Test(unittest.TestCase):
                                                                to_compare_with])
         
         if len(runners_to_compare)<=1:
-                raise MadGraph5Error,\
-"""  Only one runner to compute the result with, so there is no possible comparison.
+                raise MadGraph5Error("""  Only one runner to compute the result with, so there is no possible comparison.
   This is most likely due to the fact that you are running a TIR only comparison
-  and the reference pickle cannot be found."""            
+  and the reference pickle cannot be found.""")            
         
         # Set the runners to include
         my_comp.set_me_runners(*runners_to_compare)
@@ -242,8 +243,8 @@ class ML5Test(unittest.TestCase):
 #       print "Creating loop pickle for chosen_runner=",chosen_runner
         allowed_chosen_runners = ['ML4','ML5_opt','ML5_default'] 
         if chosen_runner not in allowed_chosen_runners:
-            raise MadGraph5Error, 'The reference runner can only be in %s.'%\
-                                                          allowed_chosen_runners
+            raise MadGraph5Error('The reference runner can only be in %s.'%\
+                                                          allowed_chosen_runners)
         
         runner = None
         if chosen_runner == 'ML5_opt':

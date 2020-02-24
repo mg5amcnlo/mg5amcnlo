@@ -15,7 +15,9 @@
 
 """Unit test library to test the histograms.py functions"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os 

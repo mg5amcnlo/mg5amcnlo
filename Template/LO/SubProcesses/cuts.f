@@ -1592,6 +1592,7 @@ C     Set masses. Currently no way of getting those?
       m0d = 0.0
       m0c = 1.5
       m0s = 0.0
+      m0b = 4.7 
       m0t = 172.5
       m0w = 80.4
       m0z = 91.188

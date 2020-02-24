@@ -14,6 +14,7 @@
 ################################################################################
 """A File for splitting"""
 
+from __future__ import absolute_import
 import sys
 import re
 import os
@@ -38,7 +39,7 @@ class FOAnalyseCard(dict):
         """ if testing, card is the content"""
         self.testing = testing
         dict.__init__(self)
-        self.keylist = self.keys()
+        self.keylist = list(self.keys())
             
         if card:
             self.read_card(card)

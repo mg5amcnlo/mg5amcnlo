@@ -14,6 +14,8 @@
 ################################################################################
 """ Command interface for MadSpin """
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import collections
 import logging
 import math
@@ -24,6 +26,8 @@ import shutil
 import sys
 import time
 import glob
+import six
+from six.moves import range
 
 
 pjoin = os.path.join
@@ -75,7 +79,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('cross_section', {'__type__':0.}, comment="forcing normalization of cross-section after MS (for none/onshell)" )
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
-        
+        self.add_param('frame_id', 6)
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -211,7 +215,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Read the banner of the inputfile
         self.events_file = open(os.path.realpath(inputfile))
         self.banner = banner.Banner(self.events_file)
-        
+
 
         # Check the validity of the banner:
         if 'slha' not in self.banner:
@@ -226,14 +230,21 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd('This event file was already decayed by MS. This is not possible to add to it a second decay')
         
         if 'mgruncard' in self.banner:
+            run_card = self.banner.charge_card('run_card')
             if not self.options['Nevents_for_max_weigth']:
-                nevents = int(self.banner.get_detail('run_card', 'nevents'))
+                nevents = run_card['nevents']
                 N_weight = max([75, int(3*nevents**(1/3))])
                 self.options['Nevents_for_max_weigth'] = N_weight
                 N_sigma = max(4.5, math.log(nevents,7.7))
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+            
+            if isinstance(run_card, banner.RunCardLO):
+                run_card.update_system_parameter_for_include()
+                self.options['frame_id'] = run_card['frame_id']
+            else:
+                self.options['frame_id'] = 6
         else:
             if not self.options['Nevents_for_max_weigth']:
                 self.options['Nevents_for_max_weigth'] = 75
@@ -246,7 +257,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         process = self.banner.get_detail('proc_card', 'generate')
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
-            raise Exception, msg
+            raise Exception(msg)
         process, option = mg_interface.MadGraphCmd.split_process_line(process)
         self.proc_option = option
         
@@ -313,7 +324,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if model_name in line:
                     final_model = True
                     
-            
                 
     def import_model(self, args):
         """syntax: import model NAME CARD_PATH
@@ -400,8 +410,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         #if self.model and not self.model['case_sensitive']:
         #    decaybranch = decaybranch.lower()
 
+        if self.options['spinmode'] != 'full' and '{' in decaybranch:
+            if self.options['spinmode'] == 'none':
+                logger.warning("polarization option used with spinmode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
+            else:
+                logger.warning("polarization option used with spinmode=onshell. This combination is not validated and is by construction using sub-optimal method which can likely lead to bias in some situation. Use at your own risk.")
+
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
-        if not self.list_branches.has_key(init_part):
+        if init_part not in self.list_branches:
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
         del decay_process, init_part    
@@ -476,7 +492,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Format
         if len(args) == 1:
-            opts = self.options.keys() + ['seed', "spinmode"]
+            opts = list(self.options.keys()) + ['seed', "spinmode"]
             return self.list_completion(text, opts) 
         elif len(args) == 2:
             if args[1] == 'BW_effect':
@@ -493,20 +509,20 @@ class MadSpinInterface(extended_cmd.Cmd):
     def help_set(self):
         """help the set command"""
         
-        print 'syntax: set OPTION VALUE'
-        print ''
-        print '-- assign to a given option a given value'
-        print '   - set max_weight VALUE: pre-define the maximum_weight for the reweighting'
-        print '   - set BW_effect True|False: [default:True] reshuffle the momenta to describe'
-        print '       corrrectly the Breit-Wigner of the decayed particle'
-        print '   - set seed VALUE: fix the value of the seed to a given value.'
-        print '       by default use the current time to set the seed. random number are'
-        print '       generated by the python module random using the Mersenne Twister generator.'
-        print '       It has a period of 2**19937-1.'
-        print '   - set max_running_process VALUE: allow to limit the number of open file used by the code'
-        print '       The number of running is raising like 2*VALUE'
-        print '   - set spinmode=none: mode with simple file merging. No spin correlation attempt.'
-        print '       This mode allows 3 (and more) body decay.'
+        print('syntax: set OPTION VALUE')
+        print('')
+        print('-- assign to a given option a given value')
+        print('   - set max_weight VALUE: pre-define the maximum_weight for the reweighting')
+        print('   - set BW_effect True|False: [default:True] reshuffle the momenta to describe')
+        print('       corrrectly the Breit-Wigner of the decayed particle')
+        print('   - set seed VALUE: fix the value of the seed to a given value.')
+        print('       by default use the current time to set the seed. random number are')
+        print('       generated by the python module random using the Mersenne Twister generator.')
+        print('       It has a period of 2**19937-1.')
+        print('   - set max_running_process VALUE: allow to limit the number of open file used by the code')
+        print('       The number of running is raising like 2*VALUE')
+        print('   - set spinmode=none: mode with simple file merging. No spin correlation attempt.')
+        print('       This mode allows 3 (and more) body decay.')
     
     def do_define(self, line):
         """ """
@@ -532,14 +548,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
         try:
             return self.mg5cmd.complete_define(*args)
-        except Exception,error:
+        except Exception as error:
             misc.sprint(error)
             
     def complete_decay(self, *args):
         """ """
         try:
             return self.mg5cmd.complete_generate(*args)
-        except Exception,error:
+        except Exception as error:
             misc.sprint(error)
             
     def check_launch(self, args):
@@ -553,18 +569,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Validity check. Need lhe version 3 if matching is on
         if self.banner.get("run_card", "lhe_version") < 3 and \
             self.banner.get("run_card", "ickkw") > 0:
-            raise Exception, "MadSpin requires LHEF version 3 when running with matching/merging"
+            raise Exception("MadSpin requires LHEF version 3 when running with matching/merging")
 
     def help_launch(self):
         """help for the launch command"""
         
-        print '''Running Madspin on the loaded events, following the decays enter
+        print('''Running Madspin on the loaded events, following the decays enter
         An example of a full run is the following:
         import ../mssm_events.lhe.gz
         define sq = ur ur~
         decay go > sq j
         launch
-        '''
+        ''')
 
     @misc.mute_logger()
     def do_launch(self, line):
@@ -575,7 +591,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif self.options["spinmode"] == "onshell":
             return self.run_onshell(line)
         elif self.options["spinmode"] == "bridge":
-            raise Exception, "Bridge mode not available."
+            raise Exception("Bridge mode not available.")
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
@@ -585,14 +601,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.check_launch(args)
         for part in self.list_branches.keys():
             if part in self.mg5cmd._multiparticles:
+            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
-            pid = self.mg5cmd._curr_model.get('name2pdg')[part]
-            if pid in self.final_state:
-                break
-#        else:
-#            logger.info("Nothing to decay ...")
-#            return
+            else:
+                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                if pid in self.final_state:
+                    break
+        else:
+            logger.info("Nothing to decay ...")
+            return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
@@ -605,7 +623,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if self.options['seed'] > 30081*30081: # can't use too big random number
             msg = 'Random seed too large ' + str(self.options['seed']) + ' > 30081*30081'
-            raise Exception, msg
+            raise Exception(msg)
 
         #self.options['seed'] = self.seed
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
@@ -699,13 +717,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         
             orig_block = generate_all.banner.param_card[name]
             if block != orig_block:                
-                raise Exception, """The directory %s is specific to a mass spectrum. 
+                raise Exception("""The directory %s is specific to a mass spectrum. 
                 Your event file is not compatible with this one. (Different param_card: %s different)
                 orig block:
                 %s
                 new block:
                 %s""" \
-                % (self.options['ms_dir'], name, orig_block, block)
+                % (self.options['ms_dir'], name, orig_block, block))
 
         #replace init information
         generate_all.banner['init'] = self.banner['init']
@@ -791,7 +809,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif '.hepmc' in filename:
                 self.options['input_format']  = 'hepmc'
             else:
-                raise Exception, "fail to recognized input format automatically"
+                raise Exception("fail to recognized input format automatically")
                 
         if self.options['input_format'] in ['lhe', 'lhe_no_banner']:
             orig_lhe = lhe_parser.EventFile(filename)
@@ -831,7 +849,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if self.options['seed'] > 30081*30081: # can't use too big random number
             msg = 'Random seed too large ' + str(self.options['seed']) + ' > 30081*30081'
-            raise Exception, msg
+            raise Exception(msg)
 
         #self.options['seed'] = self.options['seed']
         
@@ -971,7 +989,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         for event in orig_lhe:
             if counter and counter % 100 == 0 and float(str(counter)[1:]) ==0:
-                print "decaying event number %s [%s s]" % (counter, time.time()-start)
+                print("decaying event number %s [%s s]" % (counter, time.time()-start))
             counter +=1
             
             # use random order for particles to avoid systematics when more than 
@@ -1040,7 +1058,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # read the event file up to completion
                     while 1:
                         try:
-                            decay = decay_file.next()
+                            decay = next(decay_file)
                         except StopIteration:
                             # check how far we are
                             ratio = counter / nb_event 
@@ -1051,6 +1069,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             evt_decayfile[particle.pdg].update(new_file)
                             decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                             continue
+
                         if helicity == decay[0].helicity or helicity==9 or \
                                             self.options["spinmode"] == "none":
                             break # use that event
@@ -1180,7 +1199,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         try:
                             os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
                             os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
-                        except Exception,error:
+                        except Exception as error:
                             logger.debug(error)
                             pass 
                         self.me_int[decay_dir] = me5_cmd
@@ -1225,7 +1244,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     try:
                         os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
                         os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
-                    except Exception,error:
+                    except Exception as error:
                         logger.debug(error)
                         pass                 
                     self.me_int[decay_dir] = me5_cmd
@@ -1340,7 +1359,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if self.seed > 30081*30081: # can't use too big random number
             msg = 'Random seed too large ' + str(self.seed) + ' > 30081*30081'
-            raise Exception, msg
+            raise Exception(msg)
 
         self.options['seed'] = self.seed
         
@@ -1408,6 +1427,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
+
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)
@@ -1424,7 +1444,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         #4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
-        
         
         #5. generate the decay 
         orig_lhe.seek(0)
@@ -1443,8 +1462,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event,production in enumerate(orig_lhe):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
-            if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
+            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+            else:
+                logger.info("next event [%s]", time.time()-start)
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
@@ -1516,7 +1537,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             # file if needed.
             while 1:
                 try:
-                    decay = decay_file.next()
+                    decay = next(decay_file)
                     break
                 except StopIteration:
                     eff = self.efficiency
@@ -1539,6 +1560,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event_decay is a dict pdg -> list of event file (contain the decay)
         
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
+            return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+        
         nevents = self.options['Nevents_for_max_weigth']
         if nevents == 0 :
             nevents = 75
@@ -1548,7 +1572,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
 
-
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
         for i in range(nevents):
@@ -1556,12 +1579,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 logger.info( "Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
             maxwgt = 0
             orig_lhe.seek(0)
-            base_event = orig_lhe.next()
+            base_event = next(orig_lhe)
             if self.options['fixed_order']:
                 base_event = base_event[0]
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
-                #carefull base_event is modified by the following function                  
+                #carefull base_event is modified by the following function 
                 _, wgt = self.get_onshell_evt_and_wgt(base_event, decays)
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
@@ -1577,10 +1600,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
+            #misc.sprint(ave_weight, std_weight)
             base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                 
             if all_maxwgt[1] > base_max_weight:
                 base_max_weight = 1.05 * all_maxwgt[1]
+        if self.options['ms_dir']:
+            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
             
             
@@ -1602,13 +1628,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
-        
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
             production_me = self.calculate_matrix_element(production)
             production.me_wgt = production_me
-            
         decay_me = 1.0
         for pdg in decays:
             for dec in decays[pdg]:
@@ -1636,7 +1660,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             final = tuple(-i for i in final)
             tag = (init, final)
             orig_order = self.all_me[tag]['order']
-            
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)
@@ -1650,12 +1673,20 @@ class MadSpinInterface(extended_cmd.Cmd):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
             
             mymod = __import__("%s.matrix2py" % (pdir))
+            if six.PY3:
+                from importlib import reload
+            else:
+                from imp import reload
             reload(mymod)
             mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_value  
+                    if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
+                            os.path.exists(pjoin(self.path_me,'param_card.dat')):
+                        mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                    else:
+                        mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
+            self.all_f2py[pdir] = mymod.get_value 
             return self.calculate_matrix_element(event)
         
         
@@ -1690,7 +1721,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 try:
                     proc_nb = int(proc_nb)
                 except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                    raise MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
                 proc_nb = '@ %i' % proc_nb 
             else:
                 proc_nb = ''     
