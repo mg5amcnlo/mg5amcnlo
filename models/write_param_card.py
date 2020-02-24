@@ -232,7 +232,7 @@ class ParamCardWriter(object):
          )
         if name!='DECAY':
             if scale:
-                self.fsock.write("""Block %s @ %s \n""" % (name.lower(), scale))
+                self.fsock.write("""Block %s Q= %s \n""" % (name.lower(), scale))
             else:
                 self.fsock.write("""Block %s \n""" % name.lower())
             

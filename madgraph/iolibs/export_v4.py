@@ -5529,15 +5529,24 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
+        self.scales = []
         
         if self.model.get('running_elements'):
             all_elements = set()
+            add_scale = set()
             for runs in self.model.get('running_elements'):
                 for line_run in runs.run_objects:
                     for one_element in line_run:
                         all_elements.add(one_element.name)
+                        add_scale.add(one_element.lhablock)
             all_elements.union(set(self.PS_dependent_key))
             self.PS_dependent_key = list(all_elements)
+            
+            try:
+                add_scale.remove('SMINPUTS')
+            except Exception:
+                pass
+            self.scales = add_scale
 
     
     def pass_parameter_to_case_insensitive(self):
@@ -5955,6 +5964,8 @@ class UFO_model_to_mg4(object):
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]
+        
+        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
 
         # check the parameter is a CT parameter or not
         # if yes, just use the needed ones        
@@ -6376,12 +6387,14 @@ class UFO_model_to_mg4(object):
       logical first
       data first /.true./
       integer i,j,k
-      double precision G0,beta0
+      double precision G0,beta0, alphas
+      external alphas
       data G0 /0d0/
       double precision r1,r2
       if (first) then
          %(initc0)s
-         G0 = SQRT(4.0D0*PI*ASMZ)
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
          first = .false.
       endif
       beta0 = 11. - 2./3. * maxjetflavor
@@ -6446,36 +6459,44 @@ class UFO_model_to_mg4(object):
         mat1=[[0]*size for _ in range(size)]
         mat2=[[0]*size for _ in range(size)]
         mat3=0
+        scales = set()
         
         for elements in self.model["running_elements"]:
             for params in elements.run_objects:
-                params = [str(p) for p in params]
-                if not any(param in runparams for param in params):
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
                     continue
-                if 'aS' in params or params.count('G') == 2:
+                if 'aS' in sparams or sparams.count('G') == 2:
                     to_update = mat2
                     prefact = 4*math.pi
                     try:
-                        params.remove('aS')
+                        sparams.remove('aS')
                     except:
-                        params.remove('G')
-                        params.remove('G')
+                        sparams.remove('G')
+                        sparams.remove('G')
                 else:
                     to_update = mat1
-                    params.remove('G')
+                    sparams.remove('G')
                     prefact = 16*math.pi**2
                     
-                if len(params) == 3:
-                    if len(set(params)) !=1:
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
                         raise Exception( "Not supported type of running")
                     mat3 = eval(elements.value)
                     continue
-                elif len(params) !=2:
+                elif len(sparams) !=2:
                     raise Exception("Not supported type of running")
-                id1 = runparams.index(params[0])
-                id2 = runparams.index(params[1])
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
                 assert to_update[id1][id2] == 0
                 to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
         
         data = {}
         data['block_nb'] = block_nb+1
@@ -6499,6 +6520,23 @@ class UFO_model_to_mg4(object):
         data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
         data['mp'] = ''
+        
+        if len(scales) == 1:
+            data['scale'] = scales.pop()
+            data['check_scale'] = ''
+        else:
+            one_scale = scales.pop()
+            data['scale'] = one_scale
+            for scale in scales:
+                check_scale = """ if (%(1)s!=%(2)s) then
+                write(*,*) 'ERROR scale %(1)s and %(2)s need to be equal for the running'
+                stop 5
+                endif
+                """
+                data['check_scale'] += check_scale % {'1': one_scale, '2': scale}           
+            
+            
+            raise Exception
         # need to compute the matrices
         # carefull some component are proportional to aS
         # need to convert those to G^2

@@ -862,7 +862,7 @@ class UFOMG5Converter(object):
 
         #check if we have scalar colored particle in the model -> issue with the running of alpha_s
         if particle['spin'] == 1 and particle['color'] != 1:
-            if particle['type'] != 'ghost':
+            if particle['type'] != 'ghost' and particle.get('mass').lower() == 'zero':
                 self.colored_scalar = True
 
         

@@ -248,7 +248,6 @@ class Block(list):
 
     def def_scale(self, scale):
         """ """
-    
         self.scale = scale
 
     def load_str(self, text):
@@ -270,8 +269,8 @@ class Block(list):
                 self.name += ' %s' % data[2]
         elif len(data) == 4 and data[2] == 'q=':
             #the last part should be of the form Q=
-            self.scale = float(data[3])                
-            
+            self.scale = float(data[3])  
+                          
         return self
     
     def keys(self):
@@ -624,8 +623,14 @@ class ParamCard(dict):
         """ write a fortran file which hardcode the param value"""
         
         self.secure_slha2(identpath)
-        
-        
+        input_inc = pjoin(os.path.dirname(outpath),'MODEL', 'input.inc')
+
+        #check if we need to write the value of scale for some block
+        if os.path.exists(input_inc):
+            text = open(input_inc).read()
+            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+
+            
         fout = file_writers.FortranWriter(outpath)
         defaultcard = ParamCard(default)
         for line in open(identpath):
@@ -657,6 +662,10 @@ class ParamCard(dict):
             fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
+                
+        for block in scales:
+            value = self[block].scale
+            fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
       
     def convert_to_complex_mass_scheme(self):
         """ Convert this param_card to the convention used for the complex mass scheme:
