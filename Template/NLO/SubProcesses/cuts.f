@@ -52,12 +52,14 @@ c jet cluster algorithm
       integer njet_eta
       integer mm
 c Photon isolation
-      integer nph,nem,k,nin
+      integer nph,nem,k,nin,nphiso
       double precision ptg,chi_gamma_iso,iso_getdrv40
       double precision Etsum(0:nexternal)
       real drlist(nexternal)
       double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
-      logical alliso
+      logical alliso,isolated
+      integer get_n_tagged_photons
+c      external get_n_tagged_photons
 c Sort array of results: ismode>0 for real, isway=0 for ascending order
       integer ismode,isway,izero,isorted(nexternal)
       parameter (ismode=1)
@@ -295,9 +297,9 @@ c find the photons
             endif
          enddo
          if(nph.eq.0)goto 444
-         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
-     $           // ' for mixed QED-QCD corrections'
-         stop 1
+c         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
+c     $           // ' for mixed QED-QCD corrections'
+c         stop 1
          
          if(isoEM)then
             nem=nph
@@ -316,22 +318,25 @@ c find the photons
             enddo
          endif
          
-         alliso=.true.
+c         alliso=.true.
+         nphiso=0
 
          j=0
-         do while(j.lt.nph.and.alliso)
+c         do while(j.lt.nph.and.alliso)
+         do while(j.lt.nph)
+
 c Loop over all photons
             j=j+1
             
             ptg=pt(pgamma(0,j))
             if(ptg.lt.ptgmin)then
-               passcuts_user=.false.
-               return
+               cycle
+c               return
             endif
             if (etagamma.gt.0d0) then
                if (abs(eta(pgamma(0,j))).gt.etagamma) then
-                  passcuts_user=.false.
-                  return
+                  cycle
+c                  return
                endif
             endif
          
@@ -348,11 +353,18 @@ c Isolate from hadronic energy
                   Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
                endif
             enddo
+            isolated=.True.
             do i=1,nin
-               alliso=alliso .and.
-     $              Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
-     $              R0gamma,xn,epsgamma,ptg)
+c               alliso=alliso .and.
+c     $              Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+c     $              R0gamma,xn,epsgamma,ptg)
+                if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $              R0gamma,xn,epsgamma,ptg)) then
+                    isolated=.False. 
+                    exit
+                endif
             enddo
+            if(.not.isolated)cycle
             
 c Isolate from EM energy
             if(isoEM.and.nem.gt.1)then
@@ -374,15 +386,25 @@ c First of list must be the photon: check this, and drop it
                      Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
                   endif
                enddo
+               isolated=.True.
                do i=1,nin
-                  alliso=alliso .and.
-     $               Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
-     $               R0gamma,xn,epsgamma,ptg)
+c                  alliso=alliso .and.
+c     $               Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+c     $               R0gamma,xn,epsgamma,ptg)
+                 if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $               R0gamma,xn,epsgamma,ptg)) then
+                    isolated=.False.
+                    exit
+                 endif
                enddo
+            if(.not.isolated)cycle
             endif
 c End of loop over photons
+
+         nphiso=nphiso+1
+
          enddo
-         if(.not.alliso)then
+         if(nphiso.lt.get_n_tagged_photons())then
             passcuts_user=.false.
             return
          endif
@@ -1126,5 +1148,22 @@ c      enddo
 c      bias_wgt=H_T**2
       return
       end
+
+      integer function get_n_tagged_photons()
+      implicit none
+      integer i
+      include "nexternal.inc"
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      get_n_tagged_photons = 0
+
+      do i = nincoming+1, nexternal
+        if (particle_tag(i))
+     $     get_n_tagged_photons = get_n_tagged_photons+1
+      enddo
+
+      return
+      end
+
 
 

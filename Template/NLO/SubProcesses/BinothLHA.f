@@ -561,23 +561,6 @@ c weight, screwing up the complete integration afterward.
       end
 
 
-      integer function get_n_tagged_photons()
-      implicit none
-      integer i
-      include "nexternal.inc"
-      logical particle_tag(nexternal)
-      common /c_particle_tag/particle_tag
-      get_n_tagged_photons = 0
-
-      do i = nincoming+1, nexternal
-        if (particle_tag(i)) 
-     $     get_n_tagged_photons = get_n_tagged_photons+1
-      enddo
-
-      return
-      end
-
-
       subroutine BinothLHAInit(filename)
       implicit none
       include "nexternal.inc"
