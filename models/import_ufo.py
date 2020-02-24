@@ -452,6 +452,8 @@ class UFOMG5Converter(object):
         self.interactions = base_objects.InteractionList()
         self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
                                   # only trigger if all particles are of QCD type (not h>gg)
+        self.colored_scalar = False # in presence of color scalar particle the running of a_s is modified
+                                    # This is not supported by madevent/systematics
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -528,6 +530,11 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
+
+        if self.colored_scalar:
+            logger.critical("Model with scalar colored particles. The running of alpha_s does not support such model.\n" + \
+                             "You can ONLY run at fix scale")
+            self.model['limitations'].append('fix_scale')
 
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
@@ -853,6 +860,11 @@ class UFOMG5Converter(object):
                     particle.set('propagator', 0)
                
         assert(10 == nb_property) #basic check that all the information is there         
+
+        #check if we have scalar colored particle in the model -> issue with the running of alpha_s
+        if particle['spin'] == 1 and particle['color'] != 1:
+            self.colored_scalar = True
+
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:

@@ -1024,6 +1024,7 @@ class Model(PhysicsObject):
         self['running_elements'] = []
         self['allow_pickle'] = True
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
+                                 # fix_scale means that the model should use fix_scale computation.
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         

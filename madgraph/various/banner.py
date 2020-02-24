@@ -3486,6 +3486,13 @@ class RunCardLO(RunCard):
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
             
+        if 'fix_scale' in proc_characteristic['limitations']:
+            self['fixed_ren_scale'] = 1
+            self['fixed_fac_scale'] = 1
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
+            
         # define class of particles present to hide all the cuts associated to 
         # not present class
         cut_class = collections.defaultdict(int)

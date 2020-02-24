@@ -4235,12 +4235,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         lhapdf_version, alternate_path)
         elif lhapdf_version.startswith('6.'):
             # try to do a simple wget
-            import random
-            r = random.choice([0,1])
-            r = [r, 1-r]
+            r = [1, 0]
             for t in r:
                 if t ==0:
-                    wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
+                    wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/v6.backup/%s/%s.tar.gz" 
                     wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
                 else:
                     wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
@@ -5903,7 +5901,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
-                
+            
+            if 'fix_scale' in proc_charac['limitations']:
+                if self.run_card['fixed_fac_scale'] or self.run_card['fixed_ren_scale']:
+                    raise InvalidCmd("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                     "Therefore you can not perform scale running computation.")
+                if self.run_card['ickkw']:
+                    raise InvalidCmd("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                     "Therefore you can not perform MLM merging with this model.")
+                    
+                if self.run_card['lpp1'] !=0 or self.run_card['lpp2'] !=0:
+                    logger.critical("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                    "PLEASE check carefully the value use for alphas in the internal log.")
+
+                     
 
         ########################################################################
         #       NLO specific check
@@ -5920,7 +5931,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.run_card['ickkw']:
                     raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
-                            
+            
+            if 'fix_scale' in proc_charac['limitations']:
+                raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
+                                 "Your model does not have a SM like running of the strong coupling.")
+                        
             for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
                            list(self.run_card['mxx_min_pdg'].keys())): 
                    
