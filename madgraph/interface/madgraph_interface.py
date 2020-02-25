@@ -3751,7 +3751,7 @@ This implies that with decay chains:
             data   = import_ufo.get_model_db()
             self._online_model2 = []
             for line in data:
-                model_name, path = line.split()
+                model_name, path = line.decode().split()
                 if model_name in already_done:
                     continue
                 if model_name.endswith('_v4'):
