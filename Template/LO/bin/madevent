@@ -76,7 +76,7 @@ if not done:
     try:
         (options, args) = parser.parse_args()
     except MyOptParser.InvalidOption as error:
-        print error
+        print(error)
         sys.exit(2)  
 
 if len(args) == 0:
