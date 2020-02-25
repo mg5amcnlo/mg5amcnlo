@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -67,7 +67,7 @@ for i in range(len(sys.argv)-1):
     try:
         (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
         done = True
-    except MyOptParser.InvalidOption, error:
+    except MyOptParser.InvalidOption as error:
         pass 
     else:
         args += sys.argv[len(sys.argv)-i:]
@@ -75,7 +75,7 @@ if not done:
     # raise correct error:
     try:
         (options, args) = parser.parse_args()
-    except MyOptParser.InvalidOption, error:
+    except MyOptParser.InvalidOption as error:
         print error
         sys.exit(2)  
 
@@ -202,7 +202,7 @@ try:
 except KeyboardInterrupt:
     print 'writting history and directory and quit on KeyboardInterrupt' 
     pass
-except cmd_interface.MadEventAlreadyRunning, error:
+except cmd_interface.MadEventAlreadyRunning  as  error:
     logging.error(str(error))
     sys.exit(1)
 

@@ -3751,7 +3751,7 @@ This implies that with decay chains:
             data   = import_ufo.get_model_db()
             self._online_model2 = []
             for line in data:
-                model_name, path = line.split()
+                model_name, path = line.decode().split()
                 if model_name in already_done:
                     continue
                 if model_name.endswith('_v4'):
@@ -5854,7 +5854,7 @@ This implies that with decay chains:
                 try:
                     version = misc.Popen(
                            [lhapdf_config,'--version'], stdout=subprocess.PIPE)
-                    lhapdf_version = int(version.stdout.read()[0])
+                    lhapdf_version = int(version.stdout.read().decode()[0])
                     if lhapdf_version not in [5,6]:
                         raise 
                 except:

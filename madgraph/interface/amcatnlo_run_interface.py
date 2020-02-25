@@ -4590,49 +4590,11 @@ RESTART = %(mint_mode)s
 
         # check if we can use LHAPDF to compute the PDF uncertainty
         if any(self.run_card['reweight_pdf']):
-            use_lhapdf=False
-            lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().decode().strip() 
-
-            try:
-                candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
-                            if os.path.isdir(pjoin(lhapdf_libdir,dirname))]
-            except OSError:
-                candidates=[]
-            for candidate in candidates:
-                if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                    sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
-                    try:
-                        import lhapdf
-                        use_lhapdf=True
-                        break
-                    except ImportError:
-                        sys.path.pop(0)
-                        continue
-                
-            if not use_lhapdf:
-                try:
-                    candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
-                                if os.path.isdir(pjoin(lhapdf_libdir+'64',dirname))]
-                except OSError:
-                    candidates=[]
-                for candidate in candidates:
-                    if os.path.isfile(pjoin(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
-                        sys.path.insert(0,pjoin(lhapdf_libdir+'64',candidate,'site-packages'))
-                        try:
-                            import lhapdf
-                            use_lhapdf=True
-                            break
-                        except ImportError:
-                            sys.path.pop(0)
-                            continue
-                
-            if not use_lhapdf:
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                except ImportError:
-                    logger.warning("Failed to access python version of LHAPDF: "\
+            lhapdf = misc.import_python_lhapdf()
+            if lhapdf:
+                use_lhapdf = True
+            else:
+                logger.warning("Failed to access python version of LHAPDF: "\
                                    "cannot compute PDF uncertainty from the "\
                                    "weights in the events. The weights in the LHE " \
                                    "event files will still cover all PDF set members, "\
@@ -4640,8 +4602,8 @@ RESTART = %(mint_mode)s
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable and the"\
                                    "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
-                    use_lhapdf=False
-
+                use_lhapdf=False                
+            
         # turn off lhapdf printing any messages
         if any(self.run_card['reweight_pdf']) and use_lhapdf: lhapdf.setVerbosity(0)
 
@@ -5066,10 +5028,11 @@ RESTART = %(mint_mode)s
                        'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
                 else:
                     output, _ = p.communicate()
-                    if code is 'applgrid' and output < '1.4.63':
+                    output.decode()
+                    if code == 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
                                              +' You are using %s',output)
-                    if code is 'amcfast' and output < '1.1.1':
+                    if code == 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
                                              +' You are using %s',output)
 

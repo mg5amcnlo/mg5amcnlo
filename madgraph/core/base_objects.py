@@ -279,11 +279,11 @@ class Particle(PhysicsObject):
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
-        if name is 'ghost':
+        if name == 'ghost':
             if not isinstance(value,bool):
                 raise self.PhysicsObjectError("%s is not a valid bool for the 'ghost' attribute" % str(value))
     
-        if name is 'counterterm':
+        if name == 'counterterm':
             if not isinstance(value,dict):
                 raise self.PhysicsObjectError("counterterm %s is not a valid dictionary" % repr(value))
             for key, val in value.items():
@@ -308,13 +308,13 @@ class Particle(PhysicsObject):
                         raise self.PhysicsObjectError("Key %s is not a valid laurent serie order" % repr(vkey))
                     if not isinstance(vvalue,str):
                         raise self.PhysicsObjectError("Coupling %s is not a valid string" % repr(vvalue))
-        if name is 'spin':
+        if name == 'spin':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("Spin %s is not an integer" % repr(value))
             if (value < 1 or value > 5) and value != 99:
                 raise self.PhysicsObjectError("Spin %i not valid" % value)
 
-        if name is 'color':
+        if name == 'color':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("Color %s is not an integer" % repr(value))
             if value not in [1, 3, 6, 8]:
@@ -327,21 +327,21 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
 
-        if name is 'pdg_code':
+        if name == 'pdg_code':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError("PDG code %s is not an integer" % repr(value))
 
-        if name is 'line':
+        if name == 'line':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError("Line type %s is not a string" % repr(value))
             if value not in ['None','dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
                 raise self.PhysicsObjectError("Line type %s is unknown" % value)
 
-        if name is 'charge':
+        if name == 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError("Charge %s is not a float" % repr(value))
 
-        if name is 'propagating':
+        if name == 'propagating':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("Propagating tag %s is not a boolean" % repr(value))
 

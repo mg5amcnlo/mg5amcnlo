@@ -1902,10 +1902,10 @@ class HTCaaSCluster(Cluster):
         for line in status.stdout:
             #ongoing.append(line.split()[0].strip())
             status2 = line.split()[-1]
-            if status2 is not 'null' or line.split()[0].strip() is not '0':
+            if status2 != 'null' or line.split()[0].strip() != '0':
                 ongoing.append(line.split()[0].strip())
             logger.debug("["+line.split()[0].strip()+"]"+status2)
-            if status2 is 'null' or line.split()[0].strip() is '0': 
+            if status2 != 'null' or line.split()[0].strip() != '0': 
                 idle += 1
             elif status2 in self.idle_tag:
                 idle += 1
@@ -2011,10 +2011,10 @@ class HTCaaS2Cluster(Cluster):
             tmp_dirs2= self.submitted_dirs[tmp_leng:]
             tmp_exes1= self.submitted_exes[0:tmp_leng]
             tmp_exes2= self.submitted_exes[tmp_leng:]
-            command1 = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in tmp_dirs1 if a and a is not ' ']),
-                               '-e', ":".join([str(a) for a in tmp_exes1 if a and a is not ' '])]
-            command2 = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in tmp_dirs2 if a and a is not ' ']),
-                               '-e', ":".join([str(a) for a in tmp_exes2 if a and a is not ' '])]
+            command1 = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in tmp_dirs1 if a and a != ' ']),
+                               '-e', ":".join([str(a) for a in tmp_exes1 if a and a != ' '])]
+            command2 = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in tmp_dirs2 if a and a != ' ']),
+                               '-e', ":".join([str(a) for a in tmp_exes2 if a and a != ' '])]
             if len(self.submitted_args) > 0 :
                 tmp_args1= self.submitted_args[0:tmp_leng]
                 tmp_args2= self.submitted_args[tmp_leng:]
@@ -2025,8 +2025,8 @@ class HTCaaS2Cluster(Cluster):
             me_dir = str(result1.stdout.read().strip())+ "//" + str(result2.stdout.read().strip())
 
         elif self.submitted > 0 and self.submitted == self.submitted_ids[-1]:
-            command = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in self.submitted_dirs if a and a is not ' ']), 
-                               '-e', ":".join([str(a) for a in self.submitted_exes if a and a is not ' '])]
+            command = ['htcaas-mgjob-submit','-d',":".join([str(a) for a in self.submitted_dirs if a and a != ' ']), 
+                               '-e', ":".join([str(a) for a in self.submitted_exes if a and a != ' '])]
             if len(self.submitted_args) > 0 :
                 command.extend(['-a', ':'.join([str(a) for a in self.submitted_args])])
             if self.submitted_dirs[0] or self.submitted_exes[0] :
@@ -2116,11 +2116,11 @@ class HTCaaS2Cluster(Cluster):
 
         for line in status.stdout:
             status2 = line.split()[-1]
-            if status2 is not 'null' or line.split()[0].strip() is not '0':
+            if status2 != 'null' or line.split()[0].strip() != '0':
                 ongoing.append(str(line.split()[0].strip())+"-"+str(line.split()[1].strip()))
             logger.debug("["+line.split()[0].strip()+"-"+line.split()[1].strip()+"]"+status2)
 
-            if  status2 is 'null' or line.split()[0].strip() is '0':
+            if  status2 == 'null' or line.split()[0].strip() == '0':
                 idle += 1
             elif status2 in self.idle_tag:
                 idle += 1
@@ -2143,7 +2143,7 @@ class HTCaaS2Cluster(Cluster):
         if not self.submitted_ids:
             return
         id = self.submitted_ids[0]
-        if id is not 0 :
+        if id:
             cmd = "htcaas-job-cancel -m %s" % str(id)
             status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 

@@ -349,7 +349,7 @@ class ProcessExporterFortran(VirtualExporter):
             MA5_interpreter = common_run_interface.CommonRunCmd.\
                           get_MadAnalysis5_interpreter(MG5DIR,ma5_path,loglevel=100)
         except (Exception, SystemExit) as e:
-            logger.warning('Fail to create a MadAnalysis5 instance. Therefore the default analysis with MadAnalysis5 will be empty.')
+            logger.warning('Fail to create a MadAnalysis5 instance. Therefore the default analysis with MadAnalysis5 will be empty')
             return
         if MA5_interpreter is None:
             return

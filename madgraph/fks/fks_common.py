@@ -841,7 +841,7 @@ class FKSLeg(MG.Leg):
             if not isinstance(value, bool):
                 six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
                                                                     str(value), name)
-        if name is 'charge':
+        if name == 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \
                     % str(value))                                                           

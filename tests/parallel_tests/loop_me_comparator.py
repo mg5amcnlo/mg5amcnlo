@@ -1393,6 +1393,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 PSpoints=[PS[1] for PS in self.results[0]]
             else:
                 PSpoints=[]
+
             self.results.append(runner.run(proc_list, model[i], energy,
                                 PSpoints))
 

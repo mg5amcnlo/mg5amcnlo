@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 from __future__ import absolute_import
 from __future__ import print_function
 import time
@@ -28,7 +28,7 @@ if  sys.version_info[1] < 7:
 try:
     import six
 except ImportError:
-    message = 'madgraph requires the six module. The easiest way to install it is to run "pip install six --user"\n'
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip%s install six --user"\n' % (sys.version_info[0] if sys.version_info[0]==3 else '')
     message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
     sys.exit(message)
 
