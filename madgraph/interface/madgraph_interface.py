@@ -5711,7 +5711,7 @@ This implies that with decay chains:
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            
+
         # Potential change in naming convention
         name_map = {}
         try:

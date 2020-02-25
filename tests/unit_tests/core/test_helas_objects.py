@@ -25,6 +25,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
+import madgraph.various.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import models.import_ufo as import_ufo
 
@@ -2825,8 +2826,13 @@ class HelasMultiProcessTest(unittest.TestCase):
     mymodel = base_objects.Model()
 
 
+    def tearDown(self):
+        unittest.TestCase.tearDown(self)
+        self.assertFalse(self.debugging)
+        
     def setUp(self):
 
+        self.debugging = False
         # Set up model
 
         mypartlist = base_objects.ParticleList()
@@ -3601,6 +3607,8 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         self.assertEqual(matrix_elements[0].get('identical_particle_factor'),
                          1)
+        #mycoreproc['legs_with_decays'] = None
+        #self.assertEqual(mycoreproc.identical_particle_factor(),1)
 
         for i, amp in enumerate(sum([diag.get('amplitudes') for diag in \
                                     matrix_elements[0].get('diagrams')],[])):
@@ -3658,6 +3666,123 @@ class HelasMultiProcessTest(unittest.TestCase):
         
         self.assertEqual(myleglist, matrix_elements[0].get('processes')[0].\
                          get_legs_with_decays())
+
+    def generate_process_with_decay(self, id_core, list_of_decays, pols=[]):
+        
+        def create_one_dec(pids): 
+            myleglist = base_objects.LegList()  
+            for i, pid in enumerate(pids):
+                if i == 0:
+                    myleglist.append(base_objects.Leg({'id':pid,
+                                         'state':False}))
+                else:
+                    myleglist.append(base_objects.Leg({'id':pid,
+                                         'state':True}))
+                    
+            return base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+        
+        myleglist = base_objects.LegList()
+        for i, pid in enumerate(id_core):
+            if i < 2:
+                myleglist.append(base_objects.Leg({'id':pid,
+                                         'state':False}))
+            else:
+                if pols:
+                    pol = pols[i-2]
+                    myleglist.append(base_objects.Leg({'id':pid,
+                                                       'state':True,
+                                                       'polarization': pol}))
+                else:
+                    myleglist.append(base_objects.Leg({'id':pid,
+                                                       'state':True}))
+                    
+        coreproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+        
+        if list_of_decays:     
+            decays = base_objects.ProcessList()
+            for one_dec in list_of_decays:
+                decays.append(create_one_dec(one_dec))
+            coreproc.set('decay_chains', decays)
+        return coreproc 
+                                 
+
+    def test_multistage_symmetryfactor(self):
+        """Test a multistage decay for symmetry factor
+           # Since this test use the process class for the test this 
+           symmetry factor is a pure combinatoric of the final state
+           so this is quite trivial ...
+           Another function is testing the "identical_decay_chain_factor" function
+           which include more complex symmetryfactor due to decay chain
+        """
+        
+        # u u~ > g g, g > u u~   # should be 
+        # u u~ > g d, g/d > u u~ # should be 
+        # u u~ > g{0} g{T}, g > u u~ #should be
+        # test one g g > Z Z, Z > e+e- 
+        mycoreproc = self.generate_process_with_decay([1,-1,21,21], [[21,1,-1],[21,1,-1]])
+        # this is expected to be a sanity check
+        self.assertEqual(len(mycoreproc.get_final_ids_after_decay()), 4)
+        self.assertEqual(sorted(mycoreproc.get_final_ids_after_decay()), [-1,-1,1,1])
+        self.assertEqual(len(mycoreproc.get_final_ids()), 2)
+        self.assertEqual(sorted(mycoreproc.get_final_ids()), [21,21])
+
+        mycoreproc = self.generate_process_with_decay([1,-1,23,23], [[23,11,-11],[23,11,-11]])
+        # this is expected to be a sanity check
+        self.assertEqual(len(mycoreproc.get_final_ids_after_decay()), 4)
+        self.assertEqual(sorted(mycoreproc.get_final_ids_after_decay()), [-11,-11,11,11])
+        self.assertEqual(len(mycoreproc.get_final_ids()), 2)
+        self.assertEqual(sorted(mycoreproc.get_final_ids()), [23,23])   
+        
+        # go for the check
+        data= {'u u~ > Z Z, Z > e+ e-': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11]]),
+               'u u~ > Z H, Z/H > e+ e-': (4, [1,-1,23,25], [[23,11,-11],[25,11,-11]]),
+               'u u~ > Z H, Z > e+ e-, H > mu+ mu-': (1, [1,-1,23,25], [[23,11,-11],[25,13,-13]]),
+               'u u~ > e+ e- Z, Z > e+ e-': (4, [1,-1,23,11,-11], [[23,11,-11]]), # likely not consistent ...
+               'u u~ > e+ e- e+  e-': (4, [1,-1,11,-11,11,-11], None),
+               'u u~ > Z Z, Z > e+ e-, Z > e+ e- a': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11,22]]),
+               'u u~ > Z Z': (2, [1,-1,23,23], None),
+               }
+        passed = True 
+        for key in data:
+            sol, core, dec = data[key]
+            proc = self.generate_process_with_decay(core, dec)
+            sym = proc.identical_particle_factor()
+            if self.debugging:
+                if sol == sym:
+                    print("OK  :  %s: expected %s returned %s" % (key, sol, sym))
+                else:
+                    print("FAIL  :  %s: expected %s returned %s" % (key, sol, sym))
+                    passed = False
+            else:
+                self.assertEqual(sol, sym, " %s: expected %s returned %s" % (key, sol, sym))
+
+
+        # go for the check with polarization
+        data= {'u u~ > Z{0} Z{1}, Z > e+ e-': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11]], [0,1]),
+           'u u~ > Z{0} Z{0}, Z > e+ e-': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11]], [0,0]),
+           'u u~ > Z{1} Z{1}, Z > e+ e-': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11]], [1,1]),
+           'u u~ > Z Z, Z > e+ e-': (4, [1,-1,23,23], [[23,11,-11],[23,11,-11]], [None,None]),
+               }
+
+        for key in data:
+            sol, core, dec, pol = data[key]
+            proc = self.generate_process_with_decay(core, dec,pol)
+            sym = proc.identical_particle_factor()
+            if self.debugging:
+                if sol == sym:
+                    print("OK  :  %s: expected %s returned %s" % (key, sol, sym))
+                else:
+                    print("FAIL  :  %s: expected %s returned %s" % (key, sol, sym))
+                    passed = False
+            else:
+                self.assertEqual(sol, sym, " %s: expected %s returned %s" % (key, sol, sym))
+
+        self.assertTrue(passed)
+
+                
+             
 
     def test_majorana_decay_chain_process(self):
         """Test decay chain with majorana particles e+e->n1n1

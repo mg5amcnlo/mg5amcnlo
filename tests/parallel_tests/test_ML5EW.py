@@ -273,25 +273,38 @@ class ML5EWTest(unittest.TestCase):
     def setUp(self):
         """ Here we just copy the hidden restrict_card to a regular one.
         And we don't bother making it hidden again after the test."""
-        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm',
+        model_path = os.path.join(_mg5_path,'models','loop_qcd_qed_sm')
+        if not os.path.exists(model_path):
+            for tmp in os.environ['PYTHONPATH'].split(':'):
+                model_path = os.path.join(tmp,'loop_qcd_qed_sm')
+                if os.path.exists(model_path):
+                    break
+        cp(os.path.join(model_path,
                         '.restrict_parallel_test.dat'),
-           os.path.join(_mg5_path,'models','loop_qcd_qed_sm',
+           os.path.join(model_path,
                         'restrict_parallel_test.dat'))
-        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm',
+        cp(os.path.join(model_path,
                         '.restrict_parallel_test_MB.dat'),
-           os.path.join(_mg5_path,'models','loop_qcd_qed_sm',
+           os.path.join(model_path,
                         'restrict_parallel_test_MB.dat'))
-        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+        model_path = os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu')
+        if not os.path.exists(model_path):
+            for tmp in os.environ['PYTHONPATH'].split(':'):
+                model_path = os.path.join(tmp,'loop_qcd_qed_sm_Gmu')
+                if os.path.exists(model_path):
+                    break
+
+        cp(os.path.join(model_path,
                         '.restrict_parallel_test_WW.dat'),
-           os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+           os.path.join(model_path,
                         'restrict_parallel_test_WW.dat'))
-        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+        cp(os.path.join(model_path,
                         '.restrict_parallel_test_ZZ.dat'),
-           os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+           os.path.join(model_path,
                         'restrict_parallel_test_ZZ.dat'))
-        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+        cp(os.path.join(model_path,
                         '.restrict_parallel_test_WZ.dat'),
-           os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+           os.path.join(model_path,
                         'restrict_parallel_test_WZ.dat'))
 
     #===========================================================================

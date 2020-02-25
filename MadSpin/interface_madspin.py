@@ -815,6 +815,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif self.options['input_format'] in ['hepmc']:
             import madgraph.various.hepmc_parser as hepmc_parser
             orig_lhe = hepmc_parser.HEPMC_EventFile(filename)
+            orig_lhe.allow_empty_event = True
             logger.info("Parsing input event to know how many decay to generate. This can takes few minuts.")
         else:
             raise Exception

@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
+from __future__ import division
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and
@@ -3868,11 +3868,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # First need to reset all legs_with_decays
         for proc in self.get('processes'):
             proc.set('legs_with_decays', base_objects.LegList())
-
+            
         # We need to keep track of how the
         # wavefunction numbers change
         replace_dict = {}
         for number in decay_dict.keys():
+            misc.sprint(number, type(decay_dict[number]))
+
             # Find all wavefunctions corresponding to this external
             # leg number
             replace_dict[number] = [wf for wf in \
@@ -4515,6 +4517,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                       filter(lambda leg: leg.get('state') == True, \
                               self.get('processes')[0].get('legs'))]
 
+        final_pols = [leg.get('polarization') for leg in \
+                      filter(lambda leg: leg.get('state') == True, \
+                              self.get('processes')[0].get('legs'))]
+        misc.sprint(final_pols)
+        pols_by_id = {}
+        for id, pol in zip(final_legs, final_pols):
+            if id not in pols_by_id:
+                pols_by_id[id]  = {tuple(pol):1}
+            else:
+                if tuple(pol) in pols_by_id[id]:
+                    pols_by_id[id][tuple(pol)] += 1
+                else:
+                    pols_by_id[id][tuple(pol)] = 1 
+        misc.sprint(pols_by_id)
+                
         # Leg ids for legs being replaced by decay chains
         decay_ids = [decay.get('legs')[0].get('id') for decay in \
                      self.get('processes')[0].get('decay_chains')]
@@ -4551,6 +4568,30 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     chains.pop(i)
                 else:
                     i = i + 1
+                    
+            # check if all those identical decay are originated from the 
+            # same set of polarization state
+            pid = first_chain.get('processes')[0].get('legs')[0].get('id')
+            if len(pols_by_id[pid]) !=1 and ident_copies == sum(pols_by_id[pid].values()):
+                nb_tot = 0
+                tmp = 1
+                for value in pols_by_id[pid].values():
+                    misc.sprint(value)
+                    iden_chains_factor *= math.factorial(value)
+                    tmp /= math.factorial(value)
+                    nb_tot += value
+                    misc.sprint(tmp)
+                iden_chains_factor /= math.factorial(nb_tot)
+                tmp *= math.factorial(nb_tot)
+                misc.sprint(tmp, ident_copies)
+                #raise Exception
+            elif ident_copies !=1:
+                misc.sprint("Not supported", ident_copies)
+                raise Exception
+            else:
+                logger.warning('assuming ordered decay')
+                raise Exception
+            
             iden_chains_factor = iden_chains_factor * \
                                  math.factorial(ident_copies)
 
@@ -4822,7 +4863,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               if not leg.get('polarization') else 
                               len(leg.get('polarization'))
                                for leg in initial_legs ])
+        #self['identical_particle_factor'] = None
+        #self.calculate_identical_particle_factor()
+        #self.get('identical_particle_factor')
 
+        misc.sprint(spin_factor , color_factor , self['identical_particle_factor'])
         return spin_factor * color_factor * self['identical_particle_factor']
 
     def generate_color_amplitudes(self, color_basis, diagrams):
@@ -5366,6 +5411,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         decay_is_ids = [[element.get('processes')[0].get_initial_ids()[0] \
                          for element in elements]
                          for elements in decay_elements]
+        misc.sprint(decay_is_ids)
 
         while self['core_processes']:
             # Pop the process to save memory space
@@ -5376,6 +5422,15 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                             core_process.get('processes')[0].get_final_legs())
             # List of ids for the final state legs
             fs_ids = [leg.get('id') for leg in fs_legs]
+            fs_pols = [leg.get('polarization') for leg in fs_legs]  # not defined yet
+            fs_pols_dict = {}
+            for id, pol in zip(fs_ids, fs_pols):
+                if id not in fs_pols_dict:
+                    fs_pols_dict[id] = [pol]
+                else:
+                    fs_pols_dict[id].append(pol)
+            misc.sprint(fs_pols_dict)
+            #misc.sprint([leg.get('polarization') for leg in fs_legs])
             # Create a dictionary from id to (index, leg number)
             fs_numbers = {}
             fs_indices = {}
@@ -5403,9 +5458,14 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 # chain which defines the decay for this particle.
 
                 chains = []
+                misc.sprint(len(fs_legs), len(decay_elements), [fs in ids for (fs, ids) in \
+                             zip(fs_ids, decay_is_ids)])
                 if len(fs_legs) == len(decay_elements) and \
                        all([fs in ids for (fs, ids) in \
-                             zip(fs_ids, decay_is_ids)]):
+                             zip(fs_ids, decay_is_ids)]) \
+                       :
+                    misc.sprint('same number')
+                    misc.sprint(fs_pols_dict)
                     # The decay of the different fs parts is given
                     # by the different decay chains, respectively.
                     # Chains is a list of matrix element lists
@@ -5416,6 +5476,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                              decay_elements[index]))
 
                 if len(fs_legs) != len(decay_elements) or not chains or not chains[0]:
+                    misc.sprint('second case -> all combination')
                     # In second case, or no chains are found
                     # (e.g. because the order of decays is reversed),
                     # all decays for this particle type are used
@@ -5438,6 +5499,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     if sorted([p.get('processes')[0] for p in prod],
                               lambda x1, x2: x1.compare_for_sort(x2)) \
                               in red_decay_chains:
+                        misc.sprint('remove due to symmetry')
                         continue
                     
                     # Store already used combinations
