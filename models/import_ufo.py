@@ -127,6 +127,7 @@ def get_model_db():
     else:
         raise MadGraph5Error('''Model not found locally and Impossible to connect any of us servers.
         Please check your internet connection or retry later''')
+
     return data
 
 def import_model_from_db(model_name, local_dir=False):
@@ -140,7 +141,7 @@ def import_model_from_db(model_name, local_dir=False):
     data =get_model_db()
     link = None
     for line in data:
-        split = line.split()
+        split = line.decode().split()
         if model_name == split[0]:
             link = split[1]
             break
