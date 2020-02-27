@@ -1746,10 +1746,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            try:
-                fct = raw_input
-            except Exception:
-                fct = input
+            fct = six.moves.input
         
         if timeout:
             signal.alarm(timeout)

@@ -3700,7 +3700,7 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 #remove the line break from output (last character)
-                output = output[:-1]
+                output = output.decode()[:-1]
                 # add lib/include paths
                 if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
                     logger.warning('Linking FastJet: updating EXTRAPATHS')

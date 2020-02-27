@@ -2162,7 +2162,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('Running Reweighting', level='madspin')
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
-        reweight_cmd.raw_input=False
+        reweight_cmd.raw_input=False # probably useless ...
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
         reweight_cmd.import_command_file(path)
@@ -5027,7 +5027,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
           
         if banner:                      
             logger.info('*** END HELP ***', '$MG:BOLD')    
-        #raw_input('press enter to quit the help')
+        #six.moves.input('press enter to quit the help')
         return card       
 #     except Exception, error:
 #         if __debug__:
@@ -5975,13 +5975,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 libs , paths = [], []
                 p = misc.subprocess.Popen([executable, '--libs'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
-                libs = [x[2:] for x in stdout.split() if x.startswith('-l') or paths.append(x[2:])]
+                libs = [x[2:] for x in stdout.decode().split() if x.startswith('-l') or paths.append(x[2:])]
                 
                 # Add additional user-defined compilation flags
                 p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
                 for lib in ['-ldl','-lstdc++','-lc++']:
-                    if lib in stdout:
+                    if lib in stdout.decode():
                         libs.append(lib[2:])                    
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC

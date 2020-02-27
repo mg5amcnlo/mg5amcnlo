@@ -518,7 +518,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
 
         try:
             out = out.decode('utf-8')
-        except:
+        except Exception:
             out = str(out)
 
         # Check if this is due to the need of gfortran 4.6 for quadruple precision

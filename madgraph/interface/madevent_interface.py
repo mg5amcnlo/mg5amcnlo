@@ -3908,7 +3908,7 @@ Beware that this can be dangerous for local multicore runs.""")
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                              cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
-            out = out.replace('\n','')
+            out = out.decode().replace('\n','')
             PY8_curr_version = out
             # In order to test that the version is correctly formed, we try to cast
             # it to a float
@@ -5698,7 +5698,7 @@ tar -czf split_$1.tar.gz split_$1
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode()
             if 'VALID' not in str(bias_module_valid).upper() or \
                'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%

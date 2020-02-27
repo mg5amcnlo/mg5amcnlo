@@ -204,7 +204,7 @@ class CmdExtended(cmd.Cmd):
             bzrname,_ = proc.communicate()
             proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrversion,_ = proc.communicate() 
-            bzrname, bzrversion = bzrname.strip(), bzrversion.strip() 
+            bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
             len_name = len(bzrname)
             len_version = len(bzrversion)            
             info_line += "#*         BZR %s %s %s         *\n" % \
@@ -6318,7 +6318,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # Run the configure script
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
-            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0].decode()
 
         # For PJFry, use autotools.
         if name == 'PJFry':
@@ -6329,7 +6329,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
             'FC=%s'%os.environ['FC'],
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0]
+                                        stdout=subprocess.PIPE).communicate()[0].decode()
 
         # For QCDLoop, use autotools.
         if name == 'QCDLoop':
@@ -6337,7 +6337,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC'],
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0]
+                                        stdout=subprocess.PIPE).communicate()[0].decode()
 
         # For Delphes edit the makefile to add the proper link to correct library
         if args[0] == 'Delphes3':
@@ -6355,7 +6355,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if name == 'SysCalc':
             if self.options['lhapdf']:
                 ld_path = misc.Popen([self.options['lhapdf'], '--libdir'],
-                                     stdout=subprocess.PIPE).communicate()[0]
+                                     stdout=subprocess.PIPE).communicate()[0].decode()
                 ld_path = ld_path.replace('\n','')
                 if 'LD_LIBRARY_PATH' not in os.environ:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
@@ -6612,7 +6612,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE,
                                                               cwd=MG5DIR)
-            p.communicate(text)
+            p.communicate(text.encode())
 
             # check file which are not move
             #=== modified file 'Template/LO/Cards/run_card.dat'

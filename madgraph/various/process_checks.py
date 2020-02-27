@@ -1263,8 +1263,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         def check_disk_usage(path):
             return subprocess.Popen("du -shc -L "+str(path), \
-                stdout=subprocess.PIPE, shell=True).communicate()[0].split()[-2]
+                stdout=subprocess.PIPE, shell=True).communicate()[0].decode().split()[-2]
             # The above is compatible with python 2.6, not the neater version below
+            # -> need to check if need .decode for python3.7
             #return subprocess.check_output(["du -shc %s"%path],shell=True).\
             #                                                         split()[-2]
 

@@ -54,25 +54,25 @@ def treat_old_argument(argument):
     try:
         mode = int(argument[1])
     except:
-        mode = int(raw_input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
+        mode = int(six.moves.input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
     if mode == 0:
         try:
             name = argument[2]
         except:
-            name = raw_input('Enter run name\n')
+            name = six.moves.input('Enter run name\n')
     else:
         try:
             opt = argument[2]
         except:
             if mode == 1: 
-                opt = raw_input('Enter name for jobs on pbs queue\n')
+                opt = six.moves.input('Enter name for jobs on pbs queue\n')
             else:
-                opt = int(raw_input('Enter number of cores\n'))
+                opt = int(six.moves.input('Enter number of cores\n'))
         
         try:
             name = argument[3]
         except:
-            name = raw_input('enter run name\n')
+            name = six.moves.input('enter run name\n')
 
 #    launch = ME.MadEventCmd(me_dir=root_path)
         
