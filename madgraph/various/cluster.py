@@ -914,6 +914,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        output = output.decode()
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1000,6 +1001,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
+        output = output.decode()
         pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
@@ -1141,7 +1143,7 @@ class PBSCluster(Cluster):
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
-        output = a.communicate(text)[0]
+        output = a.communicate(text)[0].decode()
         id = output.split('.')[0]
         if not id.isdigit() or a.returncode !=0:
             raise ClusterManagmentError('fail to submit to the cluster: \n%s' \
@@ -1304,7 +1306,7 @@ class SGECluster(Cluster):
                              stderr=subprocess.STDOUT,
                              stdin=subprocess.PIPE, cwd=cwd)
 
-        output = a.communicate(text)[0]
+        output = a.communicate(text)[0].decode()
         id = output.split(' ')[2]
         if not id.isdigit():
             raise ClusterManagmentError('fail to submit to the cluster: \n%s' \
@@ -1420,7 +1422,7 @@ class LSFCluster(Cluster):
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
-        output = a.communicate(text)[0]
+        output = a.communicate(text)[0].decode()
         #Job <nnnn> is submitted to default queue <normal>.
         try:
             id = output.split('>',1)[0].split('<')[1]
@@ -1550,7 +1552,7 @@ class GECluster(Cluster):
                                      stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
 
-        output = a.communicate()[0]
+        output = a.communicate()[0].decode()
         #Your job 874511 ("test.sh") has been submitted
         pat = re.compile("Your job (\d*) \(",re.MULTILINE)
         try:
@@ -1687,7 +1689,7 @@ class SLURMCluster(Cluster):
                                       stdin=subprocess.PIPE, cwd=cwd)
 
         output = a.communicate()
-        output_arr = output[0].split(' ')
+        output_arr = output[0].decode().split(' ')
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
