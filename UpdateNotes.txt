@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.7.0.py3 (17/02/20):
+2.7.0.py3 (27/02/20):
                         ** PARRALEL VERSION FOR PYTHON 3 **
       ALL: Contains all feature of 2.7.0			
       OM: Support for python3.7 in top of python 2.7
