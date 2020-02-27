@@ -156,7 +156,7 @@ class gensym(object):
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, _) = p.communicate('')
+            (stdout, _) = p.communicate(''.encode())
             stdout = stdout.decode('ascii')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
