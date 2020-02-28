@@ -2465,7 +2465,11 @@ class Diagram(PhysicsObject):
                 used_leg = [] 
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
-                    mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+                    if leg.get('polarization'):
+                        mystr = mystr + str(leg['number']) + '(%s{%s})' % (str(leg['id']),leg['polarization']) + ','
+                    else:
+                        mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+                        
                     used_leg.append(leg['number'])
                 if __debug__ and len(used_leg) != len(set(used_leg)):
                     pass_sanity = False
@@ -2474,7 +2478,11 @@ class Diagram(PhysicsObject):
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
-                mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
+                lastleg = vert['legs'][-1]
+                if lastleg['polarization']:
+                    mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
+                else:
+                    mystr = mystr + str(lastleg['number']) + '(%s)' % str(lastleg['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
                                 
             mystr = mystr[:-1] + ')'
@@ -3041,7 +3049,18 @@ class Process(PhysicsObject):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + ' > '
 
-            mystr = mystr + mypart.get_name() + ' '
+            mystr = mystr + mypart.get_name()
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + '{T} '
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + '{L} '
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + '{R} '
+                else:
+                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+            else:
+                mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3165,7 +3184,19 @@ class Process(PhysicsObject):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
-            mystr = mystr + mypart.get_name() + ' '
+            mystr = mystr + mypart.get_name()
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + '{T} '
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + '{L} '
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + '{R} '
+                else:
+                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+            else:
+                mystr = mystr + ' '
+             
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3246,7 +3277,18 @@ class Process(PhysicsObject):
                    and leg['state'] == True:
                 # Separate initial and final legs by ">"
                 mystr = mystr + '> '
-            mystr = mystr + mypart.get_name() + ' '
+            mystr = mystr + mypart.get_name() 
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + '{T} '
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + '{L} '
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + '{R} '
+                else:
+                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+            else:
+                mystr = mystr + ' '
             prevleg = leg
 
         # Remove last space
@@ -3294,6 +3336,16 @@ class Process(PhysicsObject):
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + 'T'
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + 'L'
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + 'R'
+                else:
+                    mystr = mystr + '%s ' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])   
+
             prevleg = leg
 
         # Check for forbidden particles
@@ -3346,6 +3398,16 @@ class Process(PhysicsObject):
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + 'T'
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + 'L'
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + 'R'
+                else:
+                    mystr = mystr + '%s ' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])   
+
             prevleg = leg
 
         # Replace '~' with 'x'
@@ -3791,7 +3853,18 @@ class ProcessDefinition(Process):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + '> '
 
-            mystr = mystr + myparts + ' '
+            mystr = mystr + myparts
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    mystr = mystr + '{T}'
+                elif leg.get('polarization') == [-1]:
+                    mystr = mystr + '{L}'
+                elif leg.get('polarization') == [1]:
+                    mystr = mystr + '{R}'
+                else:
+                    mystr = mystr + '{%s} ' %''.join([str(p) for p in leg.get('polarization')])   
+            else:
+             mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
