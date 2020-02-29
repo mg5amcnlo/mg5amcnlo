@@ -478,7 +478,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > j j']
         values = {'number_of_P0': '1',
-                  'cross_P0_qq_qq': '6.069e+04'}
+                  'cross_P0_qq_qq': '61057.7188'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,
@@ -507,6 +507,29 @@ class OLDMG5Comparator(unittest.TestCase):
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm3.log")
+
+    def test_short_cross_pol(self):
+        """Test a short list of sm processes""" 
+        my_proc_list = ['u u~ > z{0} z{T}, (z > e+ e-)',
+                        'u u~ > z{0} z{T}, (z > e+ e-), (z > mu+ mu-)',
+                        'u u~ > z{0} z{T}, (z > l+ l-)',
+                        'u u~ > z{T} z{T}, (z > l+ l-)'
+                        ]
+
+        values =  {'number_of_P0': '1',
+                   'number_of_P1': '1', 
+                   'number_of_P2': '1',
+                   'number_of_P3': '1',
+                   'cross_P0_qq_z0zT_z_ll_z_ll': '0.0001713',
+                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.00017108',
+                   'cross_P2_qq_z0zT_z_ll_z_ll': '0.00066055',
+                   'cross_P3_qq_zTzT_z_ll_z_ll': '0.0019198',
+                   } 
+                  
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {},
+                             filename = "short_cs_pol.log")
+
 
     def test_short_cross_mssm1(self):
         """Test a short list of sm processes""" 
