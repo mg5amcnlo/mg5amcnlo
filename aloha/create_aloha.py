@@ -95,6 +95,7 @@ class AbstractRoutine(object):
         """ write the content of the object """
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
+        misc.sprint(text[0], type(self))
         if combine:
             for grouped in self.combined:
                 if isinstance(text, tuple):
@@ -282,12 +283,21 @@ in presence of majorana particle/flow violation"""
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
-            if self.tag == []:
-                logger.info('aloha creates %s routines' % self.name)
-            elif AbstractALOHAModel.lastprint < time.time() - 1:
+            if AbstractALOHAModel.lastprint < time.time() - 2:
+                if AbstractALOHAModel.lastprint == 0: 
+                    if self.tag == []:
+                        logger.info('aloha creates routines (starting by %s)' % self.name)
+                    else:
+                        logger.info('aloha creates routines (starting by %s with options %s)'\
+                                % (self.name, ','.join(self.tag)) )
+                else:
+                    if self.tag == []:
+                        logger.info('currently creating  %s' % self.name)
+                    else:
+                        logger.info('currently creating by with options %s'\
+                                % (self.name, ','.join(self.tag)) )
+                    
                 AbstractALOHAModel.lastprint = time.time()
-                logger.info('aloha creates %s set of routines with options: %s' \
-                            % (self.name, ','.join(self.tag)) )
             try:
                 lorentz = self.parse_expression()  
                 self.routine_kernel = lorentz

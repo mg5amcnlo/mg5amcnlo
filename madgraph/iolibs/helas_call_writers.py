@@ -1703,6 +1703,10 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
         return call.replace('pars->-', '-pars->')
         
 
+
+class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
+    pass
+
 #===============================================================================
 # PythonUFOHelasCallWriter
 #===============================================================================

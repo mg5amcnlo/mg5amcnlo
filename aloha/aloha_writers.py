@@ -1322,12 +1322,14 @@ class ALOHAWriterForCPP(WriteALOHA):
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
     extension = '.c'
+    prefix =''
     writer = writers.CPPWriter
 
     type2def = {}    
     type2def['int'] = 'int '
     type2def['double'] = 'double '
     type2def['complex'] = 'std::complex<double> '
+    type2def['pointerref'] = '&' # using complex<double> & vertex)
     
     #variable overwritten by gpu
     realoperator = '.real()'
@@ -1445,16 +1447,20 @@ class ALOHAWriterForCPP(WriteALOHA):
             args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = 'std::complex<double> & vertex'
+            output = '%(doublec)s %(pointerref)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointerref': self.type2def['pointerref']}
             #self.declaration.add(('complex','vertex'))
         else:
-            output = 'std::complex<double> %(spin)s%(id)d[]' % {
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
                      'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
-        out.write('void %(name)s(%(args)s,%(output)s)' % \
-                  {'output':output, 'name': name, 'args': ', '.join(args)})
+        out.write('%(prefix)s void %(name)s(%(args)s,%(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', '.join(args)})
         if 'is_h' in mode:
             out.write(';\n')
         else:
@@ -1830,9 +1836,16 @@ class ALOHAWriterForCPP(WriteALOHA):
 class ALOHAWriterForGPU(ALOHAWriterForCPP):
     
     extension = '.cu'
-    realoperator = '.re'
-    imagoperator = '.im'
-    ci_definition = 'complex<double> cI = mkcmplx(0., 1.);\n'
+    prefix ='__global__'
+    realoperator = '.real()'
+    imagoperator = '.imag()'
+    ci_definition = 'thrust::complex<double> cI = thrust::complex<double>(0., 1.);\n'
+    
+    type2def = {}    
+    type2def['int'] = 'int '
+    type2def['double'] = 'double '
+    type2def['complex'] = 'thrust::complex<double> '
+    type2def['pointerref'] = '*' # using complex<double> * vertex)
     
     def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
@@ -1840,8 +1853,8 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
             - definition of variable
         """
         text = StringIO()
-        if not 'is_h' in mode:
-            text.write('__device__=__forceinclude__\n')
+        #if not 'is_h' in mode:
+        #    text.write('__device__=__forceinclude__\n')
         text.write(ALOHAWriterForCPP.get_header_txt(self, name, couplings, mode))
         return text.getvalue()
         
@@ -1852,7 +1865,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#ifndef '+ self.name + '_guard\n')
             h_string.write('#define ' + self.name + '_guard\n')
-            h_string.write('#include "cmplx.h"\n')
+            h_string.write('#include <thrust/complex.h>\n')
             h_string.write('using namespace std;\n\n')
 
         h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)
@@ -1866,6 +1879,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#endif\n\n')
 
+        
         return h_string.getvalue()
     
 
@@ -2266,7 +2280,7 @@ class WriterFactory(object):
             return ALOHAWriterForPython(data, outputdir)
         elif language == 'cpp':
             return ALOHAWriterForCPP(data, outputdir)
-        elif language == 'gpu':
+        elif language in ['gpu','cudac']:
             return ALOHAWriterForGPU(data, outputdir)
         else:
             raise Exception('Unknown output format')
