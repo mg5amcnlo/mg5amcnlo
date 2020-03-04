@@ -498,7 +498,7 @@ class CPPWriter(FileWriter):
                         ('\s*<\s*', ' < '),
                         ('\s*!\s*', ' !'),
                         ('\s*/\s*', '/'),
-                        ('\s*\*\s*', ' * '),
+                        ('(?<!\()\s*\*\s*', ' * '),
                         ('\s*-\s+-\s*', '-- '),
                         ('\s*\+\s+\+\s*', '++ '),
                         ('\s*-\s+=\s*', ' -= '),
@@ -885,7 +885,7 @@ class CPPWriter(FileWriter):
         for i in range(len(line_quotes)):
             line += line_quotes[i]
             if len(line_no_quotes) > i + 1:
-                 line += line_no_quotes[i+1]
+                line += line_no_quotes[i+1]
 
         # Add indent
         res_lines = [" " * self.__indent + line]

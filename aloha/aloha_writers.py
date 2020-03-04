@@ -1329,8 +1329,8 @@ class ALOHAWriterForCPP(WriteALOHA):
     type2def['int'] = 'int '
     type2def['double'] = 'double '
     type2def['complex'] = 'std::complex<double> '
-    type2def['pointerref'] = '&' # using complex<double> & vertex)
-    
+    type2def['pointer_vertex'] = '&' # using complex<double> & vertex)
+    type2def['pointer_coup'] = ''
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
@@ -1444,12 +1444,16 @@ class ALOHAWriterForCPP(WriteALOHA):
             else:
                 type = self.type2def[format]
                 list_arg = ''
-            args.append('%s%s%s'% (type, argname, list_arg))
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = '%(doublec)s %(pointerref)s vertex' % {
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
                 'doublec':self.type2def['complex'],
-                'pointerref': self.type2def['pointerref']}
+                'pointer_vertex': self.type2def['pointer_vertex']}
             #self.declaration.add(('complex','vertex'))
         else:
             output = '%(doublec)s %(spin)s%(id)d[]' % {
@@ -1614,8 +1618,20 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
+            misc.sprint(coup_name)
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict = {'num': self.write_obj(numerator.get_rep([0]))}
+                for c in ['coup', 'vertex']:
+                    if self.type2def['pointer_%s' %c] in ['*']:
+                        mydict['pre_%s' %c] = '(*'
+                        mydict['post_%s' %c] = ')'
+                    else:
+                        mydict['pre_%s' %c] = ''
+                        mydict['post_%s'%c] = ''                    
+                misc.sprint(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
+                            mydict)
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
+                            mydict)
             else:
                 out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -1623,19 +1639,25 @@ class ALOHAWriterForCPP(WriteALOHA):
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
+                mydict = {}
+                if self.type2def['pointer_coup'] in ['*']:
+                        mydict['pre_coup'] = '(*'
+                        mydict['post_coup'] = ')'
+                mydict['coup'] = coup_name
+                mydict['i'] = self.outgoing
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
-                                'denom':self.write_obj(self.routine.denominator)}) 
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s)\n' % \
+                                  mydict) 
                     else:
-                        out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                                  mydict)
                 else:
                     if self.routine.denominator:
                         raise Exception('modify denominator are not compatible with complex mass scheme')                
 
-                    out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                    out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
+                              mydict)
 
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1845,7 +1867,8 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
     type2def['int'] = 'int '
     type2def['double'] = 'double '
     type2def['complex'] = 'thrust::complex<double> '
-    type2def['pointerref'] = '*' # using complex<double> * vertex)
+    type2def['pointer_vertex'] = '*' # using complex<double> * vertex)
+    type2def['pointer_coup'] = '*'
     
     def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
