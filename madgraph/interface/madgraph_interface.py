@@ -3119,6 +3119,20 @@ This implies that with decay chains:
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
+            #Check that we do not have situation like z{T} z
+            if not myprocdef.check_polarization():
+                logger.critical("Not Supported syntax:\n"+ \
+                                "   Syntax like p p  > Z{T} Z are ambiguious" +\
+                                "   Behavior is not guarantee to be stable within future version of the code." + \
+                                "   Furthemore, you can have issue with symmetry factor (we do not guarantee [differential] cross-section."+\
+                                "   We suggest you to abort this computation")
+                ans = self.ask('Do you want to continue', 'no',['yes','no'])
+                if ans == 'no':
+                    raise self.InvalidCmd("Not supported syntax of type p p  > Z{T} Z")
+                    
+                
+                
+
             self._curr_proc_defs.append(myprocdef)
             
             # Negative coupling order contraints can be given on at most one

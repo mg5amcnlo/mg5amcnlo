@@ -3721,6 +3721,40 @@ class ProcessDefinition(Process):
         
         return False
 
+    def  check_polarization(self):
+        """ raise a critical information if someone tries something like
+            p p > Z{T} Z 
+            return True if no issue and False if some issue is found
+            """
+
+        pol = {}            
+        for leg in self.get('legs'):
+            if not leg.get('state'):
+                misc.sprint('initial state?')
+                continue
+            if leg.get('polarization'):
+                for pid in leg.get('ids'):
+                    if pid not in pol:
+                        pol[pid] = [leg.get('polarization')]
+                    elif leg.get('polarization') in pol[pid]:
+                        # already present polarization -> no issue
+                        continue
+                    else:
+                        for p in leg.get('polarization'):
+                            if any(p in o for o in pol[pid]):
+                                return False
+                        pol[pid].append(leg.get('polarization'))
+            else:
+                for pid in leg.get('ids'):
+                    if pid not in pol:
+                        pol[pid] = [list(range(-3,4))]
+                    elif pol[pid] == [list(range(-3,4))]:
+                        continue
+                    else:
+                        return False
+
+        return True
+    
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
