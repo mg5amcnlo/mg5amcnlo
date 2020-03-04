@@ -3729,7 +3729,7 @@ class ProcessDefinition(Process):
 
         pol = {}            
         for leg in self.get('legs'):
-            if not leg.get('state'):)
+            if not leg.get('state'):
                 continue
             if leg.get('polarization'):
                 for pid in leg.get('ids'):

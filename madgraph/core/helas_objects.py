@@ -2901,8 +2901,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Now put together the fermion line merging in this amplitude
         if self.get('type')=='loop' and len(fermion_numbers)>0:
-            #misc.sprint(self.nice_string())
-
             # Remember that the amplitude closing the loop is always a 2-point
             # "fake interaction" attached on the second l-cut wavefunction.
             # So len(fermion_numbers) is either be 0 or 2.
@@ -4578,15 +4576,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # check if all those identical decay are originated from the 
             # same set of polarization state
             pid = first_chain.get('processes')[0].get('legs')[0].get('id')
-            if len(pols_by_id[pid]) !=1 and ident_copies == sum(pols_by_id[pid].values()):
+            if len(pols_by_id[pid]) !=1 and ident_copies == sum(pols_by_id[pid].values())\
+               and not self.ordering_for_pol[pid]:
                 nb_tot = 0
-                tmp = 1
+                #tmp = 1
                 for value in pols_by_id[pid].values():
                     iden_chains_factor *= math.factorial(value)
-                    tmp /= math.factorial(value)
+                    #tmp /= math.factorial(value)
                     nb_tot += value
                 iden_chains_factor /= math.factorial(nb_tot)
-                tmp *= math.factorial(nb_tot)
+                #tmp *= math.factorial(nb_tot)
+                
+
             
             iden_chains_factor = iden_chains_factor * \
                                  math.factorial(ident_copies)
@@ -5471,6 +5472,10 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                  decay_elements], [])
 
                     chains = [chain] * len(fs_numbers[fs_id])
+                    
+                    ordered_for_pol = False
+                else:
+                    ordered_for_pol = True
 
                 red_decay_chains = []
 
@@ -5526,9 +5531,16 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                              ", ".join([d.get('processes')[0].nice_string().\
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
+
+                if pols:
+                    if hasattr(matrix_element,'ordering_for_pol'):
+                        matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
+                    else:
+                        matrix_element.ordering_for_pol = {fs_id: ordered_for_pol}
+                        
                     
-                matrix_element.insert_decay_chains(decay_dict)    
-                
+                matrix_element.insert_decay_chains(decay_dict)
+ 
                 if combine:
                     me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
