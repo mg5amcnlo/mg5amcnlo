@@ -206,7 +206,7 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
     allow_empty_event = False
-    encoding = 'ascii'
+    encoding = 'UTF-8'
 
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
