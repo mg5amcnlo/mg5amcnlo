@@ -922,7 +922,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--reduction':'1|3|5|6','--CTModeRun':'-1',
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
@@ -3766,8 +3766,7 @@ This implies that with decay chains:
             options.horizontal = True
             options.external = True  
             options.max_size = 0.3 
-            options.add_gap = 0.5
-            misc.sprint(options)     
+            options.add_gap = 0.5  
         options = draw_lib.DrawOption(options)
         start = time.time()
 
@@ -3863,7 +3862,6 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-        
         MLoptions={}
         i=-1
         CMS_options = {}
@@ -4233,7 +4231,7 @@ This implies that with decay chains:
 
         if "MLReductionLib" in MLoptions:
             if 2 in MLoptions["MLReductionLib"]:
-                logger_debug.warning('PJFRY not supported anymore; it will be skipped.')                    
+                logger_check.warning('PJFRY not supported anymore; it will be skipped.')                    
                 MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):

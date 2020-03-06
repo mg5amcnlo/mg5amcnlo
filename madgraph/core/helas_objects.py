@@ -1762,8 +1762,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
                 'onshell': self.get('onshell'),
-                'loop_line':self.get('is_loop'),
-                'polarization':self.get('polarization')
+                'loop_line':self.get('is_loop')
                 })
 
             if optimization != 0 and not self.get('is_loop'):
@@ -1782,8 +1781,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'state': mother.get('leg_state'),
                     'onshell': None,
                     'loop_line':mother.get('is_loop'),
-                    'onshell': None,
-                    'polarization':mother.get('polarization'),
+                    'onshell': None
                     })
                 if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[(mother.get('number'),False)] = leg
@@ -2118,8 +2116,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         for i in range(0,len(fermions), 2):
             if fermions[i].get('fermionflow') < 0 or \
                fermions[i+1].get('fermionflow') < 0:
-                indices.append(i/2 + 1)
-
+                indices.append(i//2 + 1)
         return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self, 
@@ -3056,8 +3053,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
                     'onshell': None,
-                    'loop_line':mother.get('is_loop'),
-                    'polarization':mother.get('polarization')
+                    'loop_line':mother.get('is_loop')
                     })
                 if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[(mother.get('number'),False)] = leg
@@ -3134,7 +3130,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i in range(0,len(fermions), 2):
             if fermions[i].get('fermionflow') < 0 or \
                fermions[i+1].get('fermionflow') < 0:
-                indices.append(i/2 + 1)
+                indices.append(i//2 + 1)
                 
         return tuple(sorted(indices))
 

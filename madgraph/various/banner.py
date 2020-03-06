@@ -3211,6 +3211,14 @@ class RunCardLO(RunCard):
             if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
                 raise InvalidRunCard, "Heavy ion mode is only supported for lpp2=1/2"   
 
+        # check if lpp = 
+        for i in [1,2]:
+            if self['lpp%s' % i ] == 3 and self['dsqrt_q2fact%s'%i] > 4:
+                raise InvalidRunCard, "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
+                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)" 
+            if self['lpp%s' % i ] == 4 and self['dsqrt_q2fact%s'%i] > 60:
+                raise InvalidRunCard, "Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
+                                      "This number should be small." 
 
     def update_system_parameter_for_include(self):
         

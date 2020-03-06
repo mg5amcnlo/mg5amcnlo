@@ -115,13 +115,14 @@ c     ARGUMENTS
 c      
       REAL*8 P(0:3,nexternal)
       real*8 q2factorization(2)
-c
+c     
 c     EXTERNAL
 c
       REAL*8 R2,DOT,ET,ETA,DJ,SumDot,PT
 c
 c     LOCAL
 c
+      real*8 fscale
       integer i
       logical first
       data first/.true./
@@ -133,8 +134,12 @@ c----------
       if (dynamical_scale_choice.eq.-1) then
 c         Cluster external states until reducing the system to a 2->2 topology whose transverse mass is used for setting the scale.
 c         This is not done in this file due to the clustering.
-         q2factorization(1)=0d0          !factorization scale**2 for pdf1
-         q2factorization(2)=0d0          !factorization scale**2 for pdf2
+         if (abs(lpp(1)).eq.1) then
+            q2factorization(1)=0d0 !factorization scale**2 for pdf1
+         endif
+         if (abs(lpp(1)).eq.2) then         
+            q2factorization(2)=0d0 !factorization scale**2 for pdf2
+         endif
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc
@@ -180,9 +185,13 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: END of USER CODE                                      cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       else
-          call set_ren_scale(P,q2factorization(1))
-          q2factorization(1)=q2factorization(1)**2
-          q2factorization(2)=q2factorization(1)   !factorization scale**2 for pdf2
+         call set_ren_scale(P,fscale)
+         if (abs(lpp(1)).eq.1) then
+            q2factorization(1)=fscale**2
+         endif
+         if (abs(lpp(2)).eq.1) then
+            q2factorization(2)=fscale**2 !factorization scale**2 for pdf2
+         endif
       endif
 
 
