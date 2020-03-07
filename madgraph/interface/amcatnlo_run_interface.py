@@ -930,7 +930,8 @@ class AskRunNLO(cmd.ControlSwitch):
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
+                                           consistency='warning')
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
 
@@ -4522,7 +4523,6 @@ RESTART = %(mint_mode)s
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
-
         return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
     def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
@@ -4590,7 +4590,7 @@ RESTART = %(mint_mode)s
 
         # check if we can use LHAPDF to compute the PDF uncertainty
         if any(self.run_card['reweight_pdf']):
-            lhapdf = misc.import_python_lhapdf()
+            lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
             if lhapdf:
                 use_lhapdf = True
             else:

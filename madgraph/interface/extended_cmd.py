@@ -2808,7 +2808,7 @@ class ControlSwitch(SmartQuestion):
                          for k in self.inconsistent_details.values() for c in k
                          if c['changed_key'] != key] 
 
-        to_check.sort(lambda x, y: -1 if self.last_changed.index(x[0])>self.last_changed.index(y[0]) else 1)
+        to_check.sort(key=lambda x: self.last_changed.index(x[0]))
 
         # validate tmp_switch.
         to_check = [(key, value)] + to_check
