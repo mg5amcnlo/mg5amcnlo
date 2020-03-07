@@ -3214,11 +3214,10 @@ class RunCardLO(RunCard):
         # check if lpp = 
         for i in [1,2]:
             if self['lpp%s' % i ] == 3 and self['dsqrt_q2fact%s'%i] > 4:
-                raise InvalidRunCard, "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
-                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)" 
-            if self['lpp%s' % i ] == 4 and self['dsqrt_q2fact%s'%i] > 60:
-                raise InvalidRunCard, "Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
-                                      "This number should be small." 
+                raise InvalidRunCard( "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
+                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)")
+            if self['lpp%s' % i ] == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                raise InvalidRunCard("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of th Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
 
     def update_system_parameter_for_include(self):
         
