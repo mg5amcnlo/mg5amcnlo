@@ -12,6 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           generate p p > z{0} z{T}, z > l+ l-, z > j j
 	  means that the Longitudinal Z decays to lepton (transverse to jet)
 	  Thanks to Jie Xiao for reporting such issues. 
+      OM: Effective Photon approximation is now always done with a fix cutoff. This use the FIXED factorization scale
+          of the associate beam as the cutoff of the Improved Weizsaecker-Williams.
       OM: Allow to install lhapdf6.2 by default
       OM: Fixing website used to download pdf since lhapdf removed their previous hepforge page for pdf set.
 
