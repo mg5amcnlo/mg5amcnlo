@@ -3218,6 +3218,11 @@ class RunCardLO(RunCard):
                                       "For EPA this number should be small (for HERA prediction it should be 2 at most)")
             if self['lpp%s' % i ] == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
                 raise InvalidRunCard("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of th Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+        
+        # if both lpp1/2 are on PA mode -> force fixed factorization scale
+        if self['lpp1'] in [2, 3] and self['lpp2'] in [2, 3] and not self['fixed_fac_scale']:
+            raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
+
 
     def update_system_parameter_for_include(self):
         
