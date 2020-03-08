@@ -946,8 +946,7 @@ class MultiEventFile(EventFile):
         if across == 0:
             # No event linked to this channel -> so no need to include it
             return 
-        misc.gzip(path)
-        obj = EventFile(path+'.gz')
+        obj = EventFile(path)
         obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
