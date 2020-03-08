@@ -163,7 +163,6 @@ c
                 appl_obs_num   = j
                 appl_obs_histo = xval
 c      Fill the reference APPLgrid histograms
-                call APPL_fill_ref
 c      Fill the APPLgrid files
                 call APPL_fill
              endif
@@ -208,7 +207,6 @@ c     APPLgrid commons
          do j=1,nh_obs
             if(ih1.eq.ih_obs(j))then
                appl_obs_num = j
-               call APPL_fill_ref_out
                call APPL_term
             endif
          enddo

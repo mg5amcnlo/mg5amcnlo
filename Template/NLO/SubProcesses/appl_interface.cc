@@ -563,42 +563,6 @@ extern "C" void appl_fill_() {
   }
 }
 
-extern "C" void appl_fill_ref_() {
-   // Event weights to fill the histograms
-  double www = appl_common_histokin_.www_histo;
-
-  // Physical observables
-  double obs = appl_common_histokin_.obs_histo;
-
-  // Histogram number
-  int nh = appl_common_histokin_.obs_num - 1;
-
-  grid_obs[nh].getReference()->Fill(obs,www);
-}
-
-extern "C" void appl_fill_ref_out_() {
-  // Normalization factor
-  double norm = appl_common_histokin_.norm_histo;
-
-  // Check normalization value
-  if(norm <= 0.0 || norm > 1e50) {
-    std::cout << "amcblast ERROR: Invalid value for histogram normalization = " << norm << std::endl;
-    exit(-10);
-  }
-
-  // Histogram number
-  int nh = appl_common_histokin_.obs_num - 1;
-
-  // Apply normalization
-  grid_obs[nh].getReference()->Scale(norm);
-
-  // Rescale the reference histogram bins by the respective width
-  for(unsigned i=0; i<binwidths[nh].size(); i++) {
-    double bin = grid_obs[nh].getReference()->GetBinContent(i+1) / binwidths[nh][i];
-    grid_obs[nh].getReference()->SetBinContent(i+1,bin); // Reference histogram doesn't get the bin corrections
-  }
-}
-
 extern "C" void appl_term_() {
   // Conversion factor from natural units to pb
   double conv = 389379660;
@@ -617,7 +581,6 @@ extern "C" void appl_term_() {
 
   // Normalize the grid by conversion factor and number of runs 
   grid_obs[nh] *= conv / n_runs;
-  grid_obs[nh].getReference()->Scale(n_runs/conv); // Normalize the reference histogram back
 
   // Set run() to one for the combinantion.  
   grid_obs[nh].run() = 1;

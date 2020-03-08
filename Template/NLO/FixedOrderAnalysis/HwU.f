@@ -178,7 +178,6 @@ c     APPLgrid commons
                appl_obs_num   = j
                appl_obs_histo = x
 c     Fill the reference APPLgrid histograms
-               call APPL_fill_ref
 c     Fill the APPLgrid files
                call APPL_fill
             endif

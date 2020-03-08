@@ -41,7 +41,6 @@ c     APPLgrid commons (this may not be the best place to put it)
       if(iappl.ne.0)then
          do j=1,nh_obs
            appl_obs_num = j
-           call APPL_fill_ref_out
            call APPL_term
          enddo
       endif
