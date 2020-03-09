@@ -6,13 +6,6 @@
       include "run.inc"
       include 'timing_variables.inc'
       include 'mint.inc'
-C     To access mu_r
-      include 'coupl.inc'
-C     START local variable for the example only. Can be removed when removing
-C     example
-      double precision p_read(0:4,2*nexternal-3), wgt_read
-C     STOP local variables for the example.
-
       integer ndim
       common/tosigint/ndim
       logical Hevents
@@ -31,25 +24,10 @@ C     STOP local variables for the example.
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
       integer npart
-      double precision shower_scale
-     &,shower_scale_a(-nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
+      double precision shower_scale,shower_scale_a(-nexternal+3:2
+     $     *nexternal-3,-nexternal+3:2*nexternal-3)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-
-      double precision scltarget,sclstart,sudpdffact
-      common/cscalprob/scltarget,sclstart,sudpdffact
-      double precision probne_bog
-      common/cprobne_bog/probne_bog
-      double precision probne
-      common/cprobne_true/probne
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer kk,izero,ione
-      parameter (izero=0)
-      parameter (ione=1)
-      logical verbose_test
-      parameter (verbose_test=.false.)
-
       call cpu_time(tBefore)
 
       do i=1,99
@@ -63,24 +41,6 @@ C     STOP local variables for the example.
       wgt=1d0
       evnt_wgt=evtsgn*weight
       call generate_momenta(ndim,iconfig,wgt,x,p)
-
-      if(verbose_test)then
-      write(92,554)'EVT',probne,probne_bog,scltarget,sclstart,sudpdffact
-      write(92,557)i_fks,j_fks
-      if(Hevents)then
-        write(92,556)ione,evtsgn
-      else
-        write(92,556)izero,evtsgn
-      endif
-      do kk=1,nexternal
-        write(92,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
-      enddo
-      endif
- 554  format(1x,a,5(1x,e14.8))
- 555  format(1x,i2,5(1x,e14.8))
- 556  format(1x,i2,1x,e14.8)
- 557  format(2(1x,i2))
-
 c
 c Get all the info we need for writing the events.
 c      
@@ -210,8 +170,8 @@ c get info on beam and PDFs
       parameter (izero=0)
       double precision aqcd,aqed,scale
       character*140 buff
-      double precision shower_scale
-     &,shower_scale_a(-nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
+      double precision shower_scale,shower_scale_a(-nexternal+3:2
+     $     *nexternal-3,-nexternal+3:2*nexternal-3)
       INTEGER MAXNUP,i,j,k
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

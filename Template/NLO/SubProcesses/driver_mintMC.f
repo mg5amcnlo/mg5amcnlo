@@ -799,19 +799,6 @@ c
       common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
-      double precision scltarget,sclstart,sudpdffact
-      common/cscalprob/scltarget,sclstart,sudpdffact
-      double precision probne_bog
-      common/cprobne_bog/probne_bog
-      common/cprobne_true/probne
-      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
-     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      integer kk,kk0,kk1,kkunit
-      logical verbose_test
-      parameter (verbose_test=.false.)
-      logical done
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer               ifold_energy,ifold_phi,ifold_yij
@@ -822,7 +809,6 @@ c
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
 c
-      kkunit=90+imode
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -850,8 +836,6 @@ c "npNLO".
 
       fold=ifl
       if (ifl.eq.0 .or. ifl.eq.1) then
-         kk0=0
-         done=.false.
          if (ifl.eq.0) then
             icontr=0
             virt_wgt_mint=0d0
