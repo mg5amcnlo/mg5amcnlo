@@ -498,9 +498,6 @@ c over colour partners
      & xiPY8,xjacPY8_xiztoxy,wcc
       common/cqMC/qMC
 
-      double precision probne_bog
-      common/cprobne_bog/probne_bog
-
       common/cscaleminmax/xm12,ileg
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -650,7 +647,6 @@ c Check ileg, and special case for PYTHIA6PT
 c New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
       if(.not.UseSudakov)probne=1.d0
-      probne_bog=probne
 
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)

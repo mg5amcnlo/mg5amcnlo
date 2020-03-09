@@ -29,7 +29,7 @@ C     ------------------------------
      &                   ifks_in, jfks_in
 
 
-C     Ougoing event streams
+C     Outgoing event streams
 C     -----------------------
 C     First the header HEPRUP
 C     -----------------------
