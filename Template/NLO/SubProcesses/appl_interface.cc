@@ -1,8 +1,13 @@
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <stdlib.h>
+#include <string>
 #include <vector>
 
 #include "LHAPDF/LHAPDF.h"
@@ -31,46 +36,46 @@ const int __max_nproc__ = 121;
 
 // Information defined at the generation (configuration) step, that does
 // not vary event by event
-typedef struct
+extern "C" struct
 {
     int amp_split_size; // Maximum number of coupling-combinations
     int qcdpower[__amp_split_size]; // Power of alpha_s for each amp_split
     int qedpower[__amp_split_size]; // Power of alpha for each amp_split
-} __amcatnlo_common_fixed__;
+} appl_common_fixed_;
 
 // Map of the PDF combinations from aMC@NLO - structure for each
 // "subprocess" i, has some number nproc[i] pairs of parton
 // combinations. To be used together with the info in appl_flavmap.
-typedef struct
+extern "C" struct
 {
     int lumimap[__max_nproc__][__max_nproc__][2]; // (paired) subprocesses per combination
     int nproc[__max_nproc__]; // number of separate (pairwise) subprocesses for this combination
     int nlumi; // overall number of combinations ( 0 < nlumi <= __mxpdflumi__ )
-} __amcatnlo_common_lumi__;
+} appl_common_lumi_;
 
 // Event weights, kinematics, etc. that are different event by event
-typedef struct
+extern "C" struct
 {
     double x1[4], x2[4];
     double muF2[4], muR2[4], muQES2[4];
     double W0[__amp_split_size][4], WR[__amp_split_size][4];
     double WF[__amp_split_size][4], WB[__amp_split_size][4];
     int flavmap[4];
-} __amcatnlo_common_weights__;
+} appl_common_weights_;
 
 // Parameters of the grids.
 // These parameters can optionally be singularly specified by the user,
 // but if no specification is given, the code will use the default values.
-typedef struct
+extern "C" struct
 {
     double Q2min, Q2max;
     double xmin, xmax;
     int nQ2, Q2order;
     int nx, xorder;
-} __amcatnlo_common_grid__;
+} appl_common_grid_;
 
 // Parameters of the histograms
-typedef struct
+extern "C" struct
 {
     double www_histo, norm_histo;
     double obs_histo;
@@ -80,21 +85,14 @@ typedef struct
     int itype_histo;
     int amp_pos;
     int obs_num;
-} __amcatnlo_common_histokin__;
+} appl_common_histokin_;
 
 // Event weight and cross section
-typedef struct
+extern "C" struct
 {
     double event_weight, vegaswgt;
     double xsec12, xsec11, xsec20;
-} __amcatnlo_common_reco__;
-
-extern "C" __amcatnlo_common_fixed__ appl_common_fixed_;
-extern "C" __amcatnlo_common_lumi__ appl_common_lumi_;
-extern "C" __amcatnlo_common_weights__ appl_common_weights_;
-extern "C" __amcatnlo_common_grid__ appl_common_grid_;
-extern "C" __amcatnlo_common_histokin__ appl_common_histokin_;
-extern "C" __amcatnlo_common_reco__ appl_common_reco_;
+} appl_common_reco_;
 
 // Check if a file exists
 bool file_exists(const std::string& s)
@@ -105,7 +103,9 @@ bool file_exists(const std::string& s)
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 // Banner
@@ -260,35 +260,48 @@ extern "C" void appl_init_()
 
         // Replace the default values when needed
         if (appl_common_grid_.nQ2 > 0)
+        {
             NQ2 = appl_common_grid_.nQ2;
+        }
         if (appl_common_grid_.Q2min > 0)
+        {
             Q2min = appl_common_grid_.Q2min;
+        }
         if (appl_common_grid_.Q2max > 0)
+        {
             Q2max = appl_common_grid_.Q2max;
+        }
         if (appl_common_grid_.Q2order > 0)
+        {
             Q2order = appl_common_grid_.Q2order;
+        }
         if (appl_common_grid_.nx > 0)
+        {
             Nx = appl_common_grid_.nx;
+        }
         if (appl_common_grid_.xmin > 0)
+        {
             xmin = appl_common_grid_.xmin;
+        }
         if (appl_common_grid_.xmax > 0)
+        {
             xmax = appl_common_grid_.xmax;
+        }
         if (appl_common_grid_.xorder > 0)
+        {
             xorder = appl_common_grid_.xorder;
+        }
 
         // Report of the grid parameters
-        std::cout << std::endl;
-        std::cout << "amcblast INFO: Report of the grid parameters:" << std::endl;
-        std::cout << "- Q2 grid:" << std::endl;
-        std::cout << "  * interpolation range: [ " << Q2min << " : " << Q2max << " ] GeV^2"
-                  << std::endl;
-        std::cout << "  * number of nodes: " << NQ2 << std::endl;
-        std::cout << "  * interpolation order: " << Q2order << std::endl;
-        std::cout << "- x grid:" << std::endl;
-        std::cout << "  * interpolation range: [ " << xmin << " : " << xmax << " ]" << std::endl;
-        std::cout << "  * number of nodes: " << Nx << std::endl;
-        std::cout << "  * interpolation order: " << xorder << std::endl;
-        std::cout << std::endl;
+        std::cout << "\namcblast INFO: Report of the grid parameters:\n"
+            "- Q2 grid:\n"
+            "  * interpolation range: [ " << Q2min << " : " << Q2max << " ] GeV^2\n"
+            "  * number of nodes: " << NQ2 << "\n"
+            "  * interpolation order: " << Q2order << "\n"
+            "- x grid:\n"
+            "  * interpolation range: [ " << xmin << " : " << xmax << " ]\n"
+            "  * number of nodes: " << Nx << "\n"
+            "  * interpolation order: " << xorder << "\n" << std::endl;
 
         // Set up the APPLgrid PDF luminosities
         std::vector<int> pdf_luminosities;
@@ -318,13 +331,13 @@ extern "C" void appl_init_()
         // Assign to the luminosity file the timestamp in order to avoid
         // conflicts between multiple applgrid files generated with this
         // code.
-        time_t rawtime;
-        struct tm* timeinfo;
+        std::time_t rawtime;
+        std::tm* timeinfo;
         const int TZ = 16;
         char t[TZ];
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        strftime(t, TZ, "%Y%m%d%H%M%S", timeinfo);
+        std::time(&rawtime);
+        timeinfo = std::localtime(&rawtime);
+        std::strftime(t, TZ, "%Y%m%d%H%M%S", timeinfo);
         std::string filename = "amcatnlo_obs_" + ss.str() + "_" + std::string(t) + ".config";
         new lumi_pdf(filename, pdf_luminosities);
 
@@ -336,22 +349,24 @@ extern "C" void appl_init_()
         // Create array with the bin edges
         std::vector<double> obsbins(Nbins + 1);
         for (int i = 0; i <= Nbins; i++)
+        {
             obsbins[i] = appl_common_histokin_.obs_bins[i];
+        }
 
         // Check if the actual lower and upper limits of the histogram are correct
-        if (fabs(obsbins[0] - obsmin) >= 1e-5)
+        if (std::fabs(obsbins[0] - obsmin) >= 1e-5)
         {
             std::cout << "amcblast ERROR: mismatch in the lower limit of the histogram:"
                       << std::endl;
             std::cout << "It is " << obsbins[0] << ", it should be " << obsmin << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
-        if (fabs(obsbins[Nbins] - obsmax) >= 1e-5)
+        if (std::fabs(obsbins[Nbins] - obsmax) >= 1e-5)
         {
             std::cout << "amcblast ERROR: mismatch in the upper limit of the histogram"
                       << std::endl;
             std::cout << "It is " << obsbins[Nbins] << ", it should be " << obsmax << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
         // Create a grid with the binning given in the "obsbins[Nbins+1]" array
         grid_obs.emplace_back(
@@ -378,12 +393,12 @@ extern "C" void appl_fill_()
 {
     // Check event weight reconstruction
     // reco();
-    // Check that itype ranges from 1 to 3.
+    // Check that itype ranges from 1 to 5.
     int itype = appl_common_histokin_.itype_histo;
     if ((itype < 1) || (itype > 5))
     {
         std::cout << "amcblast ERROR: Invalid value of itype = " << itype << std::endl;
-        exit(-10);
+        std::exit(-10);
     }
 
     // this is the second index of the WB/R/F/0 arrays
@@ -402,7 +417,7 @@ extern "C" void appl_fill_()
     double scale2;
     double obs = appl_common_histokin_.obs_histo;
     // Weight vector whose size is the total number of subprocesses
-    std::vector<double> weight(nlumi, 0);
+    std::vector<double> weight(nlumi, 0.0);
 
     // Histogram number
     int nh = appl_common_histokin_.obs_num - 1;
@@ -414,9 +429,11 @@ extern "C" void appl_fill_()
     // It uses only Events (k=0) and the W0 weight.
     if (itype == 1)
     {
+        int k = 0;
+
         // Get Bjorken x's
-        x1 = appl_common_weights_.x1[0];
-        x2 = appl_common_weights_.x2[0];
+        x1 = appl_common_weights_.x1[k];
+        x2 = appl_common_weights_.x2[k];
         static std::vector<std::vector<double>> x1Saved(
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
         static std::vector<std::vector<double>> x2Saved(
@@ -429,27 +446,31 @@ extern "C" void appl_fill_()
             x2Saved[nh][grid_index] = x2;
         }
         // Energy scale
-        scale2 = appl_common_weights_.muF2[0];
+        scale2 = appl_common_weights_.muF2[k];
         // Relevant parton luminosity combination (-1 offset in c++)
-        ilumi = appl_common_weights_.flavmap[0] - 1;
-        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+        ilumi = appl_common_weights_.flavmap[k] - 1;
+        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
         {
             std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
                       << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
 
         // Fill grid only if x1 and x1 are non-zero
-        if (x1 == 0 && x2 == 0)
+        if (x1 == 0.0 && x2 == 0.0)
+        {
             return;
+        }
 
         // Fill only if W0 is non zero
-        if (fabs(W0[0]) < ttol)
+        if (std::fabs(W0[k]) < ttol)
+        {
             return;
+        }
 
         // Fill the grid with the values of the observables
         // W0
-        weight.at(ilumi) = W0[0];
+        weight.at(ilumi) = W0[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
         weight.at(ilumi) = 0;
     }
@@ -458,6 +479,7 @@ extern "C" void appl_fill_()
     else if (itype == 2)
     {
         int k = 1;
+
         x1 = appl_common_weights_.x1[k];
         x2 = appl_common_weights_.x2[k];
         static std::vector<std::vector<double>> x1Saved(
@@ -471,79 +493,91 @@ extern "C" void appl_fill_()
             x1Saved[nh][grid_index] = x1;
             x2Saved[nh][grid_index] = x2;
         }
+
+        scale2 = appl_common_weights_.muF2[k];
+        ilumi = appl_common_weights_.flavmap[k] - 1;
+
+        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
         {
-            scale2 = appl_common_weights_.muF2[k];
-            ilumi = appl_common_weights_.flavmap[k] - 1;
-
-            if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
-            {
-                std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                          << std::endl;
-                exit(-10);
-            }
-            if (x1 == 0 && x2 == 0)
-                return;
-
-            if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
-                return;
-
-            // W0
-            weight.at(ilumi) = W0[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-            weight.at(ilumi) = 0;
-            // WR
-            weight.at(ilumi) = WR[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-            weight.at(ilumi) = 0;
-            // WF
-            weight.at(ilumi) = WF[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-            weight.at(ilumi) = 0;
+            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
+                      << std::endl;
+            std::exit(-10);
         }
+        if (x1 == 0.0 && x2 == 0.0)
+        {
+            return;
+        }
+
+        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
+        {
+            return;
+        }
+
+        // W0
+        weight.at(ilumi) = W0[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
+        weight.at(ilumi) = 0.0;
+        // WR
+        weight.at(ilumi) = WR[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
+        weight.at(ilumi) = 0.0;
+        // WF
+        weight.at(ilumi) = WF[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
+        weight.at(ilumi) = 0.0;
     }
     // Born (n-body) contribution (corresponding to xsec20 in aMC@NLO)
     // It uses only the soft kinematics (k=1) and the weight WB.
     else if (itype == 3)
     {
-        x1 = appl_common_weights_.x1[1];
-        x2 = appl_common_weights_.x2[1];
+        int k = 1;
+
+        x1 = appl_common_weights_.x1[k];
+        x2 = appl_common_weights_.x2[k];
         static std::vector<std::vector<double>> x1Saved(
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
         static std::vector<std::vector<double>> x2Saved(
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
         if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
+        {
             return;
+        }
         else
         {
             x1Saved[nh][grid_index] = x1;
             x2Saved[nh][grid_index] = x2;
         }
-        scale2 = appl_common_weights_.muF2[1];
-        ilumi = appl_common_weights_.flavmap[1] - 1;
+        scale2 = appl_common_weights_.muF2[k];
+        ilumi = appl_common_weights_.flavmap[k] - 1;
 
-        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
         {
             std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
                       << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
 
-        if (x1 == 0 && x2 == 0)
+        if (x1 == 0.0 && x2 == 0.0)
+        {
             return;
+        }
 
-        if (fabs(WB[1]) < ttol)
+        if (std::fabs(WB[k]) < ttol)
+        {
             return;
+        }
 
         // WB
-        weight.at(ilumi) = WB[1];
+        weight.at(ilumi) = WB[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
     }
     // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
     // Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
     else if (itype == 4)
     {
         int k = 2;
+
         x1 = appl_common_weights_.x1[k];
         x2 = appl_common_weights_.x2[k];
         static std::vector<std::vector<double>> x1Saved(
@@ -551,7 +585,9 @@ extern "C" void appl_fill_()
         static std::vector<std::vector<double>> x2Saved(
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
         if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
+        {
             return;
+        }
         else
         {
             x1Saved[nh][grid_index] = x1;
@@ -561,36 +597,41 @@ extern "C" void appl_fill_()
         scale2 = appl_common_weights_.muF2[k];
         ilumi = appl_common_weights_.flavmap[k] - 1;
 
-        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
         {
             std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
                       << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
-        if (x1 == 0 && x2 == 0)
+        if (x1 == 0.0 && x2 == 0.0)
+        {
             return;
+        }
 
-        if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
+        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
+        {
             return;
+        }
 
         // W0
         weight.at(ilumi) = W0[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
         // WR
         weight.at(ilumi) = WR[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
         // WF
         weight.at(ilumi) = WF[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
     }
     // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
     // Soft-Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
     else if (itype == 5)
     {
         int k = 3;
+
         x1 = appl_common_weights_.x1[k];
         x2 = appl_common_weights_.x2[k];
         static std::vector<std::vector<double>> x1Saved(
@@ -601,41 +642,45 @@ extern "C" void appl_fill_()
         scale2 = appl_common_weights_.muF2[k];
         ilumi = appl_common_weights_.flavmap[k] - 1;
 
-        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
         {
             std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
                       << std::endl;
-            exit(-10);
+            std::exit(-10);
         }
-        if (x1 == 0 && x2 == 0)
+        if (x1 == 0.0 && x2 == 0.0)
+        {
             return;
+        }
 
-        if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
+        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
+        {
             return;
+        }
 
         // W0
         weight.at(ilumi) = W0[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
         // WR
         weight.at(ilumi) = WR[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
         // WF
         weight.at(ilumi) = WF[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-        weight.at(ilumi) = 0;
+        weight.at(ilumi) = 0.0;
     }
 }
 
 extern "C" void appl_term_()
 {
     // Conversion factor from natural units to pb
-    double conv = 389379660;
+    double conv = 389379660.0;
 
     // Normalization factor
     double norm = appl_common_histokin_.norm_histo;
-    double n_runs = 1 / norm;
+    double n_runs = 1.0 / norm;
 
     // Histogram number
     int nh = appl_common_histokin_.obs_num - 1;
