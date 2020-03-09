@@ -24,9 +24,6 @@ std::vector<std::vector<int>> translation_tables;
 std::string grid_filename_in;
 std::string grid_filename_out;
 
-// Bin width
-std::vector<std::vector<double>> binwidths;
-
 ////////////////////////////////////////////////////////////////////////////////////
 
 // Maximum number of (pairwise) suprocesses
@@ -375,12 +372,6 @@ extern "C" void appl_init_()
         // Add documentation
         grid_obs[grid_obs.size() - 1].addDocumentation(Banner());
     }
-
-    // Compute all the bin widths of the h-th histogram
-    std::vector<double> hbins;
-    for (int i = 0; i < appl_common_histokin_.obs_nbins; i++)
-        hbins.push_back(appl_common_histokin_.obs_bins[i + 1] - appl_common_histokin_.obs_bins[i]);
-    binwidths.push_back(hbins);
 }
 
 extern "C" void appl_fill_()
