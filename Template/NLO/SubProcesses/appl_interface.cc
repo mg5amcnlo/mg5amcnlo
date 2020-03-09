@@ -566,35 +566,34 @@ extern "C" void appl_fill_()
             x1Saved[nh][grid_index] = x1;
             x2Saved[nh][grid_index] = x2;
         }
+
+        scale2 = appl_common_weights_.muF2[k];
+        ilumi = appl_common_weights_.flavmap[k] - 1;
+
+        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
         {
-            scale2 = appl_common_weights_.muF2[k];
-            ilumi = appl_common_weights_.flavmap[k] - 1;
-
-            if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
-            {
-                std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                          << std::endl;
-                exit(-10);
-            }
-            if (x1 == 0 && x2 == 0)
-                return;
-
-            if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
-                return;
-
-            // W0
-            weight.at(ilumi) = W0[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-            weight.at(ilumi) = 0;
-            // WR
-            weight.at(ilumi) = WR[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-            weight.at(ilumi) = 0;
-            // WF
-            weight.at(ilumi) = WF[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-            weight.at(ilumi) = 0;
+            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
+                      << std::endl;
+            exit(-10);
         }
+        if (x1 == 0 && x2 == 0)
+            return;
+
+        if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
+            return;
+
+        // W0
+        weight.at(ilumi) = W0[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
+        weight.at(ilumi) = 0;
+        // WR
+        weight.at(ilumi) = WR[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
+        weight.at(ilumi) = 0;
+        // WF
+        weight.at(ilumi) = WF[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
+        weight.at(ilumi) = 0;
     }
     // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
     // Soft-Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
@@ -607,35 +606,34 @@ extern "C" void appl_fill_()
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
         static std::vector<std::vector<double>> x2Saved(
             grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
+
+        scale2 = appl_common_weights_.muF2[k];
+        ilumi = appl_common_weights_.flavmap[k] - 1;
+
+        if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
         {
-            scale2 = appl_common_weights_.muF2[k];
-            ilumi = appl_common_weights_.flavmap[k] - 1;
-
-            if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
-            {
-                std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                          << std::endl;
-                exit(-10);
-            }
-            if (x1 == 0 && x2 == 0)
-                return;
-
-            if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
-                return;
-
-            // W0
-            weight.at(ilumi) = W0[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-            weight.at(ilumi) = 0;
-            // WR
-            weight.at(ilumi) = WR[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-            weight.at(ilumi) = 0;
-            // WF
-            weight.at(ilumi) = WF[k];
-            grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-            weight.at(ilumi) = 0;
+            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
+                      << std::endl;
+            exit(-10);
         }
+        if (x1 == 0 && x2 == 0)
+            return;
+
+        if (fabs(W0[k]) < ttol && fabs(WR[k]) < ttol && fabs(WF[k]) < ttol)
+            return;
+
+        // W0
+        weight.at(ilumi) = W0[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
+        weight.at(ilumi) = 0;
+        // WR
+        weight.at(ilumi) = WR[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
+        weight.at(ilumi) = 0;
+        // WF
+        weight.at(ilumi) = WF[k];
+        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
+        weight.at(ilumi) = 0;
     }
 }
 
