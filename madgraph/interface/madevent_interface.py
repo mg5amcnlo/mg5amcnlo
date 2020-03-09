@@ -3353,7 +3353,9 @@ Beware that this can be dangerous for local multicore runs.""")
         #check difficult PS case
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
-        
+        elif self.run_card['hard_survey']:
+            self.pass_in_difficult_integration_mode()
+            
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -3385,22 +3387,22 @@ Beware that this can be dangerous for local multicore runs.""")
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 2 * self._survey_options['points'][1]
+            self.opts['points'] = 3 * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 1 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/2  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
         
         # Modify run_config.inc in order to improve the refine
-        #conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
-        #files.cp(conf_path, conf_path + '.bk')
+        conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
+        files.cp(conf_path, conf_path + '.bk')
         #
-        #text = open(conf_path).read()
-        #text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        #text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
-        #fsock = open(conf_path, 'w')
-        #fsock.write(text)
-        #fsock.close()
+        text = open(conf_path).read()
+        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
+        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 40000 )''', text)
+        fsock = open(conf_path, 'w')
+        fsock.write(text)
+        fsock.close()
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all']:
@@ -4670,13 +4672,7 @@ tar -czf split_$1.tar.gz split_$1
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
                                         (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
-                            else:
-                                
-                                
-                                os.system('head -n -1')
-                                os.system(' '.join(['head','-n','-1',hepmc_file,'|','tail','-n','+'+str(n_head),'>','tmpfile']))
-                                os.system(' '.join(['mv','tmpfile',hepmc_file]))
-                                
+                            else:                                
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))

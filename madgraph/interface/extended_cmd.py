@@ -2643,11 +2643,13 @@ class ControlSwitch(SmartQuestion):
             out = super(ControlSwitch,self).postcmd(stop, line)
         except AttributeError:
             pass
-        
+        if out:
+            return out
+
         line = line.strip()
         if ';' in line:
             line= [l for l in line.split(';') if l][-1] 
-        if line in self.quit_on:
+        if line in self.quit_on or self.value in self.quit_on:
             return True
         if self.value != 'reask':
             self.create_question()

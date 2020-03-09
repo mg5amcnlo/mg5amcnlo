@@ -5150,10 +5150,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         
         # check consistency
         for i, sym_fact in enumerate(symmetry):
-            if sym_fact > 0:
+            
+            if sym_fact >= 0:
                 continue
             if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
-                misc.sprint(i, sym_fact, nqcd_list[i], nqcd_list[abs(sym_fact)])
                 raise Exception, "identical diagram with different QCD powwer" 
                                       
         

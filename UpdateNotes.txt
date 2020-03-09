@@ -1,8 +1,29 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.7.1(09/03/20)
+      OM: Fixing issue (wrong cross-section and differential cross-section) for
+          polarised sample when
+	   1) you have identical polarised particles
+	   2) those particles are decays
+	  examples: p p > j j w+{0} w+{T}, w+ > e+ e-
+      OM: In presence of identical particles, if you define the exact number of decays
+          (either via the decay chain syntax or via MadSpin) then they are assigned in an ordered way:
+          generate p p > z{0} z{T}, z > l+ l-, z > j j
+	  means that the Longitudinal Z decays to lepton (transverse to jet)
+	  Thanks to Jie Xiao for reporting such issues. 
+      OM: Effective Photon approximation is now always done with a fix cutoff. This use the FIXED factorization scale
+          of the associate beam as the cutoff of the Improved Weizsaecker-Williams.
+      OM: Allow to install lhapdf6.2 by default
+      OM: Fixing website used to download pdf since lhapdf removed their previous hepforge page for pdf set.
+      OM: Fixed a bug (leading to a crash) introduced in 2.6.6 related to the ckkw/MLM check for BSM model
+          with gluon with non QCD interaction
+      OM: For fortran standalone with python binding, this is not necessary anymore to run the code from a specific directory.
+          You need however need to use the standard path for the param_card or have the file ident_card within the same
+	  directory as the param_card.dat.
 
-2.7.0(20/01/10)
+
+2.7.0(10/01/20)
       OM: Allow for a new syntax in presence of multi-jet/lepton process:
          generate p p > 3j replaces p p > j j j 
       OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]

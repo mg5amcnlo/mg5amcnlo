@@ -1942,13 +1942,49 @@ class ProcessDefinitionTest(unittest.TestCase):
                         'wrong_list':['a', {}]}
                        ]
 
-        temp_process = self.my_process_definition
+        temp_process = copy.deepcopy(self.my_process_definition)
+        
 
         for test in test_values:
             for x in test['right_list']:
                 self.assert_(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
+
+    def test_check_polarization(self):
+        
+        self.assertTrue(self.my_process_definition.check_polarization())
+
+        def set_legs(ids, polarization):
+            
+            legs = base_objects.LegList()
+            for i,(id, polarization) in enumerate(zip(ids, polarization)):
+                if i < 2:
+                    state = False
+                else:
+                    state = True
+                leg = base_objects.Leg()
+                leg['state'] = state
+                leg['ids'] = id
+                leg['polarization'] = polarization 
+                legs.append(leg)
+            return legs
+
+
+        temp_process = self.my_process_definition  
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23]],[[],[],[],[]])
+        self.assertTrue(temp_process.check_polarization())
+        
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23]],[[],[],[],[1]])
+        self.assertFalse(temp_process.check_polarization())
+        
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23],[34],[34]],
+                                        [[1],[],[1],[-1],[-1,1],[-1,1]])
+        self.assertTrue(temp_process.check_polarization())
+
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23],[34],[34]],
+                                        [[1],[],[1],[-1],[1],[-1,1]])
+        self.assertFalse(temp_process.check_polarization())
 
     def test_representation(self):
         """Test process object string representation."""
