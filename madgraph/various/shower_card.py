@@ -117,7 +117,6 @@ class ShowerCard(dict):
                 if not i in list_dm: 
                     self['dm_'+str(i)] = ''
 
-        misc.sprint(self['nsplit_jobs'])
         self.text=content
 
 

@@ -24,7 +24,7 @@ C
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
      &     ,i_replace,ii,ipartlast(20)
       double precision xlast(20),xmulast(20),pdflast(-7:7,20)
-      double precision epa_proton
+      double precision epa_proton, epa_electron
       save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
       data ipartlast/20*-99/
@@ -139,6 +139,8 @@ c     be saved
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
          pdg2pdf=pdg2pdf/x
+      else if(ih.eq.3) then       !from the electron
+            pdg2pdf=epa_electron(x,xmu*xmu)
       else if(ih.eq.2) then ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu)
       else

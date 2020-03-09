@@ -238,6 +238,7 @@ in presence of majorana particle/flow violation"""
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
         
+
         output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('FCT')])
@@ -255,7 +256,7 @@ in presence of majorana particle/flow violation"""
         
         if need_P_sign:
             expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
-        
+
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
         return lorentz_expr
@@ -303,8 +304,13 @@ in presence of majorana particle/flow violation"""
                 # check if we need a special propagator
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
-                    massless = True
-                    self.denominator = None
+                    if spin == 3 and aloha.unitary_gauge == 2:
+                        misc.sprint(spin)
+                        lorentz *= complex(0,1) * self.get_custom_propa('1PS', spin, id)
+                        continue
+                    else:
+                        massless = True
+                        self.denominator = None
                 elif propa == []:
                     massless = False
                     self.denominator = None
@@ -431,9 +437,46 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        propagator = getattr(self.model.propagators, propa)
-        numerator = propagator.numerator
-        denominator = propagator.denominator      
+        if not propa.startswith('1'):
+            propagator = getattr(self.model.propagators, propa)
+            numerator = propagator.numerator
+            denominator = propagator.denominator      
+        elif propa == "1L":
+            numerator = "EPSL(1,id) * EPSL(2,id)"
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1T":
+            numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1A":
+            numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
+            denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa in ["1P"]:
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFP(1,id)*UFPC(2,id)"
+            else:
+                numerator =  "VFP(1,id)*VFPC(2,id)"
+               
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        
+        elif propa == "1M":
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFM(1,id)*UFMC(2,id)"
+            else:
+                numerator =  "VFM(1,id)*VFMC(2,id)"
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1PS":
+            numerator = "(-1*(P(-1,id)*PBar(-1,id)) * Metric(1, 2) + P(1,id)*PBar(2,id) + PBar(1,id)*P(2,id))"
+            denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
+        else:
+            raise Exception
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
@@ -475,15 +518,16 @@ in presence of majorana particle/flow violation"""
         
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
-            denominator = self.mod_propagator_expression(tag, denominator)      
+            denominator = self.mod_propagator_expression(tag, denominator)  
+                
         numerator = self.parse_expression(numerator, needPflipping)
-        
+      
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
             self.denominator = eval(self.denominator)
             if not isinstance(self.denominator, numbers.Number):
                 self.denominator = self.denominator.simplify().expand().simplify().get((0,))
-                
+        needPflipping = False
         if spin ==4:
             return eval(numerator) * propaR
         else:

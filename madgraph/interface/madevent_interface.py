@@ -2567,7 +2567,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
 
-                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                if switch_mode['analysis'] == 'ExRoot':
                     input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
                     output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
                     self.create_root_file(input , output)
@@ -3353,7 +3353,9 @@ Beware that this can be dangerous for local multicore runs.""")
         #check difficult PS case
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
-        
+        elif self.run_card['hard_survey']:
+            self.pass_in_difficult_integration_mode()
+            
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -3385,26 +3387,25 @@ Beware that this can be dangerous for local multicore runs.""")
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 2 * self._survey_options['points'][1]
+            self.opts['points'] = 3 * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 1 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/2  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
         
         # Modify run_config.inc in order to improve the refine
-        #conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
-        #files.cp(conf_path, conf_path + '.bk')
+        conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
+        files.cp(conf_path, conf_path + '.bk')
         #
-        #text = open(conf_path).read()
-        #text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        #text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
-        #fsock = open(conf_path, 'w')
-        #fsock.write(text)
-        #fsock.close()
+        text = open(conf_path).read()
+        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
+        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 40000 )''', text)
+        fsock = open(conf_path, 'w')
+        fsock.write(text)
+        fsock.close()
         
         # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events']:
+        for name in ['../bin/internal/gen_ximprove', 'all']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
@@ -3942,8 +3943,11 @@ Beware that this can be dangerous for local multicore runs.""")
         tag = self.run_tag
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
-
-        if PY8_Card['HEPMCoutput:file']=='auto':
+        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove']:
+            if PY8_Card['HEPMCoutput:file'] == 'autoremove':
+                self.to_store.append('nopy8')
+            elif 'nopy8' in self.to_store:
+                self.to_store.remove('nopy8')
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
@@ -4504,9 +4508,11 @@ tar -czf split_$1.tar.gz split_$1
                             else:
                                 ln(in_file,selected_cwd)                                
                         in_files  = []
+                        wrapper_path = os.path.basename(wrapper_path)
                     else:
                         out_files = ['split_%d.tar.gz'%i]
                         selected_cwd = parallelization_dir
+
                     self.cluster.submit2(wrapper_path, 
                             argument=[str(i)], cwd=selected_cwd, 
                             input_files=in_files,
@@ -4656,11 +4662,23 @@ tar -czf split_$1.tar.gz split_$1
                         ######################################################################
                         for hepmc_file in all_hepmc_files:
                             # Remove in an efficient way the starting and trailing HEPMC tags
-                            if sys.platform == 'darwin':
+                            # check for support of negative argument in head
+                            pid = os.system('head -n -1 %s &> /dev/null' % __file__)
+                            if pid == 0:
+                                os.system('head -n -1 %s | tail -n +%d > %s/tmpfile' % 
+                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)))
+                                misc.call(['mv', 'tmp', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
+                            elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
                                         (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
                             else:
+                                
+                                
+                                os.system('head -n -1')
+                                os.system(' '.join(['head','-n','-1',hepmc_file,'|','tail','-n','+'+str(n_head),'>','tmpfile']))
+                                os.system(' '.join(['mv','tmpfile',hepmc_file]))
+                                
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))
@@ -5328,16 +5346,19 @@ tar -czf split_$1.tar.gz split_$1
             misc.gzip(pjoin(p,'pythia_events.hep'), 
                       stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
 
-        if 'pythia8' in self.to_store:            
+        if 'pythia8' in self.to_store:
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
             self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
-                self.update_status('Storing Pythia8 files of previous run', 
-                                                     level='pythia', error=True)
-                misc.gzip(file_path,stdout=file_path)
+                if 'nopy8' in self.to_store:
+                    os.remove(file_path)
+                else:   
+                    self.update_status('Storing Pythia8 files of previous run', 
+                                                         level='pythia', error=True)
+                    misc.gzip(file_path,stdout=file_path)
     
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
@@ -5969,7 +5990,7 @@ tar -czf split_$1.tar.gz split_$1
                 except:
                     pass
             else:
-                misc.gzip(input,keep=False)
+                misc.gzip(input)
             
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
@@ -6644,7 +6665,8 @@ class GridPackCmd(MadEventCmd):
         
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
-            
+        
+        self.banner.add_generation_info(sum_xsec, self.nb_event)
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
@@ -6659,7 +6681,7 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(outdir, self.run_name, "partials%s.lhe" % i))
                    
         self.results.add_detail('nb_event', nb_event)
-    
+        self.banner.add_generation_info(sum_xsec, nb_event)
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
             self.correct_bias()
 

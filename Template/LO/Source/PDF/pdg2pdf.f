@@ -134,7 +134,7 @@ c     saved. 'pdflast' is filled below.
          if(ih.eq.3) then       !from the electron
             pdg2pdf=epa_electron(x,q2max)
          elseif(ih .eq. 2) then !from a proton without breaking
-            pdg2pdf=epa_proton(x,q2max)
+            pdg2pdf=epa_proton(x,q2max,beamid)
          endif 
          pdflast(iporg,ireuse)=pdg2pdf
          return

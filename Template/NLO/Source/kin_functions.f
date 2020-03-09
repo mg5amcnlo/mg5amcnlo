@@ -236,7 +236,7 @@ c
 c-----
 c  Begin Code
 c-----
-      if ((lpp(1).eq.0).and.(lpp(2).eq.0)) then
+      if ((lpp(1).ne.1).and.(lpp(2).ne.1)) then
          p1a = dsqrt(p1(1)**2+p1(2)**2+p1(3)**2)
          p2a = dsqrt(p2(1)**2+p2(2)**2+p2(3)**2)
          if (p1a*p2a .ne. 0d0) then

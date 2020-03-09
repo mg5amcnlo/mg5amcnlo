@@ -75,7 +75,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('cross_section', {'__type__':0.}, comment="forcing normalization of cross-section after MS (for none/onshell)" )
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
-        
+        self.add_param('frame_id', 6)
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -211,7 +211,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Read the banner of the inputfile
         self.events_file = open(os.path.realpath(inputfile))
         self.banner = banner.Banner(self.events_file)
-        
+
 
         # Check the validity of the banner:
         if 'slha' not in self.banner:
@@ -226,14 +226,21 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd('This event file was already decayed by MS. This is not possible to add to it a second decay')
         
         if 'mgruncard' in self.banner:
+            run_card = self.banner.charge_card('run_card')
             if not self.options['Nevents_for_max_weigth']:
-                nevents = int(self.banner.get_detail('run_card', 'nevents'))
+                nevents = run_card['nevents']
                 N_weight = max([75, int(3*nevents**(1/3))])
                 self.options['Nevents_for_max_weigth'] = N_weight
                 N_sigma = max(4.5, math.log(nevents,7.7))
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+            
+            if isinstance(run_card, banner.RunCardLO):
+                run_card.update_system_parameter_for_include()
+                self.options['frame_id'] = run_card['frame_id']
+            else:
+                self.options['frame_id'] = 6
         else:
             if not self.options['Nevents_for_max_weigth']:
                 self.options['Nevents_for_max_weigth'] = 75
@@ -313,7 +320,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if model_name in line:
                     final_model = True
                     
-            
                 
     def import_model(self, args):
         """syntax: import model NAME CARD_PATH
@@ -399,6 +405,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         #if self.model and not self.model['case_sensitive']:
         #    decaybranch = decaybranch.lower()
+
+        if self.options['spinmode'] != 'full' and '{' in decaybranch:
+            if self.options['spinmode'] == 'none':
+                logger.warning("polarization option used with spinmode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
+            else:
+                logger.warning("polarization option used with spinmode=onshell. This combination is not validated and is by construction using sub-optimal method which can likely lead to bias in some situation. Use at your own risk.")
 
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
@@ -585,14 +597,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.check_launch(args)
         for part in self.list_branches.keys():
             if part in self.mg5cmd._multiparticles:
+            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
-            pid = self.mg5cmd._curr_model.get('name2pdg')[part]
-            if pid in self.final_state:
-                break
-#        else:
-#            logger.info("Nothing to decay ...")
-#            return
+            else:
+                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                if pid in self.final_state:
+                    break
+        else:
+            logger.info("Nothing to decay ...")
+            return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
@@ -801,6 +815,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif self.options['input_format'] in ['hepmc']:
             import madgraph.various.hepmc_parser as hepmc_parser
             orig_lhe = hepmc_parser.HEPMC_EventFile(filename)
+            orig_lhe.allow_empty_event = True
             logger.info("Parsing input event to know how many decay to generate. This can takes few minuts.")
         else:
             raise Exception
@@ -1408,6 +1423,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
+
         self.branching_ratio = br
         self.efficiency = 1
         self.cross, self.error = self.banner.get_cross(witherror=True)
@@ -1424,7 +1440,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         #4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
-        
         
         #5. generate the decay 
         orig_lhe.seek(0)
@@ -1443,8 +1458,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event,production in enumerate(orig_lhe):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
-            if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
+            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+            else:
+                logger.info("next event [%s]", time.time()-start)
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
@@ -1539,6 +1556,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event_decay is a dict pdg -> list of event file (contain the decay)
         
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
+            return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+        
         nevents = self.options['Nevents_for_max_weigth']
         if nevents == 0 :
             nevents = 75
@@ -1547,7 +1567,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("Estimating the maximum weight")
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
-
 
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
@@ -1561,7 +1580,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 base_event = base_event[0]
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
-                #carefull base_event is modified by the following function                  
+                #carefull base_event is modified by the following function 
                 _, wgt = self.get_onshell_evt_and_wgt(base_event, decays)
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
@@ -1577,10 +1596,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
+            #misc.sprint(ave_weight, std_weight)
             base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                 
             if all_maxwgt[1] > base_max_weight:
                 base_max_weight = 1.05 * all_maxwgt[1]
+        if self.options['ms_dir']:
+            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
             
             
@@ -1602,13 +1624,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
-        
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
             production_me = self.calculate_matrix_element(production)
             production.me_wgt = production_me
-            
         decay_me = 1.0
         for pdg in decays:
             for dec in decays[pdg]:
@@ -1636,7 +1656,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             final = tuple(-i for i in final)
             tag = (init, final)
             orig_order = self.all_me[tag]['order']
-            
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)
@@ -1651,11 +1670,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             
             mymod = __import__("%s.matrix2py" % (pdir))
             reload(mymod)
-            mymod = getattr(mymod, 'matrix2py')  
+            mymod = getattr(mymod, 'matrix2py')
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_value  
+                    if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
+                            os.path.exists(pjoin(self.path_me,'param_card.dat')):
+                        mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                    else:
+                        mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
+            self.all_f2py[pdir] = mymod.get_value 
             return self.calculate_matrix_element(event)
         
         

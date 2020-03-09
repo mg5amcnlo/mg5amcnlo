@@ -228,10 +228,11 @@ class ProcessExporterFortran(VirtualExporter):
             run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
                                             processes)
-          
-    
+        
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
-        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        shutil.copyfile(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'),
+                        pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        
         
         
     #===========================================================================
@@ -916,7 +917,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
+        if any([any([tag.startswith('L') for tag in d[1]]) for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
@@ -3840,7 +3841,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+
+        # set limitation linked to the model
+    
+        
         # indicate the PDG of all initial particle
         try:
             pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
@@ -3970,6 +3976,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 "writer not FortranWriter")
             # Set lowercase/uppercase Fortran code
             writers.FortranWriter.downcase = False
+
+        # check if MLM/.../ is supported for this matrix-element and update associate flag
+        if self.model and 'MLM' in self.model["limitations"]:
+            if 'MLM' not in self.proc_characteristic["limitations"]:
+                used_couplings = matrix_element.get_used_couplings(output="set") 
+                for vertex in self.model.get('interactions'):
+                    particles = [p for p in vertex.get('particles')]
+                    if 21 in [p.get('pdg_code') for p in particles]:
+                        colors = [par.get('color') for par in particles]
+                        if 1 in colors:
+                            continue
+                        elif 'QCD' not in vertex.get('orders'):
+                            for bad_coup in vertex.get('couplings').values():
+                                if bad_coup in used_couplings:
+                                    self.proc_characteristic["limitations"].append('MLM')
+                                    break
 
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
@@ -4103,7 +4125,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ampsplitorders']='\n'.join(amp_so)
         replace_dict['sqsplitorders']='\n'.join(sqamp_so)
         
-        
+
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
         jamp_lines = self.get_JAMP_lines_split_order(\
@@ -4115,6 +4137,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                           'iolibs/template_files/%s' % self.matrix_file)
         replace_dict['template_file2'] = pjoin(_file_path, \
                           'iolibs/template_files/split_orders_helping_functions.inc')      
+        
+        s1,s2 = matrix_element.get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
+        
         if writer:
             file = open(replace_dict['template_file']).read()
             file = file % replace_dict
@@ -5120,6 +5147,16 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symfact_orig.dat'
         self.write_symfact_file(open(filename, 'w'), symmetry)
+        
+        # check consistency
+        for i, sym_fact in enumerate(symmetry):
+            
+            if sym_fact >= 0:
+                continue
+            if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
+                raise Exception, "identical diagram with different QCD powwer" 
+                                      
+        
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
@@ -5193,6 +5230,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         ncomb=matrix_elements[0].get_helicity_combinations()
         replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+
+        s1,s2 = matrix_elements[0].get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
         
         if writer:
             file = open(pjoin(_file_path, \

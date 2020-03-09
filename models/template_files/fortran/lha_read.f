@@ -201,7 +201,6 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       param(1)=' '
       value(1)=' '
-
       ! Try to open param-card file
       call LHA_open_file(iunit,param_name,fopened)
       if(.not.fopened) then
@@ -339,6 +338,11 @@ c
       integer fine
       integer dirup,i
 
+      character*90 lastopen
+      save lastopen
+      data lastopen /''/
+      integer sindex
+      
 c-----
 c     Begin Code
 c-----
@@ -347,10 +351,26 @@ c     first check that we will end in the main directory
 c
       open(unit=lun,file=filename,status='old',ERR=20)
 c      write(*,*) 'read model file ',filename
+      sindex = INDEX(filename, '/' , .true.)
+      if (sindex.ne.0)then
+         lastopen = filename(1:sindex)
+      endif
       fopened=.true.
       return
+
+ 20   if (lastopen(1:2).ne.' ')then
+         fine=index(lastopen,' ')
+         if (fine.ne.0) then
+            tempname = lastopen(1:fine-1)//filename
+         else
+            tempname = lastopen//filename
+         endif
+         open(unit=lun,file=tempname,status='old',ERR=30)
+         fopened=.true.
+         return
+      endif
       
-20    tempname=filename
+30    tempname=filename
       fine=index(tempname,' ')
       if(fine.eq.0) fine=len(tempname)
       tempname=tempname(1:fine)
@@ -363,11 +383,11 @@ c
 
       fopened=.false.
       do i=0,5
-        open(unit=lun,file=tempname,status='old',ERR=30)
+        open(unit=lun,file=tempname,status='old',ERR=40)
         fopened=.true.
 c        write(*,*) 'read model file ',tempname
         exit
-30      tempname='../'//tempname
+40      tempname='../'//tempname
         if (i.eq.5)then
            write(*,*) 'Warning: file ',filename,
      &                           ' not found in the parent directories!(lha_read)'

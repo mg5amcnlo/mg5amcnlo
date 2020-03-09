@@ -645,7 +645,8 @@ class BasicCmd(OriginalCmd):
     def split_arg(line):
         """Split a line of arguments"""
         
-        split = line.split()
+        split = re.findall(r"(?:[^\s'\"]|(?:'|\")(?:\\.|[^\"'])*(?:\"|'))+",line)
+        
         out=[]
         tmp=''
         for data in split:
@@ -2642,15 +2643,18 @@ class ControlSwitch(SmartQuestion):
             out = super(ControlSwitch,self).postcmd(stop, line)
         except AttributeError:
             pass
-        
+        if out:
+            return out
+
         line = line.strip()
         if ';' in line:
             line= [l for l in line.split(';') if l][-1] 
-        if line in self.quit_on:
+        if line in self.quit_on or self.value in self.quit_on:
             return True
-        self.create_question()
-        return self.reask(True)
-        
+        if self.value != 'reask':
+            self.create_question()
+            return self.reask(True)
+        return
 
     def set_switch(self, key, value, user=True):
         """change a switch to a given value"""

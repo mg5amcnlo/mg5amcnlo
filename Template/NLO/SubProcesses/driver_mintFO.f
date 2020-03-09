@@ -186,7 +186,7 @@ c Don't safe the reweight information when just setting up the grids.
                enddo
             enddo
          else
-            doreweight=do_rwgt_scale.or.do_rwgt_pdf
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
             do kchan=1,nchans
