@@ -89,7 +89,6 @@ c Write-out the events
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
-
       return
       end
 
@@ -116,6 +115,7 @@ c Scales
      #                         muF2_id_str,QES_id_str
       character*7 event_norm
       common /event_normalisation/event_norm
+
       lunlhe=ifile
 c get info on beam and PDFs
       call setrun
@@ -129,6 +129,7 @@ c get info on beam and PDFs
          IDWTUP=-4
       endif
       NPRUP=1
+
       write(lunlhe,'(a)')'<LesHouchesEvents version="3.0">'
       write(lunlhe,'(a)')'  <!--'
       write(lunlhe,'(a)')'  <scalesfunctionalform>'
@@ -151,6 +152,7 @@ c get info on beam and PDFs
  250  format(1x,i8)
  501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,d14.8),1x,i6)
+
       return
       end
 
