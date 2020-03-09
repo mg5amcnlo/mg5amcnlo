@@ -891,7 +891,6 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
-            kk0=1
             if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             if (abrv(1:2).ne.'vi') then
@@ -917,7 +916,6 @@ c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
          do i=1,proc_map(proc_map(0,1),0)
-            kk1=0
             wgt_me_real=0d0
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
@@ -937,10 +935,6 @@ c check if event or counter-event passes cuts
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
-c$$$            if(passcuts_n1body.and.(.not.passcuts_nbody))then
-c$$$              write(*,*)'SFWARNING4',passcuts_n1body,passcuts_nbody
-c$$$              stop
-c$$$            endif
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
@@ -975,7 +969,6 @@ c
                   call set_FxFx_scale(3,p)
                endif
             endif               
-            kk0=0
 c compute the MonteCarlo subtraction terms. Pass the 'passcuts_nbody'
 c logical variable to the compute_MC_subt_term subroutine to determine
 c if we should actually include it in the S/H-event contributions.
@@ -986,19 +979,6 @@ c if we should actually include it in the S/H-event contributions.
                   call set_alphaS(p)
                   call compute_MC_subt_term(p,passcuts_nbody,gfactsf
      $                 ,gfactcl,probne)
-                  kk1=2
-                  if(verbose_test)then
-c Write SDK: a valid n-body configuration has been found, and 
-c MC counterterms have been computed
-                  write(kkunit,554)'SDK',probne,probne_bog,scltarget,sclstart,sudpdffact
-                  if(iFKS.gt.fks_configs.or.iFKS.le.0)then
-                    write(*,*)"SDK error",iFKS,fks_configs
-                  endif
-                  write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
-                  do kk=1,nexternal
-                    write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
-                  enddo
-                  endif
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
@@ -1025,17 +1005,6 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
-               if(kk1.eq.0)then
-                 kk1=3
-                 if(verbose_test)then
-c Write SD3 only when SDK was not written, for a given i index of the main loop
-                 write(kkunit,554)'SD3',probne,probne_bog,scltarget,sclstart,sudpdffact
-                 write(kkunit,557)ifks_lhe(iFKS),jfks_lhe(iFKS)
-                 do kk=1,nexternal
-                   write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
-                 enddo
-                 endif
-               endif
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
@@ -1046,24 +1015,8 @@ c Update the shower starting scale with the shape from the MC
 c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS,ifold_counter)
             call set_colour_connections(iFKS,ifold_counter)
-            done=done.or.(kk1.ne.0)
          enddo
  12      continue
-         if(kk0.ne.0.and.(.not.done))then
-           if(verbose_test)then
-c Write SD1 only if there was a valid n-body configuration, and if neither
-c SDK or SD3 has been written at any time in the do i=1,proc_map(proc_map(0,1),0)
-c loop. This is likely happening only for 'virt' contributions
-           write(kkunit,554)'SD1',probne,probne_bog,scltarget,sclstart,sudpdffact
-           write(kkunit,557)ifks_lhe(nFKS_picked_nbody),jfks_lhe(nFKS_picked_nbody)
-           do kk=1,nexternal
-             write(kkunit,555)kk,p(0,kk),p(1,kk),p(2,kk),p(3,kk)
-           enddo
-           endif
-         endif
- 554     format(1x,a,5(1x,e14.8))
- 555     format(1x,i2,5(1x,e14.8))
- 557     format(2(1x,i2))
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
      $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then
