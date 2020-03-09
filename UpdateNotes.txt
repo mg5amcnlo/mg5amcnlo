@@ -16,6 +16,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           of the associate beam as the cutoff of the Improved Weizsaecker-Williams.
       OM: Allow to install lhapdf6.2 by default
       OM: Fixing website used to download pdf since lhapdf removed their previous hepforge page for pdf set.
+      OM: Fixed a bug (leading to a crash) introduced in 2.6.6 related to the ckkw/MLM check for BSM model
+          with gluon with non QCD interaction
+      OM: For fortran standalone with python binding, this is not necessary anymore to run the code from a specific directory.
+          You need however need to use the standard path for the param_card or have the file ident_card within the same
+	  directory as the param_card.dat.
 
 
 2.7.0(10/01/20)

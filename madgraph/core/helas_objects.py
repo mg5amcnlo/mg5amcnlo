@@ -5410,7 +5410,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                             core_process.get('processes')[0].get_final_legs())
             # List of ids for the final state legs
             fs_ids = [leg.get('id') for leg in fs_legs]
-            fs_pols = [leg.get('polarization') for leg in fs_legs]  # not defined yet
+            fs_pols = [leg.get('polarization') for leg in fs_legs]
             fs_pols_dict = {}
             for id, pol in zip(fs_ids, fs_pols):
                 if id not in fs_pols_dict:
@@ -5446,8 +5446,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 chains = []
                 if len(fs_legs) == len(decay_elements) and \
                        all([fs in ids for (fs, ids) in \
-                             zip(fs_ids, decay_is_ids)]) \
-                       :
+                             zip(fs_ids, decay_is_ids)]):
                     # The decay of the different fs parts is given
                     # by the different decay chains, respectively.
                     # Chains is a list of matrix element lists

@@ -3387,11 +3387,11 @@ Beware that this can be dangerous for local multicore runs.""")
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 4 * self._survey_options['points'][1]
+            self.opts['points'] = 3 * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 4 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/5  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
         
         # Modify run_config.inc in order to improve the refine
         conf_path = pjoin(self.me_dir, 'Source','run_config.inc')

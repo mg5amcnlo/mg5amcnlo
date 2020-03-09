@@ -177,14 +177,14 @@ class FeynmanLine(object):
         return self.model.get_particle(pid).get(name)
 
 
-    def get_name(self, name='name',pol=True):
+    def get_name(self, name='name',add_pol=True):
         """Return the name associate to the particle."""
 
         pid = self.id
         model_info = self.model.get_particle(pid)
         
-        if pol and hasattr(self, 'polarization') and self.polarization:
-            name = self.get_name(name, pol=False)
+        if add_pol and hasattr(self, 'polarization') and self.polarization:
+            name = self.get_name(name, add_pol=False)
             pol = self.polarization
             if pol in [[-1,1],[1,-1]]:
                 name += '_T'
