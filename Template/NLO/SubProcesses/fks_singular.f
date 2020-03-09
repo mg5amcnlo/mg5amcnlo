@@ -326,10 +326,10 @@ c respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       integer nofpartners,i,j,k
-      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
-     $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
-     $     ,xmcxsec(nexternal),g22,wgt1,xlum_mc_fact,fks_Hij
-      external dot,fks_Sij,f_damp,fks_Hij
+      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
+     $     ,sevmc,dummy,zhw(nexternal),xmcxsec(nexternal)
+     $     ,g22,wgt1,xlum_mc_fact,fks_Hij
+      external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -364,7 +364,6 @@ c respectively.
       double precision xmcxsec2(max_bcol)
       double precision tiny
       parameter (tiny=1d-7)
-
       call cpu_time(tBefore)
 
 c -- call to MC counterterm functions
@@ -382,22 +381,25 @@ c -- call to MC counterterm functions
             if(is_pt_hard)exit
             factor=1d0
 c
-            call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
-     &           nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt,
-     &           bornbars,bornbarstilde,npartner)
+            call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl
+     $           ,probne,nofpartners,lzone,flagmc,zhw,xkern,xkernazi
+     $           ,emscwgt,bornbars,bornbarstilde,npartner)
             if(dampMCsubt)factor=emscwgt(npartner)
             if(colorflow(npartner,cflows).ne.0)then
                MCsec(npartner,colorflow(npartner,cflows))=factor*
-     &         (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
-     &         xkernazi(1)*N_p*bornbarstilde(colorflow(npartner,cflows)))
-               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,colorflow(npartner,cflows))
-               xmcxsec2(colorflow(npartner,cflows))=xmcxsec2(colorflow(npartner,cflows))
-     &                                            +MCsec(npartner,colorflow(npartner,cflows))
-               sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner,cflows))
+     $              (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
+     $              xkernazi(1)*N_p*bornbarstilde(colorflow(npartner
+     $              ,cflows)))
+               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner
+     $              ,colorflow(npartner,cflows))
+               xmcxsec2(colorflow(npartner,cflows))=
+     $              xmcxsec2(colorflow(npartner,cflows))+MCsec(npartner
+     $              ,colorflow(npartner,cflows))
+               sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
+     $              ,cflows))
             endif
          enddo
       enddo
-c
 c     positivity check
       if(sumMCsec.lt.0d0)then
          write(*,*)'Negative sumMCsec',sumMCsec
@@ -406,7 +408,8 @@ c     positivity check
          do cflows=1,max_bcol
             do npartner=1,ipartners(0)
                if(xmcxsec(npartner)/sumMCsec.le.-tiny)then
-                  write(*,*)'Negative xmcxsec',npartner,xmcxsec(npartner)
+                  write(*,*)'Negative xmcxsec',npartner
+     $                 ,xmcxsec(npartner)
                   stop
                elseif(xmcxsec(npartner).le.0d0)then
                   xmcxsec(npartner)=0d0
@@ -2647,7 +2650,6 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
       endif
-      
       f(1)=sigint_ABS
       f(2)=sigint
       f(3)=virt_wgt_mint
@@ -2721,7 +2723,8 @@ c found the contribution that should be written:
          SCALUP(iFKS_picked*2)=shower_scale(icontr_picked)
          do k=1,nexternal
             do l=1,nexternal
-               SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked,k,l)
+               SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked
+     $              ,k,l)
             enddo
          enddo
          colour_connections(1:2,1:nexternal)=icolour_con(1:2
@@ -2747,7 +2750,8 @@ c$$$         ifold_picked=ifold_cnt(icontr_picked)
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
          do k=1,nexternal
             do l=1,nexternal
-               SCALUP_a(iFKS_picked*2-1,k,l)=shower_scale_a(icontr_picked,k,l)
+               SCALUP_a(iFKS_picked*2-1,k,l)
+     $              =shower_scale_a(icontr_picked,k,l)
             enddo
          enddo
          colour_connections(1:2,1:nexternal)=icolour_con(1:2,1:nexternal
@@ -3195,10 +3199,13 @@ c
       logical emscasharp
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
       double precision emsca_a(nexternal,nexternal)
-      double precision emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal,nexternal)
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal)
       logical emscasharp_a(nexternal,nexternal)
-      double precision scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a,scalemin_a,scalemax_a
+      double precision scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a
+     $     ,scalemin_a,scalemax_a
       character*4 abrv
       common/to_abrv/abrv
       include 'nFKSconfigs.inc'
@@ -5000,8 +5007,8 @@ c convert to Binoth Les Houches Accord standards
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
-               if (ickkw.ne.-1)
-     &              virt_wgt=virt_wgt-average_virtual(ichan)*born_wgt*ao2pi
+               if (ickkw.ne.-1) virt_wgt=virt_wgt-average_virtual(ichan)
+     $              *born_wgt*ao2pi
                if (abrv.ne.'virt') then
                   virt_wgt=virt_wgt/virtual_fraction(ichan)
                endif
