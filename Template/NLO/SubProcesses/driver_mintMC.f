@@ -698,8 +698,8 @@ c These should be ignored (but kept for 'historical reasons')
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
       write (*,'(a)') 'xi_i, phi_i, y_ij'
-      read (*,*) ixi_i,iphi_i,iy_ij
-      write (*,*)ixi_i,iphi_i,iy_ij
+      read (*,*) ixi_i,iy_ij,iphi_i
+      write (*,*)ixi_i,iy_ij,iphi_i
 
 
       abrvinput='     '

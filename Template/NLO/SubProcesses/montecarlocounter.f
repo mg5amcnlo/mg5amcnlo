@@ -320,6 +320,7 @@ c
       implicit none
       include "nexternal.inc"
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
       double precision xmc,xrealme,gfactsf,gfactcl,probne
@@ -377,8 +378,10 @@ c
             endif
          enddo
       enddo
-      if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,
-     #                                         xmcxsec2,MCsec,probne)
+      if (mcatnlo_delta) then
+         if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,
+     $                                            xmcxsec2,MCsec,probne)
+      endif
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
 

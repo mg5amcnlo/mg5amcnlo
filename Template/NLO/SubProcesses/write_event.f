@@ -399,6 +399,7 @@ c********************************************************************
       subroutine clear_HEPEUP_event()
       implicit none
       include 'hep_event_streams.inc'
+      integer i
       NUP_out=-1
       IDPRUP_out=0
       XWGTUP_out=0.0

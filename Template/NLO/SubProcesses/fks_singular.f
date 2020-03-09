@@ -325,6 +325,7 @@ c respectively.
       include 'madfks_mcatnlo.inc'
       include 'timing_variables.inc'
       include 'coupl.inc'
+      include 'run.inc'
       integer nofpartners,i,j,k
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
      $     ,sevmc,dummy,zhw(nexternal),xmcxsec(nexternal)
@@ -423,9 +424,10 @@ c     positivity check
             enddo
          enddo
       endif
-      if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec
-     $     ,xmcxsec2,MCsec,probne)
-
+      if (mcatnlo_delta) then
+         if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,
+     $                                            xmcxsec2,MCsec,probne)
+      endif
       if (btest(Mccntcalled,4)) then
          write (*,*) 'Fifth bit of MCcntcalled should not '/
      $        /'have been set yet',MCcntcalled

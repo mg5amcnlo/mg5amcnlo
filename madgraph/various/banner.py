@@ -3989,8 +3989,9 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
-        self.add_param('parton_shower', 'PYTHIA8', fortran_name='shower_mc')        
+        self.add_param('parton_shower', 'pythia8', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
+        self.add_param('mcatnlo_delta', True)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
@@ -4210,6 +4211,9 @@ class RunCardNLO(RunCard):
         for ifold in self['folding']:
             if ifold not in [1,2,4,8]: 
                 raise InvalidRunCard, "The three 'folding' parameters should be equal to 1, 2, 4, or 8."
+    # Check MC@NLO-Delta
+        if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
+            raise InvalidRunCard, "MC@NLO-DELTA only possible with matching to Pythia8"
 
     def update_system_parameter_for_include(self):
         

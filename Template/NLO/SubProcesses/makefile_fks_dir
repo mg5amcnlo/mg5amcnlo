@@ -46,12 +46,9 @@ RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
 	add_write_info.o BinothLHA.o madfks_plot.o
 
 # Files for mintFO
-#MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
-MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o
+MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o pythia8_fortran_dummy.o
 
 # Files for mintMC
-#MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
-#	handling_lhe_events.o
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o
 
 # Files for check_poles
@@ -60,8 +57,6 @@ POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
 	BinothLHA.o born_hel.o add_write_info.o
 
 # Files for tests
-#TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o add_write_info.o \
-#	pythia8_fortran_dummy.o fill_MC_mshell.o write_event.o handling_lhe_events.o
 TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
 	pythia_unlops.o recluster.o \
 	add_write_info.o fill_MC_mshell.o write_event.o handling_lhe_events.o pythia8_fortran_dummy.o
@@ -91,14 +86,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
 	$(CXX) $(CFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.c
 	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
-pythia8_wrapper.o: pythia8_wrapper.cc
-	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) -I$(PYTHIA8INCLUDE)/../../../Dire/dire-src/include $^
-pythia8_fortran.o: pythia8_fortran.cc LHAFortran_aMCatNLO.h
-	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) $^
-pythia8_fortran_dummy.o: pythia8_fortran_dummy.cc
-	$(CXX) $(CXXFLAGS) -c -I. $^
 %.o: %.cc
-	$(CXX) $(CXXFLAGS) -c -I. $^
+	$(CXX) $(CXXFLAGS) -c -I. $(PYTHIA8INCLUDE) $^ 
 %.o: $(ANADIR)/%.cc
 	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 

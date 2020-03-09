@@ -666,8 +666,6 @@ c
       include 'unlops.inc'
       include 'madfks_mcatnlo.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-      logical do_many_scalup
-      parameter (do_many_scalup=.true.)
       logical are_col_conn(MAXNUP,MAXNUP)
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
@@ -802,7 +800,7 @@ c
                write(ifile,'(a)') '  </rwgt>'
             endif
          endif
-         if (do_many_scalup) then
+         if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
             are_col_conn=.false.
             scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
@@ -876,8 +874,6 @@ c
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-      logical do_many_scalup
-      parameter (do_many_scalup=.true.)
 c
       read(ifile,'(a)')string
       nattr=0
@@ -980,7 +976,7 @@ c
                read(ifile,'(a)')string
             endif
          endif
-         if (do_many_scalup) then
+         if (mcatnlo_delta) then
 c Read the <scales> block
             do i=1,NUP
                do j=1,NUP
@@ -1050,8 +1046,6 @@ c Same as read_lhef_event, except for the end-of-file catch
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-      logical do_many_scalup
-      parameter (do_many_scalup=.true.)
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -1163,7 +1157,7 @@ c
                read(ifile,'(a)')string
             endif
          endif
-         if (do_many_scalup) then
+         if (mcatnlo_delta) then
 c Read the <scales> block
             do i=1,NUP
                do j=1,NUP
