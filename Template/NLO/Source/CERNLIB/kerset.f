@@ -82,9 +82,3 @@
      +           'CONDITION ',A6)
 1002      FORMAT(/' ***** CERN LIBRARY ERROR CONDITION ',A6)
           END
-      SUBROUTINE ABEND
-C
-C CERN PROGLIB# Z035    ABEND           .VERSION KERNVAX  1.10  811126
-
-      STOP '*** ABEND ***'
-      END

@@ -170,6 +170,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
@@ -657,6 +661,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight.f',
                      'randinit',
                      'sudakov.inc',
+                     'sudakov.f',
                      'maxconfigs.inc',
                      'timing_variables.inc',
                      'pythia8_fortran_dummy.cc',
@@ -671,12 +676,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in linkfiles:
             ln('../' + file , '.')
         os.system("ln -s ../../Cards/param_card.dat .")
-
-        linksudgenfiles = ['dfint.f',
-                     'kerset.f',
-                     'sudakov.f']
-        for file in linksudgenfiles:
-            ln('../../../SudGen/' + file , '.')
 
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
@@ -3531,6 +3530,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
                                        
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'))
+
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
