@@ -4672,13 +4672,7 @@ tar -czf split_$1.tar.gz split_$1
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
                                         (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
-                            else:
-                                
-                                
-                                os.system('head -n -1')
-                                os.system(' '.join(['head','-n','-1',hepmc_file,'|','tail','-n','+'+str(n_head),'>','tmpfile']))
-                                os.system(' '.join(['mv','tmpfile',hepmc_file]))
-                                
+                            else:                                
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))
