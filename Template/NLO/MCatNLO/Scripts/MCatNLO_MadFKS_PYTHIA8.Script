@@ -305,11 +305,11 @@ TAUMASSPY=$TAUMASS
 GMASSPY=$GMASS
 
 if [ $BEAM1 == 1 ]; then iA=2212; elif [ $BEAM1 == -1 ]; then iA=-2212;
-elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 2 ]; then iA=2112;
+elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 4 ]; then iA=-11; elif [ $BEAM1 == 2 ]; then iA=2112;
 elif [ $BEAM1 == -2 ]; then iA=-2112; else echo "Unrecognized incoming beam 1";
 exit 1; fi
 if [ $BEAM2 == 1 ]; then iB=2212; elif [ $BEAM2 == -1 ]; then iB=-2212;
-elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 2 ]; then iB=2112;
+elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 4 ]; then iB=11; elif [ $BEAM2 == 2 ]; then iB=2112;
 elif [ $BEAM2 == -2 ]; then iB=-2112; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
