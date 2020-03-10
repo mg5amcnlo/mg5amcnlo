@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <sstream>
@@ -126,9 +128,8 @@ extern "C" void appl_init_()
     // Grid Initialization and definition of the observables.
     // Construct the input file name according to its position in the
     // vector "grid_obs".
-    std::ostringstream ss;
-    ss << grid_obs.size();
-    grid_filename_in = "grid_obs_" + ss.str() + "_in.root";
+    std::size_t const index = grid_obs.size();
+    grid_filename_in = "grid_obs_" + std::to_string(index) + "_in.root";
 
     // Check that the grid file exists. If so read the grid from the file,
     // otherwise create a new grid from scratch.
@@ -244,53 +245,19 @@ extern "C" void appl_init_()
         // These are common to all the grids computed.
         // If values larger than zero (i.e. set by the user) are found the default
         // settings are replaced with the new ones.
-        int NQ2 = 30;
+        int NQ2 = appl_common_grid_.nQ2 > 0 ? appl_common_grid_.nQ2 : 30;
         // Max and min value of Q2
-        double Q2min = 100;
-        double Q2max = 1000000;
+        double Q2min = appl_common_grid_.Q2min > 0 ? appl_common_grid_.Q2min : 100;
+        double Q2max = appl_common_grid_.Q2max > 0 ? appl_common_grid_.Q2max : 1000000;
         // Order of the polynomial interpolation in Q2
-        int Q2order = 3;
+        int Q2order = appl_common_grid_.Q2order > 0 ? appl_common_grid_.Q2order : 3;
         // Number of points for the x interpolation
-        int Nx = 50;
+        int Nx = appl_common_grid_.nx > 0 ? appl_common_grid_.nx : 50;
         // Min and max value of x
-        double xmin = 2e-7;
-        double xmax = 1;
+        double xmin = appl_common_grid_.xmin > 0 ? appl_common_grid_.xmin : 2e-7;
+        double xmax = appl_common_grid_.xmax > 0 ? appl_common_grid_.xmax : 1;
         // Order of the polynomial interpolation in x
-        int xorder = 3;
-
-        // Replace the default values when needed
-        if (appl_common_grid_.nQ2 > 0)
-        {
-            NQ2 = appl_common_grid_.nQ2;
-        }
-        if (appl_common_grid_.Q2min > 0)
-        {
-            Q2min = appl_common_grid_.Q2min;
-        }
-        if (appl_common_grid_.Q2max > 0)
-        {
-            Q2max = appl_common_grid_.Q2max;
-        }
-        if (appl_common_grid_.Q2order > 0)
-        {
-            Q2order = appl_common_grid_.Q2order;
-        }
-        if (appl_common_grid_.nx > 0)
-        {
-            Nx = appl_common_grid_.nx;
-        }
-        if (appl_common_grid_.xmin > 0)
-        {
-            xmin = appl_common_grid_.xmin;
-        }
-        if (appl_common_grid_.xmax > 0)
-        {
-            xmax = appl_common_grid_.xmax;
-        }
-        if (appl_common_grid_.xorder > 0)
-        {
-            xorder = appl_common_grid_.xorder;
-        }
+        int xorder = appl_common_grid_.xorder > 0 ? appl_common_grid_.xorder : 3;
 
         // Report of the grid parameters
         std::cout << "\namcblast INFO: Report of the grid parameters:\n"
@@ -323,23 +290,15 @@ extern "C" void appl_init_()
             }
         }
 
-        // Use a name for the PDF combination type ending with .config.
-        // This will configure from a file with the same format as the
-        // aMC@NLO initial_states_map.dat file unless a serialised
-        // vector including the combinations is also passed to the
-        // constructor, as is the case here.
-        // Assign to the luminosity file the timestamp in order to avoid
-        // conflicts between multiple applgrid files generated with this
-        // code.
-        std::time_t rawtime;
-        std::tm* timeinfo;
-        const int TZ = 16;
-        char t[TZ];
-        std::time(&rawtime);
-        timeinfo = std::localtime(&rawtime);
-        std::strftime(t, TZ, "%Y%m%d%H%M%S", timeinfo);
-        std::string filename = "amcatnlo_obs_" + ss.str() + "_" + std::string(t) + ".config";
-        new lumi_pdf(filename, pdf_luminosities);
+        // crate a uniquely identified `lumi_pdf` object by assigning it a name containing the
+        // creation time
+        std::time_t time = std::time(nullptr);
+        std::ostringstream stream("amcatnlo_obs_");
+        stream << index;
+        stream << '_';
+        stream << std::put_time(std::localtime(&time), "%Y%m%d%H%M%S");
+        stream << ".config";
+        new lumi_pdf(stream.str(), pdf_luminosities);
 
         // Define binning
         int Nbins = appl_common_histokin_.obs_nbins;
@@ -347,11 +306,10 @@ extern "C" void appl_init_()
         double obsmax = appl_common_histokin_.obs_max;
 
         // Create array with the bin edges
-        std::vector<double> obsbins(Nbins + 1);
-        for (int i = 0; i <= Nbins; i++)
-        {
-            obsbins[i] = appl_common_histokin_.obs_bins[i];
-        }
+        std::vector<double> obsbins(
+            appl_common_histokin_.obs_bins,
+            appl_common_histokin_.obs_bins + appl_common_histokin_.obs_nbins + 1
+        );
 
         // Check if the actual lower and upper limits of the histogram are correct
         if (std::fabs(obsbins[0] - obsmin) >= 1e-5)
@@ -380,12 +338,12 @@ extern "C" void appl_init_()
             xmin,
             xmax,
             xorder,
-            filename,
+            stream.str(),
             order_ids);
         // Use the reweighting function
-        grid_obs[grid_obs.size() - 1].reweight(true);
+        grid_obs.back().reweight(true);
         // Add documentation
-        grid_obs[grid_obs.size() - 1].addDocumentation(Banner());
+        grid_obs.back().addDocumentation(Banner());
     }
 }
 
