@@ -425,250 +425,93 @@ extern "C" void appl_fill_()
     // translate (index,nh) -> index of the APPLgrid
     int const grid_index = translation_tables.at(nh).at(index);
 
-    // (n+1)-body contribution (corresponding to xsec11 in aMC@NLO)
-    // It uses only Events (k=0) and the W0 weight.
-    if (itype == 1)
+    int k;
+
+    switch (itype)
     {
-        int k = 0;
+    case 1:
+        k = 0;
+        break;
 
-        // Get Bjorken x's
-        x1 = appl_common_weights_.x1[k];
-        x2 = appl_common_weights_.x2[k];
-        static std::vector<std::vector<double>> x1Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
-            return;
-        else
-        {
-            x1Saved[nh][grid_index] = x1;
-            x2Saved[nh][grid_index] = x2;
-        }
-        // Energy scale
-        scale2 = appl_common_weights_.muF2[k];
-        // Relevant parton luminosity combination (-1 offset in c++)
-        ilumi = appl_common_weights_.flavmap[k] - 1;
-        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
-        {
-            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                      << std::endl;
-            std::exit(-10);
-        }
+    case 2:
+    case 3:
+        k = 1;
+        break;
 
-        // Fill grid only if x1 and x1 are non-zero
-        if (x1 == 0.0 && x2 == 0.0)
-        {
-            return;
-        }
+    case 4:
+        k = 2;
+        break;
 
-        // Fill only if W0 is non zero
-        if (std::fabs(W0[k]) < ttol)
-        {
-            return;
-        }
+    case 5:
+        k = 3;
+        break;
 
-        // Fill the grid with the values of the observables
-        // W0
-        weight.at(ilumi) = W0[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0;
+    default:
+        assert( false );
     }
-    // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
-    // Soft CounterEvents (k=1) and uses all weights W0, WR and WF.
-    else if (itype == 2)
+
+    x1 = appl_common_weights_.x1[k];
+    x2 = appl_common_weights_.x2[k];
+
+    static std::vector<std::vector<std::vector<double>>> x1Saved(4, std::vector<std::vector<double>>(
+        grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
+    static std::vector<std::vector<std::vector<double>>> x2Saved(4, std::vector<std::vector<double>>(
+        grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
+
+    if (x1 == x1Saved[k][nh][grid_index] && x2 == x2Saved[k][nh][grid_index])
     {
-        int k = 1;
+        return;
+    }
+    else
+    {
+        x1Saved[k][nh][grid_index] = x1;
+        x2Saved[k][nh][grid_index] = x2;
+    }
 
-        x1 = appl_common_weights_.x1[k];
-        x2 = appl_common_weights_.x2[k];
-        static std::vector<std::vector<double>> x1Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
-            return;
-        else
-        {
-            x1Saved[nh][grid_index] = x1;
-            x2Saved[nh][grid_index] = x2;
-        }
+    scale2 = appl_common_weights_.muF2[k];
+    ilumi = appl_common_weights_.flavmap[k] - 1;
 
-        scale2 = appl_common_weights_.muF2[k];
-        ilumi = appl_common_weights_.flavmap[k] - 1;
+    if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
+    {
+        std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
+                  << std::endl;
+        std::exit(-10);
+    }
 
-        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
-        {
-            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                      << std::endl;
-            std::exit(-10);
-        }
-        if (x1 == 0.0 && x2 == 0.0)
-        {
-            return;
-        }
+    if (x1 == 0.0 && x2 == 0.0)
+    {
+        return;
+    }
 
-        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
-        {
-            return;
-        }
-
+    if (std::fabs(W0[k]) > ttol)
+    {
         // W0
         weight.at(ilumi) = W0[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
         weight.at(ilumi) = 0.0;
+    }
+
+    if (std::fabs(WR[k]) > ttol)
+    {
         // WR
         weight.at(ilumi) = WR[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
         weight.at(ilumi) = 0.0;
+    }
+
+    if (std::fabs(WF[k]) > ttol)
+    {
         // WF
         weight.at(ilumi) = WF[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
         weight.at(ilumi) = 0.0;
     }
-    // Born (n-body) contribution (corresponding to xsec20 in aMC@NLO)
-    // It uses only the soft kinematics (k=1) and the weight WB.
-    else if (itype == 3)
+
+    if (std::fabs(WB[k]) > ttol)
     {
-        int k = 1;
-
-        x1 = appl_common_weights_.x1[k];
-        x2 = appl_common_weights_.x2[k];
-        static std::vector<std::vector<double>> x1Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
-        {
-            return;
-        }
-        else
-        {
-            x1Saved[nh][grid_index] = x1;
-            x2Saved[nh][grid_index] = x2;
-        }
-        scale2 = appl_common_weights_.muF2[k];
-        ilumi = appl_common_weights_.flavmap[k] - 1;
-
-        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
-        {
-            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                      << std::endl;
-            std::exit(-10);
-        }
-
-        if (x1 == 0.0 && x2 == 0.0)
-        {
-            return;
-        }
-
-        if (std::fabs(WB[k]) < ttol)
-        {
-            return;
-        }
-
         // WB
         weight.at(ilumi) = WB[k];
         grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index);
-        weight.at(ilumi) = 0.0;
-    }
-    // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
-    // Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
-    else if (itype == 4)
-    {
-        int k = 2;
-
-        x1 = appl_common_weights_.x1[k];
-        x2 = appl_common_weights_.x2[k];
-        static std::vector<std::vector<double>> x1Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        if (x1 == x1Saved[nh][grid_index] && x2 == x2Saved[nh][grid_index])
-        {
-            return;
-        }
-        else
-        {
-            x1Saved[nh][grid_index] = x1;
-            x2Saved[nh][grid_index] = x2;
-        }
-
-        scale2 = appl_common_weights_.muF2[k];
-        ilumi = appl_common_weights_.flavmap[k] - 1;
-
-        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
-        {
-            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                      << std::endl;
-            std::exit(-10);
-        }
-        if (x1 == 0.0 && x2 == 0.0)
-        {
-            return;
-        }
-
-        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
-        {
-            return;
-        }
-
-        // W0
-        weight.at(ilumi) = W0[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0.0;
-        // WR
-        weight.at(ilumi) = WR[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-        weight.at(ilumi) = 0.0;
-        // WF
-        weight.at(ilumi) = WF[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
-        weight.at(ilumi) = 0.0;
-    }
-    // n-body contribution without Born (corresponding to xsec12 in aMC@NLO)
-    // Soft-Collinear CounterEvents (k=2) and uses all weights W0, WR and WF.
-    else if (itype == 5)
-    {
-        int k = 3;
-
-        x1 = appl_common_weights_.x1[k];
-        x2 = appl_common_weights_.x2[k];
-        static std::vector<std::vector<double>> x1Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-        static std::vector<std::vector<double>> x2Saved(
-            grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0));
-
-        scale2 = appl_common_weights_.muF2[k];
-        ilumi = appl_common_weights_.flavmap[k] - 1;
-
-        if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
-        {
-            std::cout << "amcblast ERROR: Invalid value of x1 and/or x2 = " << x1 << " " << x2
-                      << std::endl;
-            std::exit(-10);
-        }
-        if (x1 == 0.0 && x2 == 0.0)
-        {
-            return;
-        }
-
-        if (std::fabs(W0[k]) < ttol && std::fabs(WR[k]) < ttol && std::fabs(WF[k]) < ttol)
-        {
-            return;
-        }
-
-        // W0
-        weight.at(ilumi) = W0[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0.0;
-        // WR
-        weight.at(ilumi) = WR[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
-        weight.at(ilumi) = 0.0;
-        // WF
-        weight.at(ilumi) = WF[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
         weight.at(ilumi) = 0.0;
     }
 }
