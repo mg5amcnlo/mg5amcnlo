@@ -823,6 +823,10 @@ c initial state clustering
          else
             pcl(4,jwin)=0
          endif
+         ! mother momenta
+         do i=0,4
+            p_inter(i,0)=pcl(i,jwin)
+         enddo
          if (pcmsp(0)**2-pcmsp(1)**2-pcmsp(2)**2-pcmsp(3)**2.gt.100d0)
      $        then ! prevent too extreme boost
             call boostx(pcl(0,jwin),pcmsp,p)
@@ -871,11 +875,11 @@ c final state clustering
                enddo
             endif
          enddo
+         ! mother momenta
+         do i=0,4
+            p_inter(i,0)=pcl(i,jwin)
+         enddo
       endif
-      ! mother momenta
-      do i=0,4
-         p_inter(i,0)=pcl(i,jwin)
-      enddo
       end
       
       subroutine update_imap(nleft,imap,iwin,jwin,win_id)
