@@ -78,11 +78,13 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     y_max = 750
     
     blob_size = 1.5
+    april_fool = False
 
     def initialize(self):
         """Operation done before starting to create diagram specific EPS content
         First open the file in write mode then write in it the header and the 
         library of particle type."""
+
 
         # Open file 
         super(EpsDiagramDrawer, self).initialize()
@@ -137,9 +139,15 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x1, y1 = self.rescale(x1, y1)
         x2, y2 = self.rescale(x2, y2)
 
-        #return the line in correct format
-        return " %s %s %s %s %s \n" % (x1, y1, x2, y2, name)
-
+        #return the line in correct format\
+        if self.april_fool:
+            import random
+            c = random.random()
+            d = random.random()
+            e = random.random()
+            return "%s %s %s setrgbcolor\n %s %s %s %s %s \n" % (c,d,e,x1, y1, x2, y2, name)
+        else:
+            return "%s %s %s %s %s \n" % (x1, y1, x2, y2, name)
     def draw_vertex(self, vertex, bypass = ['QED','QCD']  ):
         """Add blob in case on non QED-QCD information"""
         
@@ -738,6 +746,12 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         opt is an DrawOption object containing all the possible option on how
         draw a diagram."""
 
+        if not opt and EpsDiagramDrawer.april_fool:
+            opt = draw.DrawOption({'external':True,
+                                   'horizontal':True,
+                                   'max_size':0.4,
+                                   'add_gap': 2.5})
+        
         if diagramlist == '':
             diagramlist = self.diagramlist
 

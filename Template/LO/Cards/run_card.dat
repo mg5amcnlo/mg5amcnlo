@@ -14,10 +14,6 @@
 #   To display more options, you can type the command:               *
 #      update full_run_card                                          *
 #*********************************************************************
-#
-#*******************                                                 
-# Running parameters
-#*******************                                                 
 #                                                                    
 #*********************************************************************
 # Tag name for the run (one word)                                    *
@@ -39,6 +35,7 @@
      %(ebeam1)s     = ebeam1  ! beam 1 total energy in GeV
      %(ebeam2)s     = ebeam2  ! beam 2 total energy in GeV
 $beam_pol
+$frame
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
@@ -60,20 +57,9 @@ $ion_pdf
 #*********************************************************************
   %(gridpack)s     = gridpack  !True = setting up the grid pack
   %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
-  %(lhe_version)s = lhe_version       ! Change the way clustering information pass to shower.        
-  %(clusinfo)s = clusinfo         ! include clustering tag in output
   %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
-
-#*********************************************************************
-# Matching parameter (MLM only)
-#*********************************************************************
- %(ickkw)s = ickkw            ! 0 no matching, 1 MLM
- %(alpsfact)s = alpsfact         ! scale factor for QCD emission vx
- %(chcluster)s = chcluster        ! cluster only according to channel diag
- %(asrwgtflavor)s = asrwgtflavor     ! highest quark flavor for a_s reweight
- %(auto_ptj_mjj)s  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0
-                                   ! (turn off for VBF and single top processes) 
- %(xqcut)s   = xqcut   ! minimum kt jet measure between partons
+$MLM
+$CKKW
 #*********************************************************************
 #
 #*********************************************************************
@@ -98,10 +84,10 @@ $ion_pdf
 # BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$$" and decay  
 #*********************************************************************
   %(bwcutoff)s  = bwcutoff      ! (M+/-bwcutoff*Gamma)
-#*********************************************************************
-# Apply pt/E/eta/dr/mij/kt_durham cuts on decay products or not
-# (note that etmiss/ptll/ptheavy/ht/sorted cuts always apply)
-#*********************************************************************
+#IF(d)# #*********************************************************************
+#IF(d)# # Apply pt/E/eta/dr/mij/kt_durham cuts on decay products or not
+#IF(d)# # (note that etmiss/ptll/ptheavy/ht/sorted cuts always apply)
+#IF(d)# #*********************************************************************
    %(cut_decays)s  = cut_decays    ! Cut decay products 
 #*********************************************************************
 # Standard Cuts                                                      *
@@ -124,8 +110,8 @@ $ecut
 #*********************************************************************
 # Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
 #*********************************************************************
-  %(etaj)s = etaj    ! max rap for the jets 
-  %(etab)s  = etab    ! max rap for the b
+ %(etaj)s = etaj    ! max rap for the jets 
+ %(etab)s  = etab    ! max rap for the b
  %(etaa)s  = etaa    ! max rap for the photons 
  %(etal)s  = etal    ! max rap for the charged leptons 
  %(etajmin)s  = etajmin ! min rap for the jets
@@ -159,8 +145,8 @@ $ecut
  %(dralmax)s  = dralmax ! maxdistance between gamma and lepton
 #*********************************************************************
 # Minimum and maximum invariant mass for pairs                       *
-# WARNING: for four lepton final state mmll cut require to have      *
-#          different lepton masses for each flavor!                  *           
+#IF(llll)# # WARNING: for four lepton final state mmll cut require to have      *
+#IF(llll)# #          different lepton masses for each flavor!                  *           
 #*********************************************************************
  %(mmjj)s   = mmjj    ! min invariant mass of a jet pair 
  %(mmbb)s   = mmbb    ! min invariant mass of a b pair 
@@ -173,14 +159,14 @@ $ecut
  %(mxx_min_pdg)s = mxx_min_pdg ! min invariant mass of a pair of particles X/X~ (e.g. {6:250})
  %(mxx_only_part_antipart)s = mxx_only_part_antipart ! if True the invariant mass is applied only 
                        ! to pairs of particle/antiparticle and not to pairs of the same pdg codes.  
-#*********************************************************************
-# Minimum and maximum invariant mass for all letpons                 *
-#*********************************************************************
+#IF(LL)# #*********************************************************************
+#IF(LL)# # Minimum and maximum invariant mass for all letpons                 *
+#IF(LL)# #*********************************************************************
  %(mmnl)s   = mmnl    ! min invariant mass for all letpons (l+- and vl) 
  %(mmnlmax)s  = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
-#*********************************************************************
-# Minimum and maximum pt for 4-momenta sum of leptons                *
-#*********************************************************************
+#IF(LL)# #*********************************************************************
+#IF(LL)# # Minimum and maximum pt for 4-momenta sum of leptons                *
+#IF(LL)# #*********************************************************************
  %(ptllmin)s   = ptllmin  ! Minimum pt for 4-momenta sum of leptons(l and vl)
  %(ptllmax)s  = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)
 #*********************************************************************
@@ -191,9 +177,9 @@ $ecut
  %(xptb)s  = xptb ! minimum pt for at least one b 
  %(xpta)s  = xpta ! minimum pt for at least one photon 
  %(xptl)s  = xptl ! minimum pt for at least one charged lepton 
-#*********************************************************************
-# Control the pt's of the jets sorted by pt                          *
-#*********************************************************************
+#IF(jj)# #*********************************************************************
+#IF(jj)# # Control the pt's of the jets sorted by pt                          *
+#IF(jj)# #*********************************************************************
  %(ptj1min)s   = ptj1min ! minimum pt for the leading jet in pt
  %(ptj2min)s   = ptj2min ! minimum pt for the second jet in pt
  %(ptj3min)s   = ptj3min ! minimum pt for the third jet in pt
@@ -203,9 +189,9 @@ $ecut
  %(ptj3max)s  = ptj3max ! maximum pt for the third jet in pt
  %(ptj4max)s  = ptj4max ! maximum pt for the fourth jet in pt
  %(cutuse)s   = cutuse  ! reject event if fails any (0) / all (1) jet pt cuts
-#*********************************************************************
-# Control the pt's of leptons sorted by pt                           *
-#*********************************************************************
+#IF(ll)# #*********************************************************************
+#IF(ll)# # Control the pt's of leptons sorted by pt                           *
+#IF(ll)# #*********************************************************************
  %(ptl1min)s   = ptl1min ! minimum pt for the leading lepton in pt
  %(ptl2min)s   = ptl2min ! minimum pt for the second lepton in pt
  %(ptl3min)s   = ptl3min ! minimum pt for the third lepton in pt
@@ -214,9 +200,9 @@ $ecut
  %(ptl2max)s  = ptl2max ! maximum pt for the second lepton in pt
  %(ptl3max)s  = ptl3max ! maximum pt for the third lepton in pt
  %(ptl4max)s  = ptl4max ! maximum pt for the fourth lepton in pt
-#*********************************************************************
-# Control the Ht(k)=Sum of k leading jets                            *
-#*********************************************************************
+#IF(JJ)# #*********************************************************************
+#IF(JJ)# # Control the Ht(k)=Sum of k leading jets                            *
+#IF(JJ)# #*********************************************************************
  %(htjmin)s   = htjmin ! minimum jet HT=Sum(jet pt)
  %(htjmax)s  = htjmax ! maximum jet HT=Sum(jet pt)
  %(ihtmin)s   = ihtmin  !inclusive Ht for all partons (including b)
@@ -227,29 +213,21 @@ $ecut
  %(ht2max)s  = ht2max ! maximum Ht for the two leading jets
  %(ht3max)s  = ht3max ! maximum Ht for the three leading jets
  %(ht4max)s  = ht4max ! maximum Ht for the four leading jets
-#***********************************************************************
-# Photon-isolation cuts, according to hep-ph/9801442                   *
-# When ptgmin=0, all the other parameters are ignored                  *
-# When ptgmin>0, pta and draj are not going to be used                 *
-#***********************************************************************
- %(ptgmin)s = ptgmin ! Min photon transverse momentum
- %(r0gamma)s = R0gamma ! Radius of isolation code
- %(xn)s = xn ! n parameter of eq.(3.4) in hep-ph/9801442
- %(epsgamma)s = epsgamma ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
- %(isoem)s = isoEM ! isolate photons from EM energy (photons and leptons)
-#*********************************************************************
-# WBF cuts                                                           *
-#*********************************************************************
+#IF(aj)# #***********************************************************************
+#IF(aj)# # Photon-isolation cuts, according to hep-ph/9801442                   *
+#IF(aj)# # When ptgmin=0, all the other parameters are ignored                  *
+#IF(aj)# # When ptgmin>0, pta and draj are not going to be used                 *
+#IF(aj)# #***********************************************************************
+#IF(aj)#  %(ptgmin)s = ptgmin ! Min photon transverse momentum
+#IF(aj)#  %(r0gamma)s = R0gamma ! Radius of isolation code
+#IF(aj)#  %(xn)s = xn ! n parameter of eq.(3.4) in hep-ph/9801442
+#IF(aj)#  %(epsgamma)s = epsgamma ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
+#IF(aj)#  %(isoem)s = isoEM ! isolate photons from EM energy (photons and leptons)
+#IF(jj)# #*********************************************************************
+#IF(jj)# # WBF cuts                                                           *
+#IF(jj)# #*********************************************************************
  %(xetamin)s   = xetamin ! minimum rapidity for two jets in the WBF case  
  %(deltaeta)s   = deltaeta ! minimum rapidity for two jets in the WBF case 
-#***********************************************************************
-# Turn on either the ktdurham or ptlund cut to activate                *
-# CKKW(L) merging with Pythia8 [arXiv:1410.3012, arXiv:1109.4829]      *
-#***********************************************************************
- %(ktdurham)s  =  ktdurham        
- %(dparameter)s   =  dparameter
- %(ptlund)s  =  ptlund
- %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above   
 #*********************************************************************
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *

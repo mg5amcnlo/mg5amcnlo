@@ -196,7 +196,7 @@ c Don't safe the reweight information when just setting up the grids.
             do_rwgt_scale=.false.
             do_rwgt_pdf=.false.
          else
-            doreweight=do_rwgt_scale.or.do_rwgt_pdf
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
          endif
 c
          write (*,*) 'imode is ',imode

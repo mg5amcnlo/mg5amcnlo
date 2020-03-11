@@ -924,7 +924,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--reduction':'1|3|5|6','--CTModeRun':'-1',
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
@@ -1064,6 +1064,49 @@ class CheckValidForCmd(cmd.CheckCmd):
             if re.search('\D\$', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
+                
+        # '{}' should only be used for onshell particle (including initial/final state)
+        # check first that polarization are not include between > >
+        if nbsep == 2:
+            if '{' in particles_parts[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used as required s-channel')
+        split = re.split('\D[$|/]',particles_parts[-1],1)
+        if len(split)==2:
+            if '{' in split[1]:
+                raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
+            
+        if '[' in process and '{' in process:
+            valid = False
+            if 'noborn' in process:
+                valid = True
+            else:
+                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+
+            # below are the check when [QCD] will be valid for computation            
+            order = process.split('[')[1].split(']')[0]
+            if '=' in order:
+                order = order.split('=')[1]
+            if order.strip().lower() != 'qcd':
+                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+
+
+            for p in particles_parts[1].split():
+                if '{' in p:
+                    part = p.split('{')[0]
+                else:
+                    continue
+                if self._curr_model:
+                    p = self._curr_model.get_particle(part)
+                    if not p:
+                        if part in self._multiparticles:
+                            for part2 in self._multiparticles[part]:
+                                p = self._curr_model.get_particle(part2)
+                                if p.get('color') != 1:
+                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                        continue
+                    if p.get('color') != 1:
+                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+        
 
 
     def check_tutorial(self, args):
@@ -1463,8 +1506,8 @@ This will take effect only in a NEW terminal
 
 
         if args[0] in ['gauge']:
-            if args[1] not in ['unitary','Feynman']:
-                raise self.InvalidCmd('gauge needs argument unitary or Feynman.')
+            if args[1] not in ['unitary','Feynman', 'axial']:
+                raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -2488,7 +2531,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1].lower() == 'ewscheme':
                 return self.list_completion(text, ["external"])
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman','default'])
+                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'output_dependencies':
@@ -2792,7 +2835,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
+                     'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
                      'looptools']
     
     # The targets below are installed using the HEPToolsInstaller.py script
@@ -2848,7 +2891,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
-                       'pjfry':'auto',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -3083,6 +3125,20 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+
+            #Check that we do not have situation like z{T} z
+            if not myprocdef.check_polarization():
+                logger.critical("Not Supported syntax:\n"+ \
+                                "   Syntax like p p  > Z{T} Z are ambiguious" +\
+                                "   Behavior is not guarantee to be stable within future version of the code." + \
+                                "   Furthemore, you can have issue with symmetry factor (we do not guarantee [differential] cross-section."+\
+                                "   We suggest you to abort this computation")
+                ans = self.ask('Do you want to continue', 'no',['yes','no'])
+                if ans == 'no':
+                    raise self.InvalidCmd("Not supported syntax of type p p  > Z{T} Z")
+                    
+                
+                
 
             self._curr_proc_defs.append(myprocdef)
             
@@ -3713,8 +3769,16 @@ This implies that with decay chains:
             logger.warning(warn)
 
         (options, args) = _draw_parser.parse_args(args)
+        if madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool:
+            options.horizontal = True
+            options.external = True  
+            options.max_size = 0.3 
+            options.add_gap = 0.5  
         options = draw_lib.DrawOption(options)
         start = time.time()
+
+
+            
 
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
@@ -3805,7 +3869,6 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-        
         MLoptions={}
         i=-1
         CMS_options = {}
@@ -4172,13 +4235,11 @@ This implies that with decay chains:
                     logger_check.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
 
-        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
-            TIR_dir['pjfry_dir']=self.options['pjfry']
-        else:
-            if "MLReductionLib" in MLoptions:
-                if 2 in MLoptions["MLReductionLib"]:
-                    logger_check.warning('PJFRY not available on your system; it will be skipped.')                    
-                    MLoptions["MLReductionLib"].remove(2)
+
+        if "MLReductionLib" in MLoptions:
+            if 2 in MLoptions["MLReductionLib"]:
+                logger_check.warning('PJFRY not supported anymore; it will be skipped.')                    
+                MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
             TIR_dir['golem_dir']=self.options['golem']
@@ -4254,7 +4315,7 @@ This implies that with decay chains:
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)
+                myprocdef_feyn = self.extract_process(line)              
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
@@ -4273,7 +4334,7 @@ This implies that with decay chains:
                                                 reuse = options['reuse'],
                                                 output_path = output_path,
                                                 cmd = self)
-
+            
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
             nb_processes += len(gauge_result_no_brs)            
@@ -4420,7 +4481,7 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman):\n'
+            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -4643,6 +4704,7 @@ This implies that with decay chains:
                 else:
                     orders[order]=99
         
+
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -4698,6 +4760,83 @@ This implies that with decay chains:
                 continue
 
             mylegids = []
+            polarization = []
+            if '{' in part_name:
+                part_name, pol = part_name.split('{',1)
+                pol, rest = pol.split('}',1)
+                
+                no_dup_name = part_name
+                while True:
+                    try:
+                        spin = self._curr_model.get_particle(no_dup_name).get('spin')
+                        break
+                    except AttributeError:
+                        if no_dup_name in self._multiparticles:
+                            spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[no_dup_name]])
+                            if len(spins) > 1:
+                                raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
+                            else:
+                                spin = spins.pop()
+                                break
+                        elif no_dup_name[0].isdigit():
+                            no_dup_name = no_dup_name[1:]
+                        else:
+                            raise
+                if rest:
+                    raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
+                ignore  =False
+                for i,p in enumerate(pol):
+                    if ignore or p==',':
+                        ignore= False
+                        continue
+                    if p in ['t','T']:
+                        if spin == 3:
+                            polarization += [1,-1]
+                        else:
+                            raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
+                    elif p in ['l', 'L']:
+                        if spin == 3:
+                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                        polarization += [-1]
+                    elif p in ['R','r']:
+                        polarization += [1]
+                    elif p in ["A",'a']:
+                        if spin == 3:
+                            polarization += [99]
+                        else:
+                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
+                    elif p in ['+']:
+                        if i +1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(p)
+                            ignore = True
+                        else:
+                            polarization += [1]
+                    elif p in ['-']:
+                        if i+1 < len(pol) and pol[i+1].isdigit():
+                            p = int(pol[i+1])
+                            if abs(p) > 3: 
+                                raise self.InvalidCmd("polarization are between -3 and 3")
+                            polarization.append(-p)
+                            ignore = True
+                        else:
+                            polarization += [-1]
+                    elif p in [0,'0']:
+                        if spin in [1,2]:
+                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                        else:
+                            polarization += [0]
+                    elif p.isdigit():
+                        p = int(p)
+                        if abs(p) > 3: 
+                            raise self.InvalidCmd("polarization are between -3 and 3")
+                        polarization.append(p)
+                    else:
+                        raise self.InvalidCmd('Invalid Polarization')
+
+            duplicate =1
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd,\
@@ -4712,12 +4851,28 @@ This implies that with decay chains:
                       "No pdg_code %s in model" % part_name
             else:
                 mypart = self._curr_model['particles'].get_copy(part_name)
+                
                 if mypart:
                     mylegids.append(mypart.get_pdg_code())
+                else:
+                    # check for duplication flag!
+                    if part_name[0].isdigit():
+                        duplicate, part_name = int(part_name[0]), part_name[1:]
+                        if part_name in self._multiparticles:
+                            if isinstance(self._multiparticles[part_name][0], list):
+                                raise self.InvalidCmd,\
+                                      "Multiparticle %s is or-multiparticle" % part_name + \
+                                      " which can be used only for required s-channels"
+                            mylegids.extend(self._multiparticles[part_name])                        
+                        else:
+                            mypart = self._curr_model['particles'].get_copy(part_name)
+                            mylegids.append(mypart.get_pdg_code())
 
             if mylegids:
-                myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state}))
+                for _ in range(duplicate):
+                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                        'state':state,
+                                                        'polarization': polarization}))
             else:
                 raise self.InvalidCmd, "No particle %s in model" % part_name
 
@@ -5045,10 +5200,18 @@ This implies that with decay chains:
         final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
+            if '{' in particle:
+                particle = particle.split('{')[0]
             if particle in pids:
                 final.add(pids[particle])
             elif particle in self._multiparticles:
                 final.update(set(self._multiparticles[particle]))
+            elif particle[0].isdigit():
+                if particle[1:] in pids:
+                    final.add(pids[particle[1:]])
+                elif particle in self._multiparticles:
+                    final.update(set(self._multiparticles[particle[1:]]))                
+
         return final
 
     def extract_particle_ids(self, args):
@@ -5241,7 +5404,7 @@ This implies that with decay chains:
                 if os.path.sep in args[1] and "import" in self.history[-1]:
                     self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
 
-                if self.options['gauge']=='unitary':
+                if self.options['gauge'] in ['unitary', 'axial']:
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
                          self._curr_model.get('perturbation_couplings') not in \
@@ -5588,7 +5751,7 @@ This implies that with decay chains:
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            
+
         # Potential change in naming convention
         name_map = {}
         try:
@@ -5623,7 +5786,7 @@ This implies that with decay chains:
 
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
-            add_options.append('--mg5_path=%s'%MG5DIR)
+            #add_options.append('--mg5_path=%s'%MG5DIR)
             # Warn about the soft dependency to gnuplot
             if misc.which('gnuplot') is None:
                 logger.warning("==========")
@@ -5710,6 +5873,7 @@ This implies that with decay chains:
             logger.info('Now installing %s. Be patient...'%tool)
             # Make sure each otion in add_options appears only once
             add_options = list(set(add_options))
+            add_options.append('--mg5_path=%s'%MG5DIR)
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
@@ -5855,7 +6019,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'Delphes2':['arXiv:0903.2225'],
                           'SysCalc':['arXiv:1801.08401'],
                           'Golem95':['arXiv:0807.0605'],
-                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
                           'QCDLoop':['arXiv:0712.1851'],
                           'pythia8':['arXiv:1410.3012'],
                           'lhapdf6':['arXiv:1412.7420'],
@@ -5877,7 +6040,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
                 'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
+                'QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
                 'maddm':'maddm'
                 }
 
@@ -6011,10 +6174,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = add_options)
 
-        if args[0] == 'PJFry' and not os.path.exists(
-                                 pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
-            logger.info("Installing PJFRY's dependence QCDLoop...")
-            self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'        
@@ -6118,16 +6277,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
             cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
-        # For PJFry, use autotools.
-        if name == 'PJFry':
-            # Run the configure script
-            ld_path = misc.Popen(['./configure', 
-            '--prefix=%s'%str(pjoin(MG5DIR, name)),
-            '--enable-golem-mode', '--with-integrals=qcdloop1',
-            'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
-            'FC=%s'%os.environ['FC'],
-            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0]
 
         # For QCDLoop, use autotools.
         if name == 'QCDLoop':
@@ -6226,7 +6375,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
@@ -6239,7 +6388,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
@@ -6333,17 +6482,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
                            'pythia-pgs':'pythia-pgs_path',
-                           'Golem95': 'golem',
-                           'PJFry': 'pjfry'}
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)
-            elif opt=='pjfry':
-                self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)            
+                self.exec_cmd('save options %s' % opt, printcmd=False)           
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options %s' % opt, printcmd=False)
@@ -6788,7 +6933,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai']:
+            elif key in ['golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -6798,7 +6943,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95',
+                        local_install = { 'golem':'golem95',
                                          'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
@@ -7279,6 +7424,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not self._curr_model:
                 if args[1] == 'unitary':
                     aloha.unitary_gauge = True
+                elif args[1] == 'axial':
+                    aloha.unitary_gauge = 2 
                 else:
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
@@ -7294,6 +7441,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+                                           % self._curr_model.get('name'))
+            elif args[1] == 'axial':
+                if 0 in self._curr_model.get('gauge'):
+                    aloha.unitary_gauge = 2
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
             else:
                 if 1 in self._curr_model.get('gauge'):
@@ -7405,7 +7559,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja','collier'] and \
+        elif args[0] in ['golem','samurai','ninja','collier'] and \
              not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
@@ -7860,7 +8014,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     exporter = self._curr_exporter.generate_process_directory(\
                             me_group.get('matrix_elements'), self._curr_helas_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number,
+                            process_number = group_number+1,
                             version = version)
                     process_names.append(exporter.process_name)
             else:

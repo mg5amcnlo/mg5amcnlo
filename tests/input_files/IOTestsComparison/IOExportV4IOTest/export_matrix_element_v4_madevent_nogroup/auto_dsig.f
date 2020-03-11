@@ -69,6 +69,11 @@ C     Keep track of whether cuts already calculated for this event
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
 C     
+C     local
+C     
+      DOUBLE PRECISION P1(0:3, NEXTERNAL)
+
+C     
 C     DATA
 C     
       DATA U1/1*1D0/
@@ -117,7 +122,12 @@ C     Continue only if IMODE is 0, 4 or 5
           DSIG = PD(0)
           RETURN
         ENDIF
-        CALL SMATRIX(PP,DSIGUU)
+        IF(FRAME_ID.NE.6)THEN
+          CALL BOOST_TO_FRAME(PP, FRAME_ID, P1)
+        ELSE
+          P1 = PP
+        ENDIF
+        CALL SMATRIX(P1,DSIGUU)
         IF (IMODE.EQ.5) THEN
           IF (DSIGUU.LT.1D199) THEN
             DSIG = DSIGUU*CONV

@@ -648,7 +648,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                        self['process']['squared_orders'].keys():
             if not order in model.get('coupling_orders') and \
                                                             order != 'WEIGHTED':
-                raise InvalidCmd("Coupling order %s not found"%order +\
+                if self['process']['orders'][order] == 0:
+                    del self['process']['orders'][order]
+                else:
+                    raise InvalidCmd("Coupling order %s not found"%order +\
                    " in any interaction of the current model %s."%model['name'])
 
         # The decision of whether the virtual must be squared against the born or the

@@ -1,7 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.2
-     include up to 2.6.7
+     include up to 2.7.1
+     MZ: better handling of zeros in color-linked borns 
      RF: improved the behaviour for integration channels that give zero cross section
      RF: Rewritten the mint integrator package. Makes for easier extensions.
      RF: Fixed a problem related to the multi-channel enhancement factor for
@@ -33,9 +34,53 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
 
-2.6.7()
+2.7.1(09/03/20)
+      OM: Fixing issue (wrong cross-section and differential cross-section) for
+          polarised sample when
+	   1) you have identical polarised particles
+	   2) those particles are decays
+	  examples: p p > j j w+{0} w+{T}, w+ > e+ e-
+      OM: In presence of identical particles, if you define the exact number of decays
+          (either via the decay chain syntax or via MadSpin) then they are assigned in an ordered way:
+          generate p p > z{0} z{T}, z > l+ l-, z > j j
+	  means that the Longitudinal Z decays to lepton (transverse to jet)
+	  Thanks to Jie Xiao for reporting such issues. 
+      OM: Effective Photon approximation is now always done with a fix cutoff. This use the FIXED factorization scale
+          of the associate beam as the cutoff of the Improved Weizsaecker-Williams.
+      OM: Allow to install lhapdf6.2 by default
+      OM: Fixing website used to download pdf since lhapdf removed their previous hepforge page for pdf set.
+      OM: Fixed a bug (leading to a crash) introduced in 2.6.6 related to the ckkw/MLM check for BSM model
+          with gluon with non QCD interaction
+      OM: For fortran standalone with python binding, this is not necessary anymore to run the code from a specific directory.
+          You need however need to use the standard path for the param_card or have the file ident_card within the same
+	  directory as the param_card.dat.
+
+
+2.7.0(10/01/20)
+      OM: Allow for a new syntax in presence of multi-jet/lepton process:
+         generate p p > 3j replaces p p > j j j 
+      OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]
+           ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
+               p p > w+{T} w-{0} j j, w+ > e+ ve, w- > j j
+      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
+          via "set gauge axial"
+      OM: Support for elastic photon from heavy ion implemented. For PA collision, you have to generate your diagram
+          with "set group_subprocesses False"
+      OM: The default run_card.dat is now by default even more specific to your process. 
+          Nearly all the cuts are now hidden by default if they do not impact your current process.
+          This allows to have less information by default in the run_card which should simplifies its 
+          readibility. 
+      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
+          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
+          (This allow to fasten the computation of such zero contribution)
+
+
+2.6.7(16/10/19)
       OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
-      OM: systematics now supports the option --weight_format (see help command for details)
+      OM: Fix a bug introduced in 2.6.6 related to the restriction of model which was leading to wrong result for re-weighitng with loop model (but impact can in principle be not limited to re-weighting).
+      OM: systematics now supports the option --weight_format and --weight_info (see help command for details)
+      OM: set the auto_ptj_mjj variable to True by default
+      OM: the systematics_arguments default value is modified in presence of matching/merging.
       OM: reweight: add an option --rwgt_info to allow to customise the banner information associate to that weight
       RF: Fixed a bug in the warning when using FxFx in conjunction with Herwig++/Herwig7. Also, with latest version of
           Herwig7.1.x, the FxFx needed files are compiled by default with in the Herwig code. Thanks Andreas Papaefstathiou.
@@ -54,7 +99,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Any number in the cards (not only integer) can use multiplication, division and k/M suffix for times 1000 and 1 million respectively
       OM: Energy cut (at LO) are now hidden by default for LHC type of run but visible for lepton collider ones.
       OM: Same for beam polarization
-
 
 2.6.5 (03/02/19)
       OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--

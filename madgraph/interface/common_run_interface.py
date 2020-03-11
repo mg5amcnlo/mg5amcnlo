@@ -1587,6 +1587,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   --only_beam=0     # only apply the new pdf set to the beam selected.")
         logger.info("   --ion_scaling=True# if original sample was using rescaled PDF: apply the same rescaling for all PDF sets.")
         logger.info("   --weight_format=\"%(id)i\"  # allow to customise the name of the weight. The resulting name SHOULD be unique.")
+        logger.info("   --weight_info=  # allow to customise the text describing the weights.")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:BOLD')
         logger.info("       central  : Do not perform any pdf variation"    )
@@ -1674,7 +1675,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
-                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format='))
+                                 '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format=',
+                                 '--weight_info='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
@@ -4131,7 +4133,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """
 
         if not lhapdf_version:
-            CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
 
         if not pdfsets_dir:
             pdfsets_dir = CommonRunCmd.get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version)
@@ -4195,8 +4197,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         lhapdf_version, alternate_path)
         elif lhapdf_version.startswith('6.'):
             # try to do a simple wget
-            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
-            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+            wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
             misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
             misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
                       cwd=pdfsets_dir)
@@ -4268,7 +4269,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     @staticmethod
     def get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version):
 
-
         if lhapdf_version.startswith('5.'):
             if os.path.exists('%s.index' % pdfsets_dir):
                 indexfile = '%s.index' % pdfsets_dir
@@ -4333,7 +4333,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_pdfsetsdir_static(lhapdf_config, lhapdf_version=None):
         """ """
         if not lhapdf_version:
-            lhapdf_version = CommonRunCmd.get_lhapdf_version_static()
+            lhapdf_version = CommonRunCmd.get_lhapdf_version_static(lhapdf_config)
 
         # check if the LHAPDF_DATA_PATH variable is defined
         if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
@@ -5822,12 +5822,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     continue
                 
                 if mass:
+                    to_sleep = True
                     if abs(width/mass) < self.run_card['small_width_treatment']:
                         logger.warning("Particle %s with small width detected (%s): See https://answers.launchpad.net/mg5amcnlo/+faq/3053 to learn the special handling of that case",
                                     param.lhacode[0], width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
-                    if CommonRunCmd.sleep_for_error:
+                    else:
+                        to_sleep = False
+                    if CommonRunCmd.sleep_for_error and to_sleep:
                         time.sleep(5)
                         CommonRunCmd.sleep_for_error = False
                         
