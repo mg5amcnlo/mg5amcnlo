@@ -20,7 +20,7 @@ c Compile with makefile_rwgt
       character*10 MonteCarlo
       character*20 parm(20)
       character*80 event_file,fname1
-      character*140 buff
+      character*1000 buff
 c Parameters
       integer    izero
       parameter (izero=0)
