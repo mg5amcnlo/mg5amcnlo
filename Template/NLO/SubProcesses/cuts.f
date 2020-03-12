@@ -44,7 +44,7 @@ c temporary variable for caching locally computation
       double precision tmpvar
 c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
-      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),ptjet
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
       integer mm
