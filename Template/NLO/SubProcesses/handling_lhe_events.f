@@ -647,7 +647,7 @@ c
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      character*140 buff
+      character*1000 buff
       integer ifile,i,kk
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
