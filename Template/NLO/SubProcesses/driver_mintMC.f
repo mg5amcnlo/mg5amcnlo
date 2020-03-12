@@ -916,7 +916,7 @@ c$$$               endif
             endif               
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(-2,p)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(-3,p)

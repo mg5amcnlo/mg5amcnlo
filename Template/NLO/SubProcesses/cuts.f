@@ -74,7 +74,35 @@ c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
      $     ,is_a_ph(nexternal)
 
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),
+     $                 FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
+     $                     FxFx_fac_scale
+c Matching information per external particle
+      integer need_matching_cuts(nexternal),mu
+      common /c_need_matching_cuts/need_matching_cuts
+
       passcuts_user=.true. ! event is okay; otherwise it is changed
+
+      if (ickkw.eq.3) then
+c Shift the "need_matching_cuts(i)" for inserted 0 pT if not the last
+        do i=nincoming+1,nexternal-1 ! i=ifks
+c Internal check
+            if (dsqrt(p(1,i)**2+p(2,i)**2).eq.0d0 .and.
+     $          need_matching_cuts(i).eq.-99) then
+                write (*,*) 'cuts-matching',i,need_matching_cuts(i)
+                stop
+            endif
+c Put correct need_matching_cuts flag
+            if (dsqrt(p(1,i)**2+p(2,i)**2).eq.0d0) then
+                do mu=nexternal,i+1,-1
+                    need_matching_cuts(mu)=need_matching_cuts(mu-1)
+                enddo
+                need_matching_cuts(i)=-99
+            endif
+        enddo
+      endif
 
 C***************************************************************
 C***************************************************************
@@ -164,7 +192,6 @@ c find the jets
             is_a_j(i)=.false.
          endif
       enddo
-
 c If we do not require a mimimum jet energy, there's no need to apply
 c jet clustering and all that.
       if (ptj.ne.0d0.or.ptgmin.ne.0d0) then
@@ -180,6 +207,8 @@ c more than the Born).
                do i=0,3
                   pQCD(i,nQCD)=p(i,j)
                enddo
+c            write (*,*) 'jet  =',j,nQCD,need_matching_cuts(j)
+c     $           ,ipdg(j),dsqrt(p(1,j)**2+p(2,j)**2)
             endif
          enddo
       endif
@@ -229,7 +258,7 @@ c no possible divergence related to it (e.g. t-channel single top)
             return
          endif
 
-
+c        if (ickkw.ne.3) then ! Enable to check new cut
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
          palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
          rfj=JETRADIUS          ! the radius parameter
@@ -263,6 +292,26 @@ c Apply the jet cuts
             passcuts_user=.false.
             return
          endif
+c        endif ! Enable to check new cut
+
+c Enable to check new cut
+c        if (ickkw.eq.3) then
+c            if (FxFx_ren_scales(nFxFx_ren_scales).lt.ptj) then
+c                passcuts_user=.false.
+c                return
+c            endif
+c        endif
+
+c Print the FxFx info to check in the log file
+c        write (*,*) '-----------------------------'
+c        do i=1,nexternal
+c            write (*,*) i,need_matching_cuts(i),ipdg(i)
+c     $           ,dsqrt(p(1,i)**2+p(2,i)**2)
+c        enddo
+c        write (*,*) passcuts_user,nFxFx_ren_scales
+c     $        ,FxFx_ren_scales(0:nFxFx_ren_scales),ptj
+c        write (*,*) '-----------------------------'
+
       endif
  122  continue
 c
@@ -466,11 +515,6 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       logical passcuts_user
       external passcuts_user
-      integer                              nFxFx_ren_scales
-      double precision     FxFx_ren_scales(0:nexternal),
-     $                     FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
-     $                     FxFx_fac_scale
       call cpu_time(tBefore)
 c Make sure have reasonable 4-momenta
       if (p(0,1) .le. 0d0) then
@@ -486,25 +530,6 @@ c Also make sure there's no INF or NAN
             endif
          enddo
       enddo
-
-
-      if (ickkw.eq.3) then
-         if (FxFx_ren_scales(nFxFx_ren_scales).gt.ptj) then
-            passcuts=.true.
-         else
-            passcuts=.false.
-         endif
-
-c$$$         do i=1,nexternal
-c$$$            write (*,*) i,idup(i,1),p(0:3,i)
-c$$$         enddo
-c$$$         write (*,*) passcuts,nFxFx_ren_scales
-c$$$     $        ,FxFx_ren_scales(nFxFx_ren_scales),ptj
-c$$$         write (*,*) ''
-
-         return
-      endif
-      
 
       rwgt=1d0
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)

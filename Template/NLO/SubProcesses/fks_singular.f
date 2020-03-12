@@ -523,11 +523,15 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
-      integer need_matching(nexternal)
+      integer need_matching(nexternal),need_matching_izero(nexternal)
+     &     ,need_matching_cuts(nexternal)
       integer need_matching_S(nexternal),need_matching_H(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
+      common /c_need_matching_cuts/need_matching_cuts
+      save need_matching_izero
       call cpu_time(tBefore)
       ktscheme=1
+
       if (iterm.eq.0) then
          rewgt_mohdr_calculated=.false.
          rewgt_izero_calculated=.false.
@@ -558,6 +562,8 @@ c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
+            need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
+            need_matching_cuts(1:nexternal)=need_matching_izero(1:nexternal)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -583,6 +589,10 @@ c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             f_sc_MC_S=f_sc_MC_S*rewgt_izero
          endif
          nFxFx_ren_scales_izero=nFxFx_ren_scales
+         do i=1,nexternal
+            need_matching_izero(i)=need_matching(i)
+            need_matching_cuts(i)=need_matching(i)
+         enddo
          do i=0,nexternal
             FxFx_ren_scales_izero(i)=FxFx_ren_scales(i)
          enddo
@@ -636,6 +646,9 @@ c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
 c Restore scales for the n-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_izero
+         do i=1,nexternal
+            need_matching_cuts(i)=need_matching_izero(i)
+         enddo
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
          enddo
@@ -645,6 +658,9 @@ c Restore scales for the n-body FxFx terms
       elseif (iterm.eq.-3) then
 c Restore scales for the n+1-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_mohdr
+         do i=1,nexternal
+            need_matching_cuts(i)=need_matching_H(i)
+         enddo
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
          enddo
@@ -655,6 +671,17 @@ c Restore scales for the n+1-body FxFx terms
          write (*,*) 'ERROR: unknown iterm in set_FxFx_scale',iterm
          stop 1
       endif
+
+c Check the need_matching
+c      do i=1,nexternal
+c      write (*,*) i,need_matching(i),need_matching_S(i)
+c     &,need_matching_H(i),need_matching_izero(i),need_matching_cuts(i)
+c     &,dsqrt(p(1,i)**2+p(2,i)**2)
+c      enddo
+c      write (*,*) 'iterm=',iterm
+c      write (*,*) nFxFx_ren_scales, FxFx_ren_scales(nFxFx_ren_scales)
+c      write (*,*) ' '
+
       call cpu_time(tAfter)
       tFxFx=tFxFx+(tAfter-tBefore)
       return
