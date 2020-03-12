@@ -44,7 +44,7 @@ c temporary variable for caching locally computation
       double precision tmpvar
 c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
-      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),ptjet
       double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
       integer mm
@@ -258,11 +258,12 @@ c no possible divergence related to it (e.g. t-channel single top)
             return
          endif
 
-c        if (ickkw.ne.3) then ! Enable to check new cut
+        if (ickkw.ne.3) then ! Skip the jet cuts in case of FxFx merging
+
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
-         palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-         rfj=JETRADIUS          ! the radius parameter
-         sycut=PTJ              ! minimum transverse momentum
+           palg=JETALGO         ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+           rfj=JETRADIUS        ! the radius parameter
+           sycut=ptj            ! minimum transverse momentum
 
 c******************************************************************************
 c     call FASTJET to get all the jets
@@ -282,36 +283,25 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_etamax_timed(
-     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
+           call amcatnlo_fastjetppgenkt_etamax_timed(
+     $          pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
 
 c Apply the jet cuts
-         if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
-            passcuts_user=.false.
-            return
-         endif
-c        endif ! Enable to check new cut
+           if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
+              passcuts_user=.false.
+              return
+           endif
+        endif
 
-c Enable to check new cut
-c        if (ickkw.eq.3) then
-c            if (FxFx_ren_scales(nFxFx_ren_scales).lt.ptj) then
-c                passcuts_user=.false.
-c                return
-c            endif
-c        endif
-
-c Print the FxFx info to check in the log file
-c        write (*,*) '-----------------------------'
-c        do i=1,nexternal
-c            write (*,*) i,need_matching_cuts(i),ipdg(i)
-c     $           ,dsqrt(p(1,i)**2+p(2,i)**2)
-c        enddo
-c        write (*,*) passcuts_user,nFxFx_ren_scales
-c     $        ,FxFx_ren_scales(0:nFxFx_ren_scales),ptj
-c        write (*,*) '-----------------------------'
-
+c In case of FxFx, use the lowest clustering scale to apply the cut
+        if (ickkw.eq.3) then
+           if (FxFx_ren_scales(min(nFxFx_ren_scales+1,1)).lt.ptj) then
+              passcuts_user=.false.
+              return
+           endif
+        endif
       endif
  122  continue
 c
