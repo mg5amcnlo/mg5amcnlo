@@ -411,19 +411,19 @@ extern "C" void appl_fill_()
     x1 = appl_common_weights_.x1[k];
     x2 = appl_common_weights_.x2[k];
 
-    static std::vector<std::vector<std::vector<double>>> x1Saved(4, std::vector<std::vector<double>>(
+    static std::vector<std::vector<std::vector<double>>> x1Saved(5, std::vector<std::vector<double>>(
         grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
-    static std::vector<std::vector<std::vector<double>>> x2Saved(4, std::vector<std::vector<double>>(
+    static std::vector<std::vector<std::vector<double>>> x2Saved(5, std::vector<std::vector<double>>(
         grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
 
-    if (x1 == x1Saved[k][nh][grid_index] && x2 == x2Saved[k][nh][grid_index])
+    if (x1 == x1Saved[itype - 1][nh][grid_index] && x2 == x2Saved[itype - 1][nh][grid_index])
     {
         return;
     }
     else
     {
-        x1Saved[k][nh][grid_index] = x1;
-        x2Saved[k][nh][grid_index] = x2;
+        x1Saved[itype - 1][nh][grid_index] = x1;
+        x2Saved[itype - 1][nh][grid_index] = x2;
     }
 
     scale2 = appl_common_weights_.muF2[k];
