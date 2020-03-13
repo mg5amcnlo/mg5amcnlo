@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "LHAPDF/LHAPDF.h"
-#include "appl_grid/appl_grid.h"
-#include "appl_grid/lumi_pdf.h"
+#include <appl_grid/appl_grid.h>
+#include <appl_grid/lumi_pdf.h>
+
 #include "orders.h"
 
 /*
@@ -26,12 +26,6 @@ std::vector<appl::grid> grid_obs;
 
 // translates an index from the range [0, __amp_split_size) to the indices need by `fill_grid`
 std::vector<std::vector<int>> translation_tables;
-
-// Declare the input and output grids
-std::string grid_filename_in;
-std::string grid_filename_out;
-
-////////////////////////////////////////////////////////////////////////////////////
 
 // Maximum number of (pairwise) suprocesses
 const int __max_nproc__ = 121;
@@ -113,14 +107,13 @@ bool file_exists(const std::string& s)
 // Banner
 std::string Banner()
 {
-    std::stringstream banner("\n");
-    banner << "    █████╗ ███╗   ███╗ ██████╗██████╗ ██╗      █████╗ ███████╗████████╗\n";
-    banner << "   ██╔══██╗████╗ ████║██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝╚══██╔══╝\n";
-    banner << "   ███████║██╔████╔██║██║     ██████╔╝██║     ███████║███████╗   ██║\n";
-    banner << "   ██╔══██║██║╚██╔╝██║██║     ██╔══██╗██║     ██╔══██║╚════██║   ██║\n";
-    banner << "   ██║  ██║██║ ╚═╝ ██║╚██████╗██████╔╝███████╗██║  ██║███████║   ██║\n";
-    banner << "   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝ \n";
-    return banner.str();
+    return "\n"
+        "    █████╗ ███╗   ███╗ ██████╗██████╗ ██╗      █████╗ ███████╗████████╗\n"
+        "   ██╔══██╗████╗ ████║██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝╚══██╔══╝\n"
+        "   ███████║██╔████╔██║██║     ██████╔╝██║     ███████║███████╗   ██║\n"
+        "   ██╔══██║██║╚██╔╝██║██║     ██╔══██╗██║     ██╔══██║╚════██║   ██║\n"
+        "   ██║  ██║██║ ╚═╝ ██║╚██████╗██████╔╝███████╗██║  ██║███████║   ██║\n"
+        "   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝\n";
 }
 
 extern "C" void appl_init_()
@@ -129,7 +122,7 @@ extern "C" void appl_init_()
     // Construct the input file name according to its position in the
     // vector "grid_obs".
     std::size_t const index = grid_obs.size();
-    grid_filename_in = "grid_obs_" + std::to_string(index) + "_in.root";
+    std::string const grid_filename_in = "grid_obs_" + std::to_string(index) + "_in.root";
 
     // Check that the grid file exists. If so read the grid from the file,
     // otherwise create a new grid from scratch.
@@ -349,8 +342,6 @@ extern "C" void appl_init_()
 
 extern "C" void appl_fill_()
 {
-    // Check event weight reconstruction
-    // reco();
     // Check that itype ranges from 1 to 5.
     int itype = appl_common_histokin_.itype_histo;
     if ((itype < 1) || (itype > 5))
@@ -476,27 +467,15 @@ extern "C" void appl_fill_()
 
 extern "C" void appl_term_()
 {
-    // Conversion factor from natural units to pb
-    double conv = 389379660.0;
-
-    // Normalization factor
-    double norm = appl_common_histokin_.norm_histo;
-    double n_runs = 1.0 / norm;
-
     // Histogram number
-    int nh = appl_common_histokin_.obs_num - 1;
-
-    // Construct the output file name according to its position in the vector "grid_obs"
-    std::ostringstream ss;
-    ss << nh;
-    grid_filename_out = "grid_obs_" + ss.str() + "_out.root";
+    int const nh = appl_common_histokin_.obs_num - 1;
 
     // Normalize the grid by conversion factor and number of runs
-    grid_obs[nh] *= conv / n_runs;
+    grid_obs[nh] *= 389379660.0 * appl_common_histokin_.norm_histo;
 
     // Set run() to one for the combinantion.
     grid_obs[nh].run() = 1;
 
     // Write grid to file
-    grid_obs[nh].Write(grid_filename_out);
+    grid_obs[nh].Write("grid_obs_" + std::to_string(nh) + "_out.root");
 }
