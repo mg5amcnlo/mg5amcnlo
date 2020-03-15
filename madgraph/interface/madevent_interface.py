@@ -4667,7 +4667,7 @@ tar -czf split_$1.tar.gz split_$1
                             if pid == 0:
                                 os.system('head -n -1 %s | tail -n +%d > %s/tmpfile' % 
                                           (hepmc_file, n_head, os.path.dirname(hepmc_file)))
-                                misc.call(['mv', 'tmp', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
+                                misc.call(['mv', 'tmpfile', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
                             elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
