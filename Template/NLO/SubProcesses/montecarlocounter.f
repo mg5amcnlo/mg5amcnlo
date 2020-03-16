@@ -1276,8 +1276,6 @@ c
       integer idIn1, idIn2
       integer idOut(0:9)
       double precision tBefore,tAfter
-      logical do_time_profiling
-      parameter (do_time_profiling=.false.)
       double precision masses_to_MC(0:25)
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
@@ -1570,117 +1568,44 @@ c Boost H-event momenta to lab frame before passing to pythia
       xscales2=-1d0
       xmasses2=-1d0
       dzones2=.true.
-      if(do_time_profiling)then
-         if (is_pythia_active.eq.0) then
+      if (is_pythia_active.eq.0) then
 c Fill masses
-            do i=7,20
-               if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
-            enddo
-            masses_to_MC(5) =get_mass_from_id(5)
-            masses_to_MC(6) =get_mass_from_id(6)
-            masses_to_MC(15)=get_mass_from_id(15)
-            masses_to_MC(23)=get_mass_from_id(23)
-            masses_to_MC(24)=get_mass_from_id(24)
-            masses_to_MC(25)=get_mass_from_id(25)
+         do i=7,20
+            if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
+         enddo
+         masses_to_MC(5) =get_mass_from_id(5)
+         masses_to_MC(6) =get_mass_from_id(6)
+         masses_to_MC(15)=get_mass_from_id(15)
+         masses_to_MC(23)=get_mass_from_id(23)
+         masses_to_MC(24)=get_mass_from_id(24)
+         masses_to_MC(25)=get_mass_from_id(25)
 c
-            call cpu_time(tBefore)
-            idOut=0
-            do i=3,nexternal-1
-              idOut(i-3) = IDUP_S(i)
-              if ( is_a_j(i) ) idOut(i-3)=2212
-            enddo
-            idIn1 = idup_s(1)
-            idIn2 = idup_s(2)
-            if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
-            if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
-            if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
-            call cpu_time(tAfter)
-            write(*,*)'time elapsed in dire_init_default',tAfter-tBefore
-         endif
-         call cpu_time(tBefore)
-         if(useDire)call dire_setevent()
-         if(usePythia)call pythia_setevent()
-         call cpu_time(tAfter)
-         write(*,*)'time elapsed in MC_setevent',tAfter-tBefore
-         call cpu_time(tBefore)
-         if(useDire)call dire_next()
-         if(usePythia)call pythia_next()
-         call cpu_time(tAfter)
-         write(*,*)'time elapsed in MC_next',tAfter-tBefore
-         call cpu_time(tBefore)
-         if(useDire)call dire_get_stopping_info(xscales,xmasses)
-         if(usePythia)call pythia_get_stopping_info(xscales,xmasses)
-         call cpu_time(tAfter)
-         write(*,*)'time elapsed in MC_get_stopping_info',tAfter-tBefore
-         call cpu_time(tBefore)
-         if(useDire)call dire_get_dead_zones(dzones)
-         if(usePythia)call pythia_get_dead_zones(dzones)
-         call cpu_time(tAfter)
-         write(*,*)'time elapsed in MC_get_dead_zones',tAfter-tBefore
-         write(*,*)
-      else
-         if (is_pythia_active.eq.0) then
-c Fill masses
-            do i=7,20
-               if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
-            enddo
-            masses_to_MC(5) =get_mass_from_id(5)
-            masses_to_MC(6) =get_mass_from_id(6)
-            masses_to_MC(15)=get_mass_from_id(15)
-            masses_to_MC(23)=get_mass_from_id(23)
-            masses_to_MC(24)=get_mass_from_id(24)
-            masses_to_MC(25)=get_mass_from_id(25)
-c
-            idOut=0
-            do i=3,nexternal-1
-              idOut(i-3) = IDUP_S(i)
-              if ( is_a_j(i) ) idOut(i-3)=2212
-            enddo
-            idIn1 = idup_s(1)
-            idIn2 = idup_s(2)
-            if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
-            if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-            if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
-            if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
-         endif
-         if(useDire)then
-           call dire_setevent()
-           call dire_next()
-           call dire_get_stopping_info(xscales,xmasses)
-           call dire_get_dead_zones(dzones)
-           call dire_clear()
-         endif
-         if(usePythia)then
-           call pythia_setevent()
-           call pythia_next()
-           call pythia_get_stopping_info(xscales,xmasses)
-           call pythia_get_dead_zones(dzones)
-           call pythia_clear()
-         endif
+         idOut=0
+         do i=3,nexternal-1
+            idOut(i-3) = IDUP_S(i)
+            if ( is_a_j(i) ) idOut(i-3)=2212
+         enddo
+         idIn1 = idup_s(1)
+         idIn2 = idup_s(2)
+         if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
+         if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
+         if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
+         if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
       endif
-
-c      write(*,*) 'before'
-c      do i=0,nexternal
-c         do j=0,nexternal
-c           write (*,*) xscales(i,j)
-c         enddo
-c      enddo
-c
-c$$$      call pythia_setevent()
-c$$$      call pythia_next()
-c$$$      call pythia_get_stopping_info(xscales,xmasses)
-c$$$      call pythia_get_dead_zones(dzones)
-c$$$      call pythia_clear()
-c
-c      write(*,*) 'after'
-c      do i=0,nexternal
-c         do j=0,nexternal
-c           write (*,*) xscales(i,j)
-c         enddo
-c      enddo
-
-c      call abort
+      if(useDire)then
+         call dire_setevent()
+         call dire_next()
+         call dire_get_stopping_info(xscales,xmasses)
+         call dire_get_dead_zones(dzones)
+         call dire_clear()
+      endif
+      if(usePythia)then
+         call pythia_setevent()
+         call pythia_next()
+         call pythia_get_stopping_info(xscales,xmasses)
+         call pythia_get_dead_zones(dzones)
+         call pythia_clear()
+      endif
 
 c     Check if the S-event state (as created from the H-event by Pythia)
 c     is consistent with the MG_aMC S-event state.
