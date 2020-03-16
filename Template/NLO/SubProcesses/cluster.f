@@ -1103,7 +1103,7 @@ c     final state clustering
          enddo
          if (is_bw) then
             ! for decaying resonance, the scale is the mass of the resonance
-            cluster_scale=sqrt(sumdot(pi,pj,1d0))
+            cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
          else
             cluster_scale=sqrt(dj_clus(pi,pj))
          endif
@@ -2006,21 +2006,11 @@ c***************************************************************************
          p2a = dsqrt(p2(1)**2+p2(2)**2+p2(3)**2)
          if (p1a*p2a .ne. 0d0) then
             costh = (p1(1)*p2(1)+p1(2)*p2(2)+p1(3)*p2(3))/(p1a*p2a)
-            dj_clus = 2d0*min(p1(0)**2,p2(0)**2)*(1d0-costh)
+            dj_clus = 2d0*min(p1(0)**2,p2(0)**2)*max((1d0-costh),0d0)
          else
             dj_clus = 0d0
          endif
       else
-        pt1 = p1(1)**2+p1(2)**2
-        pt2 = p2(1)**2+p2(2)**2
-        if (pt1.eq.0d0 .or. pt2.eq.0d0) then
-           dj_clus=0d0
-           return
-        endif
-        p1a = dsqrt(pt1+p1(3)**2)
-        p2a = dsqrt(pt2+p2(3)**2)
-        eta1 = 0.5d0*log((p1a+p1(3))/(p1a-p1(3)))
-        eta2 = 0.5d0*log((p2a+p2(3))/(p2a-p2(3)))
         if ( m1.lt.1d0.and.(m2.ge.3d0.and.maxjetflavor.gt.4.or.
      $       m2.ge.1d0.and.maxjetflavor.gt.3))then
            ! particle 1 massless, particle 2 massive
@@ -2031,8 +2021,20 @@ c***************************************************************************
            dj_clus = DJB_clus(p2)*(1d0+1d-6)
         else
            ! two massless or two massive particles
+           pt1 = p1(1)**2+p1(2)**2
+           pt2 = p2(1)**2+p2(2)**2
+           if (pt1.eq.0d0 .or. pt2.eq.0d0) then
+              dj_clus=0d0
+              return
+           endif
+           p1a = dsqrt(pt1+p1(3)**2)
+           p2a = dsqrt(pt2+p2(3)**2)
+           eta1 = 0.5d0*log((p1a+p1(3))/(p1a-p1(3)))
+           eta2 = 0.5d0*log((p2a+p2(3))/(p2a-p2(3)))
            dj_clus = max(m1,m2)**2+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
      &          (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2
+           if (dj_clus.lt.0d0 .or. dj_clus.ne.dj_clus)
+     &                 dj_clus=0d0     ! prevent numerical inaccuracies
         endif
       endif
       end
@@ -2051,4 +2053,5 @@ c***************************************************************************
       else
          djb_clus=(p1(0)-p1(3))*(p1(0)+p1(3)) ! = M^2+pT^2
       endif
+      if (djb_clus.lt.0d0) djb_clus=0d0 ! prevent numerical inaccuracies
       end
