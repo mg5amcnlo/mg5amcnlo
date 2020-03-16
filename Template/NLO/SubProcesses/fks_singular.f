@@ -2262,6 +2262,7 @@ c folds).
       use weight_lines
       implicit none
       include 'nexternal.inc'
+      include 'run.inc'
       integer ifold_counter,i,j,k,ifold_picked,icolour(2,nexternal),jj
      $     ,ii
       double precision showerscale
@@ -2270,11 +2271,13 @@ c folds).
       parameter (improved_scale_choice=.true.)
       if (icontr.eq.0) return
       if (.not. improved_scale_choice) then
+         if (MCatNLO_delta) then
+            write (*,*) 'Error in update_shower_scale_Sevents: Not '/
+     $           /'correctly updated with icolour info'
+            stop 1
+         endif
          call update_shower_scale_Sevents_v1(ifold_counter,showerscale
      $        ,showerscale_a,ifold_picked)
-         write (*,*) 'Error in update_shower_scale_Sevents: Not '/
-     $        /'correctly updated with icolour info'
-         stop 1
       else
          call update_shower_scale_Sevents_v2(ifold_counter,showerscale
      $        ,showerscale_a,icolour,ifold_picked)
@@ -3235,11 +3238,11 @@ c
          write (*,*) 'ERROR: dampMCsubt should be true'
          stop 1
       endif
-! 1st bit of MCcntcalled: call to set_shower_scale_noshape for S-event (or Born) done
-! 2nd bit of MCcntcalled: call to set_shower_scale_noshape for H-event done
-! 3rd bit of MCcntcalled: call to xmcsubt done (and is_pt_hard == false)
-! 4th bit of MCcntcalled: call to complete_xmcsubt done
-! 5th bit of MCcntcalled: is_pt_hard==True      
+! 1st bit (1) of MCcntcalled: call to set_shower_scale_noshape for S-event (or Born) done
+! 2nd bit (2) of MCcntcalled: call to set_shower_scale_noshape for H-event done
+! 3rd bit (4) of MCcntcalled: call to xmcsubt done (and is_pt_hard == false)
+! 4th bit (8) of MCcntcalled: call to complete_xmcsubt done
+! 5th bit (16) of MCcntcalled: is_pt_hard==True      
 
 ! initialize to zero
       SCALUP(iFKS)=0d0
@@ -3335,8 +3338,23 @@ c
                enddo
             enddo
          endif
+      elseif (MCcntcalled.eq.7) then
+         if (mcatnlo_delta) then
+            write (*,*) "Incompatible 'MCcntcalled':"
+            write (*,*) "When doing MCatNLO-delta, complete_xmcsubt "/
+     $           /"should always be called if pt_hard is not true."
+            stop 1
+         endif
+         if (.not. Hevents) then
+            SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
+         else
+            SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
+     $                   ref_H_scale(iFKS)-min(emsca,scalemax)))
+         endif
+         ! Do not need to fill the SCALUP_a() array
       else
          write (*,*) 'ERROR: MCcntcalled assigned wrongly.',MCcntcalled
+         stop 1
       endif
       
 c Safety measure
