@@ -401,6 +401,7 @@ c
             endif
          enddo
       enddo
+      
 c     positivity check
       if(sumMCsec.lt.0d0)then
          write(*,*)'Negative sumMCsec',sumMCsec
@@ -426,7 +427,9 @@ c     positivity check
       endif
       if (mcatnlo_delta) then
          if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,
-     $                                            xmcxsec2,MCsec,probne)
+     $        xmcxsec2,MCsec,probne)
+      else
+         xmcxsec=xmcxsec*probne
       endif
       if (btest(Mccntcalled,4)) then
          write (*,*) 'Fifth bit of MCcntcalled should not '/

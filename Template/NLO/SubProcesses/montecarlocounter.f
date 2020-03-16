@@ -654,7 +654,7 @@ c New or standard MC@NLO formulation
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
       call assign_emsca(pp,xi_i_fks,y_ij_fks)
-      call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 
 c Distinguish ISR and FSR
       if(ileg.le.2)then
@@ -739,6 +739,7 @@ c Compute dead zones
       call get_dead_zone(ileg,z(npartner),xi(npartner),s,x,yi,
      &  xm12,xm22,w1,w2,qMC,scalemax,ipartners(npartner),fksfather,
      &  lzone(npartner),wcc)
+
 c Compute MC subtraction terms
       if(lzone(npartner))then
          if(.not.flagmc)flagmc=.true.
@@ -1195,7 +1196,7 @@ c To access Pythia8 control variables
       logical firsttime1
       data firsttime1 /.true./
       include 'leshouche_decl.inc'
-      save mothup_d, icolup_d, niprocs_d
+      save idup_d, mothup_d, icolup_d, niprocs_d
 
 C To allow retrieval of S-event from Pythia
       include 'hep_event_streams.inc'
@@ -1505,7 +1506,7 @@ cSF the underlying S-event flow, which is already available here, and
 cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
         firsttime1=.false.
-        call read_leshouche_info2(idup_d,mothup_d,icolup_d,niprocs_d)
+        call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
 c Fake call for initialisation
         deltanum(1,1)=pysudakov(1.d2,2.d2,1,1,mcmass)
         if(cstlow.gt.smallptupp)then
