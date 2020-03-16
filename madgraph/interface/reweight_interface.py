@@ -99,6 +99,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.dedicated_path = {}
         self.soft_threshold = None
         self.systematics = False # allow to run systematics in ouput2.0 mode
+        self.boost_event = False
         self.mg5cmd = master_interface.MasterCmd()
         if mother:
             self.mg5cmd.options.update(mother.options)
@@ -190,12 +191,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
 
-            if 'OLP' in self.mother.options:
+            if self.mother and 'OLP' in self.mother.options:
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
                     self.rwgt_mode = 'LO'
             
-            if 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
+            if self.mother and 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
                 logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
                 self.rwgt_mode = 'LO'
         else:
@@ -368,6 +369,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.second_process.append(" ".join(args[1:-1]))
             else:
                 self.second_process = [" ".join(args[1:])]
+        elif args[0] == "boost":
+            self.boost_event = eval(' '.join(args[1:]))
         elif args[0] in ['virtual_path', 'tree_path']:
             self.dedicated_path[args[0]] = os.path.abspath(args[1])
         elif args[0] == "output":
@@ -650,15 +653,15 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             for key in output:
-                output[key].write('</LesHouchesEvents>\n')
-                output.close()
+                #output[key].write('</LesHouchesEvents>\n')
+                #output.close()
                 lhe = lhe_parser.EventFile(output[key].name)
                 nb_event = lhe.unweight(target)
                 if self.mother and  hasattr(self.mother, 'results'):
                     results = self.mother.results
                     results.add_detail('nb_event', nb_event)
                     results.current.parton.append('lhe')
-                logger.info('Event %s is now unweighted under the new theory' % lhe.name)                
+                logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
         else:
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
@@ -1196,7 +1199,27 @@ class ReweightInterface(extended_cmd.Cmd):
         # For 2>N pass in the center of mass frame
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
-        if (hasattr(event[1], 'status') and event[1].status == -1) or \
+        if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
+            import copy
+            new_event = copy.deepcopy(event)
+            pboost = FourMomenta()
+            to_inc = bin(self.banner.run_card['frame_id'])[2:]
+            to_inc.reverse()
+            nb_ext = 0
+            for p in new_event:
+                if p.status in [-1,1]:
+                    nb_ext += 1
+                    if to_inc[nb_ext]:
+                        pboost += p                    
+            new_event.boost(pboost)
+            p = new_event.get_momenta(orig_order)
+        elif (hypp_id == 1 and self.boost_event):
+            if self.boost_event is not True:
+                import copy
+                new_event = copy.deepcopy(event)
+                new_event.boost(self.boost_event)
+                p = new_event.get_momenta(orig_order)        
+        elif (hasattr(event[1], 'status') and event[1].status == -1) or \
            (event[1].px == event[1].py == 0.):
             pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
             for i,thisp in enumerate(p):
@@ -1803,7 +1826,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 if 'virt' in onedir:
                     tag = (tag, 'V')
                 prefix = all_prefix[i]
-                hel = hel_dict[prefix]
+                if prefix in hel_dict:
+                    hel = hel_dict[prefix]
+                else:
+                    hel = {}
                 if tag in data:
                     oldpdg = data[tag][0][0]+data[tag][0][1]
                     if all_prefix[all_pdgs.index(pdg)] == all_prefix[all_pdgs.index(oldpdg)]:

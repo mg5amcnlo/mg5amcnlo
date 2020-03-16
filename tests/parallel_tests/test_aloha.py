@@ -2301,8 +2301,9 @@ class TestSomeObjectProperty(unittest.TestCase):
             if data1:
                 data1 = data1.simplify()
                 self.assertAlmostEqual(eval(str(data1)), eval(str(data2))) 
+                                
                 
-    def testGammaAlgebraDefinition(self):
+    def test_short_GammaAlgebraDefinition(self):
         """Test the coherence between gamma/gamma5/sigma/projector"""
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5

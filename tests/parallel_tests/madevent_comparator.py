@@ -485,11 +485,15 @@ class MG5Runner(MadEventRunner):
         else:
             v5_string = "import model %s\n" % model
         v5_string += "set automatic_html_opening False\n"
-        couplings = me_comparator.MERunner.get_coupling_definitions(orders)
+        if orders == {}:
+            couplings = ' '
+        else:
+            couplings = me_comparator.MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
+
         v5_string += "output %s -f\n" % \
                      os.path.join(self.mg5_path, self.temp_dir_name)
         v5_string += "launch -i --multicore\n"
@@ -529,18 +533,30 @@ class MG5Runner(MadEventRunner):
 
         #Part 2: cross section
         for name in SubProc:
+
             if os.path.exists(dir_name+'/SubProcesses/'+name+'/run_01_results.dat'):
                 filepath = dir_name+'/SubProcesses/'+name+'/run_01_results.dat'
             else:
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
-            if not os.path.exists(filepath):
-                break
 
-            for line in file(filepath):
-                splitline=line.split()
-                #if len(splitline)==8:
-                output['cross_'+name]=splitline[0]
-                print "found %s %s" % (splitline[0], splitline[1])
+            if not os.path.exists(filepath):
+                
+                cross = 0
+                for G in os.listdir(dir_name+'/SubProcesses/'+name):
+                    if os.path.isdir(pjoin(dir_name+'/SubProcesses/'+name,G)):
+                        filepath = pjoin(dir_name+'/SubProcesses/'+name,G,'results.dat')
+                        channel = G[1:]
+                        for line in file(filepath):
+                            splitline=line.split()
+                            cross += float(splitline[9]) 
+                            break
+                output['cross_'+name] = str(cross)
+            else:
+                for line in file(filepath):
+                    splitline=line.split()
+                    #if len(splitline)==8:
+                    output['cross_'+name]=splitline[0]
+                    print "found %s %s" % (splitline[0], splitline[1])
         else:
             return output   
         
@@ -551,9 +567,6 @@ class MG5Runner(MadEventRunner):
         info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
         for name,value in info:
             output['cross_'+name] = value
-
-            
-            
             
 
         

@@ -79,7 +79,7 @@ class TestMG5aMCDistribution(unittest.TestCase):
                                                                             cwd=tmp_path, shell=True)                
                 shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION_UCL'))
                 online_path = dict(tuple(line.split()[:2]) for line in urllib.urlopen(
-                      'http://madgraph.hep.uiuc.edu/package_info.dat'))['HEPToolsInstaller']
+                      'http://madgraph.physics.illinois.edu/package_info.dat'))['HEPToolsInstaller']
                 subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
                                                                             cwd=tmp_path, shell=True)                
                 shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION_UIUC'))                

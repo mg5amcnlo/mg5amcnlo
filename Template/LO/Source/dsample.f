@@ -316,6 +316,7 @@ c
                fx =0d0
                wgt=0d0
             endif
+            
             if (nzoom .le. 0) then
                call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
             else
@@ -705,6 +706,7 @@ c
       tmean = 0d0
       trmean = 0d0
       tsigma = 0d0
+      nb_pass_cuts = 0
       kn = 0
       cur_it = 1
       do j=1,ng
@@ -1516,7 +1518,7 @@ c     Constants
 c
       include 'genps.inc'
       integer    max_events
-      parameter (max_events=500000) !Maximum # events before get non_zero
+      parameter (max_events=5000000) !Maximum # events before get non_zero
 c
 c     Arguments
 c
@@ -1755,6 +1757,11 @@ c
 c         if (kn .eq. events) then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
+         endif
+         if (iteration.eq.1) then
+           if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
+              call none_pass(1000)
+           endif
          endif
          if (non_zero .ge. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
@@ -2267,8 +2274,20 @@ c
 c----
 c  Begin Code
 c----
-      write(*,*) 'No points passed cuts!'
-      write(*,*) 'Loosen cuts or increase max_events',max_events
+      if (1000.eq.max_events) then
+         write(*,*) nb_pass_cuts, 
+     &    ' points passed the cut but all returned zero'
+         write(*,*) 'therefore considering this contribution as zero'
+      else if (nb_pass_cuts.gt.0.and.nb_pass_cuts.lt.1000)then
+         write(*,*) 'only', nb_pass_cuts, 
+     &    ' points passed the cut and they all returned zero'
+         write(*,*) 'therefore considering this contribution as zero'
+         write(*,*) 'Loosen cuts or increase max_events if you believe this is not zero'
+      else
+         write(*,*) 'No points passed cuts!'
+         write(*,*) 'Loosen cuts or increase max_events',max_events
+      endif
+
 c      open(unit=22,file=result_file,status='old',access='append',
 c     &           err=23)
 c      write(22,222) 'Iteration',0,'Mean: ',0d0,
@@ -2540,6 +2559,7 @@ C     LOCAL
 
       write(*,*) "RESET CUMULATIVE VARIABLE"
       non_zero = 0
+      nb_pass_cuts = 0
       do j=1,maxinvar
          do i=1,ng -1
             inon_zero = 0

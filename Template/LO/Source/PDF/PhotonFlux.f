@@ -38,19 +38,31 @@ c      write (*,*) x,dsqrt(q2min),dsqrt(q2max),f
 
       end
 
-      real*8 function epa_proton(x,q2max)
+      real*8 function epa_proton(x,q2max,beamid)
       integer i
+      integer beamid
       real*8 x,phi_f
       real*8 xin
       real*8 alpha,qz
       real*8 f, qmi,qma, q2max
       real*8 PI
+    
+      integer nb_proton(2), nb_neutron(2)
+      common/to_heavyion_pdg/ nb_proton, nb_neutron
+      double precision mass_ion(2)
+      common/to_heavyion_mass/mass_ion
+
       data PI/3.14159265358979323846/
 
       data xin/0.938/ ! proton mass in GeV
 
       alpha = .0072992701
       qz = 0.71
+
+      if (nb_proton(beamid).ne.1.or.nb_neutron(beamid).ne.0)then
+         xin = mass_ion(beamid)
+         alpha = alpha * nb_proton(beamid)
+      endif
     
 C     // x = omega/E = (E-E')/E
       if (x.lt.1) then

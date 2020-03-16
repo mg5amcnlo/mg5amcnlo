@@ -883,7 +883,7 @@ class gen_ximprove(object):
                 logger.info("running for accuracy %s%%" % (self.err_goal*100))
                 self.gen_events = False
             elif self.err_goal >= 1:
-                logger.info("Generating %s unweigthed events." % self.err_goal)
+                logger.info("Generating %s unweighted events." % self.err_goal)
                 self.gen_events = True
                 self.err_goal = self.err_goal * self.gen_events_security # security
                 
@@ -910,7 +910,7 @@ class gen_ximprove(object):
             if C.get('axsec') == 0:
                 continue
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
-                logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
+                logger.debug("channel %s is at lum=%s (need to improve by %s) (xsec=%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'),
               (1/(100*math.sqrt(self.err_goal)))*all_channels[-1].get('axsec')):

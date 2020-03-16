@@ -4193,8 +4193,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         lhapdf_version, alternate_path)
         elif lhapdf_version.startswith('6.'):
             # try to do a simple wget
-            wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
-            wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
+            wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
             misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
             misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
                       cwd=pdfsets_dir)
@@ -5819,12 +5818,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     continue
                 
                 if mass:
+                    to_sleep = True
                     if abs(width/mass) < self.run_card['small_width_treatment']:
                         logger.warning("Particle %s with small width detected (%s): See https://answers.launchpad.net/mg5amcnlo/+faq/3053 to learn the special handling of that case",
                                     param.lhacode[0], width)
                     elif abs(width/mass) < 1e-12:
                         logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
-                    if CommonRunCmd.sleep_for_error:
+                    else:
+                        to_sleep = False
+                    if CommonRunCmd.sleep_for_error and to_sleep:
                         time.sleep(5)
                         CommonRunCmd.sleep_for_error = False
                         

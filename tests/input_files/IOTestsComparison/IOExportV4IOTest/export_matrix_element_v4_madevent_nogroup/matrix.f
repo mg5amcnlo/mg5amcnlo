@@ -39,6 +39,9 @@ C
       LOGICAL GOODHEL(NCOMB)
       INTEGER NTRY
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+      INTEGER NB_SPIN_STATE(2)
+      DATA  NB_SPIN_STATE /2,2/
+      COMMON /NB_HEL_STATE/ NB_SPIN_STATE
 C     
 C     LOCAL VARIABLES 
 C     
@@ -122,9 +125,9 @@ C     ----------
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2D0  ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
+                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2D0
               ENDIF
             ENDDO
             IF (ISUM_HEL.NE.0) THEN

@@ -23,7 +23,7 @@ import sys
 import time
 import collections
 
-
+import madgraph
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
@@ -812,10 +812,13 @@ class UFOMG5Converter(object):
                         particle.set('line', value)
                 elif key == 'propagator':
                     if value:
-                        if aloha.unitary_gauge:
-                            particle.set(key, str(value[0]))
-                        else: 
-                            particle.set(key, str(value[1]))
+                        if isinstance(value, (list,dict)):
+                            if aloha.unitary_gauge:
+                                particle.set(key, str(value[0]))
+                            else: 
+                                particle.set(key, str(value[1]))
+                        else:
+                            particle.set(key, str(value))
                     else:
                         particle.set(key, '')
                 else:
@@ -1838,6 +1841,10 @@ class RestrictModel(model_reader.ModelReader):
      - identical coupling/mass/width are replace in the model by a unique one
      """
   
+    log_level = 10
+    if madgraph.ADMIN_DEBUG:
+        log_level = 5    
+  
     def default_setup(self):
         """define default value"""
         self.del_coup = []
@@ -1867,7 +1874,7 @@ class RestrictModel(model_reader.ModelReader):
                                         complex_mass_scheme=complex_mass_scheme)
         
         # Simplify conditional statements
-        logger.debug('Simplifying conditional expressions')
+        logger.log(self.log_level, 'Simplifying conditional expressions')
         modified_params, modified_couplings = \
             self.detect_conditional_statements_simplifications(model_definitions)
         
@@ -1957,7 +1964,7 @@ class RestrictModel(model_reader.ModelReader):
                 zero_coupling.append(name)
                 continue
             elif not strict_zero and abs(value) < 1e-13:
-                logger.debug('coupling with small value %s: %s treated as zero' %
+                logger.log(self.log_level, 'coupling with small value %s: %s treated as zero' %
                              (name, value))
                 zero_coupling.append(name)
                 continue
@@ -2039,14 +2046,14 @@ class RestrictModel(model_reader.ModelReader):
         parameter (resp. coupling) instance and b is the simplified expression."""
         
         if modified_params:
-            logger.debug("Conditional expressions are simplified for parameters:")
-            logger.debug(",".join("%s"%param[0].name for param in modified_params))
+            logger.log(self.log_level, "Conditional expressions are simplified for parameters:")
+            logger.log(self.log_level, ",".join("%s"%param[0].name for param in modified_params))
         for param, new_expr in modified_params:
             param.expr = new_expr
         
         if modified_couplings:
-            logger.debug("Conditional expressions are simplified for couplings:")
-            logger.debug(",".join("%s"%coupl[0].name for coupl in modified_couplings))
+            logger.log(self.log_level, "Conditional expressions are simplified for couplings:")
+            logger.log(self.log_level, ",".join("%s"%coupl[0].name for coupl in modified_couplings))
         for coupl, new_expr in modified_couplings:
             coupl.expr = new_expr
     
@@ -2086,10 +2093,10 @@ class RestrictModel(model_reader.ModelReader):
         tot_param_time = end_param-start_param
         tot_coupl_time = end_coupl-end_param
         if tot_param_time>5.0:
-            logger.debug("Simplification of conditional statements"+\
+            logger.log(self.log_level, "Simplification of conditional statements"+\
               " in parameter expressions done in %s."%misc.format_time(tot_param_time))
         if tot_coupl_time>5.0:
-            logger.debug("Simplification of conditional statements"+\
+            logger.log(self.log_level, "Simplification of conditional statements"+\
               " in couplings expressions done in %s."%misc.format_time(tot_coupl_time))
 
         return param_modifications, coupl_modifications
@@ -2170,7 +2177,7 @@ class RestrictModel(model_reader.ModelReader):
         counterterms"""
 
         
-        logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
+        logger_mod.log(self.log_level, ' Fuse the Following coupling (they have the same value): %s '% \
                         ', '.join([str(obj) for obj in couplings]))
 
         main = couplings[0][0]
@@ -2213,7 +2220,7 @@ class RestrictModel(model_reader.ModelReader):
         """ merge the identical parameters given in argument.
         keep external force to keep the param_card untouched (up to comment)"""
             
-        logger_mod.debug('Parameters set to identical values: %s '% \
+        logger_mod.log(self.log_level, 'Parameters set to identical values: %s '% \
                  ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
 
         # Extract external parameters
@@ -2309,11 +2316,11 @@ class RestrictModel(model_reader.ModelReader):
             orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
                                         
             if not vertex['couplings']:
-                logger_mod.debug('remove interactions: %s at order: %s' % \
+                logger_mod.log(self.log_level, 'remove interactions: %s at order: %s' % \
                                         (' '.join(part_name),', '.join(orders)))
                 self['interactions'].remove(vertex)
             else:
-                logger_mod.debug('modify interactions: %s at order: %s' % \
+                logger_mod.log(self.log_level, 'modify interactions: %s at order: %s' % \
                                 (' '.join(part_name),', '.join(orders)))
 
         # print useful log and clean the empty counterterm values
@@ -2325,12 +2332,12 @@ class RestrictModel(model_reader.ModelReader):
                          for part in pct[1][1]])
                                         
             if not pct[0]['counterterm'][pct[1]]:
-                logger_mod.debug('remove counterterm of particle %s'%part_name+\
+                logger_mod.log(self.log_level, 'remove counterterm of particle %s'%part_name+\
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)
                 del pct[0]['counterterm'][pct[1]]
             else:
-                logger_mod.debug('Modify counterterm of particle %s'%part_name+\
+                logger_mod.log(self.log_level, 'Modify counterterm of particle %s'%part_name+\
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)  
 
@@ -2456,9 +2463,9 @@ class RestrictModel(model_reader.ModelReader):
             #by pass parameter still in use
             if param in used or \
                   (keep_external and param_info[param]['dep'] == ('external',)):
-                logger_mod.debug('fix parameter value: %s' % param)
+                logger_mod.log(self.log_level, 'fix parameter value: %s' % param)
                 continue 
-            logger_mod.debug('remove parameters: %s' % (param))
+            logger_mod.log(self.log_level,'remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
 
