@@ -5148,18 +5148,6 @@ RESTART = %(mint_mode)s
                     if code is 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
                                              +' You are using %s',output)
-
-            # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldcflags) \n  CXXFLAGS+=$(shell %s --cxxflags)\n" \
-                             % (self.options['applgrid'],self.options['applgrid'])
-            text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
-            text_out=[]
-            for line in text:
-                if line.strip().startswith('APPLLIBS=$'):
-                    line=appllibs
-                text_out.append(line)
-            with open(pjoin(self.me_dir,'Source','make_opts'),'w') as fsock:
-                fsock.writelines(text_out)
         else:
             self.make_opts_var['applgrid'] = ""
 

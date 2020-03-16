@@ -8,12 +8,10 @@
 #include <iostream>
 #include <iterator>
 #include <sstream>
-#include <stdlib.h>
 #include <string>
 #include <vector>
 
-#include <appl_grid/appl_grid.h>
-#include <appl_grid/lumi_pdf.h>
+#include <pineappl.h>
 
 #include "orders.h"
 
@@ -22,7 +20,7 @@
 */
 
 // Declare grids
-std::vector<appl::grid> grid_obs;
+std::vector<pineappl_grid*> grid_obs;
 
 // translates an index from the range [0, __amp_split_size) to the indices need by `fill_grid`
 std::vector<std::vector<int>> translation_tables;
@@ -128,56 +126,51 @@ extern "C" void appl_init_()
     // otherwise create a new grid from scratch.
     if (file_exists(grid_filename_in))
     {
-        std::cout << "amcblast INFO: Reading existing APPLgrid from file " << grid_filename_in
-                  << " ..." << std::endl;
         // Open the existing grid
-        grid_obs.emplace_back(grid_filename_in);
+        grid_obs.emplace_back(pineappl_grid_read(grid_filename_in.c_str()));
 
-        auto const& order_ids = grid_obs.back().order_ids();
+        std::vector<int> subgrid_params(4 * pineappl_grid_get_subgrids(grid_obs.back()));
+        pineappl_grid_get_subgrid_params(grid_obs.back(), subgrid_params.data());
+
         translation_tables.emplace_back();
         auto& translation_table = translation_tables.back();
-
-        int qcd_power = -1;
-        int qed_power = -1;
 
         // when loading the grids, the stored orders might be sorted differently
         for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
         {
-            int const alphs = appl_common_fixed_.qcdpower[i] / 2;
-            int const alpha = appl_common_fixed_.qedpower[i] / 2;
+            std::size_t index = 0;
+            bool found = false;
 
-            // try to find the W0/WB grid
-            auto const it
-                = std::find(order_ids.begin(), order_ids.end(), appl::order_id(alphs, alpha, 0, 0));
+            while (!found)
+            {
+                auto const alphas = subgrid_params.at(4 * index + 0);
+                auto const alpha  = subgrid_params.at(4 * index + 1);
+                auto const logxir = subgrid_params.at(4 * index + 2);
+                auto const logxif = subgrid_params.at(4 * index + 3);
 
-            // TODO: can this happen?
-            assert(it != order_ids.end());
+                if ((alphas == appl_common_fixed_.qcdpower[i] / 2) &&
+                    (alpha  == appl_common_fixed_.qedpower[i] / 2) &&
+                    (logxir == 0) &&
+                    (logxif == 0))
+                {
+                    found = true;
+                }
+                else
+                {
+                    ++index;
+                }
+            }
 
-            auto const index = std::distance(order_ids.begin(), it);
-
-            std::cout << "[amcblast] mg5_aMC O(as^" << alphs << " a^" << alpha << ") -> " << index
-                      << '\n';
+            // TODO: can this fail?
+            assert( found );
 
             translation_table.push_back(index);
         }
-
-        std::cout << "[amcblast] loaded grid the following coupling orders:\n";
-
-        for (auto const& order : order_ids)
-        {
-            std::cout << "[amcblast] O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
-                      << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
-        }
-
-        std::cout << std::flush;
     }
     // If the grid does not exist, book it after having defined all the
     // relevant parameters.
     else
     {
-        std::cout << "amcblast INFO: Booking grid from scratch with name " << grid_filename_in
-                  << " ..." << std::endl;
-
         int lo_power = 9999;
         int nlo_power = 0;
 
@@ -194,8 +187,7 @@ extern "C" void appl_init_()
         // we assume that there is always at least one LO, and zero or one NLO
         assert((nlo_power == (lo_power + 2)) || (nlo_power == lo_power));
 
-        std::vector<appl::order_id> order_ids;
-        order_ids.reserve(appl_common_fixed_.amp_split_size);
+        std::vector<int> subgrid_params;
 
         translation_tables.emplace_back();
         translation_tables.back().reserve(appl_common_fixed_.amp_split_size);
@@ -206,137 +198,106 @@ extern "C" void appl_init_()
             int const qed = appl_common_fixed_.qedpower[i];
             int const sum = qcd + qed;
 
-            translation_tables.back().push_back(order_ids.size());
+            translation_tables.back().push_back(subgrid_params.size() / 4);
 
             if (sum == lo_power)
             {
                 // WB
-                order_ids.emplace_back(qcd / 2, qed / 2, 0, 0);
+                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
             }
             else if (sum == nlo_power)
             {
                 // W0
-                order_ids.emplace_back(qcd / 2, qed / 2, 0, 0);
+                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
                 // WR
-                order_ids.emplace_back(qcd / 2, qed / 2, 0, 1);
+                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 1, 0 });
                 // WF
-                order_ids.emplace_back(qcd / 2, qed / 2, 1, 0);
+                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 1 });
             }
         }
-
-        std::cout << "[amcblast] booked grid the following coupling orders:\n";
-
-        for (auto const& order : order_ids)
-        {
-            std::cout << "O(as^" << order.alphs() << " a^" << order.alpha() << "), LR^"
-                      << order.lmur2() << ", LF^" << order.lmuf2() << '\n';
-        }
-
-        std::cout << std::flush;
 
         // Define the settings for the interpolation in x and Q2.
         // These are common to all the grids computed.
         // If values larger than zero (i.e. set by the user) are found the default
         // settings are replaced with the new ones.
-        int NQ2 = appl_common_grid_.nQ2 > 0 ? appl_common_grid_.nQ2 : 30;
+        auto* storage = pineappl_storage_new("papplgrid_f2");
+
+        if (appl_common_grid_.nQ2 > 0)
+        {
+            pineappl_storage_set_int(storage, "nq2", appl_common_grid_.nQ2);
+        }
         // Max and min value of Q2
-        double Q2min = appl_common_grid_.Q2min > 0 ? appl_common_grid_.Q2min : 100;
-        double Q2max = appl_common_grid_.Q2max > 0 ? appl_common_grid_.Q2max : 1000000;
+        if (appl_common_grid_.Q2min > 0.0)
+        {
+            pineappl_storage_set_double(storage, "q2min", appl_common_grid_.Q2min);
+        }
+        if (appl_common_grid_.Q2max > 0.0)
+        {
+            pineappl_storage_set_double(storage, "q2max", appl_common_grid_.Q2max);
+        }
         // Order of the polynomial interpolation in Q2
-        int Q2order = appl_common_grid_.Q2order > 0 ? appl_common_grid_.Q2order : 3;
+        if (appl_common_grid_.Q2order > 0)
+        {
+            pineappl_storage_set_int(storage, "q2order", appl_common_grid_.Q2order);
+        }
         // Number of points for the x interpolation
-        int Nx = appl_common_grid_.nx > 0 ? appl_common_grid_.nx : 50;
+        if (appl_common_grid_.nx > 0)
+        {
+            pineappl_storage_set_int(storage, "nx", appl_common_grid_.nx);
+        }
         // Min and max value of x
-        double xmin = appl_common_grid_.xmin > 0 ? appl_common_grid_.xmin : 2e-7;
-        double xmax = appl_common_grid_.xmax > 0 ? appl_common_grid_.xmax : 1;
+        if (appl_common_grid_.xmin > 0.0)
+        {
+            pineappl_storage_set_double(storage, "xmin", appl_common_grid_.xmin);
+        }
+        if (appl_common_grid_.xmax > 0.0)
+        {
+            pineappl_storage_set_double(storage, "xmax", appl_common_grid_.xmax);
+        }
         // Order of the polynomial interpolation in x
-        int xorder = appl_common_grid_.xorder > 0 ? appl_common_grid_.xorder : 3;
+        if (appl_common_grid_.xorder > 0)
+        {
+            pineappl_storage_set_int(storage, "xorder", appl_common_grid_.xorder);
+        }
 
-        // Report of the grid parameters
-        std::cout << "\namcblast INFO: Report of the grid parameters:\n"
-            "- Q2 grid:\n"
-            "  * interpolation range: [ " << Q2min << " : " << Q2max << " ] GeV^2\n"
-            "  * number of nodes: " << NQ2 << "\n"
-            "  * interpolation order: " << Q2order << "\n"
-            "- x grid:\n"
-            "  * interpolation range: [ " << xmin << " : " << xmax << " ]\n"
-            "  * number of nodes: " << Nx << "\n"
-            "  * interpolation order: " << xorder << "\n" << std::endl;
-
-        // Set up the APPLgrid PDF luminosities
-        std::vector<int> pdf_luminosities;
-        pdf_luminosities.push_back(appl_common_lumi_.nlumi);
+        // Set up the PDF luminosities
+        auto* lumi = pineappl_lumi_new();
 
         // Loop over parton luminosities
         for (int ilumi = 0; ilumi < appl_common_lumi_.nlumi; ilumi++)
         {
             int nproc = appl_common_lumi_.nproc[ilumi];
 
-            pdf_luminosities.push_back(ilumi);
-            pdf_luminosities.push_back(nproc);
+            std::vector<int> pdg_ids;
+            pdg_ids.reserve(2 * nproc);
 
-            // Loop over parton-parton combinations within each luminosity
-            for (int iproc = 0; iproc < nproc; iproc++)
+            for (int iproc = 0; iproc != nproc; ++iproc)
             {
-                pdf_luminosities.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
-                pdf_luminosities.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
+                pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
+                pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
             }
+
+            pineappl_lumi_add(lumi, nproc, pdg_ids.data(), nullptr);
         }
 
-        // crate a uniquely identified `lumi_pdf` object by assigning it a name containing the
-        // creation time
-        std::time_t time = std::time(nullptr);
-        std::ostringstream stream("amcatnlo_obs_");
-        stream << index;
-        stream << '_';
-        stream << std::put_time(std::localtime(&time), "%Y%m%d%H%M%S");
-        stream << ".config";
-        new lumi_pdf(stream.str(), pdf_luminosities);
-
-        // Define binning
-        int Nbins = appl_common_histokin_.obs_nbins;
-        double obsmin = appl_common_histokin_.obs_min;
-        double obsmax = appl_common_histokin_.obs_max;
-
-        // Create array with the bin edges
-        std::vector<double> obsbins(
-            appl_common_histokin_.obs_bins,
-            appl_common_histokin_.obs_bins + appl_common_histokin_.obs_nbins + 1
-        );
-
-        // Check if the actual lower and upper limits of the histogram are correct
-        if (std::fabs(obsbins[0] - obsmin) >= 1e-5)
-        {
-            std::cout << "amcblast ERROR: mismatch in the lower limit of the histogram:"
-                      << std::endl;
-            std::cout << "It is " << obsbins[0] << ", it should be " << obsmin << std::endl;
-            std::exit(-10);
-        }
-        if (std::fabs(obsbins[Nbins] - obsmax) >= 1e-5)
-        {
-            std::cout << "amcblast ERROR: mismatch in the upper limit of the histogram"
-                      << std::endl;
-            std::cout << "It is " << obsbins[Nbins] << ", it should be " << obsmax << std::endl;
-            std::exit(-10);
-        }
-        // Create a grid with the binning given in the "obsbins[Nbins+1]" array
-        grid_obs.emplace_back(
-            Nbins,
-            obsbins.data(),
-            NQ2,
-            Q2min,
-            Q2max,
-            Q2order,
-            Nx,
-            xmin,
-            xmax,
-            xorder,
-            stream.str(),
-            order_ids);
         // Use the reweighting function
-        grid_obs.back().reweight(true);
+        pineappl_storage_set_bool(storage, "reweight", true);
         // Add documentation
-        grid_obs.back().addDocumentation(Banner());
+        pineappl_storage_set_string(storage, "documentation", Banner().c_str());
+
+        // Create a grid with the binning given in the "obsbins[Nbins+1]" array
+        grid_obs.push_back(pineappl_grid_new(
+            lumi,
+            pineappl_subgrid_format::as_a_logxir_logxif,
+            subgrid_params.size() / 4,
+            subgrid_params.data(),
+            appl_common_histokin_.obs_nbins,
+            appl_common_histokin_.obs_bins,
+            storage
+        ));
+
+        pineappl_storage_delete(storage);
+        pineappl_lumi_delete(lumi);
     }
 }
 
@@ -403,9 +364,9 @@ extern "C" void appl_fill_()
     x2 = appl_common_weights_.x2[k];
 
     static std::vector<std::vector<std::vector<double>>> x1Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
+        grid_obs.size(), std::vector<double>(pineappl_grid_get_subgrids(grid_obs[nh]), 0.0)));
     static std::vector<std::vector<std::vector<double>>> x2Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(grid_obs[nh].order_ids().size(), 0.0)));
+        grid_obs.size(), std::vector<double>(pineappl_grid_get_subgrids(grid_obs[nh]), 0.0)));
 
     if (x1 == x1Saved[itype - 1][nh][grid_index] && x2 == x2Saved[itype - 1][nh][grid_index])
     {
@@ -436,7 +397,7 @@ extern "C" void appl_fill_()
     {
         // W0
         weight.at(ilumi) = W0[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 0);
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 0);
         weight.at(ilumi) = 0.0;
     }
 
@@ -444,7 +405,7 @@ extern "C" void appl_fill_()
     {
         // WR
         weight.at(ilumi) = WR[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 1);
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 1);
         weight.at(ilumi) = 0.0;
     }
 
@@ -452,7 +413,7 @@ extern "C" void appl_fill_()
     {
         // WF
         weight.at(ilumi) = WF[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index + 2);
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 2);
         weight.at(ilumi) = 0.0;
     }
 
@@ -460,7 +421,7 @@ extern "C" void appl_fill_()
     {
         // WB
         weight.at(ilumi) = WB[k];
-        grid_obs[nh].fill_grid(x1, x2, scale2, obs, &weight[0], grid_index);
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index);
         weight.at(ilumi) = 0.0;
     }
 }
@@ -471,11 +432,10 @@ extern "C" void appl_term_()
     int const nh = appl_common_histokin_.obs_num - 1;
 
     // Normalize the grid by conversion factor and number of runs
-    grid_obs[nh] *= 389379660.0 * appl_common_histokin_.norm_histo;
-
-    // Set run() to one for the combinantion.
-    grid_obs[nh].run() = 1;
+    pineappl_grid_scale(grid_obs[nh], 389379660.0 * appl_common_histokin_.norm_histo);
 
     // Write grid to file
-    grid_obs[nh].Write("grid_obs_" + std::to_string(nh) + "_out.root");
+    pineappl_grid_write(grid_obs[nh], ("grid_obs_" + std::to_string(nh) + "_out.root").c_str());
+
+    pineappl_grid_delete(grid_obs[nh]);
 }
