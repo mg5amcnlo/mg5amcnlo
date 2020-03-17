@@ -2197,12 +2197,14 @@ c Overwrite the shower scale for the S-events
          if (H_event(i)) cycle
          if (icontr_sum(0,i).ne.0)then
             shower_scale(i)= showerscale
-            do j=1,nexternal
-               do k=1,nexternal
-                  shower_scale_a(i,j,k)= showerscale_a(j,k)
+            if (mcatnlo_delta) then
+               do j=1,nexternal
+                  do k=1,nexternal
+                     shower_scale_a(i,j,k)= showerscale_a(j,k)
+                  enddo
                enddo
-            enddo
-            icolour_con(1:2,1:nexternal,i)=icolour(1:2,1:nexternal)
+               icolour_con(1:2,1:nexternal,i)=icolour(1:2,1:nexternal)
+            endif
          endif
       enddo
       return
@@ -2232,11 +2234,6 @@ c
          do iFKS=1,fks_configs
             tmp_wgt(iFKS,ifl)=0d0
             tmp_scale(iFKS,ifl)=-1d0
-            do j=1,nexternal
-               do k=1,nexternal
-                  tmp_scale_a(iFKS,ifl,j,k)=-1d0
-               enddo
-            enddo
          enddo
       enddo
 c sum the weights that contribute to a single FKS configuration for each
@@ -2260,21 +2257,6 @@ c contribution to a given FKS configuration and fold.
      $              ,tmp_scale(nFKS(ict),ifl),shower_scale(ict)
                stop 1
             endif
-            do l=1,nexternal
-               do k=1,nexternal
-                  if (tmp_scale_a(nFKS(ict),ifl,l,k).eq.-1d0) then
-                     tmp_scale_a(nFKS(ict),ifl,l,k)=shower_scale_a(ict,l,k)
-c check that all the shower starting scales are identical for all the
-c contribution to a given FKS configuration and fold.
-                  elseif ( abs((tmp_scale_a(nFKS(ict),ifl,l,k)-shower_scale_a(ict,l,k))
-     $               /(tmp_scale_a(nFKS(ict),ifl,l,k)+shower_scale_a(ict,l,k)))
-     $               .gt. 1d-6 ) then
-                     write (*,*) 'ERR 2 in update_shower_scale_Sevents1'
-     $               ,tmp_scale_a(nFKS(ict),ifl,l,k),shower_scale_a(ict,l,k)
-                     stop 1
-                  endif
-               enddo
-            enddo
          enddo
       enddo
 c Compute the weighted average of the shower scale for each fold. Weight
@@ -2282,24 +2264,13 @@ c is given by the ABS cross section to given FKS configuration.
       do ifl=1,ifold_counter
          shsctemp(ifl)=0d0
          temp_wgt(ifl)=0d0
-         do k=1,nexternal
-            do l=1,nexternal
-               shsctemp_a(ifl,k,l)=0d0
-            enddo
-         enddo
       enddo
       temp_wgt_sum=0d0
       do ifl=1,ifold_counter
          do iFKS=1,fks_configs
             temp_wgt(ifl)=temp_wgt(ifl)+abs(tmp_wgt(iFKS,ifl))
             shsctemp(ifl)=shsctemp(ifl)+abs(tmp_wgt(iFKS,ifl))
-     $              *tmp_scale(iFKS,ifl)
-            do j=1,nexternal
-               do k=1,nexternal
-                  shsctemp_a(ifl,j,k)=shsctemp_a(ifl,j,k)+abs(tmp_wgt(iFKS,ifl))
-     $              *tmp_scale_a(iFKS,ifl,j,k)
-               enddo
-            enddo
+     $           *tmp_scale(iFKS,ifl)
          enddo
          temp_wgt_sum=temp_wgt_sum+temp_wgt(ifl)
       enddo
@@ -2316,13 +2287,8 @@ c Randomly pick one of the folds
      $        ,ifold_counter,target,ifold_accum,temp_wgt_sum
          stop 1
       endif
-c Shower scale is weighted average within the fold
+c     Shower scale is weighted average within the fold
       showerscale=shsctemp(ifl)/temp_wgt(ifl)
-      do j=1,nexternal
-         do k=1,nexternal
-            showerscale_a(j,k)=shsctemp_a(ifl,j,k)/temp_wgt(ifl)
-         enddo
-      enddo
       ifold_picked=ifl
       return
       end
@@ -3190,6 +3156,7 @@ c
          ! shower scale (if momenta are defined, else don't use shape)
          if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
             call set_cms_stuff(mohdr)
+            write (*,*) 'HERERE'
             call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
             if (mcatnlo_delta)
      $           call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
@@ -3198,35 +3165,42 @@ c
      $           ,ddum(6),ldum)
             call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
      $           ,scalemax,ileg,xm12)
-            call assign_scaleminmax_array(shat_ev,xi_i_fks_ev
+            if (mcatnlo_delta)
+     $           call assign_scaleminmax_array(shat_ev,xi_i_fks_ev
      $           ,scalemin_a,scalemax_a,ileg,xm12)
             if (.not. Hevents) then
                SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
-               do i=1,nexternal
-                  do j=1,nexternal
-                     if(j.eq.i)cycle
-                     SCALUP_a(iFKS,i,j)=min(emsca_a(i,j),
-     $                    scalemax_a(i,j))
+               if (mcatnlo_delta) then
+                  do i=1,nexternal
+                     do j=1,nexternal
+                        if(j.eq.i)cycle
+                        SCALUP_a(iFKS,i,j)=min(emsca_a(i,j),
+     $                       scalemax_a(i,j))
+                     enddo
                   enddo
-               enddo
+               endif
             else
                SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
      $              ref_H_scale(iFKS)-min(emsca,scalemax)))
-               do i=1,nexternal
-                  do j=1,nexternal
-                     if(j.eq.i)cycle
-                     SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS) ! we don't need the shape here
+               if (mcatnlo_delta) then
+                  do i=1,nexternal
+                     do j=1,nexternal
+                        if(j.eq.i)cycle
+                        SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS) ! we don't need the shape here
+                     enddo
                   enddo
-               enddo
+               endif
             endif
          else ! abrv.eq.Born .or. p(0,1).eq.-99
             SCALUP(iFKS)=shower_S_scale(iFKS)
-            do i=1,nexternal
-               do j=1,nexternal
-                  if(j.eq.i)cycle
-                  SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+            if (mcatnlo_delta) then
+               do i=1,nexternal
+                  do j=1,nexternal
+                     if(j.eq.i)cycle
+                     SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+                  enddo
                enddo
-            enddo
+            endif
          endif
       elseif (MCcntcalled.eq.19) then
          ! is_pt_hard is true. Use shower_s_scale and shower_h_scale for
@@ -3234,20 +3208,24 @@ c
          ! included.
          if (.not. Hevents) then
             SCALUP(iFKS)=shower_S_scale(iFKS)
-            do i=1,nexternal
-               do j=1,nexternal
-                  if(j.eq.i)cycle
-                  SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+            if (mcatnlo_delta) then
+               do i=1,nexternal
+                  do j=1,nexternal
+                     if(j.eq.i)cycle
+                     SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
+                  enddo
                enddo
-            enddo
+            endif
          else
             SCALUP(iFKS)=shower_H_scale(iFKS)
-            do i=1,nexternal
-               do j=1,nexternal
-                  if(j.eq.i)cycle
-                  SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS)
+            if (mcatnlo_delta) then
+               do i=1,nexternal
+                  do j=1,nexternal
+                     if(j.eq.i)cycle
+                     SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS)
+                  enddo
                enddo
-            enddo
+            endif
          endif
       elseif (MCcntcalled.eq.7) then
          if (mcatnlo_delta) then
@@ -3267,20 +3245,20 @@ c
          write (*,*) 'ERROR: MCcntcalled assigned wrongly.',MCcntcalled
          stop 1
       endif
-      
 c Safety measure
       SCALUP(iFKS)=max(SCALUP(iFKS),scaleMCcut)
-      do i=1,nexternal
-         do j=1,nexternal
-            if(j.eq.i)cycle
-            SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
-     &                            sqrt((1d0-xi_i_fks_ev)*shat_ev))
-            if (SCALUP_a(iFKS,i,j).ne.-1d0) then
-               SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
-            endif
+      if (mcatnlo_delta) then
+         do i=1,nexternal
+            do j=1,nexternal
+               if(j.eq.i)cycle
+               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
+     &              sqrt((1d0-xi_i_fks_ev)*shat_ev))
+               if (SCALUP_a(iFKS,i,j).ne.-1d0) then
+                  SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
+               endif
+            enddo
          enddo
-      enddo
-c
+      endif
       return
       end
 
