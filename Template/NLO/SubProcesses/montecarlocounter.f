@@ -1153,7 +1153,7 @@ c Emsca stuff
       endif
 c
 c Emsca stuff for multiple scales
-      if(dampMCsubt)then
+      if(dampMCsubt .and. mcatnlo_delta)then
          call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
          do i=1,nexternal-1
             do j=1,nexternal-1
@@ -1181,7 +1181,7 @@ c Emsca stuff for multiple scales
                emscav_tmp_a2(i,j)=emscav_a2(i,j)
             enddo
          enddo
-      else
+      elseif(.not. dampMCsubt) then
          write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
          stop
       endif
