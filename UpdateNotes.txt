@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.7.2(17/03/20)
+      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
+      OM: Speed up standalone_cpp code by changing compilation flag
 
 2.7.1.2(09/03/20)
       OM: Fixing issue (wrong cross-section and differential cross-section) for
