@@ -326,14 +326,13 @@ c respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       include 'run.inc'
-      integer nofpartners,i,j,k
+      include 'born_nhel.inc'
+      integer nofpartners,i
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
-     $     ,sevmc,dummy,zhw(nexternal),xmcxsec(nexternal)
+     $     ,sevmc,zhw(nexternal),xmcxsec(nexternal)
      $     ,g22,wgt1,xlum_mc_fact,fks_Hij
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -342,104 +341,13 @@ c respectively.
       integer           fks_j_from_i(nexternal,0:nexternal)
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-
-      include "born_nhel.inc"
-      integer npartner,cflows
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
-
-      double precision xkern(2),xkernazi(2),factor,N_p
-      double precision bornbars(max_bcol),bornbarstilde(max_bcol)
-      double precision emscwgt(nexternal)
-      double precision MCsec(nexternal-1,max_bcol),sumMCsec
-      double precision xmcxsec2(max_bcol)
-      double precision tiny
-      parameter (tiny=1d-7)
       call cpu_time(tBefore)
-
-c -- call to MC counterterm functions
-      first_MCcnt_call=.true.
-      is_pt_hard=.false.
-      xmcxsec=0d0
-      xmcxsec2=0d0
-      MCsec=0d0
-      sumMCsec=0d0
-      do cflows=1,max_bcol
-         if(is_pt_hard)exit
-         N_p=1d0
-         if(isspecial(cflows))N_p=2d0
-         do npartner=1,ipartners(0)
-            if(is_pt_hard)exit
-            factor=1d0
-c
-            call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl
-     $           ,probne,nofpartners,lzone,flagmc,zhw,xkern,xkernazi
-     $           ,emscwgt,bornbars,bornbarstilde,npartner)
-            if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).ne.0)then
-               MCsec(npartner,colorflow(npartner,cflows))=factor*
-     $              (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
-     $              xkernazi(1)*N_p*bornbarstilde(colorflow(npartner
-     $              ,cflows)))
-               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner
-     $              ,colorflow(npartner,cflows))
-               xmcxsec2(colorflow(npartner,cflows))=
-     $              xmcxsec2(colorflow(npartner,cflows))+MCsec(npartner
-     $              ,colorflow(npartner,cflows))
-               sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
-     $              ,cflows))
-            endif
-         enddo
-      enddo
-      
-c     positivity check
-      if(sumMCsec.lt.0d0)then
-         write(*,*)'Negative sumMCsec',sumMCsec
-         stop
-      elseif(sumMCsec.gt.0d0) then
-         do cflows=1,max_bcol
-            do npartner=1,ipartners(0)
-               if(xmcxsec(npartner)/sumMCsec.le.-tiny)then
-                  write(*,*)'Negative xmcxsec',npartner
-     $                 ,xmcxsec(npartner)
-                  stop
-               elseif(xmcxsec(npartner).le.0d0)then
-                  xmcxsec(npartner)=0d0
-               endif
-               if(xmcxsec2(cflows)/sumMCsec.le.-tiny)then
-                  write(*,*)'Negative xmcxsec2',cflows,xmcxsec2(cflows)
-                  stop
-               elseif(xmcxsec2(cflows).le.0d0)then
-                  xmcxsec2(cflows)=0d0
-               endif
-            enddo
-         enddo
-      endif
-      if (mcatnlo_delta) then
-         if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,
-     $        xmcxsec2,MCsec,probne)
-      else
-         xmcxsec=xmcxsec*probne
-      endif
-      if (btest(Mccntcalled,4)) then
-         write (*,*) 'Fifth bit of MCcntcalled should not '/
-     $        /'have been set yet',MCcntcalled
-         stop 1
-      endif
-      if (is_pt_hard) MCcntcalled=MCcntcalled+16
-      
-c -- end of call to MC counterterm functions
-
+      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
+     $     ,lzone,zhw,nofpartners,xmcxsec)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
@@ -469,7 +377,6 @@ c -- end of call to MC counterterm functions
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
       end
-
 
       logical function pdg_equal(pdg1,pdg2)
 c Returns .true. if the lists of PDG codes --'pdg1' and 'pdg2'-- are
