@@ -3156,7 +3156,6 @@ c
          ! shower scale (if momenta are defined, else don't use shape)
          if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
             call set_cms_stuff(mohdr)
-            write (*,*) 'HERERE'
             call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
             if (mcatnlo_delta)
      $           call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
