@@ -1632,7 +1632,6 @@ c By construction, t_ij are the target scales. For notational consistency
 c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
 c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
 
-      write (*,*) 'next point',nFKSprocess
       SCALUP_tmp_H2=-1d0
       do i=1,nexternal
          if(i.eq.i_fks)cycle
@@ -1829,7 +1828,7 @@ c scales.
                if (are_col_conn_H(i_fks,iBtoR(j)))
      $              SCALUP_tmp_H(i_fks,iBtoR(j))=
      $              sqrt(sumdot(p(0,i_fks),p(0,iBtoR(j)),1d0))
-               if (isspecial(jflow) then
+               if (isspecial(jflow)) then
                   ! in the special case, there is an extra dipole line
                   ! that connects i and j
                   if (.not. are_col_conn_H(iBtoR(i),iBtoR(j))) then
