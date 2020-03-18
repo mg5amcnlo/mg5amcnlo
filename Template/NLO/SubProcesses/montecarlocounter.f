@@ -1341,7 +1341,8 @@ c               cstlow <= smallptupp
       data iflip/2,1/
 
       double precision emscav_a2_tmp,emscav_tmp_a2_tmp,ptresc_a_tmp
-      double precision sref,acll1,acll2,acllfct(2),dot
+      double precision sref,acll1,acll2,acllfct(2),dot,sumdot
+      external dot,sumdot
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -1630,6 +1631,8 @@ c
 c By construction, t_ij are the target scales. For notational consistency
 c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
 c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
+
+      write (*,*) 'next point',nFKSprocess
       SCALUP_tmp_H2=-1d0
       do i=1,nexternal
          if(i.eq.i_fks)cycle
@@ -1643,7 +1646,7 @@ c tables).
             xmasses2(iRtoB(i),iRtoB(j))=min(xmasses(i,j),cxmupp)
             dzones2(iRtoB(i),iRtoB(j))=dzones(i,j)
             scalup_tmp_H2(iRtoB(i),iRtoB(j))=
-     &        xscales2(iRtoB(i),iRtoB(j))
+     &           xscales2(iRtoB(i),iRtoB(j))
          enddo
       enddo
 c Checks
@@ -1803,6 +1806,50 @@ c Final consistency checks
            stop
          endif
       enddo
+
+c Overwrite the H-event scales when the H-event configutation cannot be
+c generated from the S-event one by the shower (i.e., it is in the dead
+c zone). Use the dipole masses of the n+1-body configuration for the
+c scales.
+      do i=1,nexternal-1
+         do j=1,nexternal-1
+            if (.not.are_col_conn_S(i,j)) cycle
+            if (.not.dzones2(i,j)) cycle
+            ! check that i or j is equal to the mother, and that the
+            ! other one is connected to i_fks at the H-event level. This
+            ! is then the dipole that emitted i_fks.
+            if ((i.eq.iRtoB(j_fks) .and.
+     $                   are_col_conn_H(iBtoR(j),i_fks)) .or.
+     $          (j.eq.iRtoB(j_fks) .and.
+     $                   are_col_conn_H(i_fks,iBtoR(i)))) then
+! this is dipole that emitted i_fks
+               if (are_col_conn_H(iBtoR(i),i_fks)) 
+     $              SCALUP_tmp_H(iBtoR(i),i_fks)=
+     $                 sqrt(sumdot(p(0,iBtoR(i)),p(0,i_fks),1d0))
+               if (are_col_conn_H(i_fks,iBtoR(j)))
+     $              SCALUP_tmp_H(i_fks,iBtoR(j))=
+     $              sqrt(sumdot(p(0,i_fks),p(0,iBtoR(j)),1d0))
+               if (isspecial(jflow) then
+                  ! in the special case, there is an extra dipole line
+                  ! that connects i and j
+                  if (.not. are_col_conn_H(iBtoR(i),iBtoR(j))) then
+                     write (*,*) "ERROR: not connected correctly #13"
+                     stop 1
+                  endif
+                  SCALUP_tmp_H(iBtoR(i),iBtoR(j))=
+     $                 sqrt(sumdot(p(0,iBtoR(i)),p(0,iBtoR(j)),1d0))
+               endif
+            else
+               if (.not. are_col_conn_H(iBtoR(i),iBtoR(j))) then
+                  write (*,*) "ERROR: not connected correctly #12"
+                  stop 1
+               endif
+               SCALUP_tmp_H(iBtoR(i),iBtoR(j))=
+     $              sqrt(sumdot(p(0,iBtoR(i)),p(0,iBtoR(j)),1d0))
+            endif
+         enddo
+      enddo
+      
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
 c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
@@ -1860,13 +1907,6 @@ c case, the computed Sudakovs are actually discarded later
             if(useDire)then
 c Compute the anticollinear suppression factor
               sref=dot(p(0,1),p(0,2))
-cSF CHECK TO BE REMOVED
-              if(abs((xi_i_fks_ev*p_i_fks_ev(0)-p(0,i_fks))/p_i_fks_ev(0)).gt.1.d-6 .or.
-     #           abs((xi_i_fks_ev*p_i_fks_ev(3)-p(3,i_fks))/p_i_fks_ev(0)).gt.1.d-6)then
-                print*,"WTF",xi_i_fks_ev,p_i_fks_ev(0),p(0,i_fks),p_i_fks_ev(3),p(3,i_fks)
-                print*,"WTF",xi_i_fks_ev*p_i_fks_ev(0),p(0,i_fks),xi_i_fks_ev*p_i_fks_ev(3),p(3,i_fks)
-                stop
-              endif
               acll1=dot(p_i_fks_ev(0),p(0,iBtoR(i)))
               if(acll1.le.0.d0)then
                 if(acll1.gt.-1.d-3*sref)then
