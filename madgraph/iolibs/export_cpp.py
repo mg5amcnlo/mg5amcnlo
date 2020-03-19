@@ -716,6 +716,7 @@ class OneProcessExporterCPP(object):
         process_class_definitions = self.get_process_class_definitions()
         replace_dict['process_class_definitions'] = process_class_definitions
 
+
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict
             # Write the file
@@ -803,15 +804,26 @@ class OneProcessExporterCPP(object):
         replace_dict['ncolor'] = len(color_amplitudes)
 
         if self.single_helicities:
+            wfct_size = 18
+            # Set the size of Wavefunction
+            if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+                wfct_size = 18
+            else:
+                wfct_size = 6
+            
+            
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
                           void calculate_wavefunctions(const int perm[], const int hel[]);
-                          static const int nwavefuncs = %d;
-                          std::complex<double> w[nwavefuncs][18];
-                          static const int namplitudes = %d;
+                          static const int nwavefuncs = %(nwfct)d;
+                          std::complex<double> w[nwavefuncs][%(sizew)d];
+                          static const int namplitudes = %(namp)d;
                           std::complex<double> amp[namplitudes];""" % \
-                          (len(self.wavefunctions),
-                           len(self.amplitudes.get_all_amplitudes()))
+                          {'nwfct':len(self.wavefunctions),
+                          'sizew': wfct_size,
+                          'namp':len(self.amplitudes.get_all_amplitudes())
+                          }
+
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
                                       me.get('processes')[0].shell_string().\

@@ -1858,7 +1858,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 class ALOHAWriterForGPU(ALOHAWriterForCPP):
     
     extension = '.cu'
-    prefix ='__global__'
+    prefix ='__device__'
     realoperator = '.real()'
     imagoperator = '.imag()'
     ci_definition = 'thrust::complex<double> cI = thrust::complex<double>(0., 1.);\n'
