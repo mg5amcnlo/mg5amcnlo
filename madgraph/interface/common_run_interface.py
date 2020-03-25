@@ -4235,25 +4235,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         lhapdf_version, alternate_path)
         elif lhapdf_version.startswith('6.'):
             # try to do a simple wget
-            import random
-            r = random.choice([0,1])
-            r = [r, 1-r]
-            for t in r:
-                if t ==0:
-                    wwwpath = "http://www.hepforge.org/archive/lhapdf/pdfsets/%s/%s.tar.gz" 
-                    wwwpath %= ('.'.join(lhapdf_version.split('.')[:2]), filename)
-                else:
-                    wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
-                retcode = misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
-                if retcode:
-                    continue
-            
-                retcode = misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
+            wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
+            misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
+            misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
                       cwd=pdfsets_dir)
-                if retcode:
-                    continue
-                break
-                
+
             if os.path.exists(pjoin(pdfsets_dir, filename)) or \
                os.path.isdir(pjoin(pdfsets_dir, filename)):
                 logger.info('%s successfully downloaded and stored in %s' \

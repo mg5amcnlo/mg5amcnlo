@@ -931,7 +931,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--reduction':'1|3|5|6','--CTModeRun':'-1',
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
@@ -2859,7 +2859,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
+                     'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
                      'looptools']
     
     # The targets below are installed using the HEPToolsInstaller.py script
@@ -2916,7 +2916,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
-                       'pjfry':'auto',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -3151,6 +3150,20 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+
+            #Check that we do not have situation like z{T} z
+            if not myprocdef.check_polarization():
+                logger.critical("Not Supported syntax:\n"+ \
+                                "   Syntax like p p  > Z{T} Z are ambiguious" +\
+                                "   Behavior is not guarantee to be stable within future version of the code." + \
+                                "   Furthemore, you can have issue with symmetry factor (we do not guarantee [differential] cross-section."+\
+                                "   We suggest you to abort this computation")
+                ans = self.ask('Do you want to continue', 'no',['yes','no'])
+                if ans == 'no':
+                    raise self.InvalidCmd("Not supported syntax of type p p  > Z{T} Z")
+                    
+                
+                
 
             self._curr_proc_defs.append(myprocdef)
             
@@ -3831,7 +3844,7 @@ This implies that with decay chains:
             options.horizontal = True
             options.external = True  
             options.max_size = 0.3 
-            options.add_gap = 0.5    
+            options.add_gap = 0.5  
         options = draw_lib.DrawOption(options)
         start = time.time()
 
@@ -3927,7 +3940,6 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-        
         MLoptions={}
         i=-1
         CMS_options = {}
@@ -4294,13 +4306,11 @@ This implies that with decay chains:
                     logger_check.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
 
-        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
-            TIR_dir['pjfry_dir']=self.options['pjfry']
-        else:
-            if "MLReductionLib" in MLoptions:
-                if 2 in MLoptions["MLReductionLib"]:
-                    logger_check.warning('PJFRY not available on your system; it will be skipped.')                    
-                    MLoptions["MLReductionLib"].remove(2)
+
+        if "MLReductionLib" in MLoptions:
+            if 2 in MLoptions["MLReductionLib"]:
+                logger_check.warning('PJFRY not supported anymore; it will be skipped.')                    
+                MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
             TIR_dir['golem_dir']=self.options['golem']
@@ -5783,7 +5793,7 @@ This implies that with decay chains:
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            
+
         # Potential change in naming convention
         name_map = {'lhapdf6_py3': 'lhapdf6'}
         try:
@@ -5906,7 +5916,8 @@ This implies that with decay chains:
             # Make sure each otion in add_options appears only once
             add_options.append('--mg5_path=%s'%MG5DIR)
             add_options = list(set(add_options))
-            # And that the option '--force' is placed last.
+            add_options.append('--mg5_path=%s'%MG5DIR)
+             # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
@@ -6055,7 +6066,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'Delphes2':['arXiv:0903.2225'],
                           'SysCalc':['arXiv:1801.08401'],
                           'Golem95':['arXiv:0807.0605'],
-                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
                           'QCDLoop':['arXiv:0712.1851'],
                           'pythia8':['arXiv:1410.3012'],
                           'lhapdf6':['arXiv:1412.7420'],
@@ -6077,9 +6087,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
                 'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
-                'maddm':'maddm',
-                'lhapdf6' : 'lhapdf6' if six.PY2 else 'lhapdf6_py3'
+                    'lhapdf6' : 'lhapdf6' if six.PY2 else 'lhapdf6_py3',
+                'QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
+                'maddm':'maddm'
                 }
 
     def do_install(self, line, paths=None, additional_options=[]):
@@ -6213,10 +6223,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = add_options)
 
-        if args[0] == 'PJFry' and not os.path.exists(
-                                 pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
-            logger.info("Installing PJFRY's dependence QCDLoop...")
-            self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'        
@@ -6320,16 +6326,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
             cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0].decode()
 
-        # For PJFry, use autotools.
-        if name == 'PJFry':
-            # Run the configure script
-            ld_path = misc.Popen(['./configure', 
-            '--prefix=%s'%str(pjoin(MG5DIR, name)),
-            '--enable-golem-mode', '--with-integrals=qcdloop1',
-            'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
-            'FC=%s'%os.environ['FC'],
-            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0].decode()
 
         # For QCDLoop, use autotools.
         if name == 'QCDLoop':
@@ -6428,7 +6424,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
@@ -6441,7 +6437,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
@@ -6535,17 +6531,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
                            'pythia-pgs':'pythia-pgs_path',
-                           'Golem95': 'golem',
-                           'PJFry': 'pjfry'}
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)
-            elif opt=='pjfry':
-                self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)            
+                self.exec_cmd('save options %s' % opt, printcmd=False)           
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options %s' % opt, printcmd=False)
@@ -6990,7 +6982,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai']:
+            elif key in ['golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -7000,7 +6992,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95',
+                        local_install = { 'golem':'golem95',
                                          'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
@@ -7629,7 +7621,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja','collier'] and \
+        elif args[0] in ['golem','samurai','ninja','collier'] and \
              not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
@@ -8090,7 +8082,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     exporter = self._curr_exporter.generate_process_directory(\
                             me_group.get('matrix_elements'), self._curr_helas_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number,
+                            process_number = group_number+1,
                             version = version)
                     process_names.append(exporter.process_name)
             else:
