@@ -2,6 +2,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** PARRALEL VERSION FOR PYTHON 3 **
 
+2.7.2.py3(25/03/20):
+      ALL: Contains all feature of 2.7.2 (see below)
+
 2.7.1.py3(09/03/20):
       ALL: Contains all feature of 2.7.1 (see below)
       OM: Fixed a lot of python3 compatibility issue raised by user
@@ -27,6 +30,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                              ** Main Branch  Update **
 			
+2.7.2(17/03/20)
+      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
+      OM: Speed up standalone_cpp code by changing compilation flag
+
 2.7.1(09/03/20)
       OM: Fixing issue (wrong cross-section and differential cross-section) for
           polarised sample when

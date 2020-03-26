@@ -549,7 +549,7 @@ class MG5Runner(MadEventRunner):
                     if os.path.isdir(pjoin(dir_name+'/SubProcesses/'+name,G)):
                         filepath = pjoin(dir_name+'/SubProcesses/'+name,G,'results.dat')
                         channel = G[1:]
-                        for line in file(filepath):
+                        for line in open(filepath):
                             splitline=line.split()
                             cross += float(splitline[9]) 
                             break
@@ -559,7 +559,7 @@ class MG5Runner(MadEventRunner):
                     splitline=line.split()
                     #if len(splitline)==8:
                     output['cross_'+name]=splitline[0]
-                    print "found %s %s" % (splitline[0], splitline[1])
+                    #print( "found %s %s" % (splitline[0], splitline[1]))
         else:
             return output   
         

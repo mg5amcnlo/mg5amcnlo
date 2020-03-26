@@ -37,6 +37,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+from tests import test_manager
 
 #===============================================================================
 # TestCmd
@@ -1331,7 +1332,8 @@ P1_qq_wp_wp_lvl
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
                                                        'SubProcesses',
                                                        d)))
-        
+    
+    @test_manager.bypass_for_py3
     def test_madevent_triplet_diquarks(self):
         """Test MadEvent output of triplet diquarks"""
 

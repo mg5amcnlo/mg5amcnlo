@@ -56,6 +56,7 @@ try:
     import madgraph.iolibs.files as files
     MADEVENT = False
 except ImportError as error:
+    raise 
     logger.debug(error)
     from internal import InvalidCmd, MadGraph5Error
     import internal.extended_cmd as cmd
@@ -238,7 +239,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     do_decay_events = remove_fct
     do_delphes = remove_fct
     do_pgs = remove_fct
-    
+    _True = [1,True,'1','T','t','.true.','True']
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -408,12 +409,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     logger.warning('command launch_jobs does not recognized argument %s. This argument is ignored' % arg)
                 restrict, value = arg.split('=')
                 if restrict == '--create_dir=':
-                    if value in self.True:
+                    if value in self._True:
                         create_dir = True
                     else: 
                         create_dir = False
                 elif restrict == '--submit=':
-                    if value in self.True:
+                    if value in self._True:
                         launch = True
                     else: 
                         launch = False                
