@@ -86,6 +86,9 @@ c timing statistics
 C-----
 C  BEGIN CODE
 C-----  
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.

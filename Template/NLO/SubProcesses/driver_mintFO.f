@@ -83,6 +83,9 @@ c stats for granny_is_res
 C-----
 C  BEGIN CODE
 C-----
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+      
       useitmax=.false. ! to be overwritten in open_output_files.f if need be
 c
 c     Setup the timing variable
