@@ -14,6 +14,8 @@
 ################################################################################
 """ Command interface for Re-Weighting """
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import difflib
 import logging
 import math
@@ -25,6 +27,10 @@ import tempfile
 import time
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+import six
 
 
 pjoin = os.path.join
@@ -204,14 +210,13 @@ class ReweightInterface(extended_cmd.Cmd):
 
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
-            raise Exception, msg
+            raise Exception(msg)
         process, option = mg_interface.MadGraphCmd.split_process_line(process)
         self.proc_option = option
         self.is_decay = len(process.split('>',1)[0].split()) == 1 
         
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
-
 
     @staticmethod
     def get_LO_definition_from_NLO(proc, model, real_only=False):
@@ -295,8 +300,8 @@ class ReweightInterface(extended_cmd.Cmd):
 
             try:
                 event.check() #check 4 momenta/...
-            except Exception, error:
-                print event
+            except Exception as error:
+                print(event)
                 raise error
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
@@ -336,11 +341,11 @@ class ReweightInterface(extended_cmd.Cmd):
     def help_change(self):
         """help for change command"""
     
-        print "change model X :use model X for the reweighting"
-        print "change process p p > e+ e-: use a new process for the reweighting"
-        print "change process p p > mu+ mu- --add : add one new process to existing ones"
-        print "change output [default|2.0|unweight]:"
-        print "               default: add weight(s) to the current file"    
+        print("change model X :use model X for the reweighting")
+        print("change process p p > e+ e-: use a new process for the reweighting")
+        print("change process p p > mu+ mu- --add : add one new process to existing ones")
+        print("change output [default|2.0|unweight]:")
+        print("               default: add weight(s) to the current file")    
     
     def do_change(self, line):
         """allow to define a second model/processes"""
@@ -405,7 +410,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if len(args) == 2:
                 try:
                     self.systematics = banner.ConfigFile.format_variable(args[1], bool)
-                except Exception, error:
+                except Exception as error:
                     self.systematics = args[1:]
             else:
                 self.systematics = args[1:]
@@ -487,8 +492,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
                     time.sleep(10+i)
                     i+=5
-                    print 'wait for pickle'                  
-                print "loading from pickle"
+                    print('wait for pickle')                  
+                print("loading from pickle")
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
@@ -526,7 +531,7 @@ class ReweightInterface(extended_cmd.Cmd):
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
         if self.output_type == "default":
-            output = open( self.lhe_input.name +'rw', 'w')
+            output = open( self.lhe_input.path +'rw', 'w')
             #write the banner to the output file
             self.banner.write(output, close_tag=False)
         else:
@@ -735,7 +740,7 @@ class ReweightInterface(extended_cmd.Cmd):
             except:
                 Shell_internal = None
             if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
-                raise Exception, "scan are not allowed on the Web"
+                raise Exception("scan are not allowed on the Web")
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(new_card)
             if self.options['rwgt_name']:
@@ -817,7 +822,7 @@ class ReweightInterface(extended_cmd.Cmd):
             try:
                 if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
                     logger.warning("We found different value of alpha_s. Note that the value of alpha_s used is the one associate with the event and not the one from the cards.")
-            except Exception, error:
+            except Exception as error:
                 logger.debug("error in check of alphas: %s" % str(error))
                 pass #this is a security                
             if not self.second_process:
@@ -996,7 +1001,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 nhel = 0
             misc.sprint(nhel, Pdir, hel_dict)                        
-            raise Exception, "Invalid matrix element for original computation (weight=0)"
+            raise Exception("Invalid matrix element for original computation (weight=0)")
 
         return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
      
@@ -1273,8 +1278,8 @@ class ReweightInterface(extended_cmd.Cmd):
             else: 
                 logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
             logger.info('Computed cross-section:')
-            keys = self.all_cross_section.keys()
-            keys.sort()
+            keys = list(self.all_cross_section.keys())
+            keys.sort(key=lambda x: str(x))
             for key in keys:
                 if key == 'orig':
                     continue
@@ -1350,7 +1355,7 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info("RETRY with %s", commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             has_nlo = False
-        except Exception, error:
+        except Exception as error:
             raise
         
         commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
@@ -1387,7 +1392,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if tag in data['id2path']:
                         if not Pdir == data['id2path'][tag][1]:
                             misc.sprint(tag, Pdir, data['id2path'][tag][1])
-                            raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                            raise self.InvalidCmd('2 different process have the same final states. This module can not handle such situation')
                         else:
                             continue
                     # build the helicity dictionary
@@ -1422,7 +1427,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if os.path.exists(pjoin(path_me, data['paths'][1], 'Cards', 'MadLoopParams.dat')):
             if self.multicore == 'create':
-                print "compile OLP", data['paths'][1]
+                print("compile OLP", data['paths'][1])
                 # It is potentially unsafe to use several cores, We limit ourself to one for now
                 # n_cores = self.mother.options['nb_core']
                 n_cores = 1
@@ -1473,7 +1478,7 @@ class ReweightInterface(extended_cmd.Cmd):
             m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
             m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
         else:
-            raise Exception, "NLO reweighting requires LHAPDF to work correctly"
+            raise Exception("NLO reweighting requires LHAPDF to work correctly")
 
         path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
         common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
@@ -1507,7 +1512,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if (tag,'V') in data['id2path']:
                         if not Pdir == data['id2path'][(tag,'V')][1]:
                             misc.sprint(tag, Pdir, self.id_to_path[(tag,'V')][1])
-                            raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                            raise self.InvalidCmd('2 different process have the same final states. This module can not handle such situation')
                         else:
                             continue
                     # build the helicity dictionary
@@ -1642,7 +1647,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if path_me not in sys.path:
                     sys.path.insert(0, os.path.realpath(path_me))
                 with misc.chdir(pjoin(path_me)):
-                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [])
                     mymod =  mymod.Source.rwgt2py
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise([self.banner.run_card['lpp1'], 
@@ -1651,7 +1656,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     self.combine_wgt = mymod.get_wgt
 
             if self.multicore == 'create':
-                print "compile OLP", data['paths'][1]
+                print("compile OLP", data['paths'][1])
                 try:
                     misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
                              nb_core=self.mother.options['nb_core'])
@@ -1686,7 +1691,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
                 m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                        
             else:
-                raise Exception, "NLO_tree reweighting requires LHAPDF to work correctly"
+                raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
  
             path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
@@ -1762,16 +1767,21 @@ class ReweightInterface(extended_cmd.Cmd):
                 with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
                     mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
-                    if mod_name in sys.modules.keys():
+                    if mod_name in list(sys.modules.keys()):
                         del sys.modules[mod_name]
                         tmp_mod_name = mod_name
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                        if True:#six.PY3:
+                            mymod = __import__(mod_name, globals(), locals(), [])
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1)  
                     else:
-                        mymod = __import__(mod_name, globals(), locals(), [],-1)    
-                    
+                        if True:#six.PY3:
+                            mymod = __import__(mod_name, globals(), locals(), [])    
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1) 
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 
@@ -1789,7 +1799,9 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             all_pdgs = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
-            all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
+                
+                
             prefix_set = set(all_prefix)
 
 
@@ -1850,7 +1862,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         misc.sprint(tag, onedir)
                         misc.sprint(data[tag][:-1])
                         misc.sprint(order, pdir,)
-                        raise Exception, "two different matrix-element have the same initial/final state. Leading to an ambiguity. If your events are ALWAYS written in the correct-order (look at the numbering in the Feynman Diagram). Then you can add inside your reweight_card the line 'change keep_ordering True'." 
+                        raise Exception( "two different matrix-element have the same initial/final state. Leading to an ambiguity. If your events are ALWAYS written in the correct-order (look at the numbering in the Feynman Diagram). Then you can add inside your reweight_card the line 'change keep_ordering True'." )
 
                 data[tag] = order, pdir, hel
              

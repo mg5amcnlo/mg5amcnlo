@@ -17,6 +17,7 @@
 for a loop diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
+from __future__ import absolute_import
 import copy
 import fractions
 import operator
@@ -67,8 +68,7 @@ class LoopColorBasis(color_amp.ColorBasis):
               [color_algebra.Tr(lcut_numbers[1],lcut_numbers[0])],
               fractions.Fraction(2, 1))
         else:
-            raise color_amp.ColorBasis.ColorBasisError, \
-        "L-cut particle has an unsupported color representation %s" % lcut_charge
+            raise color_amp.ColorBasis.ColorBasisError("L-cut particle has an unsupported color representation %s" % lcut_charge)
 
         # Append it to all color strings for this diagram.
         for CS in colorize_dict.values():
@@ -110,8 +110,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         list_color_dict = []
         
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
-            raise color_amp.ColorBasis.ColorBasisError, \
-              'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
+            raise color_amp.ColorBasis.ColorBasisError('LoopColorBasis is used with an amplitude which is not a LoopAmplitude')
         for diagram in amplitude.get('loop_diagrams'):
 
             colorize_dict = self.colorize(diagram,
@@ -147,8 +146,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         list_color_dict = []
 
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
-            raise color_amp.ColorBasis.ColorBasisError, \
-              'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
+            raise color_amp.ColorBasis.ColorBasisError('LoopColorBasis is used with an amplitude which is not a LoopAmplitude')
 
         for diagram in amplitude.get('born_diagrams'):
             colorize_dict = self.colorize(diagram,

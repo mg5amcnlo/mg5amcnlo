@@ -15,6 +15,7 @@
 
 """Unit test library for the UFO parsing"""
 
+from __future__ import absolute_import
 import tests.unit_tests as unittest
 import madgraph.interface.master_interface as Cmd
 import madgraph.iolibs.ufo_expression_parsers as parsers

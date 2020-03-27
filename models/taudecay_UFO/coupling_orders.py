@@ -3,7 +3,8 @@
 # Date: Thu 8 May 2014 12:30:33
 
 
-from object_library import all_orders, CouplingOrder
+from __future__ import absolute_import
+from .object_library import all_orders, CouplingOrder
 
 
 EFT = CouplingOrder(name = 'EFT',

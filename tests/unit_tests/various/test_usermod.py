@@ -15,6 +15,7 @@
 """Unit test Library for importing and restricting model"""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -30,6 +31,10 @@ import models.usermod as usermod
 import models as ufomodels
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.various.misc as misc
+import six
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
@@ -157,7 +162,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in self.__dict__.iteritems():
+        for k,v in six.iteritems(self.__dict__):
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:
@@ -324,8 +329,11 @@ class TestModUFO(unittest.TestCase):
 
 
     def setUp(self):
-        
-        self.path = tempfile.mkdtemp(prefix='unitest_usermod') 
+        self.debug=False
+        if self.debug:
+            self.path = "/tmp/"
+        else:   
+            self.path = tempfile.mkdtemp(prefix='unitest_usermod') 
 
         #Read the full SM
         self.sm_path = import_ufo.find_ufo_path('sm')
@@ -333,8 +341,9 @@ class TestModUFO(unittest.TestCase):
         
     def tearDown(self):
         
-        shutil.rmtree(self.path)
-
+        if not self.debug:
+            shutil.rmtree(self.path)
+        self.assertFalse(self.debug)
 
     def test_write_model(self):
         """ Check that we can write all the require UFO files """
@@ -450,10 +459,15 @@ QED = CouplingOrder(name = 'QED',
         target = [l for l in target if not '.anti()' in l or duplicate.append(l.split('=')[0].strip())] 
         
         text = text.replace('.0,',',')
+        text = text.replace('1/3,','0.333333333333,')
+        text = text.replace('2/3,','0.666666666667,')
+        text = text.replace('0.6666666666666666', '0.666666666667')
+        text = text.replace('0.3333333333333333', '0.333333333333')
         text = text.split('\n')        
         text = [l.strip() for l in text
                   if l.strip() and not l.strip().startswith('#') and 
                   not l.split('=')[0].strip() in ['line', 'propagating', 'goldstoneboson', 'GoldstoneBoson','selfconjugate']]
+
         
         keep = True      
         new_text = []  
@@ -468,12 +482,11 @@ QED = CouplingOrder(name = 'QED',
             else:
                 new_text.append(line)
         text=new_text
-                
+        
         for line1, line2 in zip(target, text):
-            try:
-                self.assertEqual(line1.replace(',',')'), line2.replace(',',')'))
-            except Exception:
-                self.assertEqual(target, text)
+            self.assertEqual(line1.replace(',',')'), line2.replace(',',')'))
+
+                
     def test_write_vertices(self):
         """Check that the content of the file is valid"""
 

@@ -15,8 +15,11 @@
 
 """Testing modules for FKS_process class"""
 
+from __future__ import absolute_import
 import sys
 import os
+from six.moves import range
+from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -27,6 +30,7 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
@@ -193,6 +197,7 @@ class TestFKSProcess(unittest.TestCase):
                  'perturbation_couplings':['QED'],
                  'decay_chains': MG.ProcessList(),
                  'overall_orders': {}}
+
     
     myproc = MG.Process(dict_qcd)
     myproc2 = MG.Process(dict2_qcd)
@@ -647,8 +652,9 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),11)
-        for real, fks_info in zip(myfks.real_amps, target_fks_infos):
-            self.assertEqual(real.fks_infos, fks_info)
+        for real in myfks.real_amps:
+            self.assertIn(real.fks_infos, target_fks_infos)
+
 
     def test_FKSProcess_aguux_qed(self):
         """tests that for a g > u u~ all the relevant QED splittings are there"""

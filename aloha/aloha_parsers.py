@@ -19,18 +19,21 @@ Lex + Yacc framework"""
 
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import logging
 import numbers
 import os
 import re
 import sys
+from six.moves import input
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 
-import aloha_lib
-from aloha_object import *
+from . import aloha_lib
+from .aloha_object import *
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
 from aloha.aloha_lib import KERNEL
@@ -194,8 +197,8 @@ class UFOExpressionParser(object):
     def p_error(self, p):
         if p:
             try:
-                print p
-                print p[:]
+                print(p)
+                print(p[:])
             except:
                 pass
             raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
@@ -227,7 +230,8 @@ class ALOHAExpressionParser(UFOExpressionParser):
             obj = p[1].split('(',1)[0]
         
         if obj in self.aloha_object:
-            p[0] = ''.join(p[1:])
+            p2 = [x for i,x in enumerate(p) if i>0]
+            p[0] = ''.join(p2)
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))
              p[0] = str(new)
@@ -351,7 +355,7 @@ if __name__ == '__main__':
     calc = ALOHAExpressionParser()
     while 1:
         try:
-            s = raw_input('calc > ')
+            s = input('calc > ')
         except EOFError:
             break
         if not s: continue

@@ -1,11 +1,32 @@
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import gzip
+from six.moves import range
+import os 
 
 if '__main__' == __name__:
     import sys
-    sys.path.append('../../')
-import misc
+    root = os.path.dirname(__file__)
+    sys.path.append(os.path.realpath(os.path.join(root, '../../')))
+    if os.path.basename(root) == 'internal':
+            __package__ = "internal"
+            sys.path.append(os.path.dirname(root))
+            import internal
+    else:
+        __package__ = "madgraph.various"
+    
+
+try: 
+    import madgraph
+except ImportError as error:
+    print( sys.path)
+    print(error)
+    from . import misc
+else:
+    import madgraph.various.misc as misc
+    
 import os
 import logging
 
@@ -226,7 +247,7 @@ class HEPMC_Event(object):
         self.C = '%s\n' % line
 
     def __iter__(self):
-        return self.particles.values().__iter__()
+        return list(self.particles.values()).__iter__()
     
     #def __next__(self):
     #    
@@ -240,69 +261,115 @@ class HEPMC_Event(object):
 
 class HEPMC_EventFile(object):
     
-    def __new__(self, path, mode='r', *args, **opt):
-
-        if not path.endswith(".gz"):
-            return file.__new__(HEPMC_EventFileNoGzip, path, mode, *args, **opt)
-        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
-            return HEPMC_EventFile.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            try:
-                return gzip.GzipFile.__new__(HEPMC_EventFileGzip, path, mode, *args, **opt)
-            except IOError, error:
-                raise
-            except Exception, error:
-                if mode == 'r':
-                    misc.gunzip(path)
-                return file.__new__(HEPMC_EventFileNoGzip, path[:-3], mode, *args, **opt)  
-  
     
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
 
-        self.to_zip = False
-        if path.endswith('.gz') and mode == 'w' and\
-                                              isinstance(self, HEPMC_EventFileNoGzip):
+        if mode in ['r','rb']:
+            mode ='r'
+        self.mode = mode
+
+        if not path.endswith(".gz"):
+            self.file = open(path, mode, *args, **opt)
+        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
+            self.file = open(path[:-3], mode, *args, **opt)
             path = path[:-3]
-            self.to_zip = True # force to zip the file at close() with misc.gzip
-        
+        else:            
+            try:
+                self.file =  gzip.GzipFile(path, mode, *args, **opt)
+                self.zip_mode =True
+            except IOError as error:
+                raise
+            except Exception as error:
+                misc.sprint(error)
+                if mode == 'r':
+                    misc.gunzip(path)
+                else:
+                    self.to_zip = True
+                self.file = open(path[:-3], mode, *args, **opt)
+                path = path[:-3] 
+
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
-        try:
-            super(HEPMC_EventFile, self).__init__(path, mode, *args, **opt)
-        except IOError:
-            if '.gz' in path and isinstance(self, HEPMC_EventFileNoGzip) and\
-                mode == 'r' and os.path.exists(path[:-3]):
-                super(HEPMC_EventFile, self).__init__(path[:-3], mode, *args, **opt)
-            else:
-                raise
 
         self.header = ''
         if mode == 'r':
             line = ''
             while 'HepMC::IO_GenEvent-START_EVENT_LISTING' not in line:
-
-                try:
-                    line  = super(HEPMC_EventFile, self).next()
-                except StopIteration:
+                line = self.file.readline()
+                if not line:
                     self.seek(0)
-                    self.header = ''
+                    self.banner = ''
                     break 
+                if 'b' in mode or self.zip_mode:
+                    line = str(line.decode())
                 self.header += line
         self.start_event = ''
 
-    def seek(self, value, fromwhat=0):
+    def seek(self, *args, **opts):
         self.start_event = ""
-        return super(HEPMC_EventFile, self).seek(value, fromwhat)
+        return self.file.seek(*args, **opts)
+    
+    def tell(self):
+        if self.zipmode:
+            currpos = self.file.tell()
+            if not currpos:
+                currpos = self.size
+            return currpos  
+        else: 
+            self.file.tell() 
+
+    def __iter__(self):
+        return self
+    
+    def __del__(self):
+        try:
+            self.file.close()
+        except Exception:
+            pass
+
+    def __len__(self):
+        if self.file.closed:
+            return 0
+        if hasattr(self,"len"):
+            return self.len
+        self.seek(0)
+        nb_event=0
+        with misc.TMP_variable(self, 'parsing', False):
+            for _ in self:
+                nb_event +=1
+        self.len = nb_event
+        self.seek(0)
+        return self.len
+
+    def close(self,*args, **opts):
         
-        
-        
+        out = self.file.close(*args, **opts)
+        if self.to_zip:
+            misc.gzip(self.path)
+
+    
     def next(self):
+        
+        
+        return self.next_event()
+
+    __next__ = next
+
+
+
+
+
+    def next_event(self):
         """get next event"""
         text = self.start_event
         line = ''
         while 1:
-            line = super(HEPMC_EventFile, self).next()
+            line = self.file.readline()
+            if not line:
+                raise StopIteration
+            if 'b' in self.mode or self.zip_mode:
+                    line = str(line.decode())
             if line.startswith('E'):
                 self.start_event = line
                 if text:
@@ -317,41 +384,39 @@ class HEPMC_EventFile(object):
                 text = ''
             else:
                 text += line
-
-
-class HEPMC_EventFileGzip(HEPMC_EventFile, gzip.GzipFile):
-    """A way to read/write a gzipped lhef event"""
-    
-    def tell(self):
-        currpos = super(HEPMC_EventFileGzip, self).tell()
-        if not currpos:
-            currpos = self.size
-        return currpos
-    
+                
     def getfilesize(self):
-        fo = open(self.name, 'rb')
-        fo.seek(-4, 2)
-        r = fo.read()
-        fo.close()
-        import struct
-        return struct.unpack('<I', r)[0]    
+        if self.zip_mode:
+            self.file.seek(-4, 2)
+            r = self.file.read()
+            self.file.seek()
+            import struct
+            return struct.unpack('<I', r)[0]       
+        else:
+            self.file.seek(0,2)
+            pos = self.file.tell()
+            self.file.seek()
+            return pos
         
-class HEPMC_EventFileNoGzip(HEPMC_EventFile, file):
-    """A way to read a standard event file"""
-    
-    def close(self,*args, **opts):
+    def write(self, text):
         
-        out = super(HEPMC_EventFileNoGzip, self).close(*args, **opts)
-        if self.to_zip:
-            misc.gzip(self.name)
-            
-    def getfilesize(self):
-        self.seek(0,2)
-        return self.tell()
+        if self.zip_mode or 'b' in self.mode:
+            self.file.write(text.encode()) 
+        else:
+            self.file.write(text) 
+
+    @property
+    def name(self):
+        return self.file.name
+
+    @property
+    def closed(self):
+        return self.file.closed
+
     
     
 if "__main__" == __name__:
-    path = "/Users/omatt/Documents/eclipse/2.3.3_PY8_install_cmd/PROC_sm_24/Events/run_01/tag_1_pythia8_events.hepmc.gz"
+    path = "/Users/omattelaer/Documents/eclipse/2.7.1/PROC_sm_43/Events/run_01/tag_1_pythia8_events.hepmc.gz"
     evts = HEPMC_EventFile(path)
     nb_event = 0
     nb_p = 0
@@ -359,4 +424,4 @@ if "__main__" == __name__:
         nb_event +=1
         for p in event:
              nb_p+=1
-    print nb_event, nb_p
+    print(nb_event, nb_p)

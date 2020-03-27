@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import copy
 import os
 import math
@@ -73,8 +74,7 @@ def make_vertexlist(model):
             ini_leg = temp_legs_new.pop(num)
 
             # Sort the other legs
-            temp_legs_new.sort(lambda l1, l2: cmp(l1['id'],l2['id']), 
-                               reverse=True)
+            temp_legs_new.sort(key=lambda l: l['id'], reverse=True)
             temp_legs_new.append(ini_leg)
             temp_vertex = base_objects.Vertex({'id': inter.get('id'),
                                                'legs':temp_legs_new})

@@ -16,12 +16,15 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import itertools
 import logging
 import math
 import os
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -101,7 +104,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         """ Check that the function get_analytic_info and compute_analytic
         info in the class HelasWavefunction behaves as expected """
 
-        alohaModel = create_aloha.AbstractALOHAModel(self.myloopmodel.get('name'))
+        alohaModel = create_aloha.AbstractALOHAModel(self.myloopmodel.get('modelpath'))
         alohaModel.add_Lorentz_object(self.myloopmodel.get('lorentz'))
         
         d_helas_wf = helas_objects.HelasWavefunction({
@@ -152,11 +155,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             wf_rank = lwf.get_analytic_info('wavefunction_rank', \
                                                         alohaModel = alohaModel)
             self.assertEqual(wf_rank,trgt_wavefunction_rank)
-            self.assertTrue('wavefunction_rank' in lwf['analytic_info'].keys())
+            self.assertTrue('wavefunction_rank' in list(lwf['analytic_info'].keys()))
             inter_rank = lwf.get_analytic_info('interaction_rank', \
                                                         alohaModel = alohaModel)
             self.assertEqual(inter_rank,trgt_interaction_rank)
-            self.assertTrue('interaction_rank' in lwf['analytic_info'].keys())
+            self.assertTrue('interaction_rank' in list(lwf['analytic_info'].keys()))
             
             # Now make sure it is recovered without the alohaModel (so that the
             # caching works
@@ -247,11 +250,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         # By default, try them all
         if not selection:
             if mode=='individual':
-                DiagProcessed=range(len(alldiags))
+                DiagProcessed=list(range(len(alldiags)))
             elif mode=='collective':
                 DiagProcessed=[len(alldiags)-1]                
             else:
-                raise Error,"Mode can only be 'individual' or 'collective'"
+                raise Error("Mode can only be 'individual' or 'collective'")
         else:
             DiagProcessed=selection
             
@@ -268,9 +271,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     diagSelection=base_objects.DiagramList(alldiags[idiag[0]:idiag[1]+1])
                     selectionStart=idiag[0]
                 else:
-                    raise Error,"Selection must be a list of integers or 2-tuple of integers."                                        
+                    raise Error("Selection must be a list of integers or 2-tuple of integers.")                                        
             else:
-                raise Error,"Mode can only be 'individual' or 'collective'"
+                raise Error("Mode can only be 'individual' or 'collective'")
             Amplitude.set('diagrams',diagSelection)
             myME=helas_objects.HelasMatrixElement(Amplitude,gen_color=False)
             # Keep in mind that the loop diagram is always placed before its
@@ -287,7 +290,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 myME.set('color_basis',col_basis)
                 col_matrix = color_amp.ColorMatrix(col_basis)
                 if verbose:
-                    print "color matrix =",col_matrix
+                    print("color matrix =",col_matrix)
                 self.assertEqual(len(col_matrix),len(col_basis)**2)
                 myME.set('color_matrix',col_matrix)
                 color_amplitudes=myME.get_color_amplitudes()
@@ -300,10 +303,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             diagIndex=0
             for i, diag in enumerate(diagSelection):
                 if verbose: 
-                    print "============"
-                    print "Checking diag",selectionStart+i,"with type :",\
-                      diag.nice_string()
-                    print "============"
+                    print("============")
+                    print("Checking diag",selectionStart+i,"with type :",\
+                      diag.nice_string())
+                    print("============")
                 if mode=='individual':
                     reconstructedDiags=AllReconstructedDiags
                 else:
@@ -311,8 +314,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                                                  diagIndex+1]
                     diagIndex+=1
 
-                if verbose: print "Reconstructed diag :",\
-                  reconstructedDiags[0].nice_string()
+                if verbose: print("Reconstructed diag :",\
+                  reconstructedDiags[0].nice_string())
                 # Initialize some quantities for the tests
                 origDiagNVertices=len(diag['vertices'])
 
@@ -327,8 +330,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         len(process['model'].get('interaction_dict')[vert['id']].get('color'))
                         if numColorKeys>1:
                              numEntries*=numColorKeys
-                    if verbose: print "Diag colorization :",colorize_obj[i].keys()
-                    self.assertEqual(len(colorize_obj[i].keys()),numEntries)
+                    if verbose: print("Diag colorization :",list(colorize_obj[i].keys()))
+                    self.assertEqual(len(list(colorize_obj[i].keys())),numEntries)
                     # Commented because it is only true when there is only one
                     # lorentz structure per vertex.
                     #self.assertEqual(len(colorize_obj[i].keys()),\
@@ -337,7 +340,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # Check that the amplitude 'color_indices' is in the
                         # color keys tuples generated
                         self.assertTrue(tuple(amp['color_indices']) in \
-                                        colorize_obj[i].keys())
+                                        list(colorize_obj[i].keys()))
                         # Check that this amplitude number appear in the result
                         # from get_color_amplitude
                         self.assertTrue(amp['number'] in amp_number_apparition)                  
@@ -348,8 +351,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                             if amp['number'] in [b[1] for b in a]:
                                 contribution_list.append(j)
                         if verbose:
-                            print "Amplitude number",amp['number'],\
-                            "contributes to the following color basis elements",contribution_list
+                            print("Amplitude number",amp['number'],\
+                            "contributes to the following color basis elements",contribution_list)
         return myME
 
     def check_LHME_individual_diag_sanity(self,loopAmplitude, process,\
@@ -373,11 +376,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         # By default, try them all
         if not selection:
             if mode=='individual':
-                DiagProcessed=range(len(alldiags))
+                DiagProcessed=list(range(len(alldiags)))
             elif mode=='collective':
                 DiagProcessed=[len(alldiags)-1]                
             else:
-                raise Error,"Mode can only be 'individual' or 'collective'"
+                raise Error("Mode can only be 'individual' or 'collective'")
         else:
             DiagProcessed=selection
             
@@ -394,9 +397,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     diagSelection=base_objects.DiagramList(alldiags[idiag[0]:idiag[1]+1])
                     selectionStart=idiag[0]
                 else:
-                    raise Error,"Selection must be a list of integers or 2-tuple of integers."                                        
+                    raise Error("Selection must be a list of integers or 2-tuple of integers.")                                        
             else:
-                raise Error,"Mode can only be 'individual' or 'collective'"
+                raise Error("Mode can only be 'individual' or 'collective'")
             
   #          diagSelection = base_objects.DiagramList(\
   #            [diag for diag in diagSelection if not isinstance(diag,\
@@ -458,17 +461,17 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     col_matrix=color_amp.ColorMatrix(loop_col_basis,\
                                                        born_col_basis)
                     if verbose:
-                        print "color matrix virt_vs_born =",col_matrix
+                        print("color matrix virt_vs_born =",col_matrix)
                     self.assertEqual(len(col_matrix),len(loop_col_basis)*len(born_col_basis))
                 elif (loopDiagSelected or loopUVCTDiagSelected) and not bornDiagSelected:
                     col_matrix=color_amp.ColorMatrix(loop_col_basis)
                     if verbose:
-                        print "color matrix virt_vs_virt =",col_matrix
+                        print("color matrix virt_vs_virt =",col_matrix)
                     self.assertEqual(len(col_matrix),len(loop_col_basis)**2)
                 elif bornDiagSelected and not (loopDiagSelected or loopUVCTDiagSelected):
                     col_matrix=color_amp.ColorMatrix(born_col_basis)
                     if verbose:
-                        print "color matrix born_vs_born =",col_matrix
+                        print("color matrix born_vs_born =",col_matrix)
                     self.assertEqual(len(col_matrix),len(born_col_basis)**2)
                 myloopME.set('color_matrix',col_matrix)
                 
@@ -477,14 +480,14 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             loopColorDiagIndex=0            
             for i, diag in enumerate(diagSelection):
                 if verbose: 
-                    print "============"
+                    print("============")
                     if isinstance(diag,loop_base_objects.LoopUVCTDiagram):
-                        print "Checking diag #",selectionStart+i," with type UVCT and interaction ids ",\
-                        [coupl for coupl in diag.get('UVCT_couplings')]
+                        print("Checking diag #",selectionStart+i," with type UVCT and interaction ids ",\
+                        [coupl for coupl in diag.get('UVCT_couplings')])
                     else:
-                        print "Checking diag #",selectionStart+i,"with type",diag['type'],":",\
-                          diag.nice_string(loopAmplitude['structure_repository'])
-                    print "============"
+                        print("Checking diag #",selectionStart+i,"with type",diag['type'],":",\
+                          diag.nice_string(loopAmplitude['structure_repository']))
+                    print("============")
                 if mode=='individual':
                     reconstructedDiags=AllReconstructedDiags
                     if checkColor:
@@ -519,8 +522,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                             this_born_colorize_obj=[]
                             loopColorDiagIndex+=shift+1                         
                 
-                if verbose: print "Reconstructed loop diag :",\
-                  reconstructedDiags[0].nice_string()
+                if verbose: print("Reconstructed loop diag :",\
+                  reconstructedDiags[0].nice_string())
                 # Initialize some quantities for the tests
                 origDiagNVertices=len(diag['vertices'])
                 structNVertices=0
@@ -558,8 +561,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     self.assertEqual(len(reconstructedDiags)-1,
                       len(set(vert.get('id') for vert in diag.get('CT_vertices'))))
                     for ct_number in range(1,len(reconstructedDiags)):
-                        if verbose: print 'reconstructed CT diag',ct_number,':',\
-                          reconstructedDiags[ct_number].nice_string()
+                        if verbose: print('reconstructed CT diag',ct_number,':',\
+                          reconstructedDiags[ct_number].nice_string())
                         # Superficial check of the sanity of the Counter-terms diagrams, based
                         # on the number of vertices building them.
                         self.assertEqual(len(reconstructedDiags[ct_number]['vertices']),\
@@ -575,8 +578,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     if not isinstance(diag, loop_base_objects.LoopUVCTDiagram) and diag['type']==0:
                         # Check born
                         if verbose:
-                            print "Born diag colorization :",\
-                              this_born_colorize_obj[0].keys()
+                            print("Born diag colorization :",\
+                              list(this_born_colorize_obj[0].keys()))
                         self.assertEqual(len(this_born_colorize_obj[0]),
                           numEntries)
 
@@ -588,7 +591,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         for amp in myloopME['diagrams'][i]['amplitudes']:
                             self.assertTrue(tuple(amp['color_indices']) in \
-                                        this_born_colorize_obj[0].keys())
+                                        list(this_born_colorize_obj[0].keys()))
                             # Make sure the born amplitude number appear in the color key
                             # generated
                             self.assertTrue(amp['number'] in born_amp_number_apparition)
@@ -599,13 +602,13 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 if amp['number'] in [b[1] for b in a]:
                                     contribution_list.append(j)
                             if verbose:
-                                print "Born amplitude number",amp['number'],\
-                                "contributes to the following born color basis elements",contribution_list
+                                print("Born amplitude number",amp['number'],\
+                                "contributes to the following born color basis elements",contribution_list)
                     elif isinstance(diag, loop_base_objects.LoopUVCTDiagram):
                         # Check UVCT diagrams
                         if verbose:
-                            print "UVCT diag colorization :",\
-                              this_loop_colorize_obj[0].keys()
+                            print("UVCT diag colorization :",\
+                              list(this_loop_colorize_obj[0].keys()))
                         self.assertEqual(len(this_loop_colorize_obj[0]),
                           numEntries)
 
@@ -617,7 +620,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         for amp in myloopME['diagrams'][i]['amplitudes']:
                             self.assertTrue(tuple(amp['color_indices']) in \
-                                        this_loop_colorize_obj[0].keys())
+                                        list(this_loop_colorize_obj[0].keys()))
                             # Make sure the born amplitude number appear in the color key
                             # generated
                             self.assertTrue(amp['number'] in loop_amp_number_apparition)
@@ -628,8 +631,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 if amp['number'] in [b[1] for b in a]:
                                     contribution_list.append(j)
                             if verbose:
-                                print "UVCT amplitude number",amp['number'],\
-                                "contributes to the following born color basis elements",contribution_list                        
+                                print("UVCT amplitude number",amp['number'],\
+                                "contributes to the following born color basis elements",contribution_list)                        
                     else:
                         structEntries=1
                         for tagElem in diag['canonical_tag']:
@@ -644,9 +647,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                         structEntries*=numColorKeys
                         # Check the number of key entries for the loop diagram
                         if verbose:
-                            print "Loop diag colorization :",\
-                              this_loop_colorize_obj[0].keys()
-                        self.assertEqual(len(this_loop_colorize_obj[0].keys()),
+                            print("Loop diag colorization :",\
+                              list(this_loop_colorize_obj[0].keys()))
+                        self.assertEqual(len(list(this_loop_colorize_obj[0].keys())),
                           numEntries*structEntries)
                         loop_amps=[]
                         for loopamp in myloopME['diagrams'][i].get_loop_amplitudes():
@@ -659,7 +662,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         for amp in loop_amps:
                             self.assertTrue(tuple(amp['color_indices']) in \
-                              this_loop_colorize_obj[0].keys())
+                              list(this_loop_colorize_obj[0].keys()))
                             self.assertTrue(amp['number'] in loop_amp_number_apparition)
                             # For the verbose mode, show to which color basis element each
                             # loop amplitude contributes to
@@ -668,8 +671,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 if amp['number'] in [b[1] for b in a]:
                                     contribution_list.append(j)
                             if verbose:
-                                print "Loop amplitude number",amp['number'],\
-                                "contributes to the following loop color basis elements",contribution_list
+                                print("Loop amplitude number",amp['number'],\
+                                "contributes to the following loop color basis elements",contribution_list)
                         # Check the number of key entries for the counter-terms                        
                         if diag.get('CT_vertices'):
                             # We don't want to count twice the counterterms with same ID
@@ -684,9 +687,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 nCTColor=len(process['model'].get('interaction_dict')[ct_vert['id']].get('color'))
                                 if nCTColor==0: nCTColor=1
                                 if verbose:
-                                    print "CT diag",ct_number,"colorization :",\
-                                      this_loop_colorize_obj[ct_number].keys()
-                                self.assertEqual(len(this_loop_colorize_obj[ct_number].keys()),\
+                                    print("CT diag",ct_number,"colorization :",\
+                                      list(this_loop_colorize_obj[ct_number].keys()))
+                                self.assertEqual(len(list(this_loop_colorize_obj[ct_number].keys())),\
                                   structEntries*nCTColor)
                                 ct_amps=[a for a in myloopME['diagrams'][i].get_ct_amplitudes() \
                                   if a['interaction_id']==ct_vert['id']]
@@ -698,7 +701,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 # color keys tuples generated
                                 for amp in ct_amps:
                                     self.assertTrue(tuple(amp['color_indices']) in \
-                                    this_loop_colorize_obj[ct_number].keys())
+                                    list(this_loop_colorize_obj[ct_number].keys()))
                                     self.assertTrue(amp['number'] in loop_amp_number_apparition)
                                     # For the verbose mode, show to which color basis element each
                                     # CT amplitude contributes to
@@ -707,8 +710,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                         if amp['number'] in [b[1] for b in a]:
                                             contribution_list.append(j)
                                     if verbose:
-                                        print "CT amplitude number",amp['number'],\
-                                        "contributes to the following loop color basis elements",contribution_list
+                                        print("CT amplitude number",amp['number'],\
+                                        "contributes to the following loop color basis elements",contribution_list)
         return myloopME                                                                              
     
     def test_helas_diagrams_ddx_uux(self):
