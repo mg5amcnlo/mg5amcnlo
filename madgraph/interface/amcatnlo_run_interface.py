@@ -722,7 +722,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_launch()
-            raise self.InvalidCmd, 'Invalid Syntax: too many arguments'
+            raise self.InvalidCmd( 'Invalid Syntax: too many arguments')
 
         elif len(args) == 1:
             if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO','auto']:

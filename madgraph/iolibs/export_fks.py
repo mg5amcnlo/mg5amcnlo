@@ -995,8 +995,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
                     print(links)
-                    raise MadGraph5Error( "born_conf should be canonically ordered"
-            real_configs = ', '.join(['%d' % int(diags['real_conf']+1) for diags in links]))
+                    raise MadGraph5Error( "born_conf should be canonically ordered")
+            real_configs = ', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
                              % (iFKS,len(links),real_configs))
 

@@ -1106,7 +1106,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             return save_load_object.load_from_file(pjoin(root_path,'input_files',save_name))
         else:
             self.interface.do_import('model %s'%model_name)
-            print "Regenerating %s ..."%process_def
+            print( "Regenerating %s ..."%process_def)
             self.interface.do_generate(process_def)
             proc = copy.copy(self.interface._fks_multi_proc)
             me = fks_helas.FKSHelasMultiProcess(proc)['matrix_elements'][0]
@@ -1174,19 +1174,19 @@ class TestAMCatNLOEW(unittest.TestCase):
         else:
             self.interface.do_set('complex_mass_scheme True')
             self.interface.do_import('model 2HDMCMStIIymbMSbar')
-            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."
+            print( "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")
             self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             uux_proc = copy.copy(self.interface._fks_multi_proc)
             uux_me = fks_helas.FKSHelasMultiProcess(uux_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'),uux_me)            
-            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."            
+            print( "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")            
             self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             ccx_proc = copy.copy(self.interface._fks_multi_proc)
             ccx_me = fks_helas.FKSHelasMultiProcess(ccx_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'),ccx_me)
             uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
             ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))
-            print "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."             
+            print( "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")             
             self.interface.do_generate('d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             ddx_proc = copy.copy(self.interface._fks_multi_proc)
             ddx_me = fks_helas.FKSHelasMultiProcess(ddx_proc)['matrix_elements'][0]
