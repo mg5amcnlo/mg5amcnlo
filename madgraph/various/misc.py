@@ -1772,7 +1772,8 @@ class EasterEgg(object):
                         import random
                         msg = choices[random.randint(0,len(choices)-2)]
                     EasterEgg.message_aprilfirst[msgtype].remove(msg)
-                    
+                else:
+                    return
             elif msgtype=='loading' and date in self.special_banner:
                 self.change_banner(date)
                 return

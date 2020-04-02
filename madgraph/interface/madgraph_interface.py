@@ -1075,7 +1075,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process:
+            if 'noborn' in process or 'sqrvirt' in process:
                 valid = True
             else:
                 raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
