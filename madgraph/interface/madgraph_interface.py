@@ -6400,18 +6400,18 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
+                target = 'https://home.fnal.gov/~parke/TD/td_mac_intel64.tar.gz'
                 misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
-                files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
+                files.mv(MG5DIR + '/td/td_intel_mac64',MG5DIR+'/td/td')
             else:
                 if sys.maxsize > 2**32:
                     logger.info('Downloading TD for Linux 64 bit')
-                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td64/td'
-                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
-                In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
-                instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                    target = 'https://home.fnal.gov/~parke/TD/td_linux_64bit.tar.gz'
+                    #logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
+                #In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
+                #instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'

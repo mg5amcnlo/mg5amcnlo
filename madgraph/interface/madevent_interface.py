@@ -2497,7 +2497,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                           postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            with misc.TMP_variable(self, 'run_name', self.run_name):
+                self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('create_gridpack', postcmd=False)
         else:
             # Regular run mode
