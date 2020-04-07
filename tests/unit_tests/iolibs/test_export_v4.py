@@ -3636,12 +3636,12 @@ C 1 Tr(1,4,3,2)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual("\n".join(exporter.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
+                         """JAMP(1)=+2D0*(-AMP(1)+AMP(3)+AMP(4)-AMP(6))
 JAMP(2)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(3)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(3)=+2D0*(+AMP(2)-AMP(3)+AMP(5)+AMP(6))
 JAMP(4)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(5)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(6)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
+JAMP(5)=+2D0*(+AMP(2)-AMP(3)+AMP(5)+AMP(6))
+JAMP(6)=+2D0*(-AMP(1)+AMP(3)+AMP(4)-AMP(6))""")
 
         # Test amp2 lines        
         amp2_lines = \

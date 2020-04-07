@@ -1749,7 +1749,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
             
-        if not self.opt.has_key('sa_symmetry'):
+        if 'sa_symmetry 'not  in self.opt:
             self.opt['sa_symmetry']=False
 
         # Set lowercase/uppercase Fortran code
@@ -1866,7 +1866,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # Write the file
         writer.writelines(file)
 
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor, \
+        return len(list(filter(lambda call: call.find('#') != 0, helas_calls))), ncolor, \
                 replace_dict['nAmpSplitOrders'], replace_dict['nSqAmpSplitOrders']
 
 

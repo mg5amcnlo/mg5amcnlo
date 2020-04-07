@@ -305,32 +305,32 @@ C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,9),W(1,8),GC_2,AMP(2))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_0(W(1,4),W(1,9),W(1,6),GC_11,AMP(3))
-      CALL FFV2_5_3(W(1,1),W(1,2),GC_51,GC_58,MDL_MZ,MDL_WZ,W(1,10))
+      CALL FFV2_5_3(W(1,1),W(1,2),-GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,10))
 C     Amplitude(s) for diagram number 4
-      CALL FFV2_5_0(W(1,4),W(1,9),W(1,10),GC_51,GC_58,AMP(4))
+      CALL FFV2_5_0(W(1,4),W(1,9),W(1,10),-GC_50,GC_58,AMP(4))
       CALL FFV1_2(W(1,4),W(1,5),GC_11,MDL_MT,MDL_WT,W(1,9))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,9),W(1,3),W(1,8),GC_2,AMP(5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_11,AMP(6))
 C     Amplitude(s) for diagram number 7
-      CALL FFV2_5_0(W(1,9),W(1,3),W(1,10),GC_51,GC_58,AMP(7))
+      CALL FFV2_5_0(W(1,9),W(1,3),W(1,10),-GC_50,GC_58,AMP(7))
       CALL FFV1_2(W(1,1),W(1,5),GC_11,ZERO,ZERO,W(1,9))
       CALL FFV1P0_3(W(1,4),W(1,3),GC_2,ZERO,ZERO,W(1,10))
 C     Amplitude(s) for diagram number 8
       CALL FFV1_0(W(1,9),W(1,2),W(1,10),GC_2,AMP(8))
 C     Amplitude(s) for diagram number 9
       CALL FFV1_0(W(1,9),W(1,2),W(1,7),GC_11,AMP(9))
-      CALL FFV2_5_3(W(1,4),W(1,3),GC_51,GC_58,MDL_MZ,MDL_WZ,W(1,6))
+      CALL FFV2_5_3(W(1,4),W(1,3),-GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,6))
 C     Amplitude(s) for diagram number 10
-      CALL FFV2_5_0(W(1,9),W(1,2),W(1,6),GC_51,GC_58,AMP(10))
+      CALL FFV2_5_0(W(1,9),W(1,2),W(1,6),-GC_50,GC_58,AMP(10))
       CALL FFV1_1(W(1,2),W(1,5),GC_11,ZERO,ZERO,W(1,9))
 C     Amplitude(s) for diagram number 11
       CALL FFV1_0(W(1,1),W(1,9),W(1,10),GC_2,AMP(11))
 C     Amplitude(s) for diagram number 12
       CALL FFV1_0(W(1,1),W(1,9),W(1,7),GC_11,AMP(12))
 C     Amplitude(s) for diagram number 13
-      CALL FFV2_5_0(W(1,1),W(1,9),W(1,6),GC_51,GC_58,AMP(13))
+      CALL FFV2_5_0(W(1,1),W(1,9),W(1,6),-GC_50,GC_58,AMP(13))
 C     JAMPs contributing to orders QCD=3 QED=0
       JAMP(1,1)=+1D0/2D0*(+1D0/3D0*AMP(3)+1D0/3D0*AMP(6))
       JAMP(2,1)=+1D0/2D0*(+IMAG1*AMP(1)-AMP(3)-AMP(9))

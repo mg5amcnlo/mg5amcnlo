@@ -34,6 +34,7 @@ import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
+import six
 
 
 class TestFKSProcess(unittest.TestCase):
@@ -211,6 +212,7 @@ class TestFKSProcess(unittest.TestCase):
         TestFKSProcess.myproc_qed = MG.Process(dict_qed)
         TestFKSProcess.myproc2_qed = MG.Process(dict2_qed)
         TestFKSProcess.myprocaa_qed = MG.Process(dict3_qed)
+        TestFKSProcess.mymodel = mymodel
     
     
     def test_FKSMultiProcess(self):
@@ -757,12 +759,17 @@ class TestFKSProcess(unittest.TestCase):
         #u g > g u
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
         #take the third real of the first leg for this process 2j 21 >2 21 21i
-        leglist = fksproc.reals[0][2]['leglist']
+        if six.PY2:
+            leglist = fksproc.reals[0][2]['leglist']
+            leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        else:
+            leglist = fksproc.reals[0][0]['leglist']
+            leglist_qed = fksproc_qed.reals[0][2]['leglist']
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1, 2,\
                                            [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
         # 2j 21 > 2 21 22i
-        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        #leglist_qed = fksproc_qed.reals[0][0]['leglist']
         realproc_qed = fks_base.FKSRealProcess(fksproc_qed.born_amp['process'],leglist_qed,1,2,\
                                            [[2,21,21,2]], ['QED'],\
                                             perturbed_orders = ['QED'])
@@ -879,12 +886,21 @@ class TestFKSProcess(unittest.TestCase):
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
 
         #take the first real for this process 2j 21 >2 21 21i
-        leglist = fksproc.reals[0][2]['leglist']
+        if six.PY2:
+            leglist = fksproc.reals[0][2]['leglist']
+            # 2j 21 > 21 2 22i for QED process
+            leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        else:
+            leglist = fksproc.reals[0][0]['leglist']
+            # 2j 21 > 21 2 22i for QED process
+            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist], [2,21,2,21,21])
 
-        # 2j 21 > 21 2 22i for QED process
-        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        
+        
+        
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist_qed], [2,21,2,21,22])
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1,0,\
@@ -1400,10 +1416,24 @@ class TestFKSProcess(unittest.TestCase):
                          [len(real) for real in target])                
         for i in range(len(fksproc.reals)):
             for j in range(len(fksproc.reals[i])):
-                self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
+                if six.PY3:
+                    for k in range(len(fksproc.reals[i])):
+                        if fksproc.reals[i][j]['leglist'] ==  target[i][k]:
+                            break
+                    else:
+                        self.assertTrue(False)
+                else:    
+                    self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
         for i in range(len(fksproc_qed.reals)):
             for j in range(len(fksproc_qed.reals[i])):
-                self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
+                if six.PY3:
+                    for k in range(len(fksproc_qed.reals[i])):
+                        if fksproc_qed.reals[i][j]['leglist'] ==  target[i][k]:
+                            break
+                    else:
+                        self.assertTrue(False)
+                else:
+                    self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
         
         #process is d d~ > u u~
         fksproc2 = fks_base.FKSProcess(self.myproc2)

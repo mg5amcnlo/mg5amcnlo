@@ -812,7 +812,7 @@ class FKSProcess(object):
             pert_orders = model['coupling_orders']
 
         leglist = self.get_leglist()
-        if range(len(leglist)) != [l['number']-1 for l in leglist]:
+        if list(range(len(leglist))) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
 
         if [ i['state'] for i in leglist].count(False) == 1:

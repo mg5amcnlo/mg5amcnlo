@@ -8,8 +8,8 @@ C
 C     Interface between MG5 and COLLIER.
 C     It supports any rank when 1 < NLOOPLINE < 7.
 C     
-C     Process: d~ u > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: s~ c > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: d~ u > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: s~ c > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
 C     
 C     MODULES
