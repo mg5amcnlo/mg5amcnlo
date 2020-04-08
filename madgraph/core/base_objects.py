@@ -2600,6 +2600,20 @@ class Diagram(PhysicsObject):
         state_dict = {True:'T',False:'F'}
         return new_diag
 
+    def get_nb_t_channel(self):
+        """return number of t-channel propagator in this diagram 
+           This is used to filter multi-channel.
+        """
+        nb_t = 0
+        for v in self['vertices'][:-1]:
+            l = v.get('legs')[-1]
+            if not l.get('state'):
+                nb_t +=1
+        return nb_t
+
+            
+            
+
     def get_vertex_leg_numbers(self, 
                         veto_inter_id=Vertex.ID_to_veto_for_multichanneling,
                         max_n_loop=0):

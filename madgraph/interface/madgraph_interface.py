@@ -743,7 +743,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
@@ -774,14 +774,17 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-#        logger.info(" > (default '0') [Used for loop-induced outputs]")
-#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-#        logger.info(" > setting up the integration multichannels.") 
-#        logger.info(" > The default value of zero automatically picks the apparent")
-#        logger.info(" > appropriate choice which is to sometimes pick box loops")
-#        logger.info(" > but never higher n-points ones.")
-
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for loop-induced outputs with madevent]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+        logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
+        logger.info(" > Forbids the inclusion of channel of integration with more than X")
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate") 
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1486,7 +1489,7 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout', 'max_npoint_for_channel']:
+        if args[0] in ['timeout', 'max_npoint_for_channel', 'max_t_for_channel']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
@@ -2854,6 +2857,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel',
+                    'max_t_for_channel',
                     'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
@@ -2913,7 +2917,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
                           'max_npoint_for_channel': 0, # 0 means automaticly adapted
-                          'default_unset_couplings': 99 # 99 means infinity
+                          'default_unset_couplings': 99, # 99 means infinity
+                          'max_t_for_channel': 99, # means no restrictions
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -7564,7 +7569,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
                         ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
-        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry', 'max_t_for_channel',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
@@ -7826,7 +7831,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3 
+            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)

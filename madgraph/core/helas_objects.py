@@ -3134,16 +3134,43 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 
         return tuple(sorted(indices))
 
+    def get_nb_t_channel(self):
+        """ """
+        
+        def get_nb_t(wf):
+            mothers = []
+            try:
+                mothers = wf.get('mothers')
+            except: 
+                return  0
+            if not mothers:
+                return 0
+            nb_t = sum([get_nb_t(w) for w in mothers])
+            try:
+                if not wf.get('leg_state'):
+                    return nb_t +1
+            except Exception:
+                return nb_t
+            return nb_t
+
+        return get_nb_t(self)
+        
+        
+    nbcall = 0 
     def get_vertex_leg_numbers(self, 
               veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
-              max_n_loop=0):
+                               max_n_loop=0, max_tpropa=0):
         """Get a list of the number of legs in vertices in this diagram,
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
         shrunk loops (id=-2)"""
 
+        HelasAmplitude.nbcall +=1
         if max_n_loop == 0:
             max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+        if max_tpropa == 0:
+            max_tpropa = base_objects.Vertex.max_tpropa
+
 
         vertex_leg_numbers = [len(self.get('mothers'))] if \
                              (self['interaction_id'] not in veto_inter_id) or \
@@ -3152,6 +3179,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
+        nb_t = self.get_nb_t_channel()
+        if nb_t > max_tpropa:
+            return [] * len(vertex_leg_numbers)
 
         return vertex_leg_numbers
 
@@ -3321,6 +3351,11 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers(
                              veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)
+
+    def get_nb_t_channel(self):
+        """Get the number of T channel for this diagram"""
+
+        return self.get('amplitudes')[0].get_nb_t_channel()
 
     def get_regular_amplitudes(self):
         """ For regular HelasDiagrams, it is simply all amplitudes.

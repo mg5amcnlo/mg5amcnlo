@@ -296,7 +296,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         return sum([md.get_num_configs(model, nini) for md in 
                     self.get('mapping_diagrams')])
 
-    def find_mapping_diagrams(self):
+    def find_mapping_diagrams(self, max_tpropa=0):
         """Find all unique diagrams for all processes in this
         process class, and the mapping of their diagrams unto this
         unique diagram."""
@@ -304,6 +304,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         assert self.get('matrix_elements'), \
                "Need matrix elements to run find_mapping_diagrams"
 
+        if max_tpropa == 0:
+            max_tpropa = base_objects.Vertex.max_tpropa
+        
         matrix_elements = self.get('matrix_elements')
         model = matrix_elements[0].get('processes')[0].get('model')
         # mapping_diagrams: The configurations for the non-reducable
@@ -346,6 +349,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 # topologies (the contracted vertex has id == -2.)
                 if diagram.get_vertex_leg_numbers()!=[] and \
                                 max(diagram.get_vertex_leg_numbers()) > minvert:
+                    diagram_maps[ime].append(0)
+                    continue
+                if diagram.get_nb_t_channel() > max_tpropa:
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format
