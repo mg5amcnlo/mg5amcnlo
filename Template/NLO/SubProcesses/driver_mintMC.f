@@ -195,6 +195,11 @@ c initialize grids
                   xgrid(j,i,1)=0.d0
                enddo
             enddo
+c These will correspond to the vegas x's for the FKS variables xi_i,
+c y_ij and phi_i. Set up the MINT folding:
+            ifold_energy=ndim-2
+            ifold_yij=ndim-1
+            ifold_phi=ndim
          else
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
@@ -209,7 +214,7 @@ c to restore grids:
             read (12,*) virtual_fraction(1),average_virtual(1)
             close (12)
          endif
-c
+c         
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)

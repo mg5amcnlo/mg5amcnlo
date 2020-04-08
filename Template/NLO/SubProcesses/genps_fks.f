@@ -131,9 +131,6 @@ c     2 soft-collinear
 c Masses of particles. Should be filled in setcuts.f
       double precision pmass(nexternal)
       common /to_mass/pmass
-c     For MINT:
-      integer ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
 c local
       integer i,j,nbranch,ns_channel,nt_channel,ionebody
      &     ,fksconfiguration,icountevts,imother,ixEi,ixyij,ixpi,isolsign
@@ -384,10 +381,6 @@ c y_ij and phi_i
       ixEi=ndim-2
       ixyij=ndim-1
       ixpi=ndim
-c Set up the MINT folding:
-      ifold_energy=ixEi
-      ifold_phi=ixpi
-      ifold_yij=ixyij
 c
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
