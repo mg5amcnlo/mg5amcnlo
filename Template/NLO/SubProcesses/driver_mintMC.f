@@ -702,7 +702,7 @@ c These should be ignored (but kept for 'historical reasons')
       endif
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
-      write (*,'(a)') 'xi_i, phi_i, y_ij'
+      write (*,'(a)') 'xi_i, y_ij, phi_i'
       read (*,*) ixi_i,iy_ij,iphi_i
       write (*,*)ixi_i,iy_ij,iphi_i
 

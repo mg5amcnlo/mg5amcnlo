@@ -461,7 +461,7 @@ c -- call to MC counterterm functions
 ! assign emsca on statistical basis (don't need flow here):
          call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,mcsec
      $        ,lzone,idum,ddum)
-! include the bogus sudakov:
+! include the bogus no-emission probability:
          xmcxsec=xmcxsec*probne
       endif
       if (btest(Mccntcalled,4)) then
@@ -1806,10 +1806,11 @@ c Final consistency checks
          endif
       enddo
 
-c Overwrite the H-event scales when the H-event configutation cannot be
+c Overwrite the H-event scales when the H-event configuration cannot be
 c generated from the S-event one by the shower (i.e., it is in the dead
 c zone). Use the dipole masses of the n+1-body configuration for the
-c scales.
+c scales. (In anti-collinear+soft configurations these could be
+c small. Might check at some point using larger values for those).
       do i=1,nexternal-1
          do j=1,nexternal-1
             if (.not.are_col_conn_S(i,j)) cycle
