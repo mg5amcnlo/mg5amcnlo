@@ -3,9 +3,9 @@ c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       REAL*16 MP__MDL_SQRT__AS,MP__MDL_G__EXP__4,MP__MDL_G__EXP__2
-     $ ,MP__MDL_G__EXP__3,MP__MDL_MU_R__EXP__2,MP__MDL_LHV
-     $ ,MP__MDL_CKM3X3,MP__MDL_CONJG__CKM22,MP__MDL_CONJG__CKM3X3
-     $ ,MP__MDL_CKM33,MP__MDL_CKM22,MP__MDL_NCOL,MP__MDL_CA,MP__MDL_TF
+     $ ,MP__MDL_G__EXP__3,MP__MDL_MU_R__EXP__2,MP__MDL_CONJG__CKM3X3
+     $ ,MP__MDL_CONJG__CKM22,MP__MDL_CKM22,MP__MDL_CKM3X3
+     $ ,MP__MDL_CKM33,MP__MDL_LHV,MP__MDL_NCOL,MP__MDL_CA,MP__MDL_TF
      $ ,MP__MDL_CF,MP__MDL_MZ__EXP__2,MP__MDL_MZ__EXP__4
      $ ,MP__MDL_SQRT__2,MP__MDL_MH__EXP__2,MP__MDL_NCOL__EXP__2
      $ ,MP__MDL_MB__EXP__2,MP__MDL_MT__EXP__2,MP__MDL_AEW
@@ -22,8 +22,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       COMMON/MP_PARAMS_R/ MP__MDL_SQRT__AS,MP__MDL_G__EXP__4
      $ ,MP__MDL_G__EXP__2,MP__MDL_G__EXP__3,MP__MDL_MU_R__EXP__2
-     $ ,MP__MDL_LHV,MP__MDL_CKM3X3,MP__MDL_CONJG__CKM22
-     $ ,MP__MDL_CONJG__CKM3X3,MP__MDL_CKM33,MP__MDL_CKM22,MP__MDL_NCOL
+     $ ,MP__MDL_CONJG__CKM3X3,MP__MDL_CONJG__CKM22,MP__MDL_CKM22
+     $ ,MP__MDL_CKM3X3,MP__MDL_CKM33,MP__MDL_LHV,MP__MDL_NCOL
      $ ,MP__MDL_CA,MP__MDL_TF,MP__MDL_CF,MP__MDL_MZ__EXP__2
      $ ,MP__MDL_MZ__EXP__4,MP__MDL_SQRT__2,MP__MDL_MH__EXP__2
      $ ,MP__MDL_NCOL__EXP__2,MP__MDL_MB__EXP__2,MP__MDL_MT__EXP__2
