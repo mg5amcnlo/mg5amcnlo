@@ -1285,10 +1285,6 @@ c For the boost to the lab frame
       double precision scales(0:99)
       common /colour_connections/ icolup_s,icolup_h
 
-      integer itmp,jtmp
-      double precision scltarget,sclstart,sudpdffact
-      common/cscalprob/scltarget,sclstart,sudpdffact
-
 c To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
@@ -1861,10 +1857,6 @@ c in Ellis-Stirling-Webber
       i_dipole_dead_counter=0
       nG_S=0
       nQ_S=0
-      scltarget=1.d10
-      sudpdffact=1.d0
-      itmp=-1
-      jtmp=-1
 c
       do i=1,nexternal-1
          if(idup_s(i).eq.21)nG_S=nG_S+1
@@ -1978,12 +1970,6 @@ c Passing the following if clause must be exceedingly rare
 c$$$              stop
               startingScale0=smallptupp
             endif
-            if(stoppingScale0.lt.scltarget)then
-              scltarget=stoppingScale0
-              sclstart=startingScale0
-              itmp=i
-              jtmp=j
-            endif
             stoppingScale(icount)=stoppingScale0
             startingScale(icount)=startingScale0
             jindex(icount)=j
@@ -2080,7 +2066,6 @@ c a double colour connection (eg in gg->H). The condition that the starting
 c scale is larger than the stopping scale has not been enforced
 c so far, so do it here
            if(stoppingScale(1).lt.startingScale(1))then
-             sudpdffact=sudpdffact*pdffnum(1)/pdffden(1)
              if (isspecial(jflow).and.idup_s(i).eq.21) then
                deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
                deltaden(1)=deltaden(1)**2*pdffden(1)
@@ -2178,9 +2163,6 @@ c
              if(xtmp(jcount).ge.1.d0)xtmp(jcount)=1.d0
              if(xtmp(jcount).le.0.d0)xtmp(jcount)=0.d0
            enddo
-           sudpdffact=sudpdffact*
-     #                ( glrat(1)*pdffnum(1)/max(pdffden(1),1.d-8)+
-     #                  glrat(2)*pdffnum(2)/max(pdffden(2),1.d-8) )
            wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
          endif
  111     continue
@@ -2190,10 +2172,6 @@ c End of primary loop over i
          write(*,*)'Mismatch in number of dipole ends and Delta factors'
          write(*,*)i_dipole_counter+i_dipole_dead_counter,nQ_S,nG_S
          stop
-      endif
-      if(itmp.eq.-1.or.jtmp.eq.-1)then
-        scltarget=-1.d8
-        sclstart=-1.d8
       endif
 
 
