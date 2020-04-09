@@ -455,12 +455,12 @@ c -- call to MC counterterm functions
       call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
-         if(.not.is_pt_hard)call complete_xmcsubt(p,dummy,lzone,xmcxsec,
-     $        xmcxsec2,MCsec,probne)
+         if(.not.is_pt_hard) call complete_xmcsubt(p,dummy,lzone,xmcxsec
+     $        ,xmcxsec2,MCsec,probne)
       else
-! assign emsca on statistical basis (don't need flow here):
-         call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,mcsec
-     $        ,lzone,idum,ddum)
+! assign emsca on statistical basis (don't need flow here): 
+         if(.not.is_pt_hard) call assign_emsca_and_flow_statistical(
+     $        xmcxsec,xmcxsec2,mcsec,lzone,idum,ddum)
 ! include the bogus no-emission probability:
          xmcxsec=xmcxsec*probne
       endif
