@@ -2586,6 +2586,8 @@ class ControlSwitch(SmartQuestion):
         elif line in 'auto':
             self.switch['dynamical'] = True
             return super(ControlSwitch, self).default(line)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('unknow command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('unknow command: %s' % line)
         else:
@@ -2601,6 +2603,8 @@ class ControlSwitch(SmartQuestion):
             getattr(self, 'ans_%s' % base)(value)
         elif base in self.switch:
             self.set_switch(base, value)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('Not valid command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('Not valid command: %s' % line)                
         else:
