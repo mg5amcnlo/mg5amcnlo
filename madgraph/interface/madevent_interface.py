@@ -6473,6 +6473,12 @@ class GridPackCmd(MadEventCmd):
             misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
                          'default'], cwd=self.me_dir)
 
+        if self.run_card['python_seed'] == -2:
+            import random
+            random.seed(seed)
+        elif self.run_card['python_seed'] > 0:
+            import random
+            random.seed(self.run_card['python_seed'])            
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
