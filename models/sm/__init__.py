@@ -1,14 +1,15 @@
-import particles
-import couplings
-import lorentz
-import parameters
-import vertices
-import coupling_orders
-import function_library
-import object_library
+from __future__ import absolute_import
+from . import particles
+from . import couplings
+from . import lorentz
+from . import parameters
+from . import vertices
+from . import coupling_orders
+from . import function_library
+from . import object_library
 #from . import write_param_card
 try:
-    import decays
+    from . import decays
 except ImportError:
     pass    
 try:

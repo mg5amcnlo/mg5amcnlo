@@ -21,10 +21,8 @@ based on relevant properties.
 
 from __future__ import absolute_import
 #force filter to be a generator # like in py3
-try:
-    from  itertools import ifilter as filter
-except:
-    pass
+
+
 
 import array
 import copy
@@ -36,6 +34,7 @@ import madgraph.various.misc as misc
 from madgraph import InvalidCmd, MadGraph5Error
 from six.moves import range
 from six.moves import zip
+from six.moves import filter
 
 logger = logging.getLogger('madgraph.diagram_generation')
 

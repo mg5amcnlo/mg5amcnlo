@@ -139,7 +139,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             del options['OLP']
 
         self['init_lep_split']=False
-        if 'init_lep_split' in options.keys():
+        if 'init_lep_split' in list(options.keys()):
             self['init_lep_split']=options['init_lep_split']
             del options['init_lep_split']
 

@@ -1961,7 +1961,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         testproc = my_new_process_definition.get_process_with_legs(myleglist)
 
         for (k, v) in testproc.items():
-            if k not in self.my_process_definition.keys(): continue
+            if k not in list(self.my_process_definition.keys()): continue
             if k != 'legs':
                 self.assertEqual(my_new_process_definition[k], testproc[k])
             else:

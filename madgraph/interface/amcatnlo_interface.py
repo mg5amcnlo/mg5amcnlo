@@ -472,9 +472,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # if some orders have been set by the user,
         # check that all the orders of the model have been specified
         # set to zero those which have not been specified and warn the user
-        if myprocdef['orders'] and not all([o in myprocdef['orders'].keys() for o in myprocdef['model'].get_coupling_orders()]):
+        if myprocdef['orders'] and not all([o in list(myprocdef['orders'].keys()) for o in myprocdef['model'].get_coupling_orders()]):
             for o in myprocdef['model'].get_coupling_orders():
-                if o not in myprocdef['orders'].keys():
+                if o not in list(myprocdef['orders'].keys()):
                     myprocdef['orders'][o] = 0
                     logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
                                     'If this is not what you need, please regenerate with the correct orders.') % o)
@@ -521,7 +521,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # then increase the orders which are perturbed
         for pert in myprocdef['perturbation_couplings']:
             # if orders have been specified increase them
-            if myprocdef['orders'].keys() != ['WEIGHTED']:
+            if list(myprocdef['orders'].keys()) != ['WEIGHTED']:
                 try:
                     myprocdef['orders'][pert] += 2
                 except KeyError:
@@ -534,7 +534,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     myprocdef['squared_orders'][pert] = 200
 
         # update also the WEIGHTED entry
-        if 'WEIGHTED' in myprocdef['orders'].keys():
+        if 'WEIGHTED' in list(myprocdef['orders'].keys()):
             myprocdef['orders']['WEIGHTED'] += 1 * \
                     max([myprocdef.get('model').get('order_hierarchy')[ord] for \
                     ord in myprocdef['perturbation_couplings']])

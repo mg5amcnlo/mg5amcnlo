@@ -4568,7 +4568,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             for card in from_banner:
                 self.from_banner[card] = banner.charge_card(card)
         except KeyError:
-            if from_banner == ['param', 'run'] and banner.keys() == ['mgversion']:
+            if from_banner == ['param', 'run'] and list(banner.keys()) == ['mgversion']:
                 if self.mother_interface:
                     results = self.mother_interface.results
                     run_name = self.mother_interface.run_name 

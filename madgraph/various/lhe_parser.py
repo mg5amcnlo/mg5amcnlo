@@ -54,7 +54,7 @@ except Exception as error:
 logger = logging.getLogger("madgraph.lhe_parser")
 
 if six.PY3:
-    unicode = str
+    six.text_type = str
 
 class Particle(object):
     """ """
@@ -451,7 +451,7 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, (str,unicode)):
+        elif isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -1183,7 +1183,7 @@ class MultiEventFile(EventFile):
         """
 
 
-        if isinstance(get_wgt, (str,unicode)):
+        if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
@@ -1227,7 +1227,7 @@ class MultiEventFile(EventFile):
         """ """
         
         try:
-            str_type = (str,unicode)
+            str_type = (str,six.text_type)
         except NameError:
             str_type = (str)
         
@@ -2288,7 +2288,7 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, (str, unicode)):
+                if isinstance(k, (str, six.text_type)):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
@@ -2440,7 +2440,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, (str, unicode)):
+        elif  isinstance(obj, (str, six.text_type)):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -2647,7 +2647,7 @@ class OneNLOWeight(object):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, (str, unicode)):
+        if isinstance(input, (str, six.text_type)):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -3009,7 +3009,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, (str,unicode)):
+        if isinstance(input, (str,six.text_type)):
             self.parse(input)
         
             

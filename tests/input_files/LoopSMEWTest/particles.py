@@ -4,9 +4,10 @@
 
 
 from __future__ import division
-from object_library import all_particles, Particle
-import parameters as Param
-import CT_parameters as CTParam
+from __future__ import absolute_import
+from .object_library import all_particles, Particle
+from . import parameters as Param
+from . import CT_parameters as CTParam
 
 A = Particle(pdg_code = 22,
              name = 'A',

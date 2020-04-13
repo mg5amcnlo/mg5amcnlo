@@ -555,7 +555,7 @@ class MG5Runner(MadEventRunner):
                             break
                 output['cross_'+name] = str(cross)
             else:
-                for line in file(filepath):
+                for line in open(filepath):
                     splitline=line.split()
                     #if len(splitline)==8:
                     output['cross_'+name]=splitline[0]

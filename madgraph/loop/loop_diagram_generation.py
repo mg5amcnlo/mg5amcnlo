@@ -1122,18 +1122,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-            whole_spin_no_anti += filter(lambda p: 
-                      p.get('spin')%2==1 and p.get('self_antipart') 
-                                      and p not in whole_spin_no_anti, lcutPart) 
-            whole_spin_has_anti += filter(lambda p: 
-                      p.get('spin')%2==1 and not p.get('self_antipart')
-                                     and p not in whole_spin_has_anti, lcutPart)
-            half_spin_no_anti += filter(lambda p: 
-                      p.get('spin')%2==0 and p.get('self_antipart')
-                                       and p not in half_spin_no_anti, lcutPart) 
-            half_spin_has_anti += filter(lambda p: 
-                      p.get('spin')%2==0 and not p.get('self_antipart')
-                                      and p not in half_spin_has_anti, lcutPart)
+            whole_spin_no_anti += [p for p in lcutPart if p.get('spin')%2==1 and p.get('self_antipart') 
+                                      and p not in whole_spin_no_anti] 
+            whole_spin_has_anti += [p for p in lcutPart if p.get('spin')%2==1 and not p.get('self_antipart')
+                                     and p not in whole_spin_has_anti]
+            half_spin_no_anti += [p for p in lcutPart if p.get('spin')%2==0 and p.get('self_antipart')
+                                       and p not in half_spin_no_anti] 
+            half_spin_has_anti += [p for p in lcutPart if p.get('spin')%2==0 and not p.get('self_antipart')
+                                      and p not in half_spin_has_anti]
 
         # In an effort to canonically order loop diagrams generated, we
         # choose here to always start with whole integer spin particles and then

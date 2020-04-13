@@ -52,6 +52,7 @@ import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
 from six.moves import range
+from six.moves import zip
 
 pjoin = os.path.join
 
@@ -1075,7 +1076,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         model = matrix_element.born_me['processes'][0]['model']
 
         # first get the max_born_orders
-        if born_orders.keys() == ['WEIGHTED']:
+        if list(born_orders.keys()) == ['WEIGHTED']:
             # if user has not specified born_orders, check the 'weighted' for each
             # of the split_orders contributions
             wgt_ord_max = born_orders['WEIGHTED']
@@ -1866,7 +1867,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # Write the file
         writer.writelines(file)
 
-        return len(list(filter(lambda call: call.find('#') != 0, helas_calls))), ncolor, \
+        return len(list([call for call in helas_calls if call.find('#') != 0])), ncolor, \
                 replace_dict['nAmpSplitOrders'], replace_dict['nSqAmpSplitOrders']
 
 

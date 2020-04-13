@@ -824,7 +824,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, unicode)):
+        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode().split('\n')

@@ -911,7 +911,7 @@ class Interaction(PhysicsObject):
         flavors with identical masses and couplings) can be matched even though
         the order of the couplings specified in the UFO is different. """
 
-        return sorted(self['couplings'].keys(), key=lambda k:
+        return sorted(list(self['couplings'].keys()), key=lambda k:
         '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
 
 
