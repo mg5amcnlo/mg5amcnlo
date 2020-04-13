@@ -175,7 +175,6 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
-        
         self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
@@ -3461,6 +3460,23 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
     matrix_file = "matrix_madevent_v4.inc"
     
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True,
+                        'output_options':{},
+                        'hel_recycling': False
+                        }
+    
+    def __init__(self,  dir_path = "", opt=None):
+        
+        super(ProcessExporterFortranME, self).__init__(dir_path, opt)
+        
+        # check and format the hel_recycling options as it should if provided 
+        if isinstance(opt['output_options'], dict) and \
+                                       'hel_recycling' in opt['output_options']:
+            self.opt['hel_recycling'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['hel_recycling'], bool, 'hel_recycling')
+    
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -4745,7 +4761,10 @@ c           This is dummy particle used in multiparticle vertices
     def write_symmetry(self, writer, v5=True):
         """Write the SubProcess/driver.f file for ME"""
 
-        path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
+        if self.opt['hel_recycling']:
+            path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
+        else:
+            path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry_norecycling.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
@@ -4953,6 +4972,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
     matrix_file = "matrix_madevent_group_v4.inc"
     grouped_mode = 'madevent'
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True,
+                        'output_options':{},
+                        'hel_recycling': True
+                        }
+    
+    
     #===========================================================================
     # generate_subprocess_directory
     #===========================================================================
