@@ -314,6 +314,7 @@ c to save grids:
          write (12,*) (ans(i,1),i=1,nintegrals)
          write (12,*) (unc(i,1),i=1,nintegrals)
          write (12,*) virtual_fraction(1),average_virtual(1)
+         write (12,*) ifold_energy,ifold_phi,ifold_yij
          close (12)
 
 c*************************************************************
@@ -355,6 +356,7 @@ c to restore grids:
          read (12,*) (ans(i,1),i=1,nintegrals)
          read (12,*) (unc(i,1),i=1,nintegrals)
          read (12,*) virtual_fraction(1),average_virtual(1)
+         read (12,*) ifold_energy,ifold_phi,ifold_yij
          close (12)
 
 c determine how many events for the virtual and how many for the no-virt
