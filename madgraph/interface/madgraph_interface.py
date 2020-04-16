@@ -5615,7 +5615,7 @@ This implies that with decay chains:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd, why:
-                logger_stderr.warning('impossible to set default multiparticles %s because %s' %
+                logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
                 if self.history[-1] == 'define %s' % line.strip():
                     self.history.pop(-1)
