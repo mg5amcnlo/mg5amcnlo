@@ -2945,6 +2945,7 @@ class RunCardLO(RunCard):
         self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True, hidden=True)
+        #format output / boost
         self.add_param("lhe_version", 3.0, hidden=True)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
         self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
