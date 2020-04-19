@@ -1291,7 +1291,6 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No run_name currently define. Unable to run refine')
 
         if len(args) > 2:
-            self.help_refine()
             raise self.InvalidCmd('Too many argument for refine command')
         else:
             try:
@@ -2527,7 +2526,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             
             #we can bypass the following if scan and first result is zero
             if not bypass_run:
-                self.exec_cmd('refine %s' % nb_event, postcmd=False)
+                self.exec_cmd('refine %s --treshold=%s' % (nb_event,self.run_card['second_refine_treshold'])
+                              , postcmd=False)
             
                 self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
@@ -3416,6 +3416,17 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
+        treshold=None
+        for a in args:
+            if a.startswith('--treshold='):
+                treshold = float(a.split('=',1)[1])
+                old_xsec = self.results.current['prev_cross']
+                new_xsec = self.results.current['cross']
+                if new_xsec < old_xsec * treshold:
+                    logger.info('No need for second refine due to stability of cross-section')
+                    return
+                else:
+                    break
         # Check argument's validity
         self.check_refine(args)
         
@@ -3472,8 +3483,7 @@ Beware that this can be dangerous for local multicore runs.""")
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
-            logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
-        
+            logger.info("- Current estimate of cross-section: %s +- %s" % (cross, error))
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.

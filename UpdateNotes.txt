@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.7.3()
+      OM: Adding more option to the run_card for fine tuning phase-space integration steps
+          All are hidden by default:
+	    - hard_survey [default=F]: request for more points in survey (and subsequent refine)
+	    - second_refine_treshold [default=1.5]: forbid second refine if cross section after first refine is
+	           is smaller than cross-section of the survey times such treshold
+
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
       OM: Speed up standalone_cpp code by changing compilation flag
