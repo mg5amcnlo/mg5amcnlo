@@ -4098,6 +4098,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
                                     os.path.isdir(pjoin(pdfsets_dir, pdfset))):
                 continue
+            if not require_local:
+                if 'LHAPDF_DATA_PATH' in os.environ:
+                    found = False
+                    for path in os.environ['LHAPDF_DATA_PATH'].split(":"):
+                        if (os.path.exists(pjoin(path, pdfset)) or \
+                                    os.path.isdir(pjoin(path, pdfset))):
+                            found =True
+                            break
+                    if found:
+                        continue
+                    
+                    
             #check that the pdfset is not already there
             elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
@@ -4309,7 +4321,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = subprocess.PIPE).stdout.read().strip()
         except OSError, error:
             if error.errno == 2:
-                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % lhapdf_config
             else:
                 raise
                 

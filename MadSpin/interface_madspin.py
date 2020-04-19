@@ -1204,7 +1204,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                         run_card = self.run_card
                     else:
                         run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))                        
-                    
                     run_card["iseed"] = self.options['seed']
                     run_card['gridpack'] = True
                     run_card['systematics_program'] = 'False'
@@ -1213,6 +1212,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                     self.options['seed'] += 1
+                    self.seed = self.options['seed'] 
                     # actually creation
                     me5_cmd.exec_cmd("generate_events run_01 -f")
                     if output_width:
@@ -1222,9 +1222,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                             width *= me5_cmd.results.current['cross']
                     me5_cmd.exec_cmd("exit")                        
                     #remove pointless informat
-                    misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir)
-                    misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir)
-            
+                    if not os.path.exists(pjoin(decay_dir, 'run.sh')):
+                        devnull = open('/dev/null','w')
+                        misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir,stdout=devnull, stderr=-2)
+                        misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir,stdout=devnull, stderr=-2)
+                        devnull.close()
             # Now generate the events
             if not self.options['ms_dir']:
                 if decay_dir in self.me_int:
@@ -1460,8 +1462,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 production, counterevt= production[0], production[1:]
             if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
-            else:
-                logger.info("next event [%s]", time.time()-start)
+            #else:
+            #    logger.info("next event [%s]", time.time()-start)
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)

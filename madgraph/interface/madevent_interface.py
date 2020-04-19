@@ -1291,7 +1291,6 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No run_name currently define. Unable to run refine')
 
         if len(args) > 2:
-            self.help_refine()
             raise self.InvalidCmd('Too many argument for refine command')
         else:
             try:
@@ -2497,7 +2496,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                           postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            with misc.TMP_variable(self, 'run_name', self.run_name):
+                self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('create_gridpack', postcmd=False)
         else:
             # Regular run mode
@@ -2526,7 +2526,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             
             #we can bypass the following if scan and first result is zero
             if not bypass_run:
-                self.exec_cmd('refine %s' % nb_event, postcmd=False)
+                self.exec_cmd('refine %s --treshold=%s' % (nb_event,self.run_card['second_refine_treshold'])
+                              , postcmd=False)
             
                 self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
@@ -2882,7 +2883,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
-                while line.startswith('#') or line.startswith(' '):
+                while re.search('^(#|\s|\d)', line):
                     line = param_card.pop(line_number)
                     if not particle or line.startswith('#'):
                         line=param_card[line_number]
@@ -3415,6 +3416,17 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
+        treshold=None
+        for a in args:
+            if a.startswith('--treshold='):
+                treshold = float(a.split('=',1)[1])
+                old_xsec = self.results.current['prev_cross']
+                new_xsec = self.results.current['cross']
+                if new_xsec < old_xsec * treshold:
+                    logger.info('No need for second refine due to stability of cross-section')
+                    return
+                else:
+                    break
         # Check argument's validity
         self.check_refine(args)
         
@@ -3471,8 +3483,7 @@ Beware that this can be dangerous for local multicore runs.""")
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
-            logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
-        
+            logger.info("- Current estimate of cross-section: %s +- %s" % (cross, error))
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -4663,11 +4674,13 @@ tar -czf split_$1.tar.gz split_$1
                         for hepmc_file in all_hepmc_files:
                             # Remove in an efficient way the starting and trailing HEPMC tags
                             # check for support of negative argument in head
-                            pid = os.system('head -n -1 %s &> /dev/null' % __file__)
+                            devnull = open(os.path.devnull, 'w')
+                            pid = misc.call(['head','-n', '-1', __file__], stdout=devnull, stderr=devnull)
+                            devnull.close()
                             if pid == 0:
-                                os.system('head -n -1 %s | tail -n +%d > %s/tmpfile' % 
-                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)))
-                                misc.call(['mv', 'tmp', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
+                                misc.call('head -n -1 %s | tail -n +%d > %s/tmpfile' %
+                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)), shell=True)
+                                misc.call(['mv', 'tmpfile', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
                             elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
@@ -6470,6 +6483,12 @@ class GridPackCmd(MadEventCmd):
             misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
                          'default'], cwd=self.me_dir)
 
+        if self.run_card['python_seed'] == -2:
+            import random
+            random.seed(seed)
+        elif self.run_card['python_seed'] > 0:
+            import random
+            random.seed(self.run_card['python_seed'])            
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),

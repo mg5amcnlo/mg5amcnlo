@@ -1,7 +1,8 @@
 c/* ********************************************************* */
 c/*  Equivalent photon approximation structure function.   * */
-c/*     Improved Weizsaecker-Williams formula              * */
 c/*   V.M.Budnev et al., Phys.Rep. 15C (1975) 181          * */
+c/*     Improved Weizsaecker-Williams formula              * */
+c/*     http://inspirehep.net/record/359425                * */  
 c/* ********************************************************* */
 c   provided by Tomasz Pierzchala - UCL
 

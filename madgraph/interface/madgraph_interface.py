@@ -459,7 +459,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
-        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
+        logger.info("      --noeps=True: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -1078,7 +1078,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process:
+            if 'noborn' in process or 'sqrvirt' in process:
                 valid = True
             else:
                 raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
@@ -5620,7 +5620,7 @@ This implies that with decay chains:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd, why:
-                logger_stderr.warning('impossible to set default multiparticles %s because %s' %
+                logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
                 if self.history[-1] == 'define %s' % line.strip():
                     self.history.pop(-1)
@@ -6405,18 +6405,18 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
+                target = 'https://home.fnal.gov/~parke/TD/td_mac_intel64.tar.gz'
                 misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
-                files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
+                files.mv(MG5DIR + '/td/td_intel_mac64',MG5DIR+'/td/td')
             else:
                 if sys.maxsize > 2**32:
                     logger.info('Downloading TD for Linux 64 bit')
-                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td64/td'
-                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
-                In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
-                instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                    target = 'https://home.fnal.gov/~parke/TD/td_linux_64bit.tar.gz'
+                    #logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
+                #In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
+                #instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
