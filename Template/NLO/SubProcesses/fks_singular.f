@@ -3844,8 +3844,17 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
      #      j_fks.gt.nincoming ) .or.
      #    (xbk(2).gt.1.d0.and.j_fks.eq.1) .or.
      #    (xbk(1).gt.1.d0.and.j_fks.eq.2) )then
-        write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
-        stop
+
+      ! add an extra check on the bjorken x's (relevant for ee
+      ! collisions)
+        if (xbk(1).gt.1d0.and.xbk(1)-1d0.lt.1d-12) then
+          xbk(1) = 1d0
+        else if (xbk(2).gt.1d0.and.xbk(2)-1d0.lt.1d-12) then
+          xbk(2) = 1d0
+        else
+          write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
+          stop
+        endif
       endif
       return
       end

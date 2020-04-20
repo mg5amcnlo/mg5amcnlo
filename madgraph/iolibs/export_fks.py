@@ -639,6 +639,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec_events_pdf_dummy.f',
                      'iproc_map.f',
                      'run.inc',
+                     'eepdf.inc',
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
@@ -2551,16 +2552,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
     
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                 self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
         replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['ee_comp_vars'] = eepdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
-        pdf_vars_mirr, pdf_data_mirr, pdf_lines_mirr = \
-                self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
-        replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
-    
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/parton_lum_n_fks.inc')).read()
         file = file % replace_dict
@@ -3027,6 +3025,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         model = processes[0].get('model')
 
         pdf_definition_lines = ""
+        ee_pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
 
@@ -3051,7 +3050,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
 
             # Set conversion from PDG code to number used in PDF calls
-            pdgtopdf = {21: 0, 22: 7}
+            pdgtopdf = {21: 0, 22: 7, -11: -8, 11: 8, -13: -9, 13: 9, -15: -10, 15: 10}
             # Fill in missing entries of pdgtopdf
             for pdg in sum(initial_states,[]):
                 if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
@@ -3061,9 +3060,15 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                     pdgtopdf[pdg] = 6000000 + pdg
 
             # Get PDF variable declarations for all initial states
+            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n" 
             for i in [0,1]:
                 pdf_definition_lines += "DOUBLE PRECISION " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
+                ee_pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
@@ -3094,13 +3099,16 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 for initial_state in init_states:
                     if initial_state in pdf_codes.keys():
                         if subproc_group:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
+                                    ("if (abs(lpp(ib(%d))).eq.4) call store_ibeam_ee(%d)\n" + \
+                                     "%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n" + \
+                                     "IF (ABS(LPP(%d)).EQ.4) %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
-                                          ibeam, ibeam)
+                                          ibeam, ibeam,
+                                          ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3108,13 +3116,16 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                                      "%s%d=0d0\n") % \
                                          (pdf_codes[initial_state],i + 1)                                
                         else:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
-                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
+                                    ("if (abs(lpp(%d)).eq.4) call store_ibeam_ee(%d)\n" + \
+                                     "%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n" + \
+                                     "IF (ABS(LPP(%d)).EQ.4) %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
-                                          ibeam, ibeam)
+                                          ibeam, ibeam,
+                                          ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3130,18 +3141,28 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC) = "
+                comp_list = []
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
+                        comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                     else:
                         pdf_lines = pdf_lines + "1d0*"
+                        comp_list.append("DUMMY")
+
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
 
+                # this is for the lepton collisions with electron luminosity 
+                # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                pdf_lines += "if (ABS(LPP(1)).EQ.4.and.ABS(LPP(2)).EQ.4) " + \
+                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                             tuple(comp_list)
+
         # Remove last line break from pdf_lines
-        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
 
     #test written

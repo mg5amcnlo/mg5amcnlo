@@ -121,7 +121,7 @@ C Fill common block for Les Houches init info
                idbmup(i)=11
             elseif(lpp(i).eq.-3) then
                idbmup(i)=-11
-            elseif(lpp(i).eq.0) then
+            elseif(lpp(i).eq.0.or.lpp(i).eq.4) then
                open (unit=71,status='old',file='initial_states_map.dat')
                read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
                close (71)
