@@ -530,6 +530,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
         logger.info("Example: check full p p > j j",'$MG:color:GREEN')
+        logger.info("Using leshouches file as input",'$MG:color:GREEN')
+        logger.info("    use the option --events=PATH")
+        logger.info("      zipped file are not supported")
+        logger.info("      to loop over the file use the option --skip_evt=X")
+        logger.info("")
         logger.info("Options for loop processes only:",'$MG:BOLD')
         logger.info("o timing:",'$MG:color:GREEN')
         logger.info("   Generate and output a process and returns detailed")
@@ -926,7 +931,9 @@ class CheckValidForCmd(cmd.CheckCmd):
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
-                   '--collier_mode':'1'}  
+                   '--collier_mode':'1',
+                   '--events': None,
+                   '--skip_evt':0}  
 
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -3869,6 +3876,15 @@ This implies that with decay chains:
             option = args[i].split('=')
             if option[0] =='--energy':
                 options['energy']=float(option[1])
+            elif option[0] == '--events' and option[1]:
+                if option[1] == 'None':
+                    options['events'] = None
+                elif not os.path.exists(option[1]):
+                    raise Exception, 'path %s does not exists' % option[1]
+                else:
+                    options['events'] = option[1]
+            elif option[0] == '--skip_evt':
+                options['skip_evt']=int(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
             elif option[0]=='--helicity':
