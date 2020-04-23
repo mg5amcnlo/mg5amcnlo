@@ -3196,11 +3196,6 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-
-        if (self['lpp1'] != 1 or self['lpp2'] != 1) and self['use_syst']:
-            logger.warning('non proton beam used. Therefore we can not handle scale uncertainty with use_syst. We change the value of \'use_syst\' to False')
-            self['use_syst'] = False
-             
     
         # check validity of the pdf set
         if self['pdlabel'] == 'lhapdf':
