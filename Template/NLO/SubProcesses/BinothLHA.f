@@ -267,6 +267,7 @@ C Uncomment the lines below that apply to the case at hand
         ! this is the number of powers of 'e' in the born
         qed_pow_b = amp_orders(qed_pos)
         amp_orders(qed_pos) = amp_orders(qed_pos) + 2
+        if (amp_orders(qed_pos).gt.NLO_ORDERS(qed_pos)) cycle
 C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 C$$$        ! the following lines need to be uncommented when
 C$$$        ! one starts with a Gmu-scheme model
