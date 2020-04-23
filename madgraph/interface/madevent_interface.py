@@ -3422,10 +3422,11 @@ Beware that this can be dangerous for local multicore runs.""")
                 treshold = float(a.split('=',1)[1])
                 old_xsec = self.results.current['prev_cross']
                 new_xsec = self.results.current['cross']
-                if new_xsec < old_xsec * treshold:
+                if old_xsec > new_xsec * treshold:
                     logger.info('No need for second refine due to stability of cross-section')
                     return
                 else:
+                    args.remove(a)
                     break
         # Check argument's validity
         self.check_refine(args)
