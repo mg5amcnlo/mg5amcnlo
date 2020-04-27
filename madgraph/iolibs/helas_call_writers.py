@@ -14,6 +14,8 @@
 ################################################################################
 """Classes for writing Helas calls. HelasCallWriter is the base class."""
 
+import re
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -231,6 +233,8 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         res = []
         for diagram in matrix_element.get('diagrams'):
+            
+            
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
             res.append("# Amplitude(s) for diagram number %d" % \
@@ -274,8 +278,14 @@ class HelasCallWriter(base_objects.PhysicsObject):
         corresponding to the key"""
 
         try:
+            #misc.sprint(wavefunction['number_external'])
             call = self["wavefunctions"][wavefunction.get_call_key()](\
-                wavefunction)
+                                                                   wavefunction)
+            if wavefunction.is_t_channel():
+                call = re.sub(',\s*fk_\w*\s*,', ', ZERO,', call)
+            else:   
+                call = self["wavefunctions"][wavefunction.get_call_key()](\
+                                                                   wavefunction)            
             return call
         except KeyError:
             return ""

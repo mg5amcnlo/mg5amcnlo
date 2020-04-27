@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __builtin__ import False
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and
@@ -973,6 +974,26 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_majorana(self):
         return self.is_fermion() and self.get('self_antipart')
+
+    def is_t_channel(self):
+        
+        ninitial = 2
+        if self.get('number_external') > ninitial:
+            return False
+        if self['mothers']:
+            nb_t_channel= sum(int(wf.is_t_channel()) for wf in self['mothers'])
+        else:
+            return True
+            
+        if nb_t_channel == 1:
+            return True
+        else:
+            return False
+        
+    
+        
+        
+
 
     def get_analytic_info(self, info, alohaModel=None):
         """ Returns a given analytic information about this loop wavefunction or
@@ -2011,6 +2032,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
                        x1.get('legs')[-1].get('number'))
 
+        for t in tchannels:
+            t['is_t_channel'] = True
+        for s in schannels:
+            s['is_t_channel'] = False
+            
         return schannels, tchannels
 
     def get_struct_external_leg_ids(self):
