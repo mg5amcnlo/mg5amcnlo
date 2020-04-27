@@ -3422,10 +3422,11 @@ Beware that this can be dangerous for local multicore runs.""")
                 treshold = float(a.split('=',1)[1])
                 old_xsec = self.results.current['prev_cross']
                 new_xsec = self.results.current['cross']
-                if new_xsec < old_xsec * treshold:
+                if old_xsec > new_xsec * treshold:
                     logger.info('No need for second refine due to stability of cross-section')
                     return
                 else:
+                    args.remove(a)
                     break
         # Check argument's validity
         self.check_refine(args)
@@ -6666,11 +6667,11 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
-                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                    AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                    AllEvent.add(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                                  sum_xsec,
                                  math.sqrt(sum(x**2 for x in sum_xerru)),
                                  sum_axsec) 

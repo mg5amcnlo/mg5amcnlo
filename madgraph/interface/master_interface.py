@@ -215,6 +215,8 @@ class Switcher(object):
                 elif nlo_mode in ['virt', 'sqrvirt']:
                     self.change_principal_cmd('MadLoop', allow_switch)
                 elif nlo_mode == 'noborn': 
+                    if self.current_interface == "MadGraph":
+                        allow_switch = True
                     self.change_principal_cmd('MadLoop', allow_switch)
                     self.cmd.validate_model(self, loop_type=nlo_mode,
                                                             coupling_type=orders)
