@@ -62,11 +62,19 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
+        if abs(part.get('pdg_code')) == 23 and leg.get('state') == False:
+                part2 = model.get_particle(22)
+                mass = part2.get('mass')
+                width = part2.get('mass')
+        else:
+            mass = part.get('mass')
+            width = part.get('width')
 
         return [((leg.get('number'), part.get('spin'),
-                  part.get('mass'), part.get('width'), part.get('color')),
+                  mass, width, part.get('color')),
                  leg.get('number'))]
-        
+
+    
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify configs:
@@ -77,9 +85,18 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         if last_vertex:
             return ((0,),)
         else:
-            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            leg = vertex.get('legs')[-1]
+            part = model.get_particle(leg.get('id'))
+            if abs(part.get('pdg_code')) == 23 and leg.get('state') == False:
+                part2 = model.get_particle(22)
+                mass = part2.get('mass')
+                width = part2.get('mass')
+            else:
+                mass = part.get('mass')
+                width = part.get('width')
+            
             return ((part.get('color'),
-                     part.get('mass'), part.get('width')),
+                     mass, width),
                     0)
 
     @staticmethod
