@@ -3195,7 +3195,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if max_n_loop == 0:
             max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
         if max_tpropa == 0:
-            max_tpropa = base_objects.Vertex.max_tpropa
+            try:
+                max_tpropa = base_objects.Vertex.max_tpropa
+            except AttributeError:
+                max_tpropa = 99
 
 
         vertex_leg_numbers = [len(self.get('mothers'))] if \
