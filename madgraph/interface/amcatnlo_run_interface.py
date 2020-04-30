@@ -4971,6 +4971,23 @@ RESTART = %(mint_mode)s
         return input_files, output_files, required_output,  args
 
 
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+        files.cp(os.path.join(lep_d_path, 'eepdf.inc'), sourcedir)
+
+
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
@@ -5033,14 +5050,25 @@ RESTART = %(mint_mode)s
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') != 0 or \
-                 self.banner.get_detail('run_card', 'lpp2') != 0):
+                (self.banner.get_detail('run_card', 'lpp1') not in [0, 4] or \
+                 self.banner.get_detail('run_card', 'lpp2') not in [0, 4]):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
+        # this is the case of collision with dressed leptons
+        elif self.banner.get_detail('run_card', 'lpp1') == \
+             self.banner.get_detail('run_card', 'lpp2') == 4:
+
+            # force not to use LHAPDF in this case
+            if self.run_card['pdlabel'] == 'lhapdf':
+                raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
+            # copy the files for the chosen density
+            self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
+
+        # bare leptons, or anything else
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
