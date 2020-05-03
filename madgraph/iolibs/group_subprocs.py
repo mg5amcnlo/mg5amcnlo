@@ -62,15 +62,17 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
-        if abs(part.get('pdg_code')) == 23 and leg.get('state') == False:
+        if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('mass')
+                spin = part2.get('spin')
         else:
             mass = part.get('mass')
             width = part.get('width')
+            spin = part.get('spin')
 
-        return [((leg.get('number'), part.get('spin'),
+        return [((leg.get('number'), spin,
                   mass, width, part.get('color')),
                  leg.get('number'))]
 
