@@ -3665,6 +3665,7 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
+    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll'] 
     
     def default_setup(self):
         """define the default value"""
@@ -3686,7 +3687,7 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'])                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] + self.allowed_lep_densities)                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -3774,7 +3775,12 @@ class RunCardNLO(RunCard):
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
         if self['lpp1']==0 and self['lpp2']==0:
-            if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+            if self['lpp1'] == self['lpp2'] == 4:
+                # for dressed lepton collisions, check that the lhaid is a valid one
+                if self['pdlabel'] not in self.allowed_lep_densities:
+                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+
+            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]
                 logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')

@@ -278,7 +278,15 @@ C
 c---------------------------------------------------------------
 c---------------------------------------------------------------
 
+C dressed lepton collisions: these are the names of the directories
+C  inside Source/PDF/lep_densities. Keep in mind that pdlabel
+C  has only the first 7 characters
+      elseif (pdlabel .eq. 'isronly' .or. pdlabel .eq. 'cepc240'
+     $  .or. pdlabel .eq. 'ilc500l') then
+       asmz=0.118d0
 
+c---------------------------------------------------------------
+c---------------------------------------------------------------
       else
           write(6,*) 'Unimplemented distribution= ',pdlabel
           write(6,*) 'Implemented are: ',
