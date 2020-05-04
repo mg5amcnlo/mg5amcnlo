@@ -805,7 +805,9 @@ c Write the <scales> block only for scales related to valid colour lines
             are_col_conn=.false.
             scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
             do i=1,NUP
+               if (abs(ISTUP(i)).ne.1) cycle
                do j=1,NUP
+                  if (abs(ISTUP(j)).ne.1) cycle
                   if(i.eq.j)cycle
                   are_col_conn(i,j)=
      &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
