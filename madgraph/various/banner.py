@@ -3965,7 +3965,7 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll'] 
+    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll', 'fcce240ll', 'fcce365ll'] 
     
     def default_setup(self):
         """define the default value"""

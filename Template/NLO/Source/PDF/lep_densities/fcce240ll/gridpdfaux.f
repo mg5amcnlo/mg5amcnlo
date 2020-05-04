@@ -23,8 +23,12 @@ c     other partons are zero
         else
           if (n .eq. 1) then
             k=1d0-beta
-          else
-            k=0d0
+          else if (n .eq. 2) then
+            k=-beta-b
+          else if (n .eq. 3) then
+            k=1d0-beta
+          else if (n .ge. 4) then
+            k=-beta-b
           endif
         endif
       else if (beamid .eq. -11) then
@@ -33,6 +37,12 @@ c     other partons are zero
         else
           if (n .eq. 1) then
             k=1d0-beta
+          else if (n .eq. 2) then
+            k=1d0-beta
+          else if (n .eq. 3) then
+            k=-beta-b
+          else if (n .ge. 4) then
+            k=-beta-b
           else
             k=0d0
           endif
@@ -55,8 +65,12 @@ c     other partons are zero
         else
           if (n .eq. 1) then
             res=1
-          else
-            res=0
+          else if (n .eq. 2) then
+            res=2
+          else if (n .eq. 3) then
+            res=1
+          else if (n .ge. 4) then
+            res=2
           endif
         endif
       else if (beamid .eq. -11) then
@@ -65,8 +79,12 @@ c     other partons are zero
         else
           if (n .eq. 1) then
             res=1
-          else
-            res=0
+          else if (n .eq. 2) then
+            res=1
+          else if (n .eq. 3) then
+            res=2
+          else if (n .ge. 4) then
+            res=2
           endif
         endif
       endif
@@ -98,6 +116,12 @@ c     other partons are zero
         else
           if (n .eq. 1) then
             res = 1d0
+          else if (n .eq. 2) then
+            res = 1d0
+          else if (n .eq. 3) then
+            res = 1d0
+          else if (n .eq. 4) then
+            res = 1d0
           else
             res = 1d0
           endif
@@ -107,6 +131,12 @@ c     other partons are zero
           res = 1d0
         else
           if (n .eq. 1) then
+            res = 1d0
+          else if (n .eq. 2) then
+            res = 1d0
+          else if (n .eq. 3) then
+            res = 1d0
+          else if (n .eq. 4) then
             res = 1d0
           else
             res = 1d0
