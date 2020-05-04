@@ -282,7 +282,8 @@ C dressed lepton collisions: these are the names of the directories
 C  inside Source/PDF/lep_densities. Keep in mind that pdlabel
 C  has only the first 7 characters
       elseif (pdlabel .eq. 'isronly' .or. pdlabel .eq. 'cepc240'
-     $  .or. pdlabel .eq. 'ilc500l') then
+     $  .or. pdlabel .eq. 'ilc500l' .or. pdlabel .eq. 'fcce240'
+     $  .or. pdlabel .eq. 'fcce365') then
        asmz=0.118d0
 
 c---------------------------------------------------------------
