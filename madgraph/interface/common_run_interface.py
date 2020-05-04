@@ -2836,8 +2836,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events','lheEvents0_%d'%MA5_run_number))+\
-                                       misc.glob('*.root',pjoin(reco_output,'Output','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','SAF','_reco_events','lheEvents0_%d'%MA5_run_number))+\
+                                       misc.glob('*.root',pjoin(reco_output,'Output','SAF','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2852,7 +2852,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     parent_dir_name = os.path.basename(os.path.dirname(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
                       '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
-                      MA5_runtag,i+1),'Output','_reco_events',parent_dir_name,links_created[-1]),
+                      MA5_runtag,i+1),'Output','SAF','_reco_events',parent_dir_name,links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
 
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
