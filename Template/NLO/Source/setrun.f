@@ -134,7 +134,9 @@ C Fill common block for Les Houches init info
             endif
             ebmup(i)=ebeam(i)
          enddo
-         call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+         if ((abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) .or.
+     $       (abs(lpp(1)).eq.1.and.abs(lpp(2)).eq.1)) 
+     $       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
       endif
 c Fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
