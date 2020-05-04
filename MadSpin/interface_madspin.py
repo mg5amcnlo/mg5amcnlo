@@ -67,7 +67,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
-        self.add_param('spinmode', "madspin", allowed=['madspin','none','onshell'])
+        self.add_param('spinmode', "madspin", allowed=['full','madspin','none','onshell'])
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for spinmode==none. Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -137,8 +137,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.decay = madspin.decay_misc()
         self.model = None
-        self.mode = "madspin" # can be flat/bridge change the way the decay is done.
-                              # note amc@nlo does not support bridge.
+        #self.mode = "madspin" # can be flat/bridge change the way the decay is done.
+        #                      # note amc@nlo does not support bridge.
         
         self.options = MadSpinOptions()
         
@@ -458,7 +458,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
         
         elif args[0] == "spinmode":
-            if args[1].lower() not in ["full", "onshell", "none"]:
+            if args[1].lower() not in ["full", "onshell", "none", "madspin"]:
                 raise self.InvalidCmd("spinmode can only take one of those 3 value: full/onshell/none")
              
         elif args[0] == "run_card":
