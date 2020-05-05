@@ -606,7 +606,7 @@ c
             Write(float,'(f16.5)') ptclus
             write(integfour,'(i4)') ito(i)
             temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
-     $           /' ="'//trim(adjustl(float))//'"'
+     $           /'="'//trim(adjustl(float))//'"'
          enddo
          ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
       endif
