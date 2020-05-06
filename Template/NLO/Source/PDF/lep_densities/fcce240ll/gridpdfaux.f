@@ -1,3 +1,26 @@
+      integer function eepdf_n_components(partonid,beamid)
+      implicit none
+      integer partonid,beamid
+      integer ncom
+c     electron beam
+      if (beamid .eq. 11) then
+c     other partons are zero
+        if (partonid .ne. 11) then
+          ncom=0
+        else
+          ncom=4
+        endif
+      else if (beamid .eq. -11) then
+        if (partonid .ne. -11) then
+          ncom=0
+        else
+          ncom=4
+        endif
+      endif
+      eepdf_n_components=ncom
+      end
+
+
 c     This function return the power of (1-x)
       real*8 function eepdf_tilde_power(Q2,n,partonid,beamid)
       implicit none
@@ -27,8 +50,10 @@ c     other partons are zero
             k=-beta-b
           else if (n .eq. 3) then
             k=1d0-beta
-          else if (n .ge. 4) then
+          else if (n .eq. 4) then
             k=-beta-b
+          else
+            k=0d0
           endif
         endif
       else if (beamid .eq. -11) then
@@ -41,7 +66,7 @@ c     other partons are zero
             k=1d0-beta
           else if (n .eq. 3) then
             k=-beta-b
-          else if (n .ge. 4) then
+          else if (n .eq. 4) then
             k=-beta-b
           else
             k=0d0
@@ -69,8 +94,10 @@ c     other partons are zero
             res=2
           else if (n .eq. 3) then
             res=1
-          else if (n .ge. 4) then
+          else if (n .eq. 4) then
             res=2
+          else
+            res=0
           endif
         endif
       else if (beamid .eq. -11) then
@@ -83,8 +110,10 @@ c     other partons are zero
             res=1
           else if (n .eq. 3) then
             res=2
-          else if (n .ge. 4) then
+          else if (n .eq. 4) then
             res=2
+          else
+            res=0
           endif
         endif
       endif
