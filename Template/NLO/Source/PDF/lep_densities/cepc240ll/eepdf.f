@@ -39,8 +39,7 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_1_1_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else if(ipart.eq.11)then
           if(ibeam.eq.-11)then
@@ -48,12 +47,10 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_1_2_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else
-          write(*,*)'unknown parton ID:',ipart
-          stop
+          tmp=0d0
         endif
       else if(icom.eq.2)then
         if(ipart.eq.-11)then
@@ -62,8 +59,7 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_2_1_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else if(ipart.eq.11)then
           if(ibeam.eq.-11)then
@@ -71,12 +67,10 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_2_2_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else
-          write(*,*)'unknown parton ID:',ipart
-          stop
+          tmp=0d0
         endif
       else if(icom.eq.3)then
         if(ipart.eq.-11)then
@@ -85,8 +79,7 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_3_1_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else if(ipart.eq.11)then
           if(ibeam.eq.-11)then
@@ -94,12 +87,10 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_3_2_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else
-          write(*,*)'unknown parton ID:',ipart
-          stop
+          tmp=0d0
         endif
       else if(icom.eq.4)then
         if(ipart.eq.-11)then
@@ -108,8 +99,7 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_4_1_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else if(ipart.eq.11)then
           if(ibeam.eq.-11)then
@@ -117,13 +107,13 @@
           else if(ibeam.eq.11)then
           tmp=eepdf_4_2_2(y,z)
           else
-            write(*,*)'unknown beam ID:',ibeam
-            stop
+            tmp=0d0
           endif
         else
-          write(*,*)'unknown parton ID:',ipart
-          stop
+          tmp=0d0
         endif
+      else
+        tmp=0d0
       endif
       eepdf_tilde=tmp*eepdf_tilde_factor(y,Q2,icom,ipart,ibeam)
       end

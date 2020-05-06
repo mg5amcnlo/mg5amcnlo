@@ -5047,7 +5047,6 @@ RESTART = %(mint_mode)s
         # now copy the files
         for filename in ['eepdf.f', 'gridpdfaux.f']:
             files.cp(os.path.join(lep_d_path, filename), pdf_path)
-        files.cp(os.path.join(lep_d_path, 'eepdf.inc'), sourcedir)
 
 
     def compile(self, mode, options):
