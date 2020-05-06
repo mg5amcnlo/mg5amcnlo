@@ -132,7 +132,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-Subroutine FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, TS)
+Subroutine  MATRIX%(proc_id)s(P,NHEL,IC, TS)
 C  
 %(info_lines)s
 C
