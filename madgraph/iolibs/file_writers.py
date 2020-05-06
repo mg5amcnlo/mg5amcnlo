@@ -202,6 +202,7 @@ class FortranWriter(FileWriter):
     number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
+    uniformcase = True #force everyting to be lower/upper case 
     downcase = False
     line_length = 71
     max_split = 20
@@ -257,23 +258,24 @@ class FortranWriter(FileWriter):
             # Replace all double quotes by single quotes
             myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
-            splitline = myline.split('\'')
-            myline = ""
-            i = 0
-            while i < len(splitline):
-                if i % 2 == 1:
-                    # This is a quote - check for escaped \'s
-                    while  splitline[i] and splitline[i][-1] == '\\':
-                        splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
-                else:
-                    # Otherwise downcase/upcase
-                    if FortranWriter.downcase:
-                        splitline[i] = splitline[i].lower()
+            if self.uniformcase:
+                splitline = myline.split('\'')
+                myline = ""
+                i = 0
+                while i < len(splitline):
+                    if i % 2 == 1:
+                        # This is a quote - check for escaped \'s
+                        while  splitline[i] and splitline[i][-1] == '\\':
+                            splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                     else:
-                        splitline[i] = splitline[i].upper()
-                i = i + 1
-
-            myline = "\'".join(splitline).rstrip()
+                        # Otherwise downcase/upcase
+                        if FortranWriter.downcase:
+                            splitline[i] = splitline[i].lower()
+                        else:
+                            splitline[i] = splitline[i].upper()
+                    i = i + 1
+    
+                myline = "\'".join(splitline).rstrip()
 
             # Check if line starts with dual keyword and adjust indent 
             if self.__keyword_list and re.search(self.keyword_pairs[\

@@ -3671,7 +3671,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                           v5=self.opt['v5_model'])
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
-        filename = pjoin(Ppath, 'matrix.f')
+        if self.opt['hel_recycling']:
+            filename = pjoin(Ppath, 'matrix_orig.f')
+        else:
+            filename = pjoin(Ppath, 'matrix.f')
         calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename),
                       matrix_element, fortran_model, subproc_number = me_number)
@@ -5042,14 +5045,53 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):
-            filename = 'matrix%d.f' % (ime+1)
-            calls, ncolor = \
-               self.write_matrix_element_v4(writers.FortranWriter(filename), 
-                            matrix_element,
-                            fortran_model,
-                            proc_id=str(ime+1),
-                            config_map=subproc_group.get('diagram_maps')[ime],
-                            subproc_number=group_number)
+            if self.opt['hel_recycling']:
+                filename = 'matrix%d_orig.f' % (ime+1)
+                replace_dict = self.write_matrix_element_v4(None, 
+                                matrix_element,
+                                fortran_model,
+                                proc_id=str(ime+1),
+                                config_map=subproc_group.get('diagram_maps')[ime],
+                                subproc_number=group_number)
+                calls,ncolor = replace_dict['return_value']
+                tfile = open(replace_dict['template_file']).read()
+                file = tfile % replace_dict
+                # Add the split orders helper functions.
+                file = file + '\n' + open(replace_dict['template_file2'])\
+                                                            .read()%replace_dict
+                # Write the file
+                writer = writers.FortranWriter(filename)
+                writer.writelines(file)
+                
+                #
+                # write the dedicated template for helicity recycling
+                #
+                to_keep = ['ncomb', 'helicity_lines']
+                for key in to_keep:
+                    assert key in replace_dict
+                    replace_dict[key] = '%({0})s'.format(key)
+                    
+                file = tfile % replace_dict
+                # Add the split orders helper functions.
+                file = file + '\n' + open(replace_dict['template_file2'])\
+                                                            .read()%replace_dict
+                # Write the file
+                writer = writers.FortranWriter('template_matrix%d.f' % (ime+1))
+                writer.uniformcase = False
+                writer.writelines(file)
+                
+                
+                
+                
+            else:
+                filename = 'matrix%d.f' % (ime+1)
+                calls, ncolor = \
+                   self.write_matrix_element_v4(writers.FortranWriter(filename), 
+                                matrix_element,
+                                fortran_model,
+                                proc_id=str(ime+1),
+                                config_map=subproc_group.get('diagram_maps')[ime],
+                                subproc_number=group_number)
 
             filename = 'auto_dsig%d.f' % (ime+1)
             self.write_auto_dsig_file(writers.FortranWriter(filename),

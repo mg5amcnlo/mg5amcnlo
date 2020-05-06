@@ -20,7 +20,7 @@ C
     Include 'nexternal.inc'
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
-    PARAMETER (             NCOMB=%(ncomb)d)
+    PARAMETER (             NCOMB=%(ncomb)s)
     INTEGER    NGRAPHS
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
