@@ -4021,7 +4021,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':''}
-
+ 
+ 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
@@ -5066,11 +5067,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 #
                 # write the dedicated template for helicity recycling
                 #
-                to_keep = ['ncomb', 'helicity_lines']
-                for key in to_keep:
-                    assert key in replace_dict
-                    replace_dict[key] = '%({0})s'.format(key)
-                    
+                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read() 
                 file = tfile % replace_dict
                 # Add the split orders helper functions.
                 file = file + '\n' + open(replace_dict['template_file2'])\
