@@ -5979,10 +5979,16 @@ tar -czf split_$1.tar.gz split_$1
 
         eradir = self.options['exrootanalysis_path']
         totar = False
+        torm = False
         if input.endswith('.gz'):
-            misc.gunzip(input, keep=True)
-            totar = True
-            input = input[:-3]
+            if not os.path.exists(input) and os.path.exists(input[:-3]):
+                totar = True
+                input = input[:-3]
+            else:
+                misc.gunzip(input, keep=True)
+                totar = False
+                torm = True
+                input = input[:-3]
             
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
@@ -5994,12 +6000,13 @@ tar -czf split_$1.tar.gz split_$1
         if totar:
             if os.path.exists('%s.gz' % input):
                 try:
-                    os.remove(input)
+                    os.remove('%s.gz' % input)
                 except:
                     pass
             else:
                 misc.gzip(input)
-            
+        if torm:
+            os.remove(input)
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
