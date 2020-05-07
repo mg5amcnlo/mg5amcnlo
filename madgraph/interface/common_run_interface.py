@@ -4785,10 +4785,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return []
         
         self.special_shortcut.update({
-            'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s'])
+            'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s']),
+            'nodecay':([], ['edit madspin_card --comment_line="decay"'])
             })
         self.special_shortcut_help.update({
-            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.'
+            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
+            'nodecay': 'remove all decay previously defined in madspin',
              })
         return []
     
@@ -6489,6 +6491,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
         logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
         logger.info( '     --clean remove all previously existing line in  the file')
+        logger.info( '     --comment_line="<regular-expression>"  comment all lines matching the regular expression')
         logger.info('')
         logger.info('    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('')
@@ -6634,7 +6637,29 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
-                                            
+
+            elif args[1].startswith('--comment_line='):
+                # catch the line/regular expression and replace the associate line
+                # if no line match go to check if args[2] has other instruction starting with --
+                text = open(path).read()
+                split = text.split('\n')
+                search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                nb_mod = 0
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        split[posline] = '#%s' % l
+                        nb_mod +=1
+                        logger.info("Commenting line \"%s\" [line %d of %s]" %
+                         (l, posline, card ),'$MG:BOLD') 
+                        # overwrite the previous line
+                if not nb_mod:
+                    logger.warning('no line commented (no line matching)')
+                ff = open(path,'w')
+                ff.write('\n'.join(split))
+
+                self.last_editline_pos = posline               
+
             
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line

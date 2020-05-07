@@ -5,7 +5,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           All are hidden by default:
 	    - hard_survey [default=F]: request for more points in survey (and subsequent refine)
 	    - second_refine_treshold [default=1.5]: forbid second refine if cross section after first refine is
-	           is smaller than cross-section of the survey times such treshold
+	       is smaller than cross-section of the survey times such treshold
+      OM: new command for the editions of the cards:
+           - set nodecay: remove all decay line from the madspin_card
+	   - edit CARDNAME --comment_line='<regular_expression>' : new syntax to comment all lines of a card
+	       that are matching a given regular expression
+
 
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine

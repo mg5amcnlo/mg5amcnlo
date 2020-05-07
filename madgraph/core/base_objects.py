@@ -3484,18 +3484,31 @@ class Process(PhysicsObject):
         final.sort()
         return (tuple(initial), tuple(final))
     
-    def get_final_ids_after_decay(self):
+    def get_initial_final_ids_after_decay(self, max_depth=-1):
+        """return a tuple of two tuple containing the id of the initial/final
+           state particles. Each list is ordered"""
+           
+        initial = [l.get('id') for l in self.get('legs')\
+              if not l.get('state')]
+        final = self.get_final_ids_after_decay(max_depth=max_depth)
+        initial.sort()
+        final.sort()
+        return (tuple(initial), tuple(final))
+        
+    
+    def get_final_ids_after_decay(self, max_depth=-1):
         """Give the pdg code of the process including decay"""
         
         finals = self.get_final_ids()
-        for proc in self.get('decay_chains'):
-            init = proc.get_initial_ids()[0]
-            #while 1:
-            try:
-                pos = finals.index(init)
-            except:
-                break
-            finals[pos] = proc.get_final_ids_after_decay()
+        if max_depth !=0 :
+            for proc in self.get('decay_chains'):
+                init = proc.get_initial_ids()[0]
+                #while 1:
+                try:
+                    pos = finals.index(init)
+                except:
+                    break
+                finals[pos] = proc.get_final_ids_after_decay(max_depth-1)
         output = []
         for d in finals:
             if isinstance(d, list):
