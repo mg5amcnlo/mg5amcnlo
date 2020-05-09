@@ -3620,8 +3620,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
 
-
-
         #os.chdir(path)
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
@@ -4547,6 +4545,14 @@ c           This is dummy particle used in multiparticle vertices
 
             # For t-channels, just need the first non-empty one
             tchannels = [t for s,t in stchannels if t != None][0]
+                 
+            misc.sprint(" Diagram %d" % (mapconfigs[iconfig]))       
+            if True:
+                tchannels = ProcessExporterFortranME.reorder_tchannels(tchannels)
+            
+            
+            
+
 
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
@@ -4625,7 +4631,139 @@ c           This is dummy particle used in multiparticle vertices
         writer.writelines(lines)
 
         return s_and_t_channels, nqcd_list
+    
 
+
+    #===========================================================================
+    # reoder t-channels
+    #===========================================================================    
+    @staticmethod
+    def reorder_tchannels(tchannels):
+        """change the tchannel ordering to pass to a ping-pong strategy.
+           assume ninitial == 2
+        
+        We assume that we receive something like this
+        
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-1)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-N+2)
+                |                
+                X --------- L
+                |
+                | (-N+1) 
+                |                
+        -N ----- X ------- P        
+        
+        coded as 
+        (1 -2 > -X) (-X 4 > -X-1) (-X-1 -1 > -X-2) ...
+        ((-N+3) 3 > (-N+2)) ((-n+2) L > (-n+1)) ((-n+1) P > -N)
+        
+        we want to convert this as:
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-2)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-X-3)
+                |                
+                X --------- L
+                |
+                | (-X-1) 
+                |                
+        2 ----- X ------- P          
+        
+        coded as 
+        (1 -2 > -X) (2 P > -X-1) (-X 4 > -X-2) (-X-1 L > -X-3) ...
+        """
+
+        # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        if len(tchannels) < 2:
+            return tchannels
+
+        out = []
+        oldid2new = {}
+        
+        misc.sprint("********")
+        misc.sprint([t.nice_string() for t in tchannels])
+        
+
+        
+        # initialisation
+        # id of the first T-channel (-X)
+        propa_id = tchannels[0]['legs'][-1]['number'] 
+        #
+        # Setup the last vertex to refenence the second id beam
+        # -N (need to setup it to 2.
+        initialid = tchannels[-1]['legs'][-1]['number']       
+        oldid2new[initialid] = 2
+        
+
+        
+        i = 0 
+        while tchannels:
+            #ping pong by taking first/last element in aternance
+            if i % 2 == 0:
+                old_vert = tchannels.pop(0)
+            else:
+                old_vert = tchannels.pop()
+                
+            #copy the vertex /leglist to avoid side effects
+            new_vert = base_objects.Vertex(old_vert)
+            new_vert['legs'] = [base_objects.Leg(l) for l in old_vert['legs']]
+            # if vertex taken from the bottom we have 
+            # (-N+1 X > -N) we need to flip to pass to 
+            # -N X > -N+1 (and then relabel -N and -N+1
+            # to be secure  we also support (X -N+1 > -N)
+            if i % 2 ==1: 
+                legs = new_vert['legs'] # shorcut
+                id1 = legs[0]['number']
+                id2 = legs[1]['number'] 
+                if id1 > id2:
+                    legs[0], legs[1] = legs[1], legs[0]
+                else:
+                    legs[0], legs[2] = legs[2], legs[0]
+            
+            # the only new relabelling is the last element of the list
+            # always thanks to the above flipping
+            old_propa_id = new_vert['legs'][-1]['number'] 
+            oldid2new[old_propa_id] = propa_id
+
+            #pass to new convention for leg numbering:
+            for l in new_vert['legs']:
+                if l['number'] in  oldid2new:
+                    l['number'] = oldid2new[l['number']]    
+            
+            # new_vert is now ready
+            out.append(new_vert)
+            # prepare next iteration
+            propa_id -=1
+            i +=1
+        misc.sprint([t.nice_string() for t in out])
+
+        return out
+
+            
+        
+        
+    
     #===========================================================================
     # write_decayBW_file
     #===========================================================================
@@ -5011,6 +5149,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         for ime, matrix_element in \
                 enumerate(matrix_elements):
             filename = 'matrix%d.f' % (ime+1)
+            
             calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename), 
                             matrix_element,
