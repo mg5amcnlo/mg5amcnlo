@@ -113,8 +113,8 @@ endif
 
 # Option APPLGrid
 ifneq ($(applgrid),)
-  APPLLIBS=$(shell pkg-config pineappl --libs)
-  CXXFLAGS+=$(shell pkg-config pineappl --cflags)
+  APPLLIBS=$(shell pkg-config pineappl_capi --libs)
+  CXXFLAGS+=$(shell pkg-config pineappl_capi --cflags)
   applgrid_interface=appl_interface.o
 else
   APPLLIBS=

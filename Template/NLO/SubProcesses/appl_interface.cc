@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <pineappl.h>
+#include <pineappl_capi.h>
 
 #include "orders.h"
 
@@ -129,8 +129,8 @@ extern "C" void appl_init_()
         // Open the existing grid
         grid_obs.emplace_back(pineappl_grid_read(grid_filename_in.c_str()));
 
-        std::vector<int> subgrid_params(4 * pineappl_grid_get_subgrids(grid_obs.back()));
-        pineappl_grid_get_subgrid_params(grid_obs.back(), subgrid_params.data());
+        std::vector<uint32_t> subgrid_params(4 * pineappl_grid_order_count(grid_obs.back()));
+        pineappl_grid_order_params(grid_obs.back(), subgrid_params.data());
 
         translation_tables.emplace_back();
         auto& translation_table = translation_tables.back();
@@ -187,7 +187,7 @@ extern "C" void appl_init_()
         // we assume that there is always at least one LO, and zero or one NLO
         assert((nlo_power == (lo_power + 2)) || (nlo_power == lo_power));
 
-        std::vector<int> subgrid_params;
+        std::vector<uint32_t> subgrid_params;
 
         translation_tables.emplace_back();
         translation_tables.back().reserve(appl_common_fixed_.amp_split_size);
@@ -220,44 +220,44 @@ extern "C" void appl_init_()
         // These are common to all the grids computed.
         // If values larger than zero (i.e. set by the user) are found the default
         // settings are replaced with the new ones.
-        auto* storage = pineappl_storage_new("papplgrid_f2");
+        auto* key_vals = pineappl_keyval_new();
 
         if (appl_common_grid_.nQ2 > 0)
         {
-            pineappl_storage_set_int(storage, "nq2", appl_common_grid_.nQ2);
+            pineappl_keyval_set_int(key_vals, "nq2", appl_common_grid_.nQ2);
         }
         // Max and min value of Q2
         if (appl_common_grid_.Q2min > 0.0)
         {
-            pineappl_storage_set_double(storage, "q2min", appl_common_grid_.Q2min);
+            pineappl_keyval_set_double(key_vals, "q2min", appl_common_grid_.Q2min);
         }
         if (appl_common_grid_.Q2max > 0.0)
         {
-            pineappl_storage_set_double(storage, "q2max", appl_common_grid_.Q2max);
+            pineappl_keyval_set_double(key_vals, "q2max", appl_common_grid_.Q2max);
         }
         // Order of the polynomial interpolation in Q2
         if (appl_common_grid_.Q2order > 0)
         {
-            pineappl_storage_set_int(storage, "q2order", appl_common_grid_.Q2order);
+            pineappl_keyval_set_int(key_vals, "q2order", appl_common_grid_.Q2order);
         }
         // Number of points for the x interpolation
         if (appl_common_grid_.nx > 0)
         {
-            pineappl_storage_set_int(storage, "nx", appl_common_grid_.nx);
+            pineappl_keyval_set_int(key_vals, "nx", appl_common_grid_.nx);
         }
         // Min and max value of x
         if (appl_common_grid_.xmin > 0.0)
         {
-            pineappl_storage_set_double(storage, "xmin", appl_common_grid_.xmin);
+            pineappl_keyval_set_double(key_vals, "xmin", appl_common_grid_.xmin);
         }
         if (appl_common_grid_.xmax > 0.0)
         {
-            pineappl_storage_set_double(storage, "xmax", appl_common_grid_.xmax);
+            pineappl_keyval_set_double(key_vals, "xmax", appl_common_grid_.xmax);
         }
         // Order of the polynomial interpolation in x
         if (appl_common_grid_.xorder > 0)
         {
-            pineappl_storage_set_int(storage, "xorder", appl_common_grid_.xorder);
+            pineappl_keyval_set_int(key_vals, "xorder", appl_common_grid_.xorder);
         }
 
         // Set up the PDF luminosities
@@ -268,7 +268,7 @@ extern "C" void appl_init_()
         {
             int nproc = appl_common_lumi_.nproc[ilumi];
 
-            std::vector<int> pdg_ids;
+            std::vector<int32_t> pdg_ids;
             pdg_ids.reserve(2 * nproc);
 
             for (int iproc = 0; iproc != nproc; ++iproc)
@@ -281,22 +281,21 @@ extern "C" void appl_init_()
         }
 
         // Use the reweighting function
-        pineappl_storage_set_bool(storage, "reweight", true);
+        pineappl_keyval_set_bool(key_vals, "reweight", true);
         // Add documentation
-        pineappl_storage_set_string(storage, "documentation", Banner().c_str());
+        pineappl_keyval_set_string(key_vals, "documentation", Banner().c_str());
 
         // Create a grid with the binning given in the "obsbins[Nbins+1]" array
         grid_obs.push_back(pineappl_grid_new(
             lumi,
-            pineappl_subgrid_format::as_a_logxir_logxif,
             subgrid_params.size() / 4,
             subgrid_params.data(),
             appl_common_histokin_.obs_nbins,
             appl_common_histokin_.obs_bins,
-            storage
+            key_vals
         ));
 
-        pineappl_storage_delete(storage);
+        pineappl_keyval_delete(key_vals);
         pineappl_lumi_delete(lumi);
     }
 }
@@ -326,8 +325,6 @@ extern "C" void appl_fill_()
     double x1, x2;
     double scale2;
     double obs = appl_common_histokin_.obs_histo;
-    // Weight vector whose size is the total number of subprocesses
-    std::vector<double> weight(nlumi, 0.0);
 
     // Histogram number
     int nh = appl_common_histokin_.obs_num - 1;
@@ -364,9 +361,9 @@ extern "C" void appl_fill_()
     x2 = appl_common_weights_.x2[k];
 
     static std::vector<std::vector<std::vector<double>>> x1Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(pineappl_grid_get_subgrids(grid_obs[nh]), 0.0)));
+        grid_obs.size(), std::vector<double>(pineappl_grid_order_count(grid_obs[nh]), 0.0)));
     static std::vector<std::vector<std::vector<double>>> x2Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(pineappl_grid_get_subgrids(grid_obs[nh]), 0.0)));
+        grid_obs.size(), std::vector<double>(pineappl_grid_order_count(grid_obs[nh]), 0.0)));
 
     if (x1 == x1Saved[itype - 1][nh][grid_index] && x2 == x2Saved[itype - 1][nh][grid_index])
     {
@@ -395,34 +392,22 @@ extern "C" void appl_fill_()
 
     if (std::fabs(W0[k]) > ttol)
     {
-        // W0
-        weight.at(ilumi) = W0[k];
-        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 0);
-        weight.at(ilumi) = 0.0;
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, grid_index + 0, obs, ilumi, W0[k]);
     }
 
     if (std::fabs(WR[k]) > ttol)
     {
-        // WR
-        weight.at(ilumi) = WR[k];
-        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 1);
-        weight.at(ilumi) = 0.0;
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, grid_index + 1, obs, ilumi, WR[k]);
     }
 
     if (std::fabs(WF[k]) > ttol)
     {
-        // WF
-        weight.at(ilumi) = WF[k];
-        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index + 2);
-        weight.at(ilumi) = 0.0;
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, grid_index + 2, obs, ilumi, WF[k]);
     }
 
     if (std::fabs(WB[k]) > ttol)
     {
-        // WB
-        weight.at(ilumi) = WB[k];
-        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, obs, &weight[0], grid_index);
-        weight.at(ilumi) = 0.0;
+        pineappl_grid_fill(grid_obs[nh], x1, x2, scale2, grid_index, obs, ilumi, WB[k]);
     }
 }
 
