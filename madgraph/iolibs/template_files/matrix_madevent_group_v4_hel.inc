@@ -208,10 +208,8 @@ if (first) then
 	%(fake_width_definitions)s
 endif
 
-
 ${helas_calls}
 ${jamp_lines}
-
     DO K = 1, ${ncomb}
         TS(K) = 0.D0 
     	DO M = 1, NAMPSO
@@ -228,7 +226,6 @@ ${jamp_lines}
           ENDDO
     	ENDDO
     ENDDO
-
 ${amp2_lines}
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
