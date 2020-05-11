@@ -22,15 +22,19 @@ c************************************************************************
 
       logical updateloop
       common /to_updateloop/updateloop
+      data updateloop /%(updateloop_default)s/
 
       %(load_card)s
       ! also loop parameters should be initialised here
-      updateloop=.true.
-      include 'param_read.inc'
-      call coup()
-
-      updateloop=.false.
-
+      if (updateloop) then
+         include 'param_read.inc'
+         call coup()         
+      else   
+         updateloop=.true.
+         include 'param_read.inc'
+         call coup()
+         updateloop=.false.
+      endif
       return
 
       end
