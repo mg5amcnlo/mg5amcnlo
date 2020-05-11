@@ -212,20 +212,22 @@ endif
 ${helas_calls}
 ${jamp_lines}
 
-    MATRIX%(proc_id)s = 0.D0 
-	DO M = 1, NAMPSO
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-        ENDDO
-		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-		  ENDIF
-		ENDDO
-      ENDDO
-	ENDDO
+    DO K = 1, ${ncomb}
+        TS(K) = 0.D0 
+    	DO M = 1, NAMPSO
+          DO I = 1, NCOLOR
+            ZTEMP = (0.D0,0.D0)
+            DO J = 1, NCOLOR
+              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+            ENDDO
+    		DO N = 1, NAMPSO
+              IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+    		     TS(K) = TS(K) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+    		  ENDIF
+    		ENDDO
+          ENDDO
+    	ENDDO
+    ENDDO
 
 ${amp2_lines}
     Do I = 1, NCOLOR
