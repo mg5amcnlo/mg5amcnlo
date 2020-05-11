@@ -19,7 +19,7 @@ C
     Include 'nexternal.inc'
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
-    PARAMETER (             NCOMB=%%(ncomb)s)
+    PARAMETER (             NCOMB=${ncomb})
     INTEGER    NGRAPHS
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
@@ -61,7 +61,7 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-%%(helicity_lines)s
+${helicity_lines}
 %(den_factor_line)s
 
 C ----------
@@ -208,8 +208,8 @@ if (first) then
 endif
 
 
-%%(helas_calls)s
-%%(jamp_lines)s
+${helas_calls}
+${jamp_lines}
 
     MATRIX%(proc_id)s = 0.D0 
 	DO M = 1, NAMPSO
@@ -226,7 +226,7 @@ endif
       ENDDO
 	ENDDO
 
-%%(amp2_lines)s
+${amp2_lines}
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
