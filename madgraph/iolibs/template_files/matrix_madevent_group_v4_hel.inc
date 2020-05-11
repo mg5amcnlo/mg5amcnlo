@@ -151,7 +151,7 @@ C
     include 'nexternal.inc'
     include 'maxamps.inc'
     INTEGER    NWAVEFUNCS,     NCOLOR
-    PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+    PARAMETER (NWAVEFUNCS=${nwavefuncs}, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
     PARAMETER (ZERO=0D0)
     COMPLEX*16 IMAG1
@@ -166,13 +166,14 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    REAL*8 TS(${ncomb})
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER I,J,M,N
+    INTEGER I,J,M,N,K
     COMPLEX*16 ZTEMP
     REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+    COMPLEX*16 AMP(NGRAPHS,${ncomb}), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
