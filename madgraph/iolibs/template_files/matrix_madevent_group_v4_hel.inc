@@ -88,7 +88,7 @@ c   Kiran please check if you need this:
        TS(I)=0d0
     ENDDO
 
-    call MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1), TS)
+    call MATRIX%(proc_id)s(P ,JC(1), TS)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -132,7 +132,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,NHEL,IC, TS)
+Subroutine  MATRIX%(proc_id)s(P,IC, TS)
 C  
 %(info_lines)s
 C
