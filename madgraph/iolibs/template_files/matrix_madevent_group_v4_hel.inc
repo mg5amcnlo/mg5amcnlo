@@ -209,8 +209,8 @@ if (first) then
 endif
 
 ${helas_calls}
-${jamp_lines}
     DO K = 1, ${ncomb}
+${jamp_lines}
         TS(K) = 0.D0 
     	DO M = 1, NAMPSO
           DO I = 1, NCOLOR
@@ -225,16 +225,16 @@ ${jamp_lines}
     		ENDDO
           ENDDO
     	ENDDO
+        ${amp2_lines}
+        Do I = 1, NCOLOR
+    	  DO M = 1, NAMPSO
+    		DO N = 1, NAMPSO
+              IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+                Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
+    		  ENDIF
+    		enddo
+    	  enddo
+        Enddo
     ENDDO
-${amp2_lines}
-    Do I = 1, NCOLOR
-	  DO M = 1, NAMPSO	
-		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-            Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
-		  ENDIF
-		enddo
-	  enddo
-    Enddo
 
     END
