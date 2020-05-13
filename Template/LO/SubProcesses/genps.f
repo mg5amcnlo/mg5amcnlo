@@ -652,6 +652,7 @@ c
       integer itree(2,-max_branch:-1) !Structure of configuration
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
+      double precision pother(0:3)
       double precision M(-max_branch:max_particles)
       double precision S(-max_branch:0)
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
@@ -663,7 +664,8 @@ c     Local
 c
       logical pass
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
-c      data nerr/0/
+      integer iopposite ! index for t-channel mapping for the part not handle by itree
+c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
       double precision ma2,mb2,m12,mn2,s1
@@ -834,17 +836,65 @@ c     Particle Kinematics Chapter 6 section 3 page 166
 c
 c     From here, on we can just pretend this is a 2->2 scattering with
 c     Pa                    + Pb     -> P1          + P2
-c     p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
-c     M(ibranch) is the total mass available (Pa+Pb)^2
-c     M(ibranch-1) is the mass of P2  (all the remaining particles)
+c     No -flipping case:      
+c      p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       -  M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)
 c
+c     With flipping case
+c      p(0,itree(ibranch,1)) + pother -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       - pother = p(0,itree(ibranch,1)) -p(0,itree(ibranch,2))         
+c       - M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)      
+c
+c     This assumes that P(0, ibranch) is set to the T-channel propa (likely)
       do ibranch=-ns_channel-1,-nbranch+1,-1
+         if (ibranch.ne.-ns_channel-1)then
+            pother(:) = P(:,ibranch+1)
+            iopposite = ibranch +1
+         else
+            pother(:) = p(:,2)
+            iopposite = 2
+         endif
          s1  = m(ibranch)**2                        !Total mass available
-         ma2 = m(2)**2
+         ma2 = dot(pother, pother)
          mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
-c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
+c
+c$$$         write(*,*) itree(1, ibranch), '-----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+c$$$         write(*,*)        '                       |           '
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)   	   '                       | ',ibranch
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)        '                       |           '
+c$$$         if (ibranch.ne.-ns_channel-1)then
+c$$$            write(*,*) iopposite, '-----------T---------- m=', m(ibranch-1)
+c$$$         else
+c$$$            write(*,*) 2, '-----------T---------- m=', m(ibranch-1)
+c$$$            write(*,*) m(1), m(2), m(3), m(4), m(5)
+c$$$         endif
+c$$$         write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+c$$$         if (ibranch.ne.-ns_channel-1) then
+c$$$            write(*,*) 'Pb', P(0,iopposite),P(1,iopposite),P(2,iopposite), P(3,iopposite)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,itree(1, ibranch)) + P(i,ibranch+1) 
+c$$$            enddo
+c$$$         else
+c$$$            write(*,*) 'Pb', P(0,2),P(1,2),P(2,2),P(3,2)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,1) + P(i,2)
+c$$$            enddo
+c$$$         endif
+c$$$         do i=0,3
+c$$$            pother(i) = P(i,itree(1, ibranch)) + P(i,iopposite)
+c$$$         enddo
+c$$$         write(*,*) 'DSQRT(s1) = ', m(ibranch), DSQRT(dot(pother, pother))
+c$$$c         if (m(ibranch)**2.ne.dot(pother, pother)) stop 1
+c$$$         write(*,*) 'm12= Pd**2 = ', m12 ,DSQRT(m12)
+c$$$         write(*,*) 'mn2 = Pc**2 =', mn2, DSQRT(mn2)
+         
+C     WRITE(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
          call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
 c
 c     Call for 0<x<1
@@ -893,10 +943,25 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi,
+         call gentcms(p(0,itree(1,ibranch)),p(0,iopposite),t,phi,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
+c$$$         write(*,*) 'RESULT'
+c$$$         write(*,*) 'pa', p(0,itree(1,ibranch)),p(1,itree(1,ibranch)),p(2,itree(1,ibranch)),p(3,itree(1,ibranch))
+c$$$         write(*,*) 'pb', p(0,iopposite),p(1,iopposite),p(2,iopposite),p(3,iopposite)
+c$$$         write(*,*) '->'
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         do i =0,3
+c$$$            pother(i) = p(i,itree(1,ibranch)) + p(i,iopposite) - p(i,itree(2,ibranch))
+c$$$         enddo
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         write(*,*) 'pd', pother(0), pother(1), pother(2), pother(3) , DSQRT(dot(pother,pother))
+c$$$         write(*,*) 'T channel'
+c$$$         write(*,*) 'pr', p(0,ibranch),p(1,ibranch),p(2,ibranch),p(3,ibranch)
+c$$$         write(*,*) 'pa-pc', p(0,itree(1,ibranch))-p(0,itree(2,ibranch)),p(1,itree(1,ibranch))-p(1,itree(2,ibranch))
 
+
+         
          if (jac .lt. 0d0) then
 c            nerr=nerr+1
 c            if(nerr.le.5)
@@ -911,10 +976,25 @@ c     We need to get the momentum of the last external particle.
 c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
 c
-      do i=0,3
-         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
-      enddo
-
+      if (nt_channel.eq.1) then
+c$$$         write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         enddo
+      else
+c$$$                  write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,-nbranch+2)
+         enddo
+      endif
 
       endif                     !t-channel stuff
 
@@ -950,6 +1030,18 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
          call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
+c$$$      write(*,*) '****'
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'mass', i, m(i)
+c$$$      enddo
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$      enddo
+c$$$      do i =0,3
+c$$$         pother(i) = p(i,1) + p(i,2) - p(i,3) -p(i,4)
+c$$$      enddo
+c$$$      write(*,*) 'p5 expected', pother(0), pother(1),pother(2),pother(3)
+
       jac = jac*wgt
       if (.not. pass) jac = -99
       end

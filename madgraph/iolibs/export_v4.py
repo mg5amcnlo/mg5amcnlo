@@ -4546,7 +4546,6 @@ c           This is dummy particle used in multiparticle vertices
             # For t-channels, just need the first non-empty one
             tchannels = [t for s,t in stchannels if t != None][0]
                  
-            misc.sprint(" Diagram %d" % (mapconfigs[iconfig]))       
             if True:
                 tchannels = ProcessExporterFortranME.reorder_tchannels(tchannels)
             
@@ -4701,11 +4700,6 @@ c           This is dummy particle used in multiparticle vertices
         out = []
         oldid2new = {}
         
-        misc.sprint("********")
-        misc.sprint([t.nice_string() for t in tchannels])
-        
-
-        
         # initialisation
         # id of the first T-channel (-X)
         propa_id = tchannels[0]['legs'][-1]['number'] 
@@ -4756,7 +4750,6 @@ c           This is dummy particle used in multiparticle vertices
             # prepare next iteration
             propa_id -=1
             i +=1
-        misc.sprint([t.nice_string() for t in out])
 
         return out
 
