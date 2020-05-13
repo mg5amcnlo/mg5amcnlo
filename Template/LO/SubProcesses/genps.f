@@ -864,7 +864,7 @@ c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0, -tmin/stot)
+     $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
 
       else

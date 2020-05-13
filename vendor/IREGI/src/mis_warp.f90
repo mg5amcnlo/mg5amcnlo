@@ -502,7 +502,7 @@ CONTAINS
                  .AND.ABS(p32-m32).GE.EPS.AND.ABS(p32-m42).GE.EPS)THEN
                ! {s12, p22, s23, p42, p12, p32, m12, m32, m22, m42}
                DO ep=0,-2,-1
-                  temp(ep)=qlI4(s12,p22,s23,p42,p12,p32,m12,m32,m22,m42)
+                  temp(ep)=qlI4(s12,p22,s23,p42,p12,p32,m12,m32,m22,m42,musq,ep)
                ENDDO
                flag=1
             ENDIF
