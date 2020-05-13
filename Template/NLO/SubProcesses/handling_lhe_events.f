@@ -1141,6 +1141,7 @@ c
 
       subroutine copy_header(infile,outfile,nevts)
       implicit none
+      include 'run.inc'
       character*200 buff2
       integer nevts,infile,outfile
 c
@@ -1150,11 +1151,13 @@ c
          if(index(buff2,'= nevents').eq.0)
      &        write(outfile,'(a)') trim(buff2)
          if(index(buff2,'= nevents').ne.0) exit
+         if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
       enddo
       write(outfile,*)
      &     nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
+         if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
          write(outfile,'(a)')trim(buff2)
       enddo
 c
