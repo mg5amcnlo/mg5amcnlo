@@ -5518,7 +5518,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                    if args[start+1:-1] == ['all']:
                         for key in self.param_card[args[start]].param_dict:
                             if (args[start], key) in self.restricted_value:
                                 continue
