@@ -11,6 +11,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	   - set BLOCKNAME all VALUE: set all entry of the param_card "BLOCKNAME" to VALUE
 	   - edit CARDNAME --comment_line='<regular_expression>' : new syntax to comment all lines of a card
 	       that are matching a given regular expression
+      OM: For Mac only, when running in script mode, MG5aMC will now prevent the computer to go to idle sleep.
+          You can prevent this by running with the '-s' option. like ./bin/mg5_aMC -s PATH_TO_CMD
 
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
