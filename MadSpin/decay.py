@@ -544,7 +544,7 @@ class dc_branch_from_me(dict):
                     # record the mass for the reshuffling phase, 
                     # in case the point passes the reweighting creteria
                     tree[tag]["mass"] = m
-                    #update the weigth of the phase-space point
+                    #update the weight of the phase-space point
                     weight=weight*jac
                 # for checking conservation of energy
                 mass_sum -= m
@@ -3087,7 +3087,7 @@ class decay_all_events(object):
         for production in self.all_ME.values():
             decay_set.add(production['decaying'])
 
-        numberev = self.options['Nevents_for_max_weigth'] # number of events
+        numberev = self.options['Nevents_for_max_weight'] # number of events
         numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
         
         logger.info('  ')

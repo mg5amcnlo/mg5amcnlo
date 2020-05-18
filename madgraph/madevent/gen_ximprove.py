@@ -971,7 +971,7 @@ class gen_ximprove_v4(gen_ximprove):
         super(gen_ximprove_v4, self).__init__(cmd, opt)
         
         if cmd.opts['accuracy'] < cmd._survey_options['accuracy'][1]:
-            self.increase_precision()
+            self.increase_precision(cmd._survey_options['accuracy'][1]/cmd.opts['accuracy'])
 
     def reset_multijob(self):
 
@@ -986,15 +986,23 @@ class gen_ximprove_v4(gen_ximprove):
         f.write('%i\n' % nb_split)
         f.close()
     
-    def increase_precision(self):
-        
-        self.max_event_in_iter = 20000
-        self.min_events = 7500
+    def increase_precision(self, rate=3):
+        misc.sprint(rate)
+        if rate < 3:
+            self.max_event_in_iter = 20000
+            self.min_events = 7500
+            self.gen_events_security = 1.3
+        else:
+            rate = rate -2
+            self.max_event_in_iter = int((rate+1) * 10000)
+            self.min_events = int(rate+2) * 2500
+            self.gen_events_security = 1 + 0.1 * (rate+2) 
+                        
         if int(self.nhel) == 1:
             self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
             self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
 
-        self.gen_events_security = 1.3
+        
             
     alphabet = "abcdefghijklmnopqrstuvwxyz"
     def get_job_for_event(self):

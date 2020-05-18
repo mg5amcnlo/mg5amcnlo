@@ -606,7 +606,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
       PARAMETER (MAXNREF_EVALS=100)
-      INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
+      Double Precision, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
       INTEGER, INTENT(IN)							  :: mStart, mEnd
       INTEGER										  :: Minimum
       INTEGER										  :: Location

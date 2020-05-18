@@ -60,14 +60,14 @@ class MadSpinOptions(banner.ConfigFile):
 
         self.add_param("max_weight", -1)
         self.add_param('curr_dir', os.path.realpath(os.getcwd()))
-        self.add_param('Nevents_for_max_weigth', 0)
+        self.add_param('Nevents_for_max_weight', 0)
         self.add_param("max_weight_ps_point", 400)
         self.add_param('BW_cut', -1)
         self.add_param('nb_sigma', 0.)
         self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
-        self.add_param('spinmode', "madspin", allowed=['madspin','none','onshell'])
+        self.add_param('spinmode', "madspin", allowed=['full','madspin','none','onshell'])
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for spinmode==none. Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -137,8 +137,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.decay = madspin.decay_misc()
         self.model = None
-        self.mode = "madspin" # can be flat/bridge change the way the decay is done.
-                              # note amc@nlo does not support bridge.
+        #self.mode = "madspin" # can be flat/bridge change the way the decay is done.
+        #                      # note amc@nlo does not support bridge.
         
         self.options = MadSpinOptions()
         
@@ -227,10 +227,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         if 'mgruncard' in self.banner:
             run_card = self.banner.charge_card('run_card')
-            if not self.options['Nevents_for_max_weigth']:
+            if not self.options['Nevents_for_max_weight']:
                 nevents = run_card['nevents']
                 N_weight = max([75, int(3*nevents**(1/3))])
-                self.options['Nevents_for_max_weigth'] = N_weight
+                self.options['Nevents_for_max_weight'] = N_weight
                 N_sigma = max(4.5, math.log(nevents,7.7))
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
@@ -242,8 +242,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 self.options['frame_id'] = 6
         else:
-            if not self.options['Nevents_for_max_weigth']:
-                self.options['Nevents_for_max_weigth'] = 75
+            if not self.options['Nevents_for_max_weight']:
+                self.options['Nevents_for_max_weight'] = 75
                 self.options['nb_sigma'] = 4.5
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = 15.0
@@ -458,7 +458,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
         
         elif args[0] == "spinmode":
-            if args[1].lower() not in ["full", "onshell", "none"]:
+            if args[1].lower() not in ["full", "onshell", "none", "madspin"]:
                 raise self.InvalidCmd("spinmode can only take one of those 3 value: full/onshell/none")
              
         elif args[0] == "run_card":
@@ -471,6 +471,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 arg, value = data.split("=")
                 args.append(arg)
                 args.append(value)
+        elif args[0] == 'Nevents_for_max_weigth':
+            args[0] = 'Nevents_for_max_weight'
         
     def do_set(self, line):
         """ add one of the options """
@@ -1366,7 +1368,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
 
         # 2. Generate the events requested
-        nevents_for_max = self.options['Nevents_for_max_weigth']
+        nevents_for_max = self.options['Nevents_for_max_weight']
         if nevents_for_max == 0 :
             nevents_for_max = 75
         nevents_for_max *= self.options['max_weight_ps_point']
@@ -1561,7 +1563,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
             return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
         
-        nevents = self.options['Nevents_for_max_weigth']
+        nevents = self.options['Nevents_for_max_weight']
         if nevents == 0 :
             nevents = 75
         
