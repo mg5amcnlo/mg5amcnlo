@@ -108,6 +108,10 @@ class gensym(object):
             self.splitted_grid = self.run_card['survey_splitting']
         if self.run_card['survey_nchannel_per_job'] != -1:
             self.combining_job = self.run_card['survey_nchannel_per_job']        
+        elif self.run_card['hard_survey'] > 1:
+            self.combining_job = 1
+            
+            
         
         self.splitted_Pdir = {}
         self.splitted_for_dir = lambda x,y: self.splitted_grid
