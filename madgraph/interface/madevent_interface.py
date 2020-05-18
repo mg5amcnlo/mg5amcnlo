@@ -797,7 +797,7 @@ class AskRun(cmd.ControlSwitch):
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell']
+            self.allowed_madspin = ['OFF',"ON",'onshell',"full"]
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
@@ -834,7 +834,7 @@ class AskRun(cmd.ControlSwitch):
         if value == 'onshell':
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
         elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
         elif value == 'none':
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
         else:
@@ -3355,7 +3355,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
-            self.pass_in_difficult_integration_mode()
+            self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
             
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
@@ -3383,24 +3383,26 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################
-    def pass_in_difficult_integration_mode(self):
+    def pass_in_difficult_integration_mode(self, rate=1):
         """be more secure for the integration to not miss it due to strong cut"""
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 3 * self._survey_options['points'][1]
+            self.opts['points'] = (rate+2) * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 1 + rate + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/(rate+2)  
         
         # Modify run_config.inc in order to improve the refine
         conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
         files.cp(conf_path, conf_path + '.bk')
         #
         text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 40000 )''', text)
+        min_evt, max_evt = 2500 *(2+rate), 10000*(rate+1) 
+        
+        text = re.sub('''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
+        text = re.sub('''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
@@ -5979,10 +5981,16 @@ tar -czf split_$1.tar.gz split_$1
 
         eradir = self.options['exrootanalysis_path']
         totar = False
+        torm = False
         if input.endswith('.gz'):
-            misc.gunzip(input, keep=True)
-            totar = True
-            input = input[:-3]
+            if not os.path.exists(input) and os.path.exists(input[:-3]):
+                totar = True
+                input = input[:-3]
+            else:
+                misc.gunzip(input, keep=True)
+                totar = False
+                torm = True
+                input = input[:-3]
             
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
@@ -5994,12 +6002,13 @@ tar -czf split_$1.tar.gz split_$1
         if totar:
             if os.path.exists('%s.gz' % input):
                 try:
-                    os.remove(input)
+                    os.remove('%s.gz' % input)
                 except:
                     pass
             else:
                 misc.gzip(input)
-            
+        if torm:
+            os.remove(input)
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
