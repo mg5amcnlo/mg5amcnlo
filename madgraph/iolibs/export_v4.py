@@ -6934,7 +6934,6 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
       'cuttools_dir': cmd._cuttools_dir,
       'iregi_dir':cmd._iregi_dir,
-      'pjfry_dir':cmd.options['pjfry'],
       'golem_dir':cmd.options['golem'],
       'samurai_dir':cmd.options['samurai'],
       'ninja_dir':cmd.options['ninja'],

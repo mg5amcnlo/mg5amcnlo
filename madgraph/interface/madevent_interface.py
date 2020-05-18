@@ -4663,22 +4663,18 @@ tar -czf split_$1.tar.gz split_$1
                         for hepmc_file in all_hepmc_files:
                             # Remove in an efficient way the starting and trailing HEPMC tags
                             # check for support of negative argument in head
-                            pid = os.system('head -n -1 %s &> /dev/null' % __file__)
+                            devnull = open(os.path.devnull, 'w')
+                            pid = misc.call(['head','-n', '-1', __file__], stdout=devnull, stderr=devnull)
+                            devnull.close()
                             if pid == 0:
-                                os.system('head -n -1 %s | tail -n +%d > %s/tmpfile' % 
-                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)))
-                                misc.call(['mv', 'tmp', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
+                                misc.call('head -n -1 %s | tail -n +%d > %s/tmpfile' %
+                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)), shell=True)
+                                misc.call(['mv', 'tmpfile', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
                             elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
                                 os.system(' '.join(['sed','-i',"''","'%s;$d'"%
                                         (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
-                            else:
-                                
-                                
-                                os.system('head -n -1')
-                                os.system(' '.join(['head','-n','-1',hepmc_file,'|','tail','-n','+'+str(n_head),'>','tmpfile']))
-                                os.system(' '.join(['mv','tmpfile',hepmc_file]))
-                                
+                            else:                                
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))
