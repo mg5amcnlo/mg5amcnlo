@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.0.3 :
+    DP+HS+MZ: Allow for the computation of NLO EW and complete NLO corrections in the 4FS
+
 3.0.1 
      include 2.6.3 see below
      RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
