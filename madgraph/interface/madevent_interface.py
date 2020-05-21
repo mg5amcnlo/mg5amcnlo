@@ -3825,6 +3825,17 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Creating gridpack', level='parton')
         # compile gen_ximprove
         misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
+        
+        Gdir = self.get_Gdir()
+        Pdir = set([os.path.dirname(G) for G in Gdir])
+        for P in Pdir: 
+            allG = misc.glob('G*', path=P)
+            for G in allG:
+                if pjoin(P, G) not in Gdir:
+                    logger.debug('removing', pjoin(P,G))
+                    shutil.rmtree(pjoin(P,G))
+                    
+        
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
