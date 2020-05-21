@@ -176,7 +176,7 @@ c MadLoop initialization PS points.
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. ((((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance*10d0).or.(mod(ret_code,10).eq.7))
+     $           tolerance*10d0))
          else
             cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0).or.
      $                   (mod(ret_code,10).eq.7))
