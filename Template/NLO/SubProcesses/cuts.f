@@ -295,13 +295,61 @@ c Apply the jet cuts
            endif
         endif
 
-c In case of FxFx, use the lowest clustering scale to apply the cut
+c In case of FxFx merging, use the lowest clustering scale to apply the cut
         if (ickkw.eq.3) then
-           if (FxFx_ren_scales(min(nFxFx_ren_scales+1,1)).lt.ptj) then
+c First apply a numerical stability cut
+c Define jet clustering parameters with a pTmin=1 GeV
+           palg=1.0       ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+           rfj=1.0        ! the radius parameter
+           sycut=1.0      ! minimum transverse momentum
+c     call FASTJET to get all the jets
+           call amcatnlo_fastjetppgenkt_etamax_timed(
+     $          pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
+c Apply the jet cut
+           if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
               passcuts_user=.false.
               return
            endif
+
+c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
+           if (nFxFx_ren_scales.eq.0 .and. FxFx_ren_scales(0).lt.ptj) then
+              passcuts_user=.false.
+              return
+           else if (nFxFx_ren_scales.eq.1 .and. 
+     &min(FxFx_ren_scales(0),FxFx_ren_scales(1)).lt.ptj  ) then
+              passcuts_user=.false.
+              return
+           else if (nFxFx_ren_scales.eq.2 .and. 
+     &min(FxFx_ren_scales(0),FxFx_ren_scales(1),
+     &FxFx_ren_scales(2)).lt.ptj  ) then
+              passcuts_user=.false.
+              return
+           else if (nFxFx_ren_scales.eq.3 .and.
+     &min(FxFx_ren_scales(0),FxFx_ren_scales(1),
+     &FxFx_ren_scales(2),FxFx_ren_scales(3)).lt.ptj  ) then
+              passcuts_user=.false.
+             return
+           else if (nFxFx_ren_scales.gt.3) then
+            write(*,*) 'Process 2->6, nFxFx > 3', nFxFx_ren_scales
+            stop
+           endif
         endif
+
+c Print the FxFx info to check in the log file
+c        write (*,*) '-----------------------------'
+c        do i=1,nexternal
+c            write (*,*) i,need_matching_cuts(i),ipdg(i)
+c     $           ,dsqrt(p(1,i)**2+p(2,i)**2)
+c        enddo
+c        write (*,*) 'passcuts=',passcuts_user,'nFx=',nFxFx_ren_scales
+c        write (*,*) 'Fx=',FxFx_ren_scales(0),FxFx_ren_scales(1)
+c     $                     ,FxFx_ren_scales(2)
+c        write (*,*) 'minFx=',FxFx_ren_scales(min(nFxFx_ren_scales+1,1))
+c        write (*,*) 'minFxall=',min(FxFx_ren_scales(0),
+c     $               FxFx_ren_scales(1),FxFx_ren_scales(2))
+c        write (*,*) 'pTmin=',ptj
+c        write (*,*) '-----------------------------'
+
       endif
  122  continue
 c
