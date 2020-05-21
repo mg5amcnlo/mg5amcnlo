@@ -3832,7 +3832,7 @@ Beware that this can be dangerous for local multicore runs.""")
             allG = misc.glob('G*', path=P)
             for G in allG:
                 if pjoin(P, G) not in Gdir:
-                    logger.debug('removing', pjoin(P,G))
+                    logger.debug('removing %s', pjoin(P,G))
                     shutil.rmtree(pjoin(P,G))
                     
         
