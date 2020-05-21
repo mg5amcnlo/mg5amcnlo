@@ -259,20 +259,20 @@ Block mass
 ## analytical expression. MG5 ignores those values 
 ## but they are important for interfacing the output of MG5
 ## to external program such as Pythia.
-  1 0.000000 # d : 0.0 
-  2 0.000000 # u : 0.0 
-  3 0.000000 # s : 0.0 
-  4 0.000000 # c : 0.0 
-  5 0.000000 # b : 0.0 
-  11 0.000000 # e- : 0.0 
-  12 0.000000 # ve : 0.0 
-  13 0.000000 # mu- : 0.0 
-  14 0.000000 # vm : 0.0 
-  16 0.000000 # vt : 0.0 
-  21 0.000000 # g : 0.0 
-  22 0.000000 # a : 0.0 
-  24 80.419002 # w+ : cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2))) 
-  25 91.188000 # h : MZ 
+  1 0.000000e+00 # d : 0.0 
+  2 0.000000e+00 # u : 0.0 
+  3 0.000000e+00 # s : 0.0 
+  4 0.000000e+00 # c : 0.0 
+  5 0.000000e+00 # b : 0.0 
+  11 0.000000e+00 # e- : 0.0 
+  12 0.000000e+00 # ve : 0.0 
+  13 0.000000e+00 # mu- : 0.0 
+  14 0.000000e+00 # vm : 0.0 
+  16 0.000000e+00 # vt : 0.0 
+  21 0.000000e+00 # g : 0.0 
+  22 0.000000e+00 # a : 0.0 
+  24 8.041900e+01 # w+ : cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2))) 
+  25 9.118800e+01 # h : MZ 
 
 ###################################
 ## INFORMATION FOR SMINPUTS
@@ -300,20 +300,20 @@ DECAY  25 2.441404e+00 # WH
 ## analytical expression. MG5 ignores those values 
 ## but they are important for interfacing the output of MG5
 ## to external program such as Pythia.
-DECAY  1 0.000000 # d : 0.0 
-DECAY  2 0.000000 # u : 0.0 
-DECAY  3 0.000000 # s : 0.0 
-DECAY  4 0.000000 # c : 0.0 
-DECAY  5 0.000000 # b : 0.0 
-DECAY  6 0.000000 # t : 0.0 
-DECAY  11 0.000000 # e- : 0.0 
-DECAY  12 0.000000 # ve : 0.0 
-DECAY  13 0.000000 # mu- : 0.0 
-DECAY  14 0.000000 # vm : 0.0 
-DECAY  15 0.000000 # ta- : 0.0 
-DECAY  16 0.000000 # vt : 0.0 
-DECAY  21 0.000000 # g : 0.0 
-DECAY  22 0.000000 # a : 0.0 
+DECAY  1 0.000000e+00 # d : 0.0 
+DECAY  2 0.000000e+00 # u : 0.0 
+DECAY  3 0.000000e+00 # s : 0.0 
+DECAY  4 0.000000e+00 # c : 0.0 
+DECAY  5 0.000000e+00 # b : 0.0 
+DECAY  6 0.000000e+00 # t : 0.0 
+DECAY  11 0.000000e+00 # e- : 0.0 
+DECAY  12 0.000000e+00 # ve : 0.0 
+DECAY  13 0.000000e+00 # mu- : 0.0 
+DECAY  14 0.000000e+00 # vm : 0.0 
+DECAY  15 0.000000e+00 # ta- : 0.0 
+DECAY  16 0.000000e+00 # vt : 0.0 
+DECAY  21 0.000000e+00 # g : 0.0 
+DECAY  22 0.000000e+00 # a : 0.0 
 """.split('\n')
 
         self.assertEqual(self.content.getvalue().split('\n'), goal)

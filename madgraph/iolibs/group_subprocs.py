@@ -223,7 +223,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         masses"""
 
         beam = [l.get('id') for l in process.get('legs') if not l.get('state')]
-        fs = [l.get('id') for l in process.get('legs') if l.get('state')]
+        fs = [(l.get('id'), l) for l in process.get('legs') if l.get('state')]
         name = ""
         for beam in beam:
             part = process.get('model').get_particle(beam)
@@ -231,7 +231,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                    part.get('color') != 1:
                 name += "q"
             elif criteria == 'madweight':
-                 name += part.get_name().replace('~', 'x').\
+                name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
             elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') == 1 and part.get('pdg_code') % 2 == 1:
@@ -243,7 +243,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
         name += "_"
-        for fs_part in fs:
+        for (fs_part, leg) in fs:
             part = process.get('model').get_particle(fs_part)
             if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
@@ -260,6 +260,16 @@ class SubProcessGroup(base_objects.PhysicsObject):
             else:
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
+            if leg.get('polarization'):
+                if leg.get('polarization') in [[-1,1],[1,-1]]:
+                    name += 'T'
+                elif leg.get('polarization') == [-1]:
+                    name += 'L'
+                elif leg.get('polarization') == [1]:
+                    name += 'R'
+                else:
+                    name += '%s' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])   
+
         
         for dc in process.get('decay_chains'):
             name += "_" + self.generate_name(dc, criteria)

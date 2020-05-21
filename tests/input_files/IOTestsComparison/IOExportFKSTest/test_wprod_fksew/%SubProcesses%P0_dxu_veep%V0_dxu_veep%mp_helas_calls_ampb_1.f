@@ -90,18 +90,17 @@ C     Amplitude(s) for born diagram with ID 1
       CALL MP_FFV2P0_3(W(1,4),W(1,3),GC_67,CMPLX(CMASS_MDL_MW,KIND=16)
      $ ,W(1,6))
 C     Counter-term amplitude(s) for loop diagram number 2
-      CALL MP_L_WMWPMASS1_L_WMWPMASS2_L_WMWPMASS3_0(W(1,6),W(1,5)
-     $ ,C_UVWMWPMASS1EW_1EPS,C_UVWMWPMASS2EW_1EPS,C_UVWMWPMASS3EW_1EPS
-     $ ,AMPL(2,1))
-      CALL MP_L_WMWPMASS1_L_WMWPMASS2_L_WMWPMASS3_0(W(1,6),W(1,5)
-     $ ,C_UVWMWPMASS1EW,C_UVWMWPMASS2EW,C_UVWMWPMASS3EW,AMPL(1,2))
+      CALL MP_L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5)
+     $ ,C_UVWMWPMASS2EW_1EPS,C_UVWMWPMASS1EW_1EPS,AMPL(2,1))
+      CALL MP_L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5),C_UVWMWPMASS2EW
+     $ ,C_UVWMWPMASS1EW,AMPL(1,2))
 C     Counter-term amplitude(s) for loop diagram number 4
       CALL MP_L_VEXVEA21_0(W(1,4),W(1,3),W(1,5),C_UVEPVEWM1EW_1EPS
      $ ,AMPL(2,3))
       CALL MP_L_VEXVEA21_0(W(1,4),W(1,3),W(1,5),C_UVTTPVTWM1EW,AMPL(1
      $ ,4))
 C     Counter-term amplitude(s) for loop diagram number 5
-      CALL MP_L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVCXSWP1EW_1EPS
+      CALL MP_L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVDXUWM1EW_1EPS
      $ ,AMPL(2,5))
       CALL MP_L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVUXDWP1EW,AMPL(1,6))
 C     Counter-term amplitude(s) for loop diagram number 14
@@ -110,7 +109,7 @@ C     Counter-term amplitude(s) for loop diagram number 16
       CALL MP_FFV2_0(W(1,2),W(1,1),W(1,6),R2_TXBW2CP,AMPL(1,8))
 C     Counter-term amplitude(s) for loop diagram number 23
       CALL MP_R2_GG_1_R2_GG_2_R2_GG_3_0(W(1,5),W(1,6),R2_WWBOSON1
-     $ ,R2_WWC1,R2_WWBOSON3,AMPL(1,9))
+     $ ,R2_WWBOSON2,R2_WWBOSON3,AMPL(1,9))
 C     Counter-term amplitude(s) for loop diagram number 34
       CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_WWUD1,AMPL(1,10))
       CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_WWUD1,AMPL(1,11))

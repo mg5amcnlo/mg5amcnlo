@@ -41,7 +41,7 @@ c
       integer mincfig,maxcfig                  !Range of configurations
       integer invar
       double precision wgt                     !(input and output)
-      double precision x(maxdim),p(maxdim)     !x,p (output) [p(0:3,nexternal)]
+      double precision x(*),p(*)     !x,p (output) [p(0:3,nexternal)]
 c
 c     Local
 c
@@ -185,14 +185,13 @@ c
 c     External function
       double precision SumDot
       external SumDot
-
+      logical dummy_boostframe
+      external dummy_boostframe
 c
 c     data
 c
       include 'configs.inc'
       data firsttime/.true./
-      integer isym(0:100)
-c      data isym /2,1,5,27,42,47,0,0,0,0,0/
       data jfig/1/
 c-----
 c  Begin Code
@@ -215,11 +214,6 @@ c      write(*,*) 'using iconfig',iconfig
          write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
       endif                          !First_time
 
-      if (.false.) then
-         iconfig = isym(jfig)
-         jfig = jfig+1
-         if (jfig .gt. isym(0)) jfig=1      
-      endif
       this_config = iconfig             !Pass iconfig to amplitude routine
 C
 C     Get fraction of beam energy if pdf's are used
@@ -311,8 +305,12 @@ c
 c     First Generate Momentum for initial state particles
 c
       if (lpp(1).eq.9.or.lpp(2).eq.9)then
-         p(:,1) = pi1(:)
-         p(:,2) = pi2(:)
+         if (dummy_boostframe())then
+            call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
+         else
+            p(:,1) = pi1(:)
+            p(:,2) = pi2(:)
+         endif
       else if(nincoming.eq.2) then
         call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
       else
@@ -575,7 +573,7 @@ c        Set stot
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
-            if (mass_ion(2).ge.0d0) m1 = mass_ion(2)
+            if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
             if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
             pi1(0)=ebeam(1)
@@ -597,7 +595,6 @@ c        Start graph mapping
          maxcfig=iconfig
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
          maxwgt=0d0
-c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
          nbranch      = nparticles-2
@@ -616,8 +613,6 @@ c     if we believe they will have identical structure.
 c
 c         do i=1,mapconfig(0)
          do i=mincfig,maxcfig
-c         do k=1,isym(0)
-c            i = isym(k)
             write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
             do j=1,ndim
                ipole = minvar(j,i)
@@ -850,7 +845,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax)
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
 c
 c     Call for 0<x<1
 c
@@ -1124,6 +1119,7 @@ C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 91 eqs 5.28
 C     It is used to determine physical limits for Y based on inputs
+C     Y is not used in this formula (called with dummy value)
 C**************************************************************************
       implicit none
 c
@@ -1267,6 +1263,48 @@ c      eta = 0d0
 
       END
       
+
+C     -----------------------------------------
+C     Subroutine to return momenta in a dedicated frame
+C     frame_id is the tag of the particle to put at rest
+C     frame_id follow the convention of cluster.f (sum 2**(N-1))
+C     -----------------------------------------
+
+      subroutine boost_to_frame(P1, frame_id, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id
+
+      integer ids(nexternal)
+      integer i,j
+
+c     uncompress
+      call mapid(frame_id, ids)
+      pboost(:) = 0d0
+      p2(:,:) = 0d0
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal
+       if (ids(i).eq.1)then
+            do j=0,3
+	           Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3	
+          Pboost(j) = -1 * Pboost(j)
+      enddo	    
+      do i=1, nexternal
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo   
+      return
+      end
+
 
 
 

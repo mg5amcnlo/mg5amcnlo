@@ -399,13 +399,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         text=''
         for i,e in enumerate(initial_states):
-            if len(e) ==1:
-                e.append(0)
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
+                if len(t) ==1:
+                    t.append(0)
                 text=text+'   '
                 try:
                     for p in t:
+                        if p == None : p = 0
                         text=text+' '+str(p)
                 except TypeError:
                         text=text+' '+str(t)
@@ -623,8 +624,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'FKS_params.dat',
                      'initial_states_map.dat',
                      'OLE_order.olc',
-                     'FKSParams.inc',
-                     'FKSParamReader.f',
+                     'FKSParams.f90',
                      'cuts.inc',
                      'unlops.inc',
                      'pythia_unlops.f',
@@ -656,7 +656,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'madfks_plot.f',
                      'analysis_dummy.f',
                      'analysis_lhe.f',
-                     'mint-integrator2.f',
+                     'mint_module.f90',
                      'MC_integer.f',
                      'mint.inc',
                      'montecarlocounter.f',
@@ -687,7 +687,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
-                     'timing_variables.inc']
+                     'timing_variables.inc',
+                     'polfit.f']
 
         for file in linkfiles:
             ln('../' + file , '.')
@@ -887,7 +888,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         base_compiler= ['FC=g77','FC=gfortran']
         
         StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
-        
         if output_dependencies == 'external':
             # check if stdhep has to be compiled (only the first time)
             if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
@@ -900,12 +900,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     open(path, 'w').writelines(text)
 
                 logger.info('Compiling StdHEP. This has to be done only once.')
-                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                logger.info('Done.')
-            #then link the libraries in the exported dir
-            files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
+                try:
+                    misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
+                except Exception as error:
+                    logger.debug(str(error))
+                    logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
+                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                else:
+                    logger.info('Done.')
+            if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):
+                #then link the libraries in the exported dir
+                files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
                                          pjoin(self.dir_path, 'MCatNLO', 'lib'))
-            files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
+                files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
                                          pjoin(self.dir_path, 'MCatNLO', 'lib'))
 
         elif output_dependencies == 'internal':
@@ -1148,24 +1155,26 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         amp_split_size=len(amp_split_orders)
 
-        text = 'C The orders to be integrated for the Born and at NLO\n'
+        text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
         text += 'character*3 ordernames(nsplitorders)\n'
         text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
-        text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
+        text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
         text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
-        text += 'C The position of the QCD /QED orders in the array\n'
+        text += '! The position of the QCD /QED orders in the array\n'
         text += 'integer qcd_pos, qed_pos\n'
-        text += 'C if = -1, then it is not in the split_orders\n'
+        text += '! if = -1, then it is not in the split_orders\n'
         text += 'parameter (qcd_pos = %d)\n' % qcd_pos
         text += 'parameter (qed_pos = %d)\n' % qed_pos
-        text += 'C this is to keep track of the various coupling combinations entering each ME\n'
+        text += '! this is to keep track of the various \n'
+        text += '! coupling combinations entering each ME\n'
         text += 'integer amp_split_size, amp_split_size_born\n'
         text += 'parameter (amp_split_size = %d)\n' % amp_split_size
-        text += 'parameter (amp_split_size_born = %d) ! the first entries in amp_split are for the born\n' % amp_split_size_born
+        text += '! the first entries in the next line in amp_split are for the born \n'
+        text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
@@ -2801,11 +2810,17 @@ Parameters              %(params)s\n\
                 if col != 1:
                     fks_j = cpos+1
             # if no colored leg exist, look for a charged leg
-            for cpos, chg in enumerate(charges[:-1]):
-                if chg != 0.:
-                    fks_j = cpos+1
+            if fks_j == 0:
+                for cpos, chg in enumerate(charges[:-1]):
+                    if chg != 0.:
+                        fks_j = cpos+1
             # no coloured or charged particle found. Pick the final particle in the (Born) process
             if fks_j==0: fks_j=len(colors)-1    
+
+            # this is special for 2->1 processes: j must be picked initial
+            # keep in mind that colors include the fake extra particle
+            if len(colors) == 4:
+                fks_j = 2
 
             replace_dict['fks_i_values'] = str(fks_i)
             replace_dict['fks_j_values'] = str(fks_j)
@@ -3098,7 +3113,7 @@ Parameters              %(params)s\n\
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'

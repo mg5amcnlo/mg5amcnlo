@@ -291,9 +291,11 @@ class HEPMC_EventFile(object):
                 self.header += line
         self.start_event = ''
 
-    def seek(self, value):
+    def seek(self, value, fromwhat=0):
         self.start_event = ""
-        super(HEPMC_EventFile, self).seek(value)
+        return super(HEPMC_EventFile, self).seek(value, fromwhat)
+        
+        
         
     def next(self):
         """get next event"""
@@ -319,15 +321,33 @@ class HEPMC_EventFile(object):
 
 class HEPMC_EventFileGzip(HEPMC_EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
+    
+    def tell(self):
+        currpos = super(HEPMC_EventFileGzip, self).tell()
+        if not currpos:
+            currpos = self.size
+        return currpos
+    
+    def getfilesize(self):
+        fo = open(self.name, 'rb')
+        fo.seek(-4, 2)
+        r = fo.read()
+        fo.close()
+        import struct
+        return struct.unpack('<I', r)[0]    
         
 class HEPMC_EventFileNoGzip(HEPMC_EventFile, file):
     """A way to read a standard event file"""
     
     def close(self,*args, **opts):
         
-        out = super(EventFileNoGzip, self).close(*args, **opts)
+        out = super(HEPMC_EventFileNoGzip, self).close(*args, **opts)
         if self.to_zip:
             misc.gzip(self.name)
+            
+    def getfilesize(self):
+        self.seek(0,2)
+        return self.tell()
     
     
 if "__main__" == __name__:

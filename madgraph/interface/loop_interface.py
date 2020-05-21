@@ -21,6 +21,7 @@ import shutil
 import time
 import logging
 import re
+import sys
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -494,14 +495,19 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         aloha.mp_precision = aloha_original_quad_mode
 
 
-    def install_reduction_library(self):
+    def install_reduction_library(self, force=False):
         """Code to install the reduction library if needed"""
         
         opt = self.options
-        
+                
         # Check if first time:
-        if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
+        if not force and ((opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a')))): 
             return
+
+        # do not trigger the question for tests
+        if 'test_manager.py' in sys.argv[0]:
+            from unittest.case import SkipTest
+            raise SkipTest
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:BOLD')
         to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
@@ -570,7 +576,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             
             # ONLINE INSTALLATION
             elif value == 'install':
-                prog = {'pjfry': 'PJFry', 'golem': 'Golem95'}
+                prog = {'golem': 'Golem95'}
                 if key in prog:
                     self.exec_cmd('install %s' % prog[key])
                 else:
@@ -816,7 +822,12 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             # Extract potential loop_filter          
             for arg in args:
                 if arg.startswith('--loop_filter='):
-                    loop_filter = arg[14:]
+                    start = arg[14]
+                    end = arg[-1]
+                    if start == end and start in ["'", '"']:
+                        loop_filter = arg[15:-1]
+                    else:
+                        loop_filter = arg[14:]
                 if not isinstance(self, extended_cmd.CmdShell):
                     raise self.InvalidCmd, "loop_filter is not allowed in web mode"
             args = [a for a in args if not a.startswith('--loop_filter=')]
@@ -903,7 +914,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     local_installer = ['ninja', 'collier']
     required = ['cuttools', 'iregi']
-    order = ['cuttools', 'iregi', 'ninja', 'collier', 'golem', 'pjfry']
+    order = ['cuttools', 'iregi', 'ninja', 'collier', 'golem']
     bypassed = ['pjfry']
 
     @property
@@ -923,13 +934,11 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         self.code = {'ninja': 'install',
                      'collier': 'install',
                      'golem': 'off',
-                     'pjfry':'off',
                      'cuttools': 'required',
                      'iregi': 'required'}
         if not self.online:
             self.code['ninja'] = 'local'
             self.code['collier'] = 'local'
-            self.code['pjfry'] = 'fail'
             self.code['golem'] = 'fail'
         if not misc.which('cmake'):
             self.code['collier'] = 'off'
@@ -949,10 +958,10 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                 install_dir2 = MG5DIR     
             if os.path.exists(pjoin(install_dir1, 'collier')):
                 self.code['collier'] =  pjoin(install_dir1, 'collier')
-            if os.path.exists(pjoin(install_dir2, 'PJFry','bin','qd-config')):
-                self.code['collier'] =  pjoin(install_dir2, 'PJFry')
             if os.path.exists(pjoin(install_dir2, 'golem95')):
-                self.code['collier'] =  pjoin(install_dir2, 'golem95')
+                self.code['glem'] =  pjoin(install_dir2, 'golem95')
+            if os.path.exists(pjoin(install_dir1, 'ninja')):
+                self.code['ninja'] =  pjoin(install_dir2, 'ninja','lib')
         
         # 1. create the question
         question, allowed_answer = self.create_question(first=True)
@@ -974,7 +983,6 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         descript =  {'cuttools': ['cuttools','(OPP)','[0711.3596]'],
                      'iregi': ['iregi','(TIR)','[1405.0301]'],
                      'ninja': ['ninja','(OPP)','[1403.1229]'],
-                     'pjfry': ['pjfry','(TIR)','[1112.0500]'],
                      'golem': ['golem','(TIR)','[0807.0605]'],
                      'collier': ['collier','(TIR)','[1604.06792]']} 
 
@@ -1092,7 +1100,6 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
 
 
     do_ninja = lambda self,line : self.apply_name('ninja', line)
-    do_pjfry = lambda self,line : self.apply_name('pjfry', line)
     do_collier = lambda self,line : self.apply_name('collier', line)
     do_golem = lambda self,line : self.apply_name('golem', line)
     do_cuttools = lambda self,line : self.apply_name('cuttools', line)
@@ -1113,7 +1120,6 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             return self.list_completion(text, ['install', 'noinstall', 'local'], line)
     
     complete_ninja = complete_prog 
-    complete_pjfry = complete_prog
     complete_collier = complete_prog
     complete_golem = complete_prog
     complete_cuttools = complete_prog

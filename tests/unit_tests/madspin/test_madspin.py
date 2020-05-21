@@ -167,6 +167,13 @@ class TestBanner(unittest.TestCase):
                           'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
                          out.split(';')[:-1])       
 
+        out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [ all= QCD]', 't> w+b', cmd._curr_model)
+         
+        self.assertEqual(['add process p p > t t~ QED=1, t> w+b  --no_warning=duplicate',
+                          'define pert_QCD = -4 -3 -2 -1 1 2 3 4 21',
+                          'add process p p > t t~ pert_QCD QED=1, t> w+b  --no_warning=duplicate'],
+                         out.split(';')[:-1])       
+
         #6 case with virt=QCD, technically not valid but I like that the function can do it
         out = madspin.decay_all_events.get_proc_with_decay('generate p p > t t~ QED=1 [virt=QCD]', 't> w+b', cmd._curr_model)
         self.assertEqual(['add process p p > t t~ QED=1 [virt=QCD], t> w+b  --no_warning=duplicate'],
@@ -208,7 +215,7 @@ class TestEvent(unittest.TestCase):
         6  1    1    2  504    0 +1.97604030000e+02 +4.84248580000e+01 +7.68186010000e+01  2.77889220000e+02  1.73000000000e+02 0.0000e+00 0.0000e+00
        -6  1    1    2    0  502 -2.12773590000e+02 -3.46693450000e+01 +3.59454580000e+02  4.53443660000e+02  1.73000000000e+02 0.0000e+00 0.0000e+00
        21  1    1    2  501  504 +1.51695610000e+01 -1.37555130000e+01 -3.15212320000e+01  3.75962800000e+01  7.50000000000e-01 0.0000e+00 0.0000e+00
-#amcatnlo 2  5  3  3  1 0.45933500e+02 0.45933500e+02 9  0  0 0.99999999e+00 0.69338413e+00 0.14872513e+01 0.00000000e+00 0.00000000e+00
+#aMCatNLO 2  5  3  3  1 0.45933500E+02 0.45933500E+02 9  0  0 0.99999999E+00 0.69338413E+00 0.14872513E+01 0.00000000E+00 0.00000000E+00
   <rwgt>
    <wgt id='1001'>  +1.2946800e+02 </wgt>
    <wgt id='1002'>  +1.1581600e+02 </wgt>
@@ -236,7 +243,7 @@ class TestEvent(unittest.TestCase):
         6  1    1    2  501    0 -4.03786550000e+01 -1.41924320000e+02 +3.66089980000e+02  4.30956860000e+02  1.73000000000e+02 0.0000e+00 0.0000e+00
        21  1    1    2  504  502 -2.46716450000e+01 +3.98371210000e+01 +2.49924260000e+02  2.54280130000e+02  7.50000000000e-01 0.0000e+00 0.0000e+00
        -6  1    1    2    0  504 +6.50503000000e+01 +1.02087200000e+02 +5.35124510000e+02  5.75274350000e+02  1.73000000000e+02 0.0000e+00 0.0000e+00
-#amcatnlo 2  5  4  4  4 0.40498390e+02 0.40498390e+02 9  0  0 0.99999997e+00 0.68201705e+00 0.15135239e+01 0.00000000e+00 0.00000000e+00
+#aMCatNLO 2  5  4  4  4 0.40498390E+02 0.40498390E+02 9  0  0 0.99999997E+00 0.68201705E+00 0.15135239E+01 0.00000000E+00 0.00000000E+00
   <mgrwgt>
   some information
   <scale> even more infor

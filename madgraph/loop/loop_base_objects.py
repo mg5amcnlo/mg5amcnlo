@@ -1445,6 +1445,8 @@ class LoopModel(base_objects.Model):
         if len(args)>0 and isinstance(args[0],LoopModel):
             if hasattr(args[0],'map_CTcoup_CTparam'):
                 self.map_CTcoup_CTparam = copy.copy(args[0].map_CTcoup_CTparam)
+            if hasattr(args[0],'notused_ct_params'):
+                self.notused_ct_params = list(args[0].notused_ct_params)                
 
         super(LoopModel,self).__init__(*args,**opts)
 
@@ -1545,7 +1547,8 @@ class DGLoopLeg(base_objects.Leg):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group','loop_line','depth']
+        return ['id', 'number', 'state', 'from_group','loop_line','depth', 
+                'polarization']
     
     def convert_to_leg(self):
         """ Converts a DGLoopLeg back to a Leg. Basically removes the extra
@@ -1554,6 +1557,7 @@ class DGLoopLeg(base_objects.Leg):
         aleg=base_objects.Leg()
         for key in aleg.get_sorted_keys():
             aleg.set(key,self[key])
+
 
         return aleg
 

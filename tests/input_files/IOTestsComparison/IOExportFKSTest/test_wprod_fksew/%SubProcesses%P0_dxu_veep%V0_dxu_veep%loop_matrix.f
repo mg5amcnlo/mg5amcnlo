@@ -85,7 +85,7 @@ C     , Ninja and COLLIER
 C     Only CutTools or possibly Ninja (if installed with qp support)
 C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=2)
+      PARAMETER (QP_NLOOPLIB=1)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -244,8 +244,8 @@ C
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(NLOOPLIB)
-      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.
-     $ ,.TRUE.,.TRUE./
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.FALSE.,.FALSE.
+     $ ,.FALSE.,.TRUE./
       COMMON/LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
@@ -259,7 +259,7 @@ C      loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.TRUE.,.FALSE./
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
@@ -654,6 +654,14 @@ C      helicity is asked
         ENDDO
  101    CONTINUE
         CLOSE(1)
+
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
 
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
@@ -1666,7 +1674,6 @@ C      after
 C     ech event
 C     
       CALL CLEAR_TIR_CACHE()
-      CALL NINJA_CLEAR_INTEGRAL_CACHE()
       CALL CLEAR_COLLIER_CACHE()
       END
 
@@ -1938,6 +1945,16 @@ C        not included
             ACC(K) = 0.0D0
           ENDIF
         ENDIF
+
+C       If NaN are present in the evaluation, automatically set the
+C        accuracy to 1.0d99.
+        DO I=1,3
+          DO J=1,MAXSTABILITYLENGTH
+            IF (ISNAN(FULLLIST(I,K,J))) THEN
+              ACC(K) = 1.0D99
+            ENDIF
+          ENDDO
+        ENDDO
 
       ENDDO
 

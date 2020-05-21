@@ -37,6 +37,9 @@ c
     LOGICAL GOODHEL(NCOMB)
     INTEGER NTRY
     common/BLOCK_GOODHEL/NTRY,GOODHEL
+    integer nb_spin_state(2)
+    data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
+    common /nb_hel_state/ nb_spin_state
 C  
 C LOCAL VARIABLES 
 C  
@@ -49,6 +52,7 @@ C
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
+
 C  
 C GLOBAL VARIABLES
 C  
@@ -58,7 +62,7 @@ C
     CHARACTER*101        HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
-    REAL*8 POL(2)
+	REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
     
     INTEGER          ISUM_HEL
@@ -68,6 +72,7 @@ C
     DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
+
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -100,9 +105,9 @@ C ----------
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
+                 T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
                ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
+                 T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2d0
                ENDIF
              ENDDO
 			 IF (ISUM_HEL.NE.0) then
@@ -130,7 +135,7 @@ C ----------
           JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+              IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I)=.TRUE.
                  NGOOD = NGOOD +1
                  IGOOD(NGOOD) = I        
@@ -235,6 +240,11 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+
+	%(fake_width_declaration)s
+	logical first
+	data first /.true./
+	save first
 C
 C FUNCTION
 C
@@ -245,6 +255,9 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
+
+	double precision small_width_treatment
+	common/narrow_width/small_width_treatment
 C  
 C COLOR DATA
 C  
@@ -252,6 +265,11 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+if (first) then
+	first=.false.
+	%(fake_width_definitions)s
+endif
+
 %(helas_calls)s
 %(jamp_lines)s
 

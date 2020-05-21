@@ -173,7 +173,13 @@ class ModelReader(loop_base_objects.LoopModel):
                             value = '0.0' 
                         if scale and parameter_dict[block][pid].name == 'aS':
                             runner = Alphas_Runner(value, nloop=2)
-                            value = runner(scale)
+                            try:
+                                value = runner(scale)
+                            except ValueError, err:
+                                if str(err) == 'math domain error' and scale < 1:
+                                    value = 0.0
+                                else:
+                                    raise
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
                                           value))
                         parameter_dict[block][pid].value = float(value)

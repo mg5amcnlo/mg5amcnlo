@@ -23,6 +23,8 @@ import sys
 import re
 import math
 import StringIO
+import itertools
+
 
 pjoin = os.path.join
 
@@ -44,6 +46,7 @@ else:
     import madgraph.iolibs.files as files 
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR, MadGraph5Error, InvalidCmd
+
 
 
 logger = logging.getLogger('madevent.cards')
@@ -483,9 +486,9 @@ class Banner(dict):
     def charge_card(self, tag):
         """Build the python object associated to the card"""
         
-        if tag == 'param_card':
+        if tag in ['param_card', 'param']:
             tag = 'slha'
-        elif tag == 'run_card':
+        elif tag  in ['run_card', 'run']:
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
@@ -686,13 +689,19 @@ def recover_banner(results_object, level, run=None, tag=None):
         try:    
             _tag = results_object[run].tags[-1] 
         except Exception,error:
-            return Banner()      
+            if os.path.exists( pjoin(results_object.path,'Events','%s_banner.txt' % (run))):
+                tag = None
+            else:
+                return Banner()      
     else:
         _tag = tag
-                                          
-    path = results_object.path
-    banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
+    path = results_object.path
+    if tag:               
+        banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
+    else:
+        banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))
+      
     if not os.path.exists(banner_path):
         if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
@@ -712,6 +721,7 @@ def recover_banner(results_object, level, run=None, tag=None):
 
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
+    
     banner = Banner(banner_path)
     
     
@@ -905,7 +915,10 @@ class ProcCard(list):
             out = []
             for line in self:
                 if line.startswith('define'):
-                    name, content = line[7:].split('=',1)
+                    try:
+                        name, content = line[7:].split('=',1)
+                    except ValueError:
+                        name, content = line[7:].split(None,1)
                     out.append((name, content))
             return out 
         else:
@@ -1204,8 +1217,8 @@ class ConfigFile(dict):
             if value in allowed:
                 valid=True     
             elif isinstance(value, str):
-                value = value.lower()
-                allowed = [v.lower() for v in allowed]
+                value = value.lower().strip()
+                allowed = [str(v).lower() for v in allowed]
                 if value in allowed:
                     i = allowed.index(value)
                     value = self.allowed_value[lower_name][i]
@@ -1340,6 +1353,22 @@ class ConfigFile(dict):
                 elif value.endswith(('k', 'M')) and value[:-1].isdigit():
                     convert = {'k':1000, 'M':1000000}
                     value =int(value[:-1]) * convert[value[-1]] 
+                elif '/' in value or '*' in value:               
+                    try:
+                        split = re.split('(\*|/)',value)
+                        v = float(split[0])
+                        for i in range((len(split)//2)):
+                            if split[2*i+1] == '*':
+                                v *=  float(split[2*i+2])
+                            else:
+                                v /=  float(split[2*i+2])
+                    except:
+                        v=0
+                        raise InvalidCmd, "%s can not be mapped to an integer" % value
+                    finally:
+                        value = int(v)
+                        if value != v:
+                            raise InvalidCmd, "%s can not be mapped to an integer" % v
                 else:
                     try:
                         value = float(value.replace('d','e'))
@@ -1354,24 +1383,29 @@ class ConfigFile(dict):
                             value = new_value
                         else:
                             raise InvalidCmd, "incorect input: %s need an integer for %s" % (value,name)
+                     
             elif targettype == float:
-                value = value.replace('d','e') # pass from Fortran formatting
-                try:
-                    value = float(value)
-                except ValueError:
+                if value.endswith(('k', 'M')) and value[:-1].isdigit():
+                    convert = {'k':1000, 'M':1000000}
+                    value = 1.*int(value[:-1]) * convert[value[-1]] 
+                else:
+                    value = value.replace('d','e') # pass from Fortran formatting
                     try:
-                        split = re.split('(\*|/)',value)
-                        v = float(split[0])
-                        for i in range((len(split)//2)):
-                            if split[2*i+1] == '*':
-                                v *=  float(split[2*i+2])
-                            else:
-                                v /=  float(split[2*i+2])
-                    except:
-                        v=0
-                        raise InvalidCmd, "%s can not be mapped to a float" % value
-                    finally:
-                        value = v
+                        value = float(value)
+                    except ValueError:
+                        try:
+                            split = re.split('(\*|/)',value)
+                            v = float(split[0])
+                            for i in range((len(split)//2)):
+                                if split[2*i+1] == '*':
+                                    v *=  float(split[2*i+2])
+                                else:
+                                    v /=  float(split[2*i+2])
+                        except:
+                            v=0
+                            raise InvalidCmd, "%s can not be mapped to a float" % value
+                        finally:
+                            value = v
             else:
                 raise InvalidCmd, "type %s is not handle by the card" % targettype
             
@@ -1434,6 +1468,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('pdg_initial2', [0])
         self.add_param('splitting_types',[], typelist=str)
         self.add_param('perturbation_order', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -2232,12 +2267,17 @@ class RunCard(ConfigFile):
         self.fortran_name = {}
         #parameter which are not supported anymore. (no action on the code)
         self.legacy_parameter = {}
-        #a list with all the cuts variable
-        self.cuts_parameter = []
+        #a list with all the cuts variable and which type object impacted
+        # L means charged lepton (l) and neutral lepton (n)
+        # d means that it is related to decay chain
+        # J means both light jet (j) and heavy jet (b)
+        # aj/jl/bj/bl/al are also possible (and stuff like aa/jj/llll/...
+        self.cuts_parameter = {}
         # parameter added where legacy requires an older value.
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
+        self.cut_class = {} 
         self.warned=False
 
 
@@ -2273,7 +2313,7 @@ class RunCard(ConfigFile):
         if hidden or system:
             self.hidden_param.append(name)
         if cut:
-            self.cuts_parameter.append(name)
+            self.cuts_parameter[name] = cut
         if sys_default is not None:
             self.system_default[name] = sys_default
 
@@ -2313,10 +2353,35 @@ class RunCard(ConfigFile):
                         logger.warning(str(error))
                     else:
                         raise
+
+    def valid_line(self, line, tmp):
+        template_options = tmp
+        default = template_options['default']
+        if line.startswith('#IF('):
+            cond = line[4:line.find(')')]
+            if template_options.get(cond,  default):
+                return True
+            else:
+                return False
+        elif line.strip().startswith('%'):
+            parameter = line[line.find('(')+1:line.find(')')]
+            
+            try:
+                cond = self.cuts_parameter[parameter]
+            except KeyError:
+                return True
+            
+            
+            if template_options.get(cond, default) or cond is True:
+                return True
+            else:
+                return False 
+        else:
+            return True      
                     
                 
     def write(self, output_file, template=None, python_template=False,
-                    write_hidden=False):
+                    write_hidden=False, template_options=None):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -2324,6 +2389,8 @@ class RunCard(ConfigFile):
         written = set()
         if not template:
             raise Exception
+        if not template_options:
+            template_options = collections.defaultdict(str)
 
         # check which optional block to write:
         write_block= []
@@ -2334,10 +2401,18 @@ class RunCard(ConfigFile):
                not any(f in self.user_set for f in b.fields):
                 continue
             write_block.append(b.name)
+            
+            
+        if python_template:
+            text = file(template,'r').read()
+            text = text.split('\n')             
+            # remove if templating
+            text = [l if not l.startswith('#IF') else l[l.find(')# ')+2:] 
+                    for l in text if self.valid_line(l, template_options)]
+            text ='\n'.join(text)
         
         if python_template and not to_write:
             import string
-            text = file(template,'r').read() 
             if self.blocks:
                 text = string.Template(text)
                 mapping = {}
@@ -2366,7 +2441,7 @@ class RunCard(ConfigFile):
                 comment = line[len(nline):]
                 nline = nline.split('=')
                 if python_template and nline[0].startswith('$'):
-                    block_name = nline[0][1:]
+                    block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
                     if not this_group:
                         logger.debug("block %s not defined", block_name)
@@ -2374,9 +2449,9 @@ class RunCard(ConfigFile):
                     else:
                         this_group = this_group[0]
                     if block_name in write_block:
-                        text += this_group.on_template % self
+                        text += this_group.template_on % self
                         for name in this_group.fields:
-                            written.add(f)
+                            written.add(name)
                             if name in to_write:
                                 to_write.remove(name)
                     else:
@@ -2488,6 +2563,11 @@ class RunCard(ConfigFile):
                     log_level = 5
                 elif lower_name in self.hidden_param:
                     log_level = 10
+                elif lower_name in self.cuts_parameter:
+                    if not MADEVENT and madgraph.ADMIN_DEBUG:
+                        log_level = 5
+                    else:
+                        log_level = 10
                 else:
                     log_level = 20
             if not default:
@@ -2594,7 +2674,7 @@ class RunCard(ConfigFile):
                 continue
             else:
                 pathinc = incname
-                
+
             fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
             for key in self.includepath[incname]:                
                 #define the fortran name
@@ -2684,6 +2764,8 @@ class RunCard(ConfigFile):
             targettype = type(self[name])
             if targettype == bool:
                 self[name] = False
+            if targettype == dict:
+                self[name] = '{}'
             elif 'min' in name:
                 self[name] = 0
             elif 'max' in name:
@@ -2743,8 +2825,68 @@ class RunCardLO(RunCard):
 #
 """, 
     template_off= '# Syscalc is deprecated but to see the associate options type\'update syscalc\''),
-    ]
+
+#    ECUT block (hidden it by default but for e+ e- collider)             
+        runblock(name='ecut', fields=('ej','eb','ea','el','ejmax','ebmax','eamax','elmax','e_min_pdg','e_max_pdg'),
+              template_on=\
+"""#*********************************************************************
+# Minimum and maximum E's (in the center of mass frame)              *
+#*********************************************************************
+  %(ej)s  = ej     ! minimum E for the jets
+  %(eb)s  = eb     ! minimum E for the b
+  %(ea)s  = ea     ! minimum E for the photons
+  %(el)s  = el     ! minimum E for the charged leptons
+  %(ejmax)s   = ejmax ! maximum E for the jets
+ %(ebmax)s   = ebmax ! maximum E for the b
+ %(eamax)s   = eamax ! maximum E for the photons
+ %(elmax)s   = elmax ! maximum E for the charged leptons
+ %(e_min_pdg)s = e_min_pdg ! E cut for other particles (use pdg code). Applied on particle and anti-particle
+ %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50})
+""", 
+    template_off= '#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#'),
+
+#    Frame for polarization
+    runblock(name='frame', fields=('me_frame'),
+              template_on=\
+"""#*********************************************************************
+# Frame where to evaluate the matrix-element (not the cut!) for polarization   
+#*********************************************************************
+  %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
+                               ! in which to evaluate the matrix-element
+                               ! [1,2] means the partonic center of mass 
+""", 
+    template_off= ''),        
+#    MERGING BLOCK:  MLM           
+        runblock(name='MLM', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
+            template_on=\
+"""#*********************************************************************
+# Matching parameter (MLM only)
+#*********************************************************************
+ %(ickkw)s = ickkw            ! 0 no matching, 1 MLM
+ %(alpsfact)s = alpsfact         ! scale factor for QCD emission vx
+ %(chcluster)s = chcluster        ! cluster only according to channel diag
+ %(asrwgtflavor)s = asrwgtflavor     ! highest quark flavor for a_s reweight
+ %(auto_ptj_mjj)s  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0
+                                   ! (turn off for VBF and single top processes)
+ %(xqcut)s   = xqcut   ! minimum kt jet measure between partons
+""",
+            template_off='# To see MLM/CKKW  merging options: type "update MLM" or "update CKKW"'),
+
+#    MERGING BLOCK:  CKKW         
+        runblock(name='CKKW', fields=(),
+            template_on=\
+"""#***********************************************************************
+# Turn on either the ktdurham or ptlund cut to activate                *
+# CKKW(L) merging with Pythia8 [arXiv:1410.3012, arXiv:1109.4829]      *
+#***********************************************************************
+ %(ktdurham)s  =  ktdurham
+ %(dparameter)s   =  dparameter
+ %(ptlund)s  =  ptlund
+ %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
+""",
+            template_off=''),    
     
+    ]    
     
     
     def default_setup(self):
@@ -2755,7 +2897,7 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
-        self.add_param("python_seed", -1, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
+        self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],
@@ -2797,135 +2939,138 @@ class RunCardLO(RunCard):
                 
         #matching
         self.add_param("scalefact", 1.0)
-        self.add_param("ickkw", 0, allowed=[0,1],                               comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")
+        self.add_param("ickkw", 0, allowed=[0,1], hidden=True,                  comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")
         self.add_param("highestmult", 1, fortran_name="nhmult", hidden=True)
         self.add_param("ktscheme", 1, hidden=True)
-        self.add_param("alpsfact", 1.0)
+        self.add_param("alpsfact", 1.0, hidden=True)
         self.add_param("chcluster", False, hidden=True)
         self.add_param("pdfwgt", True, hidden=True)
-        self.add_param("asrwgtflavor", 5,                                       comment = 'highest quark flavor for a_s reweighting in MLM')
-        self.add_param("clusinfo", True)
-        self.add_param("lhe_version", 3.0)
+        self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
+        self.add_param("clusinfo", True, hidden=True)
+        self.add_param("lhe_version", 3.0, hidden=True)
+        self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
+        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
+        self.add_param('frame_id', 6,  system=True)
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
-                        include=False, sys_default='sum')
+                        include=False, sys_default='sum', hidden=True)
         #cut
-        self.add_param("auto_ptj_mjj", False)
+        self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
-        self.add_param("cut_decays", False)
+        self.add_param("cut_decays", False, cut='d')
         self.add_param("nhel", 0, include=False)
         #pt cut
-        self.add_param("ptj", 20.0, cut=True)
-        self.add_param("ptb", 0.0, cut=True)
-        self.add_param("pta", 10.0, cut=True)
-        self.add_param("ptl", 10.0, cut=True)
-        self.add_param("misset", 0.0, cut=True)
-        self.add_param("ptheavy", 0.0, cut=True,                                comment='this cut apply on particle heavier than 10 GeV')
+        self.add_param("ptj", 20.0, cut='j')
+        self.add_param("ptb", 0.0, cut='b')
+        self.add_param("pta", 10.0, cut='a')
+        self.add_param("ptl", 10.0, cut='l')
+        self.add_param("misset", 0.0, cut='n')
+        self.add_param("ptheavy", 0.0, cut='H',                                comment='this cut apply on particle heavier than 10 GeV')
         self.add_param("ptonium", 1.0, legacy=True)
-        self.add_param("ptjmax", -1.0, cut=True)
-        self.add_param("ptbmax", -1.0, cut=True)
-        self.add_param("ptamax", -1.0, cut=True)
-        self.add_param("ptlmax", -1.0, cut=True)
-        self.add_param("missetmax", -1.0, cut=True)
+        self.add_param("ptjmax", -1.0, cut='j')
+        self.add_param("ptbmax", -1.0, cut='b')
+        self.add_param("ptamax", -1.0, cut='a')
+        self.add_param("ptlmax", -1.0, cut='l')
+        self.add_param("missetmax", -1.0, cut='n')
         # E cut
-        self.add_param("ej", 0.0, cut=True)
-        self.add_param("eb", 0.0, cut=True)
-        self.add_param("ea", 0.0, cut=True)
-        self.add_param("el", 0.0, cut=True)
-        self.add_param("ejmax", -1.0, cut=True)
-        self.add_param("ebmax", -1.0, cut=True)
-        self.add_param("eamax", -1.0, cut=True)
-        self.add_param("elmax", -1.0, cut=True)
+        self.add_param("ej", 0.0, cut='j', hidden=True)
+        self.add_param("eb", 0.0, cut='b', hidden=True)
+        self.add_param("ea", 0.0, cut='a', hidden=True)
+        self.add_param("el", 0.0, cut='l', hidden=True)
+        self.add_param("ejmax", -1.0, cut='j', hidden=True)
+        self.add_param("ebmax", -1.0, cut='b', hidden=True)
+        self.add_param("eamax", -1.0, cut='a', hidden=True)
+        self.add_param("elmax", -1.0, cut='l', hidden=True)
         # Eta cut
-        self.add_param("etaj", 5.0, cut=True)
-        self.add_param("etab", -1.0, cut=True)
-        self.add_param("etaa", 2.5, cut=True)
-        self.add_param("etal", 2.5, cut=True)
+        self.add_param("etaj", 5.0, cut='j')
+        self.add_param("etab", -1.0, cut='b')
+        self.add_param("etaa", 2.5, cut='a')
+        self.add_param("etal", 2.5, cut='l')
         self.add_param("etaonium", 0.6, legacy=True)
-        self.add_param("etajmin", 0.0, cut=True)
-        self.add_param("etabmin", 0.0, cut=True)
-        self.add_param("etaamin", 0.0, cut=True)
-        self.add_param("etalmin", 0.0, cut=True)
+        self.add_param("etajmin", 0.0, cut='a')
+        self.add_param("etabmin", 0.0, cut='b')
+        self.add_param("etaamin", 0.0, cut='a')
+        self.add_param("etalmin", 0.0, cut='l')
         # DRJJ
-        self.add_param("drjj", 0.4, cut=True)
-        self.add_param("drbb", 0.0, cut=True)
-        self.add_param("drll", 0.4, cut=True)
-        self.add_param("draa", 0.4, cut=True)
-        self.add_param("drbj", 0.0, cut=True)
-        self.add_param("draj", 0.4, cut=True)
-        self.add_param("drjl", 0.4, cut=True)
-        self.add_param("drab", 0.0, cut=True)
-        self.add_param("drbl", 0.0, cut=True)
-        self.add_param("dral", 0.4, cut=True)
-        self.add_param("drjjmax", -1.0, cut=True)
-        self.add_param("drbbmax", -1.0, cut=True)
-        self.add_param("drllmax", -1.0, cut=True)
-        self.add_param("draamax", -1.0, cut=True)
-        self.add_param("drbjmax", -1.0, cut=True)
-        self.add_param("drajmax", -1.0, cut=True)
-        self.add_param("drjlmax", -1.0, cut=True)
-        self.add_param("drabmax", -1.0, cut=True)
-        self.add_param("drblmax", -1.0, cut=True)
-        self.add_param("dralmax", -1.0, cut=True)
+        self.add_param("drjj", 0.4, cut='jj')
+        self.add_param("drbb", 0.0, cut='bb')
+        self.add_param("drll", 0.4, cut='ll')
+        self.add_param("draa", 0.4, cut='aa')
+        self.add_param("drbj", 0.0, cut='bj')
+        self.add_param("draj", 0.4, cut='aj')
+        self.add_param("drjl", 0.4, cut='jl')
+        self.add_param("drab", 0.0, cut='ab')
+        self.add_param("drbl", 0.0, cut='bl')
+        self.add_param("dral", 0.4, cut='al')
+        self.add_param("drjjmax", -1.0, cut='jj')
+        self.add_param("drbbmax", -1.0, cut='bb')
+        self.add_param("drllmax", -1.0, cut='ll')
+        self.add_param("draamax", -1.0, cut='aa')
+        self.add_param("drbjmax", -1.0, cut='bj')
+        self.add_param("drajmax", -1.0, cut='aj')
+        self.add_param("drjlmax", -1.0, cut='jl')
+        self.add_param("drabmax", -1.0, cut='ab')
+        self.add_param("drblmax", -1.0, cut='bl')
+        self.add_param("dralmax", -1.0, cut='al')
         # invariant mass
-        self.add_param("mmjj", 0.0, cut=True)
-        self.add_param("mmbb", 0.0, cut=True)
-        self.add_param("mmaa", 0.0, cut=True)
-        self.add_param("mmll", 0.0, cut=True)
-        self.add_param("mmjjmax", -1.0, cut=True)
-        self.add_param("mmbbmax", -1.0, cut=True)                
-        self.add_param("mmaamax", -1.0, cut=True)
-        self.add_param("mmllmax", -1.0, cut=True)
-        self.add_param("mmnl", 0.0, cut=True)
-        self.add_param("mmnlmax", -1.0, cut=True)
+        self.add_param("mmjj", 0.0, cut='jj')
+        self.add_param("mmbb", 0.0, cut='bb')
+        self.add_param("mmaa", 0.0, cut='aa')
+        self.add_param("mmll", 0.0, cut='ll')
+        self.add_param("mmjjmax", -1.0, cut='jj')
+        self.add_param("mmbbmax", -1.0, cut='bb')                
+        self.add_param("mmaamax", -1.0, cut='aa')
+        self.add_param("mmllmax", -1.0, cut='ll')
+        self.add_param("mmnl", 0.0, cut='LL')
+        self.add_param("mmnlmax", -1.0, cut='LL')
         #minimum/max pt for sum of leptons
-        self.add_param("ptllmin", 0.0, cut=True)
-        self.add_param("ptllmax", -1.0, cut=True)
-        self.add_param("xptj", 0.0, cut=True)
-        self.add_param("xptb", 0.0, cut=True)
-        self.add_param("xpta", 0.0, cut=True) 
-        self.add_param("xptl", 0.0, cut=True)
+        self.add_param("ptllmin", 0.0, cut='ll')
+        self.add_param("ptllmax", -1.0, cut='ll')
+        self.add_param("xptj", 0.0, cut='jj')
+        self.add_param("xptb", 0.0, cut='bb')
+        self.add_param("xpta", 0.0, cut='aa') 
+        self.add_param("xptl", 0.0, cut='ll')
         # ordered pt jet 
-        self.add_param("ptj1min", 0.0, cut=True)
-        self.add_param("ptj1max", -1.0, cut=True)
-        self.add_param("ptj2min", 0.0, cut=True)
-        self.add_param("ptj2max", -1.0, cut=True)
-        self.add_param("ptj3min", 0.0, cut=True)
-        self.add_param("ptj3max", -1.0, cut=True)
-        self.add_param("ptj4min", 0.0, cut=True)
-        self.add_param("ptj4max", -1.0, cut=True)                
-        self.add_param("cutuse", 0, cut=True)
+        self.add_param("ptj1min", 0.0, cut='jj')
+        self.add_param("ptj1max", -1.0, cut='jj')
+        self.add_param("ptj2min", 0.0, cut='jj')
+        self.add_param("ptj2max", -1.0, cut='jj')
+        self.add_param("ptj3min", 0.0, cut='jjj')
+        self.add_param("ptj3max", -1.0, cut='jjj')
+        self.add_param("ptj4min", 0.0, cut='j'*4)
+        self.add_param("ptj4max", -1.0, cut='j'*4)                
+        self.add_param("cutuse", 0, cut='jj')
         # ordered pt lepton
-        self.add_param("ptl1min", 0.0, cut=True)
-        self.add_param("ptl1max", -1.0, cut=True)
-        self.add_param("ptl2min", 0.0, cut=True)
-        self.add_param("ptl2max", -1.0, cut=True)
-        self.add_param("ptl3min", 0.0, cut=True)
-        self.add_param("ptl3max", -1.0, cut=True)        
-        self.add_param("ptl4min", 0.0, cut=True)
-        self.add_param("ptl4max", -1.0, cut=True)
+        self.add_param("ptl1min", 0.0, cut='l'*2)
+        self.add_param("ptl1max", -1.0, cut='l'*2)
+        self.add_param("ptl2min", 0.0, cut='l'*2)
+        self.add_param("ptl2max", -1.0, cut='l'*2)
+        self.add_param("ptl3min", 0.0, cut='l'*3)
+        self.add_param("ptl3max", -1.0, cut='l'*3)        
+        self.add_param("ptl4min", 0.0, cut='l'*4)
+        self.add_param("ptl4max", -1.0, cut='l'*4)
         # Ht sum of jets
-        self.add_param("htjmin", 0.0, cut=True)
-        self.add_param("htjmax", -1.0, cut=True)
-        self.add_param("ihtmin", 0.0, cut=True)
-        self.add_param("ihtmax", -1.0, cut=True)
-        self.add_param("ht2min", 0.0, cut=True) 
-        self.add_param("ht3min", 0.0, cut=True)
-        self.add_param("ht4min", 0.0, cut=True)
-        self.add_param("ht2max", -1.0, cut=True)
-        self.add_param("ht3max", -1.0, cut=True)
-        self.add_param("ht4max", -1.0, cut=True)
+        self.add_param("htjmin", 0.0, cut='j'*2)
+        self.add_param("htjmax", -1.0, cut='j'*2)
+        self.add_param("ihtmin", 0.0, cut='J'*2)
+        self.add_param("ihtmax", -1.0, cut='J'*2)
+        self.add_param("ht2min", 0.0, cut='J'*3) 
+        self.add_param("ht3min", 0.0, cut='J'*3)
+        self.add_param("ht4min", 0.0, cut='J'*4)
+        self.add_param("ht2max", -1.0, cut='J'*3)
+        self.add_param("ht3max", -1.0, cut='J'*3)
+        self.add_param("ht4max", -1.0, cut='J'*4)
         # photon isolation
-        self.add_param("ptgmin", 0.0, cut=True)
-        self.add_param("r0gamma", 0.4)
-        self.add_param("xn", 1.0)
-        self.add_param("epsgamma", 1.0) 
-        self.add_param("isoem", True)
-        self.add_param("xetamin", 0.0, cut=True)
-        self.add_param("deltaeta", 0.0, cut=True)
-        self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut=True)
-        self.add_param("dparameter", 0.4, fortran_name="d_parameter", cut=True)
-        self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut=True)
-        self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6])
+        self.add_param("ptgmin", 0.0, cut='aj')
+        self.add_param("r0gamma", 0.4, hidden=True)
+        self.add_param("xn", 1.0, hidden=True)
+        self.add_param("epsgamma", 1.0, hidden=True) 
+        self.add_param("isoem", True, hidden=True)
+        self.add_param("xetamin", 0.0, cut='jj')
+        self.add_param("deltaeta", 0.0, cut='j'*2)
+        self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut='j')
+        self.add_param("dparameter", 0.4, fortran_name="d_parameter", cut='j')
+        self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut='j')
+        self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6], hidden=True)
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
@@ -2948,19 +3093,21 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
+        self.add_param('hard_survey', False, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
+        self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('E_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('eta_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False, cut=True)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('eta_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('eta_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
         self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
@@ -2972,7 +3119,8 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], system=True)   
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
-            
+                     
+        
              
     def check_validity(self):
         """ """
@@ -3038,10 +3186,12 @@ class RunCardLO(RunCard):
                 import time
                 time.sleep(5)
             if self['drjj'] != 0:
-                logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+                if 'drjj' in self.user_set:
+                    logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
             if self['drjl'] != 0:
-                logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+                if 'drjl' in self.user_set:
+                    logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
                 self['drjl'] = 0    
             if not self['auto_ptj_mjj']:         
                 if self['mmjj'] > self['xqcut']:
@@ -3052,8 +3202,32 @@ class RunCardLO(RunCard):
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
-   
+            
+        # if heavy ion mode use for one beam, forbis lpp!=1
+        if self['lpp1'] not in [1,2]:
+            if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp1=1/2"
+        if self['lpp2'] not in [1,2]:
+            if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
+                raise InvalidRunCard, "Heavy ion mode is only supported for lpp2=1/2"   
+
+        # check if lpp = 
+        for i in [1,2]:
+            if self['lpp%s' % i ] == 3 and self['dsqrt_q2fact%s'%i] > 4:
+                raise InvalidRunCard( "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
+                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)")
+            if self['lpp%s' % i ] == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                raise InvalidRunCard("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of th Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+        
+        # if both lpp1/2 are on PA mode -> force fixed factorization scale
+        if self['lpp1'] in [2, 3] and self['lpp2'] in [2, 3] and not self['fixed_fac_scale']:
+            raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
+
+
     def update_system_parameter_for_include(self):
+        
+        # polarization
+        self['frame_id'] = sum(2**(n) for n in self['me_frame'])
         
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(self['pt_min_pdg'].keys() +self['pt_max_pdg'].keys() + 
@@ -3134,28 +3308,78 @@ class RunCardLO(RunCard):
             self['use_syst'] = False
         else:
             # check for beam_id
+            # check for beam_id
             beam_id = set()
-            for proc in proc_def:
+            beam_id_split = [set(), set()]
+            for proc in proc_def:   
                 for oneproc in proc:
-                    for leg in oneproc['legs']:
+                    for i,leg in enumerate(oneproc['legs']):
                         if not leg['state']:
+                            beam_id_split[i].add(leg['id'])
                             beam_id.add(leg['id'])
+
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
-                pass
+            
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+                # check for e p collision
+                if any(id  in beam_id for id in [11,-11,13,-13]):
+                    self.display_block.append('beam_pol')
+                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13]):
+                        self['lpp1'] = 0  
+                        self['lpp2'] = 1 
+                        self['ebeam1'] = '1k'  
+                        self['ebeam2'] = '6500'  
+                    else:
+                        self['lpp1'] = 1  
+                        self['lpp2'] = 0  
+                        self['ebeam1'] = '6500'  
+                        self['ebeam2'] = '1k'  
+            
             elif 11 in beam_id or -11 in beam_id:
                 self['lpp1'] = 0
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
                 self['use_syst'] = False
+                self.display_block.append('beam_pol')
+                self.display_block.append('ecut')
             else:
                 self['lpp1'] = 0
                 self['lpp2'] = 0    
-                self['use_syst'] = False            
-                
+                self['use_syst'] = False   
+                self.display_block.append('beam_pol')         
+            
+            # automatic polarisation of the beam if neutrino beam  
+            if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
+                self.display_block.append('beam_pol')
+                if any(id  in beam_id_split[0] for id in [12,14,16]):
+                    self['lpp1'] = 0   
+                    self['ebeam1'] = '1k'  
+                    self['polbeam1'] = -100
+                    if not all(id  in beam_id_split[0] for id in [12,14,16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')
+                elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                    self['lpp1'] = 0   
+                    self['ebeam1'] = '1k'  
+                    self['polbeam1'] = 100
+                    if not all(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
+                if any(id  in beam_id_split[1] for id in [12,14,16]):
+                    self['lpp2'] = 0   
+                    self['ebeam2'] = '1k'  
+                    self['polbeam2'] = -100
+                    if not all(id  in beam_id_split[1] for id in [12,14,16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+                if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                    self['lpp2'] = 0   
+                    self['ebeam2'] = '1k'  
+                    self['polbeam2'] = 100
+                    if not all(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+            
         # Check if need matching
         min_particle = 99
         max_particle = 0
@@ -3195,6 +3419,9 @@ class RunCardLO(RunCard):
                 self['drjj'] = 0
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
+                self['systematics_arguments'].append('--alps=0.5,1,2')
+                self.display_block.append('MLM')
+                self.display_block.append('CKKW')
                 
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
@@ -3207,10 +3434,69 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        
         if no_systematics:
             self['use_syst'] = False
             self['systematics_program'] = 'none'
+        
+        # if polarization is used, set the choice of the frame in the run_card
+        # But only if polarization is used for massive particles
+        for plist in proc_def:
+            for proc in plist:
+                for l in proc.get('legs') + proc.get('legs_with_decays'):
+                    if l.get('polarization'):
+                        model = proc.get('model')
+                        particle = model.get_particle(l.get('id'))
+                        if particle.get('mass').lower() != 'zero':
+                            self.display_block.append('frame') 
+                            break
+                else:
+                    continue
+                break
+            else:
+                continue
+            break
+
+        if 'MLM' in proc_characteristic['limitations']:
+            if self['dynamical_scale_choice'] ==  -1:
+                self['dynamical_scale_choice'] = 3
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
             
+        # define class of particles present to hide all the cuts associated to 
+        # not present class
+        cut_class = collections.defaultdict(int)
+        for proc in proc_def:
+            for oneproc in proc:
+                one_proc_cut = collections.defaultdict(int)
+                ids = oneproc.get_final_ids_after_decay()
+                if oneproc['decay_chains']:
+                    cut_class['d']  = 1
+                for pdg in ids:
+                    if pdg == 22:
+                        one_proc_cut['a'] +=1
+                    elif abs(pdg) <= self['maxjetflavor']:
+                        one_proc_cut['j'] += 1
+                        one_proc_cut['J'] += 1
+                    elif abs(pdg) <= 5:
+                        one_proc_cut['b'] += 1
+                        one_proc_cut['J'] += 1
+                    elif abs(pdg) in [11,13,15]:
+                        one_proc_cut['l'] += 1
+                        one_proc_cut['L'] += 1
+                    elif abs(pdg) in [12,14,16]:
+                        one_proc_cut['n'] += 1
+                        one_proc_cut['L'] += 1 
+                    elif str(oneproc.get('model').get_particle(pdg)['mass']) != 'ZERO':
+                        one_proc_cut['H'] += 1
+                        
+            for key, nb in one_proc_cut.items():
+                cut_class[key] = max(cut_class[key], nb)
+            self.cut_class = dict(cut_class)
+            self.cut_class[''] = True #avoid empty
+                                   
     def write(self, output_file, template=None, python_template=False,
               **opt):
         """Write the run_card in output_file according to template 
@@ -3224,9 +3510,25 @@ class RunCardLO(RunCard):
             else:
                 template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
                 python_template = False
-       
+                
+
+        hid_lines = {'default':True}#collections.defaultdict(itertools.repeat(True).next)
+        if isinstance(output_file, str):
+            if 'default' in output_file:
+                if self.cut_class:
+                    hid_lines['default'] = False
+                    for key in self.cut_class:
+                        nb = self.cut_class[key]
+                        for i in range(1,nb+1):
+                            hid_lines[key*i] = True
+                    for k1,k2 in ['bj', 'bl', 'al', 'jl', 'ab', 'aj']:
+                        if self.cut_class.get(k1) and self.cut_class.get(k2):
+                            hid_lines[k1+k2] = True
+
         super(RunCardLO, self).write(output_file, template=template,
-                                    python_template=python_template, **opt)            
+                                    python_template=python_template, 
+                                    template_options=hid_lines,
+                                    **opt)            
 
 
 class InvalidMadAnalysis5Card(InvalidCmd):
@@ -3752,9 +4054,9 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         #hidden parameter that are transfer to the fortran code
@@ -3770,7 +4072,10 @@ class RunCardNLO(RunCard):
         super(RunCardNLO, self).check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
-        if self['lpp1']==0 and self['lpp2']==0:
+        if self['lpp1']!=1 or self['lpp2']!=1:
+            if self['lpp1'] == 1 or self['lpp2']==1:
+                raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
+            
             if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]

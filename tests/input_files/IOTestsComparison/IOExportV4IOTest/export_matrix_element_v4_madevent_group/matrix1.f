@@ -39,6 +39,7 @@ C
       LOGICAL GOODHEL(NCOMB,2)
       INTEGER NTRY(2)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+
 C     
 C     LOCAL VARIABLES 
 C     
@@ -54,6 +55,7 @@ C
       INTEGER THIS_NTRY(2)
       SAVE THIS_NTRY
       DATA THIS_NTRY /0,0/
+C     
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
 C      entries with ref_helicity_grid%%n_tot_entries
@@ -67,11 +69,17 @@ C
       CHARACTER*101         HEL_BUFF
       COMMON/TO_HELICITY/  HEL_BUFF
 
+      INTEGER NB_SPIN_STATE_IN(2)
+      COMMON /NB_HEL_STATE/ NB_SPIN_STATE_IN
+
       INTEGER IMIRROR
       COMMON/TO_MIRROR/ IMIRROR
 
       REAL*8 POL(2)
       COMMON/TO_POLARIZATION/ POL
+
+      DOUBLE PRECISION SMALL_WIDTH_TREATMENT
+      COMMON/NARROW_WIDTH/SMALL_WIDTH_TREATMENT
 
       INTEGER          ISUM_HEL
       LOGICAL                    MULTI_CHANNEL
@@ -110,6 +118,7 @@ C      entries to the grid for the MC over helicity configuration
 C     ----------
 C     BEGIN CODE
 C     ----------
+
       NTRY(IMIRROR)=NTRY(IMIRROR)+1
       THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1
       DO I=1,NEXTERNAL
@@ -142,9 +151,9 @@ C     ----------
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2D0  ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
+                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2D0
               ENDIF
             ENDDO
             IF (ISUM_HEL.NE.0.AND.DS_GET_DIM_STATUS('Helicity')
@@ -290,6 +299,15 @@ C
 C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+
+      DOUBLE PRECISION FK_ZERO
+      DOUBLE PRECISION FK_WZ
+      SAVE FK_ZERO
+      SAVE FK_WZ
+
+      LOGICAL FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
 C     
 C     FUNCTION
 C     
@@ -300,6 +318,9 @@ C
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
       INCLUDE 'coupl.inc'
+
+      DOUBLE PRECISION SMALL_WIDTH_TREATMENT
+      COMMON/NARROW_WIDTH/SMALL_WIDTH_TREATMENT
 C     
 C     COLOR DATA
 C     
@@ -312,26 +333,33 @@ C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      IF (FIRST) THEN
+        FIRST=.FALSE.
+        FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ*SMALL_WIDTH_TREATMENT)), WZ)
+        FK_ZERO = 0D0
+      ENDIF
+
+
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
+      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
       CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
-      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO,ZERO,W(1,5))
+      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQED,AMP(2))
-      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ,WZ,W(1,5))
+      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ, FK_WZ,W(1,5))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_2_0(W(1,4),W(1,3),W(1,5),GUZ1,GUZ2,AMP(3))
-      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,5))
+      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 4
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQQ,AMP(4))
-      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO,ZERO,W(1,5))
+      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQED,AMP(5))
-      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ,WZ,W(1,5))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, FK_WZ,W(1,5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_2_0(W(1,4),W(1,2),W(1,5),GUZ1,GUZ2,AMP(6))
 C     JAMPs contributing to orders ALL_ORDERS=1

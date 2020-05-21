@@ -14,7 +14,7 @@
 ################################################################################
 """ How to import a UFO model to the MG5 format """
 
-
+import collections
 import fractions
 import logging
 import os
@@ -23,7 +23,7 @@ import sys
 import time
 import collections
 
-
+import madgraph
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
@@ -106,11 +106,18 @@ def get_model_db():
     r = random.randint(0,1)
     r = [r, (1-r)]
 
+    if 'MG5aMC_WWW' in os.environ and os.environ['MG5aMC_WWW']:
+        data_path.append(os.environ['MG5aMC_WWW']+'/models_db.dat')
+        r.insert(0, 2)
+
+
     for index in r:
         cluster_path = data_path[index]
         try:
             data = urllib.urlopen(cluster_path)
         except Exception:
+            continue
+        if data.getcode() != 200:
             continue
         break
     else:
@@ -121,6 +128,11 @@ def get_model_db():
 def import_model_from_db(model_name, local_dir=False):
     """ import the model with a given name """
 
+    if os.path.sep in model_name and os.path.exists(os.path.dirname(model_name)):
+        target = os.path.dirname(model_name)
+        model_name = os.path.basename(model_name)
+    else:
+        target = None
     data =get_model_db()
     link = None
     for line in data:
@@ -129,17 +141,29 @@ def import_model_from_db(model_name, local_dir=False):
             link = split[1]
             break
     else:
-        logger.debug('no model with that name found online')
+        logger.debug('no model with that name (%s) found online', model_name)
         return False
     
     #get target directory
-    # 1. PYTHONPATH containing UFO
+    # 1. PYTHONPATH containing UFO --only for omattelaer user
     # 2. models directory
-    target = None 
-    if 'PYTHONPATH' in os.environ and not local_dir:
+    
+    username = ''
+    if not target:
+        try:
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ]  
+        except Exception, error:
+            misc.sprint(str(error))
+            username = ''
+    if username in ['omatt', 'mattelaer', 'olivier'] and target is None and \
+                                    'PYTHONPATH' in os.environ and not local_dir:
         for directory in os.environ['PYTHONPATH'].split(':'):
-            if 'UFO' in os.path.basename(directory) and os.path.exists(directory):
-                target= directory 
+            #condition only for my setup --ATLAS did not like it
+            if 'UFOMODEL' == os.path.basename(directory) and os.path.exists(directory) and\
+                misc.glob('*/couplings.py', path=directory) and 'matt' in directory:
+                target= directory
+                   
     if target is None:
         target = pjoin(MG5DIR, 'models')    
     try:
@@ -398,7 +422,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     # save in a pickle files to fasten future usage
-    if ReadWrite:
+    if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
                                    model, log=False)
 
@@ -420,6 +444,8 @@ class UFOMG5Converter(object):
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
+                                  # only trigger if all particles are of QCD type (not h>gg)
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -521,6 +547,14 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if self.non_qcd_gluon_emission:
+            logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
+            "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
+            "  Use such features with care.", self.non_qcd_gluon_emission)
+
+            self.model['allow_pickle'] = False 
+            self.model['limitations'].append('MLM')
+            
         if self.perturbation_couplings:
             try:
                 self.ufomodel.add_NLO()
@@ -531,8 +565,10 @@ class UFOMG5Converter(object):
                 self.add_CTinteraction(interaction_info, color_info)
     
 
-        for interaction in self.interactions:
+        for interaction in list(self.interactions):
             self.optimise_interaction(interaction)
+            if not interaction['couplings']:
+                self.interactions.remove(interaction)
     
     
         self.model.set('conserved_charge', self.conservecharge)
@@ -585,6 +621,32 @@ class UFOMG5Converter(object):
     
     def optimise_interaction(self, interaction):
         
+        
+        #  Check if two couplings have exactly the same definition. 
+        #  If so replace one by the other
+        if not hasattr(self, 'iden_couplings'):
+            coups = collections.defaultdict(list)
+            coups['0'].append('ZERO')
+            for coupling in self.ufomodel.all_couplings:
+                #if isinstance(coupling.value, str):
+                coups[str(coupling.value)].append( coupling.name)
+            
+            self.iden_couplings = {}
+            for idens in [c for c in coups.values() if len(c)>1]:
+                for i in range(1, len(idens)):
+                    self.iden_couplings[idens[i]] = idens[0]
+
+        # apply the replacement by identical expression
+        for key, coup in list(interaction['couplings'].items()):
+            if coup in self.iden_couplings:
+                interaction['couplings'][key] = self.iden_couplings[coup] 
+            if interaction['couplings'][key] == 'ZERO':
+                del interaction['couplings'][key]
+                
+        
+                
+
+        
         # we want to check if the same coupling is used for two lorentz strucutre 
         # for the same color structure. 
         to_lor = {}
@@ -618,14 +680,15 @@ class UFOMG5Converter(object):
                 continue
             names = [interaction['lorentz'][i] for i in to_lor[key]]
             names.sort()
-            
+            if self.lorentz_info[names[0]].get('structure') == 'external':
+                continue
             # get name of the new lorentz
             if tuple(names) in self.lorentz_combine:
                 # already created new loretnz
                 new_name = self.lorentz_combine[tuple(names)]
             else:
                 new_name = self.add_merge_lorentz(names)
-                
+
             # remove the old couplings 
             color, coup = key
             to_remove = [(color, lor) for lor in to_lor[key]]  
@@ -668,7 +731,12 @@ class UFOMG5Converter(object):
         # load the associate lorentz expression
         new_struct = ' + '.join([self.lorentz_info[n].get('structure') for n in names])
         spins = self.lorentz_info[names[0]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfactors = sum([ self.lorentz_info[n].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n], 'formfactors') \
+                            and self.lorentz_info[n].get('formfactors') \
+                      ],[])
+                        
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfactors)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
@@ -747,10 +815,13 @@ class UFOMG5Converter(object):
                         particle.set('line', value)
                 elif key == 'propagator':
                     if value:
-                        if aloha.unitary_gauge:
-                            particle.set(key, str(value[0]))
-                        else: 
-                            particle.set(key, str(value[1]))
+                        if isinstance(value, (list,dict)):
+                            if aloha.unitary_gauge:
+                                particle.set(key, str(value[0]))
+                            else: 
+                                particle.set(key, str(value[1]))
+                        else:
+                            particle.set(key, str(value))
                     else:
                         particle.set(key, '')
                 else:
@@ -919,7 +990,7 @@ class UFOMG5Converter(object):
                   the value of the pole. In the current implementation, this is
                   just to see if the pole is zero or not.
             """
-
+            
             if isinstance(CTCoupling.value,dict):
                 if -pole in CTCoupling.value.keys():
                     return CTCoupling.value[-pole], [], 0
@@ -979,7 +1050,9 @@ class UFOMG5Converter(object):
                     # attribute defined, but it is better to make sure.
                     if hasattr(self.model, 'map_CTcoup_CTparam'):
                         self.model.map_CTcoup_CTparam[couplname] = CTparamNames
+            
 
+                    
             # Finally modify the value of this CTCoupling so that it is no
             # longer a string expression in terms of CTParameters but rather
             # a dictionary with the CTparameters replaced by their _FIN_ and
@@ -990,6 +1063,13 @@ class UFOMG5Converter(object):
             if new_value:
                 coupl.old_value = coupl.value
                 coupl.value = new_value
+
+        for CTparam in all_CTparameters:
+            if CTparam.name not in self.model.map_CTcoup_CTparam:
+                if not hasattr(self.model, "notused_ct_params"):
+                    self.model.notused_ct_params = [CTparam.name.lower()]
+                else:
+                    self.model.notused_ct_params.append(CTparam.name.lower())
 
     def add_CTinteraction(self, interaction, color_info):
         """ Split this interaction in order to call add_interaction for
@@ -1239,6 +1319,7 @@ class UFOMG5Converter(object):
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
         
+     
         
         
         # Now consider the name only
@@ -1264,10 +1345,18 @@ class UFOMG5Converter(object):
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
-                if '1' in order:
+
+                if '1' in coupling.order:
                     raise InvalidModel, '''Some couplings have \'1\' order. 
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
+                # check that gluon emission from quark are QCD tagged
+                if 21 in [particle.pdg_code for particle in interaction_info.particles] and\
+                    'QCD' not in  coupling.order:
+                    col = [par.get('color') for par in particles]
+                    if 1 not in col:
+                        self.non_qcd_gluon_emission +=1
+       
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = '%s%s' % \
                                                (coupling_sign,coupling.name)
@@ -1285,7 +1374,8 @@ class UFOMG5Converter(object):
                     order_to_int[order] = interaction                        
                     # add to the interactions
                     self.interactions.append(interaction)
-        
+
+            
         # check if this interaction conserve the charge defined
  #       if type=='base':
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -1298,7 +1388,7 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
-        
+
         
         
     def get_sign_flow(self, flow, nb_fermion):
@@ -1343,15 +1433,19 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
-    def add_lorentz(self, name, spins , expr):
+    def add_lorentz(self, name, spins , expr, formfact=None):
         """ Add a Lorentz expression which is not present in the UFO """
 
+        logger.debug('MG5 converter defines %s to %s', name, expr)
         assert name not in [l.name for l in self.model['lorentz']]
         with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
                                self.model['lorentz']):
             new = self.model['lorentz'][0].__class__(name = name,
                     spins = spins,
                     structure = expr)
+            if formfact:
+                new.formfactors = formfact
+
         assert name in [l.name for l in self.model['lorentz']]
         assert name not in [l.name for l in self.ufomodel.all_lorentz]
         #self.model['lorentz'].append(new) # already done by above command
@@ -1759,6 +1853,10 @@ class RestrictModel(model_reader.ModelReader):
      - identical coupling/mass/width are replace in the model by a unique one
      """
   
+    log_level = 10
+    if madgraph.ADMIN_DEBUG:
+        log_level = 5    
+  
     def default_setup(self):
         """define default value"""
         self.del_coup = []
@@ -1788,7 +1886,7 @@ class RestrictModel(model_reader.ModelReader):
                                         complex_mass_scheme=complex_mass_scheme)
         
         # Simplify conditional statements
-        logger.debug('Simplifying conditional expressions')
+        logger.log(self.log_level, 'Simplifying conditional expressions')
         modified_params, modified_couplings = \
             self.detect_conditional_statements_simplifications(model_definitions)
         
@@ -1812,9 +1910,9 @@ class RestrictModel(model_reader.ModelReader):
         self.remove_couplings(self.del_coup)
        
         # modify interaction to avoid to have identical coupling with different lorentz
-        for interaction in self.get('interactions'):
+        for interaction in list(self.get('interactions')):
             self.optimise_interaction(interaction)
-            
+                
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
@@ -1878,9 +1976,10 @@ class RestrictModel(model_reader.ModelReader):
                 zero_coupling.append(name)
                 continue
             elif not strict_zero and abs(value) < 1e-13:
-                logger.debug('coupling with small value %s: %s treated as zero' %
+                logger.log(self.log_level, 'coupling with small value %s: %s treated as zero' %
                              (name, value))
                 zero_coupling.append(name)
+                continue
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
@@ -1948,7 +2047,7 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
-        
+
         return null_parameters, one_parameters
     
     def apply_conditional_simplifications(self, modified_params,
@@ -1959,14 +2058,14 @@ class RestrictModel(model_reader.ModelReader):
         parameter (resp. coupling) instance and b is the simplified expression."""
         
         if modified_params:
-            logger.debug("Conditional expressions are simplified for parameters:")
-            logger.debug(",".join("%s"%param[0].name for param in modified_params))
+            logger.log(self.log_level, "Conditional expressions are simplified for parameters:")
+            logger.log(self.log_level, ",".join("%s"%param[0].name for param in modified_params))
         for param, new_expr in modified_params:
             param.expr = new_expr
         
         if modified_couplings:
-            logger.debug("Conditional expressions are simplified for couplings:")
-            logger.debug(",".join("%s"%coupl[0].name for coupl in modified_couplings))
+            logger.log(self.log_level, "Conditional expressions are simplified for couplings:")
+            logger.log(self.log_level, ",".join("%s"%coupl[0].name for coupl in modified_couplings))
         for coupl, new_expr in modified_couplings:
             coupl.expr = new_expr
     
@@ -2006,10 +2105,10 @@ class RestrictModel(model_reader.ModelReader):
         tot_param_time = end_param-start_param
         tot_coupl_time = end_coupl-end_param
         if tot_param_time>5.0:
-            logger.debug("Simplification of conditional statements"+\
+            logger.log(self.log_level, "Simplification of conditional statements"+\
               " in parameter expressions done in %s."%misc.format_time(tot_param_time))
         if tot_coupl_time>5.0:
-            logger.debug("Simplification of conditional statements"+\
+            logger.log(self.log_level, "Simplification of conditional statements"+\
               " in couplings expressions done in %s."%misc.format_time(tot_coupl_time))
 
         return param_modifications, coupl_modifications
@@ -2090,7 +2189,7 @@ class RestrictModel(model_reader.ModelReader):
         counterterms"""
 
         
-        logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
+        logger_mod.log(self.log_level, ' Fuse the Following coupling (they have the same value): %s '% \
                         ', '.join([str(obj) for obj in couplings]))
 
         main = couplings[0][0]
@@ -2133,7 +2232,7 @@ class RestrictModel(model_reader.ModelReader):
         """ merge the identical parameters given in argument.
         keep external force to keep the param_card untouched (up to comment)"""
             
-        logger_mod.debug('Parameters set to identical values: %s '% \
+        logger_mod.log(self.log_level, 'Parameters set to identical values: %s '% \
                  ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
 
         # Extract external parameters
@@ -2175,8 +2274,10 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 arg = 'width'
             change_name = [p.name for (p,f) in parameters[1:]]
+            factor_for_name = [f for (p,f)  in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
-                                                       if p[arg] in change_name]
+                                                       if p[arg] in change_name and 
+                                                       factor_for_name[change_name.index(p[arg])]==1]
             
     def remove_interactions(self, zero_couplings):
         """ remove the interactions and particle counterterms 
@@ -2227,11 +2328,11 @@ class RestrictModel(model_reader.ModelReader):
             orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
                                         
             if not vertex['couplings']:
-                logger_mod.debug('remove interactions: %s at order: %s' % \
+                logger_mod.log(self.log_level, 'remove interactions: %s at order: %s' % \
                                         (' '.join(part_name),', '.join(orders)))
                 self['interactions'].remove(vertex)
             else:
-                logger_mod.debug('modify interactions: %s at order: %s' % \
+                logger_mod.log(self.log_level, 'modify interactions: %s at order: %s' % \
                                 (' '.join(part_name),', '.join(orders)))
 
         # print useful log and clean the empty counterterm values
@@ -2243,12 +2344,12 @@ class RestrictModel(model_reader.ModelReader):
                          for part in pct[1][1]])
                                         
             if not pct[0]['counterterm'][pct[1]]:
-                logger_mod.debug('remove counterterm of particle %s'%part_name+\
+                logger_mod.log(self.log_level, 'remove counterterm of particle %s'%part_name+\
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)
                 del pct[0]['counterterm'][pct[1]]
             else:
-                logger_mod.debug('Modify counterterm of particle %s'%part_name+\
+                logger_mod.log(self.log_level, 'Modify counterterm of particle %s'%part_name+\
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)  
 
@@ -2276,7 +2377,9 @@ class RestrictModel(model_reader.ModelReader):
                 particle['width'] = 'ZERO'
             if particle['width'] in one_parameters:
                 one_parameters.remove(particle['width'])                
-                
+            if particle['mass'] in one_parameters:
+                one_parameters.remove(particle['mass'])                
+
         for pdg, particle in self['particle_dict'].items():
             if particle['mass'] in zero_parameters:
                 particle['mass'] = 'ZERO'
@@ -2315,6 +2418,13 @@ class RestrictModel(model_reader.ModelReader):
                     for coupling in coupling_list:
                         for use in  re_pat.findall(coupling.expr):
                             used.add(use)
+                
+                # check in form-factor
+                for lor in self['lorentz']:
+                    if hasattr(lor, 'formfactors') and lor.formfactors:
+                        for ff in lor.formfactors:
+                            for use in  re_pat.findall(ff.value):
+                                used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         
@@ -2365,9 +2475,9 @@ class RestrictModel(model_reader.ModelReader):
             #by pass parameter still in use
             if param in used or \
                   (keep_external and param_info[param]['dep'] == ('external',)):
-                logger_mod.debug('fix parameter value: %s' % param)
+                logger_mod.log(self.log_level, 'fix parameter value: %s' % param)
                 continue 
-            logger_mod.debug('remove parameters: %s' % (param))
+            logger_mod.log(self.log_level,'remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
 
@@ -2459,16 +2569,26 @@ class RestrictModel(model_reader.ModelReader):
         if any( n.startswith('d') for n in names ):
             new_struct += '-' + ' - '.join(['1.*(%s)' %self.lorentz_info[n[1:]].get('structure') for n in names if n.startswith('d')])
         spins = self.lorentz_info[names[0][1:]].get('spins')
-        new_lor = self.add_lorentz(new_name, spins, new_struct)
+        formfact = sum([ self.lorentz_info[n[1:]].get('formfactors') for n in names \
+                            if hasattr(self.lorentz_info[n[1:]], 'formfactors') \
+                              and self.lorentz_info[n[1:]].get('formfactors') \
+                       ],[])
+
+
+
+ 
+        new_lor = self.add_lorentz(new_name, spins, new_struct, formfact)
         self.lorentz_info[new_name] = new_lor
         
         return new_name
     
-    def add_lorentz(self, name, spin, struct):
+    def add_lorentz(self, name, spin, struct, formfact=None):
         """adding lorentz structure to the current model"""
         new = self['lorentz'][0].__class__(name = name,
                                            spins = spin,
                                            structure = struct)
+        if formfact:
+            new.formfactors = formfact
         self['lorentz'].append(new)
         self.create_lorentz_dict()
         

@@ -6,6 +6,7 @@ c     SM
 c     ----
 c     p p > t t~ (up to 2jet)
 c     p p > w+ (up to 3 jet)
+c     p p > j j w+ (ordering seems important) 
 c     p p > z t t~ j j  (no MLM needed)
 c
 c
@@ -243,13 +244,15 @@ c     the hardest and ipart(2) is the softest.
       integer iddgluon, iddother, idgluon, idother
       logical isqcd
       external isqcd
+      integer get_color
+      external get_color 
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
 
       if (btest(mlevel,4)) then
-        write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
+        write(*,*) 'updating ipart for: ',ida1,ida2,' -> ',imo
       endif
 
       if (btest(mlevel,4)) then
@@ -291,7 +294,6 @@ c           Transmit jet PDG code
      $        ' (',ipdg(imo),')'
          return
       endif        
-
 c     FS clustering
 c     Transmit parton PDG code for parton vertex
       if(isjet(idmo)) then
@@ -314,9 +316,20 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(2,ida2)
         endif
-      else if(idmo.eq.21 .and. abs(idda1).le.6 .and.
+      else if(idmo.eq.21.and. abs(idda1).le.6 .and.
      $        abs(idda2).le.6) then
 c     gluon -> quark anti-quark: use both, but take hardest as 1
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+          ipart(1,imo)=ipart(1,ida1)
+          ipart(2,imo)=ipart(1,ida2)
+        else
+          ipart(1,imo)=ipart(1,ida2)
+          ipart(2,imo)=ipart(1,ida1)
+        endif
+      else if (get_color(idmo).eq.8.and.iabs(get_color(idda1)).eq.3.and.
+     $         iabs(get_color(idda2)).eq.3) then
+c     gluon' -> quark' anti-quark': use both, but take hardest as 1
         if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
           ipart(1,imo)=ipart(1,ida1)
@@ -370,14 +383,48 @@ c     quark -> quark-gluon or quark-Z or quark-h or quark-W
 c     quark -> gluon-quark or Z-quark or h-quark or W-quark
         ipart(1,imo)=ipart(1,ida2)
         ipart(2,imo)=0
-      else
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda1)).eq.3.and.get_color(idda2).eq.1) then
+c       exotic q > q' Scalar         
+        ipart(1,imo)=ipart(1,ida1)
+        ipart(2,imo)=0
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda2)).eq.3.and.get_color(idda1).eq.1) then
+c       exotic q > Scalar q'
+        ipart(1,imo)=ipart(1,ida2)
+        ipart(2,imo)=0
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda2)).eq.8.and.iabs(get_color(idda1)).eq.3) then
+c       exotic q >  q' gluon
+        ipart(1,imo)=ipart(1,ida2)
+        ipart(2,imo)=0
+      else if(iabs(get_color(idmo)).eq.3.and.iabs(get_color(idda2)).eq.3.and.get_color(idda1).eq.8) then
+c       exotic q > gluon q'
+        ipart(1,imo)=ipart(1,ida1)
+        ipart(2,imo)=0
+      else if (get_color(idmo).eq.1.or.get_color(idmo).eq.2.or.get_color(idda1).eq.2.or.get_color(idda2).eq.2) then
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
          ipart(2,imo)=ipart(1,ida2)
+      else if (abs(get_color(idmo)).eq.3.and.abs(get_color(idda1)).eq.3.and.abs(get_color(idda2)).eq.3)then
+c     EPSILON^IJK color structure -- handle it as photon emission --
+         ipart(1,imo)=ipart(1,ida1)
+         ipart(2,imo)=0
+      else if (abs(get_color(idmo)).eq.6.and.abs(get_color(idda1)).eq.3.and.abs(get_color(idda2)).eq.3)then
+c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+          ipart(1,imo)=ipart(1,ida1)
+          ipart(2,imo)=ipart(1,ida2)
+        else
+          ipart(1,imo)=ipart(1,ida2)
+          ipart(2,imo)=ipart(1,ida1)
+        endif
+      else
+         write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
+         write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
+         stop 3
       endif
       
       if (btest(mlevel,4)) then
-        write(*,*) ' -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
+        write(*,*) 'XY -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
       endif
 
       return
@@ -627,12 +674,12 @@ c     Reset chcluster to run_card value
 C   If we have fixed factorization scale, for ickkw>0 means central
 C   scale, i.e. last two scales (ren. scale for these vertices are
 C   anyway already set by "scale" above)
-      if(ickkw.gt.0) then
-         if(fixed_fac_scale.and.first)then
+      if (first) then
             q2bck(1)=q2fact(1)
             q2bck(2)=q2fact(2)
             first=.false.
-         else if(fixed_fac_scale) then
+      else if(ickkw.gt.0) then
+         if(fixed_fac_scale) then
             q2fact(1)=q2bck(1)
             q2fact(2)=q2bck(2)
          endif
@@ -695,6 +742,7 @@ c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
 c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
+c         write(*,*) 'QCD jet status (before n= ',n,'):',(iqjets(i),i=3,nexternal)
         do i=1,2 ! index of the child in the interaction
           do j=1,2 ! j index of the beam
             if(idacl(n,i).eq.ibeam(j))then
@@ -760,16 +808,17 @@ c          FS clustering
 c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+              pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
+              pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
+              pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
+              if (isqcd(pdgm).and.isqcd(pdgid1).and.isqcd(pdgid2))then
+                  continue
 c          Remove non-gluon jets that lead up to non-jet vertices
-           if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+           elseif(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c          The ishft gives the FS particle corresponding to imocl
               if(.not.is_octet(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc)))then
                  ! split case for q a > q and for g > g h (with the gluon splitting into quark)
                  ! also check for case of three scalar interaction (then do nothing)
-                 pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
-                 pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
-                 pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
-
                  if (.not.isqcd(pdgm).and..not.isqcd(pdgid1).and..not.isqcd(pdgid2)) then
                     ! this is to avoid to do weird stuff for w+ w- z (or h h h) 
                     ! this fix an issue for qq_zttxqq G1594.08
@@ -914,8 +963,8 @@ c     Store external jet numbers if first time
             endif
          enddo
          njetstore(iconfig)=njets
-         if (btest(mlevel,4))
-     $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+        if (btest(mlevel,4))
+     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
 c     Recluster without requiring chcluster
          goto 100
       else
@@ -941,7 +990,7 @@ c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
      $              '. Have jets (>0)',(iqjets(i),i=1,nexternal),
      $              ', should be ',
      $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
-               stop
+               stop 4
             endif
             if (btest(mlevel,3))
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
@@ -1683,6 +1732,10 @@ c           fs sudakov weight
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))
+      else if (abs(lpp(1)).eq.2.or.abs(lpp(1)).eq.3) then
+         q2fact(1)=q2bck(1)
+      else if (abs(lpp(2)).eq.2.or.abs(lpp(2)).eq.3) then
+         q2fact(2)=q2bck(2)
       endif
 
       if (btest(mlevel,3)) then

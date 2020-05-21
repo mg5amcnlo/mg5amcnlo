@@ -602,7 +602,7 @@ c
       endif
       write(ifile,'(a)')
      # '  </init>'
- 501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
+ 501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,e14.8),1x,i6)
 c
       return
@@ -665,8 +665,10 @@ c
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
+      logical do_rwgt
       event_id = -99
 c
+      do_rwgt = do_rwgt_scale .or. do_rwgt_pdf .or. store_rwgt_info
       if (event_id.ge.0) then
          event_id=event_id+1
          if (event_id.le.9) then
@@ -720,7 +722,7 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf .or.
+      if(buff(1:1).eq.'#' .and. (do_rwgt .or.
      &     jwgtinfo.lt.0)) then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,

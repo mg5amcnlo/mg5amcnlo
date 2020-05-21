@@ -10,10 +10,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       DOUBLE COMPLEX REGSQRT
       DOUBLE COMPLEX GRREGLOG
       DOUBLE COMPLEX RECMS
-      DOUBLE COMPLEX CRECMS
       DOUBLE COMPLEX ARG
-      DOUBLE COMPLEX GRREGLOG
-      DOUBLE COMPLEX REGSQRT
 
 
       COMPLEX*32 MP_COND
@@ -24,9 +21,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMPLEX*32 MP_REGSQRT
       COMPLEX*32 MP_GRREGLOG
       COMPLEX*32 MP_RECMS
-      COMPLEX*32 MP_CRECMS
       COMPLEX*32 MP_ARG
-      COMPLEX*32 MP_GRREGLOG
-      COMPLEX*32 MP_REGSQRT
 
 

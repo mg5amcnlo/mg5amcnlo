@@ -4,12 +4,11 @@ c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
+      use FKSParams
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include 'born_nhel.inc'
-c general MadFKS parameters
-      include 'FKSParams.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
@@ -72,6 +71,9 @@ c statistics for MadLoop
       integer ret_code_common
       common /to_ret_code/ret_code_common
       double precision born_hel_from_virt
+
+      logical updateloop
+      common /to_updateloop/updateloop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -80,7 +82,11 @@ c masses
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
+      ! force to update also loop-related parameters
+      updateloop=.true.
       call update_as_param()
+      updateloop=.false.
+
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
       virt_wgt= 0d0

@@ -112,14 +112,14 @@ class TestMECmdShell(unittest.TestCase):
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
             print "install pythia-pgs"
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print "install MadAnalysis"
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install MadAnalysis4')
@@ -160,6 +160,16 @@ class TestMECmdShell(unittest.TestCase):
         if not self.debugging or not os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
             self.generate('d d~ > u u~', 'sm')
             run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            # Some test checking that some cut are absent/present by default
+            self.assertTrue('ptj' in run_card.user_set)
+            self.assertTrue('drjj' in run_card.user_set)
+            self.assertTrue('ptj2min' in run_card.user_set)
+            self.assertFalse('ptj3min' in run_card.user_set)
+            self.assertTrue('mmjj'  in run_card.user_set)
+            self.assertFalse('ptheavy'  in run_card.user_set)
+            self.assertFalse('Ej'  in run_card.user_set)
+            
+            
             run_card.set('bias_module','ptj_bias',user=True)
             run_card.set('bias_parameters',"{'ptj_bias_target_ptj': 1000.0,'ptj_bias_enhancement_power': 4.0}",user=True)
             run_card.set('use_syst',False)
@@ -216,6 +226,18 @@ class TestMECmdShell(unittest.TestCase):
         ff.write(orig_card)
         ff.close()
         
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertFalse('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertTrue('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertFalse('polbeam1'  in run_card.user_set)
+        self.assertFalse('ptl' in run_card.user_set)
+        
         #reduce the number of events
         files.cp(pjoin(_file_path, 'input_files', 'run_card_matching.dat'),
                  pjoin(self.out_dir, 'Cards/run_card.dat'))
@@ -251,6 +273,16 @@ class TestMECmdShell(unittest.TestCase):
         # check that the run_card do not have cut
         run_card = banner.RunCard(pjoin(self.run_dir,'Cards','run_card.dat'))
         self.assertEqual(run_card['ptj'], 0)
+        self.assertTrue('ptj' in run_card.user_set)
+        self.assertTrue('drjj' in run_card.user_set)
+        self.assertTrue('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertTrue('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertFalse('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
         
         self.do('calculate_decay_widths -f')        
         
@@ -429,6 +461,20 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.no_notification()
         self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertTrue('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertTrue('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
+        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir) 
         
@@ -569,6 +615,19 @@ class TestMECmdShell(unittest.TestCase):
         mg_cmd.exec_cmd('output %s/' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.no_notification()
+        
+        # couple of test checking that default run_card is as expected
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertFalse('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertTrue('el'  in run_card.user_set)
+        self.assertTrue('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
+        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         
@@ -669,7 +728,7 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
@@ -704,7 +763,7 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'mg5_cmd')],
                          #cwd=self.path,
                         stdout=stdout, stderr=stderr)
@@ -745,7 +804,7 @@ class TestMEfromfile(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
@@ -790,7 +849,7 @@ class TestMEfromfile(unittest.TestCase):
         """)
         fsock.close()
                 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -826,7 +885,7 @@ class TestMEfromfile(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
@@ -841,7 +900,7 @@ class TestMEfromfile(unittest.TestCase):
                     {'dir_name': self.run_dir, 'mg5_path':pjoin(_file_path, os.path.pardir)})
         fsock.close()
 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'test_mssm_generation')],
                          #cwd=pjoin(self.path),
                         stdout=stdout,stderr=stdout)

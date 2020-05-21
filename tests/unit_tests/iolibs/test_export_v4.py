@@ -2455,6 +2455,13 @@ class FullHelasOutputTest(test_helas_call_writers.HelasModelTestSetup,
     created_files = ['leshouche'
                     ]
 
+
+    def setUp(self):
+        
+        
+        helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object =\
+            staticmethod(helas_call_writers.HelasCallWriter.default_customize_argument_for_all_other_helas_object)
+        
     tearDown = test_file_writers.CheckFileCreate.clean_files
 
     def test_generate_helas_diagrams_ea_ae(self):

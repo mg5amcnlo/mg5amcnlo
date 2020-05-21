@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 263 #2.4.0
+    reference_number = 301 #2.4.0
     nb_test = 0
     
     
@@ -219,12 +219,14 @@ class OLDMG5Comparator(unittest.TestCase):
            Note that if you need to redo this, this is potentially due to a change
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
-
+        
+        
         return # By default no need this
         self.create_short_parallel_sqso()
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
+        self.create_short_polarization()
         self.assertTrue(False)
         
 
@@ -303,6 +305,26 @@ class OLDMG5Comparator(unittest.TestCase):
                              filename = "short_sqso.log",
                              pickle_file = pickle_file)
 
+    def create_short_polarization(self):
+        """Test a short list of processes with polarization"""
+        # Create a list of processes to check automatically
+        my_proc_list = ['u u~ > w+{T} w-{T0}', 
+                        ' u d~ > w+{T}, w+ > e+ ve',
+                        ' u d~ > w+{0}, w+ > e+ ve',
+                        ' g g > t{L} t~{R}, t > w+ b, t~ > w- b~'
+                        'W+{T} > e+ ve',
+                        'e+{L} e-{R} > mu+ mu-',
+                        'e+ e- > mu+ mu-{L}']
+                        
+        
+        # Store list of non-zero processes and results in file
+        pickle_file = os.path.join(_pickle_path, 
+                                              "mg5_short_paralleltest_pol.pkl")
+        self.compare_processes(my_proc_list,
+                             model='sm',
+                             orders = {},
+                             filename = "short_pol.log",
+                             pickle_file = pickle_file)
 
     ############################################################################    
     #  ROUTINE FOR THE SHORT TEST (USE by the release script)
@@ -330,6 +352,33 @@ class OLDMG5Comparator(unittest.TestCase):
 
             # Do some cleanup
             my_comp.cleanup()
+
+    def test_short_polarization(self): 
+        """Test a short list of processes with squared order constraints"""
+
+        #self.create_short_polarization()
+        comparisons = me_comparator.PickleRunner.find_comparisons(\
+            os.path.join(_pickle_path, "mg5_short_paralleltest_pol.pkl"))
+
+        for stored_runner in comparisons:
+            # Create a MERunner object for MG5
+            my_mg5 = me_comparator.MG5_UFO_Runner()
+            my_mg5.setup(MG5DIR, MG5DIR)
+
+            # Create and setup a comparator
+            my_comp = me_comparator.MEComparator()
+            my_comp.set_me_runners(stored_runner, my_mg5)
+
+            # Run the actual comparison
+            my_comp.run_comparison(stored_runner.proc_list,'sm',
+                                   stored_runner.orders,
+                                   stored_runner.energy)
+
+            my_comp.assert_processes(self)
+
+            # Do some cleanup
+            my_comp.cleanup()
+            
 
     def test_short_sqso(self): 
         """Test a short list of processes with squared order constraints"""
@@ -429,7 +478,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > j j']
         values = {'number_of_P0': '1',
-                  'cross_P0_qq_qq': '6.069e+04'}
+                  'cross_P0_qq_qq': '61057.7188'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,
@@ -459,6 +508,29 @@ class OLDMG5Comparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm3.log")
 
+    def test_short_cross_pol(self):
+        """Test a short list of sm processes""" 
+        my_proc_list = ['u u~ > z{0} z{T}, (z > e+ e-)',
+                        'u u~ > z{0} z{T}, (z > e+ e-), (z > mu+ mu-)',
+                        'u u~ > z{0} z{T}, (z > l+ l-)',
+                        'u u~ > z{T} z{T}, (z > l+ l-)'
+                        ]
+
+        values =  {'number_of_P0': '1',
+                   'number_of_P1': '1', 
+                   'number_of_P2': '1',
+                   'number_of_P3': '1',
+                   'cross_P0_qq_z0zT_z_ll_z_ll': '0.0001713',
+                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.00017108',
+                   'cross_P2_qq_z0zT_z_ll_z_ll': '0.00066055',
+                   'cross_P3_qq_zTzT_z_ll_z_ll': '0.0019198',
+                   } 
+                  
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {},
+                             filename = "short_cs_pol.log")
+
+
     def test_short_cross_mssm1(self):
         """Test a short list of sm processes""" 
         my_proc_list = ['g g > go go']
@@ -487,6 +559,8 @@ class OLDMG5Comparator(unittest.TestCase):
                              orders = {'QED':2, 'QCD':2},
                              filename = "sm_mini.log",
                              energy = 1000)
+        
+        
         
     def test_mg5_minitest_mssm(self):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""

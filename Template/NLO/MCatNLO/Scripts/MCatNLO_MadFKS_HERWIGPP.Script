@@ -149,12 +149,15 @@ HWEXE=Herwig++
 if [ -f $HWPPPATH/bin/Herwig ]; then HWEXE=Herwig ; fi
 HWVER=`$HWPPPATH/bin/$HWEXE --version`
 HWVER=($(echo "$HWVER" | sed 's/ / /g'))
-HWVER=($(echo ${HWVER[1]} | tr "." "\n"))
-HWVER=${HWVER[0]}
-if [ "$HWVER" -ge 7 ]; then HWNEW=1 ; HWEXE=Herwig   ; fi
-if [ "$HWVER" -le 2 ]; then HWNEW=0 ; HWEXE=Herwig++ ; fi
+HWVER1=($(echo ${HWVER[1]} | tr "." "\n"))
+HWVER2=($(echo ${HWVER1[1]} | tr "." "\n"))
+HWVER=$(echo "$HWVER1$HWVER2" | bc)
+if [ "$HWVER" -ge 72 ]; then HWNEW=3 ; HWEXE=Herwig   ; fi
+if [ "$HWVER" -eq 71 ]; then HWNEW=2 ; HWEXE=Herwig   ; fi
+if [ "$HWVER" -eq 70 ]; then HWNEW=1 ; HWEXE=Herwig   ; fi
+if [ "$HWVER" -le 69 ]; then HWNEW=0 ; HWEXE=Herwig++ ; fi
 
-if [[ "$PDFCODE" -ne 0 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
+if [[ "$PDFCODE" -ne 0 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -ge 1 ]
 then
   HERPDF='EXTPDF'
   PDFLIBRARY='LHAPDF'
@@ -166,7 +169,7 @@ then
   if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
   if [ "$PDFCODE" -lt 0 ]; then LHAOFL=EXTRAPOLATE; fi
   if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
-  if [[ "$PDFCODE" -eq 0 && "$HWNEW" -eq 1 ]]; then PDFSET=25000 ; LHAOFL=FREEZE ; fi
+  if [[ "$PDFCODE" -eq 0 && "$HWNEW" -ge 1 ]]; then PDFSET=25000 ; LHAOFL=FREEZE ; fi
   linklhapdf
 # convert PDF number to name reading PDFsets.index
   ISLHA5=0
@@ -184,7 +187,7 @@ then
       echo 'Unable to understand LHAPDF version!'
       exit 1
   fi
-  if [[ "$ISLHA5" -eq 1 && "$HWNEW" -eq 1 ]]
+  if [[ "$ISLHA5" -eq 1 && "$HWNEW" -ge 1 ]]
   then
       echo " Please, use LHAPDF6 with HW7 "
       exit 1
@@ -282,7 +285,7 @@ then
   HWPPUTIMAKE="HWPPUTI="$HWPPUTI
   FORFILEMAKE="FORFILE="$HWPPUTI
   HEPMCF=HepMCFortran7.h
-  if [ "$HWVER" -le 2 ]; then HEPMCF=HepMCFortran2.h; fi
+  if [ "$HWVER" -le 69 ]; then HEPMCF=HepMCFortran2.h; fi
   cp $thisdir/HWPPAnalyzer/$HEPMCF $thisdir/HWPPAnalyzer/HepMCFortran.h
   HWPPANALYZER=HepMCFortran
   if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
@@ -385,6 +388,16 @@ fi
 mv $EXEC_NAMEFF $exefile
 
 # create input file
+if [ "$HWNEW" -le 1 ]
+then
+GENERATOR="LHCGenerator"
+EXTRACTOR="QCDExtractor"
+elif [ "$HWNEW" -ge 2 ]
+then
+GENERATOR="EventGenerator"
+EXTRACTOR="PPExtractor"
+fi
+
 cat <<EOF > ./$ifile
 #
 #  Create the Les Houches handler for MC@NLO
@@ -394,35 +407,47 @@ library LesHouches.so
 
 # --------------------------------------------------------------------- #
 # 1.) NECESSARY SETTINGS FOR RUNNING WITH MC@NLO EVENTS (DO NOT MODIFY)
+EOF
 
+if [ "$HWNEW" -le 1 ]
+then
+cat <<EOF >> ./$ifile
 set /Herwig/Shower/Evolver:HardVetoMode 1
 set /Herwig/Shower/Evolver:HardVetoScaleSource 1
 set /Herwig/Shower/Evolver:MECorrMode 0
+EOF
+fi
 
-
+cat <<EOF >> ./$ifile
 # create the Handler & Reader
 create ThePEG::LesHouchesFileReader /Herwig/EventHandlers/LHEReader
 create ThePEG::LesHouchesEventHandler /Herwig/EventHandlers/LHEHandler 
 insert /Herwig/EventHandlers/LHEHandler:LesHouchesReaders 0 /Herwig/EventHandlers/LHEReader
+EOF
 
+
+cat <<EOF >> ./$ifile
 set /Herwig/EventHandlers/LHEReader:AllowedToReOpen 0
 set /Herwig/EventHandlers/LHEReader:MomentumTreatment RescaleEnergy
 set /Herwig/EventHandlers/LHEReader:WeightWarnings 0
+EOF
 
+
+cat <<EOF >> ./$ifile
 set /Herwig/EventHandlers/LHEHandler:WeightOption VarNegWeight
-set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/QCDExtractor
+set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/$EXTRACTOR
 set /Herwig/EventHandlers/LHEHandler:CascadeHandler /Herwig/Shower/ShowerHandler 
 set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler
 set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
-set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
-set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS
-set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
-set /Herwig/Generators/LHCGenerator:PrintEvent $MAXPR_HWPP
-set /Herwig/Generators/LHCGenerator:MaxErrors $ERR_NUM_HWPP 
-set /Herwig/Generators/LHCGenerator:DebugLevel 1
+set /Herwig/Generators/$GENERATOR:EventHandler /Herwig/EventHandlers/LHEHandler
+set /Herwig/Generators/$GENERATOR:NumberOfEvents $NEVENTS
+set /Herwig/Generators/$GENERATOR:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
+set /Herwig/Generators/$GENERATOR:PrintEvent $MAXPR_HWPP
+set /Herwig/Generators/$GENERATOR:MaxErrors $ERR_NUM_HWPP 
+set /Herwig/Generators/$GENERATOR:DebugLevel 1
 EOF
 
-if [ $HWNEW = 0 ]
+if [ "$HWNEW" -eq 0 ]
 then
 cat <<EOF >> ./$ifile
 insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
@@ -430,7 +455,7 @@ EOF
 fi
 
 whichherpdf $HERPDF
-if [[ "$pdftype" -eq 1 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
+if [[ "$pdftype" -eq 1 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -ge 1 ]
 then
 cat <<EOF >> ./$ifile
 # Define PDF from MCatNLO.inputs PDFSET number
@@ -438,6 +463,16 @@ mkdir /LHAPDF
 create ThePEG::LHAPDF /LHAPDF/MCNLOPDF ThePEGLHAPDF.so
 set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
 set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
+EOF
+
+if [ "$HWNEW" -ge 1 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Partons/RemnantDecayer:AllowTop Yes
+EOF
+fi
+
+cat <<EOF >> ./$ifile
 set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
 set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF
@@ -494,8 +529,8 @@ set /Herwig/Particles/h0:Width $HGGWIDTH
 # 3.) ADDITIONAL SETTINGS
 
 # SHOWER SETTINGS
-set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.2*GeV
 EOF
+
 
 if ((`bc <<< "$LAMBDAHERW >= 0.0"`))
 then
@@ -512,23 +547,43 @@ set /Herwig/Shower/AlphaQCD:NumberOfLoops 2
 EOF
 fi
 
+if [ "$HWNEW" -le 1 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.2*GeV
+EOF
+elif [ "$HWNEW" -ge 2 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/ShowerHandler:IntrinsicPtGaussian 1.3*GeV
+EOF
+fi
 
-if [ $HWNEW = 1 ]
+if [ "$HWNEW" -ge 1 ]
 then
 cat <<EOF >> ./$ifile
 set /Herwig/Shower/PartnerFinder:PartnerMethod Random
 set /Herwig/Shower/PartnerFinder:ScaleChoice Partner
+EOF
+fi
+
+if [ "$HWNEW" -le 1 ]
+then
+cat <<EOF >> ./$ifile
 set /Herwig/Shower/GtoQQbarSplitFn:AngularOrdered Yes
+set /Herwig/Shower/GammatoQQbarSplitFn:AngularOrdered Yes
+#set /Herwig/Shower/ShowerHandler:Interactions QCDOnly
+#set /Herwig/Shower/ShowerHandler:SoftCorrelations No
+#set /Herwig/Shower/ShowerHandler:SpinCorrelations Yes
+EOF
+fi
 
-#set /Herwig/Shower/Evolver:Interactions QCDOnly
-#set /Herwig/Shower/Evolver:SoftCorrelations No
-#set /Herwig/Shower/Evolver:SpinCorrelations Yes
-
-set /Herwig/Shower/Evolver:SpinCorrelations No
-set /Herwig/Shower/KinematicsReconstructor:FinalStateReconOption Default
-set /Herwig/Shower/KinematicsReconstructor:InitialStateReconOption Rapidity
+if [ "$HWNEW" -ge 2 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/ShowerHandler:SpinCorrelations No
 set /Herwig/Shower/ShowerHandler:MaxPtIsMuF Yes
-set /Herwig/Shower/ShowerHandler:RestrictPhasespace On
+set /Herwig/Shower/ShowerHandler:RestrictPhasespace Yes
 
 EOF
 fi
@@ -807,36 +862,53 @@ cat <<EOF >> ./$ifile
 # 4.) HW++ SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
 
 #Boost and reconstruction stuff
+EOF
+
+if [ "$HWNEW" -eq 1 ] || [ "$HWNEW" -eq 2 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/KinematicsReconstructor:FinalStateReconOption Default
+set /Herwig/Shower/KinematicsReconstructor:InitialStateReconOption Rapidity
+EOF
+fi
+
+if [ "$HWNEW" -eq 3 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/KinematicsReconstructor:InitialStateReconOption Rapidity
+EOF
+fi
+
+cat <<EOF >> ./$ifile
 set /Herwig/Shower/KinematicsReconstructor:ReconstructionOption General
 set /Herwig/Shower/KinematicsReconstructor:InitialInitialBoostOption LongTransBoost
 
 # --------------------------------------------------------------------- #
 # 5.) CREATE THE ANALYZER AND SAVE THE RUN (DO NOT MODIFY)
-
 EOF
 
 if [ "$HWPPUTI" != "" ]
 then
 cat <<EOF >> ./$ifile
 create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
-insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 $HWPPANALYZER
+insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HWPPANALYZER
 
 EOF
 else
 cat <<EOF >> ./$ifile
 #create MCatNLO::hepfortr hepfortr hepfortr.so
-#insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 hepfortr
+#insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 hepfortr
 
 #  Useful analysis handlers for HepMC related output
 ##################################################
 # Schematic overview of an event (requires --with-hepmc to be set at configure time
 # and the graphviz program 'dot' to produce a plot)
 #create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
-#insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 $HWPPANALYZER
-# insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/Plot
+#insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HWPPANALYZER
+# insert $GENERATOR:AnalysisHandlers 0 /Herwig/Analysis/Plot
 # A HepMC dump file (requires --with-hepmc to be set at configure time)
-# insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
-insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
+# insert $GENERATOR:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
+insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
 set /Herwig/Analysis/HepMCFile:PrintEvent $NEVENTS
 set /Herwig/Analysis/HepMCFile:Format GenEvent
 set /Herwig/Analysis/HepMCFile:Units GeV_mm
@@ -845,8 +917,9 @@ EOF
 fi
 
 cat <<EOF >> ./$ifile
-saverun $runfile /Herwig/Generators/LHCGenerator
+saverun $runfile /Herwig/Generators/$GENERATOR
 EOF
+
 
 ( cd . ;\
      $exefile )
