@@ -416,8 +416,9 @@ extern "C" void appl_term_()
     // Histogram number
     int const nh = appl_common_histokin_.obs_num - 1;
 
-    // Normalize the grid by conversion factor and number of runs
-    pineappl_grid_scale(grid_obs[nh], 389379660.0 * appl_common_histokin_.norm_histo);
+    // convert between gs^2 and alphas, and normalize the grid by (hbarc)^2 and the number of runs
+    pineappl_grid_scale_by_order(grid_obs[nh], 4.0 * std::acos(-1.0), 1.0, 1.0, 1.0,
+        389379660.0 * appl_common_histokin_.norm_histo);
 
     // Write grid to file
     pineappl_grid_write(grid_obs[nh], ("grid_obs_" + std::to_string(nh) + "_out.root").c_str());
