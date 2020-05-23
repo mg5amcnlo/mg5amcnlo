@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-3.0.2
+3.0.2 (23/05/20)
      include up to 2.7.2
      MZ: better handling of zeros in color-linked borns 
      RF: improved the behaviour for integration channels that give zero cross section
