@@ -117,8 +117,13 @@ c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
-         CALL COLLIER_COMPUTE_UV_POLES(.FALSE.)
-         CALL COLLIER_COMPUTE_IR_POLES(.FALSE.)
+         IF (.not. force_polecheck) THEN ! still have the pole for the pole check
+            CALL COLLIER_COMPUTE_UV_POLES(.FALSE.)
+            CALL COLLIER_COMPUTE_IR_POLES(.FALSE.)
+         else
+            CALL COLLIER_COMPUTE_UV_POLES(.TRUE.)
+            CALL COLLIER_COMPUTE_IR_POLES(.TRUE.)
+         endif
          firsttime_run = .false.
       endif
       firsttime=firsttime.or.force_polecheck
@@ -296,7 +301,7 @@ c MadLoop initialization PS points.
             if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
                cpol = .not.((((PoleDiff(1)+PoleDiff(2))/
      $              (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $              tolerance*10d0))
+     $              tolerance*10d0).or.(mod(ret_code,10).eq.7.and..not.force_polecheck))
             else
                cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
      $              .or.(mod(ret_code,10).eq.7))
