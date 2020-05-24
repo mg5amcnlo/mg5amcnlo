@@ -6368,6 +6368,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                                                cwd = os.path.join(MG5DIR, name))
             else:
                 status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
+            devnull.close()
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
