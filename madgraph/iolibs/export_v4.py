@@ -2035,7 +2035,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
-        if 'mode' in self.opt and self.opt['mode'] == "reweight":
+        if False:#'mode' in self.opt and self.opt['mode'] == "reweight":
             #add the module to hande the NLO weight
             files.copytree(pjoin(MG5DIR, 'Template', 'RWGTNLO'),
                           pjoin(self.dir_path, 'Source'))

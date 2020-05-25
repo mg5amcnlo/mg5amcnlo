@@ -58,7 +58,7 @@ dir_to_f2py_free_mod = {}
 nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
                    # forced the python module to re-create an executable
 
-lhapdf = None
+#lhapdf = None
 
 
 class ReweightInterface(extended_cmd.Cmd):
@@ -961,8 +961,10 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
-        global lhapdf
-        
+        if not hasattr(self,'pdf'):
+            lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+            self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+            
         if self.has_nlo and self.rwgt_mode != "LO":
             return self.calculate_nlo_weight(event)
         
@@ -1075,19 +1077,20 @@ class ReweightInterface(extended_cmd.Cmd):
                     
                 base_wgt.append(c_wgt.pwgt[:3])
         
-        #change the ordering to the fortran one:
-        scales2 = self.invert_momenta(scales2)
-        pdg = self.invert_momenta(pdg)
-        bjx = self.invert_momenta(bjx)
-        # re-compute original weight to reduce numerical inacurracy
-        base_wgt = self.invert_momenta(base_wgt)
         
-        orig_wgt_check, partial_check = self.combine_wgt(scales2, pdg, bjx, base_wgt, gs, qcdpower, 1., 1.)
+        orig_wgt_check, partial_check = self.combine_wgt_local(scales2, pdg, bjx, base_wgt, gs, qcdpower, self.pdf)
+        #change the ordering to the fortran one: 
+        #scales2_i = self.invert_momenta(scales2)
+        #pdg_i = self.invert_momenta(pdg)
+        #bjx_i = self.invert_momenta(bjx)
+        # re-compute original weight to reduce numerical inacurracy
+        #base_wgt_i = self.invert_momenta(base_wgt)
+        #orig_wgt_check, partial_check = self.combine_wgt(scales2_i, pdg_i, bjx_i, base_wgt_i, gs, qcdpower, 1., 1.)
         
         if '_nlo' in type_nlo:
-            wgt = self.invert_momenta(wgt_virt)
+            #wgt = self.invert_momenta(wgt_virt)
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                new_out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+                new_out, partial = self.combine_wgt_local(scales2, pdg, bjx, wgt_virt, gs, qcdpower, self.pdf)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else 0 \
@@ -1096,9 +1099,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
             
         if '_tree' in type_nlo:
-            wgt = self.invert_momenta(wgt_tree)
+            #wgt = self.invert_momenta(wgt_tree)
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+                out, partial = self.combine_wgt_local(scales2, pdg, bjx, wgt_tree, gs, qcdpower, self.pdf)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
@@ -1126,7 +1129,25 @@ class ReweightInterface(extended_cmd.Cmd):
             assert not to_write
             assert not wgt_tree
         return final_weight 
+
+
+    def combine_wgt_local(self, scale2s, pdgs, bjxs, base_wgts, gss, qcdpowers, pdf):
+
+        wgt = 0.
+        wgts = []
+        for (scale2, pdg, bjx, base_wgt, gs, qcdpower) in   zip(scale2s, pdgs, bjxs, base_wgts, gss, qcdpowers):
+            Q2, mur2, muf2 = scale2 #Q2 is Ellis-Sexton scale
+            #misc.sprint(Q2, mur2, muf2, base_wgt, gs, qcdpower)
+            pdf1 = pdf.xfxQ2(pdg[0], bjx[0], muf2)/bjx[0]
+            pdf2 = pdf.xfxQ2(pdg[1], bjx[1], muf2)/bjx[1]
+            alphas = pdf.alphasQ2(mur2)
+            tmp = base_wgt[0] + base_wgt[1] * math.log(mur2/Q2) + base_wgt[2] * math.log(muf2/Q2)
+            tmp *= gs**qcdpower*pdf1*pdf2
+            wgt += tmp
+            wgts.append(tmp)
+        return wgt, wgts
         
+    
      
     @staticmethod   
     def invert_momenta(p):
@@ -1635,7 +1656,7 @@ class ReweightInterface(extended_cmd.Cmd):
         elif has_nlo and 'NLO' in self.rwgt_mode:
             self.create_standalone_virt_directory(data, second)
             
-            if not second:
+            if False:#not second:
                 #compile the module to combine the weight
                 misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
                 #link it 
@@ -1697,19 +1718,21 @@ class ReweightInterface(extended_cmd.Cmd):
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
             
             #compile the module to combine the weight
-            misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
-            #link it 
-            with misc.chdir(pjoin(path_me)):
-                if path_me not in sys.path:
-                    sys.path.insert(0, path_me)
-                mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
-                mymod =  mymod.Source.rwgt2py
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialise([self.banner.run_card['lpp1'], 
-                                  self.banner.run_card['lpp2']],
-                                 self.banner.run_card.get_lhapdf_id())
-                self.combine_wgt = mymod.get_wgt
-            
+            if False:
+                #use python module instead
+                misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
+                #link it 
+                with misc.chdir(pjoin(path_me)):
+                    if path_me not in sys.path:
+                        sys.path.insert(0, path_me)
+                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                    mymod =  mymod.Source.rwgt2py
+                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                        mymod.initialise([self.banner.run_card['lpp1'], 
+                                      self.banner.run_card['lpp2']],
+                                     self.banner.run_card.get_lhapdf_id())
+                    self.combine_wgt = mymod.get_wgt
+                
              
         # 6. If we need a new model/process-------------------------------------
         if (self.second_model or self.second_process or self.dedicated_path) and not second :
@@ -1933,7 +1956,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.rwgt_mode:
             self.rwgt_mode = obj['rwgt_mode']
             logger.info("mode set to %s" % self.rwgt_mode)
-        if self.has_nlo and 'NLO' in self.rwgt_mode:
+        if False:#self.has_nlo and 'NLO' in self.rwgt_mode:
+            #use python version
             path = pjoin(obj['rwgt_dir'], 'rw_mevirt','Source')
             sys.path.insert(0, path)
             try:
