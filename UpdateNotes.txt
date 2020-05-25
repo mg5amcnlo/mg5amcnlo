@@ -1,6 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.0.1 (20/12/18)
+
+3.0.2 (25/05/20)
+     include up to 2.7.2
+     MZ: better handling of zeros in color-linked borns 
+     RF: improved the behaviour for integration channels that give zero cross section
+     RF: Rewritten the mint integrator package. Makes for easier extensions.
+     RF: Fixed a problem related to the multi-channel enhancement factor for
+         NLO runs that only appeared in BSM theories (or EFTs)
+     RF: In the virt-tricks, replaced the grids for the virtuals with a
+         polynomial fit, which is more precise and allows for a reduction of
+         the number of calls to the virtual. However, requires to save all the
+         phase-space points for which the virtual has been computed to disk,
+         hence requires more disk space and memory for highly-accurate
+         runs. Can be disabled in the FKS_params.dat card, if disk space
+         and/or memory use needs to be limited.
+
+3.0.1 
      include up to 2.6.4
      MZ: Enable shower for QCD-only splittings
      RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
@@ -8,7 +24,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
 
 3.0.0 (01/05/18):
-
      RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
          [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
 	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
@@ -18,13 +33,103 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      RF+SF: Resonance-aware phase-space mapping for NLO computations 
      RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
      OM: remove ./bin/mg5 executable
-2.6.4 (//)
+
+2.7.2(17/03/20)
+      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
+      OM: Speed up standalone_cpp code by changing compilation flag
+
+2.7.1.2(09/03/20)
+      OM: Fixing issue (wrong cross-section and differential cross-section) for
+          polarised sample when
+	   1) you have identical polarised particles
+	   2) those particles are decays
+	  examples: p p > j j w+{0} w+{T}, w+ > e+ e-
+      OM: In presence of identical particles, if you define the exact number of decays
+          (either via the decay chain syntax or via MadSpin) then they are assigned in an ordered way:
+          generate p p > z{0} z{T}, z > l+ l-, z > j j
+	  means that the Longitudinal Z decays to lepton (transverse to jet)
+	  Thanks to Jie Xiao for reporting such issues. 
+      OM: Effective Photon approximation is now always done with a fix cutoff. This use the FIXED factorization scale
+          of the associate beam as the cutoff of the Improved Weizsaecker-Williams.
+      OM: Allow to install lhapdf6.2 by default
+      OM: Fixing website used to download pdf since lhapdf removed their previous hepforge page for pdf set.
+      OM: Fixed a bug (leading to a crash) introduced in 2.6.6 related to the ckkw/MLM check for BSM model
+          with gluon with non QCD interaction
+      OM: For fortran standalone with python binding, this is not necessary anymore to run the code from a specific directory.
+          You need however need to use the standard path for the param_card or have the file ident_card within the same
+	  directory as the param_card.dat.
+
+
+2.7.0(10/01/20)
+      OM: Allow for a new syntax in presence of multi-jet/lepton process:
+         generate p p > 3j replaces p p > j j j 
+      OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]
+           ex: p p > w+{0} j, e+{L} e-{R} > mu+ mu- Z{T}
+               p p > w+{T} w-{0} j j, w+ > e+ ve, w- > j j
+      OM: (Thanks to K. Mawatari, K. Hagiwara) implemention of the axial gauge for the photon/gluon propagator.
+          via "set gauge axial"
+      OM: Support for elastic photon from heavy ion implemented. For PA collision, you have to generate your diagram
+          with "set group_subprocesses False"
+      OM: The default run_card.dat is now by default even more specific to your process. 
+          Nearly all the cuts are now hidden by default if they do not impact your current process.
+          This allows to have less information by default in the run_card which should simplifies its 
+          readibility. 
+      OM: distinguish in the code if zero contribution are related to no point passing cuts or if
+          they are related to vanishing matrix-element. In the later case, allow for a lower threshold.
+          (This allow to fasten the computation of such zero contribution)
+
+
+2.6.7(16/10/19)
+      OM: Fix a bug introduced in 2.6.2, some processes with gluon like particles which can lead to the wrong sign for interference term. 
+      OM: Fix a bug introduced in 2.6.6 related to the restriction of model which was leading to wrong result for re-weighitng with loop model (but impact can in principle be not limited to re-weighting).
+      OM: systematics now supports the option --weight_format and --weight_info (see help command for details)
+      OM: set the auto_ptj_mjj variable to True by default
+      OM: the systematics_arguments default value is modified in presence of matching/merging.
+      OM: reweight: add an option --rwgt_info to allow to customise the banner information associate to that weight
+      RF: Fixed a bug in the warning when using FxFx in conjunction with Herwig++/Herwig7. Also, with latest version of
+          Herwig7.1.x, the FxFx needed files are compiled by default with in the Herwig code. Thanks Andreas Papaefstathiou.
+
+2.6.6(28/07/19)
+      OM: Bug in the edition of the shower_card. The set command of logical parameter was never setting the 
+          parameter to False. (Thanks to Richard Ruiz) 
+      RF: Fixed a bug in the creation of the energy-stripped i_FKS momentum. Tested for several processes,
+          and seems to have been completely harmless.
+      OM: Forbidding the use of CKKW/default scale for some UFO model allowing gluon emission from quark with
+          no dependence in aS
+      OM: Add an option "keep_ordering" for reweighting feature to allow to sometimes use decay chain even if
+          you have ambiguity between final state particles.
+      OM: Fixed an issue with interference which sometimes happens when some polarization contribution were negative but not all of them.
+      VH: Change in the pythia8 output mode (thanks to Peter Skands)
+      OM: Any number in the cards (not only integer) can use multiplication, division and k/M suffix for times 1000 and 1 million respectively
+      OM: Energy cut (at LO) are now hidden by default for LHC type of run but visible for lepton collider ones.
+      OM: Same for beam polarization
+
+2.6.5 (03/02/19)
+      OM: Fix some speed issue with the generated gridpack --speed issue introduced in 2.6.1--
+      OM: Fix a bug in the computation of systematics when running with Python 2.6.
+      OM: import model PATH, where PATH does not exists yet, will now connect to the online db
+          if the model_name is present in the online db, then the model will be installed in the specified path.
+      MZ: Applgrid+aMCFast was broken for some processes (since 2.6.0), due to wrong 
+          information written into initial_states_map.dat. This has been fixed now
+      OM: change in the gridpack. It automatically runs the systematics.py (if configure in the run_card)
+      OM: Fix  a MLM crash occuring for p p > go go (0,1,2 j)
+      OM: Fix issue for BSM model with additional colored particle where the default dynamical scale choice 
+          was crashing
+
+
+2.6.4 (09/11/18)
+      OM: add specific treatement for small width (at LO only and not for loop-induced)
+          if the width is smaller than 1e-6 times the mass, a fake width (at that value) is used for the
+          numerical evaluation of the matrix-element. S-channel resonances are re-scaled according to 
+          narrow-width approximation to return the correct total cross-section (the distribution of events 
+          will on the other hand follow the new width). 
+          The parameter '1e-6' can be changed by adding to (LO) run_card the parameter: "small_width_treatment"
+      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
+          the first time a loop computation is needed.
       RF: Fixed a bug when using TopDrawer plots for f(N)LO runs, where the combination of the plots could lead
           to completely wrong histograms/distributions in case of high-precision runs.
       OM: Fix some MLM crash for some processes (in particular BSM processes with W'). 
       OM: Fix a bug in the reweighting due to the new lhe format (the one avoiding some issue with py8)
-      OM: add a new command "install looptools" to trigger the question that is automatically trigger 
-          the first time a loop computation is needed.
       OM: Fix a behavior for negative mass, the width was set to negative in the param_card automatically
           making the Parton-shower (and other code) to crash since this does not follow the convention.
       OM: Change compiler flag to support Mojave.

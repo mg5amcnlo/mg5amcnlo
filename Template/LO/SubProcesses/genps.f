@@ -185,7 +185,8 @@ c
 c     External function
       double precision SumDot
       external SumDot
-
+      logical dummy_boostframe
+      external dummy_boostframe
 c
 c     data
 c
@@ -304,8 +305,12 @@ c
 c     First Generate Momentum for initial state particles
 c
       if (lpp(1).eq.9.or.lpp(2).eq.9)then
-         p(:,1) = pi1(:)
-         p(:,2) = pi2(:)
+         if (dummy_boostframe())then
+            call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
+         else
+            p(:,1) = pi1(:)
+            p(:,2) = pi2(:)
+         endif
       else if(nincoming.eq.2) then
         call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
       else
@@ -840,7 +845,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax)
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
 c
 c     Call for 0<x<1
 c
@@ -1114,6 +1119,7 @@ C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 91 eqs 5.28
 C     It is used to determine physical limits for Y based on inputs
+C     Y is not used in this formula (called with dummy value)
 C**************************************************************************
       implicit none
 c
@@ -1257,6 +1263,48 @@ c      eta = 0d0
 
       END
       
+
+C     -----------------------------------------
+C     Subroutine to return momenta in a dedicated frame
+C     frame_id is the tag of the particle to put at rest
+C     frame_id follow the convention of cluster.f (sum 2**(N-1))
+C     -----------------------------------------
+
+      subroutine boost_to_frame(P1, frame_id, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id
+
+      integer ids(nexternal)
+      integer i,j
+
+c     uncompress
+      call mapid(frame_id, ids)
+      pboost(:) = 0d0
+      p2(:,:) = 0d0
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal
+       if (ids(i).eq.1)then
+            do j=0,3
+	           Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3	
+          Pboost(j) = -1 * Pboost(j)
+      enddo	    
+      do i=1, nexternal
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo   
+      return
+      end
+
 
 
 

@@ -157,7 +157,7 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
-                    'pjfry': 'auto',
+                    #'pjfry': 'auto',
                     'golem': 'auto',
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
@@ -1090,12 +1090,12 @@ C
                                                'lib', 'libpdf.a')))
         # Check that combine_events, gen_ximprove, combine_runs 
         # compile
-        status = subprocess.call(['make', '../bin/internal/combine_events'],
-                                 stdout=devnull, 
-                                 cwd=os.path.join(self.out_dir, 'Source'))
-        self.assertEqual(status, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin','internal', 'combine_events')))
+        #status = subprocess.call(['make', '../bin/internal/combine_events'],
+        #                         stdout=devnull, 
+        #                         cwd=os.path.join(self.out_dir, 'Source'))
+        #self.assertEqual(status, 0)
+        #self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        #                                       'bin','internal', 'combine_events')))
         status = subprocess.call(['make', '../bin/internal/gen_ximprove'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))

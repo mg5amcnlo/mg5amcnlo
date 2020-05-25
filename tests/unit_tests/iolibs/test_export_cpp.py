@@ -1386,7 +1386,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
 using namespace std;
 
-namespace Pythia8 {
+using namespace Pythia8;
 
 class Parameters_sm
 {
@@ -1410,6 +1410,10 @@ void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches
 void setIndependentCouplings();
 // Set parameters that are changed event by event
 void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
+// TMP: hardcoded bogus implementation with no arguments since this
+// is being called from within the matrix elements.
+void setDependentParameters() {};
+
 // Set couplings that are changed event by event
 void setDependentCouplings();
 
@@ -1422,12 +1426,10 @@ void printDependentParameters();
 // Print couplings that are changed event by event
 void printDependentCouplings();
 
-
   private:
 static Parameters_sm* instance;
 };
 
-} // end namespace Pythia8
 #endif // Pythia8_parameters_sm_H
 """% misc.get_pkg_info()
 
@@ -1444,21 +1446,21 @@ static Parameters_sm* instance;
 #include "Parameters_sm.h"
 #include "Pythia8/PythiaStdlib.h"
 
-namespace Pythia8 {
+using namespace Pythia8;
 
-    // Initialize static instance
-    Parameters_sm* Parameters_sm::instance = 0;
+// Initialize static instance
+Parameters_sm* Parameters_sm::instance = 0;
 
-    // Function to get static instance - only one instance per program
-    Parameters_sm* Parameters_sm::getInstance(){
-    if (instance == 0)
-        instance = new Parameters_sm();
+// Function to get static instance - only one instance per program
+Parameters_sm* Parameters_sm::getInstance(){
+if (instance == 0)
+    instance = new Parameters_sm();
 
-    return instance;
-    }
+return instance;
+}
 
-    void Parameters_sm::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
-    mdl_WTau=pd->mWidth(15);
+void Parameters_sm::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
+mdl_WTau=pd->mWidth(15);
 mdl_WH=pd->mWidth(25);
 mdl_WT=pd->mWidth(6);
 mdl_WW=pd->mWidth(24);
@@ -1559,9 +1561,9 @@ mdl_I4x33 = mdl_CKM3x3*mdl_yb;
 mdl_ee__exp__2 = ((mdl_ee)*(mdl_ee));
 mdl_sw__exp__2 = ((mdl_sw)*(mdl_sw));
 mdl_cw__exp__2 = ((mdl_cw)*(mdl_cw));
-    }
-    void Parameters_sm::setIndependentCouplings(){
-    GC_1 = -(mdl_ee*mdl_complexi)/3.;
+}
+void Parameters_sm::setIndependentCouplings(){
+GC_1 = -(mdl_ee*mdl_complexi)/3.;
 GC_2 = (2.*mdl_ee*mdl_complexi)/3.;
 GC_3 = -(mdl_ee*mdl_complexi);
 GC_4 = mdl_ee*mdl_complexi;
@@ -1666,23 +1668,26 @@ GC_105 = (mdl_ee*mdl_complexi*mdl_conjg__CKM2x3)/(mdl_sw*mdl_sqrt__2);
 GC_106 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x1)/(mdl_sw*mdl_sqrt__2);
 GC_107 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x2)/(mdl_sw*mdl_sqrt__2);
 GC_108 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x3)/(mdl_sw*mdl_sqrt__2);
-    }
-    void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
-    aS = alpS;
+}
+
+void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
+aS = alpS;
 mdl_sqrt__aS = sqrt(aS);
 G = 2.*mdl_sqrt__aS*sqrt(M_PI);
 mdl_G__exp__2 = ((G)*(G));
-    }
-    void Parameters_sm::setDependentCouplings(){
-    GC_12 = mdl_complexi*mdl_G__exp__2;
+}
+
+
+void Parameters_sm::setDependentCouplings(){
+GC_12 = mdl_complexi*mdl_G__exp__2;
 GC_11 = mdl_complexi*G;
 GC_10 = -G;
-    }
+}
 
-    // Routines for printing out parameters
-    void Parameters_sm::printIndependentParameters(){
-    cout << "sm model parameters independent of event kinematics:" << endl;
-    cout << setw(20) << "mdl_WTau " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_WTau << endl;
+// Routines for printing out parameters
+void Parameters_sm::printIndependentParameters(){
+cout << "sm model parameters independent of event kinematics:" << endl;
+cout << setw(20) << "mdl_WTau " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_WTau << endl;
 cout << setw(20) << "mdl_WH " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_WH << endl;
 cout << setw(20) << "mdl_WT " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_WT << endl;
 cout << setw(20) << "mdl_WW " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_WW << endl;
@@ -1775,10 +1780,10 @@ cout << setw(20) << "mdl_I4x33 " << "= " << setiosflags(ios::scientific) << setw
 cout << setw(20) << "mdl_ee__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_ee__exp__2 << endl;
 cout << setw(20) << "mdl_sw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_sw__exp__2 << endl;
 cout << setw(20) << "mdl_cw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_cw__exp__2 << endl;
-    }
-    void Parameters_sm::printIndependentCouplings(){
-    cout << "sm model couplings independent of event kinematics:" << endl;
-    cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
+}
+void Parameters_sm::printIndependentCouplings(){
+cout << "sm model couplings independent of event kinematics:" << endl;
+cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
 cout << setw(20) << "GC_2 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_2 << endl;
 cout << setw(20) << "GC_3 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_3 << endl;
 cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
@@ -1883,22 +1888,21 @@ cout << setw(20) << "GC_105 " << "= " << setiosflags(ios::scientific) << setw(10
 cout << setw(20) << "GC_106 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_106 << endl;
 cout << setw(20) << "GC_107 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_107 << endl;
 cout << setw(20) << "GC_108 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_108 << endl;
-    }
-    void Parameters_sm::printDependentParameters(){
-    cout << "sm model parameters dependent on event kinematics:" << endl;
-    cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
+}
+void Parameters_sm::printDependentParameters(){
+cout << "sm model parameters dependent on event kinematics:" << endl;
+cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
 cout << setw(20) << "mdl_sqrt__aS " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_sqrt__aS << endl;
 cout << setw(20) << "G " << "= " << setiosflags(ios::scientific) << setw(10) << G << endl;
 cout << setw(20) << "mdl_G__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_G__exp__2 << endl;
-    }
-    void Parameters_sm::printDependentCouplings(){
-    cout << "sm model couplings dependent on event kinematics:" << endl;
-    cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
+}
+void Parameters_sm::printDependentCouplings(){
+cout << "sm model couplings dependent on event kinematics:" << endl;
+cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
 cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
 cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
-    }
+}
 
-} // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         file_h, file_cc = self.model_builder.generate_parameters_class_files()

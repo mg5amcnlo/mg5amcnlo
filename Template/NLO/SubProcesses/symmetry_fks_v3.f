@@ -3,13 +3,13 @@ c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
 c
       include 'genps.inc'      
       include 'nexternal.inc'
-      include 'mint.inc'
       include 'run.inc'
       include 'nFKSconfigs.inc'
       include 'born_conf.inc' ! needed for mapconfig
@@ -22,8 +22,8 @@ c
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision p_born(0:3,nexternal-1)
@@ -41,8 +41,6 @@ c
       common/cnbody/nbody
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
-      logical             new_point
-      common /c_new_point/new_point
       logical passcuts,check_swap
       double precision ran2
       external passcuts,check_swap,ran2
@@ -112,6 +110,7 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
+      nndim=ndim
       use_config(0)=0
       do i=1,mapconfig(0)
          use_config(i)=1
@@ -385,32 +384,3 @@ c
          endif
       enddo
       end
-c
-c
-c Dummy routines
-c
-c
-      subroutine initplot
-      end
-      subroutine outfun(pp,www,iplot)
-      end
-
-      LOGICAL FUNCTION PASSCUTS(P,rwgt)
-      real*8 rwgt
-      include 'nexternal.inc'
-      real*8 p(0:3,nexternal)
-      rwgt=1d0
-      passcuts=.true.
-      RETURN
-      END
-
-      subroutine bias_weight_function(p,ipdg,bias_wgt)
-c Dummy function. Should always retrun 1.
-      implicit none
-      include 'nexternal.inc'
-      integer ipdg(nexternal)
-      double precision bias_wgt,p(0:3,nexternal)
-      bias_wgt=1d0
-      return
-      end
-

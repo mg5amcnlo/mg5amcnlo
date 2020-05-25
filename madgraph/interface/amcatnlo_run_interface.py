@@ -919,13 +919,12 @@ class AskRunNLO(cmd.ControlSwitch):
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
         
-
-            
-        self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
+        self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
+                                           consistency='warning')
 
         hide_line = []
         if 'QED' in self.proc_characteristics['splitting_types']:
@@ -966,6 +965,10 @@ class AskRunNLO(cmd.ControlSwitch):
             self.available_module.add('PY8')
         if options['hwpp_path'] and options['thepeg_path'] and options['hepmc_path']:
             self.available_module.add('HW7')
+            
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))):
+            self.available_module.add('StdHEP')
 #
 #   shorcut
 #
@@ -1173,16 +1176,23 @@ class AskRunNLO(cmd.ControlSwitch):
         if 'QED' in self.proc_characteristics['splitting_types']:
             self.allowed_shower = ['OFF']
             return self.allowed_shower
+
+        if not misc.which('bc'):
+            return ['OFF']
         
         if self.proc_characteristics['ninitial'] == 1:
             self.allowed_shower = ['OFF']
             return ['OFF']
         else:
-            allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            if 'StdHEP' in self.available_module:
+                allowed = ['HERWIG6','OFF', 'PYTHIA6Q', 'PYTHIA6PT', ]
+            else:
+                allowed = ['OFF']
             if 'PY8' in self.available_module:
                 allowed.append('PYTHIA8')
             if 'HW7' in self.available_module:
                 allowed.append('HERWIGPP')
+            
             
             self.allowed_shower = allowed
             
@@ -1228,6 +1238,25 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.switch['shower'] = 'OFF'
             else:
                 self.switch['shower'] = 'OFF (%s)' % self.run_card['parton_shower']
+
+        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+            self.switch['shower'] = 'OFF'
+            return 
+        
+        if self.proc_characteristics['ninitial'] == 1:
+            self.switch['shower'] = 'OFF'
+            return
+        
+        if not misc.which('bc'):
+            logger.warning('bc command not available. Forbids to run the shower. please install it if you want to run the shower. (sudo apt-get install bc)')
+            self.switch['shower'] = 'OFF'
+            return
+         
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            self.switch['shower'] = self.run_card['parton_shower']  
+            #self.switch['shower'] = 'ON'
+            self.switch['fixed_order'] = "OFF"
+
 
     def consistency_shower_madanalysis(self, vshower, vma5):
         """ MA5 only possible with (N)LO+PS if shower is run"""
@@ -2354,42 +2383,71 @@ RESTART = %(mint_mode)s
         # latter is only the only line that contains integers.
         for j,fs in enumerate([files_mint_grids,files_MC_integer]):
             linesoffiles=[]
+            polyfit_data=[]
             for f in fs:
                 with open(f,'r+') as fi:
-                    linesoffiles.append(fi.readlines())
+                    data=fi.readlines()
+                    linesoffiles.append([ dat for dat in data if 'POL' not in dat.split()[0] ])
+                    polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
             to_write=[]
             for rowgrp in zip(*linesoffiles):
-                try:
-                    # check that last element on the line is an
-                    # integer (will raise ValueError if not the
-                    # case). If integer, this is the line that
-                    # contains information that needs to be
-                    # summed. All other lines can be averaged.
-                    is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
-                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
-                    special=[]
+                action=list(set([row.strip().split()[0] for row in rowgrp])) # list(set()) structure to remove duplicants
+                floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
+                floatgrps = zip(*floatsbyfile)
+                if len(action) != 1:
+                    raise aMCatNLOError('"mint_grids" files not in correct format. '+\
+                                        'Cannot combine them.')
+                if 'AVE' in action:
+                    # average
+                    write_string = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
+                elif 'SUM' in action:
+                    # sum
+                    write_string = [sum(floatgrp) for floatgrp in floatgrps]
+                elif 'MAX' in action:
+                    # take maximum
+                    write_string = [max(floatgrp) for floatgrp in floatgrps]
+                elif 'QSM' in action:
+                    # sum in quadrature
+                    write_string = [math.sqrt(sum([err**2 for err in floatgrp])) for floatgrp in floatgrps]
+                elif 'IDE' in action:
+                    # they should all be identical (INTEGERS)
+                    write_string = [int(round(floatgrp[0])) for floatgrp in floatgrps]
+                elif 'SPE' in action:
+                    # special: average first; sum second; average third (ALL INTEGERS)
+                    write_string=[]
                     for i,floatgrp in enumerate(floatgrps):
-                        if i==0: # sum X-sec
-                            special.append(sum(floatgrp))
-                        elif i==1: # sum unc in quadrature
-                            special.append(math.sqrt(sum([err**2 for err in floatgrp])))
-                        elif i==2: # average number of PS per iteration
-                            special.append(int(sum(floatgrp)/len(floatgrp)))
-                        elif i==3: # sum the number of iterations
-                            special.append(int(sum(floatgrp)))
-                        elif i==4: # average the nhits_in_grids
-                            special.append(int(sum(floatgrp)/len(floatgrp)))
-                        else:
-                            raise aMCatNLOError('"mint_grids" files not in correct format. '+\
-                                                'Cannot combine them.')
-                    to_write.append(" ".join(str(s) for s in special) + "\n")
-                except ValueError:
-                    # just average all
-                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
-                    averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
-                    to_write.append(" ".join(str(a) for a in averages) + "\n")
+                        if i==0: # average number of PS points per iterations
+                            write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                        elif i==1: # sum te number of iterations
+                            write_string.append(int(sum(floatgrp)))
+                        elif i==2: # average the nhits_in_grids
+                            write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                else:
+                    raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
+                to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
+
+            if polyfit_data:
+                # special for data regarding virtuals. Need to simply append
+                # all the data, but skipping doubles.
+                for i,onefile in enumerate(polyfit_data):
+                    # Get the number of channels, and the number of PS points per channel
+                    data_amount_in_file=[int(oneline.split()[1]) for oneline in onefile if len(oneline.split())==2]
+                    if i==0:
+                        filtered_list=[ [] for i in range(len(data_amount_in_file)) ]
+                    start=len(data_amount_in_file)
+                    for channel,channel_size in enumerate(data_amount_in_file):
+                        end=start+channel_size
+                        for data_channel in onefile[start:end]:
+                            if data_channel not in filtered_list[channel]:
+                                filtered_list[channel].append(data_channel)
+                        start=end
+                # The amount of data in each file (per channel):
+                for channel in filtered_list:
+                    to_write.append("POL " + str(len(channel)) + "\n")
+                # All the data:
+                for ch in filtered_list:
+                    for dat in ch:
+                        to_write.append(dat)
             # write the data over the master location
             if j==0:
                 with open(pjoin(location,'mint_grids'),'w') as f:
@@ -3107,7 +3165,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'elastic photon from e'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:
@@ -3699,7 +3757,8 @@ RESTART = %(mint_mode)s
         """
         scale_pdf_info=[]
         if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
-           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1\
+           or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
@@ -4212,7 +4271,7 @@ RESTART = %(mint_mode)s
         self.update_status('Run complete', level='shower', update_results=True)
 
     ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,**opts):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
@@ -4414,7 +4473,34 @@ RESTART = %(mint_mode)s
                                              self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
-        content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
+
+        try:
+            aewm1 = self.banner.get_detail('param_card', 'sminputs', 1).value
+            raise KeyError
+        except KeyError:
+            mod = self.get_model()
+            if not hasattr(mod, 'parameter_dict'):
+                from models import model_reader
+                mod = model_reader.ModelReader(mod)
+                mod.set_parameters_and_couplings(self.banner.param_card)
+            aewm1 = 0
+            for key in ['aEWM1', 'AEWM1', 'aEWm1', 'aewm1']:
+                if key in mod['parameter_dict']:
+                    aewm1 = mod['parameter_dict'][key]
+                    break
+                elif 'mdl_%s' % key in mod['parameter_dict']:
+                    aewm1 = mod['parameter_dict']['mod_%s' % key]
+                    break
+            else:
+                for key in ['aEW', 'AEW', 'aEw', 'aew']:
+                    if key in mod['parameter_dict']:
+                        aewm1 = 1./mod['parameter_dict'][key]
+                        break
+                    elif 'mdl_%s' % key in mod['parameter_dict']:
+                        aewm1 = 1./mod['parameter_dict']['mod_%s' % key]
+                        break 
+           
+        content += 'ALPHAEW=%s\n' % aewm1
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
         #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
@@ -5167,13 +5253,20 @@ RESTART = %(mint_mode)s
         if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
             not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
             if  os.path.exists(pjoin(sourcedir,'StdHEP')):
-                logger.info('Compiling StdHEP ...')
-                misc.compile(['StdHEP'], cwd = sourcedir)
-                logger.info('          ...done.')      
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                try:
+                    misc.compile(['StdHEP'], cwd = sourcedir)
+                except Exception as error:
+                    logger.debug(str(error))
+                    logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
+                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                else:
+                    logger.info('          ...done.')      
             else:
-                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                logger.warning('Could not compile StdHEP because its'+\
                    ' source directory could not be found in the SOURCE folder.\n'+\
-                             " Check the MG5_aMC option 'output_dependencies'.")
+                             " Check the MG5_aMC option 'output_dependencies'.\n"+\
+                   " This will prevent the use of HERWIG6/Pythia6 shower.")
 
         # make CutTools (only necessary with MG option output_dependencies='internal')
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
@@ -5489,7 +5582,7 @@ RESTART = %(mint_mode)s
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
-                    answer = self.ask(question, 'n', answers, alias=alias)
+                    answer = self.ask(question, 'n', answers)
                     if answer == 'n':
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)

@@ -177,11 +177,27 @@ class FeynmanLine(object):
         return self.model.get_particle(pid).get(name)
 
 
-    def get_name(self, name='name'):
+    def get_name(self, name='name',add_pol=True):
         """Return the name associate to the particle."""
 
         pid = self.id
         model_info = self.model.get_particle(pid)
+        
+        if add_pol and hasattr(self, 'polarization') and self.polarization:
+            name = self.get_name(name, add_pol=False)
+            pol = self.polarization
+            if pol in [[-1,1],[1,-1]]:
+                name += '_T'
+            elif pol == [-1]:
+                name += '_L'
+            elif pol == [1]:
+                name += '_R'
+            elif pol == [0]:
+                name += '_0'            
+            else:
+                name += '_pol'
+            return name
+
         
         if pid > 0:
             return model_info.get(name)
@@ -1663,7 +1679,7 @@ class DiagramDrawer(object):
         # Set variable for storing text        
         self.text = ''
         # Do we have to write a file? -> store in self.file
-        if file:
+        if filename:
             self.file = True # Note that this variable will be overwritten. THis
                              #will be the object file. [initialize]
         else:

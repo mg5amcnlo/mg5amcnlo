@@ -3,6 +3,7 @@ c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
+      use mint_module
       implicit none
       include 'genps.inc'      
       include 'nexternal.inc'
@@ -10,7 +11,6 @@ c*****************************************************************************
       include 'fks_info.inc'
       include 'run.inc'
       include 'cuts.inc'
-      include 'mint.inc'
       include 'coupl.inc'
       include 'born_conf.inc' ! needed for mapconfig
       double precision ZERO,    one
@@ -28,8 +28,8 @@ c*****************************************************************************
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
       logical                calculatedBorn
@@ -55,8 +55,6 @@ c*****************************************************************************
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      logical             new_point
-      common /c_new_point/new_point
       double precision alsf,besf
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
@@ -189,7 +187,7 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
-      
+      nndim=ndim
       write(*,*)'  '
       write(*,*)'  '
       write(*,*)"Enter graph number (iconfig), "
@@ -694,17 +692,3 @@ c
      & f4.2) 
       end
 
-c
-c
-c Dummy routines
-c
-c
-      subroutine initplot
-      end
-      subroutine outfun(pp,www)
-      implicit none
-      include 'nexternal.inc'
-      real*8 pp(0:3,nexternal),www
-      write(*,*)'This routine should not be called here'
-      stop
-      end

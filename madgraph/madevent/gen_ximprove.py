@@ -831,7 +831,6 @@ class gen_ximprove(object):
                 
         # Default option for the run
         self.gen_events = True
-        self.min_iter = 3
         self.parralel = False
         # parameter which was input for the normal gen_ximprove run
         self.err_goal = 0.01
@@ -884,7 +883,7 @@ class gen_ximprove(object):
                 logger.info("running for accuracy %s%%" % (self.err_goal*100))
                 self.gen_events = False
             elif self.err_goal >= 1:
-                logger.info("Generating %s unweigthed events." % self.err_goal)
+                logger.info("Generating %s unweighted events." % self.err_goal)
                 self.gen_events = True
                 self.err_goal = self.err_goal * self.gen_events_security # security
                 
@@ -911,7 +910,7 @@ class gen_ximprove(object):
             if C.get('axsec') == 0:
                 continue
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
-                logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
+                logger.debug("channel %s is at lum=%s (need to improve by %s) (xsec=%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'),
               (1/(100*math.sqrt(self.err_goal)))*all_channels[-1].get('axsec')):
@@ -1598,11 +1597,12 @@ class gen_ximprove_share(gen_ximprove, gensym):
 class gen_ximprove_gridpack(gen_ximprove_v4):
     
     min_iter = 1    
-    max_iter = 12
+    max_iter = 13
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
-    max_event_in_iter = 5000
-    min_event_in_iter = 1000
+    max_event_in_iter = 4000
+    min_event_in_iter = 500
     combining_job = sys.maxint
+    gen_events_security = 1.00
 
     def __new__(cls, *args, **opts):
         
@@ -1698,7 +1698,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'nevents': nevents, #int(nevents*self.gen_events_security)+1,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
-                    'precision': -1*int(needed_event+1)/C.get('axsec'),
+                    'precision': -1*int(needed_event)/C.get('axsec'),
                     'requested_event': needed_event,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
@@ -1718,19 +1718,18 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         for j in jobs:
             if j['P_dir'] in done:
                 continue
-
+            done.append(j['P_dir'])
             # set the working directory path.
             pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
             exe = pjoin(pwd, 'ajob1')
             st = os.stat(exe)
             os.chmod(exe, st.st_mode | stat.S_IEXEC)
 
-            # run the code
+            # run the code\
             cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
-
         write_dir = '.' if self.readonly else pjoin(self.me_dir, 'SubProcesses')
+
         self.check_events(goal_lum, to_refine, jobs, write_dir)
-        
     
     def check_events(self, goal_lum, to_refine, jobs, Sdir):
         """check that we get the number of requested events if not resubmit."""

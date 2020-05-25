@@ -3,6 +3,8 @@ c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
+      use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -11,13 +13,10 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      INTEGER    ITMAX,   NCALL
-
-      common/citmax/itmax,ncall
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2
+      integer i,j,k,l,l1,l2,kchan
       character*130 buf
 c
 c     Global
@@ -27,8 +26,8 @@ cc
       include 'coupl.inc'
       
 c     Vegas stuff
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
 
       real*8 sigint
       external sigint
@@ -43,21 +42,11 @@ c     Vegas stuff
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
 
+      character*4      abrv
+      common /to_abrv/ abrv
       integer n_mp, n_disc
-c For MINT:
-      include "mint.inc"
-      integer nhits_in_grids(maxchannels)
-      real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
-     $     ,ndimmax,maxchannels),ymax_virt(0:maxchannels),ans(nintegrals
-     $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
-     $     ,0:maxchannels),x(ndimmax),itmax_fl
       integer ixi_i,iphi_i,iy_ij,vn
-      integer ifold(ndimmax) 
-      common /cifold/ifold
-      integer ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
-      integer imode,dummy
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -72,19 +61,11 @@ c statistics for MadLoop
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual(0:n_ave_virt,maxchannels)
-     $     ,virtual_fraction(maxchannels)
-      common/c_avg_virt/average_virtual,virtual_fraction
       include 'orders.inc'
-      integer              n_ord_virt
-      common /c_n_ord_virt/n_ord_virt
 
 c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
-
-c general MadFKS parameters
-      include "FKSParams.inc"
 
 c applgrid
       integer iappl
@@ -95,13 +76,17 @@ c stats for granny_is_res
       integer ntot_granny,derntot,ncase(0:6)
       common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
 
+      logical useitmax
+      common/cuseitmax/useitmax
 
 C-----
 C  BEGIN CODE
-C-----  
+C-----
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+      
+      useitmax=.false. ! to be overwritten in open_output_files.f if need be
 c
 c     Setup the timing variable
 c
@@ -112,6 +97,7 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      min_virt_fraction_mint=min_virt_fraction
       do kchan=1,maxchannels
          do i=0,n_ave_virt
             average_virtual(i,kchan)=0d0
@@ -153,7 +139,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,imode)
+      call get_user_params(ncalls0,itmax,imode)
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -162,6 +148,7 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      nndim=ndim
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -172,7 +159,7 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-      write(*,*) "about to integrate ", ndim,ncall,itmax
+      write(*,*) "about to integrate ", ndim,ncalls0,itmax
 c APPLgrid
       if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
       if(iappl.ne.0) then
@@ -184,6 +171,23 @@ c     Fill the number of combined matrix elements for given initial state lumino
          call find_iproc_map
          write(6,*) "   ... done."
       endif
+      if (abrv(1:4).eq.'virt') then
+         only_virt=.true.
+      else
+         only_virt=.false.
+      endif
+c     Prepare the MINT folding
+      do j=1,ndimmax
+         if (j.le.ndim) then
+            ifold(j)=1
+         else
+            ifold(j)=0
+         endif
+      enddo
+      ifold_energy=ndim-2
+      ifold_yij=ndim-1
+      ifold_phi=ndim
+c      
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
@@ -194,38 +198,8 @@ c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
             do_rwgt_scale=.false.
             do_rwgt_pdf=.false.
-            do kchan=1,nchans
-               do i=1,ndimmax
-                  do j=0,nintervals
-                     xgrid(j,i,kchan)=0.d0
-                  enddo
-               enddo
-            enddo
          else
-            doreweight=do_rwgt_scale.or.do_rwgt_pdf
-c to restore grids:
-            open (unit=12, file='mint_grids',status='old')
-            ans(1,0)=0d0
-            unc(1,0)=0d0
-            do kchan=1,nchans
-               do j=0,nintervals
-                  read (12,*) (xgrid(j,i,kchan),i=1,ndim)
-               enddo
-               do j=1,nintervals_virt
-                  do k=0,n_ord_virt
-                     read (12,*) (ave_virt(j,i,k,kchan),i=1,ndim)
-                  enddo
-               enddo
-               read(12,*) ans(1,kchan),unc(1,kchan),dummy,dummy
-     $              ,nhits_in_grids(kchan)
-               read(12,*) virtual_fraction(kchan),average_virtual(0
-     $              ,kchan)
-               ans(1,0)=ans(1,0)+ans(1,kchan)
-               unc(1,0)=unc(1,0)+unc(1,kchan)**2
-            enddo
-            unc(1,0)=sqrt(unc(1,0))
-            close (12)
-            write (*,*) "Update iterations and points to",itmax,ncall
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
          endif
 c
          write (*,*) 'imode is ',imode
@@ -236,44 +210,10 @@ c
                virtual_fraction(kchan)=1d0
             enddo
          endif
-C check for zero cross-section
-C if restoring grids corresponding to sigma=0, just terminate the run
-         if (imode.ne.0.and.ans(1,0).eq.0d0.and.unc(1,0).eq.0d0) then
-            call initplot()
-            call close_run_zero_res(ncall, itmax, ndim)
-            stop
-         endif
-         call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
-     $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
+         call mint(sigint)
          call topout
          call deallocate_weight_lines
-         write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
-         write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1,0)
-         open(unit=58,file='results.dat',status='unknown')
-         do kchan=0,nchans
-            write(58,*) ans(1,kchan),unc(2,kchan),0d0,0,0,0,0,0d0,0d0
-     $           ,ans(2,kchan)
-         enddo
-         close(58)
 c
-c to save grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         do kchan=1,nchans
-            do j=0,nintervals
-               write (12,*) (xgrid(j,i,kchan),i=1,ndim)
-            enddo
-            do j=1,nintervals_virt
-               do k=0,n_ord_virt
-                  write (12,*) (ave_virt(j,i,k,kchan),i=1,ndim)
-               enddo
-            enddo
-            write (12,*) ans(1,kchan),unc(1,kchan),ncall,itmax
-     $           ,nhits_in_grids(kchan)
-            write (12,*) virtual_fraction(kchan),average_virtual(0
-     $           ,kchan)
-         enddo
-         close (12)
       else
          write (*,*) 'Unknown imode',imode
          stop
@@ -351,7 +291,7 @@ c to save grids:
       open (unit=12, file='res.dat',status='unknown')
       do kchan=0,nchans
          write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan)
-     $        ,itmax,ncall,tTot
+     $        ,itmax,ncalls0,tTot
       enddo
       close(12)
 
@@ -392,9 +332,9 @@ c timing statistics
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use weight_lines
       use extra_weights
+      use mint_module
       implicit none
       include 'nexternal.inc'
-      include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
       include 'orders.inc'
@@ -410,8 +350,8 @@ c timing statistics
       integer             ini_fin_fks(maxchannels)
       common/fks_channels/ini_fin_fks
       data sum /.false./
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       logical       nbody
       common/cnbody/nbody
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -419,9 +359,6 @@ c timing statistics
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common/c_vob/virtual_over_born
       logical                calculatedBorn
@@ -434,6 +371,9 @@ c timing statistics
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
+      if (new_point .and. ifl.ne.2) then
+         pass_cuts_check=.false.
+      endif
       if (firsttime) then
          firsttime=.false.
          call setup_ini_fin_fks_map(ini_fin_fks_map)
@@ -479,14 +419,16 @@ c The nbody contributions
       else
          jac=0.5d0
       endif
-      call generate_momenta(ndim,iconfig,jac,x,p)
+      call generate_momenta(nndim,iconfig,jac,x,p)
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
+         pass_cuts_check=.true.
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
+         call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
             call compute_born
          endif
@@ -520,7 +462,7 @@ c The n+1-body contributions (including counter terms)
          wgt_me_real=0d0
          jac=MC_int_wgt
          call update_fks_dir(iFKS)
-         call generate_momenta(ndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
@@ -528,9 +470,11 @@ c The n+1-body contributions (including counter terms)
          call set_cms_stuff(mohdr)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
+            pass_cuts_check=.true.
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
+            call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
             call set_cms_stuff(ione)
             call compute_collinear_counter_term(0d0)
@@ -538,9 +482,11 @@ c The n+1-body contributions (including counter terms)
             call compute_soft_collinear_counter_term(0d0)
          endif
          if (passcuts_n1body) then
+            pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)
+            call include_multichannel_enhance(2)
             call compute_real_emission(p,1d0)
          endif
       enddo
@@ -703,26 +649,26 @@ c     if there are no soft singularities at all, just do something trivial
       end
 
       subroutine update_vegas_x(xx,x)
+      use mint_module
       implicit none
-      include 'mint.inc'
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer ndim
-      common/tosigint/ndim
-      character*4 abrv
+      integer         nndim
+      common/tosigint/nndim
+      character*4      abrv
       common /to_abrv/ abrv
       do i=1,99
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
-            if(i.le.ndim-3)then
+            if(i.le.nndim-3)then
                x(i)=xx(i)
-            elseif(i.le.ndim) then
+            elseif(i.le.nndim) then
                x(i)=ran2()      ! Choose them flat when not including real-emision
             else
                x(i)=0.d0
             endif
          else
-            if(i.le.ndim)then
+            if(i.le.nndim)then
                x(i)=xx(i)
             else
                x(i)=0.d0
@@ -733,10 +679,11 @@ c     if there are no soft singularities at all, just do something trivial
       end
 
 c
-      subroutine get_user_params(ncall,itmax,irestart)
+      subroutine get_user_params(ncall,nitmax,irestart)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
@@ -746,16 +693,15 @@ c
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
-      include 'mint.inc'
       include 'orders.inc'
 c
 c     Arguments
 c
-      integer ncall,itmax
+      integer ncall,nitmax
 c
 c     Local
 c
-      integer i, j
+      integer i, j, kchan
       double precision dconfig(maxchannels)
 c
 c     Global
@@ -789,8 +735,6 @@ c
       character * 70 idstring
       logical savegrid
 
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -805,7 +749,6 @@ c
 c-----
 c  Begin Code
 c-----
-      mint=.true.
       unwgt=.false.
       open (unit=83,file='input_app.txt',status='old')
       done=.false.
@@ -817,8 +760,8 @@ c-----
             read(buffer,*) ncall
             write (*,*) 'Number of phase-space points per iteration:',ncall
          elseif(buffer(1:11).eq.'NITERATIONS') then
-            read(buffer(14:),*) itmax
-            write (*,*) 'Maximum number of iterations is:',itmax
+            read(buffer(14:),*) nitmax
+            write (*,*) 'Maximum number of iterations is:',nitmax
          elseif(buffer(1:8).eq.'ACCURACY') then
             read(buffer(11:),*) accuracy
             write (*,*) 'Desired accuracy is:',accuracy

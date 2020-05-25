@@ -734,7 +734,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
-            logging.info("Directory hasn't been created for process %s" %proc)
+            logging.info("Directory hasn't been created for process %s: %s", proc, directories)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
         if verbose: logging.debug("Working on process %s in dir %s" % (proc, shell_name))

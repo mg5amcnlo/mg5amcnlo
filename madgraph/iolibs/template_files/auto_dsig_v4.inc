@@ -65,6 +65,11 @@ C     Keep track of whether cuts already calculated for this event
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+c
+c     local
+c
+	   double precision P1(0:3, nexternal)
+
 C  
 C DATA
 C  
@@ -100,7 +105,12 @@ C     Continue only if IMODE is 0, 4 or 5
             DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
-         CALL SMATRIX%(proc_id)s(PP,DSIGUU)
+	 if(frame_id.ne.6)then
+           call boost_to_frame(PP, frame_id, P1)
+         else
+           P1 = PP
+         endif
+         CALL SMATRIX%(proc_id)s(P1,DSIGUU)
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      DSIG%(proc_id)s = DSIGUU*CONV

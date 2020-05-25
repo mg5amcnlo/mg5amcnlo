@@ -21,10 +21,12 @@ import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
+import madgraph.various.misc as misc
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
     pass
+
 
 #===============================================================================
 # HelasCallWriter
@@ -41,6 +43,19 @@ class HelasCallWriter(base_objects.PhysicsObject):
     # Dictionaries from spin states to letters in Helas call
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
                    99:'P'}
+    
+    @staticmethod
+    def customize_argument_for_all_other_helas_object(call, arg):
+        """ Place holder for PLUGIN/...
+            (used by madevent output for small width handling) 
+        """
+        return call, arg
+        
+    @staticmethod
+    def default_customize_argument_for_all_other_helas_object(call,arg):
+        return call,arg  
+    #customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
+    #default_customize_argument_for_all_other_helas_object = fct_customize_argument_for_all_other_helas_object
 
     def default_setup(self):
 
@@ -84,6 +99,11 @@ class HelasCallWriter(base_objects.PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['model', 'wavefunctions', 'amplitudes']
+
+
+
+    
+     
 
     def get_loop_amp_helas_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -343,7 +363,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
-        key = ((3, 3, 5, 3), ('A',))
+        key = ((3, 3, 5, 3,tuple()), ('A',))
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -352,7 +372,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 5, 3, 1), ('A',))
+        key = ((3, 5, 3, 1,tuple()), ('A',))
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -373,7 +393,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 1), ('gggg3',))
+        key = ((3, 3, 3, 3, 1,tuple()), ('gggg3',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[1].get('me_id'),
@@ -392,7 +412,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1), ('gggg2',))
+        key = ((3, 3, 3, 3, 1 ,tuple()), ('gggg2',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -411,7 +431,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1), ('gggg1',))
+        key = ((3, 3, 3, 3, 1,tuple()), ('gggg1',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[2].get('me_id'),
@@ -433,7 +453,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 3), ('',))
+        key = ((1, 3, 3, 3, 3,tuple()), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -445,7 +465,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4), ('',))
+        key = ((3, 3, 3, 1, 4,tuple()), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -470,7 +490,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 1), ('',))
+        key = ((1, 3, 3, 3, 1,tuple()), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -482,7 +502,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4), ('',))
+        key = ((3, 3, 3, 1, 4,tuple()), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -517,7 +537,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('number'))
         self.add_amplitude(key, call)
         
-        key = ((-2, 2, 5, 3), ('',))
+        key = ((-2, 2, 5, 3,tuple()), ('',))
         call = lambda wf: \
                "CALL UIOXXX(W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -1125,6 +1145,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             outgoing = 0
 
 
+
         # Check if we need to append a charge conjugation flag
         l = [str(l) for l in argument.get('lorentz')]
         flag = []
@@ -1197,17 +1218,20 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
 
         # ALL ARGUMENT FORMATTED ###############################################
+        call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
         # Store the result.
         call = call % arg
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
           OptimizedOutput=False, specifyHel=self.hel_sum)
-
+        
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
+
+
 
     def get_loop_amplitude_helas_calls(self, loop_matrix_element):
         """ Returns a list of strings corresponding to the Helas calls for each 
@@ -1487,7 +1511,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
 
         # Creating line formatting:
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
-
         arg = {'routine_name': aloha_writers.combine_name(\
                                         '%s' % l[0], l[1:], outgoing, flag, True),
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \

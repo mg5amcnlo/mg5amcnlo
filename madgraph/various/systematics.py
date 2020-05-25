@@ -58,7 +58,10 @@ class Systematics(object):
                  log=lambda x: sys.stdout.write(str(x)+'\n'),
                  only_beam=False,
                  ion_scaling=True,
+                 weight_format=None,
+                 weight_info=None,
                  ):
+
 
         # INPUT/OUTPUT FILE
         if isinstance(input_file, str):
@@ -66,6 +69,8 @@ class Systematics(object):
         else:
             self.input = input_file
         self.output_path = output_file
+        self.weight_format = weight_format
+        self.weight_info_format = weight_info
         if output_file != None:
             if isinstance(output_file, str):
                 if output_file == input_file:
@@ -325,7 +330,8 @@ class Systematics(object):
         else:
             lowest_id = self.get_id()        
 
-        ids = [lowest_id+i for i in range(len(self.args)-1)]
+        ids = [self.get_wgt_name(*self.args[i][:5], cid=lowest_id+i) for i in range(len(self.args)-1)]
+        #ids = [lowest_id+i for i in range(len(self.args)-1)]
         all_cross = [0 for i in range(len(self.args))]
         
         self.input.parsing = False
@@ -384,7 +390,7 @@ class Systematics(object):
                     misc.gzip(to_check) 
                 else:
                     import shutil
-                    shutil.move(self.output.name, self.output_path)
+                    shutil.move(to_check, self.output_path)
         
         return all_cross
         
@@ -555,10 +561,6 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1:
-                if pdf.lhapdfID < 0:
-                    for central,sets in self.pdfsets.items():
-                        if pdf in sets.set():
-                            misc.sprint(central)
                 
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
@@ -577,7 +579,6 @@ class Systematics(object):
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
-                    misc.sprint(pdf.lhapdfID)
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:
@@ -610,8 +611,11 @@ class Systematics(object):
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
-                
-            text +='<weight id="%s" %s> %s </weight>\n' % (cid, tag, info)
+            
+            wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
+            tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
+            info = self.get_wgt_info(mur, muf, alps, dyn, pdf, cid)
+            text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
             cid+=1
         
         if in_scale or in_alps or in_pdf:
@@ -659,6 +663,44 @@ class Systematics(object):
         
         return lowest_id
         
+    def get_wgt_name(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_format:            
+            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid}
+        else:
+            wgt_name = cid
+        return wgt_name
+    
+    def get_wgt_info(self, mur, muf, alps, dyn, pdf, cid=0):
+        
+        if self.weight_info_format:            
+            info =  self.weight_info_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid, 's':' ', 'n':'\n'}
+        else:
+            info = ''
+            if mur!=1.:
+                info += 'MUR=%s ' % mur
+            if muf!=1.:
+                info += 'MUF=%s ' % muf 
+            if alps!=1.:
+                info += 'alpsfact=%s ' % alps
+            if dyn!=-1.:
+                info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
+            if pdf != self.orig_pdf:
+                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+
+        return info
+
+    def get_wgt_tag (self, mur, muf, alps, dyn, pdf, cid=0):
+            tags = []
+            tags.append('MUR="%s" ' % mur)
+            tags.append('MUF="%s" ' % muf)
+            if alps!=1.:
+                tags.append('ALPSFACT="%s" ' % alps)
+            if dyn!=-1.:
+                tags.append('DYN_SCALE="%s" ' % dyn)
+            tags.append('PDF="%s" ' % pdf.lhapdfID)
+            return " ".join(tags)
+     
 
     def get_id(self):
         
@@ -720,7 +762,7 @@ class Systematics(object):
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
-        
+
         if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
             return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
         
@@ -761,10 +803,10 @@ class Systematics(object):
             pdg = abs(pdg)
         elif pdg == 0:
             return 1
-        
+      
         if (pdf, pdg,x,scale, beam) in self.pdfQ2:
             return self.pdfQ2[(pdf, pdg,x,scale,beam)]
-        
+
         if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
             nb_p = self.banner.run_card["nb_proton%s" % beam]
             nb_n = self.banner.run_card["nb_neutron%s" % beam]
@@ -825,13 +867,14 @@ class Systematics(object):
                 mur = event.get_ht_scale(0.5)
             elif dyn == 4:
                 mur = event.get_sqrts_scale(1.)
+            if math.isnan(mur):
+                return mur
             muf1 = mur
             muf2 = mur
             loinfo = dict(loinfo)
             loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
             loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
             
-        
         
         # MUR part
         if self.b1 == 0 == self.b2:
@@ -938,9 +981,16 @@ def call_systematics(args, result=sys.stdout, running=True,
                      log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
 
+
     input, output = args[0:2]
+    
+    start_opts = 2
+    if output and output.startswith('-'):
+        start_opts = 1
+        output = input
+    
     opts = {}
-    for arg in args[2:]:
+    for arg in args[start_opts:]:
         if '=' in arg:
             key,values= arg.split('=')
             key = key.replace('-','')
@@ -987,41 +1037,52 @@ def call_systematics(args, result=sys.stdout, running=True,
             
         if isinstance(card, banner.RunCardLO):
             # LO case
-            opts['mur'] = [float(x) for x in card['sys_scalefact'].split()]
-            opts['muf'] = opts['mur']
-            if card['sys_alpsfact'] != 'None':
-                opts['alps'] = [float(x) for x in card['sys_alpsfact'].split()]
+            if 'systematics_arguments' in card.user_set:
+                return call_systematics([input, output] + card['systematics_arguments']
+                                        , result=result, running=running,
+                     log=log)
+                
             else:
-                opts['alps'] = [1.0]
-            opts['together'] = [('mur','muf','alps','dyn')]
-            if '&&' in card['sys_pdf']:
-                pdfs =  card['sys_pdf'].split('&&')
-            else:
-                data = card['sys_pdf'].split()
-                pdfs = []
-                for d in data:
-                    if not d.isdigit():
-                        pdfs.append(d)
-                    elif int(d) > 500:
-                        pdfs.append(d)
-                    else:
-                        pdfs[-1] = '%s %s' % (pdfs[-1], d)
-
-            opts['dyn'] = [-1,1,2,3,4]
-            opts['pdf'] = []
-            for pdf in pdfs:
-                split = pdf.split()
-                if len(split)==1:
-                    opts['pdf'].append('%s' %pdf)
+                opts['mur'] = [float(x) for x in card['sys_scalefact'].split()]
+                opts['muf'] = opts['mur']
+                if card['sys_alpsfact'] != 'None':
+                    opts['alps'] = [float(x) for x in card['sys_alpsfact'].split()]
                 else:
-                    pdf,nb = split
-                    for i in range(int(nb)):
-                        opts['pdf'].append('%s@%s' % (pdf, i))
-            if not opts['pdf']:
-                opts['pdf'] = 'central'
+                    opts['alps'] = [1.0]
+                opts['together'] = [('mur','muf','alps','dyn')]
+                if '&&' in card['sys_pdf']:
+                    pdfs =  card['sys_pdf'].split('&&')
+                else:
+                    data = card['sys_pdf'].split()
+                    pdfs = []
+                    for d in data:
+                        if not d.isdigit():
+                            pdfs.append(d)
+                        elif int(d) > 500:
+                            pdfs.append(d)
+                        else:
+                            pdfs[-1] = '%s %s' % (pdfs[-1], d)
+        
+                opts['dyn'] = [-1,1,2,3,4]
+                opts['pdf'] = []
+                for pdf in pdfs:
+                    split = pdf.split()
+                    if len(split)==1:
+                        opts['pdf'].append('%s' %pdf)
+                    else:
+                        pdf,nb = split
+                        for i in range(int(nb)):
+                            opts['pdf'].append('%s@%s' % (pdf, i))
+                if not opts['pdf']:
+                    opts['pdf'] = 'central'
         else:
             #NLO case
-            raise Exception
+            if 'systematics_arguments' in card.user_set:
+                return call_systematics([input, output] + card['systematics_arguments']
+                                        , result=result, running=running,
+                     log=log)
+            else:
+                raise Exception
         del opts['from_card']
     
 
@@ -1031,6 +1092,7 @@ def call_systematics(args, result=sys.stdout, running=True,
     return obj
 
 if __name__ == "__main__":
+        
     sys_args = sys.argv[1:]
     for i, arg in enumerate(sys_args) :
         if arg.startswith('--lhapdf_config=') :
@@ -1042,7 +1104,7 @@ if __name__ == "__main__":
         lhapdf = misc.import_python_lhapdf('lhapdf-config')
          
     if not lhapdf:
-            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf-config=')
+            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf_config=')
     call_systematics(sys_args)
     
 
