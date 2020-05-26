@@ -120,184 +120,133 @@ extern "C" void appl_init_()
     // Construct the input file name according to its position in the
     // vector "grid_obs".
     std::size_t const index = grid_obs.size();
-    std::string const grid_filename_in = "grid_obs_" + std::to_string(index) + "_in.root";
 
-    // Check that the grid file exists. If so read the grid from the file,
-    // otherwise create a new grid from scratch.
-    if (file_exists(grid_filename_in))
+    int lo_power = 9999;
+    int nlo_power = 0;
+
+    for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
     {
-        // Open the existing grid
-        grid_obs.emplace_back(pineappl_grid_read(grid_filename_in.c_str()));
+        int sum = appl_common_fixed_.qcdpower[i] + appl_common_fixed_.qedpower[i];
 
-        std::vector<uint32_t> subgrid_params(4 * pineappl_grid_order_count(grid_obs.back()));
-        pineappl_grid_order_params(grid_obs.back(), subgrid_params.data());
+        lo_power = std::min(lo_power, sum);
+        nlo_power = std::max(nlo_power, sum);
+    }
 
-        translation_tables.emplace_back();
-        auto& translation_table = translation_tables.back();
+    // TODO: are there any situations is which there are NLOs but no LOs?
 
-        // when loading the grids, the stored orders might be sorted differently
-        for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
+    // we assume that there is always at least one LO, and zero or one NLO
+    assert((nlo_power == (lo_power + 2)) || (nlo_power == lo_power));
+
+    std::vector<uint32_t> subgrid_params;
+
+    translation_tables.emplace_back();
+    translation_tables.back().reserve(appl_common_fixed_.amp_split_size);
+
+    for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
+    {
+        int const qcd = appl_common_fixed_.qcdpower[i];
+        int const qed = appl_common_fixed_.qedpower[i];
+        int const sum = qcd + qed;
+
+        translation_tables.back().push_back(subgrid_params.size() / 4);
+
+        if (sum == lo_power)
         {
-            std::size_t index = 0;
-            bool found = false;
-
-            while (!found)
-            {
-                auto const alphas = subgrid_params.at(4 * index + 0);
-                auto const alpha  = subgrid_params.at(4 * index + 1);
-                auto const logxir = subgrid_params.at(4 * index + 2);
-                auto const logxif = subgrid_params.at(4 * index + 3);
-
-                if ((alphas == appl_common_fixed_.qcdpower[i] / 2) &&
-                    (alpha  == appl_common_fixed_.qedpower[i] / 2) &&
-                    (logxir == 0) &&
-                    (logxif == 0))
-                {
-                    found = true;
-                }
-                else
-                {
-                    ++index;
-                }
-            }
-
-            // TODO: can this fail?
-            assert( found );
-
-            translation_table.push_back(index);
+            // WB
+            subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
+        }
+        else if (sum == nlo_power)
+        {
+            // W0
+            subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
+            // WR
+            subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 1, 0 });
+            // WF
+            subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 1 });
         }
     }
-    // If the grid does not exist, book it after having defined all the
-    // relevant parameters.
-    else
+
+    // Define the settings for the interpolation in x and Q2.
+    // These are common to all the grids computed.
+    // If values larger than zero (i.e. set by the user) are found the default
+    // settings are replaced with the new ones.
+    auto* key_vals = pineappl_keyval_new();
+
+    if (appl_common_grid_.nQ2 > 0)
     {
-        int lo_power = 9999;
-        int nlo_power = 0;
-
-        for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
-        {
-            int sum = appl_common_fixed_.qcdpower[i] + appl_common_fixed_.qedpower[i];
-
-            lo_power = std::min(lo_power, sum);
-            nlo_power = std::max(nlo_power, sum);
-        }
-
-        // TODO: are there any situations is which there are NLOs but no LOs?
-
-        // we assume that there is always at least one LO, and zero or one NLO
-        assert((nlo_power == (lo_power + 2)) || (nlo_power == lo_power));
-
-        std::vector<uint32_t> subgrid_params;
-
-        translation_tables.emplace_back();
-        translation_tables.back().reserve(appl_common_fixed_.amp_split_size);
-
-        for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
-        {
-            int const qcd = appl_common_fixed_.qcdpower[i];
-            int const qed = appl_common_fixed_.qedpower[i];
-            int const sum = qcd + qed;
-
-            translation_tables.back().push_back(subgrid_params.size() / 4);
-
-            if (sum == lo_power)
-            {
-                // WB
-                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
-            }
-            else if (sum == nlo_power)
-            {
-                // W0
-                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 0 });
-                // WR
-                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 1, 0 });
-                // WF
-                subgrid_params.insert(subgrid_params.end(), { qcd / 2, qed / 2, 0, 1 });
-            }
-        }
-
-        // Define the settings for the interpolation in x and Q2.
-        // These are common to all the grids computed.
-        // If values larger than zero (i.e. set by the user) are found the default
-        // settings are replaced with the new ones.
-        auto* key_vals = pineappl_keyval_new();
-
-        if (appl_common_grid_.nQ2 > 0)
-        {
-            pineappl_keyval_set_int(key_vals, "nq2", appl_common_grid_.nQ2);
-        }
-        // Max and min value of Q2
-        if (appl_common_grid_.Q2min > 0.0)
-        {
-            pineappl_keyval_set_double(key_vals, "q2min", appl_common_grid_.Q2min);
-        }
-        if (appl_common_grid_.Q2max > 0.0)
-        {
-            pineappl_keyval_set_double(key_vals, "q2max", appl_common_grid_.Q2max);
-        }
-        // Order of the polynomial interpolation in Q2
-        if (appl_common_grid_.Q2order > 0)
-        {
-            pineappl_keyval_set_int(key_vals, "q2order", appl_common_grid_.Q2order);
-        }
-        // Number of points for the x interpolation
-        if (appl_common_grid_.nx > 0)
-        {
-            pineappl_keyval_set_int(key_vals, "nx", appl_common_grid_.nx);
-        }
-        // Min and max value of x
-        if (appl_common_grid_.xmin > 0.0)
-        {
-            pineappl_keyval_set_double(key_vals, "xmin", appl_common_grid_.xmin);
-        }
-        if (appl_common_grid_.xmax > 0.0)
-        {
-            pineappl_keyval_set_double(key_vals, "xmax", appl_common_grid_.xmax);
-        }
-        // Order of the polynomial interpolation in x
-        if (appl_common_grid_.xorder > 0)
-        {
-            pineappl_keyval_set_int(key_vals, "xorder", appl_common_grid_.xorder);
-        }
-
-        // Set up the PDF luminosities
-        auto* lumi = pineappl_lumi_new();
-
-        // Loop over parton luminosities
-        for (int ilumi = 0; ilumi < appl_common_lumi_.nlumi; ilumi++)
-        {
-            int nproc = appl_common_lumi_.nproc[ilumi];
-
-            std::vector<int32_t> pdg_ids;
-            pdg_ids.reserve(2 * nproc);
-
-            for (int iproc = 0; iproc != nproc; ++iproc)
-            {
-                pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
-                pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
-            }
-
-            pineappl_lumi_add(lumi, nproc, pdg_ids.data(), nullptr);
-        }
-
-        // Use the reweighting function
-        pineappl_keyval_set_bool(key_vals, "reweight", true);
-        // Add documentation
-        pineappl_keyval_set_string(key_vals, "documentation", Banner().c_str());
-
-        // Create a grid with the binning given in the "obsbins[Nbins+1]" array
-        grid_obs.push_back(pineappl_grid_new(
-            lumi,
-            subgrid_params.size() / 4,
-            subgrid_params.data(),
-            appl_common_histokin_.obs_nbins,
-            appl_common_histokin_.obs_bins,
-            key_vals
-        ));
-
-        pineappl_keyval_delete(key_vals);
-        pineappl_lumi_delete(lumi);
+        pineappl_keyval_set_int(key_vals, "nq2", appl_common_grid_.nQ2);
     }
+    // Max and min value of Q2
+    if (appl_common_grid_.Q2min > 0.0)
+    {
+        pineappl_keyval_set_double(key_vals, "q2min", appl_common_grid_.Q2min);
+    }
+    if (appl_common_grid_.Q2max > 0.0)
+    {
+        pineappl_keyval_set_double(key_vals, "q2max", appl_common_grid_.Q2max);
+    }
+    // Order of the polynomial interpolation in Q2
+    if (appl_common_grid_.Q2order > 0)
+    {
+        pineappl_keyval_set_int(key_vals, "q2order", appl_common_grid_.Q2order);
+    }
+    // Number of points for the x interpolation
+    if (appl_common_grid_.nx > 0)
+    {
+        pineappl_keyval_set_int(key_vals, "nx", appl_common_grid_.nx);
+    }
+    // Min and max value of x
+    if (appl_common_grid_.xmin > 0.0)
+    {
+        pineappl_keyval_set_double(key_vals, "xmin", appl_common_grid_.xmin);
+    }
+    if (appl_common_grid_.xmax > 0.0)
+    {
+        pineappl_keyval_set_double(key_vals, "xmax", appl_common_grid_.xmax);
+    }
+    // Order of the polynomial interpolation in x
+    if (appl_common_grid_.xorder > 0)
+    {
+        pineappl_keyval_set_int(key_vals, "xorder", appl_common_grid_.xorder);
+    }
+
+    // Set up the PDF luminosities
+    auto* lumi = pineappl_lumi_new();
+
+    // Loop over parton luminosities
+    for (int ilumi = 0; ilumi < appl_common_lumi_.nlumi; ilumi++)
+    {
+        int nproc = appl_common_lumi_.nproc[ilumi];
+
+        std::vector<int32_t> pdg_ids;
+        pdg_ids.reserve(2 * nproc);
+
+        for (int iproc = 0; iproc != nproc; ++iproc)
+        {
+            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
+            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
+        }
+
+        pineappl_lumi_add(lumi, nproc, pdg_ids.data(), nullptr);
+    }
+
+    // Use the reweighting function
+    pineappl_keyval_set_bool(key_vals, "reweight", true);
+    // Add documentation
+    pineappl_keyval_set_string(key_vals, "documentation", Banner().c_str());
+
+    // Create a grid with the binning given in the "obsbins[Nbins+1]" array
+    grid_obs.push_back(pineappl_grid_new(
+        lumi,
+        subgrid_params.size() / 4,
+        subgrid_params.data(),
+        appl_common_histokin_.obs_nbins,
+        appl_common_histokin_.obs_bins,
+        key_vals
+    ));
+
+    pineappl_keyval_delete(key_vals);
+    pineappl_lumi_delete(lumi);
 }
 
 extern "C" void appl_fill_()

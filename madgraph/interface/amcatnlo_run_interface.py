@@ -1872,9 +1872,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        # for second step in applgrid mode, do only the event generation step
-        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == 2 and not options['only_generation']:
-            options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
         self.setup_cluster_or_multicore()
         self.update_random_seed()
@@ -1901,11 +1898,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
-
-            # Re-distribute the grids for the 2nd step of the applgrid
-            # running
-            if self.run_card['iappl'] == 2:
-                self.applgrid_distribute(options,mode_dict[mode],p_dirs)
 
             # create a list of dictionaries "jobs_to_run" with all the
             # jobs that need to be run
@@ -2556,10 +2548,8 @@ RESTART = %(mint_mode)s
                     job['mint_mode']=-1
                     # Determine relative required accuracy on the ABS for this job
                     job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
-                    # If already accurate enough, skip the job (except when doing the first
-                    # step for the iappl=2 run: we need to fill all the applgrid grids!)
-                    if (job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0) \
-                       and not (step==-1 and self.run_card['iappl'] == 2):
+                    # If already accurate enough, skip the job
+                    if job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0:
                             continue
                     # Update the number of PS points based on errorABS, ncall and accuracy
                     itmax_fl=job['niters_done']*math.pow(job['errorABS']/
@@ -2938,18 +2928,13 @@ RESTART = %(mint_mode)s
             gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == 1:
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
-            "amcblast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
-            elif self.run_card["iappl"] == 2:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
                         self.run_name,"amcblast_obs_"+str(obs)+".root"),'-s',
                                   str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
-                for job in all_jobs:
-                    os.remove(pjoin(job,"grid_obs_"+str(obs)+"_in.root"))
             else:
-                raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
+                raise aMCatNLOError('iappl parameter can only be 0 or 1')
             # after combining, delete the original grids
             for ggdir in gdir:
                 os.remove(ggdir)
