@@ -746,7 +746,7 @@ class ReweightInterface(extended_cmd.Cmd):
             new_card = first_card.write()
             first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
                           
-        # check if "Auto" is present for a width parameter
+        # check if "Auto" is present for a width parameter)
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
             self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
@@ -1471,10 +1471,9 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = re.sub('@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
-        if mgcmd.options['golem'] or mgcmd.options['pjfry']:
-            logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem and/or PJFry++")
+        if mgcmd.options['golem']:
+            logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem")
         mgcmd.options['golem'] = None            
-        mgcmd.options['pjfry'] = None 
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -1483,22 +1482,10 @@ class ReweightInterface(extended_cmd.Cmd):
         
         #put back golem to original value
         mgcmd.options['golem'] = old_options['golem']
-        mgcmd.options['pjfry'] = old_options['pjfry']
         # update make_opts
-        m_opts = {}
-        if mgcmd.options['lhapdf']:
-            #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
-            #        stdout = subprocess.PIPE).stdout.read().strip()[0]
-            m_opts['lhapdf'] = True
-            m_opts['f2pymode'] = True
-            m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-            m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
-        else:
+        if not mgcmd.options['lhapdf']:
             raise Exception, "NLO reweighting requires LHAPDF to work correctly"
 
-        path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
-        common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
-        logger.info('Done %.4g' % (time.time()-start))
 
 
         # Download LHAPDF SET
@@ -1687,8 +1674,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
             # deactivate golem since it creates troubles
             old_options = dict(mgcmd.options)
-            mgcmd.options['golem'] = None            
-            mgcmd.options['pjfry'] = None 
+            mgcmd.options['golem'] = None             
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -1696,23 +1682,10 @@ class ReweightInterface(extended_cmd.Cmd):
             mgcmd.exec_cmd(commandline, precmd=True)    
             #put back golem to original value
             mgcmd.options['golem'] = old_options['golem']
-            mgcmd.options['pjfry'] = old_options['pjfry']
             # update make_opts
-            m_opts = {}
-            if mgcmd.options['lhapdf']:
-                #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
-                #        stdout = subprocess.PIPE).stdout.read().strip()[0]
-                m_opts['lhapdf'] = True
-                m_opts['f2pymode'] = True
-                m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-                m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                        
-            else:
+            if not mgcmd.options['lhapdf']:
                 raise Exception, "NLO_tree reweighting requires LHAPDF to work correctly"
  
-            path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
-            common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
-            logger.info('Done %.4g' % (time.time()-start))
-
             # Download LHAPDF SET
             common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
@@ -1918,6 +1891,7 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['has_nlo'] = self.has_nlo
         to_save['rwgt_mode'] = self.rwgt_mode
         to_save['rwgt_name'] = self.options['rwgt_name']
+        to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -1933,7 +1907,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         'rwgt_name': None}
         if keep_name:
             self.options['rwgt_name'] = obj['rwgt_name']
-        
+        self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
         old_rwgt = obj['rwgt_dir']
            
         # path to fortran executable
