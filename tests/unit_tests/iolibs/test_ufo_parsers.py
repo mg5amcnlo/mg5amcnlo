@@ -247,7 +247,6 @@ class UFOParserTest(unittest.TestCase):
         for toParse, sol in tests:
  #           print(toParse, sol)
             self.assertEqual(self.calc.parse(toParse), sol)
-            
         # same for MP
 
         tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),

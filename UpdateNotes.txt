@@ -67,7 +67,44 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
       OM: Speed up standalone_cpp code by changing compilation flag
 
-2.7.1(09/03/20)
+3.0.2 (25/05/20)
+     include up to 2.7.2
+     MZ: better handling of zeros in color-linked borns 
+     RF: improved the behaviour for integration channels that give zero cross section
+     RF: Rewritten the mint integrator package. Makes for easier extensions.
+     RF: Fixed a problem related to the multi-channel enhancement factor for
+         NLO runs that only appeared in BSM theories (or EFTs)
+     RF: In the virt-tricks, replaced the grids for the virtuals with a
+         polynomial fit, which is more precise and allows for a reduction of
+         the number of calls to the virtual. However, requires to save all the
+         phase-space points for which the virtual has been computed to disk,
+         hence requires more disk space and memory for highly-accurate
+         runs. Can be disabled in the FKS_params.dat card, if disk space
+         and/or memory use needs to be limited.
+
+3.0.1 
+     include up to 2.6.4
+     MZ: Enable shower for QCD-only splittings
+     RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
+         cuts and --to a lesser extend-- processes with massive final state particles:
+	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
+
+3.0.0 (01/05/18):
+     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
+         [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
+	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
+	 that when doing QCD corrections only --contrary to previous versions-- also loop diagrams with non-QCD-charged 
+	 particles will be included (e.g., the pentagons in Higgs production via vector-boson fusion).]
+     HS: inclusion of SMWidth for fast evaluation of NLO accurate widths for all SM particles
+     RF+SF: Resonance-aware phase-space mapping for NLO computations 
+     RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
+     OM: remove ./bin/mg5 executable
+
+2.7.2(17/03/20)
+      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
+      OM: Speed up standalone_cpp code by changing compilation flag
+
+2.7.1.2(09/03/20)
       OM: Fixing issue (wrong cross-section and differential cross-section) for
           polarised sample when
 	   1) you have identical polarised particles

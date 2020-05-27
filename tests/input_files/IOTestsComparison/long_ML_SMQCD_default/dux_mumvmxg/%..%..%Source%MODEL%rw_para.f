@@ -26,15 +26,19 @@ c************************************************************************
 
       logical updateloop
       common /to_updateloop/updateloop
+      data updateloop /.true./
 
       call LHA_loadcard(param_name,npara,param,value)
       ! also loop parameters should be initialised here
-      updateloop=.true.
-      include 'param_read.inc'
-      call coup()
-
-      updateloop=.false.
-
+      if (updateloop) then
+         include 'param_read.inc'
+         call coup()         
+      else   
+         updateloop=.true.
+         include 'param_read.inc'
+         call coup()
+         updateloop=.false.
+      endif
       return
 
       end

@@ -5733,23 +5733,29 @@ class UFO_model_to_mg4(object):
         if self.opt['loop_induced']:
             #loop induced follow MadEvent way to handle the card.
             load_card = ''
-            lha_read_filename='lha_read.f'            
+            lha_read_filename='lha_read.f' 
+            updateloop_default = '.true.'           
         elif self.opt['export_format'] in ['madloop','madloop_optimized', 'madloop_matchbox']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
+            updateloop_default = '.true.'
         elif self.opt['export_format'].startswith('standalone') \
             or self.opt['export_format'] in ['madweight', 'plugin']\
             or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
+            updateloop_default = '.true.'
         else:
             load_card = ''
             lha_read_filename='lha_read.f'
+            updateloop_default = '.false.'
+            
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
                                        os.path.join(self.dir_path,'lha_read.f'))
         
         file=file%{'includes':'\n      '.join(includes),
-                   'load_card':load_card}
+                   'load_card':load_card,
+                   'updateloop_default': updateloop_default}
         writer=open(os.path.join(self.dir_path,'rw_para.f'),'w')
         writer.writelines(file)
         writer.close()

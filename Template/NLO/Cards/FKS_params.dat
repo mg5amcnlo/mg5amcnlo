@@ -156,7 +156,7 @@
 ! Use a polynomial fit for the virtual corrections. Gets a better accuracy,
 ! but uses more memmory and disk space.
 #UsePolyVirtual
-.True.
+.False.
 ! Default :: .True.
 !
 ! ==========================================================================
