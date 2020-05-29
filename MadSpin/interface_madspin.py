@@ -314,7 +314,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         key = line.split()[1]
                         if key in self.multiparticles_ms:
                             del self.multiparticles_ms[key]            
-            elif line.startswith('set'):
+            elif line.startswith('set') and not line.startswith('set gauge'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
             elif line.startswith('import model'):
                 if model_name in line:
