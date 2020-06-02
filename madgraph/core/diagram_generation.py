@@ -1701,7 +1701,7 @@ class MultiProcess(base_objects.PhysicsObject):
         # keep track of the 'is_tagged' property of the legs if needed
         try:
             fstags = [leg['is_tagged'] for leg in process_definition['legs'] \
-                 if leg['state'] == True]
+                 if 'is_tagged' in leg.keys() and leg['state'] == True]
 
         except KeyError:
             fstags = []

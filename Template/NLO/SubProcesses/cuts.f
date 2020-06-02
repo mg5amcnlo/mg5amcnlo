@@ -43,41 +43,21 @@ C     recombination of photons
       integer iPDG_reco(nexternal)
 c local integers
       integer i,j
-c temporary variable for caching locally computation
-      double precision tmpvar
 c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
-      integer mm
-c Photon isolation
-      integer nph,nem,k,nin,nphiso
-      double precision ptg,chi_gamma_iso,iso_getdrv40
-      double precision Etsum(0:nexternal)
-      real drlist(nexternal)
-      double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
-      logical alliso,isolated
-      integer get_n_tagged_photons
-c      external get_n_tagged_photons
-c Sort array of results: ismode>0 for real, isway=0 for ascending order
-      integer ismode,isway,izero,isorted(nexternal)
-      parameter (ismode=1)
-      parameter (isway=0)
-      parameter (izero=0)
-c The UNLOPS cut
-      double precision p_unlops(0:3,nexternal)
+      double precision pgamma(0:3,nexternal)
+      integer nph
       include "run.inc" ! includes the ickkw parameter
-      logical passUNLOPScuts
-c PDG specific cut
-      double precision etmin(nincoming+1:nexternal-1)
-      double precision etmax(nincoming+1:nexternal-1)
-      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax,mxxmin
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
-     $     ,is_a_ph(nexternal)
+     $     ,is_a_ph(nexternal),is_nph_iso(nexternal)
+
+      logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
+     $        passcuts_jets, passcuts_pdgs 
+
 
       passcuts_user=.true. ! event is okay; otherwise it is changed
 
@@ -86,89 +66,86 @@ C***************************************************************
 C Cuts from the run_card.dat
 C***************************************************************
 C***************************************************************
+
       !first recombine the photons and fermions
       call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
      $                       p, iPDG, p_reco, iPDG_reco)
 
+      ! Apply the lepton cuts
+      passcuts_user = passcuts_user .and. 
+     $                  passcuts_leptons(p_reco,istatus,ipdg_reco,is_a_lp,is_a_lm)
+      if (.not.passcuts_user) return
+
+      ! Find the QCD partons 
+      call identify_QCD_partons(p_reco,istatus,ipdg_reco,is_a_j,pQCD,nQCD)
+
+      ! Apply the UNLOPS/JetVeto cuts
+      passcuts_user = passcuts_user .and. 
+     $                  passcuts_unlops_jv(p_reco,istatus,ipdg_reco,pQCD,nQCD,ickkw)
+      if (.not.passcuts_user) return
+
+      ! Apply the Photon cuts
+      passcuts_user = passcuts_user .and. 
+     $ passcuts_photons(p_reco,istatus,ipdg_reco,is_a_lp,is_a_lm,pQCD,nQCD,pgamma,nph,is_nph_iso)
+      if (.not.passcuts_user) return
+
+      ! Apply the Jet cuts
+      passcuts_user = passcuts_user .and. 
+     $                  passcuts_jets(p_reco,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
+      if (.not.passcuts_user) return
+
+      ! Apply PDG specific cuts
+      passcuts_user = passcuts_user .and. 
+     $                  passcuts_pdgs(p_reco,istatus,ipdg_reco)
+      if (.not.passcuts_user) return
+
+C***************************************************************
+C***************************************************************
+C PUT HERE YOUR USER-DEFINED CUTS
+C***************************************************************
+C***************************************************************
+C
+c$$$C EXAMPLE: cut on top quark pT
+c$$$C          Note that PDG specific cut are more optimised than simple user cut
+c$$$      do i=1,nexternal   ! loop over all external particles
+c$$$         if (istatus(i).eq.1    ! final state particle
+c$$$     &        .and. abs(ipdg(i)).eq.6) then    ! top quark
+c$$$C apply the pT cut (pT should be large than 200 GeV for the event to
+c$$$C pass cuts)
+c$$$            if ( p(1,i)**2+p(2,i)**2 .lt. 200d0**2 ) then
+c$$$C momenta do not pass cuts. Set passcuts_user to false and return
+c$$$               passcuts_user=.false.
+c$$$               return
+c$$$            endif
+c$$$         endif
+c$$$      enddo
 c
-c CHARGED LEPTON CUTS
-c
-c find the charged leptons (also used in the photon isolation cuts below)
-      do i=1,nexternal
-         if(istatus(i).eq.1 .and.
-     &    (ipdg_reco(i).eq.11 .or. ipdg_reco(i).eq.13 .or. ipdg_reco(i).eq.15)) then
-            is_a_lm(i)=.true.
-         else
-            is_a_lm(i)=.false.
-         endif
-         if(istatus(i).eq.1 .and.
-     &    (ipdg_reco(i).eq.-11 .or. ipdg_reco(i).eq.-13 .or. ipdg_reco(i).eq.-15)) then
-            is_a_lp(i)=.true.
-         else
-            is_a_lp(i)=.false.
-         endif
-      enddo
-c apply the charged lepton cuts
-      do i=nincoming+1,nexternal
-         if (is_a_lp(i).or.is_a_lm(i)) then
-c transverse momentum
-            if (ptl.gt.0d0) then
-               if (pt_04(p_reco(0,i)).lt.ptl) then
-                  passcuts_user=.false.
-                  return
-               endif
-            endif
-c pseudo-rapidity
-            if (etal.gt.0d0) then
-               if (abs(eta_04(p_reco(0,i))).gt.etal) then
-                  passcuts_user=.false.
-                  return
-               endif
-            endif
-c DeltaR and invariant mass cuts
-            if (is_a_lp(i)) then
-               do j=nincoming+1,nexternal
-                  if (is_a_lm(j)) then
-                     if (drll.gt.0d0) then
-                        if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll**2) then
-                           passcuts_user=.false.
-                           return
-                        endif
-                     endif
-                     if (mll.gt.0d0) then
-                        if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll**2) then
-                           passcuts_user=.false.
-                           return
-                        endif
-                     endif
-                     if (ipdg(i).eq.-ipdg(j)) then
-                        if (drll_sf.gt.0d0) then
-                           if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll_sf**2) then
-                              passcuts_user=.false.
-                              return
-                           endif
-                        endif
-                        if (mll_sf.gt.0d0) then
-                           if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll_sf**2)
-     $                          then
-                              passcuts_user=.false.
-                              return
-                           endif
-                        endif
-                     endif
-                  endif
-               enddo
-            endif
-         endif
-      enddo
+      return
+      end
+
+
+
+      subroutine identify_QCD_partons(p,istatus,ipdg,is_a_j,pQCD,nQCD)
+      implicit none
+      include 'nexternal.inc'
+      integer istatus(nexternal)
+      integer iPDG(nexternal)
+      double precision p(0:4,nexternal)
+      logical is_a_j(nexternal)
+      integer nQCD
+      double precision pQCD(0:3,nexternal)
+      include "run.inc" 
+      include "cuts.inc"
+
+      integer i, j 
 c
 c JET CUTS
 c
 c find the jets
       do i=1,nexternal
          if (istatus(i).eq.1 .and.
-     &        (abs(ipdg_reco(i)).le.maxjetflavor .or. ipdg_reco(i).eq.21
-     &         .or.(ipdg_reco(i).eq.22.and.gamma_is_j))) then
+     &        (abs(ipdg(i)).le.maxjetflavor .or. ipdg(i).eq.21
+     &         .or.(ipdg(i).eq.22.and.gamma_is_j))) then
             is_a_j(i)=.true.
          else
             is_a_j(i)=.false.
@@ -188,42 +165,268 @@ c more than the Born).
             if (is_a_j(j)) then
                nQCD=nQCD+1
                do i=0,3
-                  pQCD(i,nQCD)=p_reco(i,j)
+                  pQCD(i,nQCD)=p(i,j)
                enddo
             endif
          enddo
       endif
 
-c THE UNLOPS CUT:
-      if (ickkw.eq.4 .and. ptj.gt.0d0) then
-c Use special pythia pt cut for minimal pT
-         do i=1,nexternal
-            do j=0,3
-               p_unlops(j,i)=p_reco(j,i)
-            enddo
+      return
+      end
+
+
+
+      logical function passcuts_pdgs(p,istatus,ipdg)
+      implicit none
+      include 'nexternal.inc'
+      integer istatus(nexternal)
+      integer iPDG(nexternal)
+      double precision p(0:4,nexternal)
+c PDG specific cut
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax,mxxmin
+      REAL*8 invm2_04,pt_04
+      external invm2_04,pt_04
+c temporary variable for caching locally computation
+      double precision tmpvar
+      integer i,j
+
+      passcuts_pdgs = .true.
+
+C
+C     PDG SPECIFIC CUTS (PT/M_IJ)
+C
+      do i=nincoming+1,nexternal-1
+         if(etmin(i).gt.0d0 .or. etmax(i).gt.0d0)then
+            tmpvar = pt_04(p(0,i))
+            if (tmpvar.lt.etmin(i)) then
+               passcuts_pdgs=.false.
+               return
+            elseif (tmpvar.gt.etmax(i) .and. etmax(i).gt.0d0) then
+               passcuts_pdgs=.false.
+               return
+            endif
+         endif
+         do j=i+1, nexternal-1
+            if (mxxmin(i,j).gt.0d0)then
+               if (invm2_04(p(0,i),p(0,j),1d0).lt.mxxmin(i,j)**2)then
+                  passcuts_pdgs=.false.
+                  return
+               endif
+            endif
          enddo
-         call pythia_UNLOPS(p_unlops,passUNLOPScuts)
-         if (.not. passUNLOPScuts) then
-            passcuts_user=.false.
-            return
+      enddo
+      return
+      end
+
+
+
+
+      logical function passcuts_photons(p,istatus,ipdg,is_a_lp,is_a_lm,pQCD,nQCD,pgamma,nph,is_nph_iso)
+      implicit none
+      include 'nexternal.inc'
+      integer istatus(nexternal)
+      integer iPDG(nexternal)
+      double precision p(0:4,nexternal)
+      logical is_a_lp(nexternal),is_a_lm(nexternal)
+      integer nQCD, nph
+      double precision pQCD(0:3,nexternal), pgamma(0:3,nexternal)
+      logical is_nph_iso(nexternal)
+      include "cuts.inc"
+      include "run.inc"
+      integer i,j,k
+c Sort array of results: ismode>0 for real, isway=0 for ascending order
+      integer ismode,isway,izero,isorted(nexternal)
+      parameter (ismode=1)
+      parameter (isway=0)
+      parameter (izero=0)
+
+c Photon isolation
+      integer nem,nin,nphiso
+      double precision ptg,chi_gamma_iso,iso_getdrv40
+      double precision Etsum(0:nexternal)
+      real drlist(nexternal)
+      double precision pem(0:3,nexternal)
+
+      logical alliso,isolated
+      integer get_n_tagged_photons
+      logical is_a_ph(nexternal)
+
+      REAL*8 pt,eta
+      external pt,eta
+
+      passcuts_photons = .true.
+
+c
+c PHOTON (ISOLATION) CUTS
+c
+c find the photons
+      do i=1,nexternal
+         if (istatus(i).eq.1 .and. ipdg(i).eq.22 .and. .not.gamma_is_j) then
+            is_a_ph(i)=.true.
+         else
+            is_a_ph(i)=.false.
          endif
-c Bypass normal jet cuts
-         goto 122
-c THE VETO XSEC CUT:
-      elseif (ickkw.eq.-1 .and. ptj.gt.0d0) then
-c Use veto'ed Xsec for analytic NNLL resummation
-         if (nQCD.ne.1) then
-            write (*,*) 'ERROR: more than one QCD parton in '/
-     $           /'this event in cuts.f. There should only be one'
-            stop
+      enddo
+
+      if (ptgmin.ne.0d0) then
+         nph=0
+         do j=nincoming+1,nexternal
+            if (is_a_ph(j)) then
+               nph=nph+1
+               do i=0,3
+                  pgamma(i,nph)=p(i,j)
+               enddo
+            endif
+         enddo
+         if(nph.eq.0) return
+         
+         if(isoEM)then
+            nem=nph
+            do k=1,nem
+               do i=0,3
+                  pem(i,k)=pgamma(i,k)
+               enddo
+            enddo
+            do j=nincoming+1,nexternal
+               if (is_a_lp(j).or.is_a_lm(j)) then
+                  nem=nem+1
+                  do i=0,3
+                     pem(i,nem)=p(i,j)
+                  enddo
+               endif
+            enddo
          endif
-         if (pt(pQCD(0,1)) .gt. ptj) then
-            passcuts_user=.false.
+         
+         nphiso=0
+
+         j=0
+c Loop over all photons
+         do while(j.lt.nph)
+
+            j=j+1
+           
+            is_nph_iso(j)=.False. 
+            ptg=pt(pgamma(0,j))
+            if(ptg.lt.ptgmin)then
+               cycle
+            endif
+            if (etagamma.gt.0d0) then
+               if (abs(eta(pgamma(0,j))).gt.etagamma) then
+                  cycle
+               endif
+            endif
+         
+c Isolate from hadronic energy
+            do i=1,nQCD
+               drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pQCD(0,i)))
+            enddo
+            call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
+            Etsum(0)=0.d0
+            nin=0
+            do i=1,nQCD
+               if(dble(drlist(isorted(i))).le.R0gamma)then
+                  nin=nin+1
+                  Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
+               endif
+            enddo
+            isolated=.True.
+            do i=1,nin
+               if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $             R0gamma,xn,epsgamma,ptg)) then
+                   isolated=.False. 
+                   exit
+               endif
+            enddo
+            if(.not.isolated)cycle
+            
+c Isolate from EM energy
+            if(isoEM.and.nem.gt.1)then
+               do i=1,nem
+                  drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pem(0,i)))
+               enddo
+               call sortzv(drlist,isorted,nem,ismode,isway,izero)
+c First of list must be the photon: check this, and drop it
+               if(isorted(1).ne.j.or.drlist(isorted(1)).gt.1.e-4)then
+                  write(*,*)'Error #1 in photon isolation'
+                  write(*,*)j,isorted(1),drlist(isorted(1))
+                  stop
+               endif
+               Etsum(0)=0.d0
+               nin=0
+               do i=2,nem
+                  if(dble(drlist(isorted(i))).le.R0gamma)then
+                     nin=nin+1
+                     Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
+                  endif
+               enddo
+               isolated=.True.
+               do i=1,nin
+                 if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $               R0gamma,xn,epsgamma,ptg)) then
+                    isolated=.False.
+                    exit
+                 endif
+               enddo
+               if(.not.isolated)cycle
+            endif
+            is_nph_iso(j)=.True.
+            nphiso=nphiso+1
+
+         enddo
+c End of loop over photons
+
+         if(nphiso.lt.get_n_tagged_photons())then
+            passcuts_photons=.false.
             return
          endif
       endif
 
 
+      return
+      end
+
+
+
+      logical function passcuts_jets(p,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:4,nexternal)
+      integer nQCD, nph
+      double precision pQCD(0:3,nexternal), pgamma(0:3,nexternal)
+      logical is_nph_iso(nexternal)
+      integer ickkw
+      include "cuts.inc"
+
+      integer NJET,JET(nexternal)
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
+      double precision PJET(0:3,nexternal)
+      integer mm
+      integer i,j
+
+      integer get_n_tagged_photons
+
+      passcuts_jets=.true.
+
+c JET CUTS
+
+C       do nothing if ickkw=4 (UNLOPS)
+      if (ickkw.eq.4)return
+
+      ! add to the QCD particles the photons that are not isolated
+      if(nph.gt.get_n_tagged_photons()) then
+         do j=1,nph
+            if (.not.is_nph_iso(j)) then
+               nQCD=nQCD+1
+               do i=0,3
+                  pQCD(i,nQCD)=pgamma(i,j)
+               enddo
+            endif
+         enddo
+      endif
+      
       if (ptj.gt.0d0.and.nQCD.gt.1) then
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
@@ -235,10 +438,9 @@ c no possible divergence related to it (e.g. t-channel single top)
             if(abs(pQCD(0,j)/p(0,1)).lt.1.d-8) mm=mm+1
          enddo
          if(mm.gt.1)then
-            passcuts_user=.false.
+            passcuts_jets=.false.
             return
          endif
-
 
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
          palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
@@ -270,197 +472,158 @@ c******************************************************************************
 
 c Apply the jet cuts
          if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
-            passcuts_user=.false.
+            passcuts_jets=.false.
             return
          endif
       endif
- 122  continue
-c
-c PHOTON (ISOLATION) CUTS
-c
-c find the photons
-      do i=1,nexternal
-         if (istatus(i).eq.1 .and. ipdg(i).eq.22 .and. .not.gamma_is_j) then
-            is_a_ph(i)=.true.
-         else
-            is_a_ph(i)=.false.
-         endif
-      enddo
-      if (ptgmin.ne.0d0) then
-         nph=0
-         do j=nincoming+1,nexternal
-            if (is_a_ph(j)) then
-               nph=nph+1
-               do i=0,3
-                  pgamma(i,nph)=p(i,j)
-               enddo
-            endif
-         enddo
-         if(nph.eq.0)goto 444
-c         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
-c     $           // ' for mixed QED-QCD corrections'
-c         stop 1
-         
-         if(isoEM)then
-            nem=nph
-            do k=1,nem
-               do i=0,3
-                  pem(i,k)=pgamma(i,k)
-               enddo
-            enddo
-            do j=nincoming+1,nexternal
-               if (is_a_lp(j).or.is_a_lm(j)) then
-                  nem=nem+1
-                  do i=0,3
-                     pem(i,nem)=p(i,j)
-                  enddo
-               endif
-            enddo
-         endif
-         
-c         alliso=.true.
-         nphiso=0
 
-         j=0
-c         do while(j.lt.nph.and.alliso)
-         do while(j.lt.nph)
-
-c Loop over all photons
-            j=j+1
-            
-            ptg=pt(pgamma(0,j))
-            if(ptg.lt.ptgmin)then
-               cycle
-c               return
-            endif
-            if (etagamma.gt.0d0) then
-               if (abs(eta(pgamma(0,j))).gt.etagamma) then
-                  cycle
-c                  return
-               endif
-            endif
-         
-c Isolate from hadronic energy
-            do i=1,nQCD
-               drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pQCD(0,i)))
-            enddo
-            call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
-            Etsum(0)=0.d0
-            nin=0
-            do i=1,nQCD
-               if(dble(drlist(isorted(i))).le.R0gamma)then
-                  nin=nin+1
-                  Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
-               endif
-            enddo
-            isolated=.True.
-            do i=1,nin
-c               alliso=alliso .and.
-c     $              Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
-c     $              R0gamma,xn,epsgamma,ptg)
-                if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
-     $              R0gamma,xn,epsgamma,ptg)) then
-                    isolated=.False. 
-                    exit
-                endif
-            enddo
-            if(.not.isolated)cycle
-            
-c Isolate from EM energy
-            if(isoEM.and.nem.gt.1)then
-               do i=1,nem
-                  drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pem(0,i)))
-               enddo
-               call sortzv(drlist,isorted,nem,ismode,isway,izero)
-c First of list must be the photon: check this, and drop it
-               if(isorted(1).ne.j.or.drlist(isorted(1)).gt.1.e-4)then
-                  write(*,*)'Error #1 in photon isolation'
-                  write(*,*)j,isorted(1),drlist(isorted(1))
-                  stop
-               endif
-               Etsum(0)=0.d0
-               nin=0
-               do i=2,nem
-                  if(dble(drlist(isorted(i))).le.R0gamma)then
-                     nin=nin+1
-                     Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
-                  endif
-               enddo
-               isolated=.True.
-               do i=1,nin
-c                  alliso=alliso .and.
-c     $               Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
-c     $               R0gamma,xn,epsgamma,ptg)
-                 if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
-     $               R0gamma,xn,epsgamma,ptg)) then
-                    isolated=.False.
-                    exit
-                 endif
-               enddo
-            if(.not.isolated)cycle
-            endif
-c End of loop over photons
-
-         nphiso=nphiso+1
-
-         enddo
-         if(nphiso.lt.get_n_tagged_photons())then
-            passcuts_user=.false.
-            return
-         endif
- 444     continue
-c End photon isolation
-      endif
-
-C
-C     PDG SPECIFIC CUTS (PT/M_IJ)
-C
-      do i=nincoming+1,nexternal-1
-         if(etmin(i).gt.0d0 .or. etmax(i).gt.0d0)then
-            tmpvar = pt_04(p(0,i))
-            if (tmpvar.lt.etmin(i)) then
-               passcuts_user=.false.
-               return
-            elseif (tmpvar.gt.etmax(i) .and. etmax(i).gt.0d0) then
-               passcuts_user=.false.
-               return
-            endif
-         endif
-         do j=i+1, nexternal-1
-            if (mxxmin(i,j).gt.0d0)then
-               if (invm2_04(p(0,i),p(0,j),1d0).lt.mxxmin(i,j)**2)then
-                  passcuts_user=.false.
-                  return
-               endif
-            endif
-         enddo
-      enddo
-
-
-C***************************************************************
-C***************************************************************
-C PUT HERE YOUR USER-DEFINED CUTS
-C***************************************************************
-C***************************************************************
-C
-c$$$C EXAMPLE: cut on top quark pT
-c$$$C          Note that PDG specific cut are more optimised than simple user cut
-c$$$      do i=1,nexternal   ! loop over all external particles
-c$$$         if (istatus(i).eq.1    ! final state particle
-c$$$     &        .and. abs(ipdg(i)).eq.6) then    ! top quark
-c$$$C apply the pT cut (pT should be large than 200 GeV for the event to
-c$$$C pass cuts)
-c$$$            if ( p(1,i)**2+p(2,i)**2 .lt. 200d0**2 ) then
-c$$$C momenta do not pass cuts. Set passcuts_user to false and return
-c$$$               passcuts_user=.false.
-c$$$               return
-c$$$            endif
-c$$$         endif
-c$$$      enddo
-c
       return
       end
 
+
+
+      logical function passcuts_unlops_jv(p,istatus,ipdg,pQCD,nQCD,ickkw)
+      implicit none
+      include 'nexternal.inc'
+      integer istatus(nexternal)
+      integer iPDG(nexternal)
+      double precision p(0:4,nexternal)
+      logical is_a_j(nexternal)
+      integer nQCD
+      double precision pQCD(0:3,nexternal)
+      integer ickkw
+      include "cuts.inc"
+      double precision p_unlops(0:3,nexternal)
+      logical passUNLOPScuts
+      integer i, j 
+
+      REAL*8 pt
+      external pt
+
+      passcuts_unlops_jv=.true.
+
+c THE UNLOPS CUT:
+      if (ickkw.eq.4 .and. ptj.gt.0d0) then
+c Use special pythia pt cut for minimal pT
+         do i=1,nexternal
+            do j=0,3
+               p_unlops(j,i)=p(j,i)
+            enddo
+         enddo
+         call pythia_UNLOPS(p_unlops,passUNLOPScuts)
+         if (.not. passUNLOPScuts) then
+            passcuts_unlops_jv=.false.
+            return
+         endif
+c THE VETO XSEC CUT:
+      elseif (ickkw.eq.-1 .and. ptj.gt.0d0) then
+c Use veto'ed Xsec for analytic NNLL resummation
+         if (nQCD.ne.1) then
+            write (*,*) 'ERROR: more than one QCD parton in '/
+     $           /'this event in cuts.f. There should only be one'
+            stop
+         endif
+         if (pt(pQCD(0,1)) .gt. ptj) then
+            passcuts_unlops_jv=.false.
+            return
+         endif
+      endif
+
+      return
+      end
+
+
+
+      logical function passcuts_leptons(p,istatus,ipdg,is_a_lp,is_a_lm)
+      implicit none
+      include 'nexternal.inc'
+      integer istatus(nexternal)
+      integer iPDG(nexternal)
+      double precision p(0:4,nexternal)
+      logical is_a_lp(nexternal),is_a_lm(nexternal)
+
+      REAL*8 R2_04,invm2_04,pt_04,eta_04,pt,eta
+      external R2_04,invm2_04,pt_04,eta_04,pt,eta
+      integer i,j
+
+      include 'cuts.inc'
+
+      passcuts_leptons=.true.
+
+c
+c CHARGED LEPTON CUTS
+c
+c find the charged leptons (also used in the photon isolation cuts below)
+      do i=1,nexternal
+         if(istatus(i).eq.1 .and.
+     &    (ipdg(i).eq.11 .or. ipdg(i).eq.13 .or. ipdg(i).eq.15)) then
+            is_a_lm(i)=.true.
+         else
+            is_a_lm(i)=.false.
+         endif
+         if(istatus(i).eq.1 .and.
+     &    (ipdg(i).eq.-11 .or. ipdg(i).eq.-13 .or. ipdg(i).eq.-15)) then
+            is_a_lp(i)=.true.
+         else
+            is_a_lp(i)=.false.
+         endif
+      enddo
+c apply the charged lepton cuts
+      do i=nincoming+1,nexternal
+         if (is_a_lp(i).or.is_a_lm(i)) then
+c transverse momentum
+            if (ptl.gt.0d0) then
+               if (pt_04(p(0,i)).lt.ptl) then
+                  passcuts_leptons=.false.
+                  return
+               endif
+            endif
+c pseudo-rapidity
+            if (etal.gt.0d0) then
+               if (abs(eta_04(p(0,i))).gt.etal) then
+                  passcuts_leptons=.false.
+                  return
+               endif
+            endif
+c DeltaR and invariant mass cuts
+            if (is_a_lp(i)) then
+               do j=nincoming+1,nexternal
+                  if (is_a_lm(j)) then
+                     if (drll.gt.0d0) then
+                        if (R2_04(p(0,i),p(0,j)).lt.drll**2) then
+                           passcuts_leptons=.false.
+                           return
+                        endif
+                     endif
+                     if (mll.gt.0d0) then
+                        if (invm2_04(p(0,i),p(0,j),1d0).lt.mll**2) then
+                           passcuts_leptons=.false.
+                           return
+                        endif
+                     endif
+                     if (ipdg(i).eq.-ipdg(j)) then
+                        if (drll_sf.gt.0d0) then
+                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                              passcuts_leptons=.false.
+                              return
+                           endif
+                        endif
+                        if (mll_sf.gt.0d0) then
+                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+     $                          then
+                              passcuts_leptons=.false.
+                              return
+                           endif
+                        endif
+                     endif
+                  endif
+               enddo
+            endif
+         endif
+      enddo
+
+      return
+      end
 
 
 
