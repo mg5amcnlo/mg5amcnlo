@@ -233,6 +233,9 @@ c
       common /to_accuracy/accur
       integer           use_cut
       common /to_weight/use_cut
+      logical init_mode
+      common /to_determine_zero_hel/init_mode
+
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
@@ -275,6 +278,11 @@ c-----
       if (i .eq. 0) then
          isum_hel = 0
          write(*,*) 'Explicitly summing over helicities'
+      else if (i.eq.-1) then
+         isum_hel = 0
+         multi_channel = .false.
+         init_mode = .true.
+         write(*,*) 'Determining zero helicities'
       else
          isum_hel= i
          write(*,*) 'Monte-Carlo over helicities'

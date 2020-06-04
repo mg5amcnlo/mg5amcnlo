@@ -34,7 +34,7 @@ PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
          cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
 	 idenparts.o dummy_fct.o \
          $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
-         $(patsubst %.f,%.o,$(wildcard matrix*.f))
+         $(patsubst %.f,%.o,$(wildcard matrix*_orig.f))
 
 SYMMETRY = symmetry.o idenparts.o 
 

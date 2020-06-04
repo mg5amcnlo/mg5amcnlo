@@ -59,6 +59,8 @@ C       This is just to temporarily store the reference grid for helicity of the
 C  
 C GLOBAL VARIABLES
 C  
+    logical init_mode
+    common /to_determine_zero_hel/init_mode
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
    
@@ -169,7 +171,7 @@ C ----------
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
       ENDIF
-    ELSE             ! random helicity 
+    ELSE IF (.not.init_mode) then            ! random helicity 
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
@@ -188,6 +190,9 @@ c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
 
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+    ELSE
+	ANS = 1D0
+	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
     CALL RANMAR(R)
