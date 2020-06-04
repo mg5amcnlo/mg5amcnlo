@@ -117,10 +117,67 @@ class gensym(object):
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.lastoffset = {}
     
+    def get_helicity(self, to_submit=True, clean=True):
+        """launch a single call to madevent to get the list of non zero helicity"""
+    
+        self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
+        subproc = self.subproc
+        P_zero_result = []
+        nb_tot_proc = len(subproc)
+        job_list = {}      
+        
+          
+        for nb_proc,subdir in enumerate(subproc):
+            self.cmd.update_status('Compiling for process %s/%s.' % \
+                               (nb_proc+1,nb_tot_proc), level=None)
+
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            logger.info('    %s ' % subdir)
+            
+            self.cmd.compile(['madevent_forhel'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
+                raise Exception('Error make madevent_forhel not successful')  
+
+            if not os.path.exists(pjoin(Pdir, 'Hel')):
+                os.mkdir(pjoin(Pdir, 'Hel'))
+                ff = open(pjoin(Pdir, 'Hel', 'input_app.txt'),'w')
+                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n 1\n')
+                ff.close()
+            else:
+                try:
+                    os.remove(pjoin(Pdir, 'Hel','results.dat'))
+                except:
+                    continue
+                                  
+            # Launch gensym
+            p = misc.Popen(['../madevent_forhel < input_app.txt'], stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
+            #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
+            (stdout, _) = p.communicate(" ".encode())
+            stdout = stdout.decode('ascii')
+            if os.path.exists(pjoin(self.me_dir,'error')):
+                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
+                P_zero_result.append(subdir)
+                continue            
+
+            if 'no events passed cuts' in stdout:
+                raise Exception
+
+            ## KIRAN, put your call to your program here. ##
+            ## you should have all the information in stdout variable
+            print(stdout)
+            files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
+
+        return {}, P_zero_result
+
+    
     def launch(self, to_submit=True, clean=True):
         """ """
-        
-        self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+
+        if not hasattr(self, 'subproc'):
+            self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
         subproc = self.subproc
         

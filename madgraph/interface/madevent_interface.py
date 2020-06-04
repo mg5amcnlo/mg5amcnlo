@@ -3358,7 +3358,15 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode()
-            
+
+        if True: # need to put a switch here
+            jobs, P_zero_result = ajobcreator.get_helicity()
+        else:
+            for p in subproc:
+                files.ln(pjoin(self.me_dir, 'SubProcesses', p, 'madevent'),
+                         pjoin(self.me_dir, 'SubProcesses', p, 'madevent_optim'))
+
+                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
