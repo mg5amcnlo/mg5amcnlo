@@ -165,9 +165,19 @@ class gensym(object):
             if 'no events passed cuts' in stdout:
                 raise Exception
 
-            ## KIRAN, put your call to your program here. ##
-            ## you should have all the information in stdout variable
+            # Get indices of good helicity
+            # Use set (not list) so all elements unique
+            good_hels = {int(line.split()[3]) for line in stdout.splitlines() 
+                if 'Added good helicity' in line}
+            # Convert to sorted list for reproducibility
+            good_hels = sorted(list(good_hels))
+            good_hels = [str(x) for x in good_hels]
+            hel_file = pjoin(Pdir,'Hel','good_hel.data')
+            with open(hel_file, 'w+') as file:
+                file.write(' '.join(good_hels))
             print(stdout)
+
+
             files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
 
         return {}, P_zero_result
