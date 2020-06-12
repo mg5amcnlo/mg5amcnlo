@@ -82,14 +82,14 @@ class DAG:
 
     def __str__(self):
         print(self.graph)
-        return ""
+        return ''
 
     def __repr__(self):
         return self.graph
 
 
 class MathsObject:
-    """Abstract class for wavefunctions and Amplitudes"""
+    '''Abstract class for wavefunctions and Amplitudes'''
 
     def __init__(self, arguments, old_name, nature):
         self.args = arguments
@@ -111,7 +111,7 @@ class MathsObject:
         return self.name
 
 class External(MathsObject):
-    """Class for storing external wavefunctions"""
+    '''Class for storing external wavefunctions'''
 
     good_hel = []
     nhel_lines = ''
@@ -173,7 +173,7 @@ class External(MathsObject):
 
 
 class Internal(MathsObject):
-    """Class for storing internal wavefunctions"""
+    '''Class for storing internal wavefunctions'''
 
     max_wav_num = 0
     num_internals = 0
@@ -243,7 +243,7 @@ def get_num(wav):
 
 
 class Amplitude(MathsObject):
-    """Class for storing Amplitudes"""
+    '''Class for storing Amplitudes'''
 
     max_amp_num = 0
 
@@ -304,7 +304,7 @@ class Amplitude(MathsObject):
                     # Offset because Fortran counts from 1
                     amp_num = i + 1
             if amp_num < 1:
-                print("Failed to find amp_num")
+                print('Failed to find amp_num')
                 exit(1)
             if cls.max_amp_num < amp_num:
                 cls.max_amp_num = amp_num
@@ -320,7 +320,7 @@ class Amplitude(MathsObject):
 
 
 class HelicityRecycler():
-    """Class for recycling helicity"""
+    '''Class for recycling helicity'''
 
     def __init__(self, good_elements):
 
@@ -334,7 +334,7 @@ class HelicityRecycler():
         Internal.num_internals = 0
 
         Amplitude.max_amp_num = 0
-        
+
         self.good_elements = good_elements
 
         # Default file names
@@ -354,20 +354,20 @@ class HelicityRecycler():
         self.got_gwc = False
 
         self.procedure_name = self.input_file.split('.')[0].upper()
-        self.procedure_kind = "FUNCTION"
+        self.procedure_kind = 'FUNCTION'
 
-        self.old_out_name = ""
-        self.loop_var = "K"
+        self.old_out_name = ''
+        self.loop_var = 'K'
 
         self.all_hel = []
 
     def set_input(self, file):
-        if "born_matrix" in file:
-            print("HelicityRecycler is currently "
-                  f"unable to handle {file}")
+        if 'born_matrix' in file:
+            print('HelicityRecycler is currently '
+                  f'unable to handle {file}')
             exit(1)
         self.procedure_name = file.split('.')[0].upper()
-        self.procedure_kind = "FUNCTION"
+        self.procedure_kind = 'FUNCTION'
         self.input_file = file
 
     def set_output(self, file):
@@ -378,12 +378,12 @@ class HelicityRecycler():
 
     def function_call(self, line):
         # Check a function is called at all
-        if not "CALL" in line:
+        if not 'CALL' in line:
             return None
 
         # Now check for spinor
-        if ("CALL OXXXXX" in line or "CALL IXXXXX" in line or "CALL VXXXXX" in line):
-            return "external"
+        if ('CALL OXXXXX' in line or 'CALL IXXXXX' in line or 'CALL VXXXXX' in line):
+            return 'external'
 
         # Now check for internal
         # Wont find a internal when no externals have been found...
@@ -405,9 +405,9 @@ class HelicityRecycler():
         # What if [-1] is garbage? Then I'm relying on needs changing.
         # Is that OK?
         if (len(matches) in [2, 3]) and (function.split('_')[-1] != '0'):
-            return "internal"
+            return 'internal'
         elif (len(matches) in [3, 4] and (function.split('_')[-1] == '0')):
-            return "amplitude"
+            return 'amplitude'
         else:
             print(f'Ahhhh what is going on here?\n{line}')
 
@@ -417,43 +417,43 @@ class HelicityRecycler():
 
     def add_amp_index(self, matchobj):
         old_pat = matchobj.group()
-        new_pat = f"{old_pat[:-1]},{self.loop_var}{old_pat[-1]}"
+        new_pat = f'{old_pat[:-1]},{self.loop_var}{old_pat[-1]}'
         return new_pat
 
     def add_indices(self, line):
-        """Add loop_var index to amp and output variable. 
-           Also update name of output variable."""
+        '''Add loop_var index to amp and output variable. 
+           Also update name of output variable.'''
         # Doesnt work if the AMP arguments contain brackets
         new_line = re.sub(r'\WAMP\(.*?\)', self.add_amp_index, line)
         return new_line
 
     def jamp_finished(self, line):
-        # indent_end = re.compile(fr"{self.jamp_indent}END\W")
+        # indent_end = re.compile(fr'{self.jamp_indent}END\W')
         # m = indent_end.match(line)
         # if m:
         #     return True
-        if f"{self.old_out_name}=0.D0" in line.replace(' ', ''):
+        if f'{self.old_out_name}=0.D0' in line.replace(' ', ''):
             return True
         return False
 
     def get_old_name(self, line):
-        if f"{self.procedure_kind} {self.procedure_name}" in line:
-            if "SUBROUTINE" == self.procedure_kind:
+        if f'{self.procedure_kind} {self.procedure_name}' in line:
+            if 'SUBROUTINE' == self.procedure_kind:
                 self.old_out_name = get_arguments(line)[-1]
-            if "FUNCTION" == self.procedure_kind:
+            if 'FUNCTION' == self.procedure_kind:
                 self.old_out_name = line.split('(')[0].split()[-1]
 
     def get_amp_stuff(self, line_num, line):
 
-        if "diagram number" in line:
+        if 'diagram number' in line:
             self.amp_calc_started = True
         # Check if the calculation of this diagram is finished
-        if ("AMP" not in get_arguments(line)[-1]
+        if ('AMP' not in get_arguments(line)[-1]
                 and self.amp_calc_started and list(line)[0] != 'C'):
             # Check if the calculation of all diagrams is finished
-            if self.function_call(line) not in ["external",
-                                                "internal",
-                                                "amplitude"]:
+            if self.function_call(line) not in ['external',
+                                                'internal',
+                                                'amplitude']:
                 self.jamp_started = True
             self.amp_calc_started = False
         if self.jamp_started:
@@ -469,13 +469,13 @@ class HelicityRecycler():
             self.jamp_started = False
             self.find_amp2 = True
         elif not line.isspace():
-            self.template_dict['jamp_lines'] += f"{line[0:6]}  {self.add_indices(line[6:])}"
+            self.template_dict['jamp_lines'] += f'{line[0:6]}  {self.add_indices(line[6:])}'
 
     def get_amp2_lines(self, line):
         if line.startswith('      DO I = 1, NCOLOR'):
             self.in_amp2 = False
         elif not line.isspace():
-            self.template_dict['amp2_lines'] += f"{line[0:6]}  {self.add_indices(line[6:])}"
+            self.template_dict['amp2_lines'] += f'{line[0:6]}  {self.add_indices(line[6:])}'
 
     def prepare_bools(self):
         self.amp_calc_started = False
@@ -532,7 +532,7 @@ class HelicityRecycler():
         self.counter += 1
         formatted_hel = [f'{hel}' if hel < 0 else f' {hel}' for hel in hel_comb]
         nexternal = len(hel_comb)
-        return (f"      DATA (NHEL(I,{self.counter}),I=1,{nexternal}) /{','.join(formatted_hel)}/")
+        return (f'      DATA (NHEL(I,{self.counter}),I=1,{nexternal}) /{",".join(formatted_hel)}/')
 
     def read_orig(self):
 
@@ -547,13 +547,13 @@ class HelicityRecycler():
                 self.get_amp_stuff(line_num, line)
                 self.get_gwc(line)
 
-                if self.function_call(line) == "external":
+                if self.function_call(line) == 'external':
                     self.template_dict['helas_calls'] += self.unfold_external(
                         line)
-                if self.function_call(line) == "internal":
+                if self.function_call(line) == 'internal':
                     self.template_dict['helas_calls'] += self.unfold_internal(
                         line)
-                if self.function_call(line) == "amplitude":
+                if self.function_call(line) == 'amplitude':
                     self.template_dict['helas_calls'] += self.unfold_amp(line)
 
         self.template_dict['nwavefuncs'] = Internal.max_wav_num
@@ -578,9 +578,9 @@ class HelicityRecycler():
 
 
 def get_arguments(line):
-    """Find the substrings separated by commas between the first
+    '''Find the substrings separated by commas between the first
     closed set of parentheses in 'line'. 
-    """
+    '''
     bracket_depth = 0
     element = 0
     arguments = ['']
@@ -608,17 +608,17 @@ def get_arguments(line):
 def apply_args(old_line, all_the_args):
     function = (old_line.split('(')[0]).split()[-1]
     old_args = old_line.split(function)[-1]
-    new_lines = [old_line.replace(old_args, f"({','.join(x)})\n")
+    new_lines = [old_line.replace(old_args, f'({",".join(x)})\n')
                  for x in all_the_args]
     return ''.join(new_lines)
  
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_file", help="The file containing the "
-                                          "original matrix calculation")
-    parser.add_argument("hel_file", help="The file containing the "
-                                         "contributing helicities")
+    parser.add_argument('input_file', help='The file containing the '
+                                          'original matrix calculation')
+    parser.add_argument('hel_file', help='The file containing the '
+                                         'contributing helicities')
     args = parser.parse_args()
 
     with open(args.hel_file, 'r') as file:
@@ -632,5 +632,5 @@ def main():
 
     recycler.generate_output_file()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
