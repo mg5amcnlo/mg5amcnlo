@@ -688,7 +688,8 @@ class ReweightInterface(extended_cmd.Cmd):
             for i,card in enumerate(param_card_iterator):
                 if self.options['rwgt_name']:
                     self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
-                card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                self.new_param_card = card
+                #card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
@@ -727,13 +728,19 @@ class ReweightInterface(extended_cmd.Cmd):
             self.stored_line = None
             card = cmd.param_card
             new_card = card.write()
+            misc.sprint(new_card)
+        elif self.new_param_card:
+            new_card = self.new_param_card.write()
+            misc.sprint(new_card)
         else:
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-        
+            misc.sprint(new_card)
+            
         # check for potential scan in the new card 
-        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
+            misc.sprint("found scan")
             try:
                 import internal.extended_cmd as extended_internal
                 Shell_internal = extended_internal.CmdShell
@@ -750,8 +757,11 @@ class ReweightInterface(extended_cmd.Cmd):
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
             new_card = first_card.write()
+            misc.sprint(new_card)
+            self.new_param_card = first_card
             #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
-                          
+        
+        misc.sprint(new_card)                
         # check if "Auto" is present for a width parameter)
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
