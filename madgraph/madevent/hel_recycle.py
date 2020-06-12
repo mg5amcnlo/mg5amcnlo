@@ -202,14 +202,12 @@ class Internal(MathsObject):
         # Put this into list comprehension, new_wavfuncs = [...]
         new_wavfuncs = []
         for wavs in itertools.product(*deps):
-            # Work out which of a and b are external wavefunctions
-            ext_deps = set(wavs) & set(
-                [x for x in graph.external_nodes()])
-            # Work out if this combination of external wavefunctions
-            # corresponds to an allowed helicity combination
+            # Work out if wavs corresponds to an allowed helicity combination
+            exts = graph.external_nodes()
+            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
             this_wav_comb = [comb for comb in External.good_wav_combs
-                             if ext_deps.issubset(set(comb))]
-            if not this_wav_comb and ext_deps:
+                             if exts_on_path.issubset(set(comb))]
+            if not this_wav_comb and exts_on_path:
                 continue
             this_args = copy.copy(old_args)
             wav_names = [w.name for w in wavs]
@@ -282,19 +280,17 @@ class Amplitude(MathsObject):
         for wavs in itertools.product(*deps):
             # Work out if this amplitude's dependencies correspond to
             # an allowed helicity combination
-            ext_deps = set(wavs) & set(
-                [x for x in graph.external_nodes()])
+            exts = graph.external_nodes()
+            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
             this_wav_comb = [comb for comb in External.good_wav_combs
-                             if ext_deps.issubset(set(comb))]
-            if not this_wav_comb and ext_deps:
+                             if exts_on_path.issubset(set(comb))]
+            if not this_wav_comb and exts_on_path:
                 continue
             # Create new amp object
             this_args = copy.copy(old_args)
             wav_names = [w.name for w in wavs]
             this_args[0:len(wavs)] = wav_names
             amp_num = -1
-            exts = graph.external_nodes()
-            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
             for i in range(len(External.good_wav_combs)):
                 if set(External.good_wav_combs[i]) == set(exts_on_path):
                     # Offset because Fortran counts from 1
