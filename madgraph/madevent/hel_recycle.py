@@ -97,12 +97,61 @@ class MathsObject:
         self.nature = nature
         self.name = None
 
-    def set_name(self, num):
-        self.args[-1] = self.format_name(num)
+    def set_name(self, *args):
+        self.args[-1] = self.format_name(*args)
         self.name = self.args[-1]
 
-    def format_name(self, num):
+    def format_name(self, *nums):
         pass
+
+    @staticmethod
+    def get_deps(line, graph):
+        old_args = get_arguments(line)
+        old_name = old_args[-1]
+        matches = graph.old_names() & set(old_args)
+        try:
+            matches.remove(old_name)
+        except KeyError:
+            pass
+        old_deps = old_args[0:len(matches)]
+
+        # If we're overwriting a wav clear it from graph
+        graph.clear_old(old_name)
+        return [graph.dependencies(dep) for dep in old_deps]
+
+    @staticmethod
+    def good_helicity(wavs, graph):
+        exts = graph.external_nodes()
+        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
+        this_wav_comb = [comb for comb in External.good_wav_combs
+                         if exts_on_path.issubset(set(comb))]
+        return this_wav_comb and exts_on_path
+
+    def get_new_args(line, wavs):
+        old_args = get_arguments(line)
+        old_name = old_args[-1]
+        # Work out if wavs corresponds to an allowed helicity combination
+        this_args = copy.copy(old_args)
+        wav_names = [w.name for w in wavs]
+        this_args[0:len(wavs)] = wav_names
+        # This isnt maximally efficient
+        # Could take the num from wavs that've been deleted in graph
+        return this_args
+
+    def get_number():
+        pass
+
+    @classmethod
+    def get_obj(cls, line, wavs, graph, diag_num = None):
+        old_name = get_arguments(line)[-1]
+        new_args = cls.get_new_args(line, wavs)
+        num = cls.get_number(wavs, graph)
+        this_obj = cls.call_constructor(new_args, old_name, diag_num)
+        this_obj.set_name(num, diag_num)
+        graph.add_node(this_obj)
+        [graph.add_branch(w, this_obj) for w in wavs]
+        return this_obj
+
 
     def __str__(self):
         return self.name
@@ -120,8 +169,7 @@ class External(MathsObject):
     paired_up_wavs = []
     good_wav_combs = []
 
-    def __init__(self, arguments, function, old_name):
-        # self.func = function
+    def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
         self.hel = int(self.args[2])
         self.raise_num()
@@ -136,7 +184,6 @@ class External(MathsObject):
         # we can set names
         old_args = get_arguments(line)
         old_name = old_args[-1]
-        function = (line.split('(')[0]).split()[-1]
 
         new_wavfuncs = []
 
@@ -145,7 +192,7 @@ class External(MathsObject):
             this_args = copy.copy(old_args)
             this_args[2] = new_hel
 
-            this_wavfunc = External(this_args, function, old_name)
+            this_wavfunc = External(this_args, old_name)
             this_wavfunc.set_name(len(graph.external_nodes())+1)
 
             graph.add_node(this_wavfunc)
@@ -168,8 +215,8 @@ class External(MathsObject):
         cls.good_wav_combs = wav_comb
 
     @staticmethod
-    def format_name(num):
-        return f'W(1,{num})'
+    def format_name(*nums):
+        return f'W(1,{nums[0]})'
 
 
 class Internal(MathsObject):
@@ -184,76 +231,49 @@ class Internal(MathsObject):
 
     @classmethod
     def generate_wavfuncs(cls, line, graph):
-        old_args = get_arguments(line)
-        old_name = old_args[-1]
+        deps = cls.get_deps(line, graph)
 
-        matches = graph.old_names() & set(old_args)
-        try:
-            matches.remove(old_name)
-        except KeyError:
-            pass
-        old_deps = old_args[0:len(matches)]
+        new_wavfuncs = [ cls.get_obj(line, wavs, graph) 
+                         for wavs in itertools.product(*deps) 
+                         if cls.good_helicity(wavs, graph) ]
 
-        # If we're overwriting a wav clear it from graph
-        graph.clear_old(old_name)
-        # TODO: get rid of function
-        function = (line.split('(')[0]).split()[-1]
-        deps = [graph.dependencies(dep) for dep in old_deps]
-        # Put this into list comprehension, new_wavfuncs = [...]
-        new_wavfuncs = []
-        for wavs in itertools.product(*deps):
-            # Work out if wavs corresponds to an allowed helicity combination
-            exts = graph.external_nodes()
-            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
-            this_wav_comb = [comb for comb in External.good_wav_combs
-                             if exts_on_path.issubset(set(comb))]
-            if not this_wav_comb and exts_on_path:
-                continue
-            this_args = copy.copy(old_args)
-            wav_names = [w.name for w in wavs]
-            this_args[0:len(wavs)] = wav_names
-            # This isnt maximally efficient
-            # Could take the num from wavs that've been deleted in graph
-            num = External.num_externals + Internal.num_internals + 1
-            if cls.max_wav_num < num:
-                cls.max_wav_num = num
-            this_wav = Internal(this_args, function, old_name)
-            this_wav.set_name(num)
-            graph.add_node(this_wav)
-            [graph.add_branch(w, this_wav) for w in wavs]
-            new_wavfuncs.append(this_wav)
         return new_wavfuncs
 
-    def __init__(self, arguments, function, old_name):
+
+    # There must be a better way
+    @classmethod
+    def call_constructor(cls, new_args, old_name, diag_num):
+        return Internal(new_args, old_name)
+
+    @classmethod
+    def get_number(cls, *args):
+        num = External.num_externals + Internal.num_internals + 1
+        if cls.max_wav_num < num:
+            cls.max_wav_num = num
+        return num
+
+    def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'internal')
         self.raise_num()
 
 
     @staticmethod
-    def format_name(num):
-        return f'W(1,{num})'
-
-def get_num(wav):
-    name = wav.name
-    between_brackets = re.search(r'\(.*?\)', name).group()
-    num = int(between_brackets[1:-1].split(',')[-1])    
-    return num
-
+    def format_name(*nums):
+        return f'W(1,{nums[0]})'
 
 class Amplitude(MathsObject):
     '''Class for storing Amplitudes'''
 
     max_amp_num = 0
 
-    def __init__(self, arguments, function, old_name, diag_num):
+    def __init__(self, arguments, old_name, diag_num):
         self.diag_num = diag_num
         super().__init__(arguments, old_name, 'amplitude')
 
 
     @staticmethod
-    def format_name(nums):
-        return f'AMP({nums[0]},{nums[1]})'
-
+    def format_name(*nums):
+        return f'AMP({nums[1]},{nums[0]})'
 
     @classmethod
     def generate_amps(cls, line, graph):
@@ -264,52 +284,33 @@ class Amplitude(MathsObject):
         diag_num = int(amp_index[1:-1])
         graph.clear_amp(diag_num)
 
-        matches = graph.old_names() & set(old_args)
-        try:
-            matches.remove(old_name)
-        except KeyError:
-            pass
-        old_deps = old_args[0:len(matches)]
+        deps = cls.get_deps(line, graph)
 
-        # If we're overwriting a wav clear it from graph
-        graph.clear_old(old_name)
-        function = (line.split('(')[0]).split()[-1]
-        deps = [graph.dependencies(dep) for dep in old_deps]
-
-        new_amps = []
-        for wavs in itertools.product(*deps):
-            # Work out if this amplitude's dependencies correspond to
-            # an allowed helicity combination
-            exts = graph.external_nodes()
-            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
-            this_wav_comb = [comb for comb in External.good_wav_combs
-                             if exts_on_path.issubset(set(comb))]
-            if not this_wav_comb and exts_on_path:
-                continue
-            # Create new amp object
-            this_args = copy.copy(old_args)
-            wav_names = [w.name for w in wavs]
-            this_args[0:len(wavs)] = wav_names
-            amp_num = -1
-            for i in range(len(External.good_wav_combs)):
-                if set(External.good_wav_combs[i]) == set(exts_on_path):
-                    # Offset because Fortran counts from 1
-                    amp_num = i + 1
-            if amp_num < 1:
-                print('Failed to find amp_num')
-                exit(1)
-            if cls.max_amp_num < amp_num:
-                cls.max_amp_num = amp_num
-            this_amp = Amplitude(this_args, function, old_name, diag_num)
-            this_amp.set_name([diag_num, amp_num])
-            # Add new amp to dag
-            graph.add_node(this_amp)
-            [graph.add_branch(w, this_amp) for w in wavs]
-
-            new_amps.append(this_amp)
+        new_amps = [cls.get_obj(line, wavs, graph, diag_num) 
+                        for wavs in itertools.product(*deps) 
+                        if cls.good_helicity(wavs, graph)]
 
         return new_amps
 
+    @classmethod
+    def call_constructor(cls, new_args, old_name, diag_num):
+        return Amplitude(new_args, old_name, diag_num)
+
+    @classmethod
+    def get_number(cls, *args):
+        amp_num = -1
+        exts = args[1].external_nodes()
+        exts_on_path = { i for dep in args[0] for i in exts if args[1].find_path(i, dep) }
+        for i in range(len(External.good_wav_combs)):
+            if set(External.good_wav_combs[i]) == set(exts_on_path):
+                # Offset because Fortran counts from 1
+                amp_num = i + 1
+        if amp_num < 1:
+            print('Failed to find amp_num')
+            exit(1)
+        if cls.max_amp_num < amp_num:
+            cls.max_amp_num = amp_num 
+        return amp_num  
 
 class HelicityRecycler():
     '''Class for recycling helicity'''
@@ -604,6 +605,12 @@ def apply_args(old_line, all_the_args):
                  for x in all_the_args]
     return ''.join(new_lines)
  
+def get_num(wav):
+    name = wav.name
+    between_brackets = re.search(r'\(.*?\)', name).group()
+    num = int(between_brackets[1:-1].split(',')[-1])    
+    return num
+
 
 def main():
     parser = argparse.ArgumentParser()
