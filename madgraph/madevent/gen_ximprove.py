@@ -44,6 +44,7 @@ except ImportError:
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
+    import internal.hel_recycle as hel_recycle
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -54,6 +55,7 @@ else:
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
+    import madgraph.madevent.hel_recycle as hel_recycle
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -172,11 +174,29 @@ class gensym(object):
             # Convert to sorted list for reproducibility
             good_hels = sorted(list(good_hels))
             good_hels = [str(x) for x in good_hels]
-            hel_file = pjoin(Pdir,'Hel','good_hel.data')
-            with open(hel_file, 'w+') as file:
-                file.write(' '.join(good_hels))
             print(stdout)
 
+            for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                
+                split_file = matrix_file.split('/')
+
+                basename = split_file[-1].replace('orig', 'optim')
+                split_out = split_file[:-1] + [basename]
+                out_file = pjoin('/', '/'.join(split_out))
+
+                basename = f'template_{split_file[-1].replace("_orig", "")}'
+                split_templ = split_file[:-1] + [basename]
+                templ_file = pjoin('/', '/'.join(split_templ))
+
+                recycler = hel_recycle.HelicityRecycler(good_hels)
+                recycler.set_input(matrix_file)
+                recycler.set_output(out_file)
+                recycler.set_template(templ_file)              
+                recycler.generate_output_file()
+                del recycler
+
+            # with misc.chdir():
+            #     pass
 
             files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
 
