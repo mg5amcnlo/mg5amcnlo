@@ -127,6 +127,7 @@ class MathsObject:
                          if exts_on_path.issubset(set(comb))]
         return this_wav_comb and exts_on_path
 
+    @staticmethod
     def get_new_args(line, wavs):
         old_args = get_arguments(line)
         old_name = old_args[-1]
@@ -138,6 +139,7 @@ class MathsObject:
         # Could take the num from wavs that've been deleted in graph
         return this_args
 
+    @staticmethod
     def get_number():
         pass
 
