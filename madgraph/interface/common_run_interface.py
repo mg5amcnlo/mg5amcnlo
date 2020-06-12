@@ -1036,7 +1036,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
-
+            if 'return_instance' in opt and opt['return_instance']:
+                out, cmd = out
+        if 'return_instance' in opt and opt['return_instance']:
+            return (out, cmd)
+        return out
 
     @staticmethod
     def detect_card_type(path):
@@ -4507,7 +4511,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.modified_card = set() #set of cards not in sync with filesystem
                               # need to sync them before editing/leaving
         self.init_from_banner(from_banner, banner)
-        
+        self.writting_card = True
+        if 'write_file' in opt:
+            if not opt['write_file']:
+                self.writting_card = False
+                self.param_consistency = False
+                        
         #update default path by custom one if specify in cards
         for card in cards:
             if os.path.exists(card) and os.path.sep in cards:
@@ -5255,7 +5264,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
-        
+
         args = self.split_arg(line)
         
         
@@ -5979,8 +5988,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.do_set('shower_card extrapaths None ') 
                     
         # ensure that all cards are in sync
-        for key in list(self.modified_card):
-            self.write_card(key)
+        if self.writting_card:
+            for key in list(self.modified_card):
+                self.write_card(key)
 
 
     def reask(self, *args, **opt):
@@ -6106,7 +6116,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card.write(self.paths['run'], self.paths['run_default'])
         
     def write_card_param(self):
-        """ write the param_card """        
+        """ write the param_card """    
+    
         self.param_card.write(self.paths['param'])
         
     @staticmethod

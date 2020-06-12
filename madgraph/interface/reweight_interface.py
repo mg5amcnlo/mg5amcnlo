@@ -719,12 +719,18 @@ class ReweightInterface(extended_cmd.Cmd):
             ff.close()      
             if self.has_nlo and self.rwgt_mode != "LO":
                 files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
-            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
+                
+            out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
+                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
+                                   write_file=False, return_instance=True
+                                   )
             self.stored_line = None
+            card = cmd.param_card
+            new_card = card.write()
+        else:
+            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
         
         # check for potential scan in the new card 
-        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
@@ -744,11 +750,18 @@ class ReweightInterface(extended_cmd.Cmd):
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
             new_card = first_card.write()
-            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
+            #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
                           
         # check if "Auto" is present for a width parameter)
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
+            if param_card_iterator:
+                first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+            else:
+                ff = open(pjoin(rw_dir, 'Cards', 'param_card.dat'),'w')
+                ff.write(new_card)
+                ff.close()
+                
             self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
@@ -795,6 +808,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
+        self.orig_param_card_text = s_orig
         s_new = new_card
         self.new_param_card = check_param_card.ParamCard(s_new.splitlines())
         
@@ -866,15 +880,26 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             tag_name = 'rwgt_%s' % rewgtid
 
+                
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
                     if 'second' in path or tag == 3:
-                        module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                        param_card = self.new_param_card
                     else:
-                        module.initialise(pjoin(path_me, 'rw_me', 'Cards', 'param_card_orig.dat'))
-
+                        param_card = check_param_card.ParamCard(self.orig_param_card_text)
+                    
+                    for block in param_card:
+                        misc.sprint(block, type(block))
+                        misc.sprint(type(param_card[block]))
+                        for param   in param_card[block]:
+                            lhacode = param.lhacode
+                            value = param.value
+                            name = '%s_%s' % (block.upper(), '_'.join([str(i) for i in lhacode]))
+                            module.change_para(name, value)
+                    module.update_all_coup()
+                        
         return param_card_iterator, tag_name
 
         

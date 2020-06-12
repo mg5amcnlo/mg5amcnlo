@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from madgraph.iolibs.helas_call_writers import HelasCallWriter
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -2117,7 +2116,7 @@ CF2PY intent(in) :: value
       SELECT CASE (name)
          %(parameter_setup)s
          CASE DEFAULT
-            stop 1
+            write(*,*) 'no parameter matching'
       END SELECT
 
       return
@@ -2185,13 +2184,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
 
         params = self.get_model_parameter(self.model)
         parameter_setup =[]
-        for p in params:
-            if p.startswith('mdl_'):
-                short_p = p[4:]
-            else:
-                short_p = p
+        for key, var in params.items():
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
-                                   % (short_p, p))
+                                   % (key, var))
 
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
@@ -2211,9 +2206,17 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
     def get_model_parameter(self, model):
         """ returns all the model parameter
         """
+        params = {}
+        for p in model.get('parameters')[('external',)]:
+            name = p.name
+            nopref = name[4:] if name.startswith('mdl_') else name
+            params[nopref] = name
+            
+            block = p.lhablock
+            lha = '_'.join([str(i) for i in p.lhacode])
+            params['%s_%s' % (block, lha)] = name
 
-        params = [p.name  for  p in model.get('parameters')[('external',)]]
-        return params                          
+        return params                      
                                         
         
         
