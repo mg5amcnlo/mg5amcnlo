@@ -294,11 +294,7 @@ class Amplitude(MathsObject):
             this_args[0:len(wavs)] = wav_names
             amp_num = -1
             exts = graph.external_nodes()
-            exts_on_path = set([])
-
-            for dep in wavs:
-                exts_on_path.update(
-                    {i for i in exts if graph.find_path(i, dep)})
+            exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
             for i in range(len(External.good_wav_combs)):
                 if set(External.good_wav_combs[i]) == set(exts_on_path):
                     # Offset because Fortran counts from 1
