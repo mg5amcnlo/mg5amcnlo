@@ -709,15 +709,15 @@ class ReweightInterface(extended_cmd.Cmd):
         
         
         if not '--keep_card' in args:
-            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()
+            #ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
+            #ff.write(self.banner['slha'])
+            #ff.close()
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
                 files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
-            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()      
+            #ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
+            #ff.write(self.banner['slha'])
+            #ff.close()      
             if self.has_nlo and self.rwgt_mode != "LO":
                 files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
                 
@@ -728,19 +728,15 @@ class ReweightInterface(extended_cmd.Cmd):
             self.stored_line = None
             card = cmd.param_card
             new_card = card.write()
-            misc.sprint(new_card)
         elif self.new_param_card:
             new_card = self.new_param_card.write()
-            misc.sprint(new_card)
         else:
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-            misc.sprint(new_card)
             
         # check for potential scan in the new card 
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
-            misc.sprint("found scan")
             try:
                 import internal.extended_cmd as extended_internal
                 Shell_internal = extended_internal.CmdShell
@@ -757,11 +753,9 @@ class ReweightInterface(extended_cmd.Cmd):
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
             new_card = first_card.write()
-            misc.sprint(new_card)
             self.new_param_card = first_card
             #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
         
-        misc.sprint(new_card)                
         # check if "Auto" is present for a width parameter)
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
@@ -901,8 +895,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         param_card = check_param_card.ParamCard(self.orig_param_card_text)
                     
                     for block in param_card:
-                        misc.sprint(block, type(block))
-                        misc.sprint(type(param_card[block]))
+
                         for param   in param_card[block]:
                             lhacode = param.lhacode
                             value = param.value
