@@ -31,7 +31,7 @@ LIBS = $(LIBDIR)libbias.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsamp
 # Source files
 
 MATRIX_HEL = $(patsubst %.f,%.o,$(wildcard matrix*_orig.f))
-MATRIX= = $(patsubst %.f,%.o,$(wildcard matrix*_optim.f))
+MATRIX = $(patsubst %.f,%.o,$(wildcard matrix*_optim.f))
 
 PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
          cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
