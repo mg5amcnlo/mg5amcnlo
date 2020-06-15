@@ -1010,7 +1010,7 @@ c-----
       endif
       end
 
-      subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
+      subroutine gentcms(pa,pb,t,phi,ma2,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
 c     given the values t, and phi
@@ -1046,7 +1046,7 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-      ma2 = dot(pa,pa)
+c      ma2 = dot(pa,pa)
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c
