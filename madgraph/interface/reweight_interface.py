@@ -709,17 +709,8 @@ class ReweightInterface(extended_cmd.Cmd):
         
         
         if not '--keep_card' in args:
-            #ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-            #ff.write(self.banner['slha'])
-            #ff.close()
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-                files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
-            #ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-            #ff.write(self.banner['slha'])
-            #ff.close()      
-            if self.has_nlo and self.rwgt_mode != "LO":
-                files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
                 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
