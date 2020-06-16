@@ -2749,7 +2749,7 @@ class decay_all_events(object):
             for proc in processes:
                 if not proc.strip().startswith(('add','generate')):
                     proc = 'add process %s' % proc
-                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
+                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
                 
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
@@ -2813,6 +2813,7 @@ class decay_all_events(object):
         #
         commandline = 'output standalone_msF %s' % pjoin(path_me,'decay_me')
         logger.info(commandline)
+        misc.sprint(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))        
         #
@@ -2835,7 +2836,7 @@ class decay_all_events(object):
 #                    assert decay.shell_string() in self.all_decay
             
     @staticmethod
-    def get_proc_with_decay(proc, decay_text, model):
+    def get_proc_with_decay(proc, decay_text, model, msoptions=None):
         
         commands = []
         if '[' in proc:
@@ -2880,6 +2881,13 @@ class decay_all_events(object):
             else:
                 baseproc = new_proc
                 proc_nb = ''      
+
+            if msoptions and msoptions['global_order_coupling']:
+                if '@' in proc_nb:
+                    proc_nb += " %s" % msoptions['global_order_coupling']
+                else:
+                    proc_nb += " @0 %s" %  msoptions['global_order_coupling']                
+
             nb_comma = baseproc.count(',')
             if nb_comma == 0:
                 commands.append("%s, %s %s %s" % (baseproc, decay_text, proc_nb, options))

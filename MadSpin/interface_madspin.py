@@ -76,6 +76,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         self.add_param('frame_id', 6)
+        self.add_param('global_order_coupling', '')
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -1704,7 +1705,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     decay_text.append('(%s)' % decay)
                 else:
                     decay_text.append(decay)
-                processes_decay.append(decay)
+                processes_decay.append(decay)            
         decay_text = ', '.join(decay_text)
         processes += []
         
@@ -1719,12 +1720,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 
+                if self.options['global_order_coupling']:
+                    proc_nb = '%s %s' % (proc_nb, self.options['global_order_coupling'])
             else:
-                proc_nb = ''     
+                if self.options['global_order_coupling']:
+                    proc_nb = '@0 %s ' % self.options['global_order_coupling']    
                 
             rwgt_interface.ReweightInterface.get_LO_definition_from_NLO()        
         
-
+        raise Exception
 
 if __name__ == '__main__':
     
