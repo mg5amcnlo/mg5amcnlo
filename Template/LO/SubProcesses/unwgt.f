@@ -547,7 +547,7 @@ C  BEGIN CODE
 C-----
       
       if ((nw .ge. maxevents).and.do_write_events) return
-      if (.not.init_mode) return
+      if (init_mode) return
 C     if all the necessary inputs to write the events have already been
 C     computed in the bias module, then directly jump to write_events
       if (AlreadySetInBiasModule) then

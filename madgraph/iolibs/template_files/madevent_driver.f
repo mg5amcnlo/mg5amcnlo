@@ -273,6 +273,7 @@ c-----
          write(*,*) 'Using full amplitude.'
       endif
 
+      init_mode = .false.
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
