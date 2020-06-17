@@ -1677,7 +1677,7 @@ This will take effect only in a NEW terminal
                     continue
                 elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
-                arg, value = arg.split('=')
+                arg, value = arg.split('=',1)
                 if arg[2:] not in options:
                     raise self.InvalidCmd('%s not valid options' % arg)
                 options[arg[2:]] = value
