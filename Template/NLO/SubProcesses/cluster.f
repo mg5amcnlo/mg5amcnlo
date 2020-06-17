@@ -35,12 +35,13 @@ C given by the to_mconfigs common block.
      $     ,cluster_pdg(3*3*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_conf,iconf,cluster_ij(max_branch),iord(0:max_branch)
      $     ,nqcdrenscale,iconfig,need_matching(nexternal)
+     $     ,cluster_type(maskr(nexternal),0:fks_configs)
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
       logical firsttime(0:fks_configs),skip_first
       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
-      save ipdg,cluster_list,cluster_pdg,firsttime
+      save ipdg,cluster_list,cluster_pdg,cluster_type,firsttime
       if (iproc.eq.0) then      ! n-body contribution
          next=nexternal-1
          do i=1,next
@@ -58,6 +59,7 @@ C given by the to_mconfigs common block.
       endif
       nbr=next-3 ! number of clusterings to get to a 2->1 process
       if (firsttime(iproc)) then
+         cluster_type(1:maskr(nexternal),iproc)=0 ! set to zero
          call set_pdg(0,max(1,iproc)) ! use max() here to get something for iproc=0
          if (iproc.eq.0) then
             do i=1,next
@@ -75,7 +77,8 @@ c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
             call iforest_to_list(next,nincoming,nbr,iforest(1,-(nbr+1)
      $           ,iconf,iproc),sprop(-nbr,iconf,iproc),tprid(-nbr,iconf
      $           ,iproc),pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
-     $           ,cluster_list(il_list),cluster_pdg(il_pdg))
+     $           ,cluster_list(il_list),cluster_pdg(il_pdg)
+     $           ,cluster_type(1,iproc))
          enddo
          firsttime(iproc)=.false.
       endif
@@ -91,7 +94,8 @@ c cluster_ij) with scales (in cluster_scales)
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-(nbr+1)
      $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig,iproc)
      $     ,pwidth(-nbr,iconfig,iproc),iconfig,sprop(-nbr,iconfig,iproc)
-     $     ,cluster_conf,cluster_scales,cluster_ij,iord)
+     $     ,cluster_conf,cluster_scales,cluster_ij,iord,cluster_type(1
+     $     ,iproc))
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
@@ -151,7 +155,7 @@ c respectively)
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
 
       subroutine iforest_to_list(next,nincoming,nbr,iforest,sprop
-     $     ,tprid,prwidth,ipdg,cluster_list,cluster_pdg)
+     $     ,tprid,prwidth,ipdg,cluster_list,cluster_pdg,cluster_type)
 c Given iforest it returns cluster_list. This is a binary list where the
 c intermediate particle numbers are the sums of the external ones (which
 c go from 1,2,4,8... If 4 and 8 are connected, the label of intermediate
@@ -162,9 +166,12 @@ c codes for particles in the cluster_list as well as their daughters.
       implicit none
       integer ibr,i,j,next,nbr,iforest(2,-(nbr+1):-1),cluster_list(2
      $     *nbr),cluster_pdg(0:2,0:2*nbr),cluster_tmp(-nbr:next)
-     $     ,ipdg(next),nincoming,sprop(-nbr:-1),tprid(-nbr:-1) ,n_tchan
-      double precision prwidth(-nbr:-1)
+     $     ,ipdg(next),nincoming,sprop(-nbr:-1),tprid(-nbr:-1),n_tchan
+     $     ,cluster_type(maskr(next)),iord(0:nbr),iclus,ico,imo
+     $     ,get_color
+      double precision prwidth(-nbr:-1),mass,get_mass_from_id
       logical s_chan
+      external get_color,get_mass_from_id
       if (nincoming.ne.2) then
          write (*,*) 'clustering only works for 2->X process;'/
      $        /' not for decays',nincoming
@@ -250,14 +257,55 @@ c daughters correctly.
             endif
          endif
       enddo
+
+c Set the type of the clustered particle. Use binary coding, since some
+c clustered particles can be multiple types (e.g. gluon/photon splitting
+c to a quark anti-quark pair). We use this to determine the clustering
+c scale in 'cluster_one_step'.
+      do ibr=1,nbr*2
+         iclus=cluster_list(ibr)
+         imo=cluster_pdg(0,ibr)
+         ico=get_color(imo)
+         mass=get_mass_from_id(imo)
+         call set_particle_type(cluster_type(iclus),ico,mass)
+      enddo
+
       return
       end
+
+      subroutine set_particle_type(itype,ico,mass)
+      implicit none
+      integer ico,itype
+      double precision mass
+      if (ico.eq.8 .and. mass.eq.0d0) then
+         if (.not.btest(itype,0)) 
+     $        itype = itype+1
+      elseif (abs(ico).eq.3 .and. mass.eq.0d0 ) then
+         if (.not.btest(itype,1)) 
+     $        itype = itype+2
+      elseif (abs(ico).eq.3 .and. mass.ne.0d0 ) then
+         if (.not.btest(itype,2)) 
+     $        itype = itype+4
+      elseif (abs(ico).eq.1 .and. mass.eq.0d0) then
+         if (.not.btest(itype,3)) 
+     $        itype = itype+8
+      elseif (abs(ico).eq.1 .and. mass.ne.0d0) then
+         if (.not.btest(itype,4)) 
+     $        itype = itype+16
+      else
+c Stop if a particle type not implemented
+         write (*,*) 'Unknown particle in update_type, mass='
+     $        ,mass,', color=',ico
+         stop 1
+      endif
+      end
+      
 
 CCCCCCCCCCCCCCC-- MAIN CLUSTER ROUTINE -- CCCCCCCCCCCCCCCC
 
       subroutine cluster(next,p,nconf,nbr,cluster_list,cluster_pdg,itree
      $     ,ipdg,prmass,prwidth,iconfig,sprop,cluster_conf
-     $     ,cluster_scales,cluster_ij,iord)
+     $     ,cluster_scales,cluster_ij,iord,cluster_type)
 c Takes a set of momenta and clusters them according to possible diagram
 c configurations (given by cluster_list).  The idea is to perform the
 c clusterings until we have a 2->1 process. Clusterings are only done if
@@ -270,13 +318,14 @@ c clustering scales (cluster_scales).
      $     ,nbr,cluster_list(2*nbr,nconf),cluster_conf,iclus,ipdg(next)
      $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
      $     ,iBWlist(2,0:nbr),itree(2,-(nbr+1):-1),iconf,iconfig,sprop(
-     $     -nbr:-1)
+     $     -nbr:-1),cluster_type(maskr(next)),get_color,ico
+     $     ,particle_type(next)
       double precision p(0:3,next),pcl(0:4,next),cluster_scales(0:nbr)
      $     ,scale,p_inter(0:4,0:2,0:nbr),prmass(-nbr:-1),prwidth(-nbr:-1)
-     $     ,djb_clus,get_mass_from_id,mt_2to2
+     $     ,djb_clus,get_mass_from_id,mt_2to2,mass
       logical valid_conf(nconf),is_bw,cluster_according_to_iconfig
       parameter (cluster_according_to_iconfig=.false.)
-      external djb_clus,get_mass_from_id
+      external djb_clus,get_mass_from_id,get_color
       do i=1,next
          do j=0,3
             pcl(j,i)=p(j,i)
@@ -284,6 +333,11 @@ c clustering scales (cluster_scales).
          pcl(4,i)=abs(get_mass_from_id(ipdg(i)))
 c imap links the current particle labels with the binary coding.
          imap(i)=ishft(1,i-1)
+c fill the type for the external particles
+         particle_type(i)=0
+         ico=get_color(ipdg(i))
+         mass=get_mass_from_id(ipdg(i))
+         call set_particle_type(particle_type(i),ico,mass)
       enddo
 c Set all diagrams (according to which we cluster) as valid
       call reset_valid_confs(nconf,nvalid,valid_conf)
@@ -304,7 +358,7 @@ c should be 'nbr' (number of branchings) clusterings.
 c Do one clustering (returning iwin, jwin and win_id and the scale)
          call cluster_one_step(nleft,pcl(0,1),imap(1),nbr,nconf
      $        ,valid_conf,cluster_list,iBWlist,iwin,jwin,win_id
-     $        ,scale,is_bw)
+     $        ,scale,is_bw,cluster_type,particle_type)
 c Remove diagrams that do not have the win_id among its clusterings
          call update_valid_confs(win_id,nconf,nbr,nvalid,valid_conf
      $        ,cluster_list)
@@ -313,9 +367,9 @@ c Remove diagrams that do not have the win_id among its clusterings
             ! since it will set the final cluster_scale below
             mT_2to2=sqrt(djb_clus(pcl(0,7-iwin)))
          endif
-c Combine the momenta
-         call update_momenta(nleft,pcl(0,1),iwin,jwin,
-     $        p_inter(0,0,iclus),is_bw)
+c Combine the momenta (and update particle types)
+         call update_momenta(nleft,pcl(0,1),iwin,jwin,p_inter(0,0
+     $        ,iclus),is_bw,particle_type,cluster_type(win_id))
 c Update imap (the map that links current particle labels with the
 c binary labeling). Since we combine particles, we need to update the
 c corresponding imap label with the combined particle label.
@@ -722,7 +776,8 @@ c s-channel is not in iconf. Set it as a invalid configuration
       end
       
       subroutine cluster_one_step(next,p,imap,nbr,nconf,valid_conf
-     $     ,cluster_list,iBWlist,iwin,jwin,win_id,min_scale,is_bw)
+     $     ,cluster_list,iBWlist,iwin,jwin,win_id,min_scale,is_bw
+     $     ,cluster_type,particle_type)
 c Finds the pair of particles with the smallest clustering scale and
 c returns that pair (and the scale) in 'iwin', 'jwin', 'win_id' and
 c 'min_scale'. Any clustering that is possible among the diagram
@@ -731,6 +786,7 @@ c anything else) cluster).
       implicit none
       integer next,imap(next),iwin,jwin,id_ij,win_id,nbr,nconf
      $     ,cluster_list(2*nbr,nconf),i,j,iBWlist(2,0:nbr)
+     $     ,cluster_type(maskr(next)),particle_type(next),cl(0:2)
       double precision p(0:4,next),cluster_scale,min_scale,scale
       logical in_list,valid_conf(nconf),is_bw
       external in_list,cluster_scale
@@ -745,7 +801,11 @@ c anything else) cluster).
             ! clustering
             if (.not.in_list(id_ij,nbr,nconf,valid_conf,cluster_list))
      $           cycle
-            scale=cluster_scale(iBWlist,nbr,j,id_ij,p(0,i),p(0,j),is_bw)
+            cl(0)=cluster_type(id_ij)
+            cl(1)=particle_type(i)
+            cl(2)=particle_type(j)
+            scale=cluster_scale(iBWlist,nbr,j,id_ij,p(0,i),p(0,j),cl
+     $           ,is_bw)
             if (scale.lt.min_scale) then
                min_scale=scale
                iwin=i
@@ -797,10 +857,12 @@ c a valid cluster configuration/topology.
       return
       end
 
-      subroutine update_momenta(nleft,pcl,iwin,jwin,p_inter,is_bw)
-c Updates the 'pcl' momenta list by combining particles iwin and jwin.
+      subroutine update_momenta(nleft,pcl,iwin,jwin,p_inter,is_bw
+     $     ,particle_type,cl_type)
+c Updates the 'pcl' momenta list by combining particles iwin and
+c jwin. Also updates the particle_type of the combined particle.
       implicit none
-      integer nleft,iwin,jwin,i,j,k
+      integer nleft,iwin,jwin,i,j,k,particle_type(nleft),cl_type
       double precision pcl(0:4,nleft),p(0:3),nr(0:3),nn2,ct,st
      $     ,pcmsp(0:3),p_inter(0:4,0:2),pi(0:3),dot,pz(0:3)
       logical is_bw
@@ -880,6 +942,13 @@ c final state clustering
             p_inter(i,0)=pcl(i,jwin)
          enddo
       endif
+      do i=jwin,nleft-1
+         if (i.eq.jwin) then
+            particle_type(i)=cl_type
+         else
+            particle_type(i)=particle_type(i+1)
+         endif
+      enddo
       end
       
       subroutine update_imap(nleft,imap,iwin,jwin,win_id)
@@ -1077,10 +1146,10 @@ c     pick one at "random"
       
       
       double precision function cluster_scale(iBWlist,nbr,j,id_ij,pi,pj
-     $     ,is_bw)
+     $     ,cl,is_bw)
 c Determines the cluster scale for the clustering of momenta pi and pj
       implicit none
-      integer nbr,i,j,id_ij,iBWlist(2,0:nbr)
+      integer nbr,i,j,id_ij,iBWlist(2,0:nbr),cl(0:2),itype
       double precision pi(0:4),pj(0:4),sumdot,dj_clus,one_plus_tiny
      $     ,djb_clus
       parameter (one_plus_tiny=1.000001d0)
@@ -1105,11 +1174,67 @@ c     final state clustering
             ! for decaying resonance, the scale is the mass of the resonance
             cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
          else
-            cluster_scale=sqrt(dj_clus(pi,pj))
+            ! Check that it is unique (might need fixing)
+            do i=0,2
+               if (popcnt(cl(i)).gt.1)  then
+                  write (*,*) 'more than one possibility for clustering'
+     $                 ,cl(i)
+                  stop 1
+               endif
+            enddo
+            call get_clustering_type(cl,itype)
+            if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
+     $          itype.eq.3 .or. itype.eq.7) then
+               cluster_scale=sqrt(dj_clus(pi,pj))
+            elseif (itype.eq.4 .or. itype.eq.5) then
+               cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
+            endif
          endif
       endif
       end
 
+      subroutine get_clustering_type(cl,itype)
+      implicit none
+      integer cl(0:2),itype
+      if ( (btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
+     $     (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
+     $     (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then 
+         ! three massless particles
+         itype=1
+      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+     $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+         ! massive emitting a massless particle 1
+         itype=2
+      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+     $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
+         ! massive emitting a massless particle 2
+         itype=3
+      elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+     $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
+         ! massless emitting a massive particle 1
+         itype=4
+      elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
+     $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+         ! massive emitting a massless particle 2
+         itype=5
+      elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+         ! massless to two massive particles
+         itype=6
+      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+         ! Three massive particles
+         itype=7
+      else
+         write (*,*) 'Unknown clustering type',cl
+      endif
+      end
       
       subroutine fill_type(next,ipdg,type,mass)
 c Loops over all external particles and sets up 'type' using the
@@ -1434,8 +1559,9 @@ c Color is 1,3,8 for singlet(no QCD),triplet(quark),octet(gluon)
             cycle
          else
 c Stop if a particle passed all the previous statements
-         write (*,*) 'Unknown particle, pdgid=',ipdg(i),'color=',get_color(ipdg(i))
-         stop
+            write (*,*) 'Unknown particle, pdgid=',ipdg(i),'color='
+     $           ,get_color(ipdg(i))
+            stop
          endif
       enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
