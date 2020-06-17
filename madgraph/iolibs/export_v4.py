@@ -1961,7 +1961,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     def export_model_files(self, model_path):
         """export the model dependent files for V4 model"""
 
-        raise Exception
         super(ProcessExporterFortranSA,self).export_model_files(model_path)
         # Add the routine update_as_param in v4 model 
         # This is a function created in the UFO  
