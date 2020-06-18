@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import copy
 import argparse
-import subprocess
-import itertools
 import atexit
 import re
 from string import Template
+from copy import copy
+from itertools import product
 
 # Remove
 import mmap
@@ -132,7 +131,7 @@ class MathsObject:
         old_args = get_arguments(line)
         old_name = old_args[-1]
         # Work out if wavs corresponds to an allowed helicity combination
-        this_args = copy.copy(old_args)
+        this_args = copy(old_args)
         wav_names = [w.name for w in wavs]
         this_args[0:len(wavs)] = wav_names
         # This isnt maximally efficient
@@ -191,7 +190,7 @@ class External(MathsObject):
 
         for new_hel in ['+1', '-1']:
 
-            this_args = copy.copy(old_args)
+            this_args = copy(old_args)
             this_args[2] = new_hel
 
             this_wavfunc = External(this_args, old_name)
@@ -210,7 +209,7 @@ class External(MathsObject):
         # TODO: is it better to have list of sets?
         wav_comb = [[] for x in range(rows)]
         # TODO: CHECK SHAPE OF HEL MAKES SENSE AND SHAPE OF SPINOR_COMB IS SAME
-        for i, j in itertools.product(range(rows), range(columns)):
+        for i, j in product(range(rows), range(columns)):
             for wav in cls.paired_up_wavs[j]:
                 if cls.good_hel[i][j] == wav.hel:
                     wav_comb[i].append(wav)
@@ -236,7 +235,7 @@ class Internal(MathsObject):
         deps = cls.get_deps(line, graph)
 
         new_wavfuncs = [ cls.get_obj(line, wavs, graph) 
-                         for wavs in itertools.product(*deps) 
+                         for wavs in product(*deps) 
                          if cls.good_helicity(wavs, graph) ]
 
         return new_wavfuncs
@@ -289,7 +288,7 @@ class Amplitude(MathsObject):
         deps = cls.get_deps(line, graph)
 
         new_amps = [cls.get_obj(line, wavs, graph, diag_num) 
-                        for wavs in itertools.product(*deps) 
+                        for wavs in product(*deps) 
                         if cls.good_helicity(wavs, graph)]
 
         return new_amps
