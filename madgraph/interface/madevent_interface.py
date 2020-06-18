@@ -6490,7 +6490,10 @@ class GridPackCmd(MadEventCmd):
             os.chdir(self.me_dir)
         else:
             for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
-                os.mkdir(line.strip())
+                p = line.strip()
+                os.mkdir(p)
+                files.cp(pjoin(self.me_dir,'SubProcesses',p,'symfact.dat'),
+                         pjoin(p, 'symfact.dat'))
             
 
     def launch(self, nb_event, seed):
