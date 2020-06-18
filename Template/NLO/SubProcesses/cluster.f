@@ -1151,10 +1151,10 @@ c Determines the cluster scale for the clustering of momenta pi and pj
       implicit none
       integer nbr,i,j,id_ij,iBWlist(2,0:nbr),cl(0:2),itype
       double precision pi(0:4),pj(0:4),sumdot,dj_clus,one_plus_tiny
-     $     ,djb_clus
+     $     ,djb_clus,dot
       parameter (one_plus_tiny=1.000001d0)
       logical is_bw
-      external sumdot,dj_clus,djb_clus
+      external sumdot,dj_clus,djb_clus,dot
       if (j.le.2) then
 c     initial state clustering
          cluster_scale=sqrt(djb_clus(pi))
@@ -1186,8 +1186,10 @@ c     final state clustering
             if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
      $          itype.eq.3 .or. itype.eq.7) then
                cluster_scale=sqrt(dj_clus(pi,pj))
-            elseif (itype.eq.4 .or. itype.eq.5) then
-               cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
+            elseif (itype.eq.4) then
+               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
+            elseif (itype.eq.5) then
+               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
             endif
          endif
       endif
@@ -1219,7 +1221,7 @@ c     final state clustering
       elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
      $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
      $        (btest(cl(2),2).or.btest(cl(2),4))) then
-         ! massive emitting a massless particle 2
+         ! massless emitting a massive particle 2
          itype=5
       elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
      $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
