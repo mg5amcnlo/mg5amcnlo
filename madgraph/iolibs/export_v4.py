@@ -3476,7 +3476,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        'hel_recycling' in opt['output_options']:
             self.opt['hel_recycling'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['hel_recycling'], bool, 'hel_recycling')
-    
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -3669,6 +3669,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         filename = pjoin(Ppath,'driver.f')
         self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1,
                           v5=self.opt['v5_model'])
+
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
         if self.opt['hel_recycling']:
@@ -4765,11 +4766,9 @@ c           This is dummy particle used in multiparticle vertices
     def write_symmetry(self, writer, v5=True):
         """Write the SubProcess/driver.f file for ME"""
 
-        if self.opt['hel_recycling']:
-            path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
-        else:
-            path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry_norecycling.f')
         
+        path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
+
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
         else:
@@ -5044,6 +5043,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_driver(writers.FortranWriter(filename),ncomb,
                                   n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
+        self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
         for ime, matrix_element in \
                 enumerate(matrix_elements):
             if self.opt['hel_recycling']:

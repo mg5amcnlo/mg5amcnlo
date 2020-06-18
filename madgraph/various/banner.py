@@ -1500,7 +1500,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('limitations', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)  
+        self.add_param('hel_recycling', False)      
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -3130,7 +3131,7 @@ class RunCardLO(RunCard):
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
-        
+        self.add_param('hel_recycling', True, hidden=True, include=False, comment='allowed to deactivate helicity optimization at run-time --code needed to be generated with such optimization--')
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)

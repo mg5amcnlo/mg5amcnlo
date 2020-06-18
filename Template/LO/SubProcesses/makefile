@@ -32,6 +32,10 @@ LIBS = $(LIBDIR)libbias.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsamp
 
 MATRIX_HEL = $(patsubst %.f,%.o,$(wildcard matrix*_orig.f))
 MATRIX = $(patsubst %.f,%.o,$(wildcard matrix*_optim.f))
+ifeq ($(strip $(MATRIX_HEL)),)
+        MATRIX = $(patsubst %.f,%.o,$(wildcard matrix*.f))
+endif
+
 
 PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
          cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
@@ -42,11 +46,11 @@ SYMMETRY = symmetry.o idenparts.o
 
 # Binaries
 
+$(PROG): $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX)
+	$(FC) -o $(PROG) $(PROCESS) $(MATRIX) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
+
 $(PROG)_forhel: $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX_HEL)
 	$(FC) -o $(PROG)_forhel $(PROCESS) $(MATRIX_HEL) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
-
-$(PROG): $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX)
-	$(FC) -o $(PROG)_forhel $(PROCESS) $(MATRIX) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
 	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric -lpdf $(llhapdf) $(LDFLAGS)
@@ -83,4 +87,4 @@ unwgt.o: genps.inc nexternal.inc symswap.inc cluster.inc run.inc message.inc \
 initcluster.o: message.inc
 
 clean:
-	$(RM) *.o gensym madevent
+	$(RM) *.o gensym madevent madevent_forhel

@@ -3359,14 +3359,17 @@ Beware that this can be dangerous for local multicore runs.""")
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode()
 
-        if True: # need to put a switch here
+        if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
             jobs, P_zero_result = ajobcreator.get_helicity()
         else:
             for p in subproc:
-                files.ln(pjoin(self.me_dir, 'SubProcesses', p, 'madevent'),
-                         pjoin(self.me_dir, 'SubProcesses', p, 'madevent_optim'))
-
-                
+                misc.sprint([m for m in os.listdir(pjoin(self.me_dir, 'SubProcesses', p)) if m.startswith('m')])
+                for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    files.cp(f, f.replace('_orig','_optim'))
+                    f = '%s.o' % f[:-2]
+                    if os.path.exists(f):
+                        files.cp(f, f.replace('_orig','_optim'))
+                                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
