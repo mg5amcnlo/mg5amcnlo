@@ -307,11 +307,13 @@ CF2PY intent(in) :: value
 
       include '../Source/MODEL/input.inc'
       include '../Source/MODEL/coupl.inc'
-
-      SELECT CASE (name)
+      include '../Source/MODEL/mp_coupl.inc'
+      include '../Source/MODEL/mp_input.inc'
+      
+      SELECT CASE (name)   
          %(parameter_setup)s
          CASE DEFAULT
-            write(*,*) 'no parameter matching'
+            write(*,*) 'no parameter matching', name
       END SELECT
 
       return
@@ -408,8 +410,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         params = self.get_model_parameter(self.model)
         parameter_setup =[]
         for key, var in params.items():
-            parameter_setup.append('        CASE ("%s")\n          %s = value' 
-                                   % (key, var))
+            parameter_setup.append('        CASE ("%s")\n          %s = value\n        MP__%s = value' 
+                                   % (key, var, var))
             
             
 

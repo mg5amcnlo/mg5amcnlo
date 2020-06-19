@@ -2115,7 +2115,7 @@ CF2PY intent(in) :: value
       SELECT CASE (name)
          %(parameter_setup)s
          CASE DEFAULT
-            write(*,*) 'no parameter matching'
+            write(*,*) 'no parameter matching', name, value
       END SELECT
 
       return

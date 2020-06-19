@@ -136,16 +136,22 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.close()
         
 
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
-            me_cmd.run_cmd('reweight run_01 --from_cards')
+        if logger.level <= 10:
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
         
-        solutions = [12.905371, 12.271068, 12.271753, 12.436969, 12.330121, 12.441459, 12.290359, 12.406486, 12.352107, 11.862291, 12.346005, 12.603302, 12.483697, 12.597262, 12.352434, 11.841136, 12.559252, 12.693822, 12.073114, 12.080773, 12.088188, 12.169921, 12.36124, 12.620677, 12.641769]
+        #solutions = [12.905371, 12.271068, 12.271753, 12.436969, 12.330121, 12.441459, 12.290359, 12.406486, 12.352107, 11.862291, 12.346005, 12.603302, 12.483697, 12.597262, 12.352434, 11.841136, 12.559252, 12.693822, 12.073114, 12.080773, 12.088188, 12.169921, 12.36124, 12.620677, 12.641769]
+        solutions = [14.288834, 13.551237, 13.564131, 13.745311, 13.620339, 13.750088, 13.611093, 13.709763, 13.670902, 13.071603, 13.658932, 13.939627, 13.827959, 13.932638, 13.669482, 13.045913, 13.888161, 14.045136, 13.319103, 13.327884, 13.336799, 13.430042, 13.658435, 13.959817, 13.984111]
+        #solutions = []
         for i,event in enumerate(lhe):
             
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1'])
+            #continue
             self.assertTrue('rwgt_1' in rwgt_data)
             self.assertTrue(misc.equal(rwgt_data['rwgt_1'], solutions[i]))
         #misc.sprint(solutions)

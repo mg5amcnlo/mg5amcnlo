@@ -1,6 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.7.3()
+      OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
+          Thanks to Congqiao Li for this
+      OM: Allowing loop-induced process to run on LO gridpack with read-only mode.
+          Thanks to Congqiao Li for this      
       OM: Fix a bug in the longitudinal polarization for off-shell effect, leading to deviation at large invariant mass.
       OM: Adding more option to the run_card for fine tuning phase-space integration steps
           All are hidden by default:
