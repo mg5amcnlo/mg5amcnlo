@@ -2213,7 +2213,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             
             block = p.lhablock
             lha = '_'.join([str(i) for i in p.lhacode])
-            params['%s_%s' % (block, lha)] = name
+            params['%s_%s' % (block.upper(), lha)] = name
 
         return params                      
                                         

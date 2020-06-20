@@ -245,7 +245,8 @@ class TestMECmdRWGT(unittest.TestCase):
         if 1: #with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
-        solutions = [41.511565, 41.930505, 41.511565, 41.511565, 41.586169, 41.511565, 41.511565, 41.511565, 41.511565, 42.046806, 41.511565, 44.164503, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.778368, 41.511565, 42.05448, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.115494, 41.511854, 41.511567, 41.511565, 42.00028, 42.120605, 41.514867, -41.511565, 41.511565, 45.125706, 41.511565, 42.180208, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.997509, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513926, 41.511565, 41.882499, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 47.532736, 41.511565, 41.809063, 41.511565, 41.511565, 41.511565, 41.927695, 41.511565, 41.511565, 41.555692, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 42.029675, 41.725129, 41.511565, 41.511565, 41.511778, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.050439, 41.511565, 41.511565, 41.511565, -41.511565, 42.071105, 41.511565, 41.511565]
+        #solutions = [41.511565, 41.930505, 41.511565, 41.511565, 41.586169, 41.511565, 41.511565, 41.511565, 41.511565, 42.046806, 41.511565, 44.164503, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.778368, 41.511565, 42.05448, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.115494, 41.511854, 41.511567, 41.511565, 42.00028, 42.120605, 41.514867, -41.511565, 41.511565, 45.125706, 41.511565, 42.180208, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.997509, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513926, 41.511565, 41.882499, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 47.532736, 41.511565, 41.809063, 41.511565, 41.511565, 41.511565, 41.927695, 41.511565, 41.511565, 41.555692, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 42.029675, 41.725129, 41.511565, 41.511565, 41.511778, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.050439, 41.511565, 41.511565, 41.511565, -41.511565, 42.071105, 41.511565, 41.511565]
+        solutions =  [41.511565, 41.75164, 41.511565, 41.511565, 41.557009, 41.511565, 41.511565, 41.511565, 41.511565, 41.759881, 41.511565, 44.717244, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.041827, 41.511565, 41.663092, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.920917, 41.511736, 41.511566, 41.511565, 205.29791, 42.538389, 41.513573, -41.511565, 41.511565, 44.650974, 41.511565, 42.549187, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.431553, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513265, 41.511565, 43.902643, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 8853.0397, 41.511565, 333.38491, 41.511565, 41.511565, 41.511565, 75.701362, 41.511565, 41.511565, 41.54695, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 41.454923, 41.53984, 41.511565, 41.511565, 41.511743, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.732627, 41.511565, 41.511565, 41.511565, -41.511565, 41.395865, 41.511565, 41.511565]
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_1.lhe.gz'))
         lhe_orig = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
         from itertools import izip
@@ -255,9 +256,9 @@ class TestMECmdRWGT(unittest.TestCase):
             i+=1
             rwgt_data = event_orig.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1_tree'])
+            #continue
             self.assertTrue('rwgt_1_tree' in rwgt_data)
             self.assertEqual(event.wgt, rwgt_data['rwgt_1_tree'])
-            #misc.sprint(abs(event.wgt))
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
             nlo1 = event.parse_nlo_weight()
             nlo2 = event_orig.parse_nlo_weight()
@@ -265,6 +266,7 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertNotEqual(nlo1.total_wgt, nlo2.total_wgt)
 
         #misc.sprint(solutions)
+        #raise Exception
 
     def test_loop_improved_reweighting(self):
         """ check identical re-weighting in ttbar 
@@ -287,8 +289,11 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if logger.level <=10:
             me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
         lhe2=  lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_1.lhe.gz'))
@@ -341,11 +346,12 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertTrue(misc.equal(rwgt_data['NAME_1'], solutions2[i]))
             
 
-    def test_nlo_reweighting_comb(self):
+    def old_test_nlo_reweighting_comb(self):
         """check that nlo reweighting is working.
            The main point is to check the recombination of the weights
            Since the rest should be either checked by the lhe_parser class
-           or by the various check of the standalone checks
+           or by the various check of the standalone checks.
+           This way of combining weights is now outdated
         """
         
         # create a reweight directory   

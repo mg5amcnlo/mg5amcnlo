@@ -322,6 +322,7 @@ CF2PY intent(in) :: value
     subroutine update_all_coup()
     implicit none
      call coup()
+     call printout()
     return 
     end
 

@@ -2813,7 +2813,6 @@ class decay_all_events(object):
         #
         commandline = 'output standalone_msF %s' % pjoin(path_me,'decay_me')
         logger.info(commandline)
-        misc.sprint(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))        
         #
