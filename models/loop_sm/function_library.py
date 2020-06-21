@@ -8,12 +8,13 @@
 #
 #
 
+from __future__ import absolute_import
 __date__ = "22 July 2010"
 __author__ = "claude.duhr@durham.ac.uk"
 
 import cmath
 try:
-    from object_library import all_functions, Function
+    from .object_library import all_functions, Function
 except:
     from . import object_library
     all_functions, Function = object_library.all_functions , object_library.Function

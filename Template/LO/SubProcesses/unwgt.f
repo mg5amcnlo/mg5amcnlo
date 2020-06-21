@@ -478,7 +478,8 @@ c
       double precision beta, get_betaz
       double precision ebi(0:3), ebo(0:3)
       double precision ptcltmp(nexternal), pdum(0:3)
-
+      integer beam_number
+      
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -705,31 +706,42 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          else
             write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
          endif
-         if(n_pdfrw(1).gt.0)then
+         beam_number = 1
+         if (flip) then
+            beam_number =2
+         endif
+         
+         if(n_pdfrw(1).gt.0.and.abs(lpp(1)).eq.1)then
             if(2*n_pdfrw(1).lt.10) then
-               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
      $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
             else
-               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
      $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
             endif
-            write(s_buff(4), cfmt) '<pdfrwt beam="1">',
+            
+            write(s_buff(4), cfmt) '<pdfrwt beam="', beam_number, '">',
      $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
      $           '</pdfrwt>'
          else
-            write(s_buff(4), '(a)') '<pdfrwt beam="1">0</pdfrwt>'
+            write(s_buff(4), '(a,I1,a)') '<pdfrwt beam="',
+     $       beam_number,'">0</pdfrwt>'
          endif
-         if(n_pdfrw(2).gt.0)then
+         beam_number = 2
+         if (flip) then
+            beam_number	= 1
+         endif
+         if(n_pdfrw(2).gt.0.and.abs(lpp(2)).eq.1)then
             if(2*n_pdfrw(2).lt.10) then
-               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
      $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
             else
-               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
      $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
             endif
-            write(s_buff(5), cfmt) '<pdfrwt beam="2">',
+            write(s_buff(5), cfmt) '<pdfrwt beam="',beam_number,'">',
      $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_qpdf(i,2),i=1,n_pdfrw(2)),

@@ -180,8 +180,8 @@ C      only three external particles.
               CYCLE
             ENDIF
             T=ML5_0_MATRIX(P ,NHEL(1,IHEL),JC(1))
-            IF(POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_BORN_HEL_SELECTED(I
-     $HEL)) THEN
+            IF(POLARIZATIONS(0,0).EQ.
+     $       -1.OR.ML5_0_IS_BORN_HEL_SELECTED(IHEL)) THEN
               ANS=ANS+T
             ENDIF
             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
