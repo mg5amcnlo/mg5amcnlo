@@ -3,11 +3,10 @@
 # Date: Mon 1 Oct 2012 14:58:25
 
 
-from __future__ import absolute_import
-from .object_library import all_parameters, Parameter
+from object_library import all_parameters, Parameter
 
 
-from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 
 
