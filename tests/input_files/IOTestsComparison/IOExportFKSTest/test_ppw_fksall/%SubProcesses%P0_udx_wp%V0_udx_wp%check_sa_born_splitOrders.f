@@ -170,8 +170,8 @@ C
 C     CALL SMATRIX(P,MATELEM)
 C     
 C     write (*,*) "-------------------------------------------------"
-C     write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
-C     	
+C     write (*,*) "Matrix element = ", MATELEM, "
+C      GeV^",-(2*nexternal-8)	
 C     write (*,*) "-------------------------------------------------"
 
       END

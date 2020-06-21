@@ -36,7 +36,8 @@ def read_from_file(filename, myfunct, *args, **opt):
             ret_value = myfunct(sock, *args)
         finally:
             sock.close()
-    except IOError, (errno, strerror):
+    except IOError as error:
+        errno, strerror = error.errno, str(error)
         if opt.has_key('print_error'):
             if not opt['print_error']:
                 return None

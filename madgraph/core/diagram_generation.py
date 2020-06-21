@@ -896,7 +896,7 @@ class Amplitude(base_objects.PhysicsObject):
                                              fcts=['remove_diag'])
         else:
             #example and simple tests
-            def remove_diag(diag):
+            def remove_diag(diag, model=None):
                 for vertex in diag['vertices']: #last 
                     if vertex['id'] == 0: #special final vertex
                         continue 
@@ -907,8 +907,9 @@ class Amplitude(base_objects.PhysicsObject):
 
         res = diag_list.__class__()                
         nb_removed = 0 
+        model = self['process']['model'] 
         for diag in diag_list:
-            if remove_diag(diag):
+            if remove_diag(diag, model):
                 nb_removed +=1
             else:
                 res.append(diag)

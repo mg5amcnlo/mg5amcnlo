@@ -104,8 +104,8 @@ C     Amplitude(s) for born diagram with ID 1
       CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_67,AMP(1))
       CALL FFV2P0_3(W(1,4),W(1,3),GC_67,DCMPLX(CMASS_MDL_MW),W(1,6))
 C     Counter-term amplitude(s) for loop diagram number 2
-      CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5),C_UVWMWPMASS2EW_1EPS
-     $ ,C_UVWMWPMASS1EW_1EPS,AMPL(2,1))
+      CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5)
+     $ ,C_UVWMWPMASS2EW_1EPS,C_UVWMWPMASS1EW_1EPS,AMPL(2,1))
       CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5),C_UVWMWPMASS2EW
      $ ,C_UVWMWPMASS1EW,AMPL(1,2))
 C     Counter-term amplitude(s) for loop diagram number 4

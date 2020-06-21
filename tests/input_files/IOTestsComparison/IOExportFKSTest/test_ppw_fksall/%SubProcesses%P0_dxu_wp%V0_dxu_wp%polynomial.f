@@ -113,8 +113,8 @@ C
         CFTOT=CMPLX(CF_N(COLOR_ID,I)/(ONE*ABS(CF_D(COLOR_ID,I))),ZERO
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
-        CONST(ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5SOINDEX_FOR_BORN_AMP
-     $(I))+CFTOT*CONJG(AMP(I))
+        CONST(ML5SOINDEX_FOR_BORN_AMP(I))
+     $   =CONST(ML5SOINDEX_FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
@@ -132,6 +132,24 @@ C
 
       END
 
+      SUBROUTINE INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      USE POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+
+      INTEGER I, NCOEFS
+
+      COMPLEX*16 POLYNOMIAL(0:NCOEFS-1)
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
+        ENDIF
+      ENDDO
+
+      END
 
 C     Now the routines to update the wavefunctions
 
@@ -214,8 +232,8 @@ C
         CFTOT=CMPLX(CF_N(COLOR_ID,I)/(ONE*ABS(CF_D(COLOR_ID,I))),ZERO
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
-        CONST(ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5SOINDEX_FOR_BORN_AMP
-     $(I))+CFTOT*CONJG(AMP(I))
+        CONST(ML5SOINDEX_FOR_BORN_AMP(I))
+     $   =CONST(ML5SOINDEX_FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
@@ -233,6 +251,24 @@ C
 
       END
 
+      SUBROUTINE MP_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      USE POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+
+      INTEGER I, NCOEFS
+
+      COMPLEX*32 POLYNOMIAL(0:NCOEFS-1)
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
+        ENDIF
+      ENDDO
+
+      END
 
 C     Now the routines to update the wavefunctions
 

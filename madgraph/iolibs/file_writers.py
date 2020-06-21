@@ -342,19 +342,28 @@ class FortranWriter(FileWriter):
         columns. Split in preferential order according to
         split_characters, and start each new line with line_start."""
 
+        def get_split_index(line, max_length, max_split, split_characters):
+            split_at = 0
+            for character in split_characters:
+                index = line[(max_length - max_split): \
+                                      max_length].rfind(character)
+                if index >= 0:
+                    split_at_tmp = max_length - max_split + index
+                    if split_at_tmp > split_at:
+                        split_at = split_at_tmp
+            return split_at
+                
+
         res_lines = [line]
 
         while len(res_lines[-1]) > self.line_length:
-            split_at = 0
-            for character in split_characters:
-                index = res_lines[-1][(self.line_length - self.max_split): \
-                                      self.line_length].rfind(character)
-                if index >= 0:
-                    split_at_tmp = self.line_length - self.max_split + index
-                    if split_at_tmp > split_at:
-                        split_at = split_at_tmp
+            split_at = get_split_index(res_lines[-1], self.line_length, 
+                                       self.max_split, split_characters)
             if split_at == 0:
-                split_at = self.line_length
+                split_at = get_split_index(res_lines[-1], self.line_length, 
+                                       self.max_split + 30, split_characters)
+                if split_at == 0:
+                    split_at = self.line_length
                 
             newline = res_lines[-1][split_at:]
             nquotes = self.count_number_of_quotes(newline)
