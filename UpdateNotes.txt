@@ -1,5 +1,24 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.7.3(21/06/20)
+      OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
+          Thanks to Congqiao Li for this
+      OM: Allowing loop-induced process to run on LO gridpack with read-only mode.
+          Thanks to Congqiao Li for this      
+      OM: Fix a bug in the longitudinal polarization for off-shell effect, leading to deviation at large invariant mass.
+      OM: Adding more option to the run_card for fine tuning phase-space integration steps
+          All are hidden by default:
+	    - hard_survey [default=1]: request for more points in survey (and subsequent refine)
+	    - second_refine_treshold [default=1.5]: forbid second refine if cross section after first refine is
+	       is smaller than cross-section of the survey times such treshold
+      OM: new command for the editions of the cards:
+           - set nodecay: remove all decay line from the madspin_card
+	   - set BLOCKNAME all VALUE: set all entry of the param_card "BLOCKNAME" to VALUE
+	   - edit CARDNAME --comment_line='<regular_expression>' : new syntax to comment all lines of a card
+	       that are matching a given regular expression
+      OM: For Mac only, when running in script mode, MG5aMC will now prevent the computer to go to idle sleep.
+          You can prevent this by running with the '-s' option. like ./bin/mg5_aMC -s PATH_TO_CMD
+
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
       OM: Speed up standalone_cpp code by changing compilation flag

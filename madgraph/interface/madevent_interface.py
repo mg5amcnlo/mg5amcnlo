@@ -797,7 +797,7 @@ class AskRun(cmd.ControlSwitch):
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell']
+            self.allowed_madspin = ['OFF',"ON",'onshell',"full"]
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
@@ -834,7 +834,7 @@ class AskRun(cmd.ControlSwitch):
         if value == 'onshell':
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
         elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
         elif value == 'none':
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
         else:
@@ -1291,7 +1291,6 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No run_name currently define. Unable to run refine')
 
         if len(args) > 2:
-            self.help_refine()
             raise self.InvalidCmd('Too many argument for refine command')
         else:
             try:
@@ -2497,7 +2496,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                           postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            with misc.TMP_variable(self, 'run_name', self.run_name):
+                self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('create_gridpack', postcmd=False)
         else:
             # Regular run mode
@@ -2526,7 +2526,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             
             #we can bypass the following if scan and first result is zero
             if not bypass_run:
-                self.exec_cmd('refine %s' % nb_event, postcmd=False)
+                self.exec_cmd('refine %s --treshold=%s' % (nb_event,self.run_card['second_refine_treshold'])
+                              , postcmd=False)
             
                 self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
@@ -2882,7 +2883,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
-                while line.startswith('#') or line.startswith(' '):
+                while re.search('^(#|\s|\d)', line):
                     line = param_card.pop(line_number)
                     if not particle or line.startswith('#'):
                         line=param_card[line_number]
@@ -3354,7 +3355,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
-            self.pass_in_difficult_integration_mode()
+            self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
             
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
@@ -3382,24 +3383,26 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################
-    def pass_in_difficult_integration_mode(self):
+    def pass_in_difficult_integration_mode(self, rate=1):
         """be more secure for the integration to not miss it due to strong cut"""
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 3 * self._survey_options['points'][1]
+            self.opts['points'] = (rate+2) * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 1 + rate + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/(rate+2)  
         
         # Modify run_config.inc in order to improve the refine
         conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
         files.cp(conf_path, conf_path + '.bk')
         #
         text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 40000 )''', text)
+        min_evt, max_evt = 2500 *(2+rate), 10000*(rate+1) 
+        
+        text = re.sub('''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
+        text = re.sub('''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
@@ -3415,6 +3418,18 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
+        treshold=None
+        for a in args:
+            if a.startswith('--treshold='):
+                treshold = float(a.split('=',1)[1])
+                old_xsec = self.results.current['prev_cross']
+                new_xsec = self.results.current['cross']
+                if old_xsec > new_xsec * treshold:
+                    logger.info('No need for second refine due to stability of cross-section')
+                    return
+                else:
+                    args.remove(a)
+                    break
         # Check argument's validity
         self.check_refine(args)
         
@@ -3471,8 +3486,7 @@ Beware that this can be dangerous for local multicore runs.""")
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
-            logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
-        
+            logger.info("- Current estimate of cross-section: %s +- %s" % (cross, error))
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -3811,6 +3825,17 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Creating gridpack', level='parton')
         # compile gen_ximprove
         misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
+        
+        Gdir = self.get_Gdir()
+        Pdir = set([os.path.dirname(G) for G in Gdir])
+        for P in Pdir: 
+            allG = misc.glob('G*', path=P)
+            for G in allG:
+                if pjoin(P, G) not in Gdir:
+                    logger.debug('removing %s', pjoin(P,G))
+                    shutil.rmtree(pjoin(P,G))
+                    
+        
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
@@ -4668,7 +4693,7 @@ tar -czf split_$1.tar.gz split_$1
                             devnull.close()
                             if pid == 0:
                                 misc.call('head -n -1 %s | tail -n +%d > %s/tmpfile' %
-                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)), shell=True)
+                                          (hepmc_file, n_head+1, os.path.dirname(hepmc_file)), shell=True)
                                 misc.call(['mv', 'tmpfile', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
                             elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
@@ -5967,10 +5992,16 @@ tar -czf split_$1.tar.gz split_$1
 
         eradir = self.options['exrootanalysis_path']
         totar = False
+        torm = False
         if input.endswith('.gz'):
-            misc.gunzip(input, keep=True)
-            totar = True
-            input = input[:-3]
+            if not os.path.exists(input) and os.path.exists(input[:-3]):
+                totar = True
+                input = input[:-3]
+            else:
+                misc.gunzip(input, keep=True)
+                totar = False
+                torm = True
+                input = input[:-3]
             
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
@@ -5982,12 +6013,13 @@ tar -czf split_$1.tar.gz split_$1
         if totar:
             if os.path.exists('%s.gz' % input):
                 try:
-                    os.remove(input)
+                    os.remove('%s.gz' % input)
                 except:
                     pass
             else:
                 misc.gzip(input)
-            
+        if torm:
+            os.remove(input)
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
@@ -6458,7 +6490,10 @@ class GridPackCmd(MadEventCmd):
             os.chdir(self.me_dir)
         else:
             for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
-                os.mkdir(line.strip())
+                p = line.strip()
+                os.mkdir(p)
+                files.cp(pjoin(self.me_dir,'SubProcesses',p,'symfact.dat'),
+                         pjoin(p, 'symfact.dat'))
             
 
     def launch(self, nb_event, seed):
@@ -6472,6 +6507,12 @@ class GridPackCmd(MadEventCmd):
             misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
                          'default'], cwd=self.me_dir)
 
+        if self.run_card['python_seed'] == -2:
+            import random
+            random.seed(seed)
+        elif self.run_card['python_seed'] > 0:
+            import random
+            random.seed(self.run_card['python_seed'])            
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
@@ -6649,11 +6690,11 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
-                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                    AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                    AllEvent.add(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                                  sum_xsec,
                                  math.sqrt(sum(x**2 for x in sum_xerru)),
                                  sum_axsec) 

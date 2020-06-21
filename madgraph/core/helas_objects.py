@@ -5871,6 +5871,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
                                       get('processes')
+                    
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),
                         permutations[me_index],
@@ -5911,14 +5912,24 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         """Reorder the legs in the process according to the difference
         between org_perm and proc_perm"""
 
+        
+        
         leglist = base_objects.LegList(\
                   [copy.copy(process.get('legs_with_decays')[i]) for i in \
                    diagram_generation.DiagramTag.reorder_permutation(\
                        proc_perm, org_perm)])
         new_proc = copy.copy(process)
-        new_proc.set('legs_with_decays', leglist)
+        if org_perm == proc_perm:
+            return new_proc
 
+        if  len(org_perm) != len(process.get('legs_with_decays')):
+            raise Exception, "issue on symmetry between process"
+
+        new_proc.set('legs_with_decays', leglist)
+        
         if not new_proc.get('decay_chains'):
             new_proc.set('legs', leglist)
+            assert len(process.get('legs')) == len(leglist)
 
+            
         return new_proc

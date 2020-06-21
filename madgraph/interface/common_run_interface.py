@@ -1036,7 +1036,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
-
+            if 'return_instance' in opt and opt['return_instance']:
+                out, cmd = out
+        if 'return_instance' in opt and opt['return_instance']:
+            return (out, cmd)
+        return out
 
     @staticmethod
     def detect_card_type(path):
@@ -2836,8 +2840,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events','lheEvents0_%d'%MA5_run_number))+\
-                                       misc.glob('*.root',pjoin(reco_output,'Output','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','SAF','_reco_events','lheEvents0_%d'%MA5_run_number))+\
+                                       misc.glob('*.root',pjoin(reco_output,'Output','SAF','_reco_events', 'RecoEvents0_%d'%MA5_run_number))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2852,7 +2856,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     parent_dir_name = os.path.basename(os.path.dirname(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
                       '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
-                      MA5_runtag,i+1),'Output','_reco_events',parent_dir_name,links_created[-1]),
+                      MA5_runtag,i+1),'Output','SAF','_reco_events',parent_dir_name,links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
 
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
@@ -3328,7 +3332,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if mass and abs(width/mass) < 1e-12:
                 if hasattr(interface, 'run_card') and isinstance(interface.run_card, banner_mod.RunCardLO):
                     if interface.run_card['small_width_treatment'] < 1e-12:
-                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_treatment parameter is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 else:
                     logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
@@ -4098,6 +4102,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
                                     os.path.isdir(pjoin(pdfsets_dir, pdfset))):
                 continue
+            if not require_local:
+                if 'LHAPDF_DATA_PATH' in os.environ:
+                    found = False
+                    for path in os.environ['LHAPDF_DATA_PATH'].split(":"):
+                        if (os.path.exists(pjoin(path, pdfset)) or \
+                                    os.path.isdir(pjoin(path, pdfset))):
+                            found =True
+                            break
+                    if found:
+                        continue
+                    
+                    
             #check that the pdfset is not already there
             elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
@@ -4309,7 +4325,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = subprocess.PIPE).stdout.read().strip()
         except OSError, error:
             if error.errno == 2:
-                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+                raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % lhapdf_config
             else:
                 raise
                 
@@ -4495,7 +4511,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.modified_card = set() #set of cards not in sync with filesystem
                               # need to sync them before editing/leaving
         self.init_from_banner(from_banner, banner)
-        
+        self.writting_card = True
+        if 'write_file' in opt:
+            if not opt['write_file']:
+                self.writting_card = False
+                self.param_consistency = False
+                        
         #update default path by custom one if specify in cards
         for card in cards:
             if os.path.exists(card) and os.path.sep in cards:
@@ -4773,10 +4794,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return []
         
         self.special_shortcut.update({
-            'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s'])
+            'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s']),
+            'nodecay':([], ['edit madspin_card --comment_line="decay"'])
             })
         self.special_shortcut_help.update({
-            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.'
+            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
+            'nodecay': 'remove all decay previously defined in madspin',
              })
         return []
     
@@ -5241,7 +5264,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
-        
+
         args = self.split_arg(line)
         
         
@@ -5504,7 +5527,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                    if args[start+1:-1] == ['all']:
                         for key in self.param_card[args[start]].param_dict:
                             if (args[start], key) in self.restricted_value:
                                 continue
@@ -5965,8 +5988,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.do_set('shower_card extrapaths None ') 
                     
         # ensure that all cards are in sync
-        for key in list(self.modified_card):
-            self.write_card(key)
+        if self.writting_card:
+            for key in list(self.modified_card):
+                self.write_card(key)
 
 
     def reask(self, *args, **opt):
@@ -6092,7 +6116,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card.write(self.paths['run'], self.paths['run_default'])
         
     def write_card_param(self):
-        """ write the param_card """        
+        """ write the param_card """    
+    
         self.param_card.write(self.paths['param'])
         
     @staticmethod
@@ -6477,6 +6502,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
         logger.info( '     --replace_line="<regular-expression>" replace the line matching the regular expression')
         logger.info( '     --clean remove all previously existing line in  the file')
+        logger.info( '     --comment_line="<regular-expression>"  comment all lines matching the regular expression')
         logger.info('')
         logger.info('    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('')
@@ -6622,7 +6648,29 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
-                                            
+
+            elif args[1].startswith('--comment_line='):
+                # catch the line/regular expression and replace the associate line
+                # if no line match go to check if args[2] has other instruction starting with --
+                text = open(path).read()
+                split = text.split('\n')
+                search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                nb_mod = 0
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        split[posline] = '#%s' % l
+                        nb_mod +=1
+                        logger.info("Commenting line \"%s\" [line %d of %s]" %
+                         (l, posline, card ),'$MG:BOLD') 
+                        # overwrite the previous line
+                if not nb_mod:
+                    logger.warning('no line commented (no line matching)')
+                ff = open(path,'w')
+                ff.write('\n'.join(split))
+
+                self.last_editline_pos = posline               
+
             
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line

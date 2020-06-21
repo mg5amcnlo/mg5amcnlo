@@ -181,6 +181,11 @@ class ModelReader(loop_base_objects.LoopModel):
                                     value = 0.0
                                 else:
                                     raise
+                            except OverflowError, err:
+                                if scale < 1:
+                                    value = 0.0
+                                else:
+                                    raise
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
                                           value))
                         parameter_dict[block][pid].value = float(value)

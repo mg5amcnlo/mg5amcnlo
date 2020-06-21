@@ -49,7 +49,8 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
                  help='force to launch debug mode')
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
-                               
+parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
+                  help='For mac user, forbids to use caffeinate when running with a script')                               
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -65,6 +66,9 @@ if __debug__ and not options.debug and \
 import logging
 import logging.config
 import madgraph.interface.coloring_logging
+
+if ' ' in os.getcwd():
+    logging.warning("Path does contains spaces. We advise that you change your current path to avoid to have space in the path.")
 
 try: 
     import readline
@@ -157,6 +161,10 @@ else:
 # Call the cmd interface main loop
 try:
     if options.file or args:
+        if sys.platform == "darwin" and options.nosleep:
+            logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
+            pid = os.getpid()
+            subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
         # They are an input file 
         if args:
             input_file = os.path.realpath(args[0])

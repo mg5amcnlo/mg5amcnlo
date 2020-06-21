@@ -58,7 +58,7 @@ dir_to_f2py_free_mod = {}
 nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
                    # forced the python module to re-create an executable
 
-lhapdf = None
+#lhapdf = None
 
 
 class ReweightInterface(extended_cmd.Cmd):
@@ -688,7 +688,8 @@ class ReweightInterface(extended_cmd.Cmd):
             for i,card in enumerate(param_card_iterator):
                 if self.options['rwgt_name']:
                     self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
-                card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                self.new_param_card = card
+                #card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
@@ -708,24 +709,23 @@ class ReweightInterface(extended_cmd.Cmd):
         
         
         if not '--keep_card' in args:
-            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-                files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
-            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()      
-            if self.has_nlo and self.rwgt_mode != "LO":
-                files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
-            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
+                
+            out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
+                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
+                                   write_file=False, return_instance=True
+                                   )
             self.stored_line = None
-        
+            card = cmd.param_card
+            new_card = card.write()
+        elif self.new_param_card:
+            new_card = self.new_param_card.write()
+        else:
+            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+            
         # check for potential scan in the new card 
-        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
             try:
@@ -744,11 +744,19 @@ class ReweightInterface(extended_cmd.Cmd):
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
             new_card = first_card.write()
-            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
-                          
-        # check if "Auto" is present for a width parameter
+            self.new_param_card = first_card
+            #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
+        
+        # check if "Auto" is present for a width parameter)
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
+            if param_card_iterator:
+                first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+            else:
+                ff = open(pjoin(rw_dir, 'Cards', 'param_card.dat'),'w')
+                ff.write(new_card)
+                ff.close()
+                
             self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
@@ -795,6 +803,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
+        self.orig_param_card_text = s_orig
         s_new = new_card
         self.new_param_card = check_param_card.ParamCard(s_new.splitlines())
         
@@ -866,15 +875,25 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             tag_name = 'rwgt_%s' % rewgtid
 
+                
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
                     if 'second' in path or tag == 3:
-                        module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                        param_card = self.new_param_card
                     else:
-                        module.initialise(pjoin(path_me, 'rw_me', 'Cards', 'param_card_orig.dat'))
+                        param_card = check_param_card.ParamCard(self.orig_param_card_text)
+                    
+                    for block in param_card:
 
+                        for param   in param_card[block]:
+                            lhacode = param.lhacode
+                            value = param.value
+                            name = '%s_%s' % (block.upper(), '_'.join([str(i) for i in lhacode]))
+                            module.change_para(name, value)
+                    module.update_all_coup()
+                        
         return param_card_iterator, tag_name
 
         
@@ -961,8 +980,10 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
-        global lhapdf
-        
+        if not hasattr(self,'pdf'):
+            lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+            self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+            
         if self.has_nlo and self.rwgt_mode != "LO":
             return self.calculate_nlo_weight(event)
         
@@ -1075,19 +1096,20 @@ class ReweightInterface(extended_cmd.Cmd):
                     
                 base_wgt.append(c_wgt.pwgt[:3])
         
-        #change the ordering to the fortran one:
-        scales2 = self.invert_momenta(scales2)
-        pdg = self.invert_momenta(pdg)
-        bjx = self.invert_momenta(bjx)
-        # re-compute original weight to reduce numerical inacurracy
-        base_wgt = self.invert_momenta(base_wgt)
         
-        orig_wgt_check, partial_check = self.combine_wgt(scales2, pdg, bjx, base_wgt, gs, qcdpower, 1., 1.)
+        orig_wgt_check, partial_check = self.combine_wgt_local(scales2, pdg, bjx, base_wgt, gs, qcdpower, self.pdf)
+        #change the ordering to the fortran one: 
+        #scales2_i = self.invert_momenta(scales2)
+        #pdg_i = self.invert_momenta(pdg)
+        #bjx_i = self.invert_momenta(bjx)
+        # re-compute original weight to reduce numerical inacurracy
+        #base_wgt_i = self.invert_momenta(base_wgt)
+        #orig_wgt_check, partial_check = self.combine_wgt(scales2_i, pdg_i, bjx_i, base_wgt_i, gs, qcdpower, 1., 1.)
         
         if '_nlo' in type_nlo:
-            wgt = self.invert_momenta(wgt_virt)
+            #wgt = self.invert_momenta(wgt_virt)
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                new_out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+                new_out, partial = self.combine_wgt_local(scales2, pdg, bjx, wgt_virt, gs, qcdpower, self.pdf)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else 0 \
@@ -1096,9 +1118,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
             
         if '_tree' in type_nlo:
-            wgt = self.invert_momenta(wgt_tree)
+            #wgt = self.invert_momenta(wgt_tree)
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+                out, partial = self.combine_wgt_local(scales2, pdg, bjx, wgt_tree, gs, qcdpower, self.pdf)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
@@ -1126,7 +1148,25 @@ class ReweightInterface(extended_cmd.Cmd):
             assert not to_write
             assert not wgt_tree
         return final_weight 
+
+
+    def combine_wgt_local(self, scale2s, pdgs, bjxs, base_wgts, gss, qcdpowers, pdf):
+
+        wgt = 0.
+        wgts = []
+        for (scale2, pdg, bjx, base_wgt, gs, qcdpower) in   zip(scale2s, pdgs, bjxs, base_wgts, gss, qcdpowers):
+            Q2, mur2, muf2 = scale2 #Q2 is Ellis-Sexton scale
+            #misc.sprint(Q2, mur2, muf2, base_wgt, gs, qcdpower)
+            pdf1 = pdf.xfxQ2(pdg[0], bjx[0], muf2)/bjx[0]
+            pdf2 = pdf.xfxQ2(pdg[1], bjx[1], muf2)/bjx[1]
+            alphas = pdf.alphasQ2(mur2)
+            tmp = base_wgt[0] + base_wgt[1] * math.log(mur2/Q2) + base_wgt[2] * math.log(muf2/Q2)
+            tmp *= gs**qcdpower*pdf1*pdf2
+            wgt += tmp
+            wgts.append(tmp)
+        return wgt, wgts
         
+    
      
     @staticmethod   
     def invert_momenta(p):
@@ -1450,10 +1490,9 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = re.sub('@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
-        if mgcmd.options['golem'] or mgcmd.options['pjfry']:
-            logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem and/or PJFry++")
+        if mgcmd.options['golem']:
+            logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem")
         mgcmd.options['golem'] = None            
-        mgcmd.options['pjfry'] = None 
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -1462,22 +1501,10 @@ class ReweightInterface(extended_cmd.Cmd):
         
         #put back golem to original value
         mgcmd.options['golem'] = old_options['golem']
-        mgcmd.options['pjfry'] = old_options['pjfry']
         # update make_opts
-        m_opts = {}
-        if mgcmd.options['lhapdf']:
-            #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
-            #        stdout = subprocess.PIPE).stdout.read().strip()[0]
-            m_opts['lhapdf'] = True
-            m_opts['f2pymode'] = True
-            m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-            m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
-        else:
+        if not mgcmd.options['lhapdf']:
             raise Exception, "NLO reweighting requires LHAPDF to work correctly"
 
-        path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
-        common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
-        logger.info('Done %.4g' % (time.time()-start))
 
 
         # Download LHAPDF SET
@@ -1635,7 +1662,7 @@ class ReweightInterface(extended_cmd.Cmd):
         elif has_nlo and 'NLO' in self.rwgt_mode:
             self.create_standalone_virt_directory(data, second)
             
-            if not second:
+            if False:#not second:
                 #compile the module to combine the weight
                 misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
                 #link it 
@@ -1666,8 +1693,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
             # deactivate golem since it creates troubles
             old_options = dict(mgcmd.options)
-            mgcmd.options['golem'] = None            
-            mgcmd.options['pjfry'] = None 
+            mgcmd.options['golem'] = None             
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -1675,41 +1701,30 @@ class ReweightInterface(extended_cmd.Cmd):
             mgcmd.exec_cmd(commandline, precmd=True)    
             #put back golem to original value
             mgcmd.options['golem'] = old_options['golem']
-            mgcmd.options['pjfry'] = old_options['pjfry']
             # update make_opts
-            m_opts = {}
-            if mgcmd.options['lhapdf']:
-                #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
-                #        stdout = subprocess.PIPE).stdout.read().strip()[0]
-                m_opts['lhapdf'] = True
-                m_opts['f2pymode'] = True
-                m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-                m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                        
-            else:
+            if not mgcmd.options['lhapdf']:
                 raise Exception, "NLO_tree reweighting requires LHAPDF to work correctly"
  
-            path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
-            common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
-            logger.info('Done %.4g' % (time.time()-start))
-
             # Download LHAPDF SET
             common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
             
             #compile the module to combine the weight
-            misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
-            #link it 
-            with misc.chdir(pjoin(path_me)):
-                if path_me not in sys.path:
-                    sys.path.insert(0, path_me)
-                mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
-                mymod =  mymod.Source.rwgt2py
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialise([self.banner.run_card['lpp1'], 
-                                  self.banner.run_card['lpp2']],
-                                 self.banner.run_card.get_lhapdf_id())
-                self.combine_wgt = mymod.get_wgt
-            
+            if False:
+                #use python module instead
+                misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
+                #link it 
+                with misc.chdir(pjoin(path_me)):
+                    if path_me not in sys.path:
+                        sys.path.insert(0, path_me)
+                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                    mymod =  mymod.Source.rwgt2py
+                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                        mymod.initialise([self.banner.run_card['lpp1'], 
+                                      self.banner.run_card['lpp2']],
+                                     self.banner.run_card.get_lhapdf_id())
+                    self.combine_wgt = mymod.get_wgt
+                
              
         # 6. If we need a new model/process-------------------------------------
         if (self.second_model or self.second_process or self.dedicated_path) and not second :
@@ -1895,6 +1910,7 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['has_nlo'] = self.has_nlo
         to_save['rwgt_mode'] = self.rwgt_mode
         to_save['rwgt_name'] = self.options['rwgt_name']
+        to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -1910,7 +1926,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         'rwgt_name': None}
         if keep_name:
             self.options['rwgt_name'] = obj['rwgt_name']
-        
+        self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
         old_rwgt = obj['rwgt_dir']
            
         # path to fortran executable
@@ -1933,7 +1949,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.rwgt_mode:
             self.rwgt_mode = obj['rwgt_mode']
             logger.info("mode set to %s" % self.rwgt_mode)
-        if self.has_nlo and 'NLO' in self.rwgt_mode:
+        if False:#self.has_nlo and 'NLO' in self.rwgt_mode:
+            #use python version
             path = pjoin(obj['rwgt_dir'], 'rw_mevirt','Source')
             sys.path.insert(0, path)
             try:
