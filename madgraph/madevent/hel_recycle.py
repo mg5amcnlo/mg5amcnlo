@@ -36,17 +36,16 @@ class DAG:
 
     def dependencies(self, old_name):
         deps = [key for key, value in self.graph.items()
-                if key.old_name == old_name]
+                if key.old_name == old_name and not key.dead]
         return deps
 
-    def clear_old(self, old_name):
+    def kill_old(self, old_name):
         for key, value in list(self.graph.items()):
             if key.old_name == old_name:
-                del self.graph[key]
-                continue
-            for i in reversed(range(len(value))):
-                if value[i].old_name == old_name:
-                    del self.graph[key][i]
+                key.dead = True
+            for v in value:
+                if v.old_name == old_name:
+                    v.dead = True
 
     def clear_amp(self, diag_num):
         for key, value in list(self.graph.items()):
@@ -98,6 +97,7 @@ class MathsObject:
         self.old_name = old_name
         self.nature = nature
         self.name = None
+        self.dead = False
 
     def set_name(self, *args):
         self.args[-1] = self.format_name(*args)
@@ -118,7 +118,7 @@ class MathsObject:
         old_deps = old_args[0:len(matches)]
 
         # If we're overwriting a wav clear it from graph
-        graph.clear_old(old_name)
+        graph.kill_old(old_name)
         return [graph.dependencies(dep) for dep in old_deps]
 
     @staticmethod
@@ -309,12 +309,9 @@ class Amplitude(MathsObject):
         wavs, graph = args
         amp_num = -1
         exts = graph.external_nodes()
-        # Update good_wavs_combs to not include wavs that 
-        # have been overwritten
-        good_wav_combs = [{wav for wav in comb if wav in exts} for comb in External.good_wav_combs]
         exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
         for i in range(len(External.good_wav_combs)):
-            if good_wav_combs[i] == set(exts_on_path):
+            if set(External.good_wav_combs[i]) == set(exts_on_path):
                 # Offset because Fortran counts from 1
                 amp_num = i + 1
         if amp_num < 1:
@@ -326,7 +323,6 @@ class Amplitude(MathsObject):
 
 class HelicityRecycler():
     '''Class for recycling helicity'''
-
 
     def __init__(self, good_elements):
 
