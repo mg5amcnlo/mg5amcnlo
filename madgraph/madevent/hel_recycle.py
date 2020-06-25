@@ -34,11 +34,6 @@ class DAG:
                 if key.nature == 'external']
         return exts
 
-    def internal_nodes(self):
-        ints = [key for key, value in self.graph.items()
-                if key.nature == 'internal']
-        return ints
-
     def dependencies(self, old_name):
         deps = [key for key, value in self.graph.items()
                 if key.old_name == old_name]
