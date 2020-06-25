@@ -75,11 +75,19 @@ class DAG:
         return None
 
     def __str__(self):
-        print(self.graph)
-        return ''
+        print_str = 'With new names:\n\t'
+        print_str += '\n\t'.join([f'{key}  {item}' for key, item in self.graph.items() ])
+        print_str += '\n\nWith old names:\n\t'
+        print_str += '\n\t'.join([f'{key.old_name}  {item.old_name}' for key, item in self.graph.items() ])
+        return print_str
 
     def __repr__(self):
-        return self.graph
+        print_str = 'With new names:\n\t'
+        print_str += '\n\t'.join([f'{key}  {item}' for key, item in self.graph.items() ])
+        print_str += '\n\nWith old names:\n\t'
+        print_str += '\n\t'.join([f'{key.old_name}  {[i.old_name for i in item]}' for key, item in self.graph.items() ])
+        return print_str
+
 
 
 class MathsObject:
