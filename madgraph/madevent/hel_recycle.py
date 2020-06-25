@@ -170,7 +170,7 @@ class External(MathsObject):
     nhel_lines = ''
     num_externals = 0
     # Could get this from dag but I'm worried about preserving order
-    paired_up_wavs = []
+    wavs_same_leg = []
     good_wav_combs = []
 
     def __init__(self, arguments, old_name):
@@ -191,10 +191,14 @@ class External(MathsObject):
 
         new_wavfuncs = []
 
-        for new_hel in ['+1', '-1']:
+        vec_boson = 'MDL_MW' in line
+
+        new_hels = ['+1', ' 0', '-1'] if vec_boson else ['+1', '-1']
+
+        for hel in new_hels:
 
             this_args = copy(old_args)
-            this_args[2] = new_hel
+            this_args[2] = hel
 
             this_wavfunc = External(this_args, old_name)
             this_wavfunc.set_name(len(graph.external_nodes())+1)
@@ -202,7 +206,8 @@ class External(MathsObject):
             graph.add_node(this_wavfunc)
             new_wavfuncs.append(this_wavfunc)
 
-        cls.paired_up_wavs.append(new_wavfuncs)
+        cls.wavs_same_leg.append(new_wavfuncs)
+
         return new_wavfuncs
 
     @classmethod
@@ -213,7 +218,7 @@ class External(MathsObject):
         wav_comb = [[] for x in range(rows)]
         # TODO: CHECK SHAPE OF HEL MAKES SENSE AND SHAPE OF SPINOR_COMB IS SAME
         for i, j in product(range(rows), range(columns)):
-            for wav in cls.paired_up_wavs[j]:
+            for wav in cls.wavs_same_leg[j]:
                 if cls.good_hel[i][j] == wav.hel:
                     wav_comb[i].append(wav)
         cls.good_wav_combs = wav_comb
@@ -236,7 +241,6 @@ class Internal(MathsObject):
     @classmethod
     def generate_wavfuncs(cls, line, graph):
         deps = cls.get_deps(line, graph)
-
         new_wavfuncs = [ cls.get_obj(line, wavs, graph) 
                          for wavs in product(*deps) 
                          if cls.good_helicity(wavs, graph) ]
@@ -323,12 +327,13 @@ class Amplitude(MathsObject):
 class HelicityRecycler():
     '''Class for recycling helicity'''
 
+
     def __init__(self, good_elements):
 
         External.good_hel = []
         External.nhel_lines = ''
         External.num_externals = 0
-        External.paired_up_wavs = []
+        External.wavs_same_leg = []
         External.good_wav_combs = []
 
         Internal.max_wav_num = 0
@@ -503,14 +508,15 @@ class HelicityRecycler():
     def get_gwc(self, line):
         if self.got_gwc:
             return
+        # Blank lines indicate new leg (plus one at start)
         num_found = len([line 
                          for line in self.template_dict['helas_calls'].splitlines() 
-                         if line.strip() != ''])
+                         if line.strip() == ''])
         try:
             num_exts = len(External.good_hel[0])
         except IndexError:
             return
-        if num_found == 2*num_exts:
+        if num_found == num_exts + 1:
             self.got_gwc=True
             External.get_gwc()
 
