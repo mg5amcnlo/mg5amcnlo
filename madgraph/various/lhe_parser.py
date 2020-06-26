@@ -1449,8 +1449,8 @@ class Event(list):
         if not hasattr(Event, 'loweight_pattern'):
             Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
                                     <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
             ''',re.X+re.I+re.M)
         
@@ -1468,13 +1468,22 @@ class Event(list):
             self.loweight['asrwt'] =[float(x) for x in info.group('asrwt').split()[1:]]
             self.loweight['tot_fact'] = float(info.group('totfact'))
             
-            args = info.group('beam1').split()
+            if info.group('idb1') == info.group('idb2'):
+                raise Exception, '%s not parsed'% text
+            
+            if info.group('idb1') =="1":
+                args = info.group('beam1').split()
+            else:
+                args = info.group('beam2').split()
             npdf = int(args[0])
             self.loweight['n_pdfrw1'] = npdf
             self.loweight['pdf_pdg_code1'] = [int(i) for i in args[1:1+npdf]]
             self.loweight['pdf_x1'] = [float(i) for i in args[1+npdf:1+2*npdf]]
             self.loweight['pdf_q1'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]
-            args = info.group('beam2').split()
+            if info.group('idb2') =="2":
+                args = info.group('beam2').split()
+            else:
+                args = info.group('beam1').split()
             npdf = int(args[0])
             self.loweight['n_pdfrw2'] = npdf
             self.loweight['pdf_pdg_code2'] = [int(i) for i in args[1:1+npdf]]
