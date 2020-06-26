@@ -92,7 +92,7 @@ def generate_directories_fks_async(i):
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     
-    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal]
 
 
 class CheckFKS(mg_interface.CheckValidForCmd):
@@ -728,8 +728,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
-                    self.born_processes.extend(diroutput[5])
-                    self.born_processes_for_olp.append(diroutput[5][0])
 
             else:
                 max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for \
