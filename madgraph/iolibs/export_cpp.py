@@ -379,7 +379,8 @@ class UFOModelConverterCPP(object):
         template_h_files = self.read_aloha_template_files(ext = 'h')
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
-        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
+        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'),
+                                                      explicit_combine=True)
         aloha_model.add_Lorentz_object(self.model.get('lorentz'))
         
         if self.wanted_lorentz:
@@ -511,7 +512,17 @@ class UFOModelConverterGPU(UFOModelConverterCPP):
     
         return out
 
-
+    def write_process_h_file(self, writer):
+        
+        replace_dict = UFOModelConverterCPP.write_process_h_file(self, None)
+        replace_dict['include_for_complex'] = '#include <thrust/complex.h>'
+        
+        if writer:
+            file = self.read_template_file(self.process_template_h) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
 
 class OneProcessExporterCPP(object):
     """Class to take care of exporting a set of matrix elements to
@@ -715,7 +726,7 @@ class OneProcessExporterCPP(object):
         # Extract class definitions
         process_class_definitions = self.get_process_class_definitions()
         replace_dict['process_class_definitions'] = process_class_definitions
-
+        replace_dict['include_for_complex'] = ''
 
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict

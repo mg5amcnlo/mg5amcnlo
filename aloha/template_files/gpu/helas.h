@@ -1,5 +1,5 @@
 __device__ void oxxxxx(double p[4], double fmass, int nhel, int nsf,
-                       thrust::complex<double> *fo); //[6]);
+                       thrust::complex<double> fo[6]);
 
 __device__ void sxxxxx(double p[4], int nss, thrust::complex<double> sc[3]);
 

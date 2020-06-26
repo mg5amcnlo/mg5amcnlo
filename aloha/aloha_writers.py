@@ -1641,8 +1641,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                 coeff = 'denom'
                 mydict = {}
                 if self.type2def['pointer_coup'] in ['*']:
-                        mydict['pre_coup'] = '(*'
-                        mydict['post_coup'] = ')'
+                    mydict['pre_coup'] = '(*'
+                    mydict['post_coup'] = ')'
+                else:
+                    mydict['pre_coup'] = ''
+                    mydict['post_coup'] = ''
                 mydict['coup'] = coup_name
                 mydict['i'] = self.outgoing
                 if not aloha.complex_mass:
@@ -1868,7 +1871,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
     type2def['double'] = 'double '
     type2def['complex'] = 'thrust::complex<double> '
     type2def['pointer_vertex'] = '*' # using complex<double> * vertex)
-    type2def['pointer_coup'] = '*'
+    type2def['pointer_coup'] = ''
     
     def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
