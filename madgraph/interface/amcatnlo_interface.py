@@ -478,7 +478,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    'If this is not what you need, please regenerate with the correct orders.') % o)
 
         # this is in case no orders have been passed
-        if not myprocdef['squared_orders']:
+        if not myprocdef['squared_orders'] and not myprocdef['orders']:
             # find the minimum weighted order, then extract the values for the varius
             # couplings in the model
             weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
@@ -504,6 +504,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                             'If this is not what you need, please regenerate with the correct orders.'), 
                             ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
                             '$MG:BOLD')
+
+        # now check that all couplings that are there in orders also appear
+        # in squared_orders. If not, set the corresponding one
+        for k, v in myprocdef['orders'].items():
+            if k not in myprocdef['squared_orders'].keys():
+                myprocdef['squared_orders'][k] = 2*v 
+                logger.warning('Order %s is not constrained as squared_orders. Using: %s^2=%d' % (k,k,2*v) )
 
         # check that all the couplings of the model have been constrained
         # in the squared orders, otherwise set the others to zero
