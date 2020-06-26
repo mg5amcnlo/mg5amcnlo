@@ -4090,8 +4090,13 @@ class Channel(base_objects.Diagram):
                     if not hasattr(model, 'lorentz_dict'):
                         model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
                         self.init_regular_expression()
+                    
+                    lorentz =  model.lorentz_dict[vertex['lorentz'][key[1]]]
+                    structure = lorentz.structure
+                    if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+                        for ff in lorentz.formfactors:
+                            structure = structure.replace(ff.name, '(%s)' % ff.value)
                         
-                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
                     lor_value = eval(new_structure % q_dict_lor)
