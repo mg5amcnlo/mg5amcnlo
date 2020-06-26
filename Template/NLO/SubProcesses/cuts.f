@@ -139,7 +139,7 @@ c DeltaR and invariant mass cuts
                            return
                         endif
                      endif
-                     if (ipdg(i).eq.-ipdg(j)) then
+                     if (ipdg_reco(i).eq.-ipdg_reco(j)) then
                         if (drll_sf.gt.0d0) then
                            if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll_sf**2) then
                               passcuts_user=.false.
