@@ -1516,8 +1516,8 @@ This will take effect only in a NEW terminal
                 if sys.version_info[0] == 2:
                     if  sys.version_info[1] == 6:
                         raise Exception('python2.6 does not support such functionalities please use python2.7')
-                else:
-                    raise Exception('python3.x does not support such functionalities please use python2.7')
+                #else:
+                #    raise Exception('python3.x does not support such functionalities please use python2.7')
         
 
 
@@ -7708,6 +7708,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning(message)
 
         elif args[0] == 'OLP':
+            if six.PY3 and self.options['low_mem_multicore_nlo_generation']:
+                raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
@@ -7736,6 +7738,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
+        elif args[0] in ['low_mem_multicore_nlo_generation']:	    
+            if six.PY3 and self.options['OLP'] != 'MadLoop':
+                raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+            else:
+                self.options[args[0]] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
