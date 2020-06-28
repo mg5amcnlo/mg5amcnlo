@@ -3,10 +3,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** PARRALEL VERSION FOR PYTHON 3 **
 
-2.7.3.py3(21/06/20):
+2.7.3.py3(28/06/20):
       ALL: Contains all feature of 2.7.3 (see below)
       OM: Fix a crash when running PY8 in matched/merged mode (bug not present in not .py3 version of the code)
-      MZ: low_mem_multicore_nlo_generation is working again 
+      MZ: low_mem_multicore_nlo_generation is working again
+          but not for LOonly mode and not in OLP mode
 
 2.7.2.py3(25/03/20):
       ALL: Contains all feature of 2.7.2 (see below)
