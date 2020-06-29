@@ -822,6 +822,7 @@ class OneProcessExporterCPP(object):
             else:
                 wfct_size = 6
             
+            replace_dict['wfct_size'] = wfct_size
             
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
@@ -883,14 +884,34 @@ class OneProcessExporterCPP(object):
                                                         color_amplitudes)
         replace_dict['reset_jamp_lines'] = \
                                      self.get_reset_jamp_lines(color_amplitudes)
-        replace_dict['sigmaKin_lines'] = \
+        replace_dict['sigmaKin_lines'], other_replace = \
                                      self.get_sigmaKin_lines(color_amplitudes)
-        replace_dict['sigmaHat_lines'] = \
-                                     self.get_sigmaHat_lines()
+        replace_dict.update(other_replace)
+            
+        replace_dict['sigmaHat_lines'] = self.get_sigmaHat_lines()
 
         replace_dict['all_sigmaKin'] = \
                                   self.get_all_sigmaKin_lines(color_amplitudes,
                                                               'CPPProcess')
+        
+        replace_dict['nexternal'] = len(self.matrix_elements[0].get('processes')[0].get('legs'))
+        
+        couplings = set()
+        mass = set()
+        width = set()
+        for d in self.matrix_elements[0].get('diagrams'):
+            for wf in d.get('wavefunctions'):
+                for c in wf.get('coupling'):
+                    couplings.add(c)
+                mass.add(wf.get('particle').get('mass'))
+                width.add(wf.get('particle').get('width'))
+        mass.remove('ZERO')
+        width.remove('ZERO')
+        couplings.remove('none')
+        replace_dict['ncoupling'] = len(couplings)
+        replace_dict['nparams'] = len(mass) + len(width)
+        replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncoupling']
+        replace_dict['coupling_list'] = ' '.join(couplings)
 
         file = self.read_template_file(self.process_definition_template) %\
                replace_dict
@@ -1051,12 +1072,16 @@ class OneProcessExporterCPP(object):
                     
             replace_dict['get_mirror_matrix_lines'] = mirror_matrix_lines
 
+            replace_dict['nproc'] = sum([ 2 if m.get('has_mirror_process') else 1
+                                        for m in self.matrix_elements])
+            replace_dict['nb_amp'] = len(self.amplitudes.get_all_amplitudes())
+            misc.sprint(replace_dict['nb_amp'])
             if write:
                 file = \
                  self.read_template_file(\
                             self.process_sigmaKin_function_template) %\
                             replace_dict
-                return file
+                return file, replace_dict
             else:
                 return replace_dict
         else:
@@ -1067,11 +1092,11 @@ class OneProcessExporterCPP(object):
                               replace("0_", "") for \
                               me in self.matrix_elements])
             if write:
-                return ret_lines 
+                return ret_lines, replace_dict
             else:
                 replace_dict['get_mirror_matrix_lines'] = ret_lines
                 return replace_dict
-                
+              
     def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
@@ -1350,11 +1375,94 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
-    process_definition_template = 'cpp_process_function_definitions.inc'
+    process_definition_template = 'gpu/process_function_definitions.inc'
     process_wavefunction_template = 'cpp_process_wavefunctions.inc'
-    process_sigmaKin_function_template = 'cpp_process_sigmaKin_function.inc'
+    process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
     single_process_template = 'cpp_process_matrix.inc'
 
+    def get_process_class_definitions(self, write=True):
+        
+        replace_dict = super(OneProcessExporterGPU,self).get_process_class_definitions(write=False)
+
+        replace_dict['all_sigma_kin_definitions'] = \
+                          """// Calculate wavefunctions
+                          __device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt,
+                                        thrust::complex<double> amp[%(namp)d]
+
+
+                            thrust::complex<double> sw[%(nwfct)d][%(sizew)d];
+                            """ % \
+                          {'nwfct':len(self.wavefunctions),
+                          'sizew': replace_dict['wfct_size'],
+                          'namp':len(self.amplitudes)#.get_all_amplitudes())
+                          }
+
+        misc.sprint(self.process_class_template)
+        if write:
+            file = self.read_template_file(self.process_class_template) % replace_dict
+            return file
+        else:
+            return replace_dict
+        
+        
+    def get_calculate_wavefunctions(self, wavefunctions, amplitudes, write=True):
+        """Return the lines for optimized calculation of the
+        wavefunctions for all subprocesses"""
+
+        replace_dict = {}
+
+        replace_dict['nwavefuncs'] = len(wavefunctions)
+        
+        #ensure no recycling of wavefunction ! incompatible with some output
+        #for me in self.matrix_elements:
+        #    me.restore_original_wavefunctions()
+
+        replace_dict['wavefunction_calls'] = "\n".join(\
+            self.helas_call_writer.get_wavefunction_calls(\
+            helas_objects.HelasWavefunctionList(wavefunctions)))
+
+        replace_dict['amplitude_calls'] = "\n".join(\
+            self.helas_call_writer.get_amplitude_calls(amplitudes))
+
+        if write:
+            file = self.read_template_file(self.process_wavefunction_template) % \
+                replace_dict
+            return file
+        else:
+            return replace_dict
+        
+    def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
+        """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
+
+        ret_lines = []
+        if self.single_helicities:
+            ret_lines.append(
+                "__device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt, thrust::complex<double> amp[%s]){"
+                % len(self.matrix_elements[0].get_all_amplitudes()))
+
+            ret_lines.append("// Calculate wavefunctions for all processes")
+            misc.sprint(type(self.helas_call_writer))
+            helas_calls = self.helas_call_writer.get_matrix_element_calls(\
+                                                    self.matrix_elements[0])
+            logger.debug("only one Matrix-element supported?")
+
+            nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
+            logger.debug("No spin2/3/2 supported?")
+            ret_lines.append("thrust::complex<double> sw[%s][6];" %
+                             (nwavefuncs)
+                             )
+            ret_lines += helas_calls
+            #ret_lines.append(self.get_calculate_wavefunctions(\
+            #    self.wavefunctions, self.amplitudes))
+            ret_lines.append("}")
+        else:
+            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
+                                  for i, me in enumerate(self.matrix_elements)])
+        ret_lines.extend([self.get_matrix_single_process(i, me,
+                                                         color_amplitudes[i],
+                                                         class_name) \
+                                for i, me in enumerate(self.matrix_elements)])
+        return "\n".join(ret_lines)
 
 class OneProcessExporterMatchbox(OneProcessExporterCPP):
     """Class to take care of exporting a set of matrix elements to
@@ -2432,7 +2540,7 @@ class ProcessExporterGPU(ProcessExporterCPP):
                         'v5_model': True
                         }
     
-    oneprocessclass = OneProcessExporterCPP
+    oneprocessclass = OneProcessExporterGPU
     s= _file_path + 'iolibs/template_files/'
     from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc'],
                      'SubProcesses': [s+'check_sa.cpp']}

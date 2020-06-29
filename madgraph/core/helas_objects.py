@@ -3726,7 +3726,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def reuse_outdated_wavefunctions(self, helas_diagrams):
         """change the wavefunctions id used in the writer to minimize the 
            memory used by the wavefunctions."""
-           
+        
+
         if not self.optimization:
             for diag in helas_diagrams:
                 for wf in diag['wavefunctions']:
