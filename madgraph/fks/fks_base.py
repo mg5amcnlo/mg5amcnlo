@@ -318,16 +318,22 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                      '%s at the output stage only.'%self['OLP'])
             return
 
+        # determine the orders to be used to generate the loop
+#MZ        loop_orders = {}
+#        for  born in self['born_processes']:
+#            for coup, val in fks_common.find_orders(born.born_amp).items():
+#                try:
+#                    loop_orders[coup] = max([loop_orders[coup], val])
+#                except KeyError:
+#                    loop_orders[coup] = val
+
         for i, born in enumerate(self['born_processes']):
             myproc = copy.copy(born.born_amp['process'])
-            # if [orders] are not specified, then
             # include all particles in the loops
             # i.e. allow all orders to be perturbed
-            # (this is the case for EW corrections, where only squared oders 
-            # are imposed)
-            if not myproc['orders']:
-                myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
+            myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
+#MZ            myproc['orders'] = loop_orders
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted = False).replace(\
@@ -387,6 +393,7 @@ class FKSRealProcess(object):
                 self.process['perturbation_couplings'].append(o)
         # set the orders to empty, to force the use of the squared_orders
         self.process['orders'] = copy.copy(born_proc['orders'])
+        self.process['orders'] = {}
 
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
@@ -802,16 +809,8 @@ class FKSProcess(object):
         """
         
         model = self.born_amp['process']['model']
-        # if [orders] are not specified, then
-        # include all kind of splittings
-        # i.e. allow all orders to be perturbed
-        # (this is the case for EW corrections, where only squared oders 
-        # are imposed)
         if not pert_orders:
-            if not self.born_amp['process']['orders']:
-                pert_orders = model['coupling_orders']
-            else:
-                pert_orders = self.born_amp['process']['perturbation_couplings']
+            pert_orders = model['coupling_orders']
 
         leglist = self.get_leglist()
         if range(len(leglist)) != [l['number']-1 for l in leglist]:

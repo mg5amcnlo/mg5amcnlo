@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
 C     
 C     
 C     CONSTANTS 

@@ -113,7 +113,8 @@ class TestFKSProcess(unittest.TestCase):
     
     # PROCESS: u g > u g 
     dict_qcd = {'legs' : myleglist, 
-                'born_sq_orders':{'QCD':4, 'QED':0},
+                'orders':{'QCD':4, 'QED':0},
+                'born_orders':{'QCD':2, 'QED':0},
                 'squared_orders':{'QCD':6, 'QED':0},
                 'split_orders':['QCD', 'QED'],
                 'sqorders_types':{'QED':'=', 'QCD':'='},
@@ -128,7 +129,8 @@ class TestFKSProcess(unittest.TestCase):
                 'overall_orders': {}}
     
     dict_qed = {'legs' : myleglist, 
-                'born_sq_orders':{'QCD':4, 'QED':0},
+                'orders':{'QCD':2, 'QED':2},
+                'born_orders':{'QCD':2, 'QED':0},
                 'squared_orders':{'QCD':4, 'QED':2},
                 'split_orders':['QCD', 'QED'],
                 'sqorders_types':{'QED':'=', 'QCD':'='},
@@ -144,10 +146,7 @@ class TestFKSProcess(unittest.TestCase):
 
     # PROCESS: d d~ > u u~
     dict2_qcd = {'legs' : myleglist2, 
-                 'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
-                 'squared_orders':{'QCD':6, 'QED':0, 'WEIGHTED':6},
-                 'split_orders':['QCD', 'QED'],
-                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                  'model': mymodel,
                  'id': 1,
                  'required_s_channels':[],
@@ -159,10 +158,7 @@ class TestFKSProcess(unittest.TestCase):
                  'overall_orders': {}}
     
     dict2_qed = {'legs' : myleglist2, 
-                 'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
-                 'squared_orders':{'QCD':4, 'QED':2, 'WEIGHTED':8},
-                 'split_orders':['QCD', 'QED'],
-                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                  'model': mymodel,
                  'id': 1,
                  'required_s_channels':[],
@@ -175,10 +171,7 @@ class TestFKSProcess(unittest.TestCase):
     
     # PROCESS: d d~ > a a
     dict3_qcd = {'legs' : myleglist3, 
-                 'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
-                 'squared_orders':{'QCD':2, 'QED':4, 'WEIGHTED':10},
-                 'split_orders':['QCD', 'QED'],
-                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
                  'model': mymodel,
                  'id': 1,
                  'required_s_channels':[],
@@ -190,10 +183,7 @@ class TestFKSProcess(unittest.TestCase):
                  'overall_orders': {}}
     
     dict3_qed = {'legs' : myleglist3, 
-                 'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
-                 'squared_orders':{'QCD':0, 'QED':6, 'WEIGHTED':12},
-                 'split_orders':['QCD', 'QED'],
-                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
                  'model': mymodel,
                  'id': 1,
                  'required_s_channels':[],
@@ -227,7 +217,8 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':4, 'QED':0},
+                        'orders': {'QCD':4, 'QED':0},
+                        'born_orders': {'QCD':2, 'QED':0},
                         'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -236,7 +227,8 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':4, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -317,7 +309,8 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -328,7 +321,8 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
-                        'born_sq_orders': {'QCD':4, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -372,14 +366,16 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
-                        'born_sq_orders': {'QCD':4, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -418,7 +414,8 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -427,7 +424,8 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':0, 'QED':4},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':0, 'QED':6},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -450,7 +448,8 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist1[1].set('state', False)
         my_process_definition1 = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -460,7 +459,8 @@ class TestFKSProcess(unittest.TestCase):
         my_process_definition1_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
                         'perturbation_couplings': ['QED'],
-                        'born_sq_orders': {'QCD':0, 'QED':4},
+                        'orders': {'QCD':0, 'QED':4},
+                        'born_orders': {'QCD':0, 'QED':2},
                         'squared_orders': {'QCD':0, 'QED':6},
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -497,7 +497,8 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': 21, 'state':True})])
         
         dict = {'legs' : leglist, 
-                'born_sq_orders':{'QCD':4, 'QED':0},
+                'orders':{'QCD':4, 'QED':0},
+                'born_orders':{'QCD':2, 'QED':0},
                 'squared_orders':{'QCD':6, 'QED':0},
                 'split_orders':['QED','QCD'],
                 'sqorders_types':{'QED':'=','QCD':'='},
@@ -658,7 +659,8 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': -2, 'state':True})])
 
         dict = {'legs' : leglist, 
-                'born_sq_orders': {'QCD':2, 'QED':2},
+                'orders':{'QCD':1, 'QED':3},
+                'born_orders': {'QCD':1, 'QED':1},
                 'squared_orders': {'QCD':2, 'QED':4},
                 'sqorders_types': {'QED':'=', 'QCD':'='},
                 'model': self.mymodel,

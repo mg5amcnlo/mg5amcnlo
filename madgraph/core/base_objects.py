@@ -2896,7 +2896,7 @@ class Process(PhysicsObject):
         # keep track of the orders that have been explicitly asked by the 
         # user, because other borns will appear used for the subtraction
         # of singularities
-        self['born_sq_orders'] = {}
+        self['born_orders'] = {}
         # The user might want to have the individual matrix element evaluations
         # for specific values of the coupling orders. The list below specifies
         # what are the coupling names which need be individually treated.
@@ -2916,7 +2916,7 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
 
-        if name in ['orders', 'overall_orders','squared_orders', 'born_sq_orders']:
+        if name in ['orders', 'overall_orders','squared_orders', 'born_orders']:
             Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'constrained_orders':
@@ -3081,7 +3081,7 @@ class Process(PhysicsObject):
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
-                'NLO_mode', 'split_orders', 'born_sq_orders']
+                'NLO_mode', 'split_orders', 'born_orders']
 
     def nice_string(self, indent=0, print_weighted = True, prefix=True):
         """Returns a nicely formated string about current process
@@ -4064,7 +4064,7 @@ class ProcessDefinition(Process):
             'is_decay_chain': self.get('is_decay_chain'),
             'overall_orders': self.get('overall_orders'),
             'split_orders': self.get('split_orders'),
-            'born_sq_orders': self.get('born_sq_orders'),
+            'born_orders': self.get('born_orders'),
             'NLO_mode': self.get('NLO_mode')
             })
             

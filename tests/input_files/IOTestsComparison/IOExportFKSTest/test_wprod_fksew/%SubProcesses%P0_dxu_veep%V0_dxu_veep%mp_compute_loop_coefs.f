@@ -8,8 +8,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
 C     
 C     Modules
 C     

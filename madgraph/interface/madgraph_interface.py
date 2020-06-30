@@ -4713,9 +4713,7 @@ This implies that with decay chains:
         # defined with the '>' operato, then this order correspondingly set to 
         # be maximal (99) since there is no way to know, during generation, if 
         # the amplitude being contstructed will be leading or not.
-        # This only applies when no perturbation couplings are provided, ie
-        # for LO-only generation
-        if orders=={} and squared_orders!={} and not perturbation_couplings:
+        if orders=={} and squared_orders!={}:
             for order in squared_orders.keys():
                 if squared_orders[order][0]>=0 and squared_orders[order][1]!='>':
                     orders[order]=squared_orders[order][0]
