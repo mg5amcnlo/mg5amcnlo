@@ -1,5 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.7.4:
+      OM: In madspin_card you can now replace the line "launch"
+          by "launch -n NAME", this will allow to specify the name of the
+	  directory in EVENTS where that run is stored.
+
+
 2.7.3(21/06/20)
       OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
           Thanks to Congqiao Li for this
