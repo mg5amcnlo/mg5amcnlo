@@ -1378,7 +1378,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     process_definition_template = 'gpu/process_function_definitions.inc'
     process_wavefunction_template = 'cpp_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
-    single_process_template = 'cpp_process_matrix.inc'
+    single_process_template = 'gpu/process_matrix.inc'
 
     def get_process_class_definitions(self, write=True):
         
@@ -1437,9 +1437,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt, thrust::complex<double> amp[%s]){"
-                % len(self.matrix_elements[0].get_all_amplitudes()))
+                "__device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt, double &matrix){"
+                )
 
+            ret_lines.append("thrust::complex<double> amp[%s])" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("// Calculate wavefunctions for all processes")
             misc.sprint(type(self.helas_call_writer))
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
@@ -1454,7 +1455,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             ret_lines += helas_calls
             #ret_lines.append(self.get_calculate_wavefunctions(\
             #    self.wavefunctions, self.amplitudes))
-            ret_lines.append("}")
+            #ret_lines.append("}")
         else:
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
                                   for i, me in enumerate(self.matrix_elements)])

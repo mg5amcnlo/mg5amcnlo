@@ -1709,7 +1709,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
 
 
-    findcoupling = re.compile('pars->[-]*([\d\w_]+)\s*,')
+    findcoupling = re.compile('pars->([-]*[\d\w_]+)\s*,')
     def format_coupling(self, call):
         """Format the coupling so any minus signs are put in front"""
 
@@ -1840,7 +1840,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                 else:
                     arg['mass'] = "pars->%(M)s,pars->%(W)s,"
             else:        
-                arg['out'] = 'amp[%(out)d]'
+                arg['out'] = '&amp[%(out)d]'
                 arg['mass'] = ''
                 
             call = call % arg
