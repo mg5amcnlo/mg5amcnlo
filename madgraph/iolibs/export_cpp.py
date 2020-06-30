@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """Methods and classes to export models and matrix elements to Pythia 8
 and C++ Standalone format."""
 
@@ -675,6 +674,7 @@ class OneProcessExporterCPP(object):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
 
+        misc.sprint(self.path)
         # Create the files
         if not os.path.isdir(os.path.join(self.path, self.include_dir)):
             os.makedirs(os.path.join(self.path, self.include_dir))
@@ -860,7 +860,7 @@ class OneProcessExporterCPP(object):
         else:
             return replace_dict
         
-    def get_process_function_definitions(self):
+    def get_process_function_definitions(self, write=True):
         """The complete Pythia 8 class definition for the process"""
 
         replace_dict = {}
@@ -895,28 +895,13 @@ class OneProcessExporterCPP(object):
                                                               'CPPProcess')
         
         replace_dict['nexternal'] = len(self.matrix_elements[0].get('processes')[0].get('legs'))
-        
-        couplings = set()
-        mass = set()
-        width = set()
-        for d in self.matrix_elements[0].get('diagrams'):
-            for wf in d.get('wavefunctions'):
-                for c in wf.get('coupling'):
-                    couplings.add(c)
-                mass.add(wf.get('particle').get('mass'))
-                width.add(wf.get('particle').get('width'))
-        mass.remove('ZERO')
-        width.remove('ZERO')
-        couplings.remove('none')
-        replace_dict['ncoupling'] = len(couplings)
-        replace_dict['nparams'] = len(mass) + len(width)
-        replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncoupling']
-        replace_dict['coupling_list'] = ' '.join(couplings)
-
-        file = self.read_template_file(self.process_definition_template) %\
+    
+        if write:
+            file = self.read_template_file(self.process_definition_template) %\
                replace_dict
-
-        return file
+            return file
+        else:
+            return replace_dict
 
     def get_process_name(self):
         """Return process file name for the process in matrix_element"""
@@ -1372,18 +1357,79 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     include_dir = '.'
     template_path = os.path.join(_file_path, 'iolibs', 'template_files')
     __template_path = os.path.join(_file_path, 'iolibs', 'template_files') 
-    process_template_h = 'cpp_process_h.inc'
-    process_template_cc = 'cpp_process_cc.inc'
-    process_class_template = 'cpp_process_class.inc'
+    process_template_h = 'gpu/process_h.inc'
+    process_template_cc = 'gpu/process_cc.inc'
+    process_class_template = 'gpu/process_class.inc'
     process_definition_template = 'gpu/process_function_definitions.inc'
     process_wavefunction_template = 'cpp_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
     single_process_template = 'gpu/process_matrix.inc'
 
+
+    def generate_process_files(self):
+        
+        super(OneProcessExporterGPU, self).generate_process_files()
+
+        self.edit_check_sa()
+        
+    def edit_check_sa(self):
+        
+        template = open(pjoin(self.template_path,'gpu','check_sa.cu'),'r').read()
+        replace_dict = {}
+        replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
+        ff = open(pjoin(self.path, 'check_sa.cu'),'w')
+        ff.write(template % replace_dict)
+        ff.close()
+
+        
+       # misc.sprint(me, path)
+
+    def get_process_function_definitions(self, write=True):
+        """The complete Pythia 8 class definition for the process"""
+
+        replace_dict = super(OneProcessExporterGPU,self).get_process_function_definitions(write=False)
+
+
+        replace_dict['ncouplings'] = len(self.couplings2order)
+        replace_dict['nparams'] = len(self.params2order)
+        replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncouplings']
+        replace_dict['coupling_list'] = ' '
+
+        misc.sprint(self.__dict__.keys(), type(self))
+        misc.sprint(self.couplings2order)
+        misc.sprint(self.params2order)
+        coupling = [''] * len(self.couplings2order)
+        params = [''] * len(self.params2order)
+        for coup, pos in self.couplings2order.items():
+            coupling[pos] = coup
+        coup_str = "static thrust::complex<double> tIPC[%s] = {pars->%s};\n"\
+            %(len(self.couplings2order), ',pars->'.join(coupling))
+        for para, pos in self.params2order.items():
+            params[pos] = para            
+        param_str = "static double tIPD[%s] = {pars->%s};\n"\
+            %(len(self.params2order), ',pars->'.join(params))            
+        
+        
+        replace_dict['assign_coupling'] = coup_str + param_str
+        replace_dict['all_helicities'] = self.get_helicity_matrix(self.matrix_elements[0])
+        replace_dict['all_helicities'] = replace_dict['all_helicities'] .replace("helicities", "tHel")
+        
+        file = self.read_template_file(self.process_definition_template) %\
+               replace_dict
+
+        return file
+
     def get_process_class_definitions(self, write=True):
         
         replace_dict = super(OneProcessExporterGPU,self).get_process_class_definitions(write=False)
 
+        replace_dict['nwavefuncs'] = replace_dict['wfct_size']
+        replace_dict['namp'] = len(self.amplitudes.get_all_amplitudes())
+        
+        replace_dict['sizew'] = self.matrix_elements[0].get_number_of_wavefunctions()
+        replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
+        replace_dict['ncomb'] = len([x for x in self.matrix_elements[0].get_helicity_matrix()])
+        
         replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
                           __device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt,
@@ -1430,7 +1476,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             return file
         else:
             return replace_dict
-        
+    
     def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
@@ -1446,7 +1492,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                     self.matrix_elements[0])
             logger.debug("only one Matrix-element supported?")
-
+            self.couplings2order = self.helas_call_writer.couplings2order
+            self.params2order = self.helas_call_writer.params2order
+            misc.sprint(type(self))
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
             logger.debug("No spin2/3/2 supported?")
             ret_lines.append("thrust::complex<double> sw[%s][6];" %
@@ -2256,15 +2304,19 @@ class ProcessExporterCPP(VirtualExporter):
                 for f in self.from_template[key]:
                     cp(f, key)
 
-            # Copy src Makefile
-            makefile = self.read_template_file('Makefile_sa_cpp_src') % \
-                           {'model': self.get_model_name(model.get('name'))}
-            open(os.path.join('src', 'Makefile'), 'w').write(makefile)
+            if self.template_src_make:
+                # Copy src Makefile
+                misc.sprint(self.template_src_make)
+                misc.sprint(self.read_template_file(self.template_src_make))
+                makefile = self.read_template_file(self.template_src_make) % \
+                               {'model': self.get_model_name(model.get('name'))}
+                open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
-            # Copy SubProcesses Makefile
-            makefile = self.read_template_file('Makefile_sa_cpp_sp') % \
-                                    {'model': self.get_model_name(model.get('name'))}
-            open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
+            if self.template_Sub_make:
+                # Copy SubProcesses Makefile
+                makefile = self.read_template_file(self.template_Sub_make) % \
+                                        {'model': self.get_model_name(model.get('name'))}
+                open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
     #===========================================================================
     # Helper functions
@@ -2323,7 +2375,8 @@ class ProcessExporterCPP(VirtualExporter):
             # Create the process .h and .cc files
             process_exporter_cpp.generate_process_files()
             for file in self.to_link_in_P:
-                ln('../%s' % file)    
+                ln('../%s' % file) 
+        misc.sprint(self.to_link_in_P, type(self))  
         return
 
     @staticmethod
@@ -2544,14 +2597,13 @@ class ProcessExporterGPU(ProcessExporterCPP):
     oneprocessclass = OneProcessExporterGPU
     s= _file_path + 'iolibs/template_files/'
     from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc'],
-                     'SubProcesses': [s+'check_sa.cpp']}
-    to_link_in_P = ['check_sa.cpp', 'Makefile']
-    template_src_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_src')
-    template_Sub_make = template_src_make
+                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile']}
+    to_link_in_P = ['Makefile', 'timer.h']
+
+    template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')
+    template_Sub_make = None
     create_model_class =  UFOModelConverterGPU
     
-
-
 
 #===============================================================================
 # UFOModelConverterPythia8

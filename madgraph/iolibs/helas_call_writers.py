@@ -1713,9 +1713,12 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
     def format_coupling(self, call):
         """Format the coupling so any minus signs are put in front"""
 
-
+        misc.sprint(self.__dict__.keys())
+        model = self.get('model')
+        misc.sprint(type(model), model.__dict__.keys() )
         if not hasattr(self, 'couplings2order'):
             self.couplings2order = {}
+            self.params2order = {}
             
         for coup in re.findall(self.findcoupling, call):
             misc.sprint(coup)
@@ -1726,10 +1729,23 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             if coup.startswith('-'):
                 sign = '-'
                 coup = coup[1:]
-            if coup not in self.couplings2order:
-                self.couplings2order[coup] = len(self.couplings2order)
+            
+            try:
+                param = model.get_parameter(coup)
+            except KeyError:
+                param = False
+            
+            misc.sprint(param)
+            if param:   
+                alias = self.params2order
+                name = "cIPD"
+            else: 
+                alias = self.couplings2order
+                name = "cIPC"
+            if coup not in alias:
+                alias[coup] = len(alias)
             call = call.replace('pars->%s%s' % (sign, coup), 
-                                    '%scIPC[%s]' % (sign, self.couplings2order[coup]))
+                                    '%s%s[%s]' % (sign, name, alias[coup]))
 
         misc.sprint(call)
         return call
