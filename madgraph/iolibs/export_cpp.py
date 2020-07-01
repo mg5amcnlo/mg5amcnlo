@@ -1383,7 +1383,28 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ff.write(template % replace_dict)
         ff.close()
 
-        
+        def get_initProc_lines(self, matrix_element, color_amplitudes):
+        """Get initProc_lines for function definition for Pythia 8 .cc file"""
+
+        initProc_lines = []
+
+        initProc_lines.append("// Set external particle masses for this matrix element")
+
+        for part in matrix_element.get_external_wavefunctions():
+            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
+        #for i, colamp in enumerate(color_amplitudes):
+        #    initProc_lines.append("jamp2[%d] = new double[%d];" % \
+        #                          (i, len(colamp)))
+
+        return "\n".join(initProc_lines)
+
+    def get_reset_jamp_lines(self, color_amplitudes):
+        """Get lines to reset jamps"""
+
+        ret_lines = ""
+        return ret_lines
+    
+    
        # misc.sprint(me, path)
 
     def get_process_function_definitions(self, write=True):
