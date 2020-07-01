@@ -200,18 +200,20 @@ class CmdExtended(cmd.Cmd):
                             info['date'])
 
         if os.path.exists(pjoin(MG5DIR, '.bzr')):
-            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrname,_ = proc.communicate()
-            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrversion,_ = proc.communicate() 
-            bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
-            len_name = len(bzrname)
-            len_version = len(bzrversion)            
-            info_line += "#*         BZR %s %s %s         *\n" % \
+            try:
+                proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                bzrname,_ = proc.communicate()
+                proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                bzrversion,_ = proc.communicate() 
+                bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
+                len_name = len(bzrname)
+                len_version = len(bzrversion)            
+                info_line += "#*         BZR %s %s %s         *\n" % \
                             (bzrname,
                             (34 - len_name - len_version) * ' ',
                             bzrversion)
-
+            except:
+                pass
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
         self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
