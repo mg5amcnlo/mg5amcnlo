@@ -72,6 +72,7 @@ class UFOModelConverterCPP(object):
     output_name = 'C++ Standalone'
     namespace = 'MG5'
     aloha_writer = 'CPP'
+    cc_ext = 'cc'
 
     # Dictionary from Python type to C++ type
     type_dict = {"real": "double",
@@ -364,7 +365,7 @@ class UFOModelConverterCPP(object):
         model_h_file = os.path.join(self.dir_path, self.include_dir,
                                     'HelAmps_%s.h' % self.model_name)
         model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'HelAmps_%s.cc' % self.model_name)
+                                     'HelAmps_%s.%s' % (self.model_name, self.cc_ext))
 
         replace_dict = {}
 
@@ -488,7 +489,7 @@ class UFOModelConverterCPP(object):
 class UFOModelConverterGPU(UFOModelConverterCPP):
     
     aloha_writer = 'cudac'
-    
+    cc_ext = 'cu'
         # Template files to use
     #include_dir = '.'
     #c_file_dir = '.'
@@ -540,6 +541,7 @@ class OneProcessExporterCPP(object):
     process_wavefunction_template = 'cpp_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'cpp_process_sigmaKin_function.inc'
     single_process_template = 'cpp_process_matrix.inc'
+    cc_ext = 'cc'
 
     class ProcessExporterCPPError(Exception):
         pass
@@ -685,7 +687,7 @@ class OneProcessExporterCPP(object):
         if not os.path.isdir(os.path.join(self.path, self.process_dir)):
             os.makedirs(os.path.join(self.path, self.process_dir))
         filename = os.path.join(self.path, self.process_dir,
-                                '%s.cc' % self.process_class)
+                                '%s.%s' % (self.process_class, self.cc_ext)) 
         self.write_process_cc_file(writers.CPPWriter(filename))
 
         logger.info('Created files %(process)s.h and %(process)s.cc in' % \
@@ -1364,7 +1366,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     process_wavefunction_template = 'cpp_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
     single_process_template = 'gpu/process_matrix.inc'
-
+    cc_ext = 'cu'
 
     def generate_process_files(self):
         
