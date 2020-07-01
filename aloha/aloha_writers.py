@@ -1622,6 +1622,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             if coup_name == 'COUP':
                 mydict = {'num': self.write_obj(numerator.get_rep([0]))}
                 for c in ['coup', 'vertex']:
+                    misc.sprint(self.type2def['pointer_%s' %c], c)
                     if self.type2def['pointer_%s' %c] in ['*']:
                         mydict['pre_%s' %c] = '(*'
                         mydict['post_%s' %c] = ')'
@@ -1633,7 +1634,16 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out.write(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
                             mydict)
             else:
-                out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict= {}
+                if self.type2def['pointer_vertex'] in ['*']:
+                    mydict['pre_vertex'] = '(*'
+                    mydict['post_vertex'] = ')'
+                else:
+                    mydict['pre_vertex'] = ''
+                    mydict['post_vertex'] = ''                 
+                mydict['data'] = self.write_obj(numerator.get_rep([0]))
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(data)s;\n' % 
+                          mydict)
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
