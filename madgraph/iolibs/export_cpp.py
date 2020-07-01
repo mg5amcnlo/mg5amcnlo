@@ -1509,7 +1509,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                 "__device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt, double &matrix){"
                 )
 
-            ret_lines.append("thrust::complex<double> amp[%s])" % len(self.matrix_elements[0].get_all_amplitudes()))
+            ret_lines.append("thrust::complex<double> amp[%s];" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("// Calculate wavefunctions for all processes")
             misc.sprint(type(self.helas_call_writer))
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\

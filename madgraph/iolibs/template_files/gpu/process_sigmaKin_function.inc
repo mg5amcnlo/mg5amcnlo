@@ -23,7 +23,7 @@ double t[%(nproc)i];
 // Helicities for the process
 //%(helicity_matrix)s
 // Denominators: spins, colors and identical particles
-const int denominators[nprocesses] = {%(den_factors)s};
+const int denominators[%(nproc)i] = {%(den_factors)s};
 
 
 // Reset the matrix elements

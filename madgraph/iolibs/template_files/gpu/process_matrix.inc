@@ -18,7 +18,7 @@ for(i=0;i < ncolor; i++){
   ztemp = 0.;
   for(j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  matrix = matrix+(ztemp*conj(jamp[i])).real()/denom[i];
 }
 
 // Store the leading color flows for choice of color
