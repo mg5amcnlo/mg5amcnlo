@@ -38,8 +38,7 @@ for(int i = 0; i < nprocesses; i++){
 
 
 for (int ihel = 0; ihel < ncomb; ihel++) {
-    calculate_wavefunctions(ihel, dps, dpt, amp);
-     %(get_matrix_t_lines)s
+    calculate_wavefunctions(ihel, dps, dpt,  matrix_element[0]);
 }
 
 
