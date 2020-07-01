@@ -259,7 +259,7 @@ __device__ void sxxxxx(double p[4], int nss, thrust::complex<double> sc[3]) {
 }
 
 __device__ void oxxxxx(double p[4], double fmass, int nhel, int nsf,
-                       thrust::complex<double> *fo /* [6] */) {
+                       thrust::complex<double> fo[6]) {
   thrust::complex<double> chi[2];
   double sf[2], sfomeg[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int nh, ip, im;
