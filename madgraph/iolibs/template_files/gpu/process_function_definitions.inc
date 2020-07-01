@@ -58,13 +58,6 @@ __global__ void sigmaKin(cudaPitchedPtr tp, double *meDevPtr, size_t mePitch) {
     %(sigmaKin_lines)s
 }
 
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence. 
-
-double CPPProcess::sigmaHat() {  
-    %(sigmaHat_lines)s
-}
-
 //==========================================================================
 // Private class member functions
 

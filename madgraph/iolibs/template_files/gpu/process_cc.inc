@@ -10,5 +10,6 @@
 #include <iostream>
 #include <thrust/complex.h>
 
+using namespace MG5_%(model_name)s;
 
 %(process_function_definitions)s
