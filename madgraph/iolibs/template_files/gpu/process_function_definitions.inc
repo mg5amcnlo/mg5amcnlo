@@ -2,12 +2,17 @@
 // Class member functions for calculating the matrix elements for
 %(process_lines)s
 
-__constant__ int cHel[%(ncomb)i][%(nexternal)i];
-__constant__ double cMME[%(nexternal)i]; // ask Stefan what this is
+extern __constant__ int cHel[%(ncomb)i][%(nexternal)i];
+extern __constant__ double cmME[%(nexternal)i]; 
 //extern __constant__ int cPerm[4];
 // %(coupling_list)s
-__constant__ thrust::complex<double> cIPC[%(ncouplings)i]; // coupling ?
-__constant__ double cIPD[%(nparams)i]; 
+extern __constant__ thrust::complex<double> cIPC[%(ncouplings)i]; // coupling ?
+extern __constant__ double cIPD[%(nparams)i]; 
+
+
+// Evaluate |M|^2 for each subprocess
+
+%(all_sigmaKin)s
 
 
 CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
@@ -15,7 +20,6 @@ CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
     : m_numiterations(numiterations), gpu_nblocks(gpublocks),
       gpu_nthreads(gputhreads), dim(gpu_nblocks * gpu_nthreads), mME(%(nexternal)d, 0.00) {
 
-  static double tmpmME[%(nexternal)d];
 
   // Helicities for the process - nodim
   %(all_helicities)s
@@ -62,6 +66,3 @@ __global__ void sigmaKin(cudaPitchedPtr tp, double *meDevPtr, size_t mePitch) {
 // Private class member functions
 
 //--------------------------------------------------------------------------
-// Evaluate |M|^2 for each subprocess
-
-%(all_sigmaKin)s

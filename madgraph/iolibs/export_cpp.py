@@ -1030,7 +1030,7 @@ class OneProcessExporterCPP(object):
                 den_factors.extend(den_factors)
             replace_dict['den_factors'] = ",".join(den_factors)
             replace_dict['get_matrix_t_lines'] = "\n".join(
-                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
+                     ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
                       me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
@@ -1459,7 +1459,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                                         thrust::complex<double> amp[%(namp)d]
 
 
-                            thrust::complex<double> sw[%(nwfct)d][%(sizew)d];
+                            thrust::complex<double> w[%(nwfct)d][%(sizew)d];
                             """ % \
                           {'nwfct':len(self.wavefunctions),
                           'sizew': replace_dict['wfct_size'],
@@ -1520,7 +1520,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             misc.sprint(type(self))
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
             logger.debug("No spin2/3/2 supported?")
-            ret_lines.append("thrust::complex<double> sw[%s][6];" %
+            ret_lines.append("thrust::complex<double> w[%s][6];" %
                              (nwavefuncs)
                              )
             ret_lines += helas_calls
