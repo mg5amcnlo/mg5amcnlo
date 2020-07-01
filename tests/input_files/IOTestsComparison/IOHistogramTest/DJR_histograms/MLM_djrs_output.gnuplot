@@ -121,9 +121,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -195,9 +195,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -269,9 +269,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -343,9 +343,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\

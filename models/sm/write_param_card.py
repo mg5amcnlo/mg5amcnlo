@@ -1,11 +1,6 @@
 
-from __future__ import absolute_import
-from __future__ import print_function
-from six.moves import range
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
-
-from function_library import *
 
 class ParamCardWriter(object):
     
@@ -122,7 +117,10 @@ class ParamCardWriter(object):
         import cmath
         from parameters import all_parameters
         for parameter in all_parameters:
-            exec("%s = %s" % (parameter.name, parameter.value))
+            try:
+                exec("%s = %s" % (parameter.name, parameter.value))
+            except Exception:
+                pass
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"

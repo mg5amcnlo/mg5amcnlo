@@ -1341,7 +1341,7 @@ class ConfigFile(dict):
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
-        if (six.PY2 and not isinstance(value, (str,unicode)) or (six.PY3 and  not isinstance(value, str))):
+        if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
@@ -3125,6 +3125,8 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
+        self.add_param('hard_survey', 0, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
+        self.add_param("second_refine_treshold", 0.9, hidden=True, include=False, comment="set a treshold to bypass the use of a second refine. if the ratio of cross-section after survey by the one of the first refine is above the treshold, the  second refine will not be done.")
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
@@ -3228,8 +3230,6 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-
-
     
         # check validity of the pdf set
         if self['pdlabel'] == 'lhapdf':
@@ -3243,6 +3243,18 @@ class RunCardLO(RunCard):
         if self['lpp2'] not in [1,2]:
             if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")   
+
+        # check if lpp = 
+        for i in [1,2]:
+            if self['lpp%s' % i ] == 3 and self['dsqrt_q2fact%s'%i] > 4:
+                raise InvalidRunCard( "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
+                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)")
+            if self['lpp%s' % i ] == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                raise InvalidRunCard("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of th Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+        
+        # if both lpp1/2 are on PA mode -> force fixed factorization scale
+        if self['lpp1'] in [2, 3] and self['lpp2'] in [2, 3] and not self['fixed_fac_scale']:
+            raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
 
 
     def update_system_parameter_for_include(self):
@@ -4088,7 +4100,7 @@ class RunCardNLO(RunCard):
         super(RunCardNLO, self).check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
-        if self['lpp1']!=1 or self['lpp2']!=1:
+        if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
             

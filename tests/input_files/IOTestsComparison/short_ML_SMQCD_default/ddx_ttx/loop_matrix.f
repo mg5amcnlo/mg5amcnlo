@@ -700,12 +700,14 @@ C     We chose to use the born evaluation for the reference
 
       VALIDH=-1
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODHEL(H))))
+     $    THEN
 
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
 
@@ -789,11 +791,11 @@ C         Counter-term amplitude(s) for loop diagram number 11
           CALL R2_GG_1_R2_GG_2_0(W(1,5,H),W(1,6,H),R2_GGG_1,R2_GGG_2
      $     ,AMPL(1,27))
 C         Amplitude(s) for UVCT diagram with ID 13
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(1,28))
-          AMPL(1,28)=AMPL(1,28)*(2.0D0*UVWFCT_T_0)
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(2,28))
+          AMPL(2,28)=AMPL(2,28)*(2.0D0*UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 14
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(2,29))
-          AMPL(2,29)=AMPL(2,29)*(2.0D0*UVWFCT_B_0_1EPS)
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(1,29))
+          AMPL(1,29)=AMPL(1,29)*(2.0D0*UVWFCT_T_0)
  300      CONTINUE
 
 
@@ -950,8 +952,9 @@ C         SET THE LOOP FILTER
             ENDDO
           ENDIF
         ELSEIF (.NOT.HELDOUBLECHECKED)THEN
-          IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ML5_0_ISZERO(ABS(ANS(
-     $1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+          IF ((.NOT.GOODHEL(HELPICKED))
+     $     .AND.(.NOT.ML5_0_ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3))
+     $     ,REF/DBLE(NCOMB),-1))) THEN
             WRITE(*,*) '##W15 Helicity filter could not be'
      $       //' successfully double checked.'
             WRITE(*,*) '##One reason for this is that you have changed'
@@ -1042,16 +1045,18 @@ C        METHODS
 
         CTMODE=BASIC_CT_MODE
 
-        IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
+        IF(.NOT.EVAL_DONE(3).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.1)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
           EVAL_DONE(3)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,1)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,1)
           GOTO 200
         ENDIF
 
-        IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
+        IF(.NOT.EVAL_DONE(4).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.2)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
           EVAL_DONE(4)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,2)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,2)

@@ -996,7 +996,7 @@ class CondorCluster(Cluster):
         #open('submit_condor','w').write(text % dico)
         a = subprocess.Popen(['condor_submit'], stdout=subprocess.PIPE,
                              stdin=subprocess.PIPE)
-        output, _ = a.communicate((text % dico).encode)
+        output, _ = a.communicate((text % dico).encode())
         #output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).

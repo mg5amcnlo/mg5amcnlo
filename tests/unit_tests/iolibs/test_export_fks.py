@@ -49,7 +49,7 @@ class TestFKSOutput(unittest.TestCase):
     identical results
     """
 
-    @test_manager.bypass_for_py3
+#    @test_manager.bypass_for_py3
     def test_w_nlo_gen(self):
         """check that the new (memory and cpu efficient) and old generation
         mode at NLO give the same results for p p > w [QCD]
@@ -97,7 +97,7 @@ class TestFKSOutput(unittest.TestCase):
             for old_l, new_l in zip(open(oldf), open(newf)):
                 self.assertEqual(old_l, new_l)
 
-    @test_manager.bypass_for_py3
+#    @test_manager.bypass_for_py3
     def test_wj_loonly_gen(self):
         """check that the new (memory and cpu efficient) and old generation
         mode at NLO give the same results for p p > w j [LOonly=QCD]

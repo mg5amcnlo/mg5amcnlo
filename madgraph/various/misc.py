@@ -496,7 +496,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
-                error_text += "Xcode3 contains those required programs"
+                error_text += "Xcode contains gmake. For gfortran we advise: http://hpc.sourceforge.net/"
             raise MadGraph5Error(error_text)
 
     if p.returncode:
@@ -553,7 +553,7 @@ def get_gfortran_version(compiler='gfortran'):
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
         output = output.decode("utf-8")
-        version_finder=re.compile(r"(?P<version>(\d.)*\d)")
+        version_finder=re.compile(r"(?P<version>\d[\d.]*)")
         version = version_finder.search(output).group('version')
         return version
     except Exception as error:
@@ -1789,7 +1789,8 @@ class EasterEgg(object):
                         import random
                         msg = choices[random.randint(0,len(choices)-2)]
                     EasterEgg.message_aprilfirst[msgtype].remove(msg)
-                    
+                else:
+                    return
             elif msgtype=='loading' and date in self.special_banner:
                 self.change_banner(date)
                 return
@@ -2085,7 +2086,9 @@ def import_python_lhapdf(lhapdfconfig):
                 logger.warning("Failed to access python version of LHAPDF: "\
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable and the"\
-                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x)."\
+                                   "The required LD_LIBRARY_PATH is "+ lhapdf_libdir 
+                                   )
         
     if use_lhapdf:
         python_lhapdf = lhapdf
@@ -2160,6 +2163,63 @@ def dict_cmp(A, B, level=1):
         return (a > b) - (a < b)
         #return cmp(A[adiff], B[bdiff])
 
+if six.PY3:
+    import io
+    file = io.FileIO
+        
+class BackRead(file):
+    """read a file returning the lines in reverse order for each call of readline()
+This actually just reads blocks (4096 bytes by default) of data from the end of
+the file and returns last line in an internal buffer."""
+
+
+    def readline(self):
+        """ readline in a backward way """
+
+        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
+          self.blkcount = self.blkcount + 1
+          line = self.data[0]
+          try:
+            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+            self.data = (self.read(self.blksize).decode() + line).split('\n')
+          except IOError:  # can't seek before the beginning of the file
+            self.seek(0)
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode() + line
+            self.data = data.split('\n')
+
+        if len(self.data) == 0:
+          return ""
+
+        line = self.data.pop()
+        return line + '\n'
+
+    def __init__(self, filepos, blksize=4096):
+        """initialize the internal structures"""
+
+        # get the file size
+        self.size = os.stat(filepos)[6]
+        # how big of a block to read from the file...
+        self.blksize = blksize
+        # how many blocks we've read
+        self.blkcount = 1
+        file.__init__(self, filepos, 'rb')
+        # if the file is smaller than the blocksize, read a block,
+        # otherwise, read the whole thing...
+        if self.size > self.blksize:
+          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+        self.data = self.read(self.blksize).decode().split('\n')
+        # strip the last item if it's empty...  a byproduct of the last line having
+        # a newline at the end of it
+        if not self.data[-1]:
+          self.data.pop()
+
+    def next(self):
+        line = self.readline()
+        if line:
+            return line
+        else:
+            raise StopIteration
+        
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
 #oldfile = __builtin__.file

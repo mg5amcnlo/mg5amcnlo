@@ -2612,6 +2612,8 @@ class ControlSwitch(SmartQuestion):
         elif line in 'auto':
             self.switch['dynamical'] = True
             return super(ControlSwitch, self).default(line)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('unknow command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('unknow command: %s' % line)
         else:
@@ -2627,6 +2629,8 @@ class ControlSwitch(SmartQuestion):
             getattr(self, 'ans_%s' % base)(value)
         elif base in self.switch:
             self.set_switch(base, value)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('Not valid command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('Not valid command: %s' % line)                
         else:
@@ -2669,11 +2673,13 @@ class ControlSwitch(SmartQuestion):
             out = super(ControlSwitch,self).postcmd(stop, line)
         except AttributeError:
             pass
-        
+        if out:
+            return out
+
         line = line.strip()
         if ';' in line:
             line= [l for l in line.split(';') if l][-1] 
-        if line in self.quit_on:
+        if line in self.quit_on or self.value in self.quit_on:
             return True
         if self.value != 'reask':
             self.create_question()
@@ -2808,7 +2814,7 @@ class ControlSwitch(SmartQuestion):
                          for k in self.inconsistent_details.values() for c in k
                          if c['changed_key'] != key] 
 
-        to_check.sort(lambda x, y: -1 if self.last_changed.index(x[0])>self.last_changed.index(y[0]) else 1)
+        to_check.sort(key=lambda x: self.last_changed.index(x[0]))
 
         # validate tmp_switch.
         to_check = [(key, value)] + to_check

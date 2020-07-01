@@ -178,8 +178,8 @@ C      only three external particles.
             CALL ML5_0_MATRIX(P ,NHEL(1,IHEL),JC(1), T)
             BUFF=0D0
             DO I=1,NSQAMPSO
-              IF(POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_BORN_HEL_SELECTED
-     $(IHEL)) THEN
+              IF(POLARIZATIONS(0,0).EQ.
+     $         -1.OR.ML5_0_IS_BORN_HEL_SELECTED(IHEL)) THEN
                 ANS(I)=ANS(I)+T(I)
               ENDIF
               BUFF=BUFF+T(I)
@@ -475,8 +475,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       ML5_0_SQSOINDEX=ML5_0_SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -570,8 +570,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_SQUARED_ORDERS_FO'
-     $ //'R_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -610,8 +610,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_ORDERS_FOR_AMPSOI'
-     $ //'NDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_GET_ORDERS_FOR_AMPSOINDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
@@ -653,8 +653,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_SOINDEX_FOR_AMPORDERS'
-     $ //''
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_SOINDEX_FOR_AMPORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 
