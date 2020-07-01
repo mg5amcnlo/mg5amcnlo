@@ -257,6 +257,7 @@ c
 c     Need to start from scratch. This is clunky but I'll just
 c     remove the grid, so we are clean
 c
+      goto 200
       write(*,*) "Trying w/ fresh grid"
       open(unit=25,file='ftn25',status='unknown',err=102)
       write(25,*) ' '
@@ -329,7 +330,7 @@ c
 c
 c     All done
 c
-      open(unit=66,file='results.dat',status='unknown')
+200   open(unit=66,file='results.dat',status='unknown')
       i=1
       do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
          i=i+1
