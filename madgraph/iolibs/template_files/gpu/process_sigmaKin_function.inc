@@ -19,7 +19,7 @@ const int ncomb = %(ncomb)d;
 //static int igood[ncomb];
 static int jhel;
 std::complex<double> **wfs;
-double t[nprocesses];
+double t[%(nproc)i];
 // Helicities for the process
 //%(helicity_matrix)s
 // Denominators: spins, colors and identical particles

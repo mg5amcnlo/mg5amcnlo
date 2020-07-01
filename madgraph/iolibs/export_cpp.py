@@ -1383,7 +1383,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ff.write(template % replace_dict)
         ff.close()
 
-        def get_initProc_lines(self, matrix_element, color_amplitudes):
+    def get_initProc_lines(self, matrix_element, color_amplitudes):
         """Get initProc_lines for function definition for Pythia 8 .cc file"""
 
         initProc_lines = []
