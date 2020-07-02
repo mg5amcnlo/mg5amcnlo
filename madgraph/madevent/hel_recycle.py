@@ -29,9 +29,14 @@ class DAG:
     def add_branch(self, node_i, node_f):
         self.graph[node_i].append(node_f)
 
-    def external_nodes(self):
+    def external_wavs(self):
         exts = [key for key, value in self.graph.items()
                 if key.nature == 'external']
+        return exts
+
+    def internal_wavs(self):
+        exts = [key for key, value in self.graph.items()
+                if key.nature == 'internal']
         return exts
 
     def dependencies(self, old_name):
@@ -123,7 +128,7 @@ class MathsObject:
 
     @staticmethod
     def good_helicity(wavs, graph):
-        exts = graph.external_nodes()
+        exts = graph.external_wavs()
         exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
         this_wav_comb = [comb for comb in External.good_wav_combs
                          if exts_on_path.issubset(set(comb))]
@@ -153,7 +158,8 @@ class MathsObject:
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
         this_obj.set_name(num, diag_num)
         graph.add_node(this_obj)
-        [graph.add_branch(w, this_obj) for w in wavs]
+        for w in wavs:
+            graph.add_branch(w, this_obj)
         return this_obj
 
 
@@ -188,6 +194,7 @@ class External(MathsObject):
         # we can set names
         old_args = get_arguments(line)
         old_name = old_args[-1]
+        graph.kill_old(old_name)
 
         new_wavfuncs = []
 
@@ -201,7 +208,7 @@ class External(MathsObject):
             this_args[2] = hel
 
             this_wavfunc = External(this_args, old_name)
-            this_wavfunc.set_name(len(graph.external_nodes())+1)
+            this_wavfunc.set_name(len(graph.external_wavs()) + len(graph.internal_wavs()) +1)
 
             graph.add_node(this_wavfunc)
             new_wavfuncs.append(this_wavfunc)
@@ -212,15 +219,15 @@ class External(MathsObject):
 
     @classmethod
     def get_gwc(cls):
-        rows = len(cls.good_hel)
-        columns = len(cls.good_hel[0])
+        num_combs = len(cls.good_hel)
+        num_legs = len(cls.wavs_same_leg)
         # TODO: is it better to have list of sets?
-        wav_comb = [[] for x in range(rows)]
+        wav_comb = [[] for x in range(num_combs)]
         # TODO: CHECK SHAPE OF HEL MAKES SENSE AND SHAPE OF SPINOR_COMB IS SAME
-        for i, j in product(range(rows), range(columns)):
-            for wav in cls.wavs_same_leg[j]:
-                if cls.good_hel[i][j] == wav.hel:
-                    wav_comb[i].append(wav)
+        for comb, leg in product(range(num_combs), range(num_legs)):
+            for wav in cls.wavs_same_leg[leg]:
+                if cls.good_hel[comb][leg] == wav.hel:
+                    wav_comb[comb].append(wav)
         cls.good_wav_combs = wav_comb
 
     @staticmethod
@@ -308,13 +315,14 @@ class Amplitude(MathsObject):
     def get_number(cls, *args):
         wavs, graph = args
         amp_num = -1
-        exts = graph.external_nodes()
+        exts = graph.external_wavs()
         exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
         for i in range(len(External.good_wav_combs)):
             if set(External.good_wav_combs[i]) == set(exts_on_path):
                 # Offset because Fortran counts from 1
                 amp_num = i + 1
         if amp_num < 1:
+            set_trace()
             print('Failed to find amp_num')
             exit(1)
         if cls.max_amp_num < amp_num:
@@ -390,7 +398,7 @@ class HelicityRecycler():
         # Now check for internal
         # Wont find a internal when no externals have been found...
         # ... I assume
-        if not self.dag.external_nodes():
+        if not self.dag.external_wavs():
             return None
 
         # Search for internals by looking for calls to the externals
@@ -512,9 +520,10 @@ class HelicityRecycler():
             num_exts = len(External.good_hel[0])
         except IndexError:
             return
+        if num_found <= num_exts + 1:
+            External.get_gwc()
         if num_found == num_exts + 1:
             self.got_gwc=True
-            External.get_gwc()
 
     def get_good_hel(self, line):
         if 'DATA (NHEL' in line:
