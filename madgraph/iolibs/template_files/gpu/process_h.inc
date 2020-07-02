@@ -15,6 +15,7 @@
 #include <thrust/complex.h>
 
 
+__global__ void sigmaKin(cudaPitchedPtr tp, double *meDevPtr, size_t mePitch);
 
 %(process_class_definitions)s
 

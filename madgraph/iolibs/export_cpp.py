@@ -1379,6 +1379,8 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         template = open(pjoin(self.template_path,'gpu','check_sa.cu'),'r').read()
         replace_dict = {}
         replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
+        replace_dict['model'] = self.model_name
+
         ff = open(pjoin(self.path, 'check_sa.cu'),'w')
         ff.write(template % replace_dict)
         ff.close()

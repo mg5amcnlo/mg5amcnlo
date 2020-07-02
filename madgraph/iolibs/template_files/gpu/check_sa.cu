@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
     // Evaluate matrix element
     // later process.sigmaKin(ncomb, goodhel, ntry, sum_hel, ngood, igood,
     // jhel);
-    gMG5_sm::sigmaKin<<<gpublocks, gputhreads>>>(devPitchedPtr, meDevPtr,
+    sigmaKin<<<gpublocks, gputhreads>>>(devPitchedPtr, meDevPtr,
                                                  mePitch);
 
     gpuErrchk3(cudaMemcpy2D(meHostPtr, sizeof(double), meDevPtr, mePitch,
