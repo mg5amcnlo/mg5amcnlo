@@ -1618,19 +1618,15 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
-            misc.sprint(coup_name)
             if coup_name == 'COUP':
                 mydict = {'num': self.write_obj(numerator.get_rep([0]))}
                 for c in ['coup', 'vertex']:
-                    misc.sprint(self.type2def['pointer_%s' %c], c)
                     if self.type2def['pointer_%s' %c] in ['*']:
                         mydict['pre_%s' %c] = '(*'
                         mydict['post_%s' %c] = ')'
                     else:
                         mydict['pre_%s' %c] = ''
-                        mydict['post_%s'%c] = ''                    
-                misc.sprint(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
-                            mydict)
+                        mydict['post_%s'%c] = ''
                 out.write(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
                             mydict)
             else:

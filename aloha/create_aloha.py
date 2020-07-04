@@ -95,7 +95,6 @@ class AbstractRoutine(object):
         """ write the content of the object """
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
-        misc.sprint(text[0], type(self))
         if combine:
             for grouped in self.combined:
                 if isinstance(text, tuple):
@@ -322,7 +321,6 @@ in presence of majorana particle/flow violation"""
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
                     if spin == 3 and aloha.unitary_gauge == 2:
-                        misc.sprint(spin)
                         lorentz *= complex(0,1) * self.get_custom_propa('1PS', spin, id)
                         continue
                     else:

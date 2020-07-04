@@ -428,7 +428,6 @@ class UFOModelConverterCPP(object):
 
         template_files = []
         for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
-            misc.sprint(filename)
             file = open(filename, 'r')
             template_file_string = ""
             while file:
@@ -676,7 +675,6 @@ class OneProcessExporterCPP(object):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
 
-        misc.sprint(self.path)
         # Create the files
         if not os.path.isdir(os.path.join(self.path, self.include_dir)):
             os.makedirs(os.path.join(self.path, self.include_dir))
@@ -811,7 +809,7 @@ class OneProcessExporterCPP(object):
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = self.nprocesses
         
-        
+
         color_amplitudes = self.matrix_elements[0].get_color_amplitudes()
         # Number of color flows
         replace_dict['ncolor'] = len(color_amplitudes)
@@ -1062,7 +1060,7 @@ class OneProcessExporterCPP(object):
             replace_dict['nproc'] = sum([ 2 if m.get('has_mirror_process') else 1
                                         for m in self.matrix_elements])
             replace_dict['nb_amp'] = len(self.amplitudes.get_all_amplitudes())
-            misc.sprint(replace_dict['nb_amp'])
+
             if write:
                 file = \
                  self.read_template_file(\
@@ -1305,6 +1303,33 @@ class OneProcessExporterCPP(object):
             return "\n".join([denom_string, matrix_string])
 
 
+    @staticmethod
+    def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+        """Returns a nicely formatted string for the coefficients in JAMP lines"""
+    
+        total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
+    
+        if total_coeff == 1:
+            if is_imaginary:
+                return '+std::complex<double>(0,1)*'
+            else:
+                return '+'
+        elif total_coeff == -1:
+            if is_imaginary:
+                return '-std::complex<double>(0,1)*'
+            else:
+                return '-'
+    
+        res_str = '%+i.' % total_coeff.numerator
+    
+        if total_coeff.denominator != 1:
+            # Check if total_coeff is an integer
+            res_str = res_str + '/%i.' % total_coeff.denominator
+    
+        if is_imaginary:
+            res_str = res_str + '*std::complex<double>(0,1)'
+    
+        return res_str + '*'
 
 
 
@@ -1329,14 +1354,15 @@ class OneProcessExporterCPP(object):
                 res = res + '%s(' % coeff(1, global_factor, False, 0)
 
             for (coefficient, amp_number) in coeff_list:
+
                 if common_factor:
-                    res = res + "%samp[%d]" % (coeff(coefficient[0],
+                    res = res + "%samp[%d]" % (self.coeff(coefficient[0],
                                                coefficient[1] / abs(coefficient[1]),
                                                coefficient[2],
                                                coefficient[3]),
                                                amp_number - 1)
                 else:
-                    res = res + "%samp[%d]" % (coeff(coefficient[0],
+                    res = res + "%samp[%d]" % (self.coeff(coefficient[0],
                                                coefficient[1],
                                                coefficient[2],
                                                coefficient[3]),
@@ -1351,6 +1377,7 @@ class OneProcessExporterCPP(object):
 
         return "\n".join(res_list)
     
+coeff = OneProcessExporterCPP.coeff
 
 class OneProcessExporterGPU(OneProcessExporterCPP):
 
@@ -1406,8 +1433,36 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ret_lines = ""
         return ret_lines
     
+
+    @staticmethod
+    def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+        """Returns a nicely formatted string for the coefficients in JAMP lines"""
     
-       # misc.sprint(me, path)
+        total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
+    
+        if total_coeff == 1:
+            if is_imaginary:
+                return '+thrust::complex<double>(0,1)*'
+            else:
+                return '+'
+        elif total_coeff == -1:
+            if is_imaginary:
+                return '-thrust::complex<double>(0,1)*'
+            else:
+                return '-'
+    
+        res_str = '%+i.' % total_coeff.numerator
+    
+        if total_coeff.denominator != 1:
+            # Check if total_coeff is an integer
+            res_str = res_str + '/%i.' % total_coeff.denominator
+    
+        if is_imaginary:
+            res_str = res_str + '*thrust::complex<double>(0,1)'
+    
+        return res_str + '*'
+
+
 
     def get_process_function_definitions(self, write=True):
         """The complete Pythia 8 class definition for the process"""
@@ -1421,9 +1476,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncouplings']
         replace_dict['coupling_list'] = ' '
 
-        misc.sprint(self.__dict__.keys(), type(self))
-        misc.sprint(self.couplings2order)
-        misc.sprint(self.params2order)
         coupling = [''] * len(self.couplings2order)
         params = [''] * len(self.params2order)
         for coup, pos in self.couplings2order.items():
@@ -1469,7 +1521,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                           'namp':len(self.amplitudes)#.get_all_amplitudes())
                           }
 
-        misc.sprint(self.process_class_template)
         if write:
             file = self.read_template_file(self.process_class_template) % replace_dict
             return file
@@ -1514,13 +1565,11 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
             ret_lines.append("thrust::complex<double> amp[%s];" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("// Calculate wavefunctions for all processes")
-            misc.sprint(type(self.helas_call_writer))
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                     self.matrix_elements[0])
             logger.debug("only one Matrix-element supported?")
             self.couplings2order = self.helas_call_writer.couplings2order
             self.params2order = self.helas_call_writer.params2order
-            misc.sprint(type(self))
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
             logger.debug("No spin2/3/2 supported?")
             ret_lines.append("thrust::complex<double> w[%s][6];" %
@@ -2332,8 +2381,6 @@ class ProcessExporterCPP(VirtualExporter):
 
             if self.template_src_make:
                 # Copy src Makefile
-                misc.sprint(self.template_src_make)
-                misc.sprint(self.read_template_file(self.template_src_make))
                 makefile = self.read_template_file(self.template_src_make) % \
                                {'model': self.get_model_name(model.get('name'))}
                 open(os.path.join('src', 'Makefile'), 'w').write(makefile)
@@ -2402,7 +2449,6 @@ class ProcessExporterCPP(VirtualExporter):
             process_exporter_cpp.generate_process_files()
             for file in self.to_link_in_P:
                 ln('../%s' % file) 
-        misc.sprint(self.to_link_in_P, type(self))  
         return
 
     @staticmethod
@@ -2574,33 +2620,6 @@ def get_mg5_info_lines():
                      "#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
 
     return info_lines
-
-def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
-    """Returns a nicely formatted string for the coefficients in JAMP lines"""
-
-    total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
-
-    if total_coeff == 1:
-        if is_imaginary:
-            return '+std::complex<double>(0,1)*'
-        else:
-            return '+'
-    elif total_coeff == -1:
-        if is_imaginary:
-            return '-std::complex<double>(0,1)*'
-        else:
-            return '-'
-
-    res_str = '%+i.' % total_coeff.numerator
-
-    if total_coeff.denominator != 1:
-        # Check if total_coeff is an integer
-        res_str = res_str + '/%i.' % total_coeff.denominator
-
-    if is_imaginary:
-        res_str = res_str + '*std::complex<double>(0,1)'
-
-    return res_str + '*'
 
 
 

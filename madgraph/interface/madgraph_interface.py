@@ -1593,7 +1593,6 @@ This will take effect only in a NEW terminal
     def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
-        misc.sprint(args, self._export_formats)
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         elif args:
