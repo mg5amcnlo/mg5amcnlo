@@ -3,7 +3,7 @@
 // Local variables
 
   // const int ngraphs = 2;
-  const int ncolor = 1;
+  const int ncolor =  %(ncolor)d;
   thrust::complex<double> ztemp;
   thrust::complex<double> jamp[ncolor];
   // The color matrix;

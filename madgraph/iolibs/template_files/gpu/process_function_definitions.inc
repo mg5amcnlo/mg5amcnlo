@@ -2,12 +2,12 @@
 // Class member functions for calculating the matrix elements for
 %(process_lines)s
 
-extern __constant__ int cHel[%(ncomb)i][%(nexternal)i];
-extern __constant__ double cmME[%(nexternal)i]; 
+__constant__ int cHel[%(ncomb)i][%(nexternal)i];
+__constant__ double cmME[%(nexternal)i]; 
 //extern __constant__ int cPerm[4];
 // %(coupling_list)s
-extern __constant__ thrust::complex<double> cIPC[%(ncouplings)i]; // coupling ?
-extern __constant__ double cIPD[%(nparams)i]; 
+__constant__ double cIPC[%(ncouplingstimes2)i]; // coupling ?
+__constant__ double cIPD[%(nparams)i]; 
 
 
 // Evaluate |M|^2 for each subprocess

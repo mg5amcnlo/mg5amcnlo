@@ -1416,6 +1416,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
 
         replace_dict['ncouplings'] = len(self.couplings2order)
+        replace_dict['ncouplingstimes2'] = 2 *  replace_dict['ncouplings']
         replace_dict['nparams'] = len(self.params2order)
         replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncouplings']
         replace_dict['coupling_list'] = ' '
