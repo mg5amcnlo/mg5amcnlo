@@ -2,10 +2,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 import pickle
 import subprocess
+import sys
 
 def combine_plots_HwU(jobs,out,normalisation=None):
     """Sums all the plots in the HwU format."""
-    command =  []
+    command =  [sys.executable]
     command.append('bin/internal/histograms.py')
     for job in jobs:
         if job['dirname'].endswith('.HwU'):

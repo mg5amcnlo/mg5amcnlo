@@ -1,71 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.0.2.py3
-     include up to 2.7.2
-     MZ: better handling of zeros in color-linked borns 
-     RF: improved the behaviour for integration channels that give zero cross section
-     RF: Rewritten the mint integrator package. Makes for easier extensions.
-     RF: Fixed a problem related to the multi-channel enhancement factor for
-         NLO runs that only appeared in BSM theories (or EFTs)
-     RF: In the virt-tricks, replaced the grids for the virtuals with a
-         polynomial fit, which is more precise and allows for a reduction of
-         the number of calls to the virtual. However, requires to save all the
-         phase-space points for which the virtual has been computed to disk,
-         hence requires more disk space and memory for highly-accurate
-         runs. Can be disabled in the FKS_params.dat card, if disk space
-         and/or memory use needs to be limited.
+3.0.3.py3
+     version with support for python3 of 3.0.3 (see below)
+     contains all functionality up to 2.7.3.py3
 
-3.0.1 
-     include up to 2.6.4
-     MZ: Enable shower for QCD-only splittings
-     RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
-         cuts and --to a lesser extend-- processes with massive final state particles:
-	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
+                        ** PARRALEL VERSION FOR EW branch **
 
-3.0.0 (01/05/18):
-     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
-         [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
-	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
-	 that when doing QCD corrections only --contrary to previous versions-- also loop diagrams with non-QCD-charged 
-	 particles will be included (e.g., the pentagons in Higgs production via vector-boson fusion).]
-     HS: inclusion of SMWidth for fast evaluation of NLO accurate widths for all SM particles
-     RF+SF: Resonance-aware phase-space mapping for NLO computations 
-     RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
-     OM: remove ./bin/mg5 executable
-
-                        ** PARRALEL VERSION FOR PYTHON 3 **
-
-2.7.2.py3(25/03/20):
-      ALL: Contains all feature of 2.7.2 (see below)
-
-2.7.1.py3(09/03/20):
-      ALL: Contains all feature of 2.7.1 (see below)
-      OM: Fixed a lot of python3 compatibility issue raised by user
-          Particular Thanks to Congqio Li (CMS), Richard Ruiz and Leif Gellersen
-	  for their report.
-
-2.7.0.py3 (27/02/20):
-      ALL: Contains all feature of 2.7.0			
-      OM: Support for python3.7 in top of python 2.7
-          - python2.6  is not supported anymore
-	  - this requires the module "six" [pip install six --user]
-      OM: dropping function set low_mem_multicore_nlo
-      OM: dropping support for syscalc (c++ version)
-      OM: introduction of new setup variable
-          - f2py_compiler_py2 and f2py_compiler_py3
-	    which will be used to overwrite f2py_compiler when using the associate python version
-          - lhapdf_py2 and lhapdf_py3
-	    same for lhapdf
-      OM: introduction of a new command "convert model FULLPATH"
-          - try to convert a UFO model compatible to python2 only to a new model compatible both with
-	    Python2 and Python3 (no guarantee)
-
-
-                             ** Main Branch  Update **
-			
-2.7.2(17/03/20)
-      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
-      OM: Speed up standalone_cpp code by changing compilation flag
+3.0.3 (06/07/20)
+     include up to 2.7.3
 
 3.0.2 (25/05/20)
      include up to 2.7.2
@@ -99,6 +41,68 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      RF+SF: Resonance-aware phase-space mapping for NLO computations 
      RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
      OM: remove ./bin/mg5 executable
+
+
+                        ** PARRALEL VERSION FOR PYTHON 3 **
+
+
+2.7.3.py3(28/06/20):
+      ALL: Contains all feature of 2.7.3 (see below)
+      OM: Fix a crash when running PY8 in matched/merged mode (bug not present in not .py3 version of the code)
+      MZ: low_mem_multicore_nlo_generation is working again
+          but not for LOonly mode and not in OLP mode
+
+2.7.2.py3(25/03/20):
+      ALL: Contains all feature of 2.7.2 (see below)
+
+2.7.1.py3(09/03/20):
+      ALL: Contains all feature of 2.7.1 (see below)
+      OM: Fixed a lot of python3 compatibility issue raised by user
+          Particular Thanks to Congqio Li (CMS), Richard Ruiz and Leif Gellersen
+	  for their report.
+
+2.7.0.py3 (27/02/20):
+      ALL: Contains all feature of 2.7.0			
+      OM: Support for python3.7 in top of python 2.7
+          - python2.6  is not supported anymore
+	  - this requires the module "six" [pip install six --user]
+      OM: dropping function set low_mem_multicore_nlo
+      OM: dropping support for syscalc (c++ version)
+      OM: introduction of new setup variable
+          - f2py_compiler_py2 and f2py_compiler_py3
+	    which will be used to overwrite f2py_compiler when using the associate python version
+          - lhapdf_py2 and lhapdf_py3
+	    same for lhapdf
+      OM: introduction of a new command "convert model FULLPATH"
+          - try to convert a UFO model compatible to python2 only to a new model compatible both with
+	    Python2 and Python3 (no guarantee)
+
+
+                             ** Main Branch  Update **
+
+2.7.3(21/06/20)
+      OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
+          Thanks to Congqiao Li for this
+      OM: Allowing loop-induced process to run on LO gridpack with read-only mode.
+          Thanks to Congqiao Li for this      
+      OM: Fix a bug in the longitudinal polarization for off-shell effect, leading to deviation at large invariant mass.
+      OM: Adding more option to the run_card for fine tuning phase-space integration steps
+          All are hidden by default:
+	    - hard_survey [default=1]: request for more points in survey (and subsequent refine)
+	    - second_refine_treshold [default=1.5]: forbid second refine if cross section after first refine is
+	       is smaller than cross-section of the survey times such treshold
+      OM: new command for the editions of the cards:
+           - set nodecay: remove all decay line from the madspin_card
+	   - set BLOCKNAME all VALUE: set all entry of the param_card "BLOCKNAME" to VALUE
+	   - edit CARDNAME --comment_line='<regular_expression>' : new syntax to comment all lines of a card
+	       that are matching a given regular expression
+      OM: For Mac only, when running in script mode, MG5aMC will now prevent the computer to go to idle sleep.
+          You can prevent this by running with the '-s' option. like ./bin/mg5_aMC -s PATH_TO_CMD
+
+
+2.7.2(17/03/20)
+      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
+      OM: Speed up standalone_cpp code by changing compilation flag
 
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine

@@ -2404,9 +2404,11 @@ set key invert
         else:
             output, _ = p.communicate()
             output.decode()
-            if not output:
-                gnuplot_output_list=gnuplot_output_list_v5
-            elif float(output.split()[1]) < 5. :
+            try:
+                version = float(output.split()[1])
+            except:
+                version = 5
+            if version < 5. :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5
