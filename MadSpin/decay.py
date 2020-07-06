@@ -544,7 +544,7 @@ class dc_branch_from_me(dict):
                     # record the mass for the reshuffling phase, 
                     # in case the point passes the reweighting creteria
                     tree[tag]["mass"] = m
-                    #update the weigth of the phase-space point
+                    #update the weight of the phase-space point
                     weight=weight*jac
                 # for checking conservation of energy
                 mass_sum -= m
@@ -2749,7 +2749,7 @@ class decay_all_events(object):
             for proc in processes:
                 if not proc.strip().startswith(('add','generate')):
                     proc = 'add process %s' % proc
-                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
+                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
                 
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
@@ -2835,7 +2835,7 @@ class decay_all_events(object):
 #                    assert decay.shell_string() in self.all_decay
             
     @staticmethod
-    def get_proc_with_decay(proc, decay_text, model):
+    def get_proc_with_decay(proc, decay_text, model, msoptions=None):
         
         commands = []
         if '[' in proc:
@@ -2880,6 +2880,13 @@ class decay_all_events(object):
             else:
                 baseproc = new_proc
                 proc_nb = ''      
+
+            if msoptions and msoptions['global_order_coupling']:
+                if '@' in proc_nb:
+                    proc_nb += " %s" % msoptions['global_order_coupling']
+                else:
+                    proc_nb += " @0 %s" %  msoptions['global_order_coupling']                
+
             nb_comma = baseproc.count(',')
             if nb_comma == 0:
                 commands.append("%s, %s %s %s" % (baseproc, decay_text, proc_nb, options))
@@ -3087,7 +3094,7 @@ class decay_all_events(object):
         for production in self.all_ME.values():
             decay_set.add(production['decaying'])
 
-        numberev = self.options['Nevents_for_max_weigth'] # number of events
+        numberev = self.options['Nevents_for_max_weight'] # number of events
         numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
         
         logger.info('  ')

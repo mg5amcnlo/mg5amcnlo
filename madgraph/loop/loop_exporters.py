@@ -297,6 +297,36 @@ CF2PY INTENT(IN) :: PATH
       RETURN
       END
 
+      subroutine CHANGE_PARA(name, value)
+      implicit none
+CF2PY intent(in) :: name
+CF2PY intent(in) :: value
+
+      character*512 name
+      double precision value
+
+      include '../Source/MODEL/input.inc'
+      include '../Source/MODEL/coupl.inc'
+      include '../Source/MODEL/mp_coupl.inc'
+      include '../Source/MODEL/mp_input.inc'
+      
+      SELECT CASE (name)   
+         %(parameter_setup)s
+         CASE DEFAULT
+            write(*,*) 'no parameter matching', name
+      END SELECT
+
+      return
+      end
+      
+    subroutine update_all_coup()
+    implicit none
+     call coup()
+     call printout()
+    return 
+    end
+
+
       SUBROUTINE SET_MADLOOP_PATH(PATH)
 C     Routine to set the path of the folder 'MadLoop5_resources' to MadLoop
         CHARACTER(512) PATH
@@ -377,6 +407,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         #close the function
         if min_nexternal != max_nexternal:
             text.append('endif')
+            
+        params = self.get_model_parameter(self.model)
+        parameter_setup =[]
+        for key, var in params.items():
+            parameter_setup.append('        CASE ("%s")\n          %s = value\n        MP__%s = value' 
+                                   % (key, var, var))
+            
+            
 
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
@@ -385,7 +423,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
                                              for i in range(max_nexternal) \
                                              for pdg in allids]),
-                      'prefix':'\',\''.join(allprefix)
+                      'prefix':'\',\''.join(allprefix),
+                      'parameter_setup': '\n'.join(parameter_setup),
                       }
     
     

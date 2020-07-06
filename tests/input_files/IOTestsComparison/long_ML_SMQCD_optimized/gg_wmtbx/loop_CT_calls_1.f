@@ -97,8 +97,8 @@ C      if true.
 
 C     CutTools call for loop numbers 1,33,73
       CALL ML5_0_LOOP_2(7,13,DCMPLX(ZERO),DCMPLX(MDL_MB),1,I_SO,1)
-C     CutTools call for loop numbers 2,6,121,122,127,128,109,110,111,11
-C     5,116,117
+C     CutTools call for loop numbers
+C      2,6,121,122,127,128,109,110,111,115,116,117
       CALL ML5_0_LOOP_2(6,14,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,2)
 C     CutTools call for loop numbers 3,106,107,108
       CALL ML5_0_LOOP_3(5,6,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MB)
@@ -209,8 +209,8 @@ C     CutTools call for loop numbers 46
 C     CutTools call for loop numbers 47
       CALL ML5_0_LOOP_5(1,2,4,3,5,DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZERO),4,I_SO,40)
-C     CutTools call for loop numbers 48,51,123,124,125,126,129,130,131,
-C     132
+C     CutTools call for loop numbers
+C      48,51,123,124,125,126,129,130,131,132
       CALL ML5_0_LOOP_3(1,2,14,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,3,I_SO,41)
 C     CutTools call for loop numbers 49
