@@ -375,6 +375,9 @@ class AllResults(dict):
             run[name] = int(value)
         elif name in ['run_mode','run_statistics']:
             run[name] = value
+        elif name == 'cross' and run[name] != 0:
+            run['prev_' + name] = run[name]
+            run[name] = float(value) 
         else:    
             run[name] = float(value)    
     

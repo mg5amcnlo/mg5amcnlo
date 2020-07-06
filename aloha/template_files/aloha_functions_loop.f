@@ -2298,7 +2298,7 @@ c momentum q, so it is not implemented yet.
       COMPLEX*16 Q(0:3)
       INTEGER CFIG,J
       LOGICAL SCD
-      COMPLEX*16 M
+      double precision M
       COMPLEX*16 W(20)
 
       IF (CFIG.EQ.1) THEN
@@ -2558,7 +2558,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
       LOGICAL SCD
-      COMPLEX*16 M
+      double precision M
       COMPLEX*16 W(20)
 
       IF (CFIG.EQ.1) THEN
