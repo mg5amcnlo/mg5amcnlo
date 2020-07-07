@@ -26,7 +26,7 @@ std::vector<pineappl_grid*> grid_obs;
 std::vector<std::vector<int>> translation_tables;
 
 // Maximum number of (pairwise) suprocesses
-const int __max_nproc__ = 121;
+const int __max_nproc__ = 181;
 
 // Information defined at the generation (configuration) step, that does
 // not vary event by event

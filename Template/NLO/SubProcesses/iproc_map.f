@@ -251,8 +251,18 @@ c Print the map to the screen
 *     Read the file using a buffer
       do
          read (71,'(a)',err=100,end=100) buffer ! Jump to line 100 when all lines read
+         write(*,*) buffer
          read (buffer,*) kpdflumi,nproc(kpdflumi),
      1        ((pdgs(i,j,kpdflumi),i=1,2),j=1,nproc(kpdflumi))
+         ! check that the allocated arrays are big enough
+         if (kpdflumi.gt.mxpdflumi) then
+            write(*,*) 'ERROR in iproc_map.f, too many processes'
+            write(*,*) 'increase mxpdflumi and max_nproc' //
+     %                 ' inside appl_comon.inc'
+            write(*,*) 'and __max_nproc__ in appl_interface.cc'
+            write(*,*) 'Make sure to assign all variables the same value!'
+            stop 1
+         endif
          appl_nproc(kpdflumi) = nproc(kpdflumi)
       enddo
  100  continue
