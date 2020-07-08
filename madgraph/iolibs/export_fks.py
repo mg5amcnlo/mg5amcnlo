@@ -393,6 +393,27 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===============================================================================
     # write a initial states map, useful for the fast PDF NLO interface
     #===============================================================================
+    def write_applgrid_maxproc_files(self, nmaxpdf, subproc_path):
+        """write the c++ and fortran header files with the max number of pdf pairs
+        """
+        # fortran
+        content = "      integer mxpdflumi\n      integer max_nproc\n      parameter(mxpdflumi=%d,max_nproc=%d)\n" \
+                % (nmaxpdf, nmaxpdf)
+        fout = open(pjoin(subproc_path, 'appl_maxproc.inc'), 'w')
+        fout.write(content)
+        fout.close()
+
+        # c++
+        content = "#define  __max_nproc__ %d" % (nmaxpdf)
+        fout = open(pjoin(subproc_path, 'appl_maxproc.h'), 'w')
+        fout.write(content)
+        fout.close()
+
+
+
+    #===============================================================================
+    # write a initial states map, useful for the fast PDF NLO interface
+    #===============================================================================
     def write_init_map(self, file_pos, initial_states):
         """ Write an initial state process map. Each possible PDF
         combination gets an unique identifier."""
@@ -415,6 +436,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff = open(file_pos, 'w')
         ff.write(text)
         ff.close()
+
+        return i+1
 
     def get_ME_identifier(self, matrix_element, *args, **opts):
         """ A function returning a string uniquely identifying the matrix 
@@ -694,6 +717,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
+                     'appl_maxproc.inc',
+                     'appl_maxproc.h',
                      'timing_variables.inc']
 
         for file in linkfiles:

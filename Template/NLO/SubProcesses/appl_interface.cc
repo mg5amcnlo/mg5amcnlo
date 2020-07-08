@@ -15,6 +15,8 @@
 
 #include "orders.h"
 
+#include "appl_maxproc.h"
+
 /*
   fNLO mode of aMCatNLO
 */
@@ -24,9 +26,6 @@ std::vector<pineappl_grid*> grid_obs;
 
 // translates an index from the range [0, __amp_split_size) to the indices need by `fill_grid`
 std::vector<std::vector<int>> translation_tables;
-
-// Maximum number of (pairwise) suprocesses
-const int __max_nproc__ = 181;
 
 // Information defined at the generation (configuration) step, that does
 // not vary event by event

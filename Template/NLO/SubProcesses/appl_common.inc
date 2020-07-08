@@ -10,9 +10,7 @@
 
 *     Initial state map to be used together with the info in appl_flavmap
       integer appl_nlumi
-      integer mxpdflumi
-      integer max_nproc
-      parameter(mxpdflumi=181,max_nproc=181)
+      include 'appl_maxproc.inc'
       integer appl_nproc(mxpdflumi)
       integer appl_lumimap(2,max_nproc,mxpdflumi)
       common / appl_common_lumi / appl_lumimap,appl_nproc,appl_nlumi
