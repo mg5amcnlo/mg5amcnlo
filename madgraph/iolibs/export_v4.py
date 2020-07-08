@@ -4136,6 +4136,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
                               matrix_element.get('processes')[0],squared_orders)
+            replace_dict['select_configs_if'] = '          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN' % replace_dict
+            replace_dict['select_configs_endif'] = ' endif'
         else:
             # Consider the output of a dummy order 'ALL_ORDERS' for which we
             # set all amplitude order to weight 1 and only one squared order
@@ -4143,6 +4145,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             squared_orders = [(2,),]
             amp_orders = [((1,),tuple(range(1,ngraphs+1)))]
             replace_dict['chosen_so_configs'] = '.TRUE.'
+            # addtionally set the function to NOT be called
+            replace_dict['select_configs_if'] = ''
+            replace_dict['select_configs_endif'] = ''
             
         replace_dict['nAmpSplitOrders']=len(amp_orders)
         replace_dict['nSqAmpSplitOrders']=len(squared_orders)

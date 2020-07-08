@@ -311,9 +311,9 @@ endif
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
         ENDDO
 		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-		  ENDIF
+		  %(select_configs_if)s
+             MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+	      %(select_configs_endif)s
 		ENDDO
       ENDDO
 	ENDDO
@@ -322,9 +322,9 @@ endif
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+		  %(select_configs_if)s
             Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
-		  ENDIF
+		  %(select_configs_endif)s
 		enddo
 	  enddo
     Enddo

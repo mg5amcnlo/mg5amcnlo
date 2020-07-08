@@ -7770,6 +7770,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     
         if '--postpone_model' in args:
             flaglist.append('store_model')
+        if '--hel_recycling=False' in args:
+            flaglist.append('no_helrecycling')
                     
         line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
         main_file_name = ""
@@ -7900,7 +7902,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     
         #Exporter + Template
         if options['exporter'] == 'v4':
-            misc.sprint(line_options)
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                              group_subprocesses=group_processes,
                                              cmd_options=line_options)
@@ -8204,6 +8205,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+
+            if not 'no_helrecycling' in flaglist:
+                for (name, flag, out) in wanted_lorentz[:]:
+                    if out == 0:
+                        for i in range(1, len(name[0])):
+                            newflag = list(flag) + ['P1N']
+                            wanted_lorentz.append((name, tuple(newflag), i))
+                
             # For a unique output of multiple type of exporter need to store this
             # information.             
             if hasattr(self, 'previous_lorentz'):
