@@ -2922,6 +2922,8 @@ RESTART = %(mint_mode)s
         all_jobs=[]
         for job in jobs:
             if job['resultABS'] == 0.0:
+                logger.warning('applgrid_combine: Job\n%s\nwill be skipped, as it returned zero cross-section' %
+                        job['dirname'])
                 continue
             all_jobs.append(job['dirname'])
         ngrids=len(all_jobs)
