@@ -2921,6 +2921,8 @@ RESTART = %(mint_mode)s
                                                             'applgrid-combine')
         all_jobs=[]
         for job in jobs:
+            if job['resultABS'] == 0.0:
+                continue
             all_jobs.append(job['dirname'])
         ngrids=len(all_jobs)
         nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.root")])
