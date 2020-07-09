@@ -3358,25 +3358,25 @@ class RunCardLO(RunCard):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = -100
-                    if not all(id  in beam_id_split[0] for id in [12,14,16]):
-                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')
+                    if not all(id  in [12,14,16] for id in beam_id_split[0]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1]. %s')
                 elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = 100
-                    if not all(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                    if not all(id  in [-12,-14,-16] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
                 if any(id  in beam_id_split[1] for id in [12,14,16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = -100
-                    if not all(id  in beam_id_split[1] for id in [12,14,16]):
+                    if not all(id  in [12,14,16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
                 if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
-                    if not all(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                    if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
         # Check if need matching
