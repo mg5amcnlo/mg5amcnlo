@@ -640,9 +640,7 @@ def do_multiline(line):
     char_limit = 72
     num_splits = len(line)//char_limit
     if num_splits != 0 and len(line) != 72 and '!' not in line:
-        print(f'{line} -> {num_splits}')
         split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
-        print(split_line)
         indent = ''
         for char in line[6:]:
             if char == ' ':
