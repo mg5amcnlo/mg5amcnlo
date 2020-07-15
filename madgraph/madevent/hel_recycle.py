@@ -79,11 +79,7 @@ class DAG:
         return None
 
     def __str__(self):
-        print_str = 'With new names:\n\t'
-        print_str += '\n\t'.join([f'{key}  {item}' for key, item in self.graph.items() ])
-        print_str += '\n\nWith old names:\n\t'
-        print_str += '\n\t'.join([f'{key.old_name}  {item.old_name}' for key, item in self.graph.items() ])
-        return print_str
+        return self.__repr__()
 
     def __repr__(self):
         print_str = 'With new names:\n\t'
