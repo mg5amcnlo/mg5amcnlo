@@ -544,6 +544,19 @@ class HelicityRecycler():
             self.prepare_bools()
 
             for line_num, line in tqdm.tqdm(enumerate(input_file), total=get_num_lines(self.input_file)):
+                if line_num == 0:
+                    line_cache = line
+                    continue
+                char_5 = ''
+                try:
+                    char_5 = line[5]
+                except IndexError:
+                    pass
+                if char_5 == '$':
+                    line_cache = undo_multiline(line_cache, line)
+                    continue
+
+                line, line_cache = line_cache, line
 
                 self.get_old_name(line)
                 self.get_good_hel(line)
@@ -563,6 +576,7 @@ class HelicityRecycler():
             for line in file:
                 s = Template(line)
                 line = s.safe_substitute(self.template_dict)
+                line = '\n'.join([do_multiline(sub_lines) for sub_lines in line.split('\n')])
                 out_file.write(line)
         out_file.close()
 
@@ -617,6 +631,27 @@ def get_num(wav):
     num = int(between_brackets[1:-1].split(',')[-1])    
     return num
 
+def undo_multiline(old_line, new_line):
+    new_line = new_line[6:]
+    old_line = old_line.replace('\n','')
+    return f'{old_line}{new_line}'
+
+def do_multiline(line):
+    char_limit = 72
+    num_splits = len(line)//char_limit
+    if num_splits != 0 and len(line) != 72 and '!' not in line:
+        print(f'{line} -> {num_splits}')
+        split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
+        print(split_line)
+        indent = ''
+        for char in line[6:]:
+            if char == ' ':
+                indent += char
+            else:
+                break
+
+        line = f'\n     ${indent}'.join(split_line)
+    return line
 
 def main():
     parser = argparse.ArgumentParser()
