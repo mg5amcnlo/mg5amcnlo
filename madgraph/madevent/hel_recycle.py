@@ -110,7 +110,7 @@ class MathsObject:
     @staticmethod
     def get_deps(line, graph):
         old_args = get_arguments(line)
-        old_name = old_args[-1]
+        old_name = old_args[-1].replace(' ','')
         matches = graph.old_names() & set(old_args)
         try:
             matches.remove(old_name)
@@ -133,7 +133,7 @@ class MathsObject:
     @staticmethod
     def get_new_args(line, wavs):
         old_args = get_arguments(line)
-        old_name = old_args[-1]
+        old_name = old_args[-1].replace(' ','')
         # Work out if wavs corresponds to an allowed helicity combination
         this_args = copy(old_args)
         wav_names = [w.name for w in wavs]
@@ -148,7 +148,7 @@ class MathsObject:
 
     @classmethod
     def get_obj(cls, line, wavs, graph, diag_num = None):
-        old_name = get_arguments(line)[-1]
+        old_name = get_arguments(line)[-1].replace(' ','')
         new_args = cls.get_new_args(line, wavs)
         num = cls.get_number(wavs, graph)
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
@@ -189,7 +189,7 @@ class External(MathsObject):
         # If graph is passed in Internal it should be done here to so
         # we can set names
         old_args = get_arguments(line)
-        old_name = old_args[-1]
+        old_name = old_args[-1].replace(' ','')
         graph.kill_old(old_name)
 
         new_wavfuncs = []
@@ -289,7 +289,7 @@ class Amplitude(MathsObject):
     @classmethod
     def generate_amps(cls, line, graph):
         old_args = get_arguments(line)
-        old_name = old_args[-1]
+        old_name = old_args[-1].replace(' ','')
 
         amp_index = re.search(r'\(.*?\)', old_name).group()
         diag_num = int(amp_index[1:-1])
