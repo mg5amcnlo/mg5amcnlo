@@ -490,20 +490,15 @@ class HelicityRecycler():
         self.in_amp2 = False
         self.nhel_started = False
 
-    def unfold_amp(self, line):
-        new_amps = Amplitude.generate_amps(line, self.dag)
-        line = apply_args(line, [i.args for i in new_amps])
-        return line
-
-    def unfold_internal(self, line):
-        new_wavs = Internal.generate_wavfuncs(line, self.dag)
-        line = apply_args(line, [i.args for i in new_wavs])
-        return line
-
-    def unfold_external(self, line):
-        new_wavs = External.generate_wavfuncs(line, self.dag)
-        line = apply_args(line, [i.args for i in new_wavs])
-        return f'{line}\n'
+    def unfold_helicities(self, line, nature):
+        if nature == 'external':
+            new_objs = External.generate_wavfuncs(line, self.dag)
+        if nature == 'internal':
+            new_objs = Internal.generate_wavfuncs(line, self.dag)
+        if nature == 'amplitude':
+            new_objs = Amplitude.generate_amps(line, self.dag)
+        line = apply_args(line, [i.args for i in new_objs])
+        return f'{line}\n' if nature == 'external' else line
 
     def get_gwc(self, line):
         if self.got_gwc:
@@ -555,14 +550,10 @@ class HelicityRecycler():
                 self.get_amp_stuff(line_num, line)
                 self.get_gwc(line)
 
-                if self.function_call(line) == 'external':
-                    self.template_dict['helas_calls'] += self.unfold_external(
-                        line)
-                if self.function_call(line) == 'internal':
-                    self.template_dict['helas_calls'] += self.unfold_internal(
-                        line)
-                if self.function_call(line) == 'amplitude':
-                    self.template_dict['helas_calls'] += self.unfold_amp(line)
+                call_type = self.function_call(line)
+                if call_type in ['external', 'internal', 'amplitude']:
+                    self.template_dict['helas_calls'] += self.unfold_helicities(
+                        line, call_type)
 
         self.template_dict['nwavefuncs'] = Internal.max_wav_num
 
