@@ -30,6 +30,7 @@ debug: $(target)
 
 
 $(target): $(cxx_objects) $(cu_objects)
+	if [ ! -d $(LIBDIR) ]; then mkdir $(LIBDIR); fi
 	$(AR) cru $@ $(cxx_objects) $(cu_objects)
 	ranlib $(target)
 

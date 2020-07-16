@@ -25,7 +25,7 @@ debug: CUFLAGS += -G
 debug: MAKEDEBUG := debug
 debug: check
 
-modellib:
+$(LIBDIR)/lib$(MODELLIB).a:
 	@cd ../../src && make $(MAKEDEBUG)
 
 check_sa.o: check_sa.cu
@@ -37,7 +37,7 @@ check_sa.o: check_sa.cu
 %.o : %.cc %.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(main): modellib $(cxx_objects) $(cu_objects)
+$(main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) $(cu_objects)
 	$(NVCC)  -o $@ $(cxx_objects) $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) -lcuda
 
 .PHONY: clean

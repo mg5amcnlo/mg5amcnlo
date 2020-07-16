@@ -1,4 +1,4 @@
-#include <algorithm>
+#include <algorithm> // perf stats
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -31,8 +31,10 @@ bool is_number(const char *s) {
   return strlen(s) == t - s;
 }
 
-int usage(int ret = 0) {
-  std::cout << "call me correctly" << std::endl;
+int usage(char* argv0, int ret = 1) {
+  std::cout << "Usage: " << argv0 
+            << " [--verbose|-v] [--debug|-d] [--performance|-p]"
+            << " [#gpuBlocksPerGrid #gpuThreadsPerBlock] #iterations" << std::endl;
   return ret;
 }
 
@@ -43,8 +45,6 @@ int main(int argc, char **argv) {
   Timer<TIMERTYPE> timer;
   std::vector<float> wavetimes;
 
-  // remove
-  int nprocesses = 1;
 
   for (int argn = 1; argn < argc; ++argn) {
     if (strcmp(argv[argn], "--verbose") == 0 || strcmp(argv[argn], "-v") == 0)
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     else if (is_number(argv[argn]))
       numvec.push_back(atoi(argv[argn]));
     else
-      return usage(1);
+      return usage(argv[0]);
   }
   int veclen = numvec.size();
   if (veclen == 3) {
@@ -68,11 +68,11 @@ int main(int argc, char **argv) {
   } else if (veclen == 1) {
     numiter = numvec[0];
   } else {
-    return usage(1);
+    return usage(argv[0]);
   }
 
   if (numiter == 0)
-    return usage(1);
+    return usage(argv[0]);
 
   if (verbose)
     std::cout << "# iterations: " << numiter << std::endl;
@@ -85,6 +85,8 @@ int main(int argc, char **argv) {
 
   double energy = 1500;
   double weight;
+
+  int meGeVexponent = -(2 * process.nexternal - 8);
 
   int dim = gpublocks * gputhreads;
 
@@ -119,7 +121,6 @@ int main(int argc, char **argv) {
 
   std::vector<double> matrixelementvector;
 
-
   for (int x = 0; x < numiter; ++x) {
     // Get phase space point
     std::vector<std::vector<double *>> p =
@@ -136,7 +137,7 @@ int main(int argc, char **argv) {
 
     gpuErrchk3(cudaMemcpy3D(&tdp));
 
-    //process.preSigmaKin();
+   //process.preSigmaKin();
 
     if (perf) {
       timer.Start();
@@ -146,10 +147,14 @@ int main(int argc, char **argv) {
     // later process.sigmaKin(ncomb, goodhel, ntry, sum_hel, ngood, igood,
     // jhel);
     sigmaKin<<<gpublocks, gputhreads>>>(devPitchedPtr, meDevPtr,
-                                                 mePitch);
+                                                 mePitch);//, debug, verbose);
 
     gpuErrchk3(cudaMemcpy2D(meHostPtr, sizeof(double), meDevPtr, mePitch,
                             sizeof(double), dim, cudaMemcpyDeviceToHost));
+
+    if (verbose)
+      std::cout << "***********************************" << std::endl
+                << "Iteration #" << x+1 << " of " << numiter << std::endl;
 
     if (perf) {
       float gputime = timer.GetDuration();
@@ -180,8 +185,7 @@ int main(int argc, char **argv) {
           if (verbose)
             std::cout << " Matrix element = "
                       //	 << setiosflags(ios::fixed) << setprecision(17)
-                      << meHostPtr[d][i] << " GeV^"
-                      << -(2 * process.nexternal - 8) << std::endl;
+                      << meHostPtr[d][i] << " GeV^" << meGeVexponent << std::endl;
           if (perf)
             matrixelementvector.push_back(meHostPtr[d][i]);
         }
@@ -219,28 +223,41 @@ int main(int argc, char **argv) {
         std::max_element(wavetimes.begin(), wavetimes.end());
 
     int num_mes = matrixelementvector.size();
+    float sumelem = std::accumulate(matrixelementvector.begin(), matrixelementvector.end(), 0.0);
+    float meanelem = sumelem / num_mes;
+    float sqselem = std::inner_product(matrixelementvector.begin(), matrixelementvector.end(), 
+                                       matrixelementvector.begin(), 0.0);
+    float stdelem = std::sqrt(sqselem / num_mes - meanelem * meanelem);
     std::vector<double>::iterator maxelem = std::max_element(
         matrixelementvector.begin(), matrixelementvector.end());
     std::vector<double>::iterator minelem = std::min_element(
         matrixelementvector.begin(), matrixelementvector.end());
 
     std::cout << "***********************************" << std::endl
-              << "NumIterations        = " << numiter << std::endl
-              << "NumThreadsPerBlock   = " << gputhreads << std::endl
-              << "NumBlocksPerGrid     = " << gpublocks << std::endl
-              << "NumberOfEntries      = " << num_wts << std::endl
-              << std::scientific << "TotalTimeInWaveFuncs = " << sum
-              << std::endl
-              << "MeanTimeinWaveFuncs  = " << mean << std::endl
-              << "StdDevWaveFuncs      = " << stdev << std::endl
-              << "MinTimeInWaveFuncs   = " << *mintime << std::endl
-              << "MaxTimeInWaveFuncs   = " << *maxtime << std::endl
+              << "NumIterations         = " << numiter << std::endl
+              << "NumThreadsPerBlock    = " << gputhreads << std::endl
+              << "NumBlocksPerGrid      = " << gpublocks << std::endl
               << "-----------------------------------" << std::endl
-              << "ProcessID:           = " << getpid() << std::endl
-              << "NProcesses           = " << process.nprocesses << std::endl
-              << "NumMatrixElements    = " << num_mes << std::endl
-              << std::scientific << "MaxMatrixElemValue   = " << *maxelem
-              << std::endl
-              << "MinMatrixElemValue   = " << *minelem << std::endl;
+              << "NumberOfEntries       = " << num_wts << std::endl
+              << std::scientific
+              << "TotalTimeInWaveFuncs  = " << sum << " sec" << std::endl
+              << "MeanTimeInWaveFuncs   = " << mean << " sec" << std::endl
+              << "StdDevTimeInWaveFuncs = " << stdev << " sec" << std::endl
+              << "MinTimeInWaveFuncs    = " << *mintime << " sec" << std::endl
+              << "MaxTimeInWaveFuncs    = " << *maxtime << " sec" << std::endl
+              << "-----------------------------------" << std::endl
+              << "ProcessID:            = " << getpid() << std::endl
+              << "NProcesses            = " << process.nprocesses << std::endl
+              << "NumMatrixElements     = " << num_mes << std::endl
+              << "MatrixElementsPerSec  = " << num_mes/sum << " sec^-1" << std::endl;
+
+    std::cout << "***********************************" << std::endl
+              << "NumMatrixElements     = " << num_mes << std::endl
+              << std::scientific
+              << "MeanMatrixElemValue   = " << meanelem << " GeV^" << meGeVexponent << std::endl
+              << "StdErrMatrixElemValue = " << stdelem/sqrt(num_mes) << " GeV^" << meGeVexponent << std::endl
+              << "StdDevMatrixElemValue = " << stdelem << " GeV^" << meGeVexponent << std::endl
+              << "MinMatrixElemValue    = " << *minelem << " GeV^" << meGeVexponent << std::endl
+              << "MaxMatrixElemValue    = " << *maxelem << " GeV^" << meGeVexponent << std::endl;
   }
 }

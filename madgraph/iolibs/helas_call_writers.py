@@ -1740,8 +1740,13 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                 name = "cIPC"
             if coup not in alias:
                 alias[coup] = len(alias)
-            call = call.replace('pars->%s%s' % (sign, coup), 
+            if name == "cIPD":
+                call = call.replace('pars->%s%s' % (sign, coup), 
                                     '%s%s[%s]' % (sign, name, alias[coup]))
+            else:
+                call = call.replace('pars->%s%s' % (sign, coup), 
+                                    '%sthrust::complex(cIPC[%s],cIPC[%s])' % 
+                                    (sign, 2*alias[coup],2*alias[coup]+1))
 
         return call
             
