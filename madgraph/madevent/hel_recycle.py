@@ -55,6 +55,7 @@ class DAG:
         return {wav.old_name for wav in self.all_wavs}
 
     def find_path(self, start, end, path=[]):
+        '''Taken from https://www.python.org/doc/essays/graphs/'''
         path = path + [start]
         if start == end:
             return path
