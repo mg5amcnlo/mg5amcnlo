@@ -120,9 +120,12 @@ class MathsObject:
     def good_helicity(cls, wavs, graph):
         exts = graph.external_wavs
         cls.ext_deps = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
-        this_wav_comb = [comb for comb in External.good_wav_combs
-                         if cls.ext_deps.issubset(set(comb))]
-        return this_wav_comb and cls.ext_deps
+        this_comb_good = False
+        for comb in External.good_wav_combs:
+            if cls.ext_deps.issubset(set(comb)):
+                this_comb_good = True
+                break
+        return this_comb_good and cls.ext_deps
 
     @staticmethod
     def get_new_args(line, wavs):
