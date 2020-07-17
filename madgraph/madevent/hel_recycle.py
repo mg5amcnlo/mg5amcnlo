@@ -8,6 +8,7 @@ from copy import copy
 from itertools import product
 
 # Remove
+from ipdb import set_trace
 import mmap
 import tqdm
 def get_num_lines(file_path):
@@ -22,38 +23,36 @@ class DAG:
 
     def __init__(self):
         self.graph = {}
+        self.all_wavs = []
+        self.external_wavs = []
+        self.internal_wavs = []
 
-    def add_node(self, node):
-        self.graph[node] = []
+    def store_wav(self, wav):
+        self.all_wavs.append(wav)
+        nature = wav.nature
+        if nature == 'external':
+            self.external_wavs.append(wav)
+        if nature == 'internal':
+            self.internal_wavs.append(wav)
 
     def add_branch(self, node_i, node_f):
-        self.graph[node_i].append(node_f)
-
-    def external_wavs(self):
-        exts = [key for key, value in self.graph.items()
-                if key.nature == 'external']
-        return exts
-
-    def internal_wavs(self):
-        exts = [key for key, value in self.graph.items()
-                if key.nature == 'internal']
-        return exts
+        try:
+            self.graph[node_i].append(node_f)
+        except KeyError:
+            self.graph[node_i] = [node_f]
 
     def dependencies(self, old_name):
-        deps = [key for key, value in self.graph.items()
-                if key.old_name == old_name and not key.dead]
+        deps = [wav for wav in self.all_wavs
+                if wav.old_name == old_name and not wav.dead]
         return deps
 
     def kill_old(self, old_name):
-        for key, value in list(self.graph.items()):
-            if key.old_name == old_name:
-                key.dead = True
-            for v in value:
-                if v.old_name == old_name:
-                    v.dead = True
+        for wav in self.all_wavs:
+            if wav.old_name == old_name:
+                wav.dead = True
 
     def old_names(self):
-        return {key.old_name for key, value in self.graph.items()}
+        return {wav.old_name for wav in self.all_wavs}
 
     def find_path(self, start, end, path=[]):
         path = path + [start]
@@ -118,7 +117,7 @@ class MathsObject:
 
     @classmethod
     def good_helicity(cls, wavs, graph):
-        exts = graph.external_wavs()
+        exts = graph.external_wavs
         cls.ext_deps = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         this_wav_comb = [comb for comb in External.good_wav_combs
                          if cls.ext_deps.issubset(set(comb))]
@@ -148,8 +147,8 @@ class MathsObject:
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
         this_obj.set_name(num, diag_num)
         if this_obj.nature != 'amplitude':
-            graph.add_node(this_obj)
-            for w in wavs:
+            graph.store_wav(this_obj)
+            for w in cls.ext_deps:
                 graph.add_branch(this_obj, w)
         return this_obj
 
@@ -199,9 +198,9 @@ class External(MathsObject):
             this_args[2] = hel
 
             this_wavfunc = External(this_args, old_name)
-            this_wavfunc.set_name(len(graph.external_wavs()) + len(graph.internal_wavs()) +1)
+            this_wavfunc.set_name(len(graph.external_wavs) + len(graph.internal_wavs) +1)
 
-            graph.add_node(this_wavfunc)
+            graph.store_wav(this_wavfunc)
             new_wavfuncs.append(this_wavfunc)
 
         cls.wavs_same_leg.append(new_wavfuncs)
@@ -387,7 +386,7 @@ class HelicityRecycler():
         # Now check for internal
         # Wont find a internal when no externals have been found...
         # ... I assume
-        if not self.dag.external_wavs():
+        if not self.dag.external_wavs:
             return None
 
         # Search for internals by looking for calls to the externals
