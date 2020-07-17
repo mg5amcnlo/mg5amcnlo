@@ -83,6 +83,10 @@ class DAG:
 class MathsObject:
     '''Abstract class for wavefunctions and Amplitudes'''
 
+    # Store here which externals the last wav/amp depends on.
+    # This saves us having to call find_path multiple times.
+    ext_deps = None
+
     def __init__(self, arguments, old_name, nature):
         self.args = arguments
         self.old_name = old_name
@@ -112,13 +116,13 @@ class MathsObject:
         graph.kill_old(old_name)
         return [graph.dependencies(dep) for dep in old_deps]
 
-    @staticmethod
-    def good_helicity(wavs, graph):
+    @classmethod
+    def good_helicity(cls, wavs, graph):
         exts = graph.external_wavs()
-        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
+        cls.ext_deps = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         this_wav_comb = [comb for comb in External.good_wav_combs
-                         if exts_on_path.issubset(set(comb))]
-        return this_wav_comb and exts_on_path
+                         if cls.ext_deps.issubset(set(comb))]
+        return this_wav_comb and cls.ext_deps
 
     @staticmethod
     def get_new_args(line, wavs):
@@ -302,9 +306,8 @@ class Amplitude(MathsObject):
         wavs, graph = args
         amp_num = -1
         exts = graph.external_wavs()
-        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         for i in range(len(External.good_wav_combs)):
-            if set(External.good_wav_combs[i]) == set(exts_on_path):
+            if set(External.good_wav_combs[i]) == set(cls.ext_deps):
                 # Offset because Fortran counts from 1
                 amp_num = i + 1
         if amp_num < 1:
