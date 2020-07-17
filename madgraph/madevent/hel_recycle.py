@@ -52,16 +52,6 @@ class DAG:
                 if v.old_name == old_name:
                     v.dead = True
 
-    def clear_amp(self, diag_num):
-        for key, value in list(self.graph.items()):
-            if key.nature == 'amplitude' and key.diag_num <= diag_num:
-                del self.graph[key]
-                continue
-            for i in reversed(range(len(value))):
-                if (value[i].nature == 'amplitude' and
-                        value[i].diag_num <= diag_num):
-                    del self.graph[key][i]
-
     def old_names(self):
         return {key.old_name for key, value in self.graph.items()}
 
@@ -153,9 +143,10 @@ class MathsObject:
         num = cls.get_number(wavs, graph)
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
         this_obj.set_name(num, diag_num)
-        graph.add_node(this_obj)
-        for w in wavs:
-            graph.add_branch(w, this_obj)
+        if this_obj.nature != 'amplitude':
+            graph.add_node(this_obj)
+            for w in wavs:
+                graph.add_branch(w, this_obj)
         return this_obj
 
 
@@ -293,7 +284,6 @@ class Amplitude(MathsObject):
 
         amp_index = re.search(r'\(.*?\)', old_name).group()
         diag_num = int(amp_index[1:-1])
-        graph.clear_amp(diag_num)
 
         deps = cls.get_deps(line, graph)
 
