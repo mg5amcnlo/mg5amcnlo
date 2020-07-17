@@ -305,7 +305,7 @@ class Amplitude(MathsObject):
     def get_number(cls, *args):
         wavs, graph = args
         amp_num = -1
-        exts = graph.external_wavs()
+        exts = graph.external_wavs
         for i in range(len(External.good_wav_combs)):
             if set(External.good_wav_combs[i]) == set(cls.ext_deps):
                 # Offset because Fortran counts from 1
