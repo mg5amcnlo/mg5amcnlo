@@ -115,7 +115,7 @@ class MathsObject:
     @staticmethod
     def good_helicity(wavs, graph):
         exts = graph.external_wavs()
-        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
+        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         this_wav_comb = [comb for comb in External.good_wav_combs
                          if exts_on_path.issubset(set(comb))]
         return this_wav_comb and exts_on_path
@@ -146,7 +146,7 @@ class MathsObject:
         if this_obj.nature != 'amplitude':
             graph.add_node(this_obj)
             for w in wavs:
-                graph.add_branch(w, this_obj)
+                graph.add_branch(this_obj, w)
         return this_obj
 
 
@@ -302,7 +302,7 @@ class Amplitude(MathsObject):
         wavs, graph = args
         amp_num = -1
         exts = graph.external_wavs()
-        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(i, dep) }
+        exts_on_path = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         for i in range(len(External.good_wav_combs)):
             if set(External.good_wav_combs[i]) == set(exts_on_path):
                 # Offset because Fortran counts from 1
