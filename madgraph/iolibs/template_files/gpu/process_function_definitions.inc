@@ -23,6 +23,7 @@ CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
 
   // Helicities for the process - nodim
   %(all_helicities)s
+  cudaMemcpyToSymbol(cHel, tHel, ncomb * nexternal * sizeof(int));
   // perm - nodim
   //static int perm[nexternal] = {0, 1, 2, 3};
 }
