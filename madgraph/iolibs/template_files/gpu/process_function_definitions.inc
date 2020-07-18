@@ -3,7 +3,7 @@
 %(process_lines)s
 
 __constant__ int cHel[%(ncomb)i][%(nexternal)i];
-__constant__ double cmME[%(nexternal)i]; 
+//__constant__ double cmME[%(nexternal)i]; value hardcoded now
 //extern __constant__ int cPerm[4];
 // %(coupling_list)s
 __constant__ double cIPC[%(ncouplingstimes2)i]; // coupling ?
@@ -18,7 +18,7 @@ __constant__ double cIPD[%(nparams)i];
 CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
                        bool verbose, bool debug)
     : m_numiterations(numiterations), gpu_nblocks(gpublocks),
-      gpu_nthreads(gputhreads), dim(gpu_nblocks * gpu_nthreads), mME(%(nexternal)d, 0.00) {
+      gpu_nthreads(gputhreads), dim(gpu_nblocks * gpu_nthreads) {
 
 
   // Helicities for the process - nodim

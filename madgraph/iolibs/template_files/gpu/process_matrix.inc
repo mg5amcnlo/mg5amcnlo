@@ -13,7 +13,6 @@
 %(jamp_lines)s
 
 // Sum and square the color flows to get the matrix element
-matrix = 0;
 for(i=0;i < ncolor; i++){
   ztemp = 0.;
   for(j = 0; j < ncolor; j++)
