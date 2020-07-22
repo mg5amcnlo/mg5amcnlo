@@ -176,6 +176,7 @@ class External(MathsObject):
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
         self.hel = int(self.args[2])
+        self.hel_range = []
         self.raise_num()
 
     @classmethod
@@ -190,12 +191,12 @@ class External(MathsObject):
         old_name = old_args[-1].replace(' ','')
         graph.kill_old(old_name)
 
+        nhel_index = re.search(r'\(.*?\)', old_args[2]).group()
+        ext_num = int(nhel_index[1:-1]) - 1
+        new_hels = sorted(list(External.hel_range[ext_num]), reverse=True)
+        new_hels = [int_to_string(i) for i in new_hels]
+
         new_wavfuncs = []
-
-        vec_boson = 'MDL_MW' in line
-
-        new_hels = ['+1', ' 0', '-1'] if vec_boson else ['+1', '-1']
-
         for hel in new_hels:
 
             this_args = copy(old_args)
@@ -412,6 +413,7 @@ class HelicityRecycler():
             return 'amplitude'
         else:
             print(f'Ahhhh what is going on here?\n{line}')
+            set_trace()
 
         return None
 
@@ -519,12 +521,20 @@ class HelicityRecycler():
             self.all_hel.append(this_hel)
         elif self.nhel_started:
             self.nhel_started = False
+            
             External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
+
+            External.hel_range = [set() for hel in External.good_hel[0]]
+            for comb in External.good_hel:
+                for i, hel in enumerate(comb):
+                    External.hel_range[i].add(hel)
+
             self.counter = 0
             nhel_array = [self.nhel_string(hel)
                           for hel in External.good_hel]
             nhel_lines = '\n'.join(nhel_array)
             self.template_dict['helicity_lines'] += nhel_lines
+
             self.template_dict['ncomb'] = len(External.good_hel)
 
     def nhel_string(self, hel_comb):
@@ -646,6 +656,17 @@ def do_multiline(line):
 
         line = f'\n     ${indent}'.join(split_line)
     return line
+
+def int_to_string(i):
+    if i == 1:
+        return '+1'
+    if i == 0:
+        return ' 0'
+    if i == -1:
+        return '-1'
+    else:
+        print(f'How can {i} be a helicity?')
+        set_trace()
 
 def main():
     parser = argparse.ArgumentParser()
