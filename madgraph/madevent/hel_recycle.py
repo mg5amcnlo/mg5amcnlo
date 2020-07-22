@@ -176,7 +176,7 @@ class External(MathsObject):
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
         self.hel = int(self.args[2])
-        self.hel_range = []
+        self.hel_ranges = []
         self.raise_num()
 
     @classmethod
@@ -193,7 +193,7 @@ class External(MathsObject):
 
         nhel_index = re.search(r'\(.*?\)', old_args[2]).group()
         ext_num = int(nhel_index[1:-1]) - 1
-        new_hels = sorted(list(External.hel_range[ext_num]), reverse=True)
+        new_hels = sorted(list(External.hel_ranges[ext_num]), reverse=True)
         new_hels = [int_to_string(i) for i in new_hels]
 
         new_wavfuncs = []
@@ -524,10 +524,10 @@ class HelicityRecycler():
             
             External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
 
-            External.hel_range = [set() for hel in External.good_hel[0]]
+            External.hel_ranges = [set() for hel in External.good_hel[0]]
             for comb in External.good_hel:
                 for i, hel in enumerate(comb):
-                    External.hel_range[i].add(hel)
+                    External.hel_ranges[i].add(hel)
 
             self.counter = 0
             nhel_array = [self.nhel_string(hel)
