@@ -1060,7 +1060,7 @@ class OneProcessExporterCPP(object):
             replace_dict['nproc'] = sum([ 2 if m.get('has_mirror_process') else 1
                                         for m in self.matrix_elements])
             replace_dict['nb_amp'] = len(self.amplitudes.get_all_amplitudes())
-
+            replace_dict['nexternal'] = len(self.processes[0].get('legs'))
             if write:
                 file = \
                  self.read_template_file(\

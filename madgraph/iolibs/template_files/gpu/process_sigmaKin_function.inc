@@ -4,7 +4,7 @@
 
   char *devPtr = (char *)tp.ptr;
   size_t dpt = tp.pitch;
-  size_t slicePitch = dpt * 4;
+  size_t slicePitch = dpt * %(nexternal)i;
 
   char *dps = devPtr + dim * slicePitch;
   double *matrix_element = (double *)((char *)meDevPtr + dim * mePitch);

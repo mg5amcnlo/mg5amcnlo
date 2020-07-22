@@ -43,6 +43,8 @@ void CPPProcess::initProc(string param_card_name) {
     pars->setIndependentCouplings();
     pars->printIndependentParameters();
     pars->printIndependentCouplings();
+    pars->setDependentParameters();
+    pars->setDependentCouplings();
     %(initProc_lines)s
     %(assign_coupling)s
     cudaMemcpyToSymbol(cIPC, tIPC, %(ncouplings)i * sizeof(thrust::complex<double>));

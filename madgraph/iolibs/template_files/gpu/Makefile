@@ -14,6 +14,12 @@ main=check.exe
 cu_objects=CPPProcess.o check_sa.o
 cxx_objects=
 
+# Assuming uname is available, detect if architecture is power
+UNAME_P := $(shell uname -p)
+ifeq ($(UNAME_P),ppc64le)
+    CUFLAGS+= -Xcompiler -mno-float128
+endif
+
 all: check
 
 check: $(main)

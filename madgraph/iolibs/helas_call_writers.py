@@ -1841,7 +1841,11 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                 
                 
             # Creating line formatting:
-            call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
+            else:
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s); printf(" %(out)s %%%%f %%%%f\\n", %(out2)s.real(), %(out2)s.imag());'
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
                                             '%s' % l[0], l[1:], outgoing, flag,True),
@@ -1858,6 +1862,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                     arg['mass'] = "pars->%(M)s,pars->%(W)s,"
             else:        
                 arg['out'] = '&amp[%(out)d]'
+                arg['out2'] = 'amp[%(out)d]'
                 arg['mass'] = ''
                 
             call = call % arg

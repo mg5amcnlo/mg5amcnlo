@@ -1914,6 +1914,130 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         
         return h_string.getvalue()
     
+    
+    def write_obj_Add_test(self, obj, prefactor=True):
+        """Turns addvariable into a string"""
+
+        data = defaultdict(list)
+        number = []
+        [data[p.prefactor].append(p) if hasattr(p, 'prefactor') else number.append(p)
+             for p in obj]
+
+        file_str = StringIO()
+        
+        if prefactor and obj.prefactor != 1:
+            formatted = self.change_number_format(obj.prefactor)
+            if formatted.startswith(('+','-')):
+                file_str.write('(%s)' % formatted)
+            else:
+                file_str.write(formatted)
+            file_str.write('*(')
+        else:
+            file_str.write('(')
+        first=True
+        for value, obj_list in data.items():
+            add= '+'
+            if value not in  [-1,1]:
+                nb_str = self.change_number_format(value)
+                if nb_str[0] in ['+','-']:
+                    file_str.write(nb_str)
+                else:
+                    file_str.write('+')
+                    file_str.write(nb_str)
+                file_str.write('*(')
+            elif value == -1:
+                add = '-' 
+                file_str.write('-')
+            elif not first:
+                file_str.write('+')
+            else:
+                file_str.write('')
+            first = False
+            file_str.write(add.join([self.write_obj(obj, prefactor=False) 
+                                                          for obj in obj_list]))
+            if value not in [1,-1]:
+                file_str.write(')')
+        if number:
+            total = sum(number)
+            file_str.write('+ %s' % self.change_number_format(total))
+
+        file_str.write(')')
+        return file_str.getvalue()    
+    
+    def write_MultVariable_test(self, obj, prefactor=True):
+        """Turn a multvariable into a string"""
+        
+        mult_list = [self.write_variable_id(id) for id in obj]
+        
+        tmp = mult_list[0]
+        for obj in mult_list[1:]:
+            tmp = 'cuCmul(%s,%s)' % (obj, tmp)
+        
+        
+        data = {'factors': tmp}
+        if prefactor and obj.prefactor != 1:
+            if obj.prefactor != -1:
+                text = '%(prefactor)s * %(factors)s'
+                data['prefactor'] = self.change_number_format(obj.prefactor)
+            else:
+                text = '-%(factors)s'
+        else:
+            text = '%(factors)s'
+        return text % data
+    
+    
+    def get_header_txt(self, name=None, couplings=None,mode=''):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+        if name is None:
+            name = self.name
+           
+        if mode=='':
+            mode = self.mode
+        
+        
+        
+        out = StringIO()
+        # define the type of function and argument
+        if not 'no_include' in mode:
+            out.write('#include \"%s.h\"\n\n' % self.name)
+        args = []
+        for format, argname in self.define_argument_list(couplings):
+            if format.startswith('list'):
+                type = self.type2def[format[5:]]
+                list_arg = '[]'
+            else:
+                type = self.type2def[format]
+                list_arg = ''
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
+                
+        if not self.offshell:
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointer_vertex': self.type2def['pointer_vertex']}
+            #self.declaration.add(('complex','vertex'))
+        else:
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
+                     'spin': self.particles[self.outgoing -1],
+                     'id': self.outgoing}
+            self.declaration.add(('list_complex', output))
+        
+        out.write('%(prefix)s void %(name)s(%(args)s, %(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', const '.join(args)})
+        if 'is_h' in mode:
+            out.write(';\n')
+        else:
+            out.write('\n{\n')
+
+        return out.getvalue() 
 
 class ALOHAWriterForPython(WriteALOHA):
     """ A class for returning a file/a string for python evaluation """

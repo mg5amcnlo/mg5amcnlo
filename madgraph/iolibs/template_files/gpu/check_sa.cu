@@ -91,7 +91,8 @@ int main(int argc, char **argv) {
   int dim = gpublocks * gputhreads;
 
   // Local Memory
-  double lp[dim][%(nexternal)i][4];
+  typedef double arr_t[%(nexternal)i][4];
+  arr_t* lp = new arr_t[dim];
 
   // GPU memory
   // from http://www.orangeowlsolutions.com/archives/817
@@ -260,4 +261,6 @@ int main(int argc, char **argv) {
               << "MinMatrixElemValue    = " << *minelem << " GeV^" << meGeVexponent << std::endl
               << "MaxMatrixElemValue    = " << *maxelem << " GeV^" << meGeVexponent << std::endl;
   }
+  delete[] lp;
+
 }
