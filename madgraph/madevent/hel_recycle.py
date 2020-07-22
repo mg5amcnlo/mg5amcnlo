@@ -27,13 +27,15 @@ class DAG:
         self.external_wavs = []
         self.internal_wavs = []
 
-    def store_wav(self, wav):
+    def store_wav(self, wav, ext_deps=[]):
         self.all_wavs.append(wav)
         nature = wav.nature
         if nature == 'external':
             self.external_wavs.append(wav)
         if nature == 'internal':
             self.internal_wavs.append(wav)
+        for ext in ext_deps:
+            self.add_branch(wav, ext)
 
     def add_branch(self, node_i, node_f):
         try:
@@ -151,9 +153,7 @@ class MathsObject:
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
         this_obj.set_name(num, diag_num)
         if this_obj.nature != 'amplitude':
-            graph.store_wav(this_obj)
-            for w in cls.ext_deps:
-                graph.add_branch(this_obj, w)
+            graph.store_wav(this_obj, cls.ext_deps)
         return this_obj
 
 
