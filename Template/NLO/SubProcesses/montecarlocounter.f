@@ -323,9 +323,9 @@ c
       include 'run.inc'
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
-      double precision xmc,xrealme,gfactsf,gfactcl,probne
-      double precision xmcxsec(nexternal),z(nexternal)
-      integer nofpartners
+      double precision xmc,xrealme,gfactsf,gfactcl,probne,sumMCsec
+      double precision xmcxsec(nexternal),z(nexternal),ddum,dummy
+      integer nofpartners,idum
       logical lzone(nexternal),flagmc
 
       include "born_nhel.inc"
@@ -347,45 +347,41 @@ c
       integer npart
       double precision MCsec(nexternal-1,max_bcol)
       logical isspecial(max_bcol)
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
       common/cisspecial/isspecial
-c
-c True MC subtraction term
       first_MCcnt_call=.true.
       is_pt_hard=.false.
       xmcxsec=0d0
       xmcxsec2=0d0
       MCsec=0d0
-      do cflows=1,max_bcol
-         if(is_pt_hard)cycle
-         N_p=1d0
-         if(isspecial(cflows))N_p=2d0
-         do npartner=1,ipartners(0)
-            if(is_pt_hard)cycle
+      sumMCsec=0d0
+      do npartner=1,ipartners(0)
+         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
+     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
+     $        ,bornbars,bornbarstilde,npartner)
+         if(is_pt_hard)exit
+         if(dampMCsubt) then
+            factor=emscwgt(npartner)
+         else
             factor=1d0
-c
-            call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     &           nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
-     &           bornbars,bornbarstilde,npartner)
-            if(dampMCsubt)factor=emscwgt(npartner)
-            if(colorflow(npartner,cflows).ne.0)then
-               MCsec(npartner,colorflow(npartner,cflows))=factor*
-     &         (xkern(1)*N_p*bornbars(colorflow(npartner,cflows))+
-     &         xkernazi(1)*N_p*bornbarstilde(colorflow(npartner,cflows)))
-               xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner,colorflow(npartner,cflows))
-               xmcxsec2(colorflow(npartner,cflows))=xmcxsec2(colorflow(npartner,cflows))
-     &                                            +MCsec(npartner,colorflow(npartner,cflows))
+         endif
+         do cflows=1,max_bcol
+            if (colorflow(npartner,cflows).eq.0) cycle
+            if(isspecial(cflows)) then
+               N_p=2d0
+            else
+               N_p=1d0
             endif
+            MCsec(npartner,colorflow(npartner,cflows))=factor*(xkern(1)
+     $           *N_p*bornbars(colorflow(npartner,cflows))+xkernazi(1)
+     $           *N_p*bornbarstilde(colorflow(npartner,cflows)))
+            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
+     $           ,cflows))
          enddo
       enddo
-      if (mcatnlo_delta) then
-         if(.not.is_pt_hard)call complete_xmcsubt(pp,xmc,lzone,xmcxsec,
-     $                                            xmcxsec2,MCsec,probne)
-      endif
-c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
-
-      wgt=xmc+xrealme
-
+      wgt=sumMCsec+xrealme
       return
       end
 
@@ -1192,7 +1188,8 @@ c Main loop over colour partners used to end here
 
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
-      subroutine complete_xmcsubt(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec,probne)
+      subroutine complete_xmcsubt(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec
+     $     ,probne)
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'

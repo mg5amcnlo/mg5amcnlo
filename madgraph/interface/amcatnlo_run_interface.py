@@ -5339,7 +5339,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -L%(pythia8_prefix)s/../../Di
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
-            shower = self.run_card['parton_shower']
+            shower = self.run_card['parton_shower'].upper()
             header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
             file.write(header + content)
         elif test == 'test_ME':

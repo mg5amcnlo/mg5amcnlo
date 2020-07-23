@@ -75,6 +75,13 @@ c*****************************************************************************
      &     ,pt_hardness
       double precision ran2
       external         ran2
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+c
+c     Properly initialize PY8 controls
+c
+      include 'pythia8_control.inc'
+      include 'pythia8_control_setup.inc'
 c-----
 c  Begin Code
 c-----
@@ -199,7 +206,7 @@ c
          bs_min=iconfig_in
          bs_max=iconfig_in
       endif
-
+      
       do iconfig=bs_min,bs_max  ! Born configurations
          ichan=1
          iconfigs(1)=iconfig
@@ -262,6 +269,7 @@ c
                x(jj)=ran2()
             enddo
             new_point=.true.
+            MCcntcalled=0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
                wgt=1d0
@@ -269,6 +277,7 @@ c
                   x(jj)=ran2()
                enddo
                new_point=.true.
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                ntry=ntry+1
             enddo
@@ -282,6 +291,7 @@ c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
 c configurations close to the soft-collinear limit
                xi_i_fks_fix=0.d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(0)
@@ -303,6 +313,7 @@ c Now generate the momenta for the original xi_i_fks=0.1, slightly shifted,
 c because otherwise fresh random will be used...
                xi_i_fks_fix=0.100001d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(-100)
@@ -325,6 +336,7 @@ c because otherwise fresh random will be used...
             do i=2,imax
                xi_i_fks_fix=xi_i_fks_fix/10d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(-100)
@@ -410,6 +422,7 @@ c
                x(jj)=ran2()
             enddo
             new_point=.true.
+            MCcntcalled=0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
                wgt=1d0
@@ -417,6 +430,7 @@ c
                   x(jj)=ran2()
                enddo
                new_point=.true.
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                ntry=ntry+1
             enddo
@@ -453,6 +467,7 @@ c
             do i=2,imax
                y_ij_fks_fix=1-0.1d0**i
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(-100)
