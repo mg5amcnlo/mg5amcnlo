@@ -1799,7 +1799,8 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             # Fill out with X up to 6 positions
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
-            call = call + "((double *)(dps + %d * dpt),"
+            ##call = call + "((double *)(dps + %d * dpt),"
+            call = call + "(local_mom[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "pars->%s, cHel[ihel][%d],"

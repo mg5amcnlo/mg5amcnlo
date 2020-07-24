@@ -1407,6 +1407,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict = {}
         replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
         replace_dict['model'] = self.model_name
+        replace_dict['numproc'] = len(self.matrix_elements)
 
         ff = open(pjoin(self.path, 'check_sa.cu'),'w')
         ff.write(template % replace_dict)
@@ -1510,7 +1511,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         
         replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          __device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt,
+                          __device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3],
                                         thrust::complex<double> amp[%(namp)d]
 
 
@@ -1518,7 +1519,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                             """ % \
                           {'nwfct':len(self.wavefunctions),
                           'sizew': replace_dict['wfct_size'],
+                          'nexternal':replace_dict['nexternal'],
                           'namp':len(self.amplitudes)#.get_all_amplitudes())
+                           
                           }
 
         if write:
@@ -1559,8 +1562,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
         ret_lines = []
         if self.single_helicities:
+            
             ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, char *dps, size_t dpt, double &matrix){"
+                "__device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3], double &matrix){" %
+                {'nexternal': self.nexternal}
                 )
 
             ret_lines.append("thrust::complex<double> amp[%s];" % len(self.matrix_elements[0].get_all_amplitudes()))

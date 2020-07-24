@@ -1,15 +1,30 @@
   // for (int xx = 0; xx < 384; ++xx) {
-  int nprocesses = %(nproc)i;
-  int dim = blockIdx.x * blockDim.x + threadIdx.x;
+  const int nprocesses = %(nproc)i;
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-  char *devPtr = (char *)tp.ptr;
-  size_t dpt = tp.pitch;
-  size_t slicePitch = dpt * %(nexternal)i;
+  //char *devPtr = (char *)tp.ptr;
+  //size_t dpt = tp.pitch;
+  //size_t slicePitch = dpt * %(nexternal)i;
 
-  char *dps = devPtr + dim * slicePitch;
-  double *matrix_element = (double *)((char *)meDevPtr + dim * mePitch);
+  //char *dps = devPtr + dim * slicePitch;
+  double matrix_element[nprocesses];
 
   thrust::complex<double> amp[%(nb_amp)i];
+
+   double local_m[%(nexternal)i][3];
+   int DIM = blockDim.x * gridDim.x;
+   //for (int i=0; i<20;i++){
+   //     printf(" %%f ", allmomenta[i]);
+   //}
+   //printf("\n");
+   //printf("DIM is %%i/%%i\n", tid, DIM);
+   for (int i=0; i<%(nexternal)i;i++){
+          for (int j=0; j<3;j++){	
+                local_m[i][j] =  allmomenta[i*3*DIM+j*DIM+tid];
+                //printf(" %%f ", local_m[i][j]);
+          }
+          //printf("\n");
+  }
 
 
 // Local variables and constants
@@ -19,7 +34,7 @@ const int ncomb = %(ncomb)d;
 //static int igood[ncomb];
 //static int jhel;
 //std::complex<double> **wfs;
-double t[%(nproc)i];
+//double t[%(nproc)i];
 // Helicities for the process
 //%(helicity_matrix)s
 // Denominators: spins, colors and identical particles
@@ -38,11 +53,16 @@ for(int i = 0; i < nprocesses; i++){
 
 
 for (int ihel = 0; ihel < ncomb; ihel++) {
-    calculate_wavefunctions(ihel, dps, dpt,  matrix_element[0]);
+    calculate_wavefunctions(ihel, local_m,  matrix_element[0]);
 }
 
 
 for (int i=0;i < nprocesses; ++i){
     matrix_element[i] /= denominators[i];
+}
+for (int i=0;i < nprocesses; ++i){
+output[i*nprocesses+tid] = matrix_element[i];
+//printf("output %%i %%i %%i %%f", tid, i, i*nprocesses+tid,  output[i*nprocesses+tid]);
+
 }
 

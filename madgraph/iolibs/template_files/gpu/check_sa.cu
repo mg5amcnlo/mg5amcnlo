@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
   if (numiter == 0)
     return usage(argv[0]);
 
+  cudaFree(0);
   if (verbose)
     std::cout << "# iterations: " << numiter << std::endl;
 
@@ -91,34 +92,14 @@ int main(int argc, char **argv) {
   int dim = gpublocks * gputhreads;
 
   // Local Memory
-  typedef double arr_t[%(nexternal)i][4];
-  arr_t* lp = new arr_t[dim];
+  //typedef double arr_t[%(nexternal)i][4];
+  double* lp = new double[%(nexternal)i*3*dim];
 
-  // GPU memory
-  // from http://www.orangeowlsolutions.com/archives/817
-  cudaExtent extent = make_cudaExtent(%(nexternal)i * sizeof(double), 4, dim);
-  cudaPitchedPtr devPitchedPtr;
-  gpuErrchk3(cudaMalloc3D(&devPitchedPtr, extent));
+  double* meHostPtr = new double[dim*%(numproc)i];
+  double *meDevPtr =0;
+  int num_bytes_back = %(numproc)i * dim * sizeof(double);
+  cudaMalloc((void**)&meDevPtr, num_bytes_back);
 
-  cudaMemcpy3DParms tdp = {0};
-  tdp.srcPtr.ptr = lp;
-  tdp.srcPtr.pitch = %(nexternal)i * sizeof(double);
-  tdp.srcPtr.xsize = 4;
-  tdp.srcPtr.ysize = 4;
-  tdp.dstPtr.ptr = devPitchedPtr.ptr;
-  tdp.dstPtr.pitch = devPitchedPtr.pitch;
-  tdp.dstPtr.xsize = 4;
-  tdp.dstPtr.ysize = 4;
-  tdp.extent.width = %(nexternal)i * sizeof(double);
-  tdp.extent.height = 4;
-  tdp.extent.depth = dim;
-  tdp.kind = cudaMemcpyHostToDevice;
-
-  double meHostPtr[dim][1]; // dim = rows, 1 = cols
-  double *meDevPtr;
-  size_t mePitch;
-  gpuErrchk3(
-      cudaMallocPitch(&meDevPtr, &mePitch, /* 1 * */ sizeof(double), dim));
 
   std::vector<double> matrixelementvector;
 
@@ -130,13 +111,19 @@ int main(int argc, char **argv) {
     // Set momenta for this event
     for (int d = 0; d < dim; ++d) {
       for (int i = 0; i < %(nexternal)i; ++i) {
-        for (int j = 0; j < 4; ++j) {
-          lp[d][i][j] = p[d][i][j];
+        for (int j = 0; j < 3; ++j) {
+          lp[i*dim*3+j*dim+d] = p[d][i][1+j];
         }
       }
     }
 
-    gpuErrchk3(cudaMemcpy3D(&tdp));
+    //new
+    int num_bytes = 3*%(nexternal)i*dim * sizeof(double);
+    double *allmomenta = 0;
+    cudaMalloc((void**)&allmomenta, num_bytes);
+    cudaMemcpy(allmomenta,lp,num_bytes,cudaMemcpyHostToDevice);
+
+    //gpuErrchk3(cudaMemcpy3D(&tdp));
 
    //process.preSigmaKin();
 
@@ -147,11 +134,12 @@ int main(int argc, char **argv) {
     // Evaluate matrix element
     // later process.sigmaKin(ncomb, goodhel, ntry, sum_hel, ngood, igood,
     // jhel);
-    sigmaKin<<<gpublocks, gputhreads>>>(devPitchedPtr, meDevPtr,
-                                                 mePitch);//, debug, verbose);
+    sigmaKin<<<gpublocks, gputhreads>>>(allmomenta,  meDevPtr);//, debug, verbose);
+    gpuErrchk3( cudaPeekAtLastError() );
+    //gpuErrchk3(cudaMemcpy2D(meHostPtr, sizeof(double), meDevPtr, mePitch,
+    //                        sizeof(double), dim, cudaMemcpyDeviceToHost));
 
-    gpuErrchk3(cudaMemcpy2D(meHostPtr, sizeof(double), meDevPtr, mePitch,
-                            sizeof(double), dim, cudaMemcpyDeviceToHost));
+   cudaMemcpy(meHostPtr, meDevPtr, %(numproc)i * dim*sizeof(double), cudaMemcpyDeviceToHost);
 
     if (verbose)
       std::cout << "***********************************" << std::endl
@@ -186,9 +174,9 @@ int main(int argc, char **argv) {
           if (verbose)
             std::cout << " Matrix element = "
                       //	 << setiosflags(ios::fixed) << setprecision(17)
-                      << meHostPtr[d][i] << " GeV^" << meGeVexponent << std::endl;
+                      << meHostPtr[i*%(numproc)i + d] << " GeV^" << meGeVexponent << std::endl;
           if (perf)
-            matrixelementvector.push_back(meHostPtr[d][i]);
+            matrixelementvector.push_back(meHostPtr[i*%(numproc)i + d]);
         }
 
         if (verbose)

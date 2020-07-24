@@ -1,8 +1,11 @@
-__device__ void ixxxxx(double p[4], double fmass, int nhel, int nsf,
+__device__ void ixxxxx(double pvec[3], double fmass, int nhel, int nsf,
                        thrust::complex<double> fi[6]) {
   thrust::complex<double> chi[2];
   double sf[2], sfomega[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int ip, im, nh;
+
+  double p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
   fi[0] = thrust::complex<double>(-p[0] * nsf, -p[3] * nsf);
   fi[1] = thrust::complex<double>(-p[1] * nsf, -p[2] * nsf);
   nh = nhel * nsf;
@@ -63,15 +66,18 @@ __device__ void ixxxxx(double p[4], double fmass, int nhel, int nsf,
       fi[5] = thrust::complex<double>(0.0, 0.0);
     }
   }
+
   return;
 }
 
-__device__ void txxxxx(double p[4], double tmass, int nhel, int nst,
+__device__ void txxxxx(double pvec[3], double tmass, int nhel, int nst,
                        thrust::complex<double> tc[18]) {
   thrust::complex<double> ft[6][4], ep[4], em[4], e0[4];
   double pt, pt2, pp, pzpt, emp, sqh, sqs;
   int i, j;
-
+  
+  double p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+tmass*tmass);
   sqh = sqrt(0.5);
   sqs = sqrt(0.5 / 3);
 
@@ -197,10 +203,14 @@ __device__ void txxxxx(double p[4], double tmass, int nhel, int nst,
   }
 }
 
-__device__ void vxxxxx(double p[4], double vmass, int nhel, int nsv,
+__device__ void vxxxxx(double pvec[3], double vmass, int nhel, int nsv,
                        thrust::complex<double> vc[6]) {
   double hel, hel0, pt, pt2, pp, pzpt, emp, sqh;
   int nsvahl;
+
+  double p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+vmass*vmass);
+
   sqh = sqrt(0.5);
   hel = double(nhel);
   nsvahl = nsv * std::abs(hel);
@@ -251,18 +261,26 @@ __device__ void vxxxxx(double p[4], double vmass, int nhel, int nsv,
   return;
 }
 
-__device__ void sxxxxx(double p[4], int nss, thrust::complex<double> sc[3]) {
+__device__ void sxxxxx(double pvec[3], int nss, thrust::complex<double> sc[3]) {
+  //double p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  //p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
+  double p[4] = {0, 0, 0, 0};
+  printf("scalar not supported so far. to do: fix mass issue");
   sc[2] = thrust::complex<double>(1.00, 0.00);
   sc[0] = thrust::complex<double>(p[0] * nss, p[3] * nss);
   sc[1] = thrust::complex<double>(p[1] * nss, p[2] * nss);
   return;
 }
 
-__device__ void oxxxxx(double p[4], double fmass, int nhel, int nsf,
+__device__ void oxxxxx(double pvec[3], double fmass, int nhel, int nsf,
                        thrust::complex<double> fo[6]) {
   thrust::complex<double> chi[2];
   double sf[2], sfomeg[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int nh, ip, im;
+  
+  double p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
+
   fo[0] = thrust::complex<double>(p[0] * nsf, p[3] * nsf);
   fo[1] = thrust::complex<double>(p[1] * nsf, p[2] * nsf);
   nh = nhel * nsf;

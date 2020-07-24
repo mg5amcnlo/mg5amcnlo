@@ -54,12 +54,12 @@ void CPPProcess::initProc(string param_card_name) {
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-__global__ void sigmaKin(cudaPitchedPtr tp, double *meDevPtr, size_t mePitch) { 
+__global__ void sigmaKin(double * allmomenta, double * output) { 
     // Set the parameters which change event by event
     // Need to discuss this with Stefan
     //pars->setDependentParameters();
     //pars->setDependentCouplings();
-    
+
     // Reset color flows
     %(reset_jamp_lines)s
     %(sigmaKin_lines)s
