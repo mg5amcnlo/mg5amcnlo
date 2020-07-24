@@ -6636,6 +6636,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision zero
       parameter (zero=0d0)
 
@@ -6780,7 +6782,7 @@ C MZ the test may be removed sooner or later
          do i=nincoming+1,nexternal
             if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
      $           =ngluons_FKS(nFKSprocess)+1
-            if (pdg_type(i).eq.22) nphotons_FKS(nFKSprocess)
+            if (pdg_type(i).eq.22.and..not.particle_tag(i)) nphotons_FKS(nFKSprocess)
      $           =nphotons_FKS(nFKSprocess)+1
          enddo
 
