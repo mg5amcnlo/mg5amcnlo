@@ -1,16 +1,15 @@
 //double %(process_class_name)s::matrix_%(proc_name)s(%(matrix_args)s) { 
+
+
 %(all_wavefunction_calls)s
 // Local variables
 
   // const int ngraphs = 2;
-  const int ncolor =  %(ncolor)d;
+
   thrust::complex<double> ztemp;
-  thrust::complex<double> jamp[ncolor];
   // The color matrix;
 %(color_matrix_lines)s
 
-// Calculate color flows
-%(jamp_lines)s
 
 // Sum and square the color flows to get the matrix element
 for(i=0;i < ncolor; i++){

@@ -9,9 +9,10 @@
   //char *dps = devPtr + dim * slicePitch;
   double matrix_element[nprocesses];
 
-  thrust::complex<double> amp[%(nb_amp)i];
+  thrust::complex<double> amp[1];// was %(nb_amp)i];
 
-   double local_m[%(nexternal)i][3];
+
+   Double local_m[%(nexternal)i][3];
    int DIM = blockDim.x * gridDim.x;
    //for (int i=0; i<20;i++){
    //     printf(" %%f ", allmomenta[i]);

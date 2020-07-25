@@ -1354,7 +1354,7 @@ class OneProcessExporterCPP(object):
             if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                 common_factor = True
                 global_factor = diff_fracs[0]
-                res = res + '%s(' % coeff(1, global_factor, False, 0)
+                res = res + '%s(' % self.coeff(1, global_factor, False, 0)
 
             for (coefficient, amp_number) in coeff_list:
 
@@ -1549,15 +1549,17 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                           """// Calculate wavefunctions
                           __device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3],
                                         thrust::complex<double> amp[%(namp)d]
-
+  
+                          const int ncolor =  %(ncolor)d;
+                          thrust::complex<double> jamp[ncolor];
 
                             thrust::complex<double> w[%(nwfct)d][%(sizew)d];
                             """ % \
                           {'nwfct':len(self.wavefunctions),
                           'sizew': replace_dict['wfct_size'],
                           'nexternal':replace_dict['nexternal'],
-                          'namp':len(self.amplitudes)#.get_all_amplitudes())
-                           
+                          'namp':len(self.amplitudes),
+                          'ncolor': len(self.matrix_elements[0].get_color_amplitudes())
                           }
 
         if write:
@@ -1605,7 +1607,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                 {'nexternal': self.nexternal}
                 )
 
-            ret_lines.append("thrust::complex<double> amp[%s];" % len(self.matrix_elements[0].get_all_amplitudes()))
+            ret_lines.append("thrust::complex<double> amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
+            ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
+            ret_lines.append("thrust::complex<double> jamp[ncolor];")
             ret_lines.append("// Calculate wavefunctions for all processes")
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                     self.matrix_elements[0],
@@ -1633,7 +1637,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                                                          color_amplitudes[i],
                                                          class_name) \
                                 for i, me in enumerate(self.matrix_elements)])
-        misc.sprint(to_add)
         ret_lines.extend([self.get_matrix_single_process(i, me,
                                                          color_amplitudes[i],
                                                          class_name) \
