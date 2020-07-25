@@ -680,6 +680,8 @@ class OneProcessExporterCPP(object):
             os.makedirs(os.path.join(self.path, self.include_dir))
         filename = os.path.join(self.path, self.include_dir,
                                 '%s.h' % self.process_class)
+
+        
         self.write_process_h_file(writers.CPPWriter(filename))
 
         if not os.path.isdir(os.path.join(self.path, self.process_dir)):
@@ -728,6 +730,7 @@ class OneProcessExporterCPP(object):
         replace_dict['process_class_definitions'] = process_class_definitions
         replace_dict['include_for_complex'] = ''
 
+        misc.sprint(type(self))
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict
             # Write the file
@@ -1397,9 +1400,42 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
     def generate_process_files(self):
         
+        misc.sprint(type(self))
         super(OneProcessExporterGPU, self).generate_process_files()
 
         self.edit_check_sa()
+    
+    
+    
+    def write_process_h_file(self, writer):
+        """Write the class definition (.h) file for the process"""
+        
+        misc.sprint(self.path)
+        replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
+        replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.h')).read()
+        
+        if writer:
+            file = self.read_template_file(self.process_template_h) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+    
+    def write_process_cc_file(self, writer):
+        """Write the class member definition (.cc) file for the process
+        described by matrix_element"""
+        
+                
+        replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
+        replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
+        
+        if writer:
+            file = self.read_template_file(self.process_template_cc) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+        
         
     def edit_check_sa(self):
         
@@ -1531,31 +1567,32 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             return replace_dict
         
         
-    def get_calculate_wavefunctions(self, wavefunctions, amplitudes, write=True):
-        """Return the lines for optimized calculation of the
-        wavefunctions for all subprocesses"""
-
-        replace_dict = {}
-
-        replace_dict['nwavefuncs'] = len(wavefunctions)
-        
-        #ensure no recycling of wavefunction ! incompatible with some output
-        #for me in self.matrix_elements:
-        #    me.restore_original_wavefunctions()
-
-        replace_dict['wavefunction_calls'] = "\n".join(\
-            self.helas_call_writer.get_wavefunction_calls(\
-            helas_objects.HelasWavefunctionList(wavefunctions)))
-
-        replace_dict['amplitude_calls'] = "\n".join(\
-            self.helas_call_writer.get_amplitude_calls(amplitudes))
-
-        if write:
-            file = self.read_template_file(self.process_wavefunction_template) % \
-                replace_dict
-            return file
-        else:
-            return replace_dict
+#     def get_calculate_wavefunctions(self, wavefunctions, amplitudes, write=True):
+#         """Return the lines for optimized calculation of the
+#         wavefunctions for all subprocesses"""
+# 
+#         raise Exception
+#         replace_dict = {}
+# 
+#         replace_dict['nwavefuncs'] = len(wavefunctions)
+#         
+#         #ensure no recycling of wavefunction ! incompatible with some output
+#         #for me in self.matrix_elements:
+#         #    me.restore_original_wavefunctions()
+# 
+#         replace_dict['wavefunction_calls'] = "\n".join(\
+#             self.helas_call_writer.get_wavefunction_calls(\
+#             helas_objects.HelasWavefunctionList(wavefunctions)))
+# 
+#         replace_dict['amplitude_calls'] = "\n".join(\
+#             self.helas_call_writer.get_amplitude_calls(amplitudes))
+# 
+#         if write:
+#             file = self.read_template_file(self.process_wavefunction_template) % \
+#                 replace_dict
+#             return file
+#         else:
+#             return replace_dict
     
     def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
@@ -1571,7 +1608,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             ret_lines.append("thrust::complex<double> amp[%s];" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("// Calculate wavefunctions for all processes")
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
-                                                    self.matrix_elements[0])
+                                                    self.matrix_elements[0],
+                                                    color_amplitudes[0]
+                                                    )
             logger.debug("only one Matrix-element supported?")
             self.couplings2order = self.helas_call_writer.couplings2order
             self.params2order = self.helas_call_writer.params2order
@@ -1580,13 +1619,21 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             ret_lines.append("thrust::complex<double> w[%s][6];" %
                              (nwavefuncs)
                              )
+
             ret_lines += helas_calls
+            misc.sprint("\n".join(ret_lines))
             #ret_lines.append(self.get_calculate_wavefunctions(\
             #    self.wavefunctions, self.amplitudes))
             #ret_lines.append("}")
         else:
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
                                   for i, me in enumerate(self.matrix_elements)])
+        to_add = []
+        to_add.extend([self.get_matrix_single_process(i, me,
+                                                         color_amplitudes[i],
+                                                         class_name) \
+                                for i, me in enumerate(self.matrix_elements)])
+        misc.sprint(to_add)
         ret_lines.extend([self.get_matrix_single_process(i, me,
                                                          color_amplitudes[i],
                                                          class_name) \

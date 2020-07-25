@@ -1,3 +1,4 @@
+%(helamps_h)s
 //==========================================================================
 // This file has been automatically generated for C++ Standalone by
 %(info_lines)s
