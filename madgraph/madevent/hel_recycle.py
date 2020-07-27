@@ -3,6 +3,7 @@
 import argparse
 import atexit
 import re
+import collections
 from string import Template
 from copy import copy
 from itertools import product
@@ -491,11 +492,13 @@ class HelicityRecycler():
     def unfold_helicities(self, line, nature):
         if nature == 'external':
             new_objs = External.generate_wavfuncs(line, self.dag)
+            line = apply_args(line, [i.args for i in new_objs])
         if nature == 'internal':
             new_objs = Internal.generate_wavfuncs(line, self.dag)
+            line = apply_args(line, [i.args for i in new_objs])
         if nature == 'amplitude':
             new_objs = Amplitude.generate_amps(line, self.dag)
-        line = apply_args(line, [i.args for i in new_objs])
+            line = split_amps(line, new_objs)
         return f'{line}\n' if nature == 'external' else line
 
     def get_gwc(self, line):
@@ -630,7 +633,54 @@ def apply_args(old_line, all_the_args):
     new_lines = [old_line.replace(old_args, f'({",".join(x)})\n')
                  for x in all_the_args]
     return ''.join(new_lines)
- 
+
+def split_amps(line, new_amps):
+    fct = line.split('(',1)[0].split('_0')[0]
+    for i,amp in enumerate(new_amps):
+        if i == 0:
+            occur = []
+            for a in amp.args:
+                if "W(1," in a:
+                    tmp = collections.defaultdict(int)
+                    tmp[a] += 1
+                    occur.append(tmp)
+        else:
+            for i in range(len(occur)):
+                a = amp.args[i]
+                occur[i][a] +=1
+    # Each element in occur is the wavs that appear in a column, with
+    # the number of occurences
+    nb_wav =  [len(o) for o in occur]
+    to_remove = nb_wav.index(max(nb_wav)) 
+    # Remove the one that occurs the most
+    occur.pop(to_remove)
+    
+    lines = [] 
+    # Get the wavs per column
+    wav_name = [o.keys() for o in occur]          
+    for wfcts in product(*wav_name):
+        # Select the amplitudes produced by wfcts
+        sub_amps = [amp for amp in new_amps 
+                    if all(w in amp.args for w in wfcts)]
+        # the next line is to make the code nicer 
+        sub_amps.sort(key=lambda a: int(a.args[-1][:-1].split(',',1)[1]))
+        for i,amp in enumerate(sub_amps):
+            args = amp.args[:]   
+            # Remove wav and get its index
+            wcontract = args.pop(to_remove)
+            windex = wcontract.split(',')[1].split(')')[0]
+            amp_result,  args[-1]  =  args[-1], 'TMP(1)'
+            if i ==0:
+                # Call the original fct with P1N_...
+                # Final arg is replaced with TMP(1)
+                lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
+            lines.append('      %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
+                         % {'result': amp_result, 'w':  windex}) 
+            lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
+                         % {'result': amp_result, 'w':  windex})
+    lines.append('')
+    return '\n'.join(lines)
+
 def get_num(wav):
     name = wav.name
     between_brackets = re.search(r'\(.*?\)', name).group()
