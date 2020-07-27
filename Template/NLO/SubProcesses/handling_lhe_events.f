@@ -648,7 +648,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*140 buff
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -662,6 +662,7 @@ c
       common/event_attributes/nattr,npNLO,npLO
       include './run.inc'
       include 'unlops.inc'
+      include 'orders.inc'
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -761,20 +762,23 @@ c
                write(ifile,'(a)') '  <rwgt>'
                idwgt=1000
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              idwgt=idwgt+1
-                              write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                             ,wgtxsecmu(j,i,kk)," </wgt>"
+                  do oo=0,amp_split_size
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 idwgt=idwgt+1
+                                 write(ifile,601) 
+     $                                "   <wgt id='",idwgt,"'>"
+     $                                ,wgtxsecmu(oo,j,i,kk)," </wgt>"
+                              enddo
                            enddo
-                        enddo
-                     else
-                        idwgt=idwgt+1
-                        write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                       ,wgtxsecmu(1,1,kk)," </wgt>"
-                     endif
+                        else
+                           idwgt=idwgt+1
+                           write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecmu(oo,1,1,kk)," </wgt>"
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then
@@ -821,7 +825,7 @@ c
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*140 buff
       character*80 string
       character*12 dummy12
@@ -835,6 +839,7 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      include 'orders.inc'
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -910,18 +915,20 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              call read_rwgt_line(ifile,idwgt
-     $                             ,wgtxsecmu(j,i,kk))
+                  do oo=0,amp_split_size
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 call read_rwgt_line(ifile,idwgt
+     $                                ,wgtxsecmu(oo,j,i,kk))
+                              enddo
                            enddo
-                        enddo
-                     else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+                        else
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
      $                       ,kk))
-                     endif
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then
@@ -968,7 +975,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*140 buff
       character*80 string
       character*12 dummy12
@@ -982,6 +989,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      include 'orders.inc'
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -1066,18 +1074,20 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              call read_rwgt_line(ifile,idwgt
-     $                             ,wgtxsecmu(j,i,kk))
+                  do oo=0,amp_split_size
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 call read_rwgt_line(ifile,idwgt
+     $                                ,wgtxsecmu(oo,j,i,kk))
+                              enddo
                            enddo
-                        enddo
-                     else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+                        else
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
      $                       ,kk))
-                     endif
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then

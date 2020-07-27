@@ -3169,6 +3169,7 @@ c iproc_picked:
      &              //trim(adjustl(procid))
 
                write (str_temp,30)
+     &              orderstag(ict),
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -3220,6 +3221,7 @@ c H-event
      &           //trim(adjustl(procid))
 
             write (str_temp,30)
+     &           orderstag(ict),
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
@@ -3240,7 +3242,7 @@ c H-event
          endif
       enddo
       return
- 30   format(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
