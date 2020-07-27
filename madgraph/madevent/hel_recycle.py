@@ -192,10 +192,14 @@ class External(MathsObject):
         old_name = old_args[-1].replace(' ','')
         graph.kill_old(old_name)
 
-        nhel_index = re.search(r'\(.*?\)', old_args[2]).group()
-        ext_num = int(nhel_index[1:-1]) - 1
-        new_hels = sorted(list(External.hel_ranges[ext_num]), reverse=True)
-        new_hels = [int_to_string(i) for i in new_hels]
+        if 'NHEL' in old_args[2].upper():
+            nhel_index = re.search(r'\(.*?\)', old_args[2]).group()
+            ext_num = int(nhel_index[1:-1]) - 1
+            new_hels = sorted(list(External.hel_ranges[ext_num]), reverse=True)
+            new_hels = [int_to_string(i) for i in new_hels]
+        else:
+            # Spinor must be a scalar so give it hel = 0
+            new_hels = [' 0']
 
         new_wavfuncs = []
         for hel in new_hels:
@@ -718,6 +722,7 @@ def int_to_string(i):
     else:
         print(f'How can {i} be a helicity?')
         set_trace()
+        exit(1)
 
 def main():
     parser = argparse.ArgumentParser()
