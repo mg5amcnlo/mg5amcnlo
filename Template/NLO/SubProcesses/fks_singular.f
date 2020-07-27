@@ -5879,7 +5879,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-               
+               virt_wgt = 0d0
                do iamp=1,amp_split_size
                   if (amp_split_virt(iamp).eq.0d0) cycle
                   if (use_poly_virtual) then
