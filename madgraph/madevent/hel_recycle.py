@@ -385,8 +385,9 @@ class HelicityRecycler():
         if not 'CALL' in line:
             return None
 
-        # Now check for spinor
-        if ('CALL OXXXXX' in line or 'CALL IXXXXX' in line or 'CALL VXXXXX' in line):
+        # Now check for external spinor
+        ext_calls = ['CALL OXXXXX', 'CALL IXXXXX', 'CALL VXXXXX', 'CALL SXXXXX']
+        if any( call in line for call in ext_calls ):
             return 'external'
 
         # Now check for internal
