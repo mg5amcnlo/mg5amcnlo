@@ -21,6 +21,9 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer n_orderstags,oo,tag
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="3.0">'
@@ -30,28 +33,38 @@ c
          write(ifile,'(a)') '  <initrwgt>'
          idwgt=1000
          if (do_rwgt_scale) then
-            do kk=1,dyn_scale(0)
-               write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup name='scale_variation ",
-     &              dyn_scale(kk),"' combine='envelope'>"
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        idwgt=idwgt+1
-                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                       "      <weight id='",idwgt,"'> dyn=",
-     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
-     $                       ,scalevarF(ii)," </weight>"
-                     enddo
-                  enddo
+            do oo=0,n_orderstags
+               if (oo.eq.0) then
+                   tag = 0
                else
-                  idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                 "      <weight id='",idwgt,"'> dyn=",
-     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
-     $                 ," </weight>"
+                   tag = orderstags_glob(oo)
                endif
-               write(ifile,'(a)') "    </weightgroup>"
+               do kk=1,dyn_scale(0)
+                  write(ifile,'(a,i15,i4,a)') 
+     &                 "    <weightgroup name='scale_variation ",
+     &                 tag, dyn_scale(kk),"' combine='envelope'>"
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           idwgt=idwgt+1
+                           write(ifile,
+     $                           '(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",scalevarR(jj)," muF="
+     $                       ,scalevarF(ii)," </weight>"
+                        enddo
+                     enddo
+                  else
+                     idwgt=idwgt+1
+                     write(ifile,'(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",1d0 ," muF=",1d0
+     $                       ," </weight>"
+                  endif
+                  write(ifile,'(a)') "    </weightgroup>"
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then
@@ -126,6 +139,9 @@ c     other parameter
       character*150 buffer,buffer_lc,buffer2
       integer event_id
       common /c_event_id/ event_id
+      integer n_orderstags,oo,tag
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 
 c     Set the event_id to 0. If 0 or positive, this value will be update
 c     in write_lhe_event. It is set to -99 through a block data
@@ -215,28 +231,38 @@ c Write here the reweight information if need be
          write(ifile,'(a)') '  <initrwgt>'
          idwgt=1000
          if (do_rwgt_scale) then
-            do kk=1,dyn_scale(0)
-               write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup name='scale_variation ",
-     &              dyn_scale(kk),"' combine='envelope'>"
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        idwgt=idwgt+1
-                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                       "      <weight id='",idwgt,"'> dyn=",
-     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
-     $                       ,scalevarF(ii)," </weight>"
-                     enddo
-                  enddo
+            do oo=0,n_orderstags
+               if (oo.eq.0) then
+                   tag = 0
                else
-                  idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                 "      <weight id='",idwgt,"'> dyn=",
-     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
-     $                 ," </weight>"
+                   tag = orderstags_glob(oo)
                endif
-               write(ifile,'(a)') "    </weightgroup>"
+               do kk=1,dyn_scale(0)
+                  write(ifile,'(a,i15,i4,a)') 
+     &                 "    <weightgroup name='scale_variation ",
+     &                 tag, dyn_scale(kk),"' combine='envelope'>"
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           idwgt=idwgt+1
+                           write(ifile,
+     $                           '(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",scalevarR(jj)," muF="
+     $                       ,scalevarF(ii)," </weight>"
+                        enddo
+                     enddo
+                  else
+                     idwgt=idwgt+1
+                     write(ifile,'(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",1d0 ," muF=",1d0
+     $                       ," </weight>"
+                  endif
+                  write(ifile,'(a)') "    </weightgroup>"
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then
