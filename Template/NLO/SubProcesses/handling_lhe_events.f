@@ -662,7 +662,9 @@ c
       common/event_attributes/nattr,npNLO,npLO
       include './run.inc'
       include 'unlops.inc'
-      include 'orders.inc'
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -762,7 +764,7 @@ c
                write(ifile,'(a)') '  <rwgt>'
                idwgt=1000
                if (do_rwgt_scale) then
-                  do oo=0,amp_split_size
+                  do oo=0,n_orderstags
                      do kk=1,dyn_scale(0)
                         if (lscalevar(kk)) then
                            do i=1,nint(scalevarF(0))
@@ -839,7 +841,9 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      include 'orders.inc'
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -915,7 +919,7 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do oo=0,amp_split_size
+                  do oo=0,n_orderstags
                      do kk=1,dyn_scale(0)
                         if (lscalevar(kk)) then
                            do i=1,nint(scalevarF(0))
@@ -989,7 +993,9 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      include 'orders.inc'
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -1074,7 +1080,7 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do oo=0,amp_split_size
+                  do oo=0,n_orderstags
                      do kk=1,dyn_scale(0)
                         if (lscalevar(kk)) then
                            do i=1,nint(scalevarF(0))

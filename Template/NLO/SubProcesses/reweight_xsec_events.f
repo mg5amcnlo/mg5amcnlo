@@ -8,7 +8,6 @@ c Compile with makefile_rwgt
       use extra_weights
       implicit none
       include "run.inc"
-      include "orders.inc"
       integer i,oo,ii,jj,kk,isave,lef,ifile,maxevt,iSorH_lhe,ifks_lhe
      $     ,jfks_lhe,fksfather_lhe,ipartner_lhe,kwgtinfo,kexternal
      $     ,jwgtnumpartn,ofile,kf,kr,n,nn
@@ -29,6 +28,10 @@ c Common blocks
       character*7         pdlabel,epa_label
       integer       lhaid
       common/to_pdf/lhaid,pdlabel,epa_label
+c Common blocks for the orders tags
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c Les Houches Event File info:
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -155,6 +158,8 @@ c start with central member of the first set
 
       rewind(34)
 
+      call get_orderstags_glob_infos()
+
       ofile=35
       open(unit=ofile,file=fname1,status='unknown')
 
@@ -218,7 +223,7 @@ c Do the actual reweighting.
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
          if(do_rwgt_scale)then
-            do oo=0,amp_split_size
+            do oo=0,n_orderstags
                do kk=1,dyn_scale(0)
                   if (lscalevar(kk)) then
                      do ii=1,nint(scalevarF(0))
@@ -550,13 +555,13 @@ c reset to the 0th member of the 1st set
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'orders.inc'
       integer ii,jj,kk,oo,nn,n,iw,i
       integer orderstag_this
-      integer get_orders_tag_from_amp_pos
-      external get_orders_tag_from_amp_pos
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 
-      do oo=0,amp_split_size
+      do oo=0,n_orderstags
          do kk=1,dyn_scale(0)
             if (lscalevar(kk)) then
                do ii=1,nint(scalevarF(0))
@@ -581,8 +586,8 @@ c reset to the 0th member of the 1st set
       do i=1,icontr
          iw=2
          if (do_rwgt_scale) then
-            do oo=0,amp_split_size
-               if (oo.ne.0) orderstag_this = get_orders_tag_from_amp_pos(oo)
+            do oo=0,n_orderstags
+               if (oo.ne.0) orderstag_this = orderstags_glob(oo)
                ! filter the weights with the correct order
                if (oo.ne.0.and.orderstag_this.ne.orderstag(i)) cycle
                do kk=1,dyn_scale(0)
