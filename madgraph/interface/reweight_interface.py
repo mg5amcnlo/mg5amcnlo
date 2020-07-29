@@ -980,11 +980,12 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
-        if not hasattr(self,'pdf'):
-            lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
-            self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
-            
+
         if self.has_nlo and self.rwgt_mode != "LO":
+            if not hasattr(self,'pdf'):
+                lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+                self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+                
             return self.calculate_nlo_weight(event)
         
         event.parse_reweight()                    
