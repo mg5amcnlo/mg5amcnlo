@@ -18,12 +18,13 @@ __constant__ double cIPD[%(nparams)i];
 CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
                        bool verbose, bool debug)
     : m_numiterations(numiterations), gpu_nblocks(gpublocks),
-      gpu_nthreads(gputhreads), dim(gpu_nblocks * gpu_nthreads) {
+      gpu_nthreads(gputhreads), m_verbose(verbose), m_debug(debug),
+      dim(gpu_nblocks * gpu_nthreads) {
 
 
   // Helicities for the process - nodim
   %(all_helicities)s
-  cudaMemcpyToSymbol(cHel, tHel, ncomb * nexternal * sizeof(int));
+  gpuErrchk3(cudaMemcpyToSymbol(cHel, tHel, ncomb * nexternal * sizeof(int)));
   // perm - nodim
   //static int perm[nexternal] = {0, 1, 2, 3};
 }
@@ -38,17 +39,19 @@ const std::vector<double> &CPPProcess::getMasses() const { return mME; }
 void CPPProcess::initProc(string param_card_name) {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_%(model_name)s::getInstance();
-    SLHAReader slha(param_card_name);
+    SLHAReader slha(param_card_name, m_verbose);
     pars->setIndependentParameters(slha);
     pars->setIndependentCouplings();
-    pars->printIndependentParameters();
-    pars->printIndependentCouplings();
+    if (m_verbose) {
+        pars->printIndependentParameters();
+    	pars->printIndependentCouplings();
+    }
     pars->setDependentParameters();
     pars->setDependentCouplings();
     %(initProc_lines)s
     %(assign_coupling)s
-    cudaMemcpyToSymbol(cIPC, tIPC, %(ncouplings)i * sizeof(thrust::complex<double>));
-    cudaMemcpyToSymbol(cIPD, tIPD, %(nparams)i * sizeof(double));
+    gpuErrchk3(cudaMemcpyToSymbol(cIPC, tIPC, %(ncouplings)i * sizeof(thrust::complex<double>)));
+    gpuErrchk3(cudaMemcpyToSymbol(cIPD, tIPD, %(nparams)i * sizeof(double)));
 } 
 
 //--------------------------------------------------------------------------

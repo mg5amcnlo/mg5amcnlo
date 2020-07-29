@@ -12,15 +12,6 @@
 #include "rambo.h"
 #include "timer.h"
 
-#define gpuErrchk3(ans)                                                        \
-  { gpuAssert3((ans), __FILE__, __LINE__); }
-
-inline void gpuAssert3(cudaError_t code, const char *file, int line,
-                       bool abort = true) {
-  if (code != cudaSuccess) {
-    printf("GPUassert: %%s %%s %%d\n", cudaGetErrorString(code), file, line);
-  }
-}
 
 #define TIMERTYPE std::chrono::high_resolution_clock
 
@@ -74,7 +65,7 @@ int main(int argc, char **argv) {
   if (numiter == 0)
     return usage(argv[0]);
 
-  cudaFree(0);
+  gpuErrchk3(cudaFree(0));
   if (verbose)
     std::cout << "# iterations: " << numiter << std::endl;
 
@@ -98,7 +89,7 @@ int main(int argc, char **argv) {
   double* meHostPtr = new double[dim*%(numproc)i];
   double *meDevPtr =0;
   int num_bytes_back = %(numproc)i * dim * sizeof(double);
-  cudaMalloc((void**)&meDevPtr, num_bytes_back);
+  gpuErrchk3(cudaMalloc((void**)&meDevPtr, num_bytes_back));
 
 
   std::vector<double> matrixelementvector;
@@ -120,8 +111,8 @@ int main(int argc, char **argv) {
     //new
     int num_bytes = 3*%(nexternal)i*dim * sizeof(double);
     double *allmomenta = 0;
-    cudaMalloc((void**)&allmomenta, num_bytes);
-    cudaMemcpy(allmomenta,lp,num_bytes,cudaMemcpyHostToDevice);
+    gpuErrchk3(cudaMalloc((void**)&allmomenta, num_bytes));
+    gpuErrchk3(cudaMemcpy(allmomenta,lp,num_bytes,cudaMemcpyHostToDevice));
 
     //gpuErrchk3(cudaMemcpy3D(&tdp));
 
@@ -139,7 +130,7 @@ int main(int argc, char **argv) {
     //gpuErrchk3(cudaMemcpy2D(meHostPtr, sizeof(double), meDevPtr, mePitch,
     //                        sizeof(double), dim, cudaMemcpyDeviceToHost));
 
-   cudaMemcpy(meHostPtr, meDevPtr, %(numproc)i * dim*sizeof(double), cudaMemcpyDeviceToHost);
+   gpuErrchk3(cudaMemcpy(meHostPtr, meDevPtr, %(numproc)i * dim*sizeof(double), cudaMemcpyDeviceToHost));
 
     if (verbose)
       std::cout << "***********************************" << std::endl
@@ -250,5 +241,9 @@ int main(int argc, char **argv) {
               << "MaxMatrixElemValue    = " << *maxelem << " GeV^" << meGeVexponent << std::endl;
   }
   delete[] lp;
+  //gpuErrchk3( cudaFree( allmomenta ) );
+  //gpuErrchk3( cudaFree( meDevPtr ) );
+  gpuErrchk3( cudaDeviceReset() );
+
 
 }

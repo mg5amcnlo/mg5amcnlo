@@ -732,6 +732,8 @@ class OneProcessExporterCPP(object):
 
         misc.sprint(type(self))
         if writer:
+            misc.sprint(self.process_template_h, replace_dict.keys())
+            misc.sprint(self.read_template_file(self.process_template_h))
             file = self.read_template_file(self.process_template_h) % replace_dict
             # Write the file
             writer.writelines(file)
@@ -1404,37 +1406,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         super(OneProcessExporterGPU, self).generate_process_files()
 
         self.edit_check_sa()
-    
-    
-    
-    def write_process_h_file(self, writer):
-        """Write the class definition (.h) file for the process"""
-        
-        misc.sprint(self.path)
-        replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
-        replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.h')).read()
-        
-        if writer:
-            file = self.read_template_file(self.process_template_h) % replace_dict
-            # Write the file
-            writer.writelines(file)
-        else:
-            return replace_dict
-    
-    def write_process_cc_file(self, writer):
-        """Write the class member definition (.cc) file for the process
-        described by matrix_element"""
-        
-                
-        replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
-        replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
-        
-        if writer:
-            file = self.read_template_file(self.process_template_cc) % replace_dict
-            # Write the file
-            writer.writelines(file)
-        else:
-            return replace_dict
         
         
     def edit_check_sa(self):
@@ -1611,6 +1582,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
             ret_lines.append("thrust::complex<double> jamp[ncolor];")
             ret_lines.append("// Calculate wavefunctions for all processes")
+            ret_lines.append("using namespace MG5_%s;" % self.model_name)
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                     self.matrix_elements[0],
                                                     color_amplitudes[0]

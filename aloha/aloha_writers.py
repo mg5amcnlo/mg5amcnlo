@@ -2029,7 +2029,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
-        out.write('%(prefix)s void %(name)s(%(args)s, %(output)s)' % \
+        out.write('%(prefix)s void %(name)s(const %(args)s, %(output)s)' % \
                   {'prefix': self.prefix,
                       'output':output, 'name': name, 'args': ', const '.join(args)})
         if 'is_h' in mode:

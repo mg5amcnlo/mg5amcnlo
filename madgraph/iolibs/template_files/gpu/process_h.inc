@@ -1,4 +1,3 @@
-%(helamps_h)s
 //==========================================================================
 // This file has been automatically generated for C++ Standalone by
 %(info_lines)s
@@ -9,11 +8,24 @@
 
 #include <complex>
 #include <vector>
+#include <cassert>
+
 %(include_for_complex)s
 
 #include "Parameters_%(model_name)s.h"
 
 #include <thrust/complex.h>
+
+#define gpuErrchk3( code ) { gpuAssert3( code, __FILE__, __LINE__ ); }
+	
+inline void gpuAssert3( cudaError_t code, const char *file, int line, bool abort = true )
+{
+  if ( code != cudaSuccess )
+  {
+    printf( "GPUassert: %%s %%s %%d\n", cudaGetErrorString(code), file, line );
+    if ( abort ) assert( code == cudaSuccess );
+  }
+}
 
 
 __global__ void sigmaKin(double * allmomenta, double * output);

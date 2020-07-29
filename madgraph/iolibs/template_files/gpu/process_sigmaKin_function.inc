@@ -12,7 +12,7 @@
   thrust::complex<double> amp[1];// was %(nb_amp)i];
 
 
-   Double local_m[%(nexternal)i][3];
+   double local_m[%(nexternal)i][3];
    int DIM = blockDim.x * gridDim.x;
    //for (int i=0; i<20;i++){
    //     printf(" %%f ", allmomenta[i]);

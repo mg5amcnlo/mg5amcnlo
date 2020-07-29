@@ -1751,6 +1751,68 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
         return call
             
 
+    def get_external(self, wf, argument):
+
+        call = ''
+        call = call + HelasCallWriter.mother_dict[\
+                argument.get_spin_state_number()].lower() 
+        if wf.get('mass').lower() != 'zero' or argument.get('spin') != 2: 
+            # Fill out with X up to 6 positions
+            call = call + 'x' * (6 - len(call))
+            # Specify namespace for Helas calls
+            ##call = call + "((double *)(dps + %d * dpt),"
+            call = call + "(local_mom[%d],"
+            if argument.get('spin') != 1:
+                # For non-scalars, need mass and helicity
+                call = call + "pars->%s, cHel[ihel][%d],"
+            else:
+                call = call + "pars->%s,"
+            call = call + "%+d,w[%d]);"
+            if argument.get('spin') == 1:
+                return call % \
+                                (wf.get('number_external')-1,
+                                 wf.get('mass'),
+                                 # For boson, need initial/final here
+                                 (-1) ** (wf.get('state') == 'initial'),
+                                 wf.get('me_id')-1)
+            elif argument.is_boson():
+                return  self.format_coupling(call % \
+                                (wf.get('number_external')-1,
+                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1) ** (wf.get('state') == 'initial'),
+                                 wf.get('me_id')-1))
+            else:
+                misc.sprint(call)
+                return self.format_coupling(call % \
+                                (wf.get('number_external')-1,
+                                 wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For fermions, need particle/antiparticle
+                                 - (-1) ** wf.get_with_flow('is_part'),
+                                 wf.get('me_id')-1))
+        else:
+            if wf.get('number_external') == 1:
+                call += 'pz'
+            elif wf.get('number_external') == 2:
+                call += 'mz'
+            else:
+                call += 'xz'
+            call = call + 'x' * (6 - len(call))
+            # Specify namespace for Helas calls
+            ##call = call + "((double *)(dps + %d * dpt),"
+            call = call + "(local_mom[%d], cHel[ihel][%d],%+d,w[%d]);"
+            return self.format_coupling(call % \
+                                (wf.get('number_external')-1,
+                                 wf.get('number_external')-1,
+                                 # For fermions, need particle/antiparticle
+                                 - (-1) ** wf.get_with_flow('is_part'),
+                                 wf.get('me_id')-1))
+                
+                
+        
+        
 
     def generate_helas_call(self, argument):
         """Routine for automatic generation of C++ Helas calls
@@ -1794,40 +1856,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
             # String is just ixxxxx, oxxxxx, vxxxxx or sxxxxx
-            call = call + HelasCallWriter.mother_dict[\
-                argument.get_spin_state_number()].lower()
-            # Fill out with X up to 6 positions
-            call = call + 'x' * (6 - len(call))
-            # Specify namespace for Helas calls
-            ##call = call + "((double *)(dps + %d * dpt),"
-            call = call + "(local_mom[%d],"
-            if argument.get('spin') != 1:
-                # For non-scalars, need mass and helicity
-                call = call + "pars->%s, cHel[ihel][%d],"
-            call = call + "%+d,w[%d]);"
-            if argument.get('spin') == 1:
-                call_function = lambda wf: call % \
-                                (wf.get('number_external')-1,
-                                 # For boson, need initial/final here
-                                 (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('me_id')-1)
-            elif argument.is_boson():
-                call_function = lambda wf: self.format_coupling(call % \
-                                (wf.get('number_external')-1,
-                                 wf.get('mass'),
-                                 wf.get('number_external')-1,
-                                 # For boson, need initial/final here
-                                 (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('me_id')-1))
-            else:
-                misc.sprint(call)
-                call_function = lambda wf: self.format_coupling(call % \
-                                (wf.get('number_external')-1,
-                                 wf.get('mass'),
-                                 wf.get('number_external')-1,
-                                 # For fermions, need particle/antiparticle
-                                 - (-1) ** wf.get_with_flow('is_part'),
-                                 wf.get('me_id')-1))
+            call_function = lambda wf: self.get_external(wf, argument)
         else:
             if isinstance(argument, helas_objects.HelasWavefunction):
                 outgoing = argument.find_outgoing_number()
