@@ -368,6 +368,7 @@ class HelicityRecycler():
         self.loop_var = 'K'
 
         self.all_hel = []
+        self.hel_filt = True
 
     def set_input(self, file):
         if 'born_matrix' in file:
@@ -530,7 +531,10 @@ class HelicityRecycler():
         elif self.nhel_started:
             self.nhel_started = False
             
-            External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
+            if self.hel_filt:
+                External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
+            else:
+                External.good_hel = self.all_hel
 
             External.hel_ranges = [set() for hel in External.good_hel[0]]
             for comb in External.good_hel:
@@ -730,12 +734,16 @@ def main():
                                           'original matrix calculation')
     parser.add_argument('hel_file', help='The file containing the '
                                          'contributing helicities')
+    parser.add_argument('--hf-off', dest='hel_filt', action='store_false', default=True, help='Disable helicity filtering ')
+
     args = parser.parse_args()
 
     with open(args.hel_file, 'r') as file:
         good_elements = file.readline().split()
 
     recycler = HelicityRecycler(good_elements)
+
+    recycler.hel_filt = args.hel_filt
 
     recycler.set_input(args.input_file)
     recycler.set_output('green_matrix.f')
