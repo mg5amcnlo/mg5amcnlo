@@ -504,8 +504,14 @@ class HelicityRecycler():
             line = apply_args(line, [i.args for i in new_objs])
         if nature == 'amplitude':
             new_objs = Amplitude.generate_amps(line, self.dag)
-            line = split_amps(line, new_objs)
+            line = self.apply_amps(line, new_objs)
         return f'{line}\n' if nature == 'external' else line
+
+    def apply_amps(self, line, new_objs):
+        if self.amp_splt:
+            return split_amps(line, new_objs)  
+        else: 
+            return apply_args(line, [i.args for i in new_objs])
 
     def get_gwc(self, line):
         if self.got_gwc:
@@ -734,7 +740,8 @@ def main():
                                           'original matrix calculation')
     parser.add_argument('hel_file', help='The file containing the '
                                          'contributing helicities')
-    parser.add_argument('--hf-off', dest='hel_filt', action='store_false', default=True, help='Disable helicity filtering ')
+    parser.add_argument('--hf-off', dest='hel_filt', action='store_false', default=True, help='Disable helicity filtering')
+    parser.add_argument('--as-off', dest='amp_splt', action='store_false', default=True, help='Disable amplitude splitting')
 
     args = parser.parse_args()
 
@@ -744,6 +751,7 @@ def main():
     recycler = HelicityRecycler(good_elements)
 
     recycler.hel_filt = args.hel_filt
+    recycler.amp_splt = args.amp_splt
 
     recycler.set_input(args.input_file)
     recycler.set_output('green_matrix.f')
