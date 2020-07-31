@@ -4086,15 +4086,28 @@ class Channel(base_objects.Diagram):
                 # Evaluate the coupling strength
                 vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
                 lorentz_factor = 0
+
+                for fct in model['functions']:
+                    if ';' in fct.expr:
+                        raise Exception('; is not allowed in function_library')
+                    exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                    exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
                 for key, v in vertex['couplings'].items():
                     if not hasattr(model, 'lorentz_dict'):
                         model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
                         self.init_regular_expression()
+                    
+                    lorentz =  model.lorentz_dict[vertex['lorentz'][key[1]]]
+                    structure = lorentz.structure
+                    if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+                        for ff in lorentz.formfactors:
+                            structure = structure.replace(ff.name, '(%s)' % ff.value)
                         
-                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
-                    lor_value = eval(new_structure % q_dict_lor)
+
+                    lor_value = eval(new_structure % q_dict_lor, locals(), globals())
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
@@ -4131,6 +4144,12 @@ class Channel(base_objects.Diagram):
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
         else:
+            for fct in model['functions']:
+                if ';' in fct.expr:
+                    raise Exception('; is not allowed in function_library')
+                exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
             M = abs(eval(ini_part.get('mass')))
             # The avg_E is lower by one more particle in the next-level.
             avg_E = (M/(len(self.get_final_legs())+1.))

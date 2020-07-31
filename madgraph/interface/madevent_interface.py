@@ -3825,6 +3825,17 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Creating gridpack', level='parton')
         # compile gen_ximprove
         misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
+        
+        Gdir = self.get_Gdir()
+        Pdir = set([os.path.dirname(G) for G in Gdir])
+        for P in Pdir: 
+            allG = misc.glob('G*', path=P)
+            for G in allG:
+                if pjoin(P, G) not in Gdir:
+                    logger.debug('removing %s', pjoin(P,G))
+                    shutil.rmtree(pjoin(P,G))
+                    
+        
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
@@ -4682,7 +4693,7 @@ tar -czf split_$1.tar.gz split_$1
                             devnull.close()
                             if pid == 0:
                                 misc.call('head -n -1 %s | tail -n +%d > %s/tmpfile' %
-                                          (hepmc_file, n_head, os.path.dirname(hepmc_file)), shell=True)
+                                          (hepmc_file, n_head+1, os.path.dirname(hepmc_file)), shell=True)
                                 misc.call(['mv', 'tmpfile', os.path.basename(hepmc_file)], cwd=os.path.dirname(hepmc_file))
                             elif sys.platform == 'darwin':
                                 # sed on MAC has slightly different synthax than on
@@ -6479,7 +6490,10 @@ class GridPackCmd(MadEventCmd):
             os.chdir(self.me_dir)
         else:
             for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
-                os.mkdir(line.strip())
+                p = line.strip()
+                os.mkdir(p)
+                files.cp(pjoin(self.me_dir,'SubProcesses',p,'symfact.dat'),
+                         pjoin(p, 'symfact.dat'))
             
 
     def launch(self, nb_event, seed):

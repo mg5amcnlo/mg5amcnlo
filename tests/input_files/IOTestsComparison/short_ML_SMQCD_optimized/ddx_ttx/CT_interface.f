@@ -395,8 +395,8 @@ C     ----------
 C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $EX,LOOPNUM)) THEN
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -531,8 +531,8 @@ C     ----------
 C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $EX,LOOPNUM)) THEN
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -665,8 +665,8 @@ C     ----------
 C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $EX,LOOPNUM)) THEN
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         M2L(1)=M2**2

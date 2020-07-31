@@ -76,6 +76,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('new_wgt', 'cross-section' ,allowed=['cross-section', 'BR'], comment="if not consistent number of particles, choose what to do for the weight. (BR: means local according to number of part, cross use the force cross-section")
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         self.add_param('frame_id', 6)
+        self.add_param('global_order_coupling', '')
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -149,6 +150,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
         self.err_branching_ratio = 0
+        self.me_run_name = "" # Events diretory name where to stotre the events (used by madevent) not use internally
         
         
         if event_path:
@@ -314,7 +316,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         key = line.split()[1]
                         if key in self.multiparticles_ms:
                             del self.multiparticles_ms[key]            
-            elif line.startswith('set'):
+            elif line.startswith('set') and not line.startswith('set gauge'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
             elif line.startswith('import model'):
                 if model_name in line:
@@ -579,10 +581,34 @@ class MadSpinInterface(extended_cmd.Cmd):
         decay go > sq j
         launch
         '''
+        
+        self.parser_launch.print_help()
+
+    def parser_launch(self):
+        usage = """launch [-n RUN_NAME]   
+        """
+        parser = misc.OptionParser(usage=usage)
+        parser.add_option("-n", "--name",
+                  default="",
+                  help="When NOT run in standalone instruct MG5aMC where to store the events file")
+        return parser
+    
+    def parse_launch(self, line):
+        
+        args = self.split_arg(line)
+        return self.parser_launch().parse_args(args)
+        
 
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
+        
+        (options, args) = self.parse_launch(line)
+        
+        if options.name:
+            self.me_run_name = options.name # Only use by MG5aMC
+        else:
+            self.me_run_name = ''
         
         if self.options["spinmode"] in ["none"]:
             return self.run_bridge(line)
@@ -1704,7 +1730,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     decay_text.append('(%s)' % decay)
                 else:
                     decay_text.append(decay)
-                processes_decay.append(decay)
+                processes_decay.append(decay)            
         decay_text = ', '.join(decay_text)
         processes += []
         
@@ -1719,12 +1745,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 
+                if self.options['global_order_coupling']:
+                    proc_nb = '%s %s' % (proc_nb, self.options['global_order_coupling'])
             else:
-                proc_nb = ''     
+                if self.options['global_order_coupling']:
+                    proc_nb = '@0 %s ' % self.options['global_order_coupling']    
                 
             rwgt_interface.ReweightInterface.get_LO_definition_from_NLO()        
         
-
+        raise Exception
 
 if __name__ == '__main__':
     

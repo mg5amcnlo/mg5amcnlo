@@ -2791,7 +2791,7 @@ RESTART = %(mint_mode)s
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
 
-        command =  []
+        command =  [sys.executable]
         command.append(pjoin(self.me_dir, 'bin', 'internal','histograms.py'))
         for job in jobs:
             if job['dirname'].endswith('.HwU'):

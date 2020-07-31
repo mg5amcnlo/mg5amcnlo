@@ -1036,7 +1036,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
-
+            if 'return_instance' in opt and opt['return_instance']:
+                out, cmd = out
+        if 'return_instance' in opt and opt['return_instance']:
+            return (out, cmd)
+        return out
 
     @staticmethod
     def detect_card_type(path):
@@ -3328,7 +3332,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if mass and abs(width/mass) < 1e-12:
                 if hasattr(interface, 'run_card') and isinstance(interface.run_card, banner_mod.RunCardLO):
                     if interface.run_card['small_width_treatment'] < 1e-12:
-                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_paramer is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                        logger.error('The width of particle %s is too small for an s-channel resonance (%s) and the small_width_treatment parameter is too small to prevent numerical issues. If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 else:
                     logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
                 if CommonRunCmd.sleep_for_error:
@@ -3700,11 +3704,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         madspin_cmd.import_command_file(path)
 
-        # create a new run_name directory for this output
-        i = 1
-        while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
-            i+=1
-        new_run = '%s_decayed_%i' % (self.run_name,i)
+
+        if not madspin_cmd.me_run_name: 
+            # create a new run_name directory for this output
+            i = 1
+            while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
+                i+=1
+            new_run = '%s_decayed_%i' % (self.run_name,i)
+        else:
+            new_run = madspin_cmd.me_run_name
+            if os.path.exists(pjoin(self.me_dir,'Events', new_run)):
+                i = 1
+                while os.path.exists(pjoin(self.me_dir,'Events', '%s_%i' % (new_run,i))):
+                    i+=1
+                new_run = '%s_%i' % (new_run,i)
+
         evt_dir = pjoin(self.me_dir, 'Events')
 
         os.mkdir(pjoin(evt_dir, new_run))
@@ -4507,7 +4521,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.modified_card = set() #set of cards not in sync with filesystem
                               # need to sync them before editing/leaving
         self.init_from_banner(from_banner, banner)
-        
+        self.writting_card = True
+        if 'write_file' in opt:
+            if not opt['write_file']:
+                self.writting_card = False
+                self.param_consistency = False
+                        
         #update default path by custom one if specify in cards
         for card in cards:
             if os.path.exists(card) and os.path.sep in cards:
@@ -5255,7 +5274,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
-        
+
         args = self.split_arg(line)
         
         
@@ -5979,8 +5998,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.do_set('shower_card extrapaths None ') 
                     
         # ensure that all cards are in sync
-        for key in list(self.modified_card):
-            self.write_card(key)
+        if self.writting_card:
+            for key in list(self.modified_card):
+                self.write_card(key)
 
 
     def reask(self, *args, **opt):
@@ -6106,7 +6126,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card.write(self.paths['run'], self.paths['run_default'])
         
     def write_card_param(self):
-        """ write the param_card """        
+        """ write the param_card """    
+    
         self.param_card.write(self.paths['param'])
         
     @staticmethod

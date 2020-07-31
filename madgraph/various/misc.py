@@ -539,7 +539,7 @@ def get_gfortran_version(compiler='gfortran'):
         p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
-        version_finder=re.compile(r"(?P<version>(\d.)*)")
+        version_finder=re.compile(r"(?P<version>\d[\d.]*)")
         version = version_finder.search(output).group('version')
         return version
     except Exception:
@@ -2066,7 +2066,9 @@ def import_python_lhapdf(lhapdfconfig):
                 logger.warning("Failed to access python version of LHAPDF: "\
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable and the"\
-                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x)."\
+                                   "The required LD_LIBRARY_PATH is "+ lhapdf_libdir 
+                                   )
         
     if use_lhapdf:
         python_lhapdf = lhapdf

@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from madgraph.iolibs.helas_call_writers import HelasCallWriter
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -881,7 +880,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Make sure aloha is in quadruple precision if needed
         old_aloha_mp=aloha.mp_precision
         aloha.mp_precision=self.opt['mp']
-
+        self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
@@ -2035,7 +2034,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
-        if 'mode' in self.opt and self.opt['mode'] == "reweight":
+        if False:#'mode' in self.opt and self.opt['mode'] == "reweight":
             #add the module to hande the NLO weight
             files.copytree(pjoin(MG5DIR, 'Template', 'RWGTNLO'),
                           pjoin(self.dir_path, 'Source'))
@@ -2043,7 +2042,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
             
-        if self.prefix_info:
+        if self.prefix_info: 
             self.write_f2py_splitter()
             self.write_f2py_makefile()
             self.write_f2py_check_sa(matrix_elements,
@@ -2100,6 +2099,34 @@ CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters
       RETURN
       END
+      
+      
+      subroutine CHANGE_PARA(name, value)
+      implicit none
+CF2PY intent(in) :: name
+CF2PY intent(in) :: value
+
+      character*512 name
+      double precision value
+
+      include '../Source/MODEL/input.inc'
+      include '../Source/MODEL/coupl.inc'
+
+      SELECT CASE (name)
+         %(parameter_setup)s
+         CASE DEFAULT
+            write(*,*) 'no parameter matching', name, value
+      END SELECT
+
+      return
+      end
+      
+    subroutine update_all_coup()
+    implicit none
+     call coup()
+    return 
+    end
+      
 
     subroutine get_pdg_order(PDG)
   IMPLICIT NONE
@@ -2154,20 +2181,46 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         if min_nexternal != max_nexternal:
             text.append('endif')
 
+        params = self.get_model_parameter(self.model)
+        parameter_setup =[]
+        for key, var in params.items():
+            parameter_setup.append('        CASE ("%s")\n          %s = value' 
+                                   % (key, var))
+
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
                           'maxpart': max_nexternal,
                           'nb_me': len(allids),
                           'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
                                              for i in range(max_nexternal) for pdg in allids),
-                          'prefix':'\',\''.join(allprefix)
+                          'prefix':'\',\''.join(allprefix),
+                          'parameter_setup': '\n'.join(parameter_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
+    
+    def get_model_parameter(self, model):
+        """ returns all the model parameter
+        """
+        params = {}
+        for p in model.get('parameters')[('external',)]:
+            name = p.name
+            nopref = name[4:] if name.startswith('mdl_') else name
+            params[nopref] = name
             
+            block = p.lhablock
+            lha = '_'.join([str(i) for i in p.lhacode])
+            params['%s_%s' % (block.upper(), lha)] = name
+
+        return params                      
+                                        
+        
+        
+        
+         
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.

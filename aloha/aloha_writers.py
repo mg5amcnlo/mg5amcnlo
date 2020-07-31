@@ -1241,12 +1241,15 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
 
     def myHash(target_string):
-        if len(target_string)<50:
-            return target_string
+        suffix = ''
         if '%(propa)s' in target_string:
-            return 'ALOHA_'+(str(hash(target_string.lower()))).replace('-','m')+'%(propa)s'
+            target_string = target_string.replace('%(propa)s','')
+            suffix = '%(propa)s'
+            
+        if len(target_string)<50:
+            return '%s%s' % (target_string, suffix)
         else:
-            return 'ALOHA_'+(str(hash(target_string.lower()))).replace('-','m')
+            return 'ALOHA_%s%s' % (str(hash(target_string.lower())).replace('-','m'), suffix)
 
     if tag and any(t.startswith('P') for t in tag[:-1]):
         # propagator need to be the last entry for the tag

@@ -894,6 +894,7 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
+
          if (itree(1,ibranch).gt.-ns_channel-1)then
             mi2 = m(itree(1,ibranch))**2
          else

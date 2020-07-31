@@ -1680,7 +1680,7 @@ This will take effect only in a NEW terminal
                     continue
                 elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
-                arg, value = arg.split('=')
+                arg, value = arg.split('=',1)
                 if arg[2:] not in options:
                     raise self.InvalidCmd('%s not valid options' % arg)
                 options[arg[2:]] = value
@@ -2842,7 +2842,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools']
+                     'looptools', 'MadSTR']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -6006,7 +6006,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm', 'maddump']
+    install_plugin = ['maddm', 'maddump', 'MadSTR']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
@@ -6024,7 +6024,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
                           'maddm':['arXiv:1804.00444'],
-                          'maddump':['arXiv:1812.06771']}
+                          'maddump':['arXiv:1812.06771'],
+                          'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -6150,7 +6151,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             name = args[0]
         if args[0] == 'MadAnalysis4':
             args[0] = 'MadAnalysis'
-        
+        elif args[0] in ['madstr', 'madSTR']:
+            args[0] = 'MadSTR'
+            name = 'MadSTR'
+            
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -6373,6 +6377,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                                                cwd = os.path.join(MG5DIR, name))
             else:
                 status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
+            devnull.close()
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -8354,7 +8359,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd('output %s -f' % decay_dir,child=False)
+                self.exec_cmd('output madevent %s -f' % decay_dir,child=False)
                 
                 #modify some parameter of the default run_card
                 run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))

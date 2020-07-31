@@ -67,6 +67,9 @@ import logging
 import logging.config
 import madgraph.interface.coloring_logging
 
+if ' ' in os.getcwd():
+    logging.warning("Path does contains spaces. We advise that you change your current path to avoid to have space in the path.")
+
 try: 
     import readline
 except ImportError:
