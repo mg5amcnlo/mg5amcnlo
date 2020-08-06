@@ -2546,8 +2546,6 @@ c     S=A/(B-x) transformation:
 C dressed lepton stuff
       double precision x1_ee, x2_ee, jac_ee
       
-      double precision s_sep_bw
-
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
 
@@ -2557,6 +2555,7 @@ C dressed lepton stuff
      $     ,tau_lower_bound_resonance,tau_lower_bound
 
       double precision get_ee_expo
+      double precision tau_m, tau_w
 
       ! these common blocks are never used
       ! we leave them here for the moment 
@@ -2575,21 +2574,17 @@ C dressed lepton stuff
       r1=rnd1
       r2=rnd2
 
-      ! this parameter separates the s region where
-      ! a BW parameterisation should be used from
-      ! the one where the adaptive eepdf should be used
-      ! it is set to -1. if no BW exists
-      s_sep_bw = -1d0
+      ! define the analogous of tau for mass and width
+      tau_m = qmass**2/stot
+      tau_w = qwidth**2/stot
 
       bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
+     $ .and.tau_m.lt.1d0
       generate_with_bw=.false.
       ! if there are BWs, decide whether to generate flat or
       ! to use the BW-specific generation (half and half, or
       ! as determined by frac_bw)
-      if (bw_exists.and.qmass.lt.sqrt(stot)) then
-        ! do the lower half of the invariant-mass integration 
-        ! with BW and the upper half with ee PDFs
-        s_sep_bw = ((sqrt(stot) + qmass) / 2d0) **2
+      if (bw_exists) then
         generate_with_bw = rnd1.lt.frac_bw
         if (generate_with_bw) then
             rnd1 = rnd1 / frac_bw
@@ -2612,14 +2607,9 @@ C dressed lepton stuff
         idim_dum = 1000 ! this is never used in practice
         call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
      $       cBW_width,tau_born,xjac0)
-
-        ! throw away if tau_born is too_large, in order
-        ! not to end on the no-rad peak
-        if (tau_born*stot.gt.s_sep_bw) then
-          xjac0=-1000d0
-          return
-        endif
-
+        ! multiply the jacobian by a multichannel factor
+        xjac0 = xjac0 * (1d0/((tau_born-tau_m)**2 + tau_m*tau_w)) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
 
         ! then pick either x1 or x2 and generate it the usual way;
         ! Note that:
@@ -2647,12 +2637,18 @@ C dressed lepton stuff
         ! wrt the pp case. In the pp case, tau and y_cm are generated, 
         ! while in the ee case x1 and x2 are generated first.
 
-        call generate_x_ee(rnd1, max(s_sep_bw/stot, tau_born_lower_bound),
+        call generate_x_ee(rnd1, tau_born_lower_bound,
      $      x1_ee, omx1_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, max(s_sep_bw/stot/x1_ee, tau_born_lower_bound/x1_ee),
+        call generate_x_ee(rnd2, tau_born_lower_bound/x1_ee,
      $      x2_ee, omx2_ee, jac_ee)
         xjac0 = xjac0 * jac_ee
+
+        tau_born = x1_ee * x2_ee
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
       endif
 
       ! Check here if the bjorken x's are physical (may not be so
