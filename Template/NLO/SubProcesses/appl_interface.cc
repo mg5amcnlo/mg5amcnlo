@@ -231,8 +231,9 @@ extern "C" void appl_init_()
 
     // Use the reweighting function
     pineappl_keyval_set_bool(key_vals, "reweight", true);
-    // Add documentation
-    pineappl_keyval_set_string(key_vals, "documentation", Banner().c_str());
+
+    // valid choices are: "LagrangeSubgrid", "NtupleSubgrid"
+    pineappl_keyval_set_string(key_vals, "subgrid_type", "LagrangeSubgrid");
 
     // Create a grid with the binning given in the "obsbins[Nbins+1]" array
     grid_obs.push_back(pineappl_grid_new(
