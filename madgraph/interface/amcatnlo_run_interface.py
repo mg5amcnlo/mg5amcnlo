@@ -2917,8 +2917,6 @@ RESTART = %(mint_mode)s
     def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
-        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),
-                                                            'applgrid-combine')
         all_jobs=[]
         for job in jobs:
             if job['resultABS'] == 0.0:
@@ -2934,9 +2932,8 @@ RESTART = %(mint_mode)s
             if self.run_card["iappl"] == 1:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
-                        self.run_name,"amcblast_obs_"+str(obs)+".root"),'-s',
-                                  str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                misc.call(['pineappl','merge', pjoin(self.me_dir,"Events",
+                        self.run_name,"amcblast_obs_"+str(obs)+".root")]+ gdir)
             else:
                 raise aMCatNLOError('iappl parameter can only be 0 or 1')
             # after combining, delete the original grids
