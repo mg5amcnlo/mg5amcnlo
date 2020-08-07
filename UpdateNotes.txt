@@ -1,10 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.7.4:
+2.8.0:
       OM: In madspin_card you can now replace the line "launch"
           by "launch -n NAME", this will allow to specify the name of the
 	  directory in EVENTS where that run is stored.
-
+      OM: Change in the python interface of the standalone output. In top of the pdg of the particles,
+          you can now use the process_id (the one specified with @X) to distinguish process with the same particle
+	  content. This parameter can be set to -1 and the function then ignore that parameter.
+      OM: Adding new option in reweighting to allow the user to use the process_id in presence of ambiguous
+          initial/final state.
+      OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the
+          effective photon approximation. This mode behaves like the "3" one: The cut-off scale of the approximation
+	  is taken from the fixed renormalization factorisation scale: "dsqrt_q2fact1/dsqrt_q2fact2"
+      OM: Update the makefile of standalone interface to python to be able to compile in multicore.
+           (thanks Matthias Komm)
+      OM: Update of the auto-width code to support UFO form-factors
+      OM: Fixing numerical issue at very low invariant mass and another numerical issue with the boost in EPA mode.
+      
 
 2.7.3(21/06/20)
       OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).

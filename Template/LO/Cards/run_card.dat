@@ -28,7 +28,7 @@
 #*********************************************************************
 # Collider type and energy                                           *
 # lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
-#                                         3=photon from electron     *
+#                3=photon from electron, 4=photon from muon          *
 #*********************************************************************
      %(lpp1)s        = lpp1    ! beam 1 type 
      %(lpp2)s        = lpp2    ! beam 2 type
