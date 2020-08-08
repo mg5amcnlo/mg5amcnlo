@@ -24,6 +24,7 @@ import re
 import math
 import StringIO
 import itertools
+import time
 
 
 pjoin = os.path.join
@@ -3182,7 +3183,6 @@ class RunCardLO(RunCard):
         if self['xqcut'] > 0:
             if self['ickkw'] == 0:
                 logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
-                import time
                 time.sleep(5)
             if self['drjj'] != 0:
                 if 'drjj' in self.user_set:
@@ -3212,15 +3212,14 @@ class RunCardLO(RunCard):
 
         # check if lpp = 
         for i in [1,2]:
-            if abs(self['lpp%s' % i ]) == 3 and self['dsqrt_q2fact%s'%i] > 4:
-                raise InvalidRunCard( "Photon from electron are using fixed scale value of muf [dsqrt_q2fact%s] as the cut off value of the approximation.\n" % i + \
-                                      "For EPA this number should be small (for HERA prediction it should be 2 at most)")
-            if abs(self['lpp%s' % i ]) == 4 and self['dsqrt_q2fact%s'%i] == 91.188:
-                raise InvalidRunCard("Photon from muon are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. We prevent to use exactly 91.188 to be sure that you are aware of that." % i)
+            if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
+                logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
+                time.sleep(5)
         
             if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
-                raise InvalidRunCard("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of th Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
-        
+                logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+                time.sleep(5)
+                
         # if both lpp1/2 are on PA mode -> force fixed factorization scale
         if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
             raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
