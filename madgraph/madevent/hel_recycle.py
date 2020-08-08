@@ -8,8 +8,14 @@ from string import Template
 from copy import copy
 from itertools import product
 
+try:
+    import madgraph
+except:
+    import internal.misc as misc
+else:
+    import madgraph.various.misc as misc
 # Remove
-from ipdb import set_trace
+#from ipdb import set_trace
 import mmap
 import tqdm
 def get_num_lines(file_path):
@@ -428,7 +434,10 @@ class HelicityRecycler():
 
     def add_amp_index(self, matchobj):
         old_pat = matchobj.group()
-        new_pat = f'{old_pat[:-1]},{self.loop_var}{old_pat[-1]}'
+        new_pat = old_pat.replace('AMP(', 'AMP( %s,' % self.loop_var)
+        #misc.sprint(self.loop_var, old_pat)
+        
+        #new_pat = f'{self.loop_var},{old_pat[:-1]}{old_pat[-1]}'
         return new_pat
 
     def add_indices(self, line):
@@ -679,20 +688,45 @@ def split_amps(line, new_amps):
                     if all(w in amp.args for w in wfcts)]
         # the next line is to make the code nicer 
         sub_amps.sort(key=lambda a: int(a.args[-1][:-1].split(',',1)[1]))
+        windices = []
+        hel_calculated = []
+        iamp = 0
         for i,amp in enumerate(sub_amps):
             args = amp.args[:]   
             # Remove wav and get its index
             wcontract = args.pop(to_remove)
             windex = wcontract.split(',')[1].split(')')[0]
+            windices.append(windex)
             amp_result,  args[-1]  =  args[-1], 'TMP(1)'
             if i ==0:
                 # Call the original fct with P1N_...
                 # Final arg is replaced with TMP(1)
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
-            lines.append('      %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
-                         % {'result': amp_result, 'w':  windex}) 
-            lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
-                         % {'result': amp_result, 'w':  windex})
+            iamp, hel = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel_calculated.append(hel)
+            #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
+            #             % {'result': amp_result, 'w':  windex}) 
+            #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
+            #             % {'result': amp_result, 'w':  windex})
+        lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/)," %
+                       {'nb': len(sub_amps),
+                        'hel_list': ','.join(hel_calculated),
+                        'w_list': ','.join(windices),
+                        'iamp': iamp
+                       })
+        lines.append("     &(/%(w_list)s/), " %
+                       {'nb': len(sub_amps),
+                        'hel_list': ','.join(hel_calculated),
+                        'w_list': ','.join(windices),
+                        'iamp': iamp
+                       })
+        lines.append("     &TMP, W, AMP(1,%(iamp)s))" %
+                       {'nb': len(sub_amps),
+                        'hel_list': ','.join(hel_calculated),
+                        'w_list': ','.join(windices),
+                        'iamp': iamp
+                       })
+            
     lines.append('')
     return '\n'.join(lines)
 

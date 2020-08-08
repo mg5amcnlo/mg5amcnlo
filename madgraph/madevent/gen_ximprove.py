@@ -188,11 +188,12 @@ class gensym(object):
                 split_templ = split_file[:-1] + [basename]
                 templ_file = pjoin('/', '/'.join(split_templ))
 
+                recycler = hel_recycle.HelicityRecycler(good_hels)
                 # In case of bugs you can play around with these:
                 recycler.hel_filt = True
                 recycler.amp_splt = True
 
-                recycler = hel_recycle.HelicityRecycler(good_hels)
+
                 recycler.set_input(matrix_file)
                 recycler.set_output(out_file)
                 recycler.set_template(templ_file)              
