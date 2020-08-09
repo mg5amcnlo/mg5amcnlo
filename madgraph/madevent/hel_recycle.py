@@ -708,24 +708,25 @@ def split_amps(line, new_amps):
             #             % {'result': amp_result, 'w':  windex}) 
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
-        lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/)," %
-                       {'nb': len(sub_amps),
-                        'hel_list': ','.join(hel_calculated),
-                        'w_list': ','.join(windices),
-                        'iamp': iamp
-                       })
-        lines.append("     &(/%(w_list)s/), " %
-                       {'nb': len(sub_amps),
-                        'hel_list': ','.join(hel_calculated),
-                        'w_list': ','.join(windices),
-                        'iamp': iamp
-                       })
-        lines.append("     &TMP, W, AMP(1,%(iamp)s))" %
-                       {'nb': len(sub_amps),
-                        'hel_list': ','.join(hel_calculated),
-                        'w_list': ','.join(windices),
-                        'iamp': iamp
-                       })
+        if len(sub_amps):
+            lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/)," %
+                           {'nb': len(sub_amps),
+                            'hel_list': ','.join(hel_calculated),
+                            'w_list': ','.join(windices),
+                            'iamp': iamp
+                           })
+            lines.append("     &(/%(w_list)s/), " %
+                           {'nb': len(sub_amps),
+                            'hel_list': ','.join(hel_calculated),
+                            'w_list': ','.join(windices),
+                            'iamp': iamp
+                           })
+            lines.append("     &TMP, W, AMP(1,%(iamp)s))" %
+                           {'nb': len(sub_amps),
+                            'hel_list': ','.join(hel_calculated),
+                            'w_list': ','.join(windices),
+                            'iamp': iamp
+                           })
             
     lines.append('')
     return '\n'.join(lines)
