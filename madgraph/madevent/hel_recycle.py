@@ -688,6 +688,8 @@ def split_amps(line, new_amps):
         # Select the amplitudes produced by wfcts
         sub_amps = [amp for amp in new_amps 
                     if all(w in amp.args for w in wfcts)]
+        if not sub_amps:
+            continue
         # the next line is to make the code nicer 
         sub_amps.sort(key=lambda a: int(a.args[-1][:-1].split(',',1)[1]))
         windices = []
@@ -710,20 +712,7 @@ def split_amps(line, new_amps):
             #             % {'result': amp_result, 'w':  windex}) 
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
-        if len(sub_amps):
-            lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/)," %
-                           {'nb': len(sub_amps),
-                            'hel_list': ','.join(hel_calculated),
-                            'w_list': ','.join(windices),
-                            'iamp': iamp
-                           })
-            lines.append("     &(/%(w_list)s/), " %
-                           {'nb': len(sub_amps),
-                            'hel_list': ','.join(hel_calculated),
-                            'w_list': ','.join(windices),
-                            'iamp': iamp
-                           })
-            lines.append("     &TMP, W, AMP(1,%(iamp)s))" %
+        lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
                            {'nb': len(sub_amps),
                             'hel_list': ','.join(hel_calculated),
                             'w_list': ','.join(windices),
