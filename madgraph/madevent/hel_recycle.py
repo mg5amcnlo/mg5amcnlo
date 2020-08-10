@@ -294,7 +294,7 @@ class Amplitude(MathsObject):
 
     @staticmethod
     def format_name(*nums):
-        return f'AMP({nums[1]},{nums[0]})'
+        return f'AMP({nums[0]},{nums[1]})'
 
     @classmethod
     def generate_amps(cls, line, graph):
@@ -520,6 +520,7 @@ class HelicityRecycler():
         if self.amp_splt:
             return split_amps(line, new_objs)  
         else: 
+
             return apply_args(line, [i.args for i in new_objs])
 
     def get_gwc(self, line):
@@ -656,6 +657,7 @@ def apply_args(old_line, all_the_args):
     old_args = old_line.split(function)[-1]
     new_lines = [old_line.replace(old_args, f'({",".join(x)})\n')
                  for x in all_the_args]
+    
     return ''.join(new_lines)
 
 def split_amps(line, new_amps):
@@ -702,7 +704,7 @@ def split_amps(line, new_amps):
                 # Call the original fct with P1N_...
                 # Final arg is replaced with TMP(1)
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
-            iamp, hel = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 
