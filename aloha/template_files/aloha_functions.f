@@ -2054,3 +2054,19 @@ c     local variable
       enddo
       return
       end
+      
+      subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
+
+      integer nb ! size of the vectors
+      integer ihels(*), iwfcts(*)
+      double complex W1(3)
+      double complex Wall(6,*)
+      double complex Amp(*)
+c     local variable
+      integer i
+
+      do i = 1, nb
+         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i))
+      enddo
+      return
+      end

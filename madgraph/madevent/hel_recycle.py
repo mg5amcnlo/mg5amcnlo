@@ -702,22 +702,35 @@ def split_amps(line, new_amps):
             windex = wcontract.split(',')[1].split(')')[0]
             windices.append(windex)
             amp_result,  args[-1]  =  args[-1], 'TMP(1)'
+            
             if i ==0:
                 # Call the original fct with P1N_...
                 # Final arg is replaced with TMP(1)
+                spin = fct.split(None,1)[1][to_remove]
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
+
             hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
-        lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
-                           {'nb': len(sub_amps),
-                            'hel_list': ','.join(hel_calculated),
-                            'w_list': ','.join(windices),
-                            'iamp': iamp
-                           })
+        if spin in "VF":
+            lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
+                               {'nb': len(sub_amps),
+                                'hel_list': ','.join(hel_calculated),
+                                'w_list': ','.join(windices),
+                                'iamp': iamp
+                               })
+        elif spin == "S":
+            lines.append("      call CombineAmpS(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
+                               {'nb': len(sub_amps),
+                                'hel_list': ','.join(hel_calculated),
+                                'w_list': ','.join(windices),
+                                'iamp': iamp
+                               })            
+        else:
+            raise Exception("split amp are not supported for spin2 and 3/2")
             
     lines.append('')
     return '\n'.join(lines)
