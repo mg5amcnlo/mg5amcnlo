@@ -2737,11 +2737,11 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      %(get_nsqso_born)s
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-	  include "nsqso_born.inc"
 	  INTEGER ANS_DIMENSION
 	  PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
       %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
@@ -2767,7 +2767,7 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-	  include "nsqso_born.inc"
+      %(get_nsqso_born)s
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
       %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
@@ -2881,7 +2881,7 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      include "nsqso_born.inc"
+      %(get_nsqso_born)s
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
       %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
