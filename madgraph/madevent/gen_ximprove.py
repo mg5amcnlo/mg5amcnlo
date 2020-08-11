@@ -167,18 +167,23 @@ class gensym(object):
             if 'no events passed cuts' in stdout:
                 raise Exception
 
+            #print(stdout)
             # Get indices of good helicity
             # Use set (not list) so all elements unique
-            good_hels = {int(line.split()[3]) for line in stdout.splitlines() 
-                if 'Added good helicity' in line}
-            # Convert to sorted list for reproducibility
-            good_hels = sorted(list(good_hels))
-            good_hels = [str(x) for x in good_hels]
-            print(stdout)
-
+            all_hel = {tuple(line.split()[3:5]) for line in stdout.splitlines() 
+                if 'Matrix Element/Good Helicity:' in line}
+            #print(all_hel)
+            all_good_hels = collections.defaultdict(list)
+            for me_index, hel in all_hel:
+                all_good_hels[me_index].append(int(hel))
+            
+            #for key in all_good_hels:
+            #    print( [key], len(all_good_hels[key]))
+        
             for matrix_file in misc.glob('matrix*orig.f', Pdir):
-                
+    
                 split_file = matrix_file.split('/')
+                me_index = split_file[-1][len('matrix'):-len('_orig.f')]
 
                 basename = split_file[-1].replace('orig', 'optim')
                 split_out = split_file[:-1] + [basename]
@@ -187,6 +192,11 @@ class gensym(object):
                 basename = f'template_{split_file[-1].replace("_orig", "")}'
                 split_templ = split_file[:-1] + [basename]
                 templ_file = pjoin('/', '/'.join(split_templ))
+
+                # Convert to sorted list for reproducibility
+                #good_hels = sorted(list(good_hels))
+                good_hels = [str(x) for x in sorted(all_good_hels[me_index])]
+                #raise Exception
 
                 recycler = hel_recycle.HelicityRecycler(good_hels)
                 # In case of bugs you can play around with these:

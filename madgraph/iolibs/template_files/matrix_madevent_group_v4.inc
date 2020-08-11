@@ -159,7 +159,11 @@ C ----------
         JHEL(IMIRROR) = 1
         IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.2)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+	      IF(init_mode) THEN
+                  IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
+                     PRINT *, 'Matrix Element/Good Helicity: %(proc_id)s ', i, 'IMIRROR', IMIRROR
+	          ENDIF
+	      ELSE IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I,IMIRROR)=.TRUE.
                  NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                  IGOOD(NGOOD(IMIRROR),IMIRROR) = I
