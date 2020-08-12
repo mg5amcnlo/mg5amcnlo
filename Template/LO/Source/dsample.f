@@ -2271,7 +2271,11 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-
+c
+c     
+c
+       logical init_mode
+       common/to_determine_zero_hel/init_mode
 c----
 c  Begin Code
 c----
@@ -2279,6 +2283,9 @@ c----
          write(*,*) nb_pass_cuts, 
      &    ' points passed the cut but all returned zero'
          write(*,*) 'therefore considering this contribution as zero'
+         if (init_mode) then
+            call print_zero_amp()
+         endif
       else if (nb_pass_cuts.gt.0.and.nb_pass_cuts.lt.1000)then
          write(*,*) 'only', nb_pass_cuts, 
      &    ' points passed the cut and they all returned zero'

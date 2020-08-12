@@ -5311,6 +5311,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         replace_dict['nb_spin_state1'] = s1
         replace_dict['nb_spin_state2'] = s2
         
+        printzeroamp = []
+        for iproc in range(len(matrix_elements)):
+            printzeroamp.append(\
+                "        call print_zero_amp_%i()" % ( iproc + 1))
+        replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
+        
+        
         if writer:
             file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()

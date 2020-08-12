@@ -177,6 +177,15 @@ class gensym(object):
             for me_index, hel in all_hel:
                 all_good_hels[me_index].append(int(hel))
             
+            if self.run_card['hel_zeroamp']:
+                all_zamp = {tuple(line.split()[1:3]) for line in stdout.splitlines() 
+                    if 'Amplitude/ZEROAMP:' in line}
+                #print(all_hel)
+                all_bad_amps = collections.defaultdict(list)
+                for me_index, amp in all_zamp:
+                    all_bad_amps[me_index].append(int(amp))                
+                #for key in all_bad_amps:
+                #    print( [key], len(all_bad_amps[key]))                
             #for key in all_good_hels:
             #    print( [key], len(all_good_hels[key]))
         
@@ -196,13 +205,17 @@ class gensym(object):
                 # Convert to sorted list for reproducibility
                 #good_hels = sorted(list(good_hels))
                 good_hels = [str(x) for x in sorted(all_good_hels[me_index])]
+                if self.run_card['hel_zeroamp']:
+                    bad_amps = [str(x) for x in sorted(all_bad_amps[me_index])]
+                else:
+                    bad_amps = [] 
                 #raise Exception
 
-                recycler = hel_recycle.HelicityRecycler(good_hels)
+                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps)
                 # In case of bugs you can play around with these:
-                recycler.hel_filt = True
-                recycler.amp_splt = True
-
+                recycler.hel_filt = self.run_card['hel_filtering']
+                recycler.amp_splt = self.run_card['hel_splitamp']
+                recycler.amp_filt = self.run_card['hel_zeroamp']
 
                 recycler.set_input(matrix_file)
                 recycler.set_output(out_file)

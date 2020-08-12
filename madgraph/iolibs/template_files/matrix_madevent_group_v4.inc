@@ -123,7 +123,7 @@ C ----------
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.2) THEN
+         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -157,7 +157,7 @@ C ----------
           endif
 	  ELSE
         JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.2)THEN
+        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.10)THEN
            DO I=1,NCOMB
 	      IF(init_mode) THEN
                   IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
@@ -291,6 +291,12 @@ C
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
+
+	logical init_mode
+	common/to_determine_zero_hel/init_mode
+
+	logical zeroamp_%(proc_id)s(NGRAPHS)
+	common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
 C  
 C COLOR DATA
 C  
@@ -301,11 +307,25 @@ C ----------
 if (first) then
 	first=.false.
 	%(fake_width_definitions)s
+
+	if(init_mode) then
+	do I=1, NGRAPHS
+	   zeroamp_%(proc_id)s(i) = .true.
+	enddo
+	endif	
 endif
 
 
 %(helas_calls)s
 %(jamp_lines)s
+
+    if(init_mode)then
+      DO I=1, NGRAPHS	
+        if (AMP(I).ne.0) then
+       	  zeroamp_%(proc_id)s(i) = .false.
+       endif
+      ENDDO
+    endif	
 
     MATRIX%(proc_id)s = 0.D0 
 	DO M = 1, NAMPSO
@@ -334,3 +354,22 @@ endif
     Enddo
 
     END
+
+    SUBROUTINE PRINT_ZERO_AMP_%(proc_id)s()
+
+    INTEGER    NGRAPHS
+    PARAMETER (NGRAPHS=%(ngraphs)d)
+
+    logical zeroamp_%(proc_id)s(NGRAPHS)
+    common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
+
+    integer i
+
+    do i=1, NGRAPHS
+       if (zeroamp_%(proc_id)s(i)) then
+       	  write(*,*) 'Amplitude/ZEROAMP:', %(proc_id)s, i 
+       endif
+    enddo   
+
+    return
+    end

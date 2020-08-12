@@ -3132,6 +3132,9 @@ class RunCardLO(RunCard):
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
         self.add_param('hel_recycling', True, hidden=True, include=False, comment='allowed to deactivate helicity optimization at run-time --code needed to be generated with such optimization--')
+        self.add_param('hel_filtering', True,  hidden=True, include=False, comment='filter in advance the zero helicities when doing helicity per helicity optimization.')
+        self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
+        self.add_param('hel_zeroamp', False, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
@@ -3258,6 +3261,14 @@ class RunCardLO(RunCard):
         if self['lpp1'] in [2, 3] and self['lpp2'] in [2, 3] and not self['fixed_fac_scale']:
             raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
 
+        if six.PY2 and self['hel_recycling']:
+            self['hel_recycling'] = False
+            logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
+            In general this optimization speed up the computation be a factor of two.""")
+        elif self['hel_recycling']:
+            if self['gridpack']:
+                self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
+                
 
     def update_system_parameter_for_include(self):
         

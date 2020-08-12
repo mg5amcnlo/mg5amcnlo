@@ -513,4 +513,8 @@ C
 %(read_write_good_hel)s
 
 
+     SUBROUTINE PRINT_ZERO_AMP()
 
+     %(print_zero_amp)s
+     return
+     end

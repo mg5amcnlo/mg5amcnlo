@@ -161,12 +161,14 @@ C
 	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
 	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
 	SAVE CHOSEN_SO_CONFIGS
+    INTEGER                 NCOMB         
+    PARAMETER (             NCOMB=${ncomb})
 C  
 C ARGUMENTS 
-C  
+C
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-    REAL*8 TS(${ncomb})
+    REAL*8 TS(NCOMB)
 C  
 C LOCAL VARIABLES 
 C  
@@ -174,7 +176,7 @@ C
     COMPLEX*16 ZTEMP
     COMPLEX*16 TMP(6)
     REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(${ncomb},NGRAPHS), JAMP(NCOLOR,NAMPSO)
+    COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
@@ -210,7 +212,7 @@ if (first) then
 endif
 
 ${helas_calls}
-    DO K = 1, ${ncomb}
+    DO K = 1, NCOMB
 ${jamp_lines}
         TS(K) = 0.D0 
     	DO M = 1, NAMPSO
@@ -239,3 +241,11 @@ ${jamp_lines}
     ENDDO
 
     END
+
+
+    SUBROUTINE PRINT_ZERO_AMP_%(proc_id)s()
+
+    integer i
+    	    i =1
+    return
+    end
