@@ -417,6 +417,12 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(1,ida1)
         endif
+      else if (abs(get_color(idmo)).eq.8.and.abs(get_color(idda1)).eq.1.and.abs(get_color(idda2)).eq.8)then
+         ipart(1,imo)=ipart(1,ida2)
+         ipart(2,imo)=ipart(2,ida2)
+      else if (abs(get_color(idmo)).eq.8.and.abs(get_color(idda1)).eq.8.and.abs(get_color(idda2)).eq.1)then
+         ipart(1,imo)=ipart(1,ida1)
+         ipart(2,imo)=ipart(2,ida1)
       else
          write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
          write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"

@@ -1334,9 +1334,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if flip_sign:
                 # Flip state and particle identity
                 # (to keep particle identity * flow state)
-                new_wf.set('state', list(filter(lambda state: \
-                                           state != new_wf.get('state'),
-                                           ['incoming', 'outgoing']))[0])
+                new_wf.set('state', list([state for state in ['incoming', 'outgoing'] if state != new_wf.get('state')])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
             try:
                 # Use the copy in wavefunctions instead.
@@ -1461,8 +1459,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'is_part':
             return not self.get('is_part')
         if name == 'state':
-            return list(filter(lambda state: state != self.get('state'),
-                          ['incoming', 'outgoing']))[0]
+            return list([state for state in ['incoming', 'outgoing'] if state != self.get('state')])[0]
         return self.get(name)
     
     def get_external_helas_call_dict(self):
@@ -3979,7 +3976,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """
 
         #check that decay does not specify polarization
-        wfs = filter(lambda w: w.get('state') == 'initial' , decay.get('diagrams')[0].get('wavefunctions'))
+        wfs = [w for w in decay.get('diagrams')[0].get('wavefunctions') if w.get('state') == 'initial']
         if any(wf.get('polarization') for wf in wfs):
             raise InvalidCmd( 'In decay-chain polarization can only be specified in production not in decay. Please Retry')
 
@@ -4446,8 +4443,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                       [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == True]]
 
         final_pols = [leg.get('polarization') for leg in \
-                      filter(lambda leg: leg.get('state') == True, \
-                              self.get('processes')[0].get('legs'))]
+                      [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == True]]
         
         pols_by_id = {}
         for id, pol in zip(final_legs, final_pols):
@@ -4713,8 +4709,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         state spin only """
         
         model = self.get('processes')[0].get('model')
-        initial_legs = filter(lambda leg: leg.get('state') == False, \
-                              self.get('processes')[0].get('legs'))
+        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False]
         hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
                         else len(model.get('particle_dict')[\
                                   leg.get('id')].get_helicity_states())
@@ -4726,8 +4721,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number of state for each initial particle)"""
 
         model = self.get('processes')[0].get('model')
-        initial_legs = filter(lambda leg: leg.get('state') == False, \
-                              self.get('processes')[0].get('legs'))
+        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False]
         hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
                         else len(model.get('particle_dict')[\
                                   leg.get('id')].get_helicity_states())
@@ -5783,6 +5777,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
                                       get('processes')
+                    
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),
                         permutations[me_index],
@@ -5822,14 +5817,24 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         """Reorder the legs in the process according to the difference
         between org_perm and proc_perm"""
 
+        
+        
         leglist = base_objects.LegList(\
                   [copy.copy(process.get('legs_with_decays')[i]) for i in \
                    diagram_generation.DiagramTag.reorder_permutation(\
                        proc_perm, org_perm)])
         new_proc = copy.copy(process)
-        new_proc.set('legs_with_decays', leglist)
+        if org_perm == proc_perm:
+            return new_proc
 
+        if  len(org_perm) != len(process.get('legs_with_decays')):
+            raise Exception("issue on symmetry between process")
+
+        new_proc.set('legs_with_decays', leglist)
+        
         if not new_proc.get('decay_chains'):
             new_proc.set('legs', leglist)
+            assert len(process.get('legs')) == len(leglist)
 
+            
         return new_proc

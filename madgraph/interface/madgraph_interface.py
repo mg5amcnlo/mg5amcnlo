@@ -464,7 +464,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
-        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
+        logger.info("      --noeps=True: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -535,6 +535,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
         logger.info("Example: check full p p > j j",'$MG:color:GREEN')
+        logger.info("Using leshouches file as input",'$MG:color:GREEN')
+        logger.info("    use the option --events=PATH")
+        logger.info("      zipped file are not supported")
+        logger.info("      to loop over the file use the option --skip_evt=X")
+        logger.info("")
         logger.info("Options for loop processes only:",'$MG:BOLD')
         logger.info("o timing:",'$MG:color:GREEN')
         logger.info("   Generate and output a process and returns detailed")
@@ -935,7 +940,9 @@ class CheckValidForCmd(cmd.CheckCmd):
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
-                   '--collier_mode':'1'}  
+                   '--collier_mode':'1',
+                   '--events': None,
+                   '--skip_evt':0}  
 
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -1084,7 +1091,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process:
+            if 'noborn' in process or 'sqrvirt' in process:
                 valid = True
             else:
                 raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
@@ -1509,8 +1516,8 @@ This will take effect only in a NEW terminal
                 if sys.version_info[0] == 2:
                     if  sys.version_info[1] == 6:
                         raise Exception('python2.6 does not support such functionalities please use python2.7')
-                else:
-                    raise Exception('python3.x does not support such functionalities please use python2.7')
+                #else:
+                #    raise Exception('python3.x does not support such functionalities please use python2.7')
         
 
 
@@ -1683,7 +1690,7 @@ This will take effect only in a NEW terminal
                     continue
                 elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
-                arg, value = arg.split('=')
+                arg, value = arg.split('=',1)
                 if arg[2:] not in options:
                     raise self.InvalidCmd('%s not valid options' % arg)
                 options[arg[2:]] = value
@@ -2860,7 +2867,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools']
+                     'looptools', 'MadSTR']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -3947,6 +3954,15 @@ This implies that with decay chains:
             option = args[i].split('=')
             if option[0] =='--energy':
                 options['energy']=float(option[1])
+            elif option[0] == '--events' and option[1]:
+                if option[1] == 'None':
+                    options['events'] = None
+                elif not os.path.exists(option[1]):
+                    raise Exception('path %s does not exists' % option[1])
+                else:
+                    options['events'] = option[1]
+            elif option[0] == '--skip_evt':
+                options['skip_evt']=int(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
             elif option[0]=='--helicity':
@@ -5685,7 +5701,7 @@ This implies that with decay chains:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd as why:
-                logger_stderr.warning('impossible to set default multiparticles %s because %s' %
+                logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
                 if self.history[-1] == 'define %s' % line.strip():
                     self.history.pop(-1)
@@ -6060,7 +6076,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm', 'maddump']
+    install_plugin = ['maddm', 'maddump', 'MadSTR']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
@@ -6078,7 +6094,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
                           'maddm':['arXiv:1804.00444'],
-                          'maddump':['arXiv:1812.06771']}
+                          'maddump':['arXiv:1812.06771'],
+                          'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -6205,7 +6222,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             name = args[0]
         if args[0] == 'MadAnalysis4':
             args[0] = 'MadAnalysis'
-        
+        elif args[0] in ['madstr', 'madSTR']:
+            args[0] = 'MadSTR'
+            name = 'MadSTR'
+            
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -6429,6 +6449,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                                                cwd = os.path.join(MG5DIR, name))
             else:
                 status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
+            devnull.close()
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -6477,18 +6498,18 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
+                target = 'https://home.fnal.gov/~parke/TD/td_mac_intel64.tar.gz'
                 misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
-                files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
+                files.mv(MG5DIR + '/td/td_intel_mac64',MG5DIR+'/td/td')
             else:
                 if sys.maxsize > 2**32:
                     logger.info('Downloading TD for Linux 64 bit')
-                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td64/td'
-                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
-                In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
-                instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                    target = 'https://home.fnal.gov/~parke/TD/td_linux_64bit.tar.gz'
+                    #logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
+                #In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
+                #instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
@@ -7687,6 +7708,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning(message)
 
         elif args[0] == 'OLP':
+            if six.PY3 and self.options['low_mem_multicore_nlo_generation']:
+                raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
@@ -7715,6 +7738,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
+        elif args[0] in ['low_mem_multicore_nlo_generation']:	    
+            if six.PY3 and self.options['OLP'] != 'MadLoop':
+                raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+            else:
+                self.options[args[0]] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
