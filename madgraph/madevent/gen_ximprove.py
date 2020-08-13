@@ -123,6 +123,7 @@ class gensym(object):
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.lastoffset = {}
     
+    done_warning_zero_coupling = False
     def get_helicity(self, to_submit=True, clean=True):
         """launch a single call to madevent to get the list of non zero helicity"""
     
@@ -171,27 +172,69 @@ class gensym(object):
             if 'no events passed cuts' in stdout:
                 raise Exception
 
-            #print(stdout)
-            # Get indices of good helicity
-            # Use set (not list) so all elements unique
-            all_hel = {tuple(line.split()[3:5]) for line in stdout.splitlines() 
-                if 'Matrix Element/Good Helicity:' in line}
-            #print(all_hel)
+            all_zamp = set()
+            all_hel = set()
+            zero_gc = list()
+            
+            for line in stdout.splitlines():
+                if 'GC_' in line:
+                    lsplit = line.split()
+                    if float(lsplit[2]) ==0 == float(lsplit[3]):
+                        zero_gc.append(lsplit[0])
+                if 'Matrix Element/Good Helicity:' in line:
+                    all_hel.add(tuple(line.split()[3:5]))
+                if 'Amplitude/ZEROAMP:' in line:
+                    all_zamp.add(tuple(line.split()[1:3]))
+
+            
+
+
+            
+
+            if zero_gc and not gensym.done_warning_zero_coupling:
+                gensym.done_warning_zero_coupling = True
+                logger.warning("The optimizer detects that you have coupling evaluated to zero: \n"+\
+                                "%s\n" % (' '.join(zero_gc)) +\
+                               "This will slow down the computation. Please consider using restricted model:\n" +\
+                               "https://answers.launchpad.net/mg5amcnlo/+faq/2312")
+                           
             all_good_hels = collections.defaultdict(list)
             for me_index, hel in all_hel:
-                all_good_hels[me_index].append(int(hel))
-            
+                all_good_hels[me_index].append(int(hel))                           
+                               
+            #print(all_hel)
             if self.run_card['hel_zeroamp']:
-                all_zamp = {tuple(line.split()[1:3]) for line in stdout.splitlines() 
-                    if 'Amplitude/ZEROAMP:' in line}
-                #print(all_hel)
                 all_bad_amps = collections.defaultdict(list)
                 for me_index, amp in all_zamp:
-                    all_bad_amps[me_index].append(int(amp))                
-                #for key in all_bad_amps:
-                #    print( [key], len(all_bad_amps[key]))                
-            #for key in all_good_hels:
-            #    print( [key], len(all_good_hels[key]))
+                    all_bad_amps[me_index].append(int(amp))
+            elif all_zamp:
+                nb_zero = sum(int(a[1]) for a in all_zamp)
+                if zero_gc:
+                    logger.warning("Those zero couplings lead to %s Feynman diagram evaluated to zero (on 10 PS point),\n" % nb_zero +\
+                                   "This part can optimize if you set the flag  hel_zeroamp to True in the run_card."+\
+                                   "Note that restricted model will be more optimal.")
+                else:
+                    logger.warning("The optimization detected that you have %i zero matrix-element for this SubProcess: %s.\n" % nb_zero +\
+                                   "This part can optimize if you set the flag  hel_zeroamp to True in the run_card.")
+            
+            #check if we need to do something and write associate information"
+            data = [all_hel, all_zamp]
+            if not self.run_card['hel_zeroamp']:
+                data[1] = ''
+            if not self.run_card['hel_filtering']:
+                data[0] = ''
+            data = str(data)
+            if os.path.exists(pjoin(Pdir,'Hel','selection')):
+                old_data = open(pjoin(Pdir,'Hel','selection')).read()
+                print(data)
+                print(old_data)
+                if old_data == data:
+                    continue
+                
+            
+            with open(pjoin(Pdir,'Hel','selection'),'w') as fsock:
+                fsock.write(data)        
+                
         
             for matrix_file in misc.glob('matrix*orig.f', Pdir):
     
@@ -230,7 +273,7 @@ class gensym(object):
             # with misc.chdir():
             #     pass
 
-            files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
+            #files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
 
         return {}, P_zero_result
 

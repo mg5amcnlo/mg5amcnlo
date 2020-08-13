@@ -3365,10 +3365,16 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             for p in subproc:
                 for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    new_file = f.replace('_orig','_optim')
                     files.cp(f, f.replace('_orig','_optim'))
                     f = '%s.o' % f[:-2]
                     if os.path.exists(f):
                         files.cp(f, f.replace('_orig','_optim'))
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', p, 'Hel', 'selection'))
+            except Exception as error:
+                logger.debug(error)
+                pass
                                 
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
