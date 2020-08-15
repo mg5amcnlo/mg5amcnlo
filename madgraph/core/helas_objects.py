@@ -13,7 +13,6 @@
 #
 ################################################################################
 from __future__ import division
-from __builtin__ import False
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and

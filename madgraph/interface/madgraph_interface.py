@@ -789,7 +789,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
         logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
         logger.info(" > Forbids the inclusion of channel of integration with more than X")
-        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate") 
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
+        logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
+        logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -2865,6 +2868,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'EWscheme',
                     'max_npoint_for_channel',
                     'max_t_for_channel',
+                    'zerowidth_tchannel',
                     'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
@@ -2926,6 +2930,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_npoint_for_channel': 0, # 0 means automaticly adapted
                           'default_unset_couplings': 99, # 99 means infinity
                           'max_t_for_channel': 99, # means no restrictions
+                          'zerowidth_tchannel': True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -7641,7 +7646,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     tmp = args[1].lower()
                 else: 
                     raise
-            self.options[args[0]] = tmp        
+            self.options[args[0]] = tmp
+        elif args[0] in ['zerowidth_tchannel']:
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
@@ -7872,6 +7879,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+
         # Define the helas call  writer
         if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
@@ -7880,6 +7888,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
+            options = {'zerowidth_tchannel': True}
+            if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
+                options['zerowidth_tchannel'] = False
+            
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]

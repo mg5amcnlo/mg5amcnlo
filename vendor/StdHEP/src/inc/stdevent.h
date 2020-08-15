@@ -4,6 +4,9 @@
 /*  note that to avoid alignment problems, structures and common blocks
     should be in the order: double precision, real, integer.
 */
+#ifndef stdevent
+#define stdevent
+
 #define NMXHEP 4000
 #define NMXMLT 16
 struct stdevent {
@@ -27,3 +30,4 @@ struct stdevent {
   int color[NMXHEP];        /* color */
   int jcol[NMXHEP];         /* collision number */
 } stdevent_;
+#endif

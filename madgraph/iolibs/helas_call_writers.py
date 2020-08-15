@@ -65,6 +65,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
 
+
     def filter(self, name, value):
         """Filter for model property values"""
 
@@ -281,14 +282,16 @@ class HelasCallWriter(base_objects.PhysicsObject):
             #misc.sprint(wavefunction['number_external'])
             call = self["wavefunctions"][wavefunction.get_call_key()](\
                                                                    wavefunction)
-            if wavefunction.is_t_channel():
-                call = re.sub(',\s*fk_\w*\s*,', ', ZERO,', call)
-            else:   
-                call = self["wavefunctions"][wavefunction.get_call_key()](\
-                                                                   wavefunction)            
-            return call
-        except KeyError:
+        except KeyError as error:
             return ""
+        
+        if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
+            call = re.sub(',\s*fk_\w*\s*,', ', ZERO,', call)
+        else:   
+            call = self["wavefunctions"][wavefunction.get_call_key()](\
+                                                               wavefunction)            
+        return call
+        
 
     def get_amplitude_call(self, amplitude):
         """Return the function for writing the amplitude
@@ -334,10 +337,15 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Customized constructor
 
-    def __init__(self, argument={}):
+    def __init__(self, argument={}, options={}):
         """Allow generating a HelasCallWriter from a Model
         """
 
+        default_options = {'zerowidth_tchannel': True}
+        
+        self.options = dict(default_options)
+        self.options.update(options)
+        
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
             self.set('model', argument)
@@ -1013,13 +1021,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     mp_prefix = check_param_card.ParamCard.mp_prefix
 
-    def __init__(self, argument={}, hel_sum = False):
+    def __init__(self, argument={}, hel_sum = False, options={}):
         """Allow generating a HelasCallWriter from a Model.The hel_sum argument
         specifies if amplitude and wavefunctions must be stored specifying the
         helicity, i.e. W(1,i) vs W(1,i,H).
         """
         self.hel_sum = hel_sum
-        super(FortranUFOHelasCallWriter, self).__init__(argument)
+        super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
         """ Returns the string for accessing the wavefunction with number in
