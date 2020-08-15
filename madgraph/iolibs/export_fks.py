@@ -852,7 +852,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if output_dependencies == 'external':
             # check if stdhep has to be compiled (only the first time)
             if (not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'))) and
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'))) and \
                 not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP','fail')):
                 if 'FC' not in os.environ or not os.environ['FC']:
                     path = os.path.join(StdHep_path, 'src', 'make_opts')
