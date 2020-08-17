@@ -1307,6 +1307,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd.exec_cmd("exit")
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
             else:
+                if not self.seed:
+                    if hasattr(self, 'mother'):
+                        try:
+                            self.seed = 100 + self.mother.run_card['iseed']
+                        except:
+                            self.seed = random.randint(0, int(30081*30081))
+                if self.seed > 30081*30081:
+                    self.seed -= 30081*30081        
+                logger.info('Will use seed %s' % (self.seed))
                 misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
             if cumul:
