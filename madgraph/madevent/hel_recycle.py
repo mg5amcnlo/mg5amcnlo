@@ -789,14 +789,20 @@ def split_amps(line, new_amps):
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
         if spin in "VF":
-            lines.append("      call CombineAmp(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
+            lines.append("""      call CombineAmp(%(nb)i,
+     & (/%(hel_list)s/), 
+     & (/%(w_list)s/),
+     & TMP, W, AMP(1,%(iamp)s))""" %
                                {'nb': len(sub_amps),
                                 'hel_list': ','.join(hel_calculated),
                                 'w_list': ','.join(windices),
                                 'iamp': iamp
                                })
         elif spin == "S":
-            lines.append("      call CombineAmpS(%(nb)i, (/%(hel_list)s/), (/%(w_list)s/), TMP, W, AMP(1,%(iamp)s))" %
+            lines.append("""      call CombineAmpS(%(nb)i, 
+     &(/%(hel_list)s/), 
+     & (/%(w_list)s/), 
+     & TMP, W, AMP(1,%(iamp)s))""" %
                                {'nb': len(sub_amps),
                                 'hel_list': ','.join(hel_calculated),
                                 'w_list': ','.join(windices),
