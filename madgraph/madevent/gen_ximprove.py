@@ -146,7 +146,7 @@ class gensym(object):
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
                 raise Exception('Error make madevent_forhel not successful')  
-
+            
             if not os.path.exists(pjoin(Pdir, 'Hel')):
                 os.mkdir(pjoin(Pdir, 'Hel'))
                 ff = open(pjoin(Pdir, 'Hel', 'input_app.txt'),'w')
@@ -155,9 +155,8 @@ class gensym(object):
             else:
                 try:
                     os.remove(pjoin(Pdir, 'Hel','results.dat'))
-                except:
-                    continue
-                                  
+                except Exception:
+                    pass         
             # Launch gensym
             p = misc.Popen(['../madevent_forhel < input_app.txt'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
@@ -165,9 +164,10 @@ class gensym(object):
             (stdout, _) = p.communicate(" ".encode())
             stdout = stdout.decode('ascii')
             if os.path.exists(pjoin(self.me_dir,'error')):
-                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
-                P_zero_result.append(subdir)
-                continue            
+                raise Exception(pjoin(self.me_dir,'error')) 
+                # note a continue is not enough here, we have in top to link
+                # the matrixX_optim.f to matrixX_orig.f to let the code to work
+                # after this error.
 
             if 'no events passed cuts' in stdout:
                 raise Exception

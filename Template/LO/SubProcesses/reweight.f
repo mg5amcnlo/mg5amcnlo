@@ -590,6 +590,8 @@ c     q2bck holds the central q2fact scales
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
+      logical init_mode
+      common/to_determine_zero_hel/init_mode
 
 C   local variables
       integer i, j, idi, idj, k,m
@@ -650,11 +652,12 @@ c      are flagged as jets)
       endif
  100  clustered = cluster(p(0,1))
       if(.not.clustered) then
+         if(init_mode) goto 999
          open(unit=26,file='../../../error',status='unknown',err=999)
          write(26,*) 'Error: Clustering failed in cluster.f.'
          write(*,*) 'Error: Clustering failed in cluster.f.'
          stop
- 999     write(*,*) 'error'
+ 999     write(*,*) 'error for clustering'
          setclscales=.false.
          clustered = .false.
          return
