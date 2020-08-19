@@ -124,7 +124,7 @@ C ----------
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
@@ -179,7 +179,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
 
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -228,7 +228,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL)
 C  
 %(info_lines)s
 C
@@ -242,7 +242,9 @@ C
 C CONSTANTS
 C  
     INTEGER    NGRAPHS
-    PARAMETER (NGRAPHS=%(ngraphs)d) 
+    PARAMETER (NGRAPHS=%(ngraphs)d)
+    INTEGER                 NCOMB         
+    PARAMETER (             NCOMB=%(ncomb)s)
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
@@ -262,6 +264,7 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    INTEGER IHEL
 C  
 C LOCAL VARIABLES 
 C  
@@ -295,7 +298,7 @@ C
 	logical init_mode
 	common/to_determine_zero_hel/init_mode
 
-	logical zeroamp_%(proc_id)s(NGRAPHS)
+	logical zeroamp_%(proc_id)s(NCOMB,NGRAPHS)
 	common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
 C  
 C COLOR DATA
@@ -309,9 +312,7 @@ if (first) then
 	%(fake_width_definitions)s
 
 	if(init_mode) then
-	do I=1, NGRAPHS
-	   zeroamp_%(proc_id)s(i) = .true.
-	enddo
+	   zeroamp_%(proc_id)s(:,:) = .true.
 	endif	
 endif
 
@@ -322,7 +323,7 @@ endif
     if(init_mode)then
       DO I=1, NGRAPHS	
         if (AMP(I).ne.0) then
-       	  zeroamp_%(proc_id)s(i) = .false.
+       	  zeroamp_%(proc_id)s(ihel,i) = .false.
        endif
       ENDDO
     endif	
@@ -357,17 +358,35 @@ endif
 
     SUBROUTINE PRINT_ZERO_AMP_%(proc_id)s()
 
+    IMPLICIT NONE
     INTEGER    NGRAPHS
     PARAMETER (NGRAPHS=%(ngraphs)d)
 
-    logical zeroamp_%(proc_id)s(NGRAPHS)
+    INTEGER    NCOMB
+    PARAMETER (NCOMB=%(ncomb)d)
+
+    logical zeroamp_%(proc_id)s(NCOMB, NGRAPHS)
     common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
 
-    integer i
+    integer i,j
+    logical all_false
 
     do i=1, NGRAPHS
-       if (zeroamp_%(proc_id)s(i)) then
-       	  write(*,*) 'Amplitude/ZEROAMP:', %(proc_id)s, i 
+       all_false = .true.
+       do j=1,NCOMB
+       	  if (.not.zeroamp_%(proc_id)s(j, i)) then
+	     all_false = .false.
+	     exit
+	  endif
+       enddo	  
+       if (all_false) then
+       	  write(*,*) 'Amplitude/ZEROAMP:', %(proc_id)s, i
+       else
+          do j=1,NCOMB
+               if (zeroamp_%(proc_id)s(j, i)) then
+	         write(*,*) 'HEL/ZEROAMP:', %(proc_id)s, j  , i
+	      endif	    
+           enddo	
        endif
     enddo   
 

@@ -175,6 +175,8 @@ class gensym(object):
             all_zamp = set()
             all_hel = set()
             zero_gc = list()
+            all_zampperhel = set()
+            all_bad_amps_perhel = set()
             
             for line in stdout.splitlines():
                 if 'GC_' in line:
@@ -185,11 +187,13 @@ class gensym(object):
                     all_hel.add(tuple(line.split()[3:5]))
                 if 'Amplitude/ZEROAMP:' in line:
                     all_zamp.add(tuple(line.split()[1:3]))
-
-            
-
-
-            
+                if 'HEL/ZEROAMP:' in line:
+                    nb_mat, nb_hel, nb_amp = line.split()[1:4]
+                    if (nb_mat, nb_hel) not in all_hel:
+                        continue
+                    if (nb_mat,nb_amp) in all_zamp:
+                        continue
+                    all_zampperhel.add(tuple(line.split()[1:4]))
 
             if zero_gc and not gensym.done_warning_zero_coupling:
                 gensym.done_warning_zero_coupling = True
@@ -207,6 +211,11 @@ class gensym(object):
                 all_bad_amps = collections.defaultdict(list)
                 for me_index, amp in all_zamp:
                     all_bad_amps[me_index].append(int(amp))
+                    
+                all_bad_amps_perhel = collections.defaultdict(list)
+                for me_index, hel, amp in all_zampperhel:
+                    all_bad_amps_perhel[me_index].append((int(hel),int(amp)))    
+                    
             elif all_zamp:
                 nb_zero = sum(int(a[1]) for a in all_zamp)
                 if zero_gc:
@@ -218,7 +227,7 @@ class gensym(object):
                                    "This part can optimize if you set the flag  hel_zeroamp to True in the run_card.")
             
             #check if we need to do something and write associate information"
-            data = [all_hel, all_zamp]
+            data = [all_hel, all_zamp, all_bad_amps_perhel]
             if not self.run_card['hel_zeroamp']:
                 data[1] = ''
             if not self.run_card['hel_filtering']:
@@ -226,8 +235,6 @@ class gensym(object):
             data = str(data)
             if os.path.exists(pjoin(Pdir,'Hel','selection')):
                 old_data = open(pjoin(Pdir,'Hel','selection')).read()
-                print(data)
-                print(old_data)
                 if old_data == data:
                     continue
                 
@@ -253,12 +260,14 @@ class gensym(object):
                 #good_hels = sorted(list(good_hels))
                 good_hels = [str(x) for x in sorted(all_good_hels[me_index])]
                 if self.run_card['hel_zeroamp']:
+                    
                     bad_amps = [str(x) for x in sorted(all_bad_amps[me_index])]
+                    bad_amps_perhel = [x for x in sorted(all_bad_amps_perhel[me_index])]
                 else:
                     bad_amps = [] 
-                #raise Exception
-
-                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps)
+                    bad_amps_perhel = []
+                logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s', len(good_hels),len(bad_amps),len(bad_amps_perhel))
+                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel)
                 # In case of bugs you can play around with these:
                 recycler.hel_filt = self.run_card['hel_filtering']
                 recycler.amp_splt = self.run_card['hel_splitamp']

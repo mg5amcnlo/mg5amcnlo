@@ -131,7 +131,7 @@ class MathsObject:
         return [graph.dependencies(dep) for dep in old_deps]
 
     @classmethod
-    def good_helicity(cls, wavs, graph):
+    def good_helicity(cls, wavs, graph, diag_number=None, all_hel=[], bad_hel_amp=[]):
         exts = graph.external_wavs
         cls.ext_deps = { i for dep in wavs for i in exts if graph.find_path(dep, i) }
         this_comb_good = False
@@ -139,6 +139,17 @@ class MathsObject:
             if cls.ext_deps.issubset(set(comb)):
                 this_comb_good = True
                 break
+            
+        if diag_number and this_comb_good and cls.ext_deps:
+            helicity = dict([(a.get_id(), a.hel) for a in cls.ext_deps])
+            this_hel = [helicity[i] for i in range(1, len(helicity)+1)] 
+            hel_number = 1 + all_hel.index(tuple(this_hel))
+            
+            if (hel_number,diag_number) in bad_hel_amp:        
+                this_comb_good = False
+            
+
+            
         return this_comb_good and cls.ext_deps
 
     @staticmethod
@@ -162,6 +173,7 @@ class MathsObject:
         old_name = get_arguments(line)[-1].replace(' ','')
         new_args = cls.get_new_args(line, wavs)
         num = cls.get_number(wavs, graph)
+        
         this_obj = cls.call_constructor(new_args, old_name, diag_num)
         this_obj.set_name(num, diag_num)
         if this_obj.nature != 'amplitude':
@@ -244,7 +256,17 @@ class External(MathsObject):
     @staticmethod
     def format_name(*nums):
         return f'W(1,{nums[0]})'
-
+    
+    def get_id(self):
+        """ return the id of the particle under consideration """
+        
+        try:
+           return self.id 
+        except:
+            self.id =  int(re.findall(r'P\(0,(\d+)\)', self.args[0])[0])
+            return self.id
+        
+        
 
 class Internal(MathsObject):
     '''Class for storing internal wavefunctions'''
@@ -302,7 +324,7 @@ class Amplitude(MathsObject):
         return f'AMP({nums[0]},{nums[1]})'
 
     @classmethod
-    def generate_amps(cls, line, graph):
+    def generate_amps(cls, line, graph, all_hel=None, all_bad_hel=[]):
         old_args = get_arguments(line)
         old_name = old_args[-1].replace(' ','')
 
@@ -313,7 +335,7 @@ class Amplitude(MathsObject):
 
         new_amps = [cls.get_obj(line, wavs, graph, diag_num) 
                         for wavs in product(*deps) 
-                        if cls.good_helicity(wavs, graph)]
+                        if cls.good_helicity(wavs, graph, diag_num, all_hel,all_bad_hel)]
 
         return new_amps
 
@@ -341,7 +363,7 @@ class Amplitude(MathsObject):
 class HelicityRecycler():
     '''Class for recycling helicity'''
 
-    def __init__(self, good_elements, bad_amps=[]):
+    def __init__(self, good_elements, bad_amps=[], bad_amps_perhel=[]):
 
         External.good_hel = []
         External.nhel_lines = ''
@@ -356,6 +378,7 @@ class HelicityRecycler():
 
         self.good_elements = good_elements
         self.bad_amps = bad_amps
+        self.bad_amps_perhel = bad_amps_perhel
 
         # Default file names
         self.input_file = 'matrix_orig.f'
@@ -541,13 +564,9 @@ class HelicityRecycler():
         if nature == 'amplitude':
             nb_diag = re.findall(r'AMP\((\d+)\)', line)[0]
             if nb_diag in self.bad_amps:
-                new_objs = Amplitude.generate_amps(line, self.dag)
-                new_objs[0].line = f'      DO k=1, NCOMB\n          AMP(k,{nb_diag}) = (0d0, 0d0)\n      ENDDO'
-                new_objs[0].nb_used = 1
-                for obj in new_objs[1:]:
-                    obj.line = ''
+                continue
             else:
-                new_objs = Amplitude.generate_amps(line, self.dag)
+                new_objs = Amplitude.generate_amps(line, self.dag, self.all_hel, self.bad_amps_perhel)
                 out_line = self.apply_amps(line, new_objs)
                 for i,obj in enumerate(new_objs):
                     if i == 0: 
@@ -593,7 +612,7 @@ class HelicityRecycler():
         if 'DATA (NHEL' in line:
             self.nhel_started = True
             this_hel = [int(hel) for hel in line.split('/')[1].split(',')]
-            self.all_hel.append(this_hel)
+            self.all_hel.append(tuple(this_hel))
         elif self.nhel_started:
             self.nhel_started = False
             

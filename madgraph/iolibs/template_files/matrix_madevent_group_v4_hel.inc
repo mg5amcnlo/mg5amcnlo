@@ -210,7 +210,7 @@ if (first) then
 	first=.false.
 	%(fake_width_definitions)s
 endif
-
+    AMP(:,:) = (0d0,0d0)
 ${helas_calls}
     DO K = 1, NCOMB
 ${jamp_lines}
