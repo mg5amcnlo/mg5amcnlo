@@ -3360,7 +3360,6 @@ Beware that this can be dangerous for local multicore runs.""")
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
 
-        misc.sprint(self.proc_characteristics['hel_recycling'], self.run_card['hel_recycling'])
         if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
             jobs, P_zero_result = ajobcreator.get_helicity()
         else:
