@@ -563,9 +563,7 @@ class HelicityRecycler():
                 
         if nature == 'amplitude':
             nb_diag = re.findall(r'AMP\((\d+)\)', line)[0]
-            if nb_diag in self.bad_amps:
-                continue
-            else:
+            if nb_diag not in self.bad_amps:
                 new_objs = Amplitude.generate_amps(line, self.dag, self.all_hel, self.bad_amps_perhel)
                 out_line = self.apply_amps(line, new_objs)
                 for i,obj in enumerate(new_objs):
