@@ -1313,6 +1313,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             self.seed = 100 + self.mother.run_card['iseed']
                         except:
                             self.seed = random.randint(0, int(30081*30081))
+                self.seed += 1
                 if self.seed > 30081*30081:
                     self.seed -= 30081*30081        
                 logger.info('Will use seed %s' % (self.seed))
