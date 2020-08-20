@@ -1048,7 +1048,6 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-c      ma2 = dot(pa,pa)
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c
