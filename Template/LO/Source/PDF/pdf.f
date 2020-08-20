@@ -29,7 +29,7 @@ C***********************************************************************
       double precision u_val,d_val,u_sea,d_sea,s_sea,c_sea,b_sea,gluon
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
       double precision q2max
-      double precision epa_electron,epa_proton
+      double precision epa_lepton,epa_proton
       include 'pdf.inc'
 
       integer mode,Iprtn,Irt
@@ -297,8 +297,8 @@ c
 c  a "diffractive" photon
 c      
       q2max=xmu*xmu
-      if(ih .eq. 3) then  !from the electron
-          fx(7)=epa_electron(x,q2max)
+      if(abs(ih) .eq. 3.or.abs(ih) .eq. 4) then  !from the electron
+          fx(7)=epa_lepton(x,q2max, ih)
       elseif(ih .eq. 2) then  !from a proton without breaking
           fx(7)=epa_proton(x,q2max)
       endif      

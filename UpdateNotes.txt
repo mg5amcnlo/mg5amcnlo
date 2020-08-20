@@ -1,6 +1,35 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.8.0:
+      OM: pass to python3 by default
+      OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the
+          effective photon approximation. This mode behaves like the "3" one: The cut-off scale of the approximation
+	  is taken from the fixed renormalization factorisation scale: "dsqrt_q2fact1/dsqrt_q2fact2"
+      OM: The width ao T-channel propagator are now set to zero automatically.
+          To return to the previous behaviour , you can use the options "set zerowidth_tchannel False"
+	  (to set before the output command)
+      OM: Change in madevent phase-space integrator for T-channel:
+            - The integration of photon/Z/Higgs are now done together rather than separatly and follow importance
+	       sampling of the photon channel
+	    - A new option "set max_t_for_channel X" allows to veto some channel of integration with more than X
+	       t-channel propagator. This options can speed-up significantly the computation in VBF process.
+	       (We advise to set X to 2 in those cases)
+	    - Fix a numerical issue occuring for low invariant mass in T-channel creating spurious configuration.   
+      OM: In madspin_card you can now replace the line "launch"
+          by "launch -n NAME", this will allow to specify the name of the
+	  directory in EVENTS where that run is stored.
+      OM: Change in the python interface of the standalone output. In top of the pdg of the particles,
+          you can now use the process_id (the one specified with @X) to distinguish process with the same particle
+	  content. This parameter can be set to -1 and the function then ignore that parameter.
+      OM: Adding new option in reweighting to allow the user to use the process_id in presence of ambiguous
+          initial/final state.
+      OM: Update the makefile of standalone interface to python to be able to compile in multicore.
+           (thanks Matthias Komm)
+      OM: Update of the auto-width code to support UFO form-factors
+      OM: Fixing numerical issue  with the boost in EPA mode.
+     
+
                         ** PARRALEL VERSION FOR PYTHON 3 **
 
 2.7.3.py3(28/06/20):

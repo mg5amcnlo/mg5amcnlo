@@ -2918,6 +2918,64 @@ class test_aloha_creation(unittest.TestCase):
         for ind in one_exp.listindices():
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
 
+
+    @set_global()
+    def test_short_aloha_FormFactor(self):
+        """ test the handling of form factor function """
+        aloha_lib.KERNEL.clean()
+        SSS2 = self.Lorentz(name = 'FFS2',
+                 spins = [1, 1, 1],
+        structure="FormFF(P(-1,1)*P(-1,2))"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS2).compute_routine(3, factorize=False)
+        expr = abstract_FFT.expr
+        self.assertTrue('FCT0' in str(expr))
+        obj = aloha_lib.KERNEL.fct_expr['FCT0']
+         
+        self.assertTrue(obj[0] == 'FormFF')
+        self.assertEqual(len(obj[1]), 1)
+
+        SSS3 = self.Lorentz(name = 'FFS3',
+                 spins = [1, 1, 1],
+        structure="MyFCT(P(-1,1)*P(-1,2), P(-1,1)*P(-1,2), P(-1,1)*P(-1,3), MT, MT)"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS3).compute_routine(3, factorize=False)
+        expr2 = abstract_FFT.expr
+        self.assertFalse(str(expr) == str(expr2))
+        self.assertTrue('FCT1' in str(expr2))
+        
+        obj = aloha_lib.KERNEL.fct_expr['FCT1']
+         
+        self.assertTrue(obj[0] == 'MyFCT')
+        self.assertEqual(len(obj[1]), 5)
+        self.assertEqual(obj[1][0], obj[1][1])
+        self.assertNotEqual(obj[1][0], obj[1][2])
+        self.assertEqual(obj[1][3], obj[1][4])
+        
+        # 
+        self.assertTrue('TMP' in str(obj[1][0]))
+        self.assertTrue('MT' in str(obj[1][4]))
+
+        # check math function
+        SSS3 = self.Lorentz(name = 'FFS3',
+                 spins = [1, 1, 1],
+        structure="cmath.exp(P(-1,1)*P(-1,2))"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS3).compute_routine(3, factorize=False)
+        expr = abstract_FFT.expr
+        self.assertFalse(str(expr) == str(expr2))
+        self.assertTrue('FCT2' in str(expr))        
+
+        obj = aloha_lib.KERNEL.fct_expr['FCT2']
+        self.assertEqual('exp', obj[0])
+       
+        
+        
+
+        
+        
+
+
     def test_short_aloha_FFT2(self):
         """ test the FFT2 creation of vertex"""
 
