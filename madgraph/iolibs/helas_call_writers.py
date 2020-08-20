@@ -64,7 +64,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self['model'] = base_objects.Model()
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
-
+        self.width_tchannel_set_tozero = False
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -286,10 +286,9 @@ class HelasCallWriter(base_objects.PhysicsObject):
             return ""
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
-            call = re.sub(',\s*fk_\w*\s*,', ', ZERO,', call)
-        else:   
-            call = self["wavefunctions"][wavefunction.get_call_key()](\
-                                                               wavefunction)            
+            call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
+            if n:
+                self.width_tchannel_set_tozero = True
         return call
         
 

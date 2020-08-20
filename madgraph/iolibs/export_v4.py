@@ -3515,6 +3515,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
+    done_warning_tchannel = False
     
     # helper function for customise helas writter
     @staticmethod
@@ -4061,7 +4062,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
-        
+        if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
+            logger.warning("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False")
+            ProcessExporterFortranME.done_warning_tchannel = True
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
