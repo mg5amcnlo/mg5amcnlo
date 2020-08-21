@@ -1555,7 +1555,7 @@ class Event(list):
             self.loweight['tot_fact'] = float(info.group('totfact'))
             
             if info.group('idb1') == info.group('idb2'):
-                raise Exception, '%s not parsed'% text
+                raise Exception('%s not parsed'% text)
             
             if info.group('idb1') =="1":
                 args = info.group('beam1').split()

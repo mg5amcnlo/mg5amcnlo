@@ -11,7 +11,7 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: a g > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: a g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 3 3 
 
 C     
@@ -69,8 +69,9 @@ C           take into account the fact that this is for QCD
             IF (J.EQ.QCD_POS) AMP_ORDERS(J) = AMP_ORDERS(J) + 2
           ENDDO
             !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
-          IF(ABS(ANS(I)).GT.MAX_VAL*TINY) AMP_SPLIT_CNT(ORDERS_TO_AMP_S
-     $PLIT_POS(AMP_ORDERS),1,QCD_POS) = ANS(I)
+          IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
+     $      AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1
+     $     ,QCD_POS) = ANS(I)
         ENDIF
       ENDDO
 
@@ -91,7 +92,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: a g > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: a g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 3 3 
 
 C     
@@ -175,7 +176,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: a g > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: a g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 3 3 
 
 C     

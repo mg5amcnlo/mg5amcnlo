@@ -182,7 +182,7 @@ class ModelReader(loop_base_objects.LoopModel):
                                     value = 0.0
                                 else:
                                     raise
-                            except OverflowError, err:
+                            except OverflowError as err:
                                 if scale < 1:
                                     value = 0.0
                                 else:

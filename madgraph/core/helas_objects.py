@@ -5828,7 +5828,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             return new_proc
 
         if  len(org_perm) != len(process.get('legs_with_decays')):
-            raise Exception, "issue on symmetry between process"
+            raise Exception("issue on symmetry between process")
 
         new_proc.set('legs_with_decays', leglist)
         

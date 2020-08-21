@@ -164,8 +164,9 @@ C            for one mode only).
             IF (NCALLS_IN_CACHE(I).NE.-1.AND..NOT. ( NCOLLIERCALLS(I)
      $       .EQ.NCALLS_IN_CACHE(I).OR. ( CTMODERUN.EQ.
      $       -1.AND..NOT.COLLIERUSEINTERNALSTABILITYTEST.AND.NROTATIONS
-     $_DP.GT.0.AND.MOD(NCALLS_IN_CACHE(I),2).EQ.0.AND.(NCALLS_IN_CACHE(
-     $I)/2).EQ.NCOLLIERCALLS(I) ) ) ) THEN
+     $_DP.GT.0.AND.MOD(NCALLS_IN_CACHE(I),2)
+     $       .EQ.0.AND.(NCALLS_IN_CACHE(I)/2).EQ.NCOLLIERCALLS(I) ) ) )
+     $        THEN
               WRITE(*,*) 'WARNING: A consistency check in MadLoop'
      $         //' failed and, for safety, forced MadLoop to'
      $         //' reinitialize the global cache of COLLIER. Report'
@@ -256,8 +257,8 @@ C        the CTMODE 2
 C               The expression below is like taking the absolute value
 C                when summing errors linearly
 C               TIRCOEFSERRORS(I,K)=(TIR_COEFS_ERROR(CURR_RANK,ID)/MaxC
-C               oefForRank(CURR_RANK))*DCMPLX( ABS(DBLE(TIRCOEFS(I,K)))
-C               ,ABS(DIMAG(TIRCOEFS(I,K))) )
+C               oefForRank(CURR_RANK))*DCMPLX(
+C                ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )
 C               But empirically, I observed that retaining the
 C                original complex phase leads to slightly more
 C                accurate estimates
@@ -479,8 +480,8 @@ C       Now compute the errors on each coefficient
 C             The expression below is like taking the absolute value
 C              when summing errors linearly
 C             TIRCOEFSERRORS(I,K)=(TNtenerr(CURR_RANK)/MaxCoefForRank(C
-C             URR_RANK))*DCMPLX( ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIR
-C             COEFS(I,K))) )			
+C             URR_RANK))*DCMPLX(
+C              ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )			
 C             But empirically, I observed that retaining the original
 C              complex phase leads to slightly more accurate estimates
               TIRCOEFSERRORS(I,K)=(TNTENERR(CURR_RANK)
@@ -592,8 +593,8 @@ C      the event when called.
 
 C     The common blocks below are to retrieve the necessary
 C      information about
-C     MadLoop running mode and store it in the sCOLLIER_CACHE_RELEVANT_
-C     PARAMS common block.
+C     MadLoop running mode and store it in the
+C      sCOLLIER_CACHE_RELEVANT_PARAMS common block.
 
       INCLUDE 'MadLoopParams.inc'
       INCLUDE 'unique_id.inc'
@@ -662,8 +663,8 @@ C      value of the relevant parameters, activate and return.
         USERHEL_BU         = USERHEL
         SQSO_TARGET_BU     = SQSO_TARGET
         COLLIERMODE_BU     = COLLIERMODE
-        COLLIERUSEINTERNALSTABILITYTEST_BU = COLLIERUSEINTERNALSTABILIT
-     $YTEST
+        COLLIERUSEINTERNALSTABILITYTEST_BU =
+     $    COLLIERUSEINTERNALSTABILITYTEST
         CTMODERUN_BU       = CTMODERUN
         CALL SWITCHONCACHE_CLL((UNIQUE_ID-1)*4+1)
         COLLIER_CACHE_ACTIVE = 1
@@ -710,8 +711,8 @@ C       and either change its usage of MadLoop or turnoff COLLIER cache
         USERHEL_BU         = USERHEL
         SQSO_TARGET_BU     = SQSO_TARGET
         COLLIERMODE_BU     = COLLIERMODE
-        COLLIERUSEINTERNALSTABILITYTEST_BU = COLLIERUSEINTERNALSTABILIT
-     $YTEST
+        COLLIERUSEINTERNALSTABILITYTEST_BU =
+     $    COLLIERUSEINTERNALSTABILITYTEST
         CTMODERUN_BU       = CTMODERUN
         IF (COLLIERGLOBALCACHE.EQ.-1) THEN
           CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,MAXNEXTERNAL)

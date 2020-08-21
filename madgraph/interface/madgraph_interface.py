@@ -3965,7 +3965,7 @@ This implies that with decay chains:
                 if option[1] == 'None':
                     options['events'] = None
                 elif not os.path.exists(option[1]):
-                    raise Exception, 'path %s does not exists' % option[1]
+                    raise Exception('path %s does not exists' % option[1])
                 else:
                     options['events'] = option[1]
             elif option[0] == '--skip_evt':
