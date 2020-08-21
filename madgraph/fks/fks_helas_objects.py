@@ -35,7 +35,8 @@ import array
 import multiprocessing
 import signal
 import tempfile
-import six.moves.cPickle
+import six
+import six.moves.cPickle as cPickle
 import itertools
 import os
 import sys
@@ -343,7 +344,6 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             
             realmapfiles = []
             for realout in realmapout:
-                misc.sprint(realout, type(realout))
                 realmapfiles.append(realout[0])
 
             logger.info('Generating born and virtual matrix elements...')
