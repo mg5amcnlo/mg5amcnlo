@@ -324,8 +324,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             try:
                 # the very large timeout passed to get is to be able to catch
                 # KeyboardInterrupts
-                modelpath = born_procs[0].born_proc['model'].get('modelpath')
-                #model = self.get('processes')[0].get('model')
+                modelpath = born_procs[0].born_amp['process']['model'].get('modelpath')
+                #modelpath = self.get('processes')[0].get('model').get('modelpath')
                 with misc.TMP_variable(sys, 'path', sys.path + [pjoin(MG5DIR, 'models'), modelpath]):
                     realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
             except KeyboardInterrupt:
@@ -334,16 +334,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # sometimes empty output from map_async can be there if the amplitude has no diagrams
             # these empty entries need to be discarded
-            for rout, ramp, rpdg  in zip(realmapout, real_amp_list, pdg_list):
+            for rout, ramp, rpdg  in zip(list(realmapout), list(real_amp_list), list(pdg_list)):
                 if not rout:
                     realmapout.remove(rout)
                     real_amp_list.remove(ramp)
                     pdg_list.remove(rpdg)
-
-            #realmapout = [r for r in realmapout if r]
-
+            realmapout = [r for r in realmapout if r]
+            
             realmapfiles = []
             for realout in realmapout:
+                misc.sprint(realout, type(realout))
                 realmapfiles.append(realout[0])
 
             logger.info('Generating born and virtual matrix elements...')
