@@ -198,7 +198,7 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        nb_fermion = len([1 for s in self.spins if s % 2 == 0])   
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])  
         if isinstance(pair, tuple):
             if len(pair) ==1 :
                 pair = pair[0]

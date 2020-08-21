@@ -20,9 +20,8 @@ based on relevant properties.
 """
 
 from __future__ import absolute_import
+from six.moves import filter
 #force filter to be a generator # like in py3
-
-
 
 import array
 import copy
@@ -812,8 +811,7 @@ class Amplitude(base_objects.PhysicsObject):
                     nexttolastvertex = copy.copy(vertices.pop())
                     legs = copy.copy(nexttolastvertex.get('legs'))
                     ntlnumber = legs[-1].get('number')
-                    lastleg = next(filter(lambda leg: leg.get('number') != ntlnumber,
-                                     lastvx.get('legs')))
+                    lastleg = [leg for leg in lastvx.get('legs') if leg.get('number') != ntlnumber][0]
                     # Reset onshell in case we have forbidden s-channels
                     if lastleg.get('onshell') == False:
                         lastleg.set('onshell', None)

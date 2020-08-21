@@ -46,6 +46,7 @@ import unittest
 import time
 import datetime
 import shutil
+import subprocess
 import glob
 from functools import wraps
 
@@ -997,7 +998,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 
     parser.add_option("-N", "--notification", default=45,
           help="Running time, below which no notification is raised. (-1 for no notification)")        
-
+    parser.add_option("", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
+                  help='For mac user, forbids to use caffeinate when running with a script')
     
     (options, args) = parser.parse_args()
 
@@ -1070,6 +1072,14 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         logging.getLogger('tutorial').setLevel('ERROR')
     except:
         pass
+
+    if sys.platform == "darwin" and options.nosleep:
+        logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
+        pid = os.getpid()
+        subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
+        
+
+
     
     if options.synchronize and IOTestManager._compress_ref_fodler:
         print("The tarball synchronization is not necessary since"+ \

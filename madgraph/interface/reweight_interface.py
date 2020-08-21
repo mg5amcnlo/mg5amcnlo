@@ -117,6 +117,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.rwgt_dir = None
         self.exitted = False # Flag to know if do_quit was already called.
         self.keep_ordering = False
+        self.use_eventid = False
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -361,8 +362,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.has_standalone_dir:
                 self.terminate_fortran_executables()
                 self.has_standalone_dir = False
-        elif args[0] == "keep_ordering":
-            self.keep_ordering = banner.ConfigFile.format_variable(args[1], bool, "keep_ordering")
+        elif args[0] in ["keep_ordering", "use_eventid"]:
+            setattr(self, args[0], banner.ConfigFile.format_variable(args[1], bool, args[0]))
         elif args[0] == "allow_missing_finalstate":
             self.options["allow_missing_finalstate"] = banner.ConfigFile.format_variable(args[1], bool, "allow_missing_finalstate")
         elif args[0] == "process":
@@ -985,11 +986,12 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
-        if not hasattr(self,'pdf'):
-            lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
-            self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
-            
+
         if self.has_nlo and self.rwgt_mode != "LO":
+            if not hasattr(self,'pdf'):
+                lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+                self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+                
             return self.calculate_nlo_weight(event)
         
         event.parse_reweight()                    
@@ -1211,7 +1213,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #    base = "rw_mevirt"
         #else:
         #    base = "rw_me"
-        
+
         if (not self.second_model and not self.second_process and not self.dedicated_path) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
@@ -1274,10 +1276,16 @@ class ReweightInterface(extended_cmd.Cmd):
         pold = list(p)
         p = self.invert_momenta(p)
         pdg = list(orig_order[0])+list(orig_order[1])
-
+        try:
+            pid = event.ievent
+        except AttributeError:
+            pid = -1
+        if not self.use_eventid:
+            pid = -1
+        
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = module.smatrixhel(pdg,p, event.aqcd, scale2, nhel)
+                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
                                 
         # for loop we have also the stability status code
         if isinstance(me_value, tuple):
@@ -1392,10 +1400,12 @@ class ReweightInterface(extended_cmd.Cmd):
                     nlo_order = nlo_order.replace('noborn', 'virt')
                 commandline += "add process %s [%s] %s;" % (base,nlo_order,post)
             commandline = commandline.replace('add process', 'generate',1)
-            logger.info("RETRY with %s", commandline)
-            mgcmd.exec_cmd(commandline, precmd=True)
-            has_nlo = False
+            if commandline:
+                logger.info("RETRY with %s", commandline)
+                mgcmd.exec_cmd(commandline, precmd=True)
+                has_nlo = False
         except Exception as error:
+            misc.sprint(type(error))
             raise
         
         commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
@@ -1507,10 +1517,9 @@ class ReweightInterface(extended_cmd.Cmd):
         #put back golem to original value
         mgcmd.options['golem'] = old_options['golem']
         # update make_opts
+
         if not mgcmd.options['lhapdf']:
             raise Exception("NLO reweighting requires LHAPDF to work correctly")
-
-
 
         # Download LHAPDF SET
         common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
@@ -1709,7 +1718,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # update make_opts
             if not mgcmd.options['lhapdf']:
                 raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
- 
+            
             # Download LHAPDF SET
             common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
@@ -1812,11 +1821,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 data = self.id_to_path_second
 
             # get all the information
-            all_pdgs = mymod.get_pdg_order()
-            all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
+            allids, all_pids = mymod.get_pdg_order()
+            all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
             all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
-                
-                
             prefix_set = set(all_prefix)
 
 
@@ -1838,7 +1845,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())))
                     continue
 
-            for i,pdg in enumerate(all_pdgs):
+            for i,(pdg,pid) in enumerate(zip(all_pdgs,all_pids)):
                 if self.is_decay:
                     incoming = [pdg[0]]
                     outgoing = pdg[1:]

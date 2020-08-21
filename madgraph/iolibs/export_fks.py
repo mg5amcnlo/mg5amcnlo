@@ -891,22 +891,25 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
         if output_dependencies == 'external':
             # check if stdhep has to be compiled (only the first time)
-            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
+            if (not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'))) and \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP','fail')):
                 if 'FC' not in os.environ or not os.environ['FC']:
                     path = os.path.join(StdHep_path, 'src', 'make_opts')
                     text = open(path).read()
                     for base in base_compiler:
                         text = text.replace(base,'FC=%s' % fcompiler_chosen)
                     open(path, 'w').writelines(text)
-
                 logger.info('Compiling StdHEP. This has to be done only once.')
                 try:
                     misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
                 except Exception as error:
                     logger.debug(str(error))
                     logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
-                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                    logger.info("details on the compilation error are available on %s", pjoin(MG5DIR, 'vendor', 'StdHEP','fail'))
+                    logger.info("if you want to retry the compilation automatically, you have to remove that file first")
+                    with open(pjoin(MG5DIR, 'vendor', 'StdHEP','fail'),'w') as fsock:
+                        fsock.write(str(error))
                 else:
                     logger.info('Done.')
             if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):

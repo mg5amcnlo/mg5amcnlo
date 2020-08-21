@@ -2251,6 +2251,7 @@ class Vertex(PhysicsObject):
     # the list ID_to_veto_for_multichanneling then all loop are considered by 
     # default and the constraint below is not applied.
     max_n_loop_for_multichanneling = 4
+    max_tpropa = 99
     
     def default_setup(self):
         """Default values for all properties"""
@@ -2587,6 +2588,20 @@ class Diagram(PhysicsObject):
         new_diag.set('vertices', vertices)
         state_dict = {True:'T',False:'F'}
         return new_diag
+
+    def get_nb_t_channel(self):
+        """return number of t-channel propagator in this diagram 
+           This is used to filter multi-channel.
+        """
+        nb_t = 0
+        for v in self['vertices'][:-1]:
+            l = v.get('legs')[-1]
+            if not l.get('state'):
+                nb_t +=1
+        return nb_t
+
+            
+            
 
     def get_vertex_leg_numbers(self, 
                         veto_inter_id=Vertex.ID_to_veto_for_multichanneling,

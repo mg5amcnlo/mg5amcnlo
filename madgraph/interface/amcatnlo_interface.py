@@ -91,9 +91,10 @@ def generate_directories_fks_async(i):
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-    
-    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic, processes]
-
+    if six.PY2:
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic, processes]
+    else:
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -814,8 +815,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
-                    self.born_processes.extend(diroutput[4])
-                    self.born_processes_for_olp.append(diroutput[4][0])
+                    if six.PY2:
+                        self.born_processes.extend(diroutput[4])
+                        self.born_processes_for_olp.append(diroutput[4][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)

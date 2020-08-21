@@ -757,7 +757,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
@@ -790,14 +790,20 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-#        logger.info(" > (default '0') [Used for loop-induced outputs]")
-#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-#        logger.info(" > setting up the integration multichannels.") 
-#        logger.info(" > The default value of zero automatically picks the apparent")
-#        logger.info(" > appropriate choice which is to sometimes pick box loops")
-#        logger.info(" > but never higher n-points ones.")
-
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for loop-induced outputs with madevent]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+        logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
+        logger.info(" > Forbids the inclusion of channel of integration with more than X")
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
+        logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
+        logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1504,7 +1510,7 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout', 'max_npoint_for_channel']:
+        if args[0] in ['timeout', 'max_npoint_for_channel', 'max_t_for_channel']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
@@ -1519,8 +1525,8 @@ This will take effect only in a NEW terminal
                 if sys.version_info[0] == 2:
                     if  sys.version_info[1] == 6:
                         raise Exception('python2.6 does not support such functionalities please use python2.7')
-                else:
-                    raise Exception('python3.x does not support such functionalities please use python2.7')
+                #else:
+                #    raise Exception('python3.x does not support such functionalities please use python2.7')
         
 
 
@@ -2894,6 +2900,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel',
+                    'max_t_for_channel',
+                    'zerowidth_tchannel',
                     'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
@@ -2959,7 +2967,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
                           'max_npoint_for_channel': 0, # 0 means automaticly adapted
-                          'default_unset_couplings': 99 # 99 means infinity
+                          'default_unset_couplings': 99, # 99 means infinity
+                          'max_t_for_channel': 99, # means no restrictions
+                          'zerowidth_tchannel': True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -7710,7 +7720,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
                             ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
-        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry', 'max_t_for_channel',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
@@ -7736,6 +7746,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning(message)
 
         elif args[0] == 'OLP':
+            if six.PY3 and self.options['low_mem_multicore_nlo_generation']:
+                raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
@@ -7761,9 +7773,16 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     tmp = args[1].lower()
                 else: 
                     raise
-            self.options[args[0]] = tmp        
+            self.options[args[0]] = tmp
+        elif args[0] in ['zerowidth_tchannel']:
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
+        elif args[0] in ['low_mem_multicore_nlo_generation']:	    
+            if six.PY3 and self.options['OLP'] != 'MadLoop':
+                raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+            else:
+                self.options[args[0]] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -7972,7 +7991,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3 
+            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)
@@ -7991,6 +8011,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+
         # Define the helas call  writer
         if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
@@ -7999,6 +8020,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
+            options = {'zerowidth_tchannel': True}
+            if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
+                options['zerowidth_tchannel'] = False
+            
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
@@ -8477,7 +8502,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd('output %s -f' % decay_dir,child=False)
+                self.exec_cmd('output madevent %s -f' % decay_dir,child=False)
                 
                 #modify some parameter of the default run_card
                 run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))
