@@ -15,7 +15,8 @@
 
 """Unit test library for the export_FKS format routines"""
 
-import StringIO
+from __future__ import absolute_import
+from io import StringIO
 import copy
 import fractions
 import os 

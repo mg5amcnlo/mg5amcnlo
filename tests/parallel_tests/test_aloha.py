@@ -16,6 +16,8 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import math
 import os
 import time
@@ -29,9 +31,11 @@ import aloha.aloha_lib as aloha_lib
 from aloha.aloha_lib import *
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
-import models.sm.object_library as object_library
+#import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
+from six.moves import range
+from six.moves import zip
 
 
 set_global = misc.set_global
@@ -911,9 +915,9 @@ class testLorentzObject(unittest.TestCase):
 
         self.assertEqual(power.__class__, aloha_lib.MultLorentz)        
         self.assertEqual(product, power)
-        power = power.expand(veto=range(100))
+        power = power.expand(veto=list(range(100)))
 
-        keys= power.keys()
+        keys= list(power.keys())
         keys.sort()
         self.assertEqual(keys, [(0,)])
         solution = '( (P3_0 * P3_0) + (-1 * P3_1 * P3_1) + (-1 * P3_2 * P3_2) + (-1 * P3_3 * P3_3) )'
@@ -977,7 +981,7 @@ class testLorentzObject(unittest.TestCase):
         obj = aloha_obj.P(1,2)
         low_level = obj.expand()
 
-        keys= low_level.keys()
+        keys= list(low_level.keys())
         keys.sort()
         self.assertEqual(keys, [(0,),(1,),(2,),(3,)])
         self.assertEqual(str(low_level[(0,)]), '(P2_0)')
@@ -1059,7 +1063,7 @@ class testLorentzObject(unittest.TestCase):
         mu, nu, alpha, beta = 1,2,3,4
         
         analytical = (P(-1, t)* P(-1,t)-1) * (Metric(alpha, beta))
-        analytical= analytical.expand(veto=range(100))
+        analytical= analytical.expand(veto=list(range(100)))
     
     
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
@@ -1119,7 +1123,7 @@ class testLorentzObject(unittest.TestCase):
         mu, nu, s0, s1, s2 = 2,3,4,5,6
         
         zero = P(mu,t) * aloha_obj.Spin3halfPropagatorout(mu,nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1128,7 +1132,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
 
         zero = P(mu,t) * aloha_obj.Spin3halfPropagatorin(mu,nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1160,7 +1164,7 @@ class testLorentzObject(unittest.TestCase):
         #                     (Mass(part) * Identity(-3, s2) )
                                      
         zero = Spin3halfPropagator(nu,s1,s2, t)
-        zero = zero.expand(veto=range(100))
+        zero = zero.expand(veto=list(range(100)))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1285,7 +1289,7 @@ class testLorentzObject(unittest.TestCase):
              
         zero = P(mu,t) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         
-        zero = zero.expand(veto=range(100)).simplify() 
+        zero = zero.expand(veto=list(range(100))).simplify() 
         
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1294,7 +1298,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
         
         zero = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
-        zero = zero.expand(veto=range(100)).simplify() 
+        zero = zero.expand(veto=list(range(100))).simplify() 
         
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1352,36 +1356,36 @@ class testLorentzObject(unittest.TestCase):
 
         #part 1 
         p1 = 0.5j * ( Metric(1003,'I2') * Metric(2003,'I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2))
-        p1e = p1.expand(veto=range(100)).simplify().factorize()
+        p1e = p1.expand(veto=list(range(100))).simplify().factorize()
         
         solp1 = complex(0,1/2) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
-        zero = p1e - solp1.expand(veto=range(100)).simplify().factorize()
+        zero = p1e - solp1.expand(veto=list(range(100))).simplify().factorize()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
         
         #part 2
         p2 =   0.5j * ( Metric(1003,'I3') * Metric(2003,'I2') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p2e = p2.expand(veto=range(100)).simplify().factorize()
-        zero = p2e - solp1.expand(veto=range(100)).simplify().factorize()
+        p2e = p2.expand(veto=list(range(100))).simplify().factorize()
+        zero = p2e - solp1.expand(veto=list(range(100))).simplify().factorize()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
         
         # part 3 -and part 8
         p3 = complex(0,-1/3) * ( Metric(1003,2003)**2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) )
-        p3e = p3.expand(veto=range(100)).simplify()
+        p3e = p3.expand(veto=list(range(100))).simplify()
         solp3 = complex(0,-4/3) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
-        zero = p3e - solp3.expand(veto=range(100)).simplify()
+        zero = p3e - solp3.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
             
         # part 4
         p4 = -0.5j * ( Metric(1003,'I2') * P(2003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p4e = p4.expand(veto=range(100)).simplify()
+        p4e = p4.expand(veto=list(range(100))).simplify()
         solp4 = complex(0,-1/2) * OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2)
-        zero = p4e - solp4.expand(veto=range(100))
+        zero = p4e - solp4.expand(veto=list(range(100)))
         
         for ind in zero.listindices():
             data = zero.get_rep(ind)
@@ -1389,42 +1393,42 @@ class testLorentzObject(unittest.TestCase):
         
         # part 5
         p5 = -0.5j * ( Metric(2003,'I3') * P(1003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p5e = p5.expand(veto=range(100)).simplify()
-        zero = p5e - solp4.expand(veto=range(100)).simplify()
+        p5e = p5.expand(veto=list(range(100))).simplify()
+        zero = p5e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)   
         
         #part 6    
         p6 = -0.5j * ( Metric(1003,'I3') * P(2003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )   
-        p6e = p6.expand(veto=range(100)).simplify()
-        zero = p6e - solp4.expand(veto=range(100)).simplify()
+        p6e = p6.expand(veto=list(range(100))).simplify()
+        zero = p6e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
         
         #part 7
         p7= -0.5j * ( Metric(2003,'I2') * P(1003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p7e = p7.expand(veto=range(100)).simplify()
-        zero = p7e - solp4.expand(veto=range(100)).simplify()
+        p7e = p7.expand(veto=list(range(100))).simplify()
+        zero = p7e - solp4.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
         
         # part 9
         p9 = complex(0,1/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Metric(1003,2003)**2 * Spinor(-1,1) * Spinor(-1,2) )
-        p9e = p9.expand(veto=range(100)).simplify()
+        p9e = p9.expand(veto=list(range(100))).simplify()
         solp9 = complex(0,4/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p9e - solp9.expand(veto=range(100)).simplify()
+        zero = p9e - solp9.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
             
         # part 10
         p10 = complex(0,1/3) * ( OverMass2(3) * P(1003,3) * P(2003,3) * Metric('I2','I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p10e = p10.expand(veto=range(100)).simplify()
+        p10e = p10.expand(veto=list(range(100))).simplify()
         solp10 = complex(0,1/3) * ( OverMass2(3) * P(-1,3) **2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p10e - solp10.expand(veto=range(100)).simplify()
+        zero = p10e - solp10.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0) 
@@ -1432,26 +1436,26 @@ class testLorentzObject(unittest.TestCase):
         
         # part 11
         p11 = complex(0,2/3) * ( OverMass2(3)**2 * P('I2',3) * P('I3',3) * P(1003,3) * P(2003,3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
-        p11e = p11.expand(veto=range(100)).simplify()
+        p11e = p11.expand(veto=list(range(100))).simplify()
         solp11 = complex(0,2/3) * ( OverMass2(3)**2 * P(-1,3) **2 * P('I2',3) * P('I3',3)  * Spinor(-1,1) * Spinor(-1,2) ) 
-        zero = p11e - solp11.expand(veto=range(100)).simplify()
+        zero = p11e - solp11.expand(veto=list(range(100))).simplify()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
             
         # full
         full = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p9 + p10 + p11
-        fulle = full.expand(veto=range(100))
+        fulle = full.expand(veto=list(range(100)))
         solfull = complex(0,1/3) * ((OverMass2(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OverMass2(3) * P('I2',3)*P('I3',3)) * Spinor(-1,1) * Spinor(-1,2))  
         solfullbis = 2 * solp1 + solp3 + 4 * solp4 + solp9 +solp10 + solp11
         # first sanity
-        zero = solfullbis.expand(veto=range(100)) - solfull.expand(veto=range(100))
+        zero = solfullbis.expand(veto=list(range(100))) - solfull.expand(veto=list(range(100)))
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0,6)
         
         
-        zero = fulle - solfull.expand(veto=range(100))
+        zero = fulle - solfull.expand(veto=list(range(100)))
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0,6)
@@ -2272,7 +2276,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         #checking that (/p + m)(/p-m)=0 (for onshell)
         expr = (PSlash(1,2,1)+ M(1)*Identity(1,2))*(PSlash(2,3,1)-M(1)*Identity(2,3))
-        expr = expr.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr = expr.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
 
@@ -2282,7 +2286,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         #checking that (/p + m)(/p-m)(P)=0 (for onshell)
         expr = (PSlash(1,2,1)+ M(1)*Identity(1,2))*(PSlash(2,3,1)-M(1)*Identity(2,3))*(Gamma(4,3,4)*Identity(3,4) * P(4,1))
-        expr = expr.expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr = expr.expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in expr.listindices():
             data = expr.get_rep(ind)
             self.assertAlmostEqual(eval(str(data)), 0)  
@@ -2290,8 +2294,8 @@ class TestSomeObjectProperty(unittest.TestCase):
         # check that /P2 /P3 + /P3 /P2 = 2 P2 * P3        
         expr1 = PSlash(1,-1,2) * PSlash(-1,2,3) + PSlash(1,-1,3) * PSlash(-1,2,2)
         expr2 = 2 * P(-1,2) * P(-1,3) * Identity(1,2)
-        expr1 = expr1.simplify().expand(veto=range(len(aloha_lib.KERNEL)))
-        expr2 = expr2.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        expr1 = expr1.simplify().expand(veto=list(range(len(aloha_lib.KERNEL))))
+        expr2 = expr2.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in expr1.listindices():
             P2_0, P2_1, P2_2, P2_3 = 7,2,3,5
             P3_0, P3_1, P3_2, P3_3 = 73,23,30,51
@@ -2442,8 +2446,8 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         object1 = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
               
-        object1 = object1.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
-        object1_paper = object1_paper.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        object1 = object1.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
+        object1_paper = object1_paper.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         P3_0, P3_1, P3_2, P3_3 = 1,2,3,4
         P2_0, P2_1, P2_2, P2_3 = 10,20,30,50
         
@@ -2464,7 +2468,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         zero = - 1 * object1_paper - object1
         
         zero = zero.simplify()
-        zero = zero.expand(veto=range(len(aloha_lib.KERNEL)))
+        zero = zero.expand(veto=list(range(len(aloha_lib.KERNEL))))
         zero = zero.simplify()
         P3_0, P3_1, P3_2, P3_3 = 1,2,3,4
         P2_0, P2_1, P2_2, P2_3 = 10,20,30,50
@@ -2476,7 +2480,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                 self.assertEqual(zero.get_rep(ind), 0) 
             except Exception as error:
                 error.message = '%s (for component %s) is not zero' % (zero.get_rep(ind),ind)
-                raise AssertionError, error.message
+                raise AssertionError(error.message)
         
         object1_paper = 2 * P(-1,2) * P(-1, 3) * Gamma(3,2,1) - P(3,3) * P(-1,2) * Gamma(-1,2,1)\
                         - P(-2,3) * Gamma(3,2,-3)* P(-4,2)*Gamma(-4,-3,-5)*Gamma(-2,-5,1)
@@ -2486,7 +2490,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                 - complex(0,1) * Epsilon(3,-1,-2,-3) * P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*Gamma5(-4,1)
 
         zero =   object1_paper - object2_paper
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in zero.listindices(): 
             self.assertEqual(zero.get_rep(ind), 0)   
             
@@ -2496,7 +2500,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         object_kent = (Gamma(3,2,-1)*Gamma(4,-1,-10) - Identity(2,-10)*Metric(3,4)) * PSlash(-10,1,2)
         
         zero = object_fr - object_kent
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         for ind in zero.listindices(): 
             self.assertEqual(zero.get_rep(ind), 0)  
             
@@ -2505,7 +2509,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         object_kent = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
                  
         zero = object_fr - complex(0,1)* object_kent
-        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        zero = zero.simplify().expand(veto=list(range(len(aloha_lib.KERNEL)))).simplify()
         
         for ind in zero.listindices():
             self.assertEqual(zero.get_rep(ind), 0)              
@@ -2762,11 +2766,11 @@ class TestSomeObjectProperty(unittest.TestCase):
 
         false = aloha_lib.AddVariable([])
         if false:
-            raise AssertionError, 'empty list are not False'
+            raise AssertionError('empty list are not False')
         
         false = aloha_lib.MultVariable([])
         if false:
-            raise AssertionError, 'empty list are not False'      
+            raise AssertionError('empty list are not False')      
           
 
 class TestSimplify(unittest.TestCase):
@@ -2913,6 +2917,64 @@ class test_aloha_creation(unittest.TestCase):
                 pass
         for ind in one_exp.listindices():
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
+
+
+    @set_global()
+    def test_short_aloha_FormFactor(self):
+        """ test the handling of form factor function """
+        aloha_lib.KERNEL.clean()
+        SSS2 = self.Lorentz(name = 'FFS2',
+                 spins = [1, 1, 1],
+        structure="FormFF(P(-1,1)*P(-1,2))"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS2).compute_routine(3, factorize=False)
+        expr = abstract_FFT.expr
+        self.assertTrue('FCT0' in str(expr))
+        obj = aloha_lib.KERNEL.fct_expr['FCT0']
+         
+        self.assertTrue(obj[0] == 'FormFF')
+        self.assertEqual(len(obj[1]), 1)
+
+        SSS3 = self.Lorentz(name = 'FFS3',
+                 spins = [1, 1, 1],
+        structure="MyFCT(P(-1,1)*P(-1,2), P(-1,1)*P(-1,2), P(-1,1)*P(-1,3), MT, MT)"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS3).compute_routine(3, factorize=False)
+        expr2 = abstract_FFT.expr
+        self.assertFalse(str(expr) == str(expr2))
+        self.assertTrue('FCT1' in str(expr2))
+        
+        obj = aloha_lib.KERNEL.fct_expr['FCT1']
+         
+        self.assertTrue(obj[0] == 'MyFCT')
+        self.assertEqual(len(obj[1]), 5)
+        self.assertEqual(obj[1][0], obj[1][1])
+        self.assertNotEqual(obj[1][0], obj[1][2])
+        self.assertEqual(obj[1][3], obj[1][4])
+        
+        # 
+        self.assertTrue('TMP' in str(obj[1][0]))
+        self.assertTrue('MT' in str(obj[1][4]))
+
+        # check math function
+        SSS3 = self.Lorentz(name = 'FFS3',
+                 spins = [1, 1, 1],
+        structure="cmath.exp(P(-1,1)*P(-1,2))"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(SSS3).compute_routine(3, factorize=False)
+        expr = abstract_FFT.expr
+        self.assertFalse(str(expr) == str(expr2))
+        self.assertTrue('FCT2' in str(expr))        
+
+        obj = aloha_lib.KERNEL.fct_expr['FCT2']
+        self.assertEqual('exp', obj[0])
+       
+        
+        
+
+        
+        
+
 
     def test_short_aloha_FFT2(self):
         """ test the FFT2 creation of vertex"""
@@ -3164,16 +3226,16 @@ class test_aloha_creation(unittest.TestCase):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 S3(*)
- real*8 P1(0:3)
+ complex*16 COUP
  real*8 M1
+ real*8 OM1
+ real*8 P1(0:3)
+ complex*16 S3(*)
  complex*16 TMP0
+ complex*16 V1(6)
+ complex*16 V2(*)
  real*8 W1
  complex*16 denom
- real*8 OM1
- complex*16 COUP
- complex*16 V1(6)
 entry VVS1_2(V2, S3, COUP, M1, W1,V1)
 
     OM1 = 0d0
@@ -3198,18 +3260,18 @@ subroutine VVS1_2_1(V2, S3, COUP1, COUP2, M1, W1,V1)
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 COUP2
- complex*16 S3(*)
- real*8 P1(0:3)
- real*8 M1
- real*8 W1
  complex*16 COUP1
+ complex*16 COUP2
+ real*8 M1
+ real*8 OM1
+ real*8 P1(0:3)
+ complex*16 S3(*)
+ complex*16 V1(6)
+ complex*16 V2(*)
+ complex*16 Vtmp(6)
+ real*8 W1
  complex*16 denom
  integer*4 i
- complex*16 Vtmp(6)
- real*8 OM1
- complex*16 V1(6)
 entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 
     call VVS1_1(V2,S3,COUP1,M1,W1,V1)
@@ -3245,10 +3307,10 @@ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex
 void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
+ double  OM1;
  double  P1[4];
  std::complex<double>  TMP0;
  std::complex<double>  denom;
- double  OM1;
     OM1 = 0.;
     if (M1 != 0.)
  OM1=1./(M1*M1);
@@ -3273,8 +3335,8 @@ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<d
 }
 void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- int  i;
  std::complex<double>  Vtmp[6];
+ int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;
@@ -3286,8 +3348,8 @@ while (i < 6)
 }
 void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- int  i;
  std::complex<double>  Vtmp[6];
+ int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
  i= 2;
@@ -3360,7 +3422,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         helas_suite.compute_all()
         timing = time.time()-start
         if timing > 5:
-            print "WARNING ALOHA SLOW (taking %s s for the full sm)" % timing
+            print("WARNING ALOHA SLOW (taking %s s for the full sm)" % timing)
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
         error = 'wrong contraction for %s'
@@ -3455,7 +3517,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
                 self.assertEqual(abstract.expr.nb_lor, 0, error % name)
                 self.assertEqual(abstract.expr.nb_spin, 1, error % name)
             else:
-                raise Exception, 'not expected routine %s' % name
+                raise Exception('not expected routine %s' % name)
             
     def find_helas(self, name, model):
         for lorentz in model.all_lorentz:
@@ -3466,7 +3528,9 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 
     def test_short_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.MSSM_SLHA2.object_library import Lorentz
+
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
@@ -3490,7 +3554,8 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFFF = Lorentz(name = 'FFFF3',
                  spins = [ 2, 2, 2, 2 ],
                  structure = 'Gamma(-2,-4,3)*Gamma(-2,-3,1)*Gamma(-1,2,-3)*Gamma(-1,4,-4) - Gamma(-1,-2,3)*Gamma(-1,4,-2)*Identity(1,2) - Gamma(-1,-2,1)*Gamma(-1,2,-2)*Identity(3,4) + 4*Identity(1,2)*Identity(3,4)')
@@ -3511,8 +3576,11 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         for name, expr in amp.contracted.items():
             exec('%s = %s' % (name,expr))       
 
-        for i in range(100):
-            ufo_value = [eval(str(amp.expr.get_rep([i]))) for i in range(4)]
+        #for i in range(100):
+        ufo_value = []
+        for i in range(4):
+            ufo_value.append(eval(str(amp.expr.get_rep([i]))))   
+            #ufo_value = [eval(str(amp.expr.get_rep([i]))) for i in range(4)]
 
         #computed with 1.4.8.4 // 1.5.3 // 1.5.4
         solution = [(-518016-1383424j), (317568-1604608j), (162600-4898488j), (-31800-8538056j)]
@@ -3526,7 +3594,8 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         
         
         aloha_lib.KERNEL.clean()
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         VVS1 = Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
@@ -3537,24 +3606,24 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 V2(*)
- complex*16 TMP2
- complex*16 S3(*)
- complex*16 TMP1
- real*8 P1(0:3)
- complex*16 TMP0
- complex*16 vertex
  complex*16 COUP
- complex*16 V1(*)
+ real*8 P1(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
  complex*16 TMP3
+ complex*16 V1(*) 
+ complex*16 V2(*)
+ complex*16 vertex
 P1(0) = dble(V1(1))
 P1(1) = dble(V1(2))
 P1(2) = dimag(V1(2))
 P1(3) = dimag(V1(1))
-TMP1 = (P1(0)*V1(3)-P1(1)*V1(4)-P1(2)*V1(5)-P1(3)*V1(6))
 TMP0 = (V2(3)*P1(0)-V2(4)*P1(1)-V2(5)*P1(2)-V2(6)*P1(3))
-TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
+TMP1 = (P1(0)*V1(3)-P1(1)*V1(4)-P1(2)*V1(5)-P1(3)*V1(6))
 TMP2 = (V2(3)*V1(3)-V2(4)*V1(4)-V2(5)*V1(5)-V2(6)*V1(6))
+TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
 vertex = COUP*S3(3)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
 end
 
@@ -3587,7 +3656,8 @@ end
     def test_short_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -3639,7 +3709,8 @@ end
     def test_short_aloha_expr_FFFF(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.MSSM_SLHA2.object_library import Lorentz
+        #from models.MSSM_SLHA2.object_library import Lorentz
+        Lorentz = test_aloha_creation.Lorentz
         FFFF = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
                 structure = 'Identity(2,1)*Identity(4,3)')
@@ -3978,9 +4049,8 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         
         numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
-        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi,
-                   100*math.pi]
- 
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, 3.14159265359,
+                   100*3.14159265359]
         solution = ['CI', '1d0/2d0 * CI', '(3d0 + 9d0*CI)', '1d0', '0d0', '1d0', '2d0', '-3d0', '3d0', '3d0', '101d0/100d0', '2000d0', '1d0/3d0', '1d0/4d0', '3d0/4d0','3.14159265359d0', '314.159265359d0']
 #        converted = [writer.change_number_format(number) for number in numbers]
         for i, number in enumerate(numbers):
@@ -3999,8 +4069,8 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForPython(abstract, '/tmp')
         
         numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
-        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi, 1.001,
-                   100*math.pi]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, 3.14159265359 , 1.001,
+                   100*3.14159265359]
  
         solution = ['1j', '1j/2', '(3+9j)', '1', '0', '1', '2', '-3', '3', '3', '101/100', '2000', '1/3', '1/4', '3/4','3.14159265359','1.001','314.159265359']
 #        converted = [writer.change_number_format(number) for number in numbers]
@@ -4206,7 +4276,11 @@ end
         
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = solution.split('\n')
+        split_solution = split_solution[:1] + split_solution[12:]
         split_routine = routine.split('\n')
+        split_routine = split_routine[:1] + split_routine[12:]
+        
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4232,6 +4306,9 @@ end
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = [l.strip() for l in solution.split('\n')]
         split_routine = [l.strip() for l in routine.split('\n')]
+        split_solution = split_solution[:1] + split_solution[-2:]
+        split_routine = split_routine[:1] + split_routine[-2:]
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4283,6 +4360,8 @@ end
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = [l.strip() for l in solution.split('\n')]
         split_routine = [l.strip() for l in routine.split('\n')]
+        split_solution = split_solution[:1] + split_solution[-20:]
+        split_routine = split_routine[:1] + split_routine[-20:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4490,14 +4569,14 @@ import wavefunctions
 def FFV13C1_0(F2,F1,V3,COUP):
     P2 = [complex(F2[0]).real, complex(F2[1]).real, complex(F2[1]).imag, complex(F2[0]).imag]
     P3 = [complex(V3[0]).real, complex(V3[1]).real, complex(V3[1]).imag, complex(V3[0]).imag]
-    TMP5 = (F1[4]*(F2[2]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))+F2[3]*(P2[0]*(P3[3]*(V3[4]+1j*(V3[3]))-V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3[4]+1j*(V3[3]))+V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]+1j*(P2[1]))-P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[5]*(F2[2]*(P2[0]*(P3[3]*(V3[4]-1j*(V3[3]))+V3[5]*(+1j*(P3[1])-P3[2]))+(P2[3]*(P3[0]*(+1j*(V3[3])-V3[4])+V3[2]*(P3[2]-1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]-1j*(P2[1]))+P3[3]*V3[2]*(+1j*(P2[1])-P2[2]))))+F2[3]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))))
-    TMP4 = (P2[0]*P3[0]-P2[1]*P3[1]-P2[2]*P3[2]-P2[3]*P3[3])
-    TMP7 = (-1)*(F1[4]*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-1j*(V3[4])))+F1[5]*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5])))
-    TMP6 = (-1)*(F1[4]*(F2[2]*(P3[0]+P3[3])+F2[3]*(P3[1]-1j*(P3[2])))+F1[5]*(F2[2]*(P3[1]+1j*(P3[2]))+F2[3]*(P3[0]-P3[3])))
-    TMP1 = (V3[2]*P2[0]-V3[3]*P2[1]-V3[4]*P2[2]-V3[5]*P2[3])
     TMP0 = (F1[2]*(F2[4]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))+F2[5]*(P2[0]*(P3[3]*(-1)*(V3[4]+1j*(V3[3]))+V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]+1j*(V3[3]))-V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*-V3[5]*(P2[2]+1j*(P2[1]))+P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[3]*(F2[4]*(P2[0]*(P3[3]*(+1j*(V3[3])-V3[4])+V3[5]*(P3[2]-1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]-1j*(V3[3]))+V3[2]*(+1j*(P3[1])-P3[2]))+(P3[0]*V3[5]*(+1j*(P2[1])-P2[2])+P3[3]*V3[2]*(P2[2]-1j*(P2[1])))))+F2[5]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))))
-    TMP3 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(+1j*(V3[4])-V3[3]))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    TMP1 = (V3[2]*P2[0]-V3[3]*P2[1]-V3[4]*P2[2]-V3[5]*P2[3])
     TMP2 = (F1[2]*(F2[4]*(P3[3]-P3[0])+F2[5]*(P3[1]-1j*(P3[2])))+F1[3]*(F2[4]*(P3[1]+1j*(P3[2]))-F2[5]*(P3[0]+P3[3])))
+    TMP3 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(+1j*(V3[4])-V3[3]))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    TMP4 = (P2[0]*P3[0]-P2[1]*P3[1]-P2[2]*P3[2]-P2[3]*P3[3])
+    TMP5 = (F1[4]*(F2[2]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))+F2[3]*(P2[0]*(P3[3]*(V3[4]+1j*(V3[3]))-V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3[4]+1j*(V3[3]))+V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]+1j*(P2[1]))-P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[5]*(F2[2]*(P2[0]*(P3[3]*(V3[4]-1j*(V3[3]))+V3[5]*(+1j*(P3[1])-P3[2]))+(P2[3]*(P3[0]*(+1j*(V3[3])-V3[4])+V3[2]*(P3[2]-1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]-1j*(P2[1]))+P3[3]*V3[2]*(+1j*(P2[1])-P2[2]))))+F2[3]*(P2[1]*(P3[2]*(V3[2]-V3[5])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(P3[0]-P3[3]))+(P3[1]*V3[4]*(P2[0]-P2[3])+P3[2]*V3[3]*(P2[3]-P2[0]))))))
+    TMP6 = (-1)*(F1[4]*(F2[2]*(P3[0]+P3[3])+F2[3]*(P3[1]-1j*(P3[2])))+F1[5]*(F2[2]*(P3[1]+1j*(P3[2]))+F2[3]*(P3[0]-P3[3])))
+    TMP7 = (-1)*(F1[4]*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-1j*(V3[4])))+F1[5]*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5])))
     vertex = COUP*(TMP1*(TMP2+TMP6)+(TMP4*(-1)*(TMP3+TMP7)+(-1j*(TMP0)+1j*(TMP5))))
     return vertex
 
@@ -4741,10 +4820,26 @@ end
 
 
 """
+        text_split = [l.strip() for l in text.split('\n')]
+        target_split = [l.strip() for l in target.split('\n')]
+        target2_split = [l.strip() for l in target2.split('\n')]
+        #check that all defintion are in both side
+        # raise an error is one line is missing
+        for line in list(target_split):
+            if line.startswith(('real','complex', 'parameter')):
+                index = text_split.index(line)
+                index2 = target_split.index(line)
+                index3 = target2_split.index(line)
+                text_split.pop(index)
+                target_split.pop(index2)
+                target2_split.pop(index3)
+        
+
+
         try:
-            self.assertEqual(text.split('\n'), target.split('\n'))         
+            self.assertEqual(text_split, target_split)         
         except Exception:
-            self.assertEqual(text.split('\n'), target2.split('\n'))         
+            self.assertEqual(text_split, target2_split)
 
     def test_short_fortranwriter_CFF(self):
         """ test that python writer works """
@@ -4753,17 +4848,17 @@ end
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 F2(6)
- complex*16 V3(*)
- complex*16 TMP0
- real*8 P2(0:3)
- real*8 W2
- real*8 P3(0:3)
- complex*16 F1(*)
- real*8 M2
- complex*16 denom
  complex*16 COUP
+ complex*16 F1(*)
+ complex*16 F2(6)
  complex*16 FCT0
+ real*8 M2
+ real*8 P2(0:3)
+ real*8 P3(0:3)
+ complex*16 TMP0
+ complex*16 V3(*)
+ real*8 W2
+ complex*16 denom
 P3(0) = dble(V3(1))
 P3(1) = dble(V3(2))
 P3(2) = dimag(V3(2))
@@ -4843,8 +4938,8 @@ end
         builder.apply_conjugation()
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
+        split_solution = solution.split('\n')[18:]
+        split_routine = routine.split('\n')[18:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4888,7 +4983,10 @@ end
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
         split_solution = solution.split('\n')
+        split_solution = split_solution[:1] + split_solution[12:]
         split_routine = routine.split('\n')
+        split_routine = split_routine[:1] + split_routine[12:]
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -4922,8 +5020,8 @@ end
         amp = builder.compute_routine(2)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
+        split_solution = solution.split('\n')[12:]
+        split_routine = routine.split('\n')[12:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
@@ -5127,13 +5225,13 @@ def SSS1_3(S2,S3,COUP,M1):
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
- complex*16 S3(*)
- real*8 P1(0:3)
- complex*16 S1(3)
- complex*16 denom
  complex*16 COUP
  complex*16 M1
+ real*8 P1(0:3)
+ complex*16 S1(3)
  complex*16 S2(*)
+ complex*16 S3(*)
+ complex*16 denom
 entry SSS1_2(S2, S3, COUP, M1,S1)
 
 entry SSS1_3(S2, S3, COUP, M1,S1)
@@ -5240,14 +5338,14 @@ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<d
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 F1(*)
  complex*16 F2(*)
+ real*8 M3
+ real*8 P3(0:3)
  complex*16 V3(6)
  real*8 W3
- real*8 P3(0:3)
- real*8 M3
- complex*16 F1(*)
  complex*16 denom
- complex*16 COUP
     V3(1) = +F1(1)+F2(1)
     V3(2) = +F1(2)+F2(2)
 P3(0) = -dble(V3(1))
@@ -5267,14 +5365,14 @@ end
 implicit none
  complex*16 CI
  parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 F1(*)
  complex*16 F2(*)
+ real*8 M3
+ real*8 P3(0:3)
  complex*16 V3(6)
  real*8 W3
- real*8 P3(0:3)
- real*8 M3
- complex*16 F1(*)
  complex*16 denom
- complex*16 COUP
     V3(1) = +F1(1)+F2(1)
     V3(2) = +F1(2)+F2(2)
 P3(0) = -dble(V3(1))
@@ -5282,10 +5380,10 @@ P3(1) = -dble(V3(2))
 P3(2) = -dimag(V3(2))
 P3(3) = -dimag(V3(1))
     denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI* W3))
-    V3(3)= denom*((-CI)*((F2(5))*(F1(3))+(F2(6))*(F1(4))+(F2(3))*(F1(5))+(F2(4))*(F1(6))))
-    V3(4)= denom*((-CI)*((F2(4))*(F1(5))+(F2(3))*(F1(6))-(F2(6))*(F1(3))-(F2(5))*(F1(4))))
-    V3(5)= denom*((-CI)*(+(-CI)*((F2(6))*(F1(3))+(F2(3))*(F1(6)))+CI*((F2(5))*(F1(4))+(F2(4))*(F1(5)))))
-    V3(6)= denom*((-CI)*((F2(6))*(F1(4))+(F2(3))*(F1(5))-(F2(5))*(F1(3))-(F2(4))*(F1(6))))
+    V3(3)= denom*(-CI)*(F2(5)*F1(3)+F2(6)*F1(4)+F2(3)*F1(5)+F2(4)*F1(6))
+    V3(4)= denom*(-CI)*(-F2(6)*F1(3)-F2(5)*F1(4)+F2(4)*F1(5)+F2(3)*F1(6))
+    V3(5)= denom*(-CI)*(-CI*(F2(6)*F1(3)+F2(3)*F1(6))+CI*(F2(5)*F1(4)+F2(4)*F1(5)))
+    V3(6)= denom*(-CI)*(-F2(5)*F1(3)-F2(4)*F1(6)+F2(6)*F1(4)+F2(3)*F1(5))
 end
 
 

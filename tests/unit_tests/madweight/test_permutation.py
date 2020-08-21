@@ -13,6 +13,7 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
 import unittest
 import madgraph.madweight.MW_fct as permutation
 

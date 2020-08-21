@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 from madgraph.interface import reweight_interface
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 ################################################################################
 #
@@ -94,7 +99,7 @@ class Event:
                 
         p=[]
         string=""
-        for id in xrange(len(self.particle)):
+        for id in range(len(self.particle)):
             particle = self.particle[map_event[id] + 1]
             if particle["istup"] < 2:
                 mom = particle["momentum"]
@@ -115,28 +120,26 @@ class Event:
                 pattern = re.compile(r'''<\s*wgt id=[\'\"](?P<id>[^\'\"]+)[\'\"]\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
                 data = pattern.findall(self.rwgt)
                 if len(data)==0:
-                    print self.rwgt
+                    print(self.rwgt)
                 try:
                     text = ''.join('   <wgt id=\'%s\'> %+15.7e </wgt>\n' % (pid, float(value) * factor)
                                      for (pid,value) in data) 
-                except ValueError, error:
-                    raise Exception, 'Event File has unvalid weight. %s' % error
+                except ValueError as error:
+                    raise Exception('Event File has unvalid weight. %s' % error)
                 self.rwgt = self.rwgt[:start] + '<rwgt>\n'+ text + self.rwgt[stop:]          
 
     def string_event_compact(self):
         """ return a string with the momenta of the event written 
                 in an easy readable way
         """
-        line=""
+        line=[]
         for part in range(1,len(self.particle)+1):
-            line+=str(self.particle[part]["pid"])+" "
-            line+=str(self.particle[part]["momentum"].px)+" "
-            line+=str(self.particle[part]["momentum"].py)+" "
-            line+=str(self.particle[part]["momentum"].pz)+" "
-            line+=str(self.particle[part]["momentum"].E)+"    " 
-            line+=str(self.particle[part]["momentum"].m)+"    " 
-            line+="\n"
-        return line
+            pid = self.particle[part]["pid"]
+            m = self.particle[part]["momentum"]
+            line.append("%i %s %.7g %.7g %.7g %.7g" % 
+                        (pid, m.px, m.py, m.pz, m.E, m.m))
+        line.append('')
+        return "\n".join(line)
     
     def get_tag(self):
         
@@ -170,7 +173,7 @@ class Event:
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         line+=line1+"\n"
         scales= []
-        for item in range(1,len(self.event2mg.keys())+1):
+        for item in range(1,len(list(self.event2mg.keys()))+1):
             part=self.event2mg[item]
             if part>0:
                 particle_line=self.get_particle_line(self.particle[part])
@@ -556,7 +559,7 @@ class dc_branch_from_me(dict):
                     # I don't expect this to be inefficient, since there is a BW cut                                    
 
             if tree["nbody"] > 2:
-                raise Exception, 'Phase Space generator not yet ready for 3 body decay'
+                raise Exception('Phase Space generator not yet ready for 3 body decay')
 
             if ran==1:
                 decay_mom=generate_2body_decay(index2mom[res]["momentum"],mA, all_mass[0],all_mass[1])
@@ -874,7 +877,7 @@ class production_topo(dict):
             line+=str(d1)+" + "
             line+=str(d2)+" ,    type="
             line+=branch["type"]
-            print line
+            print(line)
 
 class AllMatrixElement(dict):
     """Object containing all the production topologies required for event to decay.
@@ -921,7 +924,7 @@ class AllMatrixElement(dict):
                 logger.warning("No Branching ratio applied for %s. Please check if this is expected" % init[0])
                 br *= self.get_br(decay)
             else:
-                raise MadGraph5Error,"No valid decay for %s. No 2 body decay for that particle. (three body are not supported by MadSpin)" % init[0]
+                raise MadGraph5Error("No valid decay for %s. No 2 body decay for that particle. (three body are not supported by MadSpin)" % init[0])
 
                 
 
@@ -1127,7 +1130,7 @@ class AllMatrixElement(dict):
 
                     # Reorganize s-channel vertices to get a list of all
                     # subprocesses for each vertex
-                    schannels = zip(*[s for s,t in stchannels])
+                    schannels = list(zip(*[s for s,t in stchannels]))
             else:
                     schannels = []
 
@@ -1168,7 +1171,7 @@ class AllMatrixElement(dict):
             if decay['decay_tag']==decay_tag: return decay
 
         msg = 'Unable to retrieve decay from decay_tag\n%s\n%s' %(production_tag, decay_tag)
-        raise Exception, msg
+        raise Exception(msg)
  
     def get_random_decay(self, production_tag,first=[]):
         """select randomly a decay channel"""
@@ -1384,32 +1387,32 @@ class width_estimate(object):
                     initial=item
                     if item not in [ particle['name'] for particle in base_model['particles'] ] \
                         and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                        raise Exception, "No particle "+item+ " in the model "+model
+                        raise Exception("No particle "+item+ " in the model "+model)
                     continue
                 elif item=='>': continue       # case 2: we have the > symbole
                 elif item not in ponctuation : # case 3: we have a particle originating from a branching
                     final.append(item)
                     if next_symbol=='' or next_symbol in ponctuation:
                         #end of a splitting, verify that it exists
-                        if initial not in self.br.keys():
+                        if initial not in list(self.br.keys()):
                             logger.debug('Branching fractions of particle '+initial+' are unknown')
                             return 0
                         if len(final)>2:
-                            raise Exception, 'splittings different from A > B +C are currently not implemented '
+                            raise Exception('splittings different from A > B +C are currently not implemented ')
 
-                        if final[0] in multiparticles.keys():
+                        if final[0] in list(multiparticles.keys()):
                             set_B=[pid2label[pid] for pid in multiparticles[final[0]]]
                         else:
                             if final[0] not in [ particle['name'] for particle in base_model['particles'] ] \
                                and final[0] not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                                raise Exception, "No particle "+item+ " in the model "
+                                raise Exception("No particle "+item+ " in the model ")
                             set_B=[final[0]]
-                        if final[1] in multiparticles.keys():
+                        if final[1] in list(multiparticles.keys()):
                             set_C=[pid2label[pid] for pid in multiparticles[final[1]]]
                         else:
                             if final[1] not in [ particle['name'] for particle in base_model['particles'] ] \
                                and final[1] not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                                raise Exception, "No particle "+item+ " in the model "+model
+                                raise Exception("No particle "+item+ " in the model "+model)
                             set_C=[final[1]]
 
                         splittings={}
@@ -1538,7 +1541,7 @@ class width_estimate(object):
         ff.close()
         
         lhapdf = False
-        if os.environ.has_key('lhapdf'):
+        if 'lhapdf' in os.environ:
             lhapdf = os.environ['lhapdf']
             del os.environ['lhapdf']
         
@@ -1566,7 +1569,7 @@ class width_estimate(object):
         
         label2pid = self.label2pid
         pid2label = self.label2pid
-        for res in self.br.keys():
+        for res in list(self.br.keys()):
             particle=self.model.get_particle(label2pid[res])
             if particle['self_antipart']: 
                 continue
@@ -1588,7 +1591,7 @@ class width_estimate(object):
                 self.br[anti_res][chan]['daughters']=[]
                 self.br[anti_res][chan]['daughters'].append(d1bar)
                 self.br[anti_res][chan]['daughters'].append(d2bar)
-                if decay.has_key('width'):
+                if 'width' in decay:
                     self.br[anti_res][chan]['width']=decay['width']                  
 
     def launch_width_evaluation(self,resonances, mgcmd):
@@ -1847,7 +1850,7 @@ class decay_misc:
             if line =="": break
             list_line=line.split()
             if len(list_line)>2:
-                if list_line[0]=="DECAY" and int(list_line[1]) in pid2widths.keys():
+                if list_line[0]=="DECAY" and int(list_line[1]) in list(pid2widths.keys()):
                     list_line[2]=str(pid2widths[int(list_line[1])]) 
                     line=""
                     for item in list_line:
@@ -2049,7 +2052,7 @@ class decay_all_events(object):
         else:
             try:
                 self.all_ME, self.all_decay,self.width_estimator = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
-            except Exception,error:
+            except Exception as error:
                 logger.debug(str(error))
                 self.generate_all_matrix_element()
                 self.save_to_file(pickle_info,
@@ -2310,7 +2313,7 @@ class decay_all_events(object):
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
                     """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
-                    raise MadSpinError, error
+                    raise MadSpinError(error)
                         
                     error = True
                 elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
@@ -2321,7 +2324,7 @@ class decay_all_events(object):
                             report['%s' % (decay['decay_tag'],)],\
                             100 * report['%s_f' % (decay['decay_tag'],)] / report[ decay['decay_tag']] ,\
                             decay['decay_tag'])  
-                    raise MadSpinError, error
+                    raise MadSpinError(error)
                     
              
             decayed_event.change_wgt(factor= self.branching_ratio) 
@@ -2491,7 +2494,6 @@ class decay_all_events(object):
             return decay_mapping
         
         BW_cut = self.options['BW_cut']       
-        
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
         for decay in self.all_decay.values():
@@ -2524,7 +2526,6 @@ class decay_all_events(object):
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
-                
                 
                 values = {}                
                 for i in range(len(decays)):
@@ -2559,7 +2560,6 @@ class decay_all_events(object):
                         comment+=  "%4e " % valid[(i,j)]
                     comment+= "|"+ os.path.basename(decays[i]['path'])                     
                     logger.debug(comment)
-            
             # store the result in the relation object. (using tag as key)
             for i in range(len(decays)):
                 tag_i = decays[i]['tag'][2:]
@@ -2654,7 +2654,7 @@ class decay_all_events(object):
             pass
         try:
             shutil.rmtree(pjoin(path_me,'production_me'))
-        except Exception, error:
+        except Exception as error:
             pass
         path_me = self.path_me        
         
@@ -2683,7 +2683,7 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
+                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
@@ -2701,7 +2701,7 @@ class decay_all_events(object):
         
         mgcmd.exec_cmd(commandline, precmd=True)
         commandline = 'output standalone_msP %s %s' % \
-        (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
+        (pjoin(path_me,'production_me'), ' '.join(list(self.list_branches.keys())))        
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
 
@@ -2722,19 +2722,19 @@ class decay_all_events(object):
                 if self.all_ME.has_particles_ambiguity:
                     final_states.add(self.pid2label[-1*self.pid2label[label]])
                 final_states.add(label)
-        for key in self.list_branches.keys():
+        for key in list(self.list_branches.keys()):
             if key not in final_states and key not in self.mgcmd._multiparticles:
                 if (len(self.list_branches)>1):
                     del self.list_branches[key]
                 elif not self.options["onlyhelicity"]:
-                    raise Exception, " No decay define for process."
+                    raise Exception(" No decay define for process.")
                     logger.info('keeping dummy decay for passthrough mode')
 
         # 4. compute the full matrix element -----------------------------------
         if not self.options["onlyhelicity"]:
             logger.info('generating the full matrix element squared (with decay)')
             start = time.time()
-            to_decay = self.mscmd.list_branches.keys()
+            to_decay = list(self.mscmd.list_branches.keys())
             decay_text = []
             for decays in self.mscmd.list_branches.values():
                 for decay in  decays:
@@ -2757,13 +2757,13 @@ class decay_all_events(object):
             # remove decay with 0 branching ratio.
             mgcmd.remove_pointless_decay(self.banner.param_card)
             commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
-                                                          ' '.join(self.list_branches.keys()))
+                                                          ' '.join(list(self.list_branches.keys())))
             mgcmd.exec_cmd(commandline, precmd=True)
             logger.info('Done %.4g' % (time.time()-start))
         elif self.options["onlyhelicity"]:
             logger.info("Helicity Matrix-Element")      
             commandline = 'output standalone_msF %s %s' % \
-            (pjoin(path_me,'full_me'), ' '.join(self.list_branches.keys()))        
+            (pjoin(path_me,'full_me'), ' '.join(list(self.list_branches.keys())))        
             mgcmd.exec_cmd(commandline, precmd=True)        
             logger.info('Done %.4g' % (time.time()-start))                    
 
@@ -2875,7 +2875,7 @@ class decay_all_events(object):
                 try:
                     proc_nb = int(proc_nb)
                 except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                    raise MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
                 proc_nb = '@%i' % proc_nb 
             else:
                 baseproc = new_proc
@@ -2896,7 +2896,7 @@ class decay_all_events(object):
             else:
                 part = baseproc.split(',')
                 if any('(' in p for p in part):
-                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'            
+                    raise Exception('too much decay at MG level. this can not be done for the moment)')            
                 else:
                     decay_part = []
                     for p in part[1:]:
@@ -2912,7 +2912,7 @@ class decay_all_events(object):
         # Compute the width branching ratio. Doing this at this point allows
         #to remove potential pointless decay in the diagram generation.
         resonances = decay_misc.get_all_resonances(self.banner, 
-                         self.mgcmd, self.mscmd.list_branches.keys())
+                         self.mgcmd, list(self.mscmd.list_branches.keys()))
 
         logger.debug('List of resonances:%s' % resonances)
         path_me = os.path.realpath(self.path_me) 
@@ -3030,9 +3030,9 @@ class decay_all_events(object):
 
                 if __debug__:
                     if(os.path.getsize(pjoin(path_me, mode,'SubProcesses', 'parameters.inc'))<10):
-                        print pjoin(path_me, mode,'SubProcesses', 'parameters.inc')
-                        raise Exception, "Parameters of the model were not written correctly ! %s " %\
-                            os.path.getsize(pjoin(path_me, mode,'SubProcesses', 'parameters.inc'))
+                        print(pjoin(path_me, mode,'SubProcesses', 'parameters.inc'))
+                        raise Exception("Parameters of the model were not written correctly ! %s " %\
+                            os.path.getsize(pjoin(path_me, mode,'SubProcesses', 'parameters.inc')))
 
 
     def extract_resonances_mass_width(self, resonances):
@@ -3050,7 +3050,7 @@ class decay_all_events(object):
                 part=abs(self.pid2label[particle_label])
                 #mass = self.banner.get('param_card','mass', abs(part))
                 width = self.banner.get('param_card','decay', abs(part))
-            except ValueError, error:
+            except ValueError as error:
                 continue
             else:
                 if (width.value > 0.001):  
@@ -3153,7 +3153,6 @@ class decay_all_events(object):
                     continue # No decay for this process
                 atleastonedecay = True
                 weight = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
-                
                     #weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
                 if tag in max_decay:
                     max_decay[tag] = max([max_decay[tag], weight])
@@ -3291,10 +3290,12 @@ class decay_all_events(object):
                                path, std_in)
 
         return max_weight
-        
+    
+    nb_load = 0
     def loadfortran(self, mode, path, stdin_text, first=True):
         """ call the fortran executable """
 
+        self.nb_load +=1
         tmpdir = ''
         if ('full',path) in self.calculator:
             external = self.calculator[('full',path)]
@@ -3304,16 +3305,31 @@ class decay_all_events(object):
             tmpdir = path
 
             executable_prod="./check"
+            my_env = os.environ.copy()
+            my_env["GFORTRAN_UNBUFFERED_ALL"] = "y"
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
+                                          stderr=STDOUT, cwd=tmpdir, env=my_env)
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
-
+            
         try:
-            external.stdin.write(stdin_text)
-        except IOError:
+            external.stdin.write(stdin_text.encode())
+            external.stdin.flush()
+        except IOError as error:
             if not first:
                 raise
+            try:
+                external.stdin.close()
+            except Exception as  error:
+                misc.sprint(error)
+            try:
+                external.stdout.close()
+            except Exception as error:
+                misc.sprint(error)
+            try:
+                external.stderr.close()
+            except Exception as error:
+                misc.sprint(error)
             try:
                 external.terminate()
             except:
@@ -3346,7 +3362,7 @@ class decay_all_events(object):
 
         if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than %s calculators. Perform cleaning' % self.options['max_running_process'])
-            nb_calls = self.calculator_nbcall.values()
+            nb_calls = list(self.calculator_nbcall.values())
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
             for key, external in list(self.calculator.items()):
@@ -3375,7 +3391,7 @@ class decay_all_events(object):
         """routine to return the matrix element"""
 
         if mode != "decay":
-            raise Exception, "This function is only secure in mode decay."
+            raise Exception("This function is only secure in mode decay.")
 
         tmpdir = ''
         if (mode, production) in self.calculator:
@@ -3390,30 +3406,40 @@ class decay_all_events(object):
                 tmpdir = pjoin(self.path_me,'%s_me' % mode, 'SubProcesses',
                            production)
             executable_prod="./check"
-            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
+            my_env = os.environ.copy()
+            my_env["GFORTRAN_UNBUFFERED_ALL"] = "y"
+            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE,
+                                                      stderr=STDOUT, cwd=tmpdir,
+                                                      env=my_env,
+                                                      bufsize=0)
+            assert (mode, production) not in self.calculator
             self.calculator[(mode, production)] = external 
             self.calculator_nbcall[(mode, production)] = 1       
 
-        external.stdin.write(stdin_text)
+
+        external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline())
+            info = int(external.stdout.readline().decode())
             nb_output = abs(info)+1
         else:
             info = 1
             nb_output = 1
-         
-        prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
+        std = []
+        for i in range(nb_output):
+            external.stdout.flush()
+            line = external.stdout.readline().decode()
+            std.append(line)
+        prod_values = ' '.join(std)
+        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
         if info < 0:
-            print 'ZERO DETECTED'
-            print prod_values
-            print stdin_text
+            print('ZERO DETECTED')
+            print(prod_values)
+            print(stdin_text)
             os.system('lsof -p %s' % external.pid)
             return ' '.join(prod_values.split()[-1*(nb_output-1):])
-        
         if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than 100 calculator. Perform cleaning')
-            nb_calls = self.calculator_nbcall.values()
+            nb_calls = list(self.calculator_nbcall.values())
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
             for key, external in list(self.calculator.items()):
@@ -3426,7 +3452,6 @@ class decay_all_events(object):
                     del self.calculator_nbcall[key]
                 else:
                     self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
-        
         if mode == 'prod':
             return prod_values
         else:
@@ -3457,7 +3482,7 @@ class decay_all_events(object):
                 #print part
                 decay_struct[part]['mg_tree']=[]
 
-                nb_res=len(decay_struct[part]["tree"].keys())
+                nb_res=len(list(decay_struct[part]["tree"].keys()))
                 for res in range(-1,-nb_res-1,-1):
                     label=abs(decay_struct[part]["tree"][res]['label'])
                     mass=self.pid2massvar[label]
@@ -3533,7 +3558,7 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index                                           
-                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
+                    for res in range(-1,-len(list(decay_struct[part]["tree"].keys()))-1,-1):
                         index_d1=decay_struct[part]['mg_tree'][-res-1][1]
                         index_d2=decay_struct[part]['mg_tree'][-res-1][2]
                         
@@ -3596,7 +3621,7 @@ class decay_all_events(object):
                     # follow the decay chain order, so that we can easily keep track of the mother index
                        
                     map_to_part_number={}
-                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
+                    for res in range(-1,-len(list(decay_struct[part]["tree"].keys()))-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
                         if (res==-1):
                             part_number+=1
@@ -3736,8 +3761,8 @@ class decay_all_events(object):
                                 d2colup2=colup2
                                 d2colup1=maxcol                        
                         else:
-                            raise Exception, 'color combination not treated by MadSpin (yet). (%s,%s,%s)' \
-                                % (colord1,colord2,colormother)
+                            raise Exception('color combination not treated by MadSpin (yet). (%s,%s,%s)' \
+                                % (colord1,colord2,colormother))
                         part_number+=1
                         index_d1_for_mom=decay_struct[part]['mg_tree'][-res-1][1]
                         mom=momenta_in_decay[index_d1_for_mom].copy()
@@ -3819,14 +3844,14 @@ class decay_all_events(object):
                     mothup1=curr_event.resonance[part]["mothup1"]         
                     mothup2=curr_event.resonance[part]["mothup2"] 
                     if mothup1==index:
-                        if mothup2!=index: print "Warning: mothup1!=mothup2"
+                        if mothup2!=index: print("Warning: mothup1!=mothup2")
                         curr_event.resonance[part]["mothup1"]=part_number
                         curr_event.resonance[part]["mothup2"]=part_number
                 for part in curr_event.particle.keys():
                     mothup1=curr_event.particle[part]["mothup1"]         
                     mothup2=curr_event.particle[part]["mothup2"] 
                     if mothup1==index:
-                        if mothup2!=index: print "Warning: mothup1!=mothup2"
+                        if mothup2!=index: print("Warning: mothup1!=mothup2")
                         curr_event.particle[part]["mothup1"]=part_number
                         curr_event.particle[part]["mothup2"]=part_number
 
@@ -3844,7 +3869,7 @@ class decay_all_events(object):
         max_br = max([m['total_br'] for m in self.all_ME.values()])
         if max_br >= 1:
             if max_br > 1.0001:
-                raise MadSpinError, 'BR is larger than one.'
+                raise MadSpinError('BR is larger than one.')
             max_br = 1
         for production in self.all_ME.values():
             if production['total_br'] < max_br:
@@ -3966,30 +3991,45 @@ class decay_all_events(object):
             for (mode, path) in self.calculator:
                 if mode=='decay':
                     external = self.calculator[(mode, path)]
+                    try:
+                        external.stdin.close()
+                    except Exception as  error:
+                        misc.sprint(error)
+                        continue
+                    try:
+                        external.stdout.close()
+                    except Exception as error:
+                        misc.sprint(error)
+                        continue
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0 0\n"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0 0\n".encode()  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     try:
                         external.stdin.write(stdin_text)
-                    except Exception:
+                        external.stdin.flush() 
+                    except Exception as error:
+                        misc.sprint(error)
+                        raise
                         continue
-                    ranmar_state=external.stdout.readline()
+                    ranmar_state=external.stdout.readline().decode()
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)
                     ranmar.close()
                     try:
                         external.stdin.close()
-                    except Exception:
-                        continue
+                    except Exception as  error:
+                        misc.sprint(error)
                     try:
                         external.stdout.close()
-                    except Exception:
-                        continue
+                    except Exception as error:
+                        misc.sprint(error)                   
                     external.terminate()
                     del external
+                else:
+                    misc.sprint('not closed', mode, type(mode))
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]
@@ -4002,7 +4042,7 @@ class decay_all_events(object):
                 external.stdout.close()
                 external.terminate()       
                 del external
-
+            
         self.calculator = {}
 
 
@@ -4058,7 +4098,7 @@ class decay_all_events_onshell(decay_all_events):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
+                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
@@ -4087,7 +4127,7 @@ class decay_all_events_onshell(decay_all_events):
         # 4. compute the full matrix element -----------------------------------
         logger.info('generating the full matrix element squared (with decay)')
 #        start = time.time()
-        to_decay = self.mscmd.list_branches.keys()
+        to_decay = list(self.mscmd.list_branches.keys())
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
@@ -4172,6 +4212,8 @@ class decay_all_events_onshell(decay_all_events):
 
     def compile(self):
         logger.info('Compiling code')
+        #my_env = os.environ.copy()
+        #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])        
         misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),

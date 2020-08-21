@@ -6,12 +6,15 @@
 
 
 #Extension
+from __future__ import absolute_import
+from __future__ import print_function
 import string
 import sys
 import os
 import re
 import time
 import stat
+from six.moves import input
 # patch if symbolic directory replace by real file
 sys.path.append('./Source/MadWeight/Python')
 sys.path.append('../Source/MadWeight/Python')
@@ -37,7 +40,7 @@ rel_pos='../'
 def Launch_all_SubProcess(MWparam):
 
     name=MWparam.name
-    print 'name :',name
+    print('name :',name)
     P_proclist,MW_proclist=MWparam.P_listdir,MWparam.MW_listdir
     #create banner
     if MWparam.run_opt['launch']:
@@ -46,14 +49,14 @@ def Launch_all_SubProcess(MWparam):
         banner.write()
 
     if MWparam.run_opt['compilation']:
-        print 'starting program compilation'
+        print('starting program compilation')
         compile_SubProcesses(MW_proclist)
             
     if MWparam.run_opt['event']:
         verif_event(MWparam)
 
     if MWparam.run_opt['refine']:
-        print "collecting data to find data with a precision less than",MWparam.run_opt['refine']
+        print("collecting data to find data with a precision less than",MWparam.run_opt['refine'])
         collect_schedular(MWparam)          
 
 
@@ -62,7 +65,7 @@ def Launch_all_SubProcess(MWparam):
     cluster.driver()
 
     if MWparam.run_opt['collect']:
-        print "collecting data"
+        print("collecting data")
         collect_schedular(MWparam)          
 
 
@@ -90,7 +93,7 @@ def   compile_SubProcesses(process_list):
         if  os.path.isfile("./comp_madweight") and exit_status==0 :
             os.chdir("..")
         else:
-            print "fortran compilation error"
+            print("fortran compilation error")
             sys.exit()
     os.chdir("..")   
     return
@@ -109,7 +112,7 @@ def     compile_P_SubProcesses(process_list):
         if  os.path.isfile("./madevent") and exit_status==0:
             os.chdir("..")
         else:
-            print "fortran compilation error"
+            print("fortran compilation error")
             sys.exit()
     os.chdir("..")   
     return  
@@ -142,15 +145,15 @@ if(__name__=='__main__'):
 
     for dir in MWparam.MW_listdir:
       if not os.path.exists("SubProcesses/"+dir+"/call_TF.f"): 
-        print "Currently no transfer function loaded ..."
+        print("Currently no transfer function loaded ...")
         listdir=os.listdir('./Source/MadWeight/transfer_function/data')
-        print 'Available transfer functions:\n   ',
-        print '\n    '.join([content[3:-4] for content in listdir if (content.startswith('TF') and content.endswith('dat'))])
-        name=raw_input('Choose your transfer Function\n')
+        print('Available transfer functions:\n   ', end=' ')
+        print('\n    '.join([content[3:-4] for content in listdir if (content.startswith('TF') and content.endswith('dat'))]))
+        name=input('Choose your transfer Function\n')
         P_dir,MW_dir=detect_SubProcess(P_mode=1)
         os.chdir('./Source/MadWeight/transfer_function')
         change_tf.create_TF_main(name,0,MW_dir)
-        print os.getcwd()
+        print(os.getcwd())
         os.chdir('../../..')
         break
 
@@ -173,7 +176,7 @@ if(__name__=='__main__'):
             plot.Differential_Graph(MWparam,auto=1)        
 
     if MWparam.run_opt['clean']:
-        print 'cleaning in progress ....'
+        print('cleaning in progress ....')
         from clean import Clean_run
         if MWparam.run_opt['clean']==1:
             Clean_run(MWparam.name)

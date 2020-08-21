@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import string,re
 
 def prnt(message):
-    print message #python2
+    print(message) #python2
 #    print(message) #python3
 
 def subs(old,new,lines):

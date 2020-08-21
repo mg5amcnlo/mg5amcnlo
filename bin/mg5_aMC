@@ -1,4 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
+from __future__ import absolute_import
+from __future__ import print_function
 import time
 start = time.time()
 
@@ -20,9 +22,15 @@ start = time.time()
 and call immediately the command line interface scripts"""
 
 import sys
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
+if  sys.version_info[1] < 7:
+    sys.exit('MadGraph5_aMC@NLO works only with python 2.7 or python 3.7 (and later).\n\
                Please upgrate your version of python.')
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip%s install six --user"\n' % (sys.version_info[0] if sys.version_info[0]==3 else '')
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
 
 import os
 import optparse
@@ -129,7 +137,7 @@ except:
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
-    print( 'WARNING: loading of madgraph too slow!!!', time.time() - start)
+    print(( 'WARNING: loading of madgraph too slow!!!', time.time() - start))
 
 try:
     import madgraph.various.misc as misc
@@ -184,7 +192,7 @@ try:
     else:
         # Interactive mode
         if options.web:
-            if not os.environ.has_key('MADGRAPH_DATA'):
+            if 'MADGRAPH_DATA' not in os.environ:
                 os.environ['MADGRAPH_DATA'] = root_path
                 os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
                 os.environ['REMOTE_USER'] = 'webmode'
@@ -192,7 +200,7 @@ try:
         else:
             cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print 'writting history and quit on KeyboardInterrupt' 
+    print('writting history and quit on KeyboardInterrupt') 
     pass
 
 try:
@@ -201,7 +209,7 @@ try:
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
-except Exception, error:
+except Exception as error:
     pass
 
 

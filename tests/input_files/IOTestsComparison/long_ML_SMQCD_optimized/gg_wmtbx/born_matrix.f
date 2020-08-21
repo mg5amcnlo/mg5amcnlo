@@ -267,22 +267,22 @@ C     ----------
       CALL OXXXXX(P(0,4),MDL_MT,NHEL(4),+1*IC(4),W(1,4))
       CALL IXXXXX(P(0,5),MDL_MB,NHEL(5),-1*IC(5),W(1,5))
       CALL VVV1P0_1(W(1,1),W(1,2),GC_4,ZERO,ZERO,W(1,6))
-      CALL FFV2_1(W(1,4),W(1,3),GC_47,MDL_MB,ZERO,W(1,7))
+      CALL FFV2_1(W(1,4),W(1,3),GC_11,MDL_MB,ZERO,W(1,7))
 C     Amplitude(s) for diagram number 1
       CALL FFV1_0(W(1,5),W(1,7),W(1,6),GC_5,AMP(1))
-      CALL FFV2_2(W(1,5),W(1,3),GC_47,MDL_MT,MDL_WT,W(1,8))
+      CALL FFV2_2(W(1,5),W(1,3),GC_11,MDL_MT,MDL_WT,W(1,8))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,8),W(1,4),W(1,6),GC_5,AMP(2))
       CALL FFV1_1(W(1,4),W(1,1),GC_5,MDL_MT,MDL_WT,W(1,6))
       CALL FFV1_2(W(1,5),W(1,2),GC_5,MDL_MB,ZERO,W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL FFV2_0(W(1,9),W(1,6),W(1,3),GC_47,AMP(3))
+      CALL FFV2_0(W(1,9),W(1,6),W(1,3),GC_11,AMP(3))
 C     Amplitude(s) for diagram number 4
       CALL FFV1_0(W(1,8),W(1,6),W(1,2),GC_5,AMP(4))
       CALL FFV1_2(W(1,5),W(1,1),GC_5,MDL_MB,ZERO,W(1,6))
       CALL FFV1_1(W(1,4),W(1,2),GC_5,MDL_MT,MDL_WT,W(1,5))
 C     Amplitude(s) for diagram number 5
-      CALL FFV2_0(W(1,6),W(1,5),W(1,3),GC_47,AMP(5))
+      CALL FFV2_0(W(1,6),W(1,5),W(1,3),GC_11,AMP(5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_0(W(1,6),W(1,7),W(1,2),GC_5,AMP(6))
 C     Amplitude(s) for diagram number 7

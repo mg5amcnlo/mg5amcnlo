@@ -1227,3 +1227,4 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_short_check_generate_events_nlo_py6pt_fsr>]> 34.7858700752
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_spin2propagator2>]> 0.152077913284
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_aloha_MP_mode>]> 0.0324759483337
+<__main__.TestSuiteModified tests=[None]> 371.0308241844177

@@ -52,7 +52,11 @@ C
         INTEGER JHEL(2), J, JJ
         INTEGER THIS_NTRY(2)
         SAVE THIS_NTRY
-        DATA THIS_NTRY /0,0/
+	INTEGER NB_FAIL
+	SAVE NB_FAIL
+	DATA THIS_NTRY /0,0/
+	DATA NB_FAIL /0/
+	
 c
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
@@ -211,8 +215,13 @@ c         Set right sign for ANS, based on sign of chosen helicity
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
         ELSE IF(ANS.ne.0d0) THEN
+	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+			
 	        stop 1
+            else
+	    nb_fail = nb_fail +1
+	    endif
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)

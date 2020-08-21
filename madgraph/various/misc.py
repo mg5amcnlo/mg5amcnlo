@@ -14,6 +14,8 @@
 ################################################################################
 """A set of functions performing routine administrative I/O tasks."""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import contextlib
 import itertools
 import logging
@@ -22,19 +24,25 @@ import re
 import signal
 import subprocess
 import sys
-import StringIO
-import sys
 import optparse
 import time
 import shutil
 import traceback
 import gzip as ziplib
 from distutils.version import LooseVersion, StrictVersion
-
+import six
+from six.moves import zip_longest
+from six.moves import range
+from six.moves import zip
+from six.moves import input
+StringIO = six
+if six.PY3:
+    import io
+    file = io.IOBase
 try:
     # Use in MadGraph
     import madgraph
-except Exception, error:
+except Exception as error:
     # Use in MadEvent
     import internal
     from internal import MadGraph5Error, InvalidCmd
@@ -67,7 +75,7 @@ def parse_info_str(fsock):
         if m is not None:
             info_dict[m.group('name')] = m.group('value')
         else:
-            raise IOError, "String %s is not a valid info string" % entry
+            raise IOError("String %s is not a valid info string" % entry)
 
     return info_dict
 
@@ -238,7 +246,7 @@ def get_ninja_quad_prec_support(ninja_lib_path):
             p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
             output, error = p.communicate()
-            return 'TRUE' in output.upper()
+            return 'TRUE' in output.decode().upper()
         except Exception:
             pass
     
@@ -293,7 +301,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
     
     def tell(msg):
         if log == 'stdout':
-            print msg
+            print(msg)
         elif callable(log):
             log(msg)
     
@@ -309,7 +317,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     
     def tell(msg):
         if log == 'stdout':
-            print msg
+            print(msg)
         elif callable(log):
             log(msg)
 
@@ -331,7 +339,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
             cmd.do_install('Golem95')
     
     if dependency=='samurai':
-        raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
+        raise MadGraph5Error('Samurai cannot yet be automatically installed.') 
 
     if dependency=='ninja':
         if cmd.options['ninja'] in ['None',None,''] or\
@@ -380,11 +388,11 @@ def nice_representation(var, nb_space=0):
     #check which data to put:
     info = [('type',type(var)),('str', var)]
     if hasattr(var, 'func_doc'):
-        info.append( ('DOC', var.func_doc) )
+        info.append( ('DOC', var.__doc__) )
     if hasattr(var, '__doc__'):
         info.append( ('DOC', var.__doc__) )
     if hasattr(var, '__dict__'):
-        info.append( ('ATTRIBUTE', var.__dict__.keys() ))
+        info.append( ('ATTRIBUTE', list(var.__dict__.keys()) ))
     
     spaces = ' ' * nb_space
 
@@ -407,7 +415,7 @@ def multiple_try(nb_try=5, sleep=20):
                     return f(*args, **opt)
                 except KeyboardInterrupt:
                     raise
-                except Exception, error:
+                except Exception as error:
                     global wait_once
                     if not wait_once:
                         text = """Start waiting for update. (more info in debug mode)"""
@@ -421,7 +429,7 @@ def multiple_try(nb_try=5, sleep=20):
 
             if __debug__:
                 raise
-            raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
+            raise error.__class__('[Fail %i times] \n %s ' % (i+1, error))
         return deco_f_retry
     return deco_retry
 
@@ -478,9 +486,9 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
-    except OSError, error:
+    except OSError as error:
         if cwd and not os.path.exists(cwd):
-            raise OSError, 'Directory %s doesn\'t exists. Impossible to run make' % cwd
+            raise OSError('Directory %s doesn\'t exists. Impossible to run make' % cwd)
         else:
             error_text = "Impossible to compile %s directory\n" % cwd
             error_text += "Trying to launch make command returns:\n"
@@ -489,7 +497,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
                 error_text += "Xcode contains gmake. For gfortran we advise: http://hpc.sourceforge.net/"
-            raise MadGraph5Error, error_text
+            raise MadGraph5Error(error_text)
 
     if p.returncode:
         # Check that makefile exists
@@ -497,24 +505,29 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             cwd = os.getcwd()
         all_file = [f.lower() for f in os.listdir(cwd)]
         if 'makefile' not in all_file and '-f' not in arg:
-            raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
+            raise OSError('no makefile present in %s' % os.path.realpath(cwd))
 
         if mode == 'fortran' and  not (which('g77') or which('gfortran')):
             error_msg = 'A fortran compiler (g77 or gfortran) is required to create this output.\n'
             error_msg += 'Please install g77 or gfortran on your computer and retry.'
-            raise MadGraph5Error, error_msg
+            raise MadGraph5Error(error_msg)
         elif mode == 'cpp' and not which('g++'):            
             error_msg ='A C++ compiler (g++) is required to create this output.\n'
             error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
-            raise MadGraph5Error, error_msg
+            raise MadGraph5Error(error_msg)
+
+        try:
+            out = out.decode('utf-8')
+        except Exception:
+            out = str(out)
 
         # Check if this is due to the need of gfortran 4.6 for quadruple precision
         if any(tag.upper() in out.upper() for tag in ['real(kind=16)','real*16',
             'complex*32']) and mode == 'fortran' and not \
                              ''.join(get_gfortran_version().split('.')) >= '46':
             if not which('gfortran'):
-                raise MadGraph5Error, 'The fortran compiler gfortran v4.6 or later '+\
-                  'is required to compile %s.\nPlease install it and retry.'%cwd
+                raise MadGraph5Error('The fortran compiler gfortran v4.6 or later '+\
+                  'is required to compile %s.\nPlease install it and retry.'%cwd)
             else:
                 logger_stderr.error('ERROR, you could not compile %s because'%cwd+\
              ' your version of gfortran is older than 4.6. MadGraph5_aMC@NLO will carry on,'+\
@@ -529,7 +542,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'Please try to fix this compilations issue and retry.\n'
         error_text += 'Help might be found at https://answers.launchpad.net/mg5amcnlo.\n'
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo'
-        raise MadGraph5Error, error_text
+        raise MadGraph5Error(error_text)
     return p.returncode
 
 def get_gfortran_version(compiler='gfortran'):
@@ -539,10 +552,12 @@ def get_gfortran_version(compiler='gfortran'):
         p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
+        output = output.decode("utf-8")
         version_finder=re.compile(r"(?P<version>\d[\d.]*)")
         version = version_finder.search(output).group('version')
         return version
-    except Exception:
+    except Exception as error:
+        raise error
         return '0'
 
 def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfortran'):
@@ -666,7 +681,7 @@ class MuteLogger(object):
         for logname in lognames:
             try:
                 os.remove(path)
-            except Exception, error:
+            except Exception as error:
                 pass
             my_logger = logging.getLogger(logname)
             hdlr = logging.FileHandler(path)            
@@ -691,7 +706,7 @@ class MuteLogger(object):
             if path:
                 try:
                     os.remove(path)
-                except Exception, error:
+                except Exception as error:
                     pass
             my_logger = logging.getLogger(logname)
             if logname in self.logger_saved_info:
@@ -742,9 +757,7 @@ def get_open_fds():
     pid = os.getpid()
     procs = subprocess.check_output( 
         [ "lsof", '-w', '-Ff', "-p", str( pid ) ] )
-    nprocs = filter( 
-            lambda s: s and s[ 0 ] == 'f' and s[1: ].isdigit(),
-            procs.split( '\n' ) )
+    nprocs = [s for s in procs.split( '\n' ) if s and s[ 0 ] == 'f' and s[1: ].isdigit()]
         
     return nprocs
 
@@ -755,10 +768,13 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
         p = Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
-    except Exception, error:
+    except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
-    return 'LLVM' in output or "clang" in output
+
+    output = output.decode()
+    return 'LLVM' in str(output) or "clang" in str(output)
+
 
 def detect_cpp_std_lib_dependence(cpp_compiler):
     """ Detects if the specified c++ compiler will normally link against the C++
@@ -872,7 +888,7 @@ def check_system_error(value=1):
         def deco_f(arg, *args, **opt):
             try:
                 return f(arg, *args, **opt)
-            except OSError, error:
+            except OSError as error:
                 logger.debug('try to recover from %s' % error)
                 if isinstance(arg, (list,tuple)):
                     prog =  arg[0]
@@ -890,8 +906,8 @@ def check_system_error(value=1):
                 # NO such file or directory
                 elif error.errno == 2:
                     # raise a more meaningfull error message
-                    raise Exception, '%s fails with no such file or directory' \
-                                                                           % arg            
+                    raise Exception('%s fails with no such file or directory' \
+                                                                           % arg)            
                 else:
                     raise
         return deco_f
@@ -921,7 +937,7 @@ def call_stdout(arg, *args, **opt):
         arg[0] = './%s' % arg[0]
         out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
         
-    str_out = out.stdout.read().strip()
+    str_out = out.stdout.read().decode().strip()
     return str_out
     
 
@@ -973,58 +989,41 @@ def get_last_line(fsock):
     
     return tail(fsock, 1)[0]
 
-class BackRead(file):
-    """read a file returning the lines in reverse order for each call of readline()
-This actually just reads blocks (4096 bytes by default) of data from the end of
-the file and returns last line in an internal buffer."""
+
+#https://stackoverflow.com/questions/2301789/read-a-file-in-reverse-order-using-python
+def reverse_readline(filename, buf_size=8192):
+    """A generator that returns the lines of a file in reverse order"""
+    with open(filename) as fh:
+        segment = None
+        offset = 0
+        fh.seek(0, os.SEEK_END)
+        file_size = remaining_size = fh.tell()
+        while remaining_size > 0:
+            offset = min(file_size, offset + buf_size)
+            fh.seek(file_size - offset)
+            buffer = fh.read(min(remaining_size, buf_size))
+            remaining_size -= buf_size
+            lines = buffer.split('\n')
+            # The first line of the buffer is probably not a complete line so
+            # we'll save it and append it to the last line of the next buffer
+            # we read
+            if segment is not None:
+                # If the previous chunk starts right from the beginning of line
+                # do not concat the segment to the last line of new chunk.
+                # Instead, yield the segment first 
+                if buffer[-1] != '\n':
+                    lines[-1] += segment
+                else:
+                    yield segment
+            segment = lines[0]
+            for index in range(len(lines) - 1, 0, -1):
+                if lines[index]:
+                    yield lines[index]
+        # Don't yield None if the file was empty
+        if segment is not None:
+            yield segment
 
 
-    def readline(self):
-        """ readline in a backward way """
-        
-        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
-          self.blkcount = self.blkcount + 1
-          line = self.data[0]
-          try:
-            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-            self.data = (self.read(self.blksize) + line).split('\n')
-          except IOError:  # can't seek before the beginning of the file
-            self.seek(0)
-            data = self.read(self.size - (self.blksize * (self.blkcount-1))) + line
-            self.data = data.split('\n')
-    
-        if len(self.data) == 0:
-          return ""
-    
-        line = self.data.pop()
-        return line + '\n'
-
-    def __init__(self, filepos, blksize=4096):
-        """initialize the internal structures"""
-
-        # get the file size
-        self.size = os.stat(filepos)[6]
-        # how big of a block to read from the file...
-        self.blksize = blksize
-        # how many blocks we've read
-        self.blkcount = 1
-        file.__init__(self, filepos, 'rb')
-        # if the file is smaller than the blocksize, read a block,
-        # otherwise, read the whole thing...
-        if self.size > self.blksize:
-          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-        self.data = self.read(self.blksize).split('\n')
-        # strip the last item if it's empty...  a byproduct of the last line having
-        # a newline at the end of it
-        if not self.data[-1]:
-          self.data.pop()
-        
-    def next(self):
-        line = self.readline()
-        if line:
-            return line
-        else:
-            raise StopIteration
 
 
 def write_PS_input(filePath, PS):
@@ -1039,8 +1038,8 @@ def write_PS_input(filePath, PS):
                                                              for p in PS])+'\n')
         PSfile.close()
     except Exception:
-        raise MadGraph5Error, 'Could not write out the PS point to file %s.'\
-                                                                  %str(filePath)
+        raise MadGraph5Error('Could not write out the PS point to file %s.'\
+                                                                  %str(filePath))
 
 def format_timer(running_time):
     """ return a nicely string representing the time elapsed."""
@@ -1117,18 +1116,25 @@ class TMP_variable(object):
     def __enter__(self):
         return self.old_value 
     
+    #allow to use as decorator
+    def __call__(self, func):
+        def wrapper(*args, **kwds):
+            with self:
+                return func(*args, **kwds)
+    
 #
 # GUNZIP/GZIP
 #
 def gunzip(path, keep=False, stdout=None):
     """ a standard replacement for os.system('gunzip -f %s.gz ' % event_path)"""
 
+    
     if not path.endswith(".gz"):
         if os.path.exists("%s.gz" % path):
             path = "%s.gz" % path
         else:
-            raise Exception, "%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
-                              {"path": path}         
+            raise Exception("%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
+                              {"path": path})         
 
     
     #for large file (>1G) it is faster and safer to use a separate thread
@@ -1147,14 +1153,16 @@ def gunzip(path, keep=False, stdout=None):
         raise
     else:    
         try:    
-            open(stdout,'w').write(gfile.read())
-        except IOError:
+            open(stdout,'w').write(gfile.read().decode())
+        except IOError as error:
+            sprint(error)
             # this means that the file is actually not gzip
             if stdout == path:
                 return
             else:
                 files.cp(path, stdout)
-            
+    finally:
+        gfile.close()    
     if not keep:
         os.remove(path)
     return 0
@@ -1177,13 +1185,15 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read())
+        ziplib.open(stdout,"w").write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
         if error:
             raise
-    else:
+        else:
+            return
+    finally:
         os.remove(path)
     
 #
@@ -1265,7 +1275,7 @@ class open_file(object):
                         cls.text_editor = configuration[key]
                         continue
                 #Need to find a valid default
-                if os.environ.has_key('EDITOR'):
+                if 'EDITOR' in os.environ:
                     cls.text_editor = os.environ['EDITOR']
                 else:
                     cls.text_editor = cls.find_valid(
@@ -1312,8 +1322,8 @@ class open_file(object):
             if not background:
                 subprocess.call(arguments)
             else:
-                import thread
-                thread.start_new_thread(subprocess.call,(arguments,))
+                import six.moves._thread
+                six.moves._thread.start_new_thread(subprocess.call,(arguments,))
         else:
             logger.warning('Not able to open file %s since no program configured.' % file_path + \
                                 'Please set one in ./input/mg5_configuration.txt')
@@ -1378,7 +1388,7 @@ class OptionParser(optparse.OptionParser):
     
     def exit(self, status=0, msg=None):
         if msg:
-            raise InvalidCmd, msg
+            raise InvalidCmd(msg)
         else:
             raise InvalidCmd
 
@@ -1390,18 +1400,18 @@ def sprint(*args, **opt):
     
 
     import inspect
-    if opt.has_key('cond') and not opt['cond']:
+    if 'cond' in opt and not opt['cond']:
         return
 
     use_print = False    
-    if opt.has_key('use_print') and opt['use_print']:
+    if 'use_print' in opt and opt['use_print']:
         use_print = True
     
-    if opt.has_key('log'):
+    if 'log' in opt:
         log = opt['log']
     else:
         log = logging.getLogger('madgraph')
-    if opt.has_key('level'):
+    if 'level' in opt:
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
@@ -1411,7 +1421,7 @@ def sprint(*args, **opt):
         #if level == 20:
         #    level = 10 #avoid info level
         #print "use", level
-    if opt.has_key('wait'):
+    if 'wait' in opt:
         wait = bool(opt['wait'])
     else:
         wait = False
@@ -1444,12 +1454,12 @@ def sprint(*args, **opt):
         log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
     else:
-        print ' '.join([intro]+[str(a) for a in args]) + \
-                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno)
+        print(' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
 
     if wait:
-        raw_input('press_enter to continue')
-    elif opt.has_key('sleep'):
+        input('press_enter to continue')
+    elif 'sleep' in opt:
         time.sleep(int(opt['sleep']))
 
     return 
@@ -1510,13 +1520,20 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
         def run(self):
             try:
                 self.result = func(*args, **kwargs)
-            except Exception,error:
-                print error
+            except Exception as error:
+                print(error)
                 self.result = default
     it = InterruptableThread()
     it.start()
     it.join(timeout_duration)
     return it.result
+
+def mmin(iter, default=None):
+    
+    if six.PY3:
+        return min(iter, default=default)
+    else:
+        return min(iter, default)
 
 
 ################################################################################
@@ -1591,7 +1608,7 @@ class ProcessTimer:
     # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                   shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
-    stdout_list = flash.communicate()[0].split('\n')
+    stdout_list = flash.communicate()[0].decode().split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms
     vms_memory = 0
@@ -1790,7 +1807,7 @@ class EasterEgg(object):
                 self.call_apple(msg)
             else:
                 self.call_linux(msg)
-        except Exception, error:
+        except Exception as error:
             sprint(error)
             pass
     
@@ -1812,6 +1829,7 @@ class EasterEgg(object):
         #1. control if the volume is on or not
         p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
         output, _  = p.communicate()
+        output = output.decode()
         #output volume:25, input volume:71, alert volume:100, output muted:true
         info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
         muted = False
@@ -1855,8 +1873,8 @@ def get_older_version(v1, v2):
         return v1 if v2 is not in 1.2.3.4.5 format
         return v2 if v1 is not in 1.2.3.4.5 format
     """
-    from itertools import izip_longest
-    for a1, a2 in izip_longest(v1, v2, fillvalue=0):
+    
+    for a1, a2 in zip_longest(v1, v2, fillvalue=0):
         try:
             a1= int(a1)
         except:
@@ -1959,7 +1977,7 @@ def plugin_import(module, error_msg, fcts=[]):
         try:
             _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
         except ImportError:
-            raise MadGraph5Error, error_msg
+            raise MadGraph5Error(error_msg)
     
     if not fcts:
         return _temp
@@ -1981,7 +1999,7 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
                 try:
                     with stdchannel_redirected(sys.stdout, os.devnull):
                         __import__('%s.%s' % (plugindirname,plug))
-                except Exception, error:
+                except Exception as error:
                     if warning:
                         logger.warning("error detected in plugin: %s.", plug)
                         logger.warning("%s", error)
@@ -1991,7 +2009,7 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
                     if not is_plugin_supported(plugin):
                         continue
                     if keyname is None:
-                        validname += getattr(plugin, target_type).keys()
+                        validname += list(getattr(plugin, target_type).keys())
                     else:
                         if keyname in getattr(plugin, target_type):
                             if not info:
@@ -2017,11 +2035,12 @@ def import_python_lhapdf(lhapdfconfig):
             return None
         else:
             return python_lhapdf
-        
+
     use_lhapdf=False
     try:
+        
         lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().strip()
+                                           stdout=subprocess.PIPE).stdout.read().decode().strip()
     except:
         use_lhapdf=False
         return False
@@ -2032,7 +2051,7 @@ def import_python_lhapdf(lhapdfconfig):
         except OSError:
             candidates=[]
         for candidate in candidates:
-            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
                 try:
                     import lhapdf
@@ -2047,8 +2066,9 @@ def import_python_lhapdf(lhapdfconfig):
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
+        sprint(candidates, lhapdf_libdir+'64')
         for candidate in candidates:
-            if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
                 try:
                     import lhapdf
@@ -2062,7 +2082,7 @@ def import_python_lhapdf(lhapdfconfig):
                 import lhapdf
                 use_lhapdf=True
             except ImportError:
-                print 'fail'
+                print('fail')
                 logger.warning("Failed to access python version of LHAPDF: "\
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable and the"\
@@ -2097,6 +2117,109 @@ def wget(http, path, *args, **opt):
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function (for using python2 type of sort)'
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
+def smallest_diff_key(A, B):
+    """return the smallest key adiff in A such that adiff not in B or A[adiff] != B[bdiff]"""
+    diff_keys = [k for k in A if k not in B or A[k] != B[k]]
+    return min(diff_keys)
+
+def dict_cmp(A, B, level=1):
+    if len(A) != len(B):
+        return (len(A) > len(B)) - (len(A) < len(B))
+    try:
+        adiff = smallest_diff_key(A, B)
+    except ValueError:
+        # No difference.
+        return 0
+    bdiff = smallest_diff_key(B, A)
+    if adiff != bdiff:
+        a = adiff
+        b = bdiff
+        return (a > b) - (a < b)        
+    a = A[adiff]
+    b = B[bdiff]
+    if isinstance(a, dict):
+        return dict_cmp(a,b,level=level+1)
+    else:
+        return (a > b) - (a < b)
+        #return cmp(A[adiff], B[bdiff])
+
+if six.PY3:
+    import io
+    file = io.FileIO
+        
+class BackRead(file):
+    """read a file returning the lines in reverse order for each call of readline()
+This actually just reads blocks (4096 bytes by default) of data from the end of
+the file and returns last line in an internal buffer."""
+
+
+    def readline(self):
+        """ readline in a backward way """
+
+        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
+          self.blkcount = self.blkcount + 1
+          line = self.data[0]
+          try:
+            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+            self.data = (self.read(self.blksize).decode() + line).split('\n')
+          except IOError:  # can't seek before the beginning of the file
+            self.seek(0)
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode() + line
+            self.data = data.split('\n')
+
+        if len(self.data) == 0:
+          return ""
+
+        line = self.data.pop()
+        return line + '\n'
+
+    def __init__(self, filepos, blksize=4096):
+        """initialize the internal structures"""
+
+        # get the file size
+        self.size = os.stat(filepos)[6]
+        # how big of a block to read from the file...
+        self.blksize = blksize
+        # how many blocks we've read
+        self.blkcount = 1
+        file.__init__(self, filepos, 'rb')
+        # if the file is smaller than the blocksize, read a block,
+        # otherwise, read the whole thing...
+        if self.size > self.blksize:
+          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+        self.data = self.read(self.blksize).decode().split('\n')
+        # strip the last item if it's empty...  a byproduct of the last line having
+        # a newline at the end of it
+        if not self.data[-1]:
+          self.data.pop()
+
+    def next(self):
+        line = self.readline()
+        if line:
+            return line
+        else:
+            raise StopIteration
+        
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
 #oldfile = __builtin__.file

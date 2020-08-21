@@ -32,11 +32,15 @@
 ##      |    |    +   pass_in_type                                      ##
 ##                                                                      ##
 ##########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import re
 import os
 import math
 import sys
 import logging
+from six.moves import map
+from six.moves import range
 
 logger = logging.getLogger('madgraph.madweight')
 pjoin = os.path.join
@@ -100,7 +104,7 @@ class Card(dict):
     #2 #########################################################################
     def read_card(self,name_card):
         """ DEPRECIATED """
-        print "warning depreciated funtion read_card in use"
+        print("warning depreciated funtion read_card in use")
         raise Exception
         self.read(name_card)
         
@@ -165,13 +169,13 @@ class Card(dict):
             if line_content[0].lower()=='decay':
                 name_block='decay'
                 line_content=line_content[1:]
-                if 'decay' not in info.keys():
+                if 'decay' not in list(info.keys()):
                     info['decay']={}
                 decay_tag=line_content[0]
             elif name_block in ['decay','br']:
                 name_block='br'
                 line_content=[decay_tag]+line_content[2:]+[line_content[0]]
-                if 'br' not in info.keys():
+                if 'br' not in list(info.keys()):
                     info['br']={}
                     
             #create list of dictionary
@@ -190,7 +194,7 @@ class Card(dict):
             for i in range(0,len(line_content)-1):
                 if line_content[0] == 'comment':
                     continue
-                if line_content[i] not in dico.keys():
+                if line_content[i] not in list(dico.keys()):
                     dico[line_content[i]]=obj[line_content[i]]
                     if get_comment and line_content[i] != 'comment':
                         comments[line_content[i]] = comment
@@ -236,7 +240,7 @@ class Card(dict):
             type=words.group('type').lower()
             value=words.group('default').lower()
 
-            if not ident.has_key(block):
+            if block not in ident:
                 ident[block]={tag:[name,type,value]}
             else:
                 ident[block][tag]=[name,type,value]
@@ -259,7 +263,7 @@ class Card(dict):
         
         
         logger.debug('create file %s' % output)
-        out=file(output,'w')
+        out=open(output,'w')
         out.writelines('C automatic include file for card '+self.file+' and '+card.file+'\n\n')
 
         if card.type=='ident':
@@ -270,9 +274,9 @@ class Card(dict):
             ident=self.info
         
         for block in info.keys(): 
-            if ident.has_key(block):
+            if block in ident:
                 for tag in ident[block].keys():
-                    if info[block].has_key(tag):
+                    if tag in info[block]:
                         value=self.pass_in_type(info[block][tag],ident[block][tag][1])
                         out.writelines('        '+ident[block][tag][0]+' = '+str(value)+'\n')
                     elif ident[block][tag][2]: #check if default value is defined
@@ -289,7 +293,7 @@ class Card(dict):
         
         
         logger.debug('create file %s' % output)
-        out=file(output+'transfer_card.inc','w')
+        out=open(output+'transfer_card.inc','w')
         out.writelines('C automatic include file for card '+self.file+' and '+card.file+'\n\n')
 
         if card.type=='ident':
@@ -304,10 +308,10 @@ class Card(dict):
         #template = "        DATA ( %s(I), I=1,nb_tf) / %s /\n"
         template = "        %s(%s) = %s \n"    
         for block in info.keys(): 
-            if ident.has_key(block):
+            if block in ident:
                 for tag in ident[block].keys():
                     type_format = ident[block][tag][1]
-                    if info[block].has_key(tag):
+                    if tag in info[block]:
                         values = info[block][tag]
                     else:
                         values = [ident[block][tag][2]] * max(1, nb_element)
@@ -321,8 +325,8 @@ class Card(dict):
                     if not nb_element:
                         nb_element = len(values)
                     elif nb_element != len(values):    
-                        print nb_element, len(values)
-                        raise Exception, 'All input in tranfer_card.dat should have the same number of element'
+                        print(nb_element, len(values))
+                        raise Exception('All input in tranfer_card.dat should have the same number of element')
 
                     # add the line
                     out.writelines(''.join(template % (ident[block][tag][0], i+1,val)
@@ -368,7 +372,7 @@ class Card(dict):
             value=value.replace('e','d')
             return value
         else:
-            print 'error in type for',value,type
+            print('error in type for',value,type)
             
     #3 #########################################################################
     def write(self, output):
@@ -582,7 +586,7 @@ def read_leshouches_file(filepos):
         #print line, [line[4],line[5], line[6]]
 
         if line=='':
-            raise FileInputException, 'incorrect leshouche.inc at position '+filepos
+            raise FileInputException('incorrect leshouche.inc at position '+filepos)
         if line[5] != ' ':
             line = old_line.rstrip() + line[6:]
         if pid_pat.search(line):

@@ -14,6 +14,7 @@
 ################################################################################
 """Methods and classes to export matrix elements to v4 format."""
 
+from __future__ import absolute_import
 import copy
 import fractions
 import glob
@@ -55,6 +56,8 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
+from six.moves import range
+from six.moves import zip
 
 
 
@@ -167,7 +170,7 @@ class LoopExporterFortran(object):
                 
                 if not os.path.exists(os.path.join(self.cuttools_dir,
                                                       'includects','libcts.a')):            
-                    raise MadGraph5Error,"CutTools could not be correctly compiled."
+                    raise MadGraph5Error("CutTools could not be correctly compiled.")
     
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
@@ -197,7 +200,7 @@ class LoopExporterFortran(object):
         same loop exporter.
         """
         if not hasattr(self, 'aloha_model'):
-            self.aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            self.aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         return self.aloha_model
 
     #===========================================================================
@@ -334,11 +337,12 @@ CF2PY intent(in)::path
         CALL SETMADLOOPPATH(PATH)
       END
 
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
+  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
   IMPLICIT NONE
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in):: procid
 CF2PY integer, intent(in) :: npdg
 CF2PY double precision, intent(out) :: ANS
 CF2PY integer, intent(out) :: RETURNCODE
@@ -346,22 +350,25 @@ CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALES2
 
   integer pdgs(*)
-  integer npdg, nhel, RETURNCODE
+  integer npdg, nhel, RETURNCODE, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALES2
-
+ 1 continue
 %(smatrixhel)s
 
       return
       end
   
-  subroutine get_pdg_order(OUT)
+  subroutine get_pdg_order(OUT, ALLPROC)
   IMPLICIT NONE
 CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
-  
+CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
   INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
   DATA PDGS/ %(pdgs)s /
+  DATA PIDS/ %(pids)s /
   OUT=PDGS
+  ALLPROC = PIDS
   RETURN
   END
   
@@ -376,33 +383,39 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
   
         """
          
-        allids = self.prefix_info.keys()
+        allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
-        min_nexternal = min([len(ids) for ids in allids])
-        max_nexternal = max([len(ids) for ids in allids])
+        min_nexternal = min([len(ids[0]) for ids in allids])
+        max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for key, (prefix, tag) in self.prefix_info.items():
-            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+        for (key,pid), (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
-            current = [ids for ids in allids if len(ids)==n_ext]
-            if not current:
+            current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
+            current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
+            if not current_id:
                 continue
             if min_nexternal != max_nexternal:
                 if n_ext == min_nexternal:
                     text.append('       if (npdg.eq.%i)then' % n_ext)
                 else:
                     text.append('       else if (npdg.eq.%i)then' % n_ext)
-            for ii,pdgs in enumerate(current):
+            for ii,pdgs in enumerate(current_id):
+                pid =  current_pid[ii]
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
                 if ii==0:
-                    text.append( ' if(%s) then ! %i' % (condition, i))
+                    text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, len(pdgs)))
                 else:
-                    text.append( ' else if(%s) then ! %i' % (condition,i))
-                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+                    text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,len(pdgs)))
+                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[(pdgs,pid)][0])
+            text.append( ' else if(procid.gt.0) then !')
+            text.append( ' procid = -1' )
+            text.append( ' goto 1' )
+            
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -422,9 +435,10 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'nb_me': len(allids),
                           'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
                                              for i in range(max_nexternal) \
-                                             for pdg in allids]),
+                                             for (pdg,pid) in allids]),
                       'prefix':'\',\''.join(allprefix),
                       'parameter_setup': '\n'.join(parameter_setup),
+                      'pids':  ','.join(str(pid) for (pdg,pid) in allids),
                       }
     
     
@@ -704,9 +718,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             if(col_amps and isinstance(col_amps[0],list)):
                 color_amplitudes=col_amps
             else:
-                raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
+                raise MadGraph5Error("Incorrect col_amps argument passed to get_amp_to_jamp_map")
         else:
-            raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
+            raise MadGraph5Error("Incorrect col_amps argument passed to get_amp_to_jamp_map")
         
         # To store the result
         res_list = [[] for i in range(n_amps)]
@@ -827,13 +841,15 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                 assert not (real_num!=0 and imag_num!=0), "MadGraph5_aMC@NLO found a "+\
                   "color matrix element which has both a real and imaginary part."
                 if imag_num!=0:
-                    res=fractions.Fraction(imag_num,common_denom)
+                    assert int(imag_num) == imag_num and int(common_denom) == common_denom
+                    res=fractions.Fraction(int(imag_num),int(common_denom))
                     line_num.append(res.numerator)
                     # Negative denominator means imaginary color coef of the
                     # final color matrix
                     line_denom.append(res.denominator*-1)
                 else:
-                    res=fractions.Fraction(real_num,common_denom)
+                    assert int(real_num) == real_num and int(common_denom) == common_denom
+                    res=fractions.Fraction(int(real_num),int(common_denom))
                     line_num.append(res.numerator)
                     # Positive denominator means real color coef of the final color matrix
                     line_denom.append(res.denominator)
@@ -913,8 +929,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         logger.info('Creating files in directory %s' % dirpath)
 
         if unique_id is None:
-            raise MadGraph5Error, 'A unique id must be provided to the function'+\
-                     'generate_loop_subprocess of LoopProcessExporterFortranSA.'
+            raise MadGraph5Error('A unique id must be provided to the function'+\
+                     'generate_loop_subprocess of LoopProcessExporterFortranSA.')
         # Create an include with the unique consecutive ID assigned
         open('unique_id.inc','w').write(
 """      integer UNIQUE_ID
@@ -1023,7 +1039,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids)] = [dict['proc_prefix'], proc.get_tag()]
+                self.prefix_info[tuple(ids),proc.get('id')] = [dict['proc_prefix'], proc.get_tag()]
 
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
@@ -1119,13 +1135,13 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         # Create the necessary files for the loop matrix element subroutine
         
         if config_map:
-            raise MadGraph5Error, 'The default loop output cannot be used with'+\
-              'MadEvent and cannot compute the AMP2 for multi-channeling.'
+            raise MadGraph5Error('The default loop output cannot be used with'+\
+              'MadEvent and cannot compute the AMP2 for multi-channeling.')
 
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
-            raise MadGraph5Error, 'The loop fortran output can only'+\
-              ' work with a UFO Fortran model'
+            raise MadGraph5Error('The loop fortran output can only'+\
+              ' work with a UFO Fortran model')
         
         LoopFortranModel = helas_call_writers.FortranUFOHelasCallWriter(
                      argument=fortran_model.get('model'),
@@ -1162,7 +1178,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                    '\n'.join(['DO I=1,NBORNAMPS','DPAMP(I,H)=AMP(I,H)','ENDDO'])
         
         if writer:
-            raise MadGraph5Error, 'Matrix output mode no longer supported.'
+            raise MadGraph5Error('Matrix output mode no longer supported.')
         
         filename = 'loop_matrix.f'
         calls = self.write_loopmatrix(writers.FortranWriter(filename),
@@ -1250,7 +1266,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         replace_dict = copy.copy(matrix_element.rep_dict)     
         for key in ['print_so_born_results','print_so_loop_results',
             'write_so_born_results','write_so_loop_results','set_coupling_target']:
-            if key not in replace_dict.keys():
+            if key not in list(replace_dict.keys()):
                 replace_dict[key]=''
         
         if matrix_element.get('processes')[0].get('has_born'):
@@ -1693,8 +1709,7 @@ C               ENDIF""")%replace_dict
         file = file % replace_dict
 
         loop_calls_finder = re.compile(r'^\s*CALL\S*LOOP\S*')
-        n_loop_calls = len(filter(lambda call: 
-               not loop_calls_finder.match(call) is None, loop_amp_helas_calls))
+        n_loop_calls = len([call for call in loop_amp_helas_calls if not loop_calls_finder.match(call) is None])
         if writer:
             # Write the file
             writer.writelines(file)  
@@ -1857,7 +1872,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             context['%s_available'%tir]=self.tir_available_dict[tir]
             # safety check
             if tir not in ['golem','pjfry','iregi','samurai','ninja','collier']:
-                raise MadGraph5Error,"%s was not a TIR currently interfaced."%tir_name
+                raise MadGraph5Error("%s was not a TIR currently interfaced."%tir_name)
 
         return context
 
@@ -2114,12 +2129,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Warn the user that the 'matrix' output where all relevant code is
         # put together in a single file is not supported in this loop output.
         if writer:
-            raise MadGraph5Error, 'Matrix output mode no longer supported.'
+            raise MadGraph5Error('Matrix output mode no longer supported.')
         
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' work with a UFO Fortran model'
+            raise MadGraph5Error('The optimized loop fortran output can only'+\
+              ' work with a UFO Fortran model')
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
@@ -2298,7 +2313,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         has_HEFT_list = []
         chunk_size = 9
-        for k in xrange(0, len(has_HEFT_vertex), chunk_size):
+        for k in range(0, len(has_HEFT_vertex), chunk_size):
             has_HEFT_list.append("DATA (HAS_AN_HEFT_VERTEX(I),I=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(has_HEFT_vertex)),
                      ','.join(['.TRUE.' if l else '.FALSE.' for l in 
@@ -2340,7 +2355,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                             ('COEFMAP_ONE',[c[1] for c in collier_map]),
                             ('COEFMAP_TWO',[c[2] for c in collier_map]),
                             ('COEFMAP_THREE',[c[3] for c in collier_map])]:
-            for k in xrange(0, len(indices_list), chunk_size):
+            for k in range(0, len(indices_list), chunk_size):
                 map_definition.append("DATA (%s(I),I=%3r,%3r) /%s/" % \
                 (map_name,k, min(k + chunk_size, len(indices_list))-1,
                  ','.join('%2r'%ind for ind in indices_list[k:k + chunk_size])))
@@ -3013,10 +3028,8 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         matrix_element.rep_dict['coef_construction']=replace_dict['coef_construction']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-
         file = file % replace_dict
-        number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
-                                                                 loop_CT_calls))   
+        number_of_calls = len([call for call in loop_CT_calls if call.find('CALL LOOP') != 0])   
         if writer:
             # Write the file
             writer.writelines(file,context=context)
@@ -3248,8 +3261,8 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     def get_amp2_lines(self, *args, **opts):
         """Make sure the function is implemented in the daughters"""
 
-        raise NotImplemented, 'The function get_amp2_lines must be called in '+\
-                                       ' the daugthers of LoopInducedExporterME'
+        raise NotImplemented('The function get_amp2_lines must be called in '+\
+                                       ' the daugthers of LoopInducedExporterME')
 
 #===============================================================================
 # LoopInducedExporterMEGroup
@@ -3329,8 +3342,8 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """
 
         if not config_map:
-            raise MadGraph5Error, 'A multi-channeling configuration map is '+\
-              ' necessary for the MadEvent Loop-induced output with grouping.'
+            raise MadGraph5Error('A multi-channeling configuration map is '+\
+              ' necessary for the MadEvent Loop-induced output with grouping.')
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
 
@@ -3399,7 +3412,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # Now write the amp2 related inputs in the replacement dictionary
         res_list = []
         chunk_size = 6
-        for k in xrange(0, len(conf_list), chunk_size):
+        for k in range(0, len(conf_list), chunk_size):
             res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(conf_list)),
                     ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
@@ -3411,7 +3424,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         amp_list = [loop_amp_ID_to_config[i] for i in \
                                    sorted(loop_amp_ID_to_config.keys()) if i!=0]
         chunk_size = 6
-        for k in xrange(0, len(amp_list), chunk_size):
+        for k in range(0, len(amp_list), chunk_size):
             res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(amp_list)),
                     ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))
@@ -3489,8 +3502,8 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         if config_map:
-            raise MadGraph5Error, 'A configuration map should not be specified'+\
-                              ' for the Loop induced exporter without grouping.'
+            raise MadGraph5Error('A configuration map should not be specified'+\
+                              ' for the Loop induced exporter without grouping.')
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
@@ -3545,7 +3558,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         conf_list = [config_index_map[i] for i in sorted(config_index_map.keys())
                                                                         if i!=0]
         chunk_size = 6
-        for k in xrange(0, len(conf_list), chunk_size):
+        for k in range(0, len(conf_list), chunk_size):
             res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(conf_list)),
                     ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
@@ -3557,7 +3570,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         amp_list = [loop_amp_ID_to_config[i] for i in \
                                    sorted(loop_amp_ID_to_config.keys()) if i!=0]
         chunk_size = 6
-        for k in xrange(0, len(amp_list), chunk_size):
+        for k in range(0, len(amp_list), chunk_size):
             res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(amp_list)),
                     ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))

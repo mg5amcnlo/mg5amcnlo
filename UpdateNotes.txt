@@ -1,5 +1,71 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+2.8.0 (21/08/20):
+      OM: pass to python3 by default
+      OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the
+          effective photon approximation. This mode behaves like the "3" one: The cut-off scale of the approximation
+	  is taken from the fixed renormalization factorisation scale: "dsqrt_q2fact1/dsqrt_q2fact2"
+      OM: The width ao T-channel propagator are now set to zero automatically.
+          To return to the previous behaviour , you can use the options "set zerowidth_tchannel False"
+	  (to set before the output command)
+      OM: Change in madevent phase-space integrator for T-channel:
+            - The integration of photon/Z/Higgs are now done together rather than separatly and follow importance
+	       sampling of the photon channel
+	    - A new option "set max_t_for_channel X" allows to veto some channel of integration with more than X
+	       t-channel propagator. This options can speed-up significantly the computation in VBF process.
+	       (We advise to set X to 2 in those cases)
+	    - Fix a numerical issue occuring for low invariant mass in T-channel creating spurious configuration.   
+      OM: In madspin_card you can now replace the line "launch"
+          by "launch -n NAME", this will allow to specify the name of the
+	  directory in EVENTS where that run is stored.
+      OM: Change in the python interface of the standalone output. In top of the pdg of the particles,
+          you can now use the process_id (the one specified with @X) to distinguish process with the same particle
+	  content. This parameter can be set to -1 and the function then ignore that parameter.
+      OM: Adding new option in reweighting to allow the user to use the process_id in presence of ambiguous
+          initial/final state.
+      OM: Update the makefile of standalone interface to python to be able to compile in multicore.
+           (thanks Matthias Komm)
+      OM: Update of the auto-width code to support UFO form-factors
+      OM: Fixing numerical issue  with the boost in EPA mode.
+     
+
+                        ** PARRALEL VERSION FOR PYTHON 3 **
+
+2.7.3.py3(28/06/20):
+      ALL: Contains all feature of 2.7.3 (see below)
+      OM: Fix a crash when running PY8 in matched/merged mode (bug not present in not .py3 version of the code)
+      MZ: low_mem_multicore_nlo_generation is working again
+          but not for LOonly mode and not in OLP mode
+
+2.7.2.py3(25/03/20):
+      ALL: Contains all feature of 2.7.2 (see below)
+
+2.7.1.py3(09/03/20):
+      ALL: Contains all feature of 2.7.1 (see below)
+      OM: Fixed a lot of python3 compatibility issue raised by user
+          Particular Thanks to Congqio Li (CMS), Richard Ruiz and Leif Gellersen
+	  for their reports.
+
+2.7.0.py3 (27/02/20):
+      ALL: Contains all feature of 2.7.0			
+      OM: Support for python3.7 in top of python 2.7
+          - python2.6  is not supported anymore
+	  - this requires the module "six" [pip install six --user]
+      OM: dropping function set low_mem_multicore_nlo
+      OM: dropping support for syscalc (c++ version)
+      OM: introduction of new setup variable
+          - f2py_compiler_py2 and f2py_compiler_py3
+	    which will be used to overwrite f2py_compiler when using the associate python version
+          - lhapdf_py2 and lhapdf_py3
+	    same for lhapdf
+      OM: introduction of a new command "convert model FULLPATH"
+          - try to convert a UFO model compatible to python2 only to a new model compatible both with
+	    Python2 and Python3 (no guarantee)
+
+
+                             ** Main Branch  Update **
+			
 2.7.3(21/06/20)
       OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
           Thanks to Congqiao Li for this
@@ -23,7 +89,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
       OM: Speed up standalone_cpp code by changing compilation flag
 
-2.7.1.2(09/03/20)
+2.7.1(09/03/20)
       OM: Fixing issue (wrong cross-section and differential cross-section) for
           polarised sample when
 	   1) you have identical polarised particles
@@ -45,7 +111,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	  directory as the param_card.dat.
 
 
-2.7.0(10/01/20)
+2.7.0(20/01/20)
       OM: Allow for a new syntax in presence of multi-jet/lepton process:
          generate p p > 3j replaces p p > j j j 
       OM: Allow syntax for (fully) polarized particles at LO: [1912.01725]

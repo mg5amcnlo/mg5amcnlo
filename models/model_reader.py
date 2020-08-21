@@ -17,6 +17,7 @@ couplings for a model"""
 
 from __future__ import division
 
+from __future__ import absolute_import
 import array
 import cmath
 import copy
@@ -32,6 +33,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc
+import six
 
 ZERO = 0
 
@@ -76,10 +78,10 @@ class ModelReader(loop_base_objects.LoopModel):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-            if isinstance(param_card, basestring):
+            if isinstance(param_card, six.string_types):
                 # Check that param_card exists
                 if not os.path.isfile(param_card):
-                    raise MadGraph5Error, "No such file %s" % param_card
+                    raise MadGraph5Error("No such file %s" % param_card)
                 param_card_text = param_card
                 param_card = card_reader.ParamCard(param_card)
             #misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
@@ -155,11 +157,11 @@ class ModelReader(loop_base_objects.LoopModel):
                                 fail = False
                     except Exception:
                         raise
-                        raise MadGraph5Error, msg
+                        raise MadGraph5Error(msg)
                         
                 
                 if fail:
-                    raise MadGraph5Error, msg
+                    raise MadGraph5Error(msg)
 
             for block in key:
                 if block not in parameter_dict:
@@ -168,7 +170,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     try:
                         value = param_card[block].get(pid).value
                     except:
-                        raise MadGraph5Error, '%s %s not define' % (block, pid)
+                        raise MadGraph5Error('%s %s not define' % (block, pid))
                     else:
                         if isinstance(value, str) and value.lower() == 'auto':
                             value = '0.0' 
@@ -176,12 +178,12 @@ class ModelReader(loop_base_objects.LoopModel):
                             runner = Alphas_Runner(value, nloop=2)
                             try:
                                 value = runner(scale)
-                            except ValueError, err:
+                            except ValueError as err:
                                 if str(err) == 'math domain error' and scale < 1:
                                     value = 0.0
                                 else:
                                     raise
-                            except OverflowError, err:
+                            except OverflowError as err:
                                 if scale < 1:
                                     value = 0.0
                                 else:
@@ -219,7 +221,7 @@ class ModelReader(loop_base_objects.LoopModel):
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
                 msg = 'Unable to evaluate %s = %s: raise error: %s' % (param.name,param.expr, error)
-                raise MadGraph5Error, msg
+                raise MadGraph5Error(msg)
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
@@ -235,7 +237,7 @@ class ModelReader(loop_base_objects.LoopModel):
                      {'width': particle.get('width')})
 
         # Extract couplings
-        couplings = sum(self['couplings'].values(), [])
+        couplings = sum(list(self['couplings'].values()), [])
         # Now calculate all couplings
         for coup in couplings:
             #print "I execute %s = %s"%(coup.name, coup.expr)

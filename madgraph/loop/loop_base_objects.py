@@ -16,6 +16,7 @@
 """Definitions of all basic objects with extra features to treat loop 
    diagrams"""
 
+from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -27,6 +28,8 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
+from six.moves import range
+from six.moves import zip
 
 logger = logging.getLogger('madgraph.loop_base_objects')
 
@@ -88,48 +91,40 @@ class LoopDiagram(base_objects.Diagram):
 
         if name == 'tag':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid tag" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid tag" % str(value))
             else:
                 for item in value:
                     if (len(item)!=3 or \
                       not isinstance(item[0],base_objects.Leg) or \
                       not isinstance(item[1],list)) or \
                       not isinstance(item[2],base_objects.Vertex):
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid tag" % str(value)
+                        raise self.PhysicsObjectError("%s is not a valid tag" % str(value))
 
         if name == 'canonical_tag':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid tag" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid tag" % str(value))
             else:
                 for item in value:
                     if (len(item)!=3 or not isinstance(item[0],int) or \
                       not isinstance(item[1],list)) or \
                       not isinstance(item[2],int):
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid canonical_tag" % str(value)
+                        raise self.PhysicsObjectError("%s is not a valid canonical_tag" % str(value))
 
         if name == 'CT_vertices':
             if not isinstance(value, base_objects.VertexList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid VertexList object" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid VertexList object" % str(value))
 
         if name == 'type':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid integer" % str(value))
 
         if name == 'multiplier':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid integer" % str(value))
 
         if name == 'contracted_diagram':
             if not isinstance(value, base_objects.Diagram):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid Diagram." % str(value)                            
+                raise self.PhysicsObjectError("%s is not a valid Diagram." % str(value))                            
 
         else:
             super(LoopDiagram, self).filter(name, value)
@@ -206,9 +201,9 @@ class LoopDiagram(base_objects.Diagram):
         # Without the tagging information we will have to reconstruct the
         # contracted diagrams with the unordered vertices
         if len(self.get('vertices'))==0:
-            raise MadGraph5Error, "Function get_contracted_loop_diagram()"+\
+            raise MadGraph5Error("Function get_contracted_loop_diagram()"+\
                 "called for the first time without specifying struct_rep "+\
-                                            "for a diagram already tagged."
+                                            "for a diagram already tagged.")
                                 
         # The leg below will be the outgoing one 
         contracted_vertex_last_loop_leg = None
@@ -354,14 +349,14 @@ class LoopDiagram(base_objects.Diagram):
 
         return tuple(
                  # For each loop vertex, we must identify the following three things
-                 zip(
+                 list(zip(
                    # Loop particle identification
                    loop_parts_tagging,
                    # FDStructure identification
                    FDStructs_tagging,
                    # Loop interactions identification
                    interactions_tagging,
-                 )
+                 ))
                  # Finally make sure that the loop orders are the same
                  + sorted(self.get_loop_orders(model).items())
                )
@@ -635,8 +630,8 @@ class LoopDiagram(base_objects.Diagram):
             start=start_in.get('number')
             end=end_in.get('number')
         else:
-            raise MadGraph5Error, "In the diagram tag function, 'start' and "+\
-                " 'end' must be either integers or Leg objects." 
+            raise MadGraph5Error("In the diagram tag function, 'start' and "+\
+                " 'end' must be either integers or Leg objects.") 
         
         if self.process_next_loop_leg(struct_rep,-1,-1,start,end,\
                                           loopVertexList, model, external_legs):
@@ -657,8 +652,8 @@ class LoopDiagram(base_objects.Diagram):
                 canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep, 
                                                            model, external_legs)
             else:
-                raise MadGraph5Error, 'The cutting method %s is not implemented.'\
-                                                            %self.cutting_method
+                raise MadGraph5Error('The cutting method %s is not implemented.'\
+                                                            %self.cutting_method)
             # The tag of the diagram is now updated with the canonical tag
             self['tag']=canonical_tag
             # We assign here the loopVertexList to the list of vertices 
@@ -674,8 +669,7 @@ class LoopDiagram(base_objects.Diagram):
             self['canonical_tag']=[[t[0]['id'],t[1],t[2]] for t in canonical_tag]
             return True
         else:
-            raise self.PhysicsObjectError, \
-                  "Loop diagram tagging failed."
+            raise self.PhysicsObjectError("Loop diagram tagging failed.")
             return False
 
 
@@ -688,7 +682,7 @@ class LoopDiagram(base_objects.Diagram):
         # Now we make sure we can combine those legs together (and 
         # obtain the output particle ID)
         key=tuple(sorted([leg.get('id') for leg in myleglist]))
-        if ref_dict_to1.has_key(key):
+        if key in ref_dict_to1:
             for interaction in ref_dict_to1[key]:
                 # Find the interaction with the right ID
                 if interaction[1]==vertID:
@@ -704,8 +698,7 @@ class LoopDiagram(base_objects.Diagram):
                     #    one initial state particle involved in the
                     #    combination -> t-channel
                     #    For a decay process there is of course no t-channel
-                    if n_initial>1 and len(myleglist)>1 and len(filter( \
-                        lambda leg: leg.get('state') == False, myleglist)) == 1:
+                    if n_initial>1 and len(myleglist)>1 and len([leg for leg in myleglist if leg.get('state') == False]) == 1:
                         state = False
                     else:
                         state = True
@@ -717,9 +710,8 @@ class LoopDiagram(base_objects.Diagram):
                     # Now we can add the corresponding vertex
                     return base_objects.Vertex({'legs':myleglist,'id':vertID})
         else:
-            raise cls.PhysicsObjectError, \
-            "An interaction from the original L-cut diagram could"+\
-            " not be found when reconstructing the loop vertices."
+            raise cls.PhysicsObjectError("An interaction from the original L-cut diagram could"+\
+            " not be found when reconstructing the loop vertices.")
 
     def process_next_loop_leg(self, structRep, fromVert, fromPos, currLeg, \
                                   endLeg, loopVertexList, model, external_legs):
@@ -748,8 +740,7 @@ class LoopDiagram(base_objects.Diagram):
                                self['vertices'][i].get('legs')[k],FDStruct)
 
             if not canonical:
-                raise self.PhysicsObjectError, \
-                      "Failed to reconstruct a FDStructure."
+                raise self.PhysicsObjectError("Failed to reconstruct a FDStructure.")
             
             # The branch was directly an external leg, so it the canonical
             # repr of this struct is simply ((legID),0).
@@ -758,8 +749,7 @@ class LoopDiagram(base_objects.Diagram):
             elif isinstance(canonical,tuple):
                 FDStruct.set('canonical',canonical)
             else:                                      
-                raise self.PhysicsObjectError, \
-                "Non-proper behavior of the construct_FDStructure function"
+                raise self.PhysicsObjectError("Non-proper behavior of the construct_FDStructure function")
             
             # First check if this structure exists in the dictionary of the
             # structures already obtained in the diagrams for this process
@@ -792,7 +782,7 @@ class LoopDiagram(base_objects.Diagram):
         # == Code begins ==
         # We will scan the whole vertex list to look for the next loop
         # interaction.
-        vertRange=range(len(self['vertices']))
+        vertRange=list(range(len(self['vertices'])))
         # If we just start the iterative procedure, then from_vert=-1 and we
         # must look for the "start" loop leg in the entire vertices list
         if not fromVert == -1: 
@@ -815,7 +805,7 @@ class LoopDiagram(base_objects.Diagram):
             # it in the INPUTS of the vertices before. However, it it was an 
             # input of its vertex we must look in the OUTPUT of the vertices 
             # forehead
-            legRange=range(len(self['vertices'][i].get('legs')))
+            legRange=list(range(len(self['vertices'][i].get('legs'))))
             if fromPos == -1:
                 # In the last vertex of the list, all entries are input
                 if not i==len(self['vertices'])-1:
@@ -838,8 +828,7 @@ class LoopDiagram(base_objects.Diagram):
                         currLeg=base_objects.Leg(self['vertices'][i].get('legs')[j])
                         
                     # We can now process this loop interaction found...
-                    for k in filter(lambda ind: not ind==j, \
-                                   range(len(self['vertices'][i].get('legs')))):
+                    for k in [ind for ind in range(len(self['vertices'][i].get('legs'))) if not ind==j]:
                         # ..for the structure k
                         # pos gives the direction in which to look for 
                         # nextLoopLeg from vertPos. It is after vertPos
@@ -858,8 +847,7 @@ class LoopDiagram(base_objects.Diagram):
                                 nextLoopLeg=self['vertices'][i].get('legs')[k]
                                 legPos=pos
                             else:
-                                raise self.PhysicsObjectError, \
-                                  " An interaction has more than two loop legs."
+                                raise self.PhysicsObjectError(" An interaction has more than two loop legs.")
                         else:
                             process_loop_interaction(i,j,k,pos)
                     # Now that we have found loop leg curr_leg, we can get out 
@@ -1049,7 +1037,7 @@ class LoopDiagram(base_objects.Diagram):
         legPos=-2
         vertPos=-2
 
-        vertRange=range(len(self['vertices']))
+        vertRange=list(range(len(self['vertices'])))
 
         # Say we are at the beginning of the structure reconstruction algorithm 
         # of the structure above, with currLeg=1 so it was found in the vertex 
@@ -1135,8 +1123,7 @@ class LoopDiagram(base_objects.Diagram):
                 branch=self.construct_FDStructure(i, legPos, \
                               self['vertices'][vertID].get('legs')[k], FDStruct)
                 if not branch:
-                    raise self.PhysicsObjectError, \
-                          "Failed to reconstruct a FDStructure."
+                    raise self.PhysicsObjectError("Failed to reconstruct a FDStructure.")
                 # That means that this branch was an external leg. 
                 if isinstance(branch,int):
                     parentBuffer[0].append(branch)
@@ -1146,8 +1133,7 @@ class LoopDiagram(base_objects.Diagram):
                     parentBuffer[0]+=list(branch[0][0])
                     vertBuffer.append(branch)
                 else:
-                    raise self.PhysicsObjectError, \
-                    "Non-proper behavior of the construct_FDStructure function"
+                    raise self.PhysicsObjectError("Non-proper behavior of the construct_FDStructure function")
             return legPos
 
         # == Beginning of the code ==
@@ -1159,7 +1145,7 @@ class LoopDiagram(base_objects.Diagram):
             # output of its vertices, then we must look in the inputs of 
             # these vertices. Remember that the last vertex of the list has only
             # inputs.
-            legRange=range(len(self['vertices'][i].get('legs')))
+            legRange=list(range(len(self['vertices'][i].get('legs'))))
             if fromPos == -1:
                 # In the last vertex of the list, all entries are input
                 if not i==len(self['vertices'])-1:
@@ -1193,8 +1179,7 @@ class LoopDiagram(base_objects.Diagram):
                 FDStruct.get('external_legs').append(copy.copy(currLeg))
                 return currLeg.get('number')
             else:
-                raise self.PhysicsObjectError, \
-                                  " A structure is malformed."
+                raise self.PhysicsObjectError(" A structure is malformed.")
         else:
             # In this case a vertex with currLeg has been found and we must
             # return the list of tuple described above. First let's sort the 
@@ -1263,7 +1248,7 @@ class LoopDiagram(base_objects.Diagram):
                                      in vertex['legs'] if leg['loop_line']])==2:
                 vertex_orders = model.get_interaction(vertex['id'])['orders']
                 for order in vertex_orders.keys():
-                    if order in loop_orders.keys():
+                    if order in list(loop_orders.keys()):
                         loop_orders[order]+=vertex_orders[order]
                     else:
                         loop_orders[order]=vertex_orders[order]
@@ -1360,23 +1345,19 @@ class LoopUVCTDiagram(base_objects.Diagram):
 
         if name == 'UVCT_couplings':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid list" % str(value))
             else:
                 for elem in value:
                     if not isinstance(elem, str) and not isinstance(elem, int):
-                        raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(value)
+                        raise self.PhysicsObjectError("%s is not a valid string" % str(value))
         
         if name == 'UVCT_orders':
             if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid dictionary" % str(value))
 
         if name == 'type':
             if not isinstance(value, str):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid string" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid string" % str(value))
         
         else:
             super(LoopUVCTDiagram, self).filter(name, value)
@@ -1474,14 +1455,12 @@ class LoopModel(base_objects.Model):
 
         if name == 'perturbation_couplings':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                    "Object of type %s is not a list" % \
-                                                            type(value)
+                raise self.PhysicsObjectError("Object of type %s is not a list" % \
+                                                            type(value))
             for order in value:
                 if not isinstance(order, str):
-                    raise self.PhysicsObjectError, \
-                        "Object of type %s is not a string" % \
-                                                            type(order)
+                    raise self.PhysicsObjectError("Object of type %s is not a string" % \
+                                                            type(order))
         else:
             super(LoopModel,self).filter(name,value)
         
@@ -1534,9 +1513,8 @@ class DGLoopLeg(base_objects.Leg):
 
         if name == 'depth':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Object of type %s is not a int" % \
-                                                            type(value)
+                raise self.PhysicsObjectError("Object of type %s is not a int" % \
+                                                            type(value))
         else:
             super(DGLoopLeg,self).filter(name,value)
         
@@ -1589,33 +1567,27 @@ class FDStructure(base_objects.PhysicsObject):
 
         if name == 'vertices':
             if not isinstance(value, base_objects.VertexList):
-                raise self.PhysicsObjectError, \
-        "%s is not a valid VertexList object" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid VertexList object" % str(value))
 
         if name == 'id':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-        "id %s is not an integer" % repr(value)
+                raise self.PhysicsObjectError("id %s is not an integer" % repr(value))
 
         if name == 'weight':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-        "weight %s is not an integer" % repr(value)
+                raise self.PhysicsObjectError("weight %s is not an integer" % repr(value))
 
         if name == 'external_legs':
             if not isinstance(value, base_objects.LegList):
-                raise self.PhysicsObjectError, \
-        "external_legs %s is not a valid Leg List" % str(value)
+                raise self.PhysicsObjectError("external_legs %s is not a valid Leg List" % str(value))
 
         if name == 'binding_leg':
             if not isinstance(value, base_objects.Leg):
-                raise self.PhysicsObjectError, \
-        "binding_leg %s is not a valid Leg" % str(value)
+                raise self.PhysicsObjectError("binding_leg %s is not a valid Leg" % str(value))
 
         if name == 'canonical':
             if not isinstance(value, tuple):
-                raise self.PhysicsObjectError, \
-        "canonical %s is not a valid tuple" % str(value)
+                raise self.PhysicsObjectError("canonical %s is not a valid tuple" % str(value))
 
         return True
     
@@ -1695,9 +1667,8 @@ class FDStructure(base_objects.PhysicsObject):
         ref_dict_to1 = model.get('ref_dict_to1')
 
         if not tag:
-            raise self.PhysicsObjectError, \
-        "The canonical tag of the FD structure is not set yet, so that the "+\
-        "reconstruction of the vertices cannot be performed."
+            raise self.PhysicsObjectError("The canonical tag of the FD structure is not set yet, so that the "+\
+        "reconstruction of the vertices cannot be performed.")
 
         # Create a local copy of the external legs
         leglist = copy.deepcopy(external_legs)
@@ -1736,7 +1707,7 @@ class FDStructure(base_objects.PhysicsObject):
 
             # Now we make sure we can combine those legs together
             key=tuple(sorted([leg.get('id') for leg in legs]))
-            if ref_dict_to1.has_key(key):
+            if key in ref_dict_to1:
                 for interaction in ref_dict_to1[key]:
                     # Find the interaction with the right ID
                     if interaction[1]==tag[0][1]:
@@ -1748,8 +1719,7 @@ class FDStructure(base_objects.PhysicsObject):
                         number = min([leg.get('number') for leg in legs])
                         # 3) state is final, unless there is exactly one initial 
                         # state particle involved in the combination -> t-channel
-                        if len(filter(lambda leg: leg.get('state') == False,
-                                  legs)) == 1:
+                        if len([leg for leg in legs if leg.get('state') == False]) == 1:
                             state = False
                         else:
                             state = True
@@ -1785,9 +1755,8 @@ class FDStructure(base_objects.PhysicsObject):
                 tag.pop(0)
 
             else:
-                raise self.PhysicsObjectError, \
-        "The canonical tag of the FD structure is corrupted because one "+\
-        "interaction does not exist."
+                raise self.PhysicsObjectError("The canonical tag of the FD structure is corrupted because one "+\
+        "interaction does not exist.")
 
 #===============================================================================
 # FDStructureList
@@ -1816,9 +1785,8 @@ class FDStructureList(base_objects.PhysicsObjectList):
                     return FDStruct
             return None
         else:
-            raise self.PhysicsObjectListError, \
-              "The ID %s specified for get_struct is not an integer or tuple"%\
-                                                                    repr(object)
+            raise self.PhysicsObjectListError("The ID %s specified for get_struct is not an integer or tuple"%\
+                                                                    repr(object))
 
     def nice_string(self):
         """Returns a nicely formatted string"""

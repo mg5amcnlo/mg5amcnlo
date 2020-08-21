@@ -14,6 +14,8 @@
 ################################################################################
 """Methods and classes to export matrix elements to fks format."""
 
+from __future__ import absolute_import
+from __future__ import print_function
 from distutils import dir_util
 import glob
 import logging
@@ -49,6 +51,7 @@ import models.write_param_card as write_param_card
 import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
+from six.moves import range
 
 pjoin = os.path.join
 
@@ -92,8 +95,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
             if not mgme_dir:
-                raise MadGraph5Error, \
-                      "No valid MG_ME path given for MG4 run directory creation."
+                raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
@@ -110,8 +112,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
-                raise MadGraph5Error, \
-                      "No valid MG_ME path given for MG4 run directory creation."
+                raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
         try:
             shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
         except IOError:
@@ -122,14 +123,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #Ensure that the Template is clean
         if clean:
             logger.info('remove old information in %s' % os.path.basename(dir_path))
-            if os.environ.has_key('MADGRAPH_BASE'):
+            if 'MADGRAPH_BASE' in os.environ:
                 subprocess.call([os.path.join('bin', 'internal', 'clean_template'), 
                                     '--web'],cwd=dir_path)
             else:
                 try:
                     subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
                                                                        cwd=dir_path)
-                except Exception, why:
+                except Exception as why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
                                                 % (os.path.basename(dir_path),why))
             #Write version info
@@ -432,8 +433,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_coef_specs_file(self, virt_me_list):
         """writes the coef_specs.inc in the DHELAS folder. Should not be called in the 
         non-optimized mode"""
-        raise fks_common.FKSProcessError(), \
-                "write_coef_specs should be called only in the loop-optimized mode"
+        raise fks_common.FKSProcessError()("write_coef_specs should be called only in the loop-optimized mode")
         
         
     #===============================================================================
@@ -451,12 +451,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         cwd = os.getcwd()
         try:
             os.chdir(path)
-        except OSError, error:
+        except OSError as error:
             error_msg = "The directory %s should exist in order to be able " % path + \
                         "to \"export\" in it. If you see this error message by " + \
                         "typing the command \"export\" please consider to use " + \
                         "instead the command \"output\". "
-            raise MadGraph5Error, error_msg 
+            raise MadGraph5Error(error_msg) 
         
         calls = 0
         
@@ -851,22 +851,25 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
         if output_dependencies == 'external':
             # check if stdhep has to be compiled (only the first time)
-            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
+            if (not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'))) and \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP','fail')):
                 if 'FC' not in os.environ or not os.environ['FC']:
                     path = os.path.join(StdHep_path, 'src', 'make_opts')
                     text = open(path).read()
                     for base in base_compiler:
                         text = text.replace(base,'FC=%s' % fcompiler_chosen)
                     open(path, 'w').writelines(text)
-
                 logger.info('Compiling StdHEP. This has to be done only once.')
                 try:
                     misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
                 except Exception as error:
                     logger.debug(str(error))
                     logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
-                    logger.info("details on the compilation error are available if the code is run with --debug flag")
+                    logger.info("details on the compilation error are available on %s", pjoin(MG5DIR, 'vendor', 'StdHEP','fail'))
+                    logger.info("if you want to retry the compilation automatically, you have to remove that file first")
+                    with open(pjoin(MG5DIR, 'vendor', 'StdHEP','fail'),'w') as fsock:
+                        fsock.write(str(error))
                 else:
                     logger.info('Done.')
             if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):
@@ -908,8 +911,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     " libstdhep.a and libFmcfio.a in you environment paths.")
             
         else:
-            raise MadGraph5Error, 'output_dependencies option %s not recognized'\
-                                                            %output_dependencies
+            raise MadGraph5Error('output_dependencies option %s not recognized'\
+                                                            %output_dependencies)
            
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
@@ -951,8 +954,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             max_links=max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
-                    print links
-                    raise MadGraph5Error, "born_conf should be canonically ordered"
+                    print(links)
+                    raise MadGraph5Error("born_conf should be canonically ordered")
             real_configs=', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
                              % (iFKS,len(links),real_configs))
@@ -1706,7 +1709,7 @@ end
             r"^(?P<in_pdgs>(\s*-?\d+\s*)+)->(?P<out_pdgs>(\s*-?\d+\s*)+)\|"+
             r"\s*(?P<proc_class>\d+)\s*(?P<proc_label>\d+)\s*$")
         line_OK_re=re.compile(r"^.*\|\s*OK")
-        for line in file(contract_file_path):
+        for line in open(contract_file_path):
             # Ignore comments
             if not comment_re.match(line) is None:
                 continue
@@ -1872,13 +1875,13 @@ end
         # We assume the orders to be common to all Subprocesses
         
         orders = process_list[0].get('orders') 
-        if 'QED' in orders.keys() and 'QCD' in orders.keys():
+        if 'QED' in list(orders.keys()) and 'QCD' in list(orders.keys()):
             QED=orders['QED']
             QCD=orders['QCD']
-        elif 'QED' in orders.keys():
+        elif 'QED' in list(orders.keys()):
             QED=orders['QED']
             QCD=0
-        elif 'QCD' in orders.keys():
+        elif 'QCD' in list(orders.keys()):
             QED=0
             QCD=orders['QCD']
         else:
@@ -2023,7 +2026,7 @@ Parameters              %(params)s\n\
         # Write the file
         writer.writelines(file)
     
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+        return len([call for call in helas_calls if call.find('#') != 0]), ncolor
 
 
     def write_born_hel(self, writer, fksborn, fortran_model):
@@ -2255,7 +2258,7 @@ c     this subdir has no soft singularities
         jamp_lines = self.get_JAMP_lines(matrix_element)
         new_jamp_lines = []
         for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP1')
+            line = line.replace('JAMP', 'JAMP1')
             new_jamp_lines.append(line)
         replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
     
@@ -2263,7 +2266,7 @@ c     this subdir has no soft singularities
         jamp_lines = self.get_JAMP_lines(matrix_element)
         new_jamp_lines = []
         for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP2')
+            line = line.replace( 'JAMP', 'JAMP2')
             new_jamp_lines.append(line)
         replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
     
@@ -2518,7 +2521,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         # Write the file
         writer.writelines(realfile)
     
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+        return len([call for call in helas_calls if call.find('#') != 0]), ncolor
 
 
     #===============================================================================
@@ -2536,8 +2539,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
     
         if ninitial < 1 or ninitial > 2:
-            raise writers.FortranWriter.FortranWriterError, \
-                  """Need ninitial = 1 or 2 to write auto_dsig file"""
+            raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
     
         replace_dict = {}
 
@@ -2579,7 +2581,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
 
         lines = []
         lines.append( "logical icolamp(%d,%d,1)" % \
-                        (max(len(matrix_element.get('color_basis').keys()), 1),
+                        (max(len(list(matrix_element.get('color_basis').keys())), 1),
                          len(mapconfigs)))
     
         lines += self.get_icolamp_lines(mapconfigs, matrix_element, 1)
@@ -2941,7 +2943,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         # we have to add the extra leg (-21), linked to the j_fks leg
                         # first, find the maximum color label
-                        maxicol = max(sum(color_flow_dict.values(), []))
+                        maxicol = max(sum(list(color_flow_dict.values()), []))
                         #then, replace the color labels
                         if color_flow_dict[fks_j][0] == 0:
                             anti = True
@@ -3054,9 +3056,9 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             pdgtopdf = {21: 0, 22: 7}
             # Fill in missing entries of pdgtopdf
             for pdg in sum(initial_states,[]):
-                if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
+                if not pdg in pdgtopdf and not pdg in list(pdgtopdf.values()):
                     pdgtopdf[pdg] = pdg
-                elif pdg not in pdgtopdf and pdg in pdgtopdf.values():
+                elif pdg not in pdgtopdf and pdg in list(pdgtopdf.values()):
                     # If any particle has pdg code 7, we need to use something else
                     pdgtopdf[pdg] = 6000000 + pdg
 
@@ -3092,7 +3094,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                                  % (ibeam, ibeam)
 
                 for initial_state in init_states:
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             if abs(pdgtopdf[initial_state]) <= 7:  
                                 pdf_lines = pdf_lines + \
@@ -3132,7 +3134,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 pdf_lines = pdf_lines + "\nPD(IPROC) = "
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
                     else:
@@ -3160,11 +3162,10 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
                 num_list = color_matrix.get_line_numerators(index, denominator)    
-                for k in xrange(0, len(num_list), n):
+                for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % i for i in num_list[k:k + n]])))
-
+                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================
@@ -3391,8 +3392,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
             if not mgme_dir:
-                raise MadGraph5Error, \
-                      "No valid MG_ME path given for MG4 run directory creation."
+                raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
@@ -3410,8 +3410,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
-                raise MadGraph5Error, \
-                      "No valid MG_ME path given for MG4 run directory creation."
+                raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
         try:
             shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
         except IOError:
@@ -3422,14 +3421,14 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         #Ensure that the Template is clean
         if clean:
             logger.info('remove old information in %s' % os.path.basename(dir_path))
-            if os.environ.has_key('MADGRAPH_BASE'):
+            if 'MADGRAPH_BASE' in os.environ:
                 subprocess.call([os.path.join('bin', 'internal', 'clean_template'), 
                     '--web'], cwd=dir_path)
             else:
                 try:
                     subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
                                                                        cwd=dir_path)
-                except Exception, why:
+                except Exception as why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
                                                 % (os.path.basename(dir_path),why))
             #Write version info

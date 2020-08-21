@@ -14,26 +14,35 @@
 ################################################################################
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
+from six.moves import zip
 if __name__ == "__main__":
     import sys
     import os
     root = os.path.dirname(__file__)
-    if os.path.basename(root) == 'internal':
-        sys.path.append(os.path.dirname(root))
-    else:
-        sys.path.append(os.path.dirname(os.path.dirname(root)))
+    if __package__ is None:
+        if os.path.basename(root) == 'internal':
+            __package__ = "internal"
+            sys.path.append(os.path.dirname(root))
+            import internal
+        else:
+            __package__ = "madgraph.various"
+
+#        sys.path.append(os.path.dirname(os.path.dirname(root)))
         
-import lhe_parser
-import banner
-import banner as banner_mod
+from . import lhe_parser
+from . import banner
+from . import banner as banner_mod
 import itertools
-import misc
+from . import misc
 import math
 import os 
 import re
 import sys
 import time
-import StringIO
+from six import StringIO
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)
@@ -44,7 +53,7 @@ class SystematicsError(Exception):
 class Systematics(object):
     
     def __init__(self, input_file, output_file,
-                 start_event=0, stop_event=sys.maxint, write_banner=False,
+                 start_event=0, stop_event=sys.maxsize, write_banner=False,
                  mur=[0.5,1,2],
                  muf=[0.5,1,2],
                  alps=[1],
@@ -113,7 +122,7 @@ class Systematics(object):
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
-                raise SystematicsError, 'The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.'
+                raise SystematicsError('The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.')
             
             if self.banner.run_card['nb_neutron1'] != 0 or \
                self.banner.run_card['nb_neutron2'] != 0 or \
@@ -123,7 +132,7 @@ class Systematics(object):
         else:
             self.is_lo = False
             if not self.banner.run_card['store_rwgt_info']:
-                raise SystematicsError, 'The events have not been generated with store_rwgt_info=True. Cannot evaluate systematics error on these events.'
+                raise SystematicsError('The events have not been generated with store_rwgt_info=True. Cannot evaluate systematics error on these events.')
 
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
@@ -158,7 +167,7 @@ class Systematics(object):
         self.stop_event=int(stop_event)
         if start_event != 0:
             self.log( "#starting from event #%s" % start_event)
-        if stop_event != sys.maxint:
+        if stop_event != sys.maxsize:
             self.log( "#stopping at event #%s" % stop_event)
         
         # LHAPDF set 
@@ -192,7 +201,7 @@ class Systematics(object):
                         try:
                             self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
                         except:
-                            raise Exception, 'Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER'
+                            raise Exception('Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER')
                     else:
                         self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                 else:
@@ -316,7 +325,7 @@ class Systematics(object):
         """remove the weight as requested by the user"""
         
         rwgt_data = event.parse_reweight()
-        for name in rwgt_data.keys():
+        for name in list(rwgt_data.keys()):
             if not self.is_wgt_kept(name):
                 del rwgt_data[name]
                 event.reweight_order.remove(name)
@@ -361,15 +370,15 @@ class Systematics(object):
                 wgts = [self.get_nlo_wgt(event, *arg) for arg in self.args]
             
             if wgts[0] == 0:
-                print wgts
-                print event
+                print(wgts)
+                print(event)
                 raise Exception
             
             wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
             all_cross = [(all_cross[j] + event.wgt*wgts[j]/wgts[0]) for j in range(len(wgts))]
             
             rwgt_data = event.parse_reweight()
-            rwgt_data.update(zip(ids, wgt))
+            rwgt_data.update(list(zip(ids, wgt)))
             event.reweight_order += ids
             # order the 
             self.output.write(str(event))
@@ -401,9 +410,9 @@ class Systematics(object):
         #print "normalisation is ", norm
         #print "nb_event is ", nb_event
     
-        max_scale, min_scale = 0,sys.maxint
-        max_alps, min_alps = 0, sys.maxint
-        max_dyn, min_dyn = 0,sys.maxint
+        max_scale, min_scale = 0,sys.maxsize
+        max_alps, min_alps = 0, sys.maxsize
+        max_dyn, min_dyn = 0,sys.maxsize
         pdfs = {}
         dyns = {} # dyn : {'max': , 'min':}
 
@@ -441,14 +450,14 @@ class Systematics(object):
             if pdf == self.orig_pdf and (alps!=1 or mur!=1 or muf!=1) and \
                                                 (dyn!=self.orig_dyn or dyn!=-1):
                 if dyn not in dyns:
-                    dyns[dyn] = {'max':0, 'min':sys.maxint,'central':0}
+                    dyns[dyn] = {'max':0, 'min':sys.maxsize,'central':0}
                 curr = dyns[dyn]
                 curr['max'] = max(curr['max'],all_cross[i])
                 curr['min'] = min(curr['min'],all_cross[i])
             if pdf == self.orig_pdf and (alps==1 and mur==1 and muf==1) and \
                                                 (dyn!=self.orig_dyn or dyn!=-1):
                 if dyn not in dyns:
-                    dyns[dyn] = {'max':0, 'min':sys.maxint,'central':all_cross[i]}
+                    dyns[dyn] = {'max':0, 'min':sys.maxsize,'central':all_cross[i]}
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
@@ -463,7 +472,7 @@ class Systematics(object):
   
         stdout.write('\n') 
                 
-        resume = StringIO.StringIO()
+        resume = StringIO()
                 
         resume.write( '#***************************************************************************\n')
         resume.write( "#\n")
@@ -972,7 +981,7 @@ class Systematics(object):
                         misc.sprint(onewgt)
                         misc.sprint(cevent)
                         misc.sprint(mur2,muf2)
-                        raise Exception, 'not enough agreement between stored value and computed one'
+                        raise Exception('not enough agreement between stored value and computed one')
                 
         return wgt
                             
@@ -1015,7 +1024,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                 else:
                     opts[key] = values
         else:
-            raise SystematicsError, "unknow argument %s" % arg
+            raise SystematicsError("unknow argument %s" % arg)
 
     #load run_card and extract parameter if needed.
     if 'from_card' in opts:
@@ -1026,8 +1035,8 @@ def call_systematics(args, result=sys.stdout, running=True,
                 try:
                     lhe = lhe_parser.EventFile(input)
                     break
-                except OSError,error:
-                    print error
+                except OSError as error:
+                    print(error)
                     time.sleep(15*(i+1))
             else:
                 raise
@@ -1094,7 +1103,7 @@ def call_systematics(args, result=sys.stdout, running=True,
 if __name__ == "__main__":
         
     sys_args = sys.argv[1:]
-    for i, arg in enumerate(sys_args) :
+    for i, arg in enumerate(list(sys_args)) :
         if arg.startswith('--lhapdf_config=') :
             lhapdf = misc.import_python_lhapdf(arg[len('--lhapdf_config='):])
             del sys_args[i]

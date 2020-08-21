@@ -14,6 +14,7 @@
 ################################################################################
 """Unit test library for the various base objects of the core library"""
 
+from __future__ import absolute_import
 import copy
 import os
 
@@ -21,6 +22,8 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
+from six.moves import range
+from six.moves import zip
 
 #===============================================================================
 # ParticleTest

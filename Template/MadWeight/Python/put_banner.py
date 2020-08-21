@@ -99,7 +99,11 @@
 
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os,re,sys
+from six.moves import range
+from six.moves import input
 sys.path+=['../'*i+'./Source/MadWeight/Python' for i in range(1,6)]
 import MW_param
 
@@ -140,7 +144,7 @@ class Banner:
         """    |   put in variable full_banner_txt the content of the file      ##
         ##     |   defined in position self.header_file                         ##
         """
-        self.full_banner_txt+=file(self.header_file,'rU').read()
+        self.full_banner_txt+=open(self.header_file,'rU').read()
 
     #2 #######################################################################
     def put_version_info(self):
@@ -149,7 +153,7 @@ class Banner:
         self.full_banner_txt+="<MGVersion>\n"
         for key,pos in self.version_info.items():
             try:
-                self.full_banner_txt+="# "+key+' '*(25-len(key))+':'+file(pos,'rU').read()
+                self.full_banner_txt+="# "+key+' '*(25-len(key))+':'+open(pos,'rU').read()
             except IOError:
                 self.full_banner_txt+="# "+key+' '*(25-len(key))+':'
             if self.full_banner_txt[-1]!='\n':
@@ -170,7 +174,7 @@ class Banner:
             try:
                 self.full_banner_txt+=eval('self.mod_'+key+'(\"'+pos+'\")')
             except:
-                self.full_banner_txt+=file(pos,'rU').read()
+                self.full_banner_txt+=open(pos,'rU').read()
             self.full_banner_txt+="</"+key+">\n"
 
     #2 #######################################################################
@@ -179,7 +183,7 @@ class Banner:
         ##     |   self.input_file                                              ##
         """
         
-        self.full_banner_txt+=file(self.input_file,'rU').read()
+        self.full_banner_txt+=open(self.input_file,'rU').read()
         if self.full_banner_txt[-1]!='\n':
             self.full_banner_txt+='\n'
         self.full_banner_txt+="</LesHouchesEvents>\n"
@@ -192,7 +196,7 @@ class Banner:
         """
         suppress_empty_line=re.compile(r'''\n\s*\n''')
         self.full_banner_txt=suppress_empty_line.sub('\n',self.full_banner_txt)
-        output=file(self.output_file,'w')
+        output=open(self.output_file,'w')
         output.writelines(self.full_banner_txt)
         output.close()
 
@@ -255,11 +259,11 @@ class ME_Banner(Banner):
         ##     |   modify (or original) run_card.dat                            ##
         """
 
-        text=file(inputfile).read()
+        text=open(inputfile).read()
         if os.path.isfile('./SubProcesses/randinit'):
             pattern_random=re.compile(r'''r=\s*(?P<val>\d*)''')
-            print file('./SubProcesses/randinit').read()
-            seed=pattern_random.search(file('./SubProcesses/randinit').read()).group('val')
+            print(open('./SubProcesses/randinit').read())
+            seed=pattern_random.search(open('./SubProcesses/randinit').read()).group('val')
             pattern_seed=re.compile(r'''0\s*=\s*iseed''')
             text=pattern_seed.sub(' '+seed+' = iseed',text)#
 
@@ -306,7 +310,7 @@ if '__main__'==__name__:
     def_pos.to_main()
     opt=sys.argv
     if len(opt)==1:
-        filename=raw_input('Enter file with events (in directory Events)')
+        filename=input('Enter file with events (in directory Events)')
     else:
         filename=opt[1]
     
