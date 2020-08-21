@@ -1738,9 +1738,9 @@ c           fs sudakov weight
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))
-      else if (abs(lpp(1)).eq.2.or.abs(lpp(1)).eq.3) then
+      else if (abs(lpp(1)).ge.2.and.abs(lpp(1)).le.4) then
          q2fact(1)=q2bck(1)
-      else if (abs(lpp(2)).eq.2.or.abs(lpp(2)).eq.3) then
+      else if (abs(lpp(2)).ge.2.or.abs(lpp(2)).le.4) then
          q2fact(2)=q2bck(2)
       endif
 

@@ -334,11 +334,12 @@ CF2PY intent(in)::path
         CALL SETMADLOOPPATH(PATH)
       END
 
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
+  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
   IMPLICIT NONE
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in):: procid
 CF2PY integer, intent(in) :: npdg
 CF2PY double precision, intent(out) :: ANS
 CF2PY integer, intent(out) :: RETURNCODE
@@ -346,22 +347,25 @@ CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALES2
 
   integer pdgs(*)
-  integer npdg, nhel, RETURNCODE
+  integer npdg, nhel, RETURNCODE, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALES2
-
+ 1 continue
 %(smatrixhel)s
 
       return
       end
   
-  subroutine get_pdg_order(OUT)
+  subroutine get_pdg_order(OUT, ALLPROC)
   IMPLICIT NONE
 CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
-  
+CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
   INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
   DATA PDGS/ %(pdgs)s /
+  DATA PIDS/ %(pids)s /
   OUT=PDGS
+  ALLPROC = PIDS
   RETURN
   END
   
@@ -378,31 +382,37 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
          
         allids = self.prefix_info.keys()
         allprefix = [self.prefix_info[key][0] for key in allids]
-        min_nexternal = min([len(ids) for ids in allids])
-        max_nexternal = max([len(ids) for ids in allids])
+        min_nexternal = min([len(ids[0]) for ids in allids])
+        max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for key, (prefix, tag) in self.prefix_info.items():
-            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+        for (key,pid), (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
-            current = [ids for ids in allids if len(ids)==n_ext]
-            if not current:
+            current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
+            current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
+            if not current_id:
                 continue
             if min_nexternal != max_nexternal:
                 if n_ext == min_nexternal:
                     text.append('       if (npdg.eq.%i)then' % n_ext)
                 else:
                     text.append('       else if (npdg.eq.%i)then' % n_ext)
-            for ii,pdgs in enumerate(current):
+            for ii,pdgs in enumerate(current_id):
+                pid =  current_pid[ii]
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
                 if ii==0:
-                    text.append( ' if(%s) then ! %i' % (condition, i))
+                    text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, i))
                 else:
-                    text.append( ' else if(%s) then ! %i' % (condition,i))
-                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+                    text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,i))
+                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[(pdgs,pid)][0])
+            text.append( ' else if(procid.gt.0) then !')
+            text.append( ' procid = -1' )
+            text.append( ' goto 1' )
+            
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -422,9 +432,10 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'nb_me': len(allids),
                           'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
                                              for i in range(max_nexternal) \
-                                             for pdg in allids]),
+                                             for (pdg,pid) in allids]),
                       'prefix':'\',\''.join(allprefix),
                       'parameter_setup': '\n'.join(parameter_setup),
+                      'pids':  ','.join(str(pid) for (pdg,pid) in allids),
                       }
     
     
@@ -1023,7 +1034,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids)] = [dict['proc_prefix'], proc.get_tag()]
+                self.prefix_info[tuple(ids),proc.get('id')] = [dict['proc_prefix'], proc.get_tag()]
 
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
@@ -3013,7 +3024,6 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         matrix_element.rep_dict['coef_construction']=replace_dict['coef_construction']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   
