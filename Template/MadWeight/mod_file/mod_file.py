@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 #Extension
+from __future__ import absolute_import
+from __future__ import print_function
 import string
 import os
 import sys
 import time
 import re
+from six.moves import range
 
 ############################################################################
 ##                          PARAMETER
@@ -21,11 +24,11 @@ def fuse_f77_files(list_input,output):
     
 #SECURITY POINT
     if type(list_input)!=list:
-        print 'subroutine need at least two files for fuse'
+        print('subroutine need at least two files for fuse')
         return 0
     
     if output in list_input:
-        print 'output file cann\'t have the same name than an input file'
+        print('output file cann\'t have the same name than an input file')
         return 0
 
 #initialisation
@@ -179,7 +182,7 @@ def mod_photon_flux(input_file,output_file):
 
     file_in.close()
     file_out.close()
-    print 'no need of mod_photon_flux'
+    print('no need of mod_photon_flux')
     sys.exit()
     return
 

@@ -17,6 +17,8 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import datetime
 import glob
 import itertools
@@ -27,6 +29,8 @@ import shutil
 import subprocess
 import sys
 import time
+import six
+from six.moves import range
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -42,7 +46,7 @@ import madgraph.interface.master_interface as cmd_interface
 import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error, MG5DIR
-import me_comparator
+from . import me_comparator
 
 class MadEventComparator(me_comparator.MEComparator):
     """Base object to run comparison tests. Take standard Runner objects and
@@ -52,7 +56,7 @@ class MadEventComparator(me_comparator.MEComparator):
     def run_comparison(self, proc_list, model='sm', orders={}):
         """Run the codes and store results."""
 
-        if isinstance(model, basestring):
+        if isinstance(model, six.string_types):
             model= [model] * len(self.me_runners)
 
         self.results = []
@@ -125,7 +129,7 @@ class MadEventComparator(me_comparator.MEComparator):
             loc_results = []
             succeed = True
             for i in range(len(self.results)):
-                if not self.results[i].has_key(prop):
+                if prop not in self.results[i]:
                     loc_results.append('not present')
                     succeed = False
                 else:
@@ -282,7 +286,7 @@ class MadEventComparatorGauge(me_comparator.MEComparatorGauge):
             loc_results = []
             succeed = True
             for i in range(len(self.results)):
-                if not self.results[i].has_key(proc):
+                if proc not in self.results[i]:
                     loc_results.append('not present')
                     succeed = False
                 else:
@@ -524,7 +528,7 @@ class MG5Runner(MadEventRunner):
         numsubProc={}
         for name in SubProc :
             tag=name.split('_')[0][1:]
-            if numsubProc.has_key(tag):
+            if tag in numsubProc:
                 numsubProc[tag]+=1
             else: numsubProc[tag]=1
 
@@ -540,23 +544,22 @@ class MG5Runner(MadEventRunner):
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
 
             if not os.path.exists(filepath):
-                
                 cross = 0
                 for G in os.listdir(dir_name+'/SubProcesses/'+name):
                     if os.path.isdir(pjoin(dir_name+'/SubProcesses/'+name,G)):
                         filepath = pjoin(dir_name+'/SubProcesses/'+name,G,'results.dat')
                         channel = G[1:]
-                        for line in file(filepath):
+                        for line in open(filepath):
                             splitline=line.split()
                             cross += float(splitline[9]) 
                             break
                 output['cross_'+name] = str(cross)
             else:
-                for line in file(filepath):
+                for line in open(filepath):
                     splitline=line.split()
                     #if len(splitline)==8:
                     output['cross_'+name]=splitline[0]
-                    print "found %s %s" % (splitline[0], splitline[1])
+                    #print( "found %s %s" % (splitline[0], splitline[1]))
         else:
             return output   
         

@@ -437,28 +437,36 @@ C     JAMPs contributing to orders QCD=2
 
       INTEGER IN1, IN2, OUT
 
-      IF (IN1.EQ.0.AND.IN2.EQ.1)THEN
-        OUT = 1
-
-
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.0)THEN
+      IF (IN1.EQ.0.AND.IN2.EQ.0)THEN
         OUT = 2
 
 
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.5)THEN
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.1)THEN
+        OUT = 1
+
+
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.2)THEN
         OUT = 0
-
-
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.4)THEN
-        OUT = 4
 
 
       ELSEIF (IN1.EQ.0.AND.IN2.EQ.3)THEN
         OUT = 3
 
 
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.2)THEN
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.4)THEN
+        OUT = 4
+
+
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.5)THEN
         OUT = 0
+
+
+      ELSEIF (IN1.EQ.1.AND.IN2.EQ.0)THEN
+        OUT = 2
+
+
+      ELSEIF (IN1.EQ.1.AND.IN2.EQ.1)THEN
+        OUT = 4
 
 
       ELSEIF (IN1.EQ.1.AND.IN2.EQ.2)THEN
@@ -475,14 +483,6 @@ C     JAMPs contributing to orders QCD=2
 
       ELSEIF (IN1.EQ.1.AND.IN2.EQ.5)THEN
         OUT = 0
-
-
-      ELSEIF (IN1.EQ.1.AND.IN2.EQ.0)THEN
-        OUT = 2
-
-
-      ELSEIF (IN1.EQ.1.AND.IN2.EQ.1)THEN
-        OUT = 4
 
       ELSE
         OUT = - 1

@@ -8,17 +8,17 @@ C
 
         G = 2 * DSQRT(AS*PI)  ! for the first init
 
-        MDL_CONJG__CKM3X3 = 1.000000D+00
+        MDL_CKM33 = 1.000000D+00
 
-        MDL_CKM22 = 1.000000D+00
+        MDL_CONJG__CKM3X3 = 1.000000D+00
 
         MDL_LHV = 1.000000D+00
 
-        MDL_CKM3X3 = 1.000000D+00
-
         MDL_CONJG__CKM22 = 1.000000D+00
 
-        MDL_CONJG__CKM33 = 1.000000D+00
+        MDL_CKM3X3 = 1.000000D+00
+
+        MDL_CKM22 = 1.000000D+00
 
         MDL_NCOL = 3.000000D+00
 
@@ -168,9 +168,6 @@ C
 
         MDL_G_UVG_1EPS_ = -((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01
      $   *PI**2))*1.100000D+01*MDL_CA
-
-        MDL_G_UVQ_1EPS_ = ((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01
-     $   *PI**2))*4.000000D+00*MDL_TF
 
         MDL_G_UVB_1EPS_ = ((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01
      $   *PI**2))*4.000000D+00*MDL_TF

@@ -19,6 +19,7 @@ MatrixElementEvaluator."""
 
 from __future__ import division
 
+from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -73,11 +74,18 @@ from madgraph import MG5DIR, InvalidCmd, MadGraph5Error
 
 from madgraph.iolibs.files import cp
 
-import StringIO
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
+import six
+StringIO = six
+from six.moves import range
+from six.moves import zip
+import io
+if six.PY3:
+    file = io.FileIO
+
 
 ADDED_GLOBAL = []
 
@@ -200,19 +208,23 @@ class MatrixElementEvaluator(object):
         process = matrix_element.get('processes')[0]
         model = process.get('model')
 
+
         if "matrix_elements" not in self.stored_quantities:
             self.stored_quantities['matrix_elements'] = []
             matrix_methods = {}
 
         if self.reuse and "Matrix_%s" % process.shell_string() in globals() and p:
+            if matrix_element not in self.stored_quantities['matrix_elements']:
+                self.stored_quantities['matrix_elements'].append(matrix_element)
             # Evaluate the matrix element for the momenta p
-            matrix = eval("Matrix_%s()" % process.shell_string())
+            matrix = eval("Matrix_%s()" % process.shell_string(), globals())
             me_value = matrix.smatrix(p, self.full_model)
             if output == "m2":
                 return matrix.smatrix(p, self.full_model), matrix.amp2
             else:
                 m2 = matrix.smatrix(p, self.full_model)
             return {'m2': m2, output:getattr(matrix, output)}
+
         if (auth_skipping or self.auth_skipping) and matrix_element in \
                self.stored_quantities['matrix_elements']:
             # Exactly the same matrix element has been tested
@@ -221,8 +233,8 @@ class MatrixElementEvaluator(object):
                         )
             return None
 
-        self.stored_quantities['matrix_elements'].append(matrix_element)
 
+        self.stored_quantities['matrix_elements'].append(matrix_element)
         # Create an empty color basis, and the list of raw
         # colorize objects (before simplification) associated
         # with amplitude
@@ -267,7 +279,7 @@ class MatrixElementEvaluator(object):
         me_used_lorentz = [lorentz for lorentz in me_used_lorentz \
                                if lorentz not in self.store_aloha]
 
-        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
         aloha_model.compute_subset(me_used_lorentz)
 
@@ -298,7 +310,7 @@ class MatrixElementEvaluator(object):
             matrix_methods = exporter.get_python_matrix_methods(\
                 gauge_check=gauge_check)
 #            print "I got matrix_methods=",str(matrix_methods.items()[0][1])
-        except helas_call_writers.HelasWriterError, error:
+        except helas_call_writers.HelasWriterError as error:
             logger.info(error)
             return None
         # If one wants to output the python code generated for the computation
@@ -310,12 +322,12 @@ class MatrixElementEvaluator(object):
             ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
         else:
             # Define the routines (locally is enough)
-            exec(matrix_methods[process.shell_string()])
+            exec(matrix_methods[process.shell_string()], globals())
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process, options)
         # Evaluate the matrix element for the momenta p
-        exec("data = Matrix_%s()" % process.shell_string())
+        exec("data = Matrix_%s()" % process.shell_string(), globals())
         if output == "m2":
             return data.smatrix(p, self.full_model), data.amp2
         else:
@@ -379,11 +391,10 @@ class MatrixElementEvaluator(object):
             
         if not (isinstance(process, base_objects.Process) and \
                 isinstance(energy, (float,int))):
-            raise rambo.RAMBOError, "Not correct type for arguments to get_momenta"
+            raise rambo.RAMBOError("Not correct type for arguments to get_momenta")
 
 
-        sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
-                                            l1.get('number') - l2.get('number'))
+        sorted_legs = sorted(process.get('legs'), key=lambda l: l.get('number')) 
 
         # If an events file is given use it for getting the momentum
         if events:
@@ -403,7 +414,7 @@ class MatrixElementEvaluator(object):
                     if skip > to_skip:
                         break
             else:
-                raise MadGraph5Error, 'No compatible events for %s' % ids
+                raise MadGraph5Error('No compatible events for %s' % ids)
             p = []
             for part in event.values():
                 m = part['momentum']
@@ -423,8 +434,8 @@ class MatrixElementEvaluator(object):
                 if isinstance(special_mass, float):
                     mass.append(special_mass)
                 else:
-                    raise Exception, "A 'special_mass' option must be specified"+\
-                 " in get_momenta when a leg with id=-10 is present (for CMS check)"
+                    raise Exception("A 'special_mass' option must be specified"+\
+                 " in get_momenta when a leg with id=-10 is present (for CMS check)")
         #mass = [math.sqrt(m.real) for m in mass]
 
 
@@ -547,7 +558,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         process = matrix_element.get('processes')[0]
         model = process.get('model')
         
-        if options and 'split_orders' in options.keys():
+        if options and 'split_orders' in list(options.keys()):
             split_orders = options['split_orders']
         else:
             split_orders = -1
@@ -694,9 +705,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 elif isinstance(value, int):
                     ml_reds = str(value)
                 else:
-                    raise MadGraph5Error, 'The argument %s '%str(value)+\
+                    raise MadGraph5Error('The argument %s '%str(value)+\
                       ' in fix_MadLoopParamCard must be a string, integer'+\
-                      ' or a list.'
+                      ' or a list.')
                 MLCard.set("MLReductionLib",ml_reds)      
             elif key == 'ImprovePS':
                 MLCard.set('ImprovePSPoint',2 if value else -1)
@@ -705,9 +716,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             elif key in MLCard:
                 MLCard.set(key,value)
             else:
-                raise Exception, 'The MadLoop options %s specified in function'%key+\
+                raise Exception('The MadLoop options %s specified in function'%key+\
                   ' fix_MadLoopParamCard does not correspond to an option defined'+\
-                  ' MadLoop nor is it specially handled in this function.'
+                  ' MadLoop nor is it specially handled in this function.')
         if not mode is None:
             MLCard.set('CTModeRun',mode)
             MLCard.set('CTModeInit',mode)
@@ -775,7 +786,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             output.read()
             output.close()
             if os.path.exists(pjoin(dir_name,'result.dat')):
-                return cls.parse_check_output(file(pjoin(dir_name,\
+                return cls.parse_check_output(open(pjoin(dir_name,\
                                                    'result.dat')),format=format)  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
@@ -811,13 +822,15 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         
         # output is supposed to be a file, if it is its content directly then
         # I change it to be the list of line.
-        if isinstance(output,file) or isinstance(output,list):
+        if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,str):
+        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
             text=output.split('\n')
+        elif isinstance(output, bytes):
+            text=output.decode().split('\n')
         else:
-            raise MadGraph5Error, 'Type for argument output not supported in'+\
-                                                          ' parse_check_output.'
+            raise MadGraph5Error('Type for argument output not supported in'+\
+                                                          ' parse_check_output: %s' % type(output))
         for line in text:
             splitline=line.split()
             if len(splitline)==0:
@@ -884,14 +897,14 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         if directories and os.path.isdir(directories[0]):
             exe_path = directories[0]
         else:
-            raise MadGraph5Error, 'Could not find a process executable '+\
-                                                      'directory in %s'%proc_dir
+            raise MadGraph5Error('Could not find a process executable '+\
+                                                      'directory in %s'%proc_dir)
         bu_path = pjoin(model_path, 'model_functions.f__backUp__')
         
         if mode=='default':
             # Restore the default source file model_function.f
             if not os.path.isfile(bu_path):
-                raise MadGraph5Error, 'Back up file %s could not be found.'%bu_path
+                raise MadGraph5Error('Back up file %s could not be found.'%bu_path)
             shutil.move(bu_path, pjoin(model_path, 'model_functions.f'))
             return
 
@@ -1002,7 +1015,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                                               file_names[ind])):
             ind += 1
         if ind==len(file_names):
-            raise Exception, "No helas calls output file found."
+            raise Exception("No helas calls output file found.")
         
         helas_file_name=pjoin(dir_name,file_names[ind])
         file = open(pjoin(dir_name,helas_file_name), 'r')
@@ -1225,7 +1238,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # unpolarized PS point 
         make_it_quick=False
 
-        if options and 'split_orders' in options.keys():
+        if options and 'split_orders' in list(options.keys()):
             split_orders = options['split_orders']
         else:
             split_orders = -1
@@ -1250,8 +1263,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         def check_disk_usage(path):
             return subprocess.Popen("du -shc -L "+str(path), \
-                stdout=subprocess.PIPE, shell=True).communicate()[0].split()[-2]
+                stdout=subprocess.PIPE, shell=True).communicate()[0].decode().split()[-2]
             # The above is compatible with python 2.6, not the neater version below
+            # -> need to check if need .decode for python3.7
             #return subprocess.check_output(["du -shc %s"%path],shell=True).\
             #                                                         split()[-2]
 
@@ -1286,7 +1300,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         proc_prefix_file = open(pjoin(dir_name,'proc_prefix.txt'),'r')
         proc_prefix = proc_prefix_file.read()
         proc_prefix_file.close()
-        helicities = file(pjoin(dir_name,'MadLoop5_resources',
+        helicities = open(pjoin(dir_name,'MadLoop5_resources',
                                   '%sHelFilter.dat'%proc_prefix)).read().split()
         for i, hel in enumerate(helicities):
             if (self.loop_optimized_output and int(hel)>-10000) or hel=='T':
@@ -1657,12 +1671,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # identical PS points with vec(p_1)=-vec(p_2), it is best not to remove
             # the helicityFilter double check
             if len(process['legs'])==3:
-              self.fix_MadLoopParamCard(dir_path, mp=False,
+                self.fix_MadLoopParamCard(dir_path, mp=False,
                               loop_filter=False, DoubleCheckHelicityFilter=True)
 
             StabChecker = subprocess.Popen([pjoin(dir_path,'StabilityCheckDriver')], 
                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                                                   cwd=dir_path)
+                                                                   cwd=dir_path, bufsize=0)
             start_index = len(DP_stability)
             if progress_bar!=None:
                     progress_bar.start()
@@ -1746,7 +1760,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 except KeyboardInterrupt:
                     interrupted = True
                     break
-                except IOError, e:
+                except IOError as e:
                     if e.errno == errno.EINTR:
                         if retry==100:
                             logger.error("Failed hundred times consecutively because"+
@@ -1767,7 +1781,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                         StabChecker = subprocess.Popen(\
                                [pjoin(dir_path,'StabilityCheckDriver')], 
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
-                                           stderr=subprocess.PIPE, cwd=dir_path)
+                                           stderr=subprocess.PIPE, cwd=dir_path, bufsize=0)
                         continue
                     else:
                         raise
@@ -1794,7 +1808,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
             # Close the StabChecker process.
             if not interrupted:
-                StabChecker.stdin.write('y\n')
+                StabChecker.stdin.write('y\n'.encode())
             else:
                 StabChecker.kill()
         
@@ -1821,17 +1835,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         class. No compilation is necessary. The CT mode can be specified."""
 
         # Reset the stdin with EOF character without closing it.
-        StabChecker.stdin.write('\x1a')
-        StabChecker.stdin.write('1\n')
-        StabChecker.stdin.write('%d\n'%mode)   
-        StabChecker.stdin.write('%s\n'%PSpoint)
-        StabChecker.stdin.write('%.16E\n'%mu_r) 
-        StabChecker.stdin.write('%d\n'%hel)
-        StabChecker.stdin.write('%d\n'%split_orders)
+        StabChecker.stdin.write('\x1a'.encode())
+        StabChecker.stdin.write('1\n'.encode())
+        StabChecker.stdin.write(('%d\n'%mode).encode())   
+        StabChecker.stdin.write(('%s\n'%PSpoint).encode())
+        StabChecker.stdin.write(('%.16E\n'%mu_r).encode()) 
+        StabChecker.stdin.write(('%d\n'%hel).encode())
+        StabChecker.stdin.write(('%d\n'%split_orders).encode())
+        
 
         try:
+            #fsock = open('/tmp/log', 'w')
             while True:
-                output = StabChecker.stdout.readline()
+                output = StabChecker.stdout.readline().decode()
+                #fsock.write(output)
                 if output != '':
                     last_non_empty = output
                 if output==' ##TAG#RESULT_START#TAG##\n':
@@ -1839,32 +1856,30 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 # Break if the checker has crashed for some reason.
                 ret_code = StabChecker.poll()
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline()
+                    output = StabChecker.stdout.readline().decode()
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline()
-                    raise MadGraph5Error, \
- "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
-                                               (ret_code, last_non_empty, error)
+                    error = StabChecker.stderr.readline().decode()
+                    raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error))
                     
             res = ""
             while True:
-                output = StabChecker.stdout.readline()
+                output = StabChecker.stdout.readline().decode()
                 if output != '':
                     last_non_empty = output
-                if output==' ##TAG#RESULT_STOP#TAG##\n':
+                if str(output)==' ##TAG#RESULT_STOP#TAG##\n':
                     break
                 else:
                     res += output
-                ret_code = StabChecker.poll()                
+                ret_code = StabChecker.poll()               
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline()
+                    output = StabChecker.stdout.readline().decode()
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline()
-                    raise MadGraph5Error, \
- "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
-                                               (ret_code, last_non_empty, error)
+                    error = StabChecker.stderr.readline().decode()
+                    raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error))
 
             return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError as e:
@@ -1933,8 +1948,8 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
         id_anti_id_dict[model.get_particle(id).get_anti_pdg_code()] = id        
     sorted_ids = []
     results = []
-    for is_prod in apply(itertools.product, isids):
-        for fs_prod in apply(itertools.product, fsids):
+    for is_prod in itertools.product(*isids):
+        for fs_prod in itertools.product(*fsids):
 
             # Check if we have already checked the process
             if check_already_checked(is_prod, fs_prod, sorted_ids,
@@ -1958,10 +1973,10 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                     result = function(process, stored_quantities, opt, options=options)
             else:
                 result = function(process, stored_quantities, options=options)
-                        
+                      
             if result:
                 results.append(result)
-            
+
     return results
 
 #===============================================================================
@@ -2125,7 +2140,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
         return None, None
 
     # The timing info is made of the merged two dictionaries
-    timing = dict(timing1.items()+timing2.items())
+    timing = dict(list(timing1.items())+list(timing2.items()))
     stability = myProfiler.check_matrix_element_stability(matrix_element,                                            
                             options=options, infos_IN=timing,param_card=param_card,
                                                       keep_folder = keep_folder,
@@ -2256,7 +2271,7 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         return None
     else:    
         # Return the merged two dictionaries
-        res = dict(timing1.items()+timing2.items())
+        res = dict(list(timing1.items())+list(timing2.items()))
         res['loop_optimized_output']=myTimer.loop_optimized_output
         res['reduction_tool'] = MLoptions['MLReductionLib'][0]
         return res
@@ -2373,7 +2388,7 @@ def check_process(process, evaluator, quick, options):
     # each position
     if quick:
         leg_positions = [[] for leg in process.get('legs')]
-        quick = range(1,len(process.get('legs')) + 1)
+        quick = list(range(1,len(process.get('legs')) + 1))
 
     values = []
 
@@ -2404,7 +2419,7 @@ def check_process(process, evaluator, quick, options):
 
         legs = base_objects.LegList(legs)
 
-        if order != range(1,len(legs) + 1):
+        if order != list(range(1,len(legs) + 1)):
             logger.info("Testing permutation: %s" % \
                         order)
         
@@ -2433,7 +2448,7 @@ def check_process(process, evaluator, quick, options):
                          process.nice_string().replace('Process', 'process'))
             break
 
-        if order == range(1,len(legs) + 1):
+        if order == list(range(1,len(legs) + 1)):
             # Generate phase space point to use
             p, w_rambo = evaluator.get_momenta(process, options)
 
@@ -2522,6 +2537,7 @@ def format_output(output,format):
 
 def output_profile(myprocdef, stability, timing, output_path, reusing=False):
     """Present the results from a timing and stability consecutive check"""
+    
 
     opt = timing['loop_optimized_output']
 
@@ -2612,16 +2628,15 @@ def output_stability(stability, output_path, reusing=False):
     
     def median(orig_list):
         """ Find the median of a sorted float list. """
-        list=copy.copy(orig_list)
-        list.sort()
-        if len(list)%2==0:
-            return (list[int((len(list)/2)-1)]+list[int(len(list)/2)])/2.0
+        tmp=copy.copy(orig_list)
+        tmp.sort()
+        if len(tmp)%2==0:
+            return (tmp[int((len(tmp)/2)-1)]+tmp[int(len(tmp)/2)])/2.0
         else:
-            return list[int((len(list)-1)/2)]
+            return tmp[int((len(tmp)-1)/2)]
 
     # Define shortcut
     f = format_output   
-        
     opt = stability['loop_optimized_output']
 
     mode = 'optimized' if opt else 'default'
@@ -2640,7 +2655,7 @@ def output_stability(stability, output_path, reusing=False):
     max_acc=0.0
     min_acc=1.0
     if stability['Stability']:
-        toolnames= stability['Stability'].keys()
+        toolnames= list(stability['Stability'].keys())
         toolnamestr="     |     ".join(tn+
                                 ''.join([' ']*(10-len(tn))) for tn in toolnames)
         DP_stability = [[eval['Accuracy'] for eval in stab['DP_stability']] \
@@ -3342,7 +3357,7 @@ def check_lorentz(processes, param_card = None,cuttools="", tir={}, options=None
                                            multiprocess,
                                            evaluator,
                                            options=options)
-        
+
         if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(output_path)
@@ -3709,7 +3724,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # Add useful entries
     run_options['param_card'] = param_card
     if isinstance(cmd, FakeInterface):
-        raise MadGraph5Error, "Check CMS cannot be run with a FakeInterface."
+        raise MadGraph5Error("Check CMS cannot be run with a FakeInterface.")
     run_options['cmd']        = cmd
     run_options['MLOptions']  = MLOptions
     if output_path:
@@ -3843,7 +3858,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     result['recompute_width'] = options['recompute_width']
     result['has_FRdecay']     = has_FRdecay
     result['widths_computed'] = []
-    cached_widths = sorted(options['cached_widths'].items(), key=lambda el: \
+    cached_widths = sorted(list(options['cached_widths'].items()), key=lambda el: \
                                                                   abs(el[0][0]))
     for (pdg, lambda_value), width in cached_widths:
         if lambda_value != 1.0:
@@ -3921,8 +3936,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                 new_resonance['FSMothersNumbers'].extend(
                                             replacement_dict[leg.get('number')])
                             except KeyError:
-                                raise Exception, 'The following diagram '+\
-                                              'is malformed:'+diag.nice_string()
+                                raise Exception('The following diagram '+\
+                                              'is malformed:'+diag.nice_string())
                                                
                     replacement_dict[s_channel.get('legs')[-1].get('number')] = \
                                                new_resonance['FSMothersNumbers']
@@ -3983,8 +3998,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             # Chose the PS point for the resonance
             set_PSpoint(resonance, force_other_res_offshell=kept_resonances)
 
-#        misc.sprint(kept_resonances)
-#        misc.sprint(len(kept_resonances))
         return tuple(kept_resonances)
 
     def set_PSpoint(resonance, force_other_res_offshell=[], 
@@ -4181,7 +4194,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             if options['offshellness']<0.0:
                 err_msg +='Try with a positive offshellness instead (or a '+\
                                        'negative one of smaller absolute value)'
-            raise InvalidCmd, err_msg
+            raise InvalidCmd(err_msg)
         else:
 #            misc.sprint('PS point found in %s trials.'%N_trials)
 #            misc.sprint(PS_point_found)
@@ -4285,9 +4298,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         else:
             # Crash if we are doing CMS and the width was not found and recycled above
             if aloha.complex_mass:
-                raise MadGraph5Error, "The width for particle with PDG %d and"%PDG+\
+                raise MadGraph5Error("The width for particle with PDG %d and"%PDG+\
                   " lambdaCMS=%f should have already been "%lambdaCMS+\
-                  "computed during the NWA run."
+                  "computed during the NWA run.")
 
         # Use MadWith
         if options['recompute_width'] in ['always','first_time']:
@@ -4318,8 +4331,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 try:
                     tmp_param_card = check_param_card.ParamCard(pjoin(path,'tmp.dat'))
                 except:
-                    raise MadGraph5Error, 'Error occured during width '+\
-                       'computation with command:\n   compute_widths %s'%command                   
+                    raise MadGraph5Error('Error occured during width '+\
+                       'computation with command:\n   compute_widths %s'%command)                   
                 width = tmp_param_card['decay'].get(PDG).value
 #                misc.sprint('lambdaCMS checked is', lambdaCMS,
 #                                                   'for particle',particle_name)
@@ -4363,7 +4376,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             try:
                 new_seed = int(tweak[4:])
             except ValueError:
-                raise MadGraph5Error, "Seed '%s' is not of the right format 'seed<int>'."%tweak
+                raise MadGraph5Error("Seed '%s' is not of the right format 'seed<int>'."%tweak)
             random.seed(new_seed)
                 
     mode = 'CMS' if aloha.complex_mass else 'NWA'
@@ -4455,8 +4468,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 retcode = subprocess.call(['make','check'],
                                    cwd=dir, stdout=devnull, stderr=devnull)                     
             if retcode != 0:
-                raise MadGraph5Error, "Compilation error with "+\
-                                                        "'make check' in %s"%dir
+                raise MadGraph5Error("Compilation error with "+\
+                                                        "'make check' in %s"%dir)
 
         # Now find all the resonances of the ME, if not saved from a previous run
         pkl_path = pjoin(proc_dir,'resonance_specs.pkl')
@@ -4550,8 +4563,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
     # Already add the coupling order for this sqaured ME.
     if loop_order != -1 and (loop_order+born_order)%2 != 0:
-        raise MadGraph5Error, 'The summed squared matrix element '+\
-                              " order '%d' is not even."%(loop_order+born_order)
+        raise MadGraph5Error('The summed squared matrix element '+\
+                              " order '%d' is not even."%(loop_order+born_order))
     result = {'born_order':born_order, 
               'loop_order': (-1 if loop_order==-1 else (loop_order+born_order)/2),
               'resonances_result':[]}
@@ -4573,14 +4586,14 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             try:
                 logstart, logend = tweak.split('->')
             except:
-                raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+                raise Madgraph5Error("Tweak '%s' not reckognized."%tweak)
             if logstart in ['logp','logm', 'log'] and \
                logend in ['logp','logm', 'log']:
                 if NLO:
                     evaluator.apply_log_tweak(proc_dir, [logstart, logend])
                     had_log_tweaks = True
             else:
-                raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+                raise Madgraph5Error("Tweak '%s' not reckognized."%tweak)
         if had_log_tweaks:
             evaluator.apply_log_tweak(proc_dir, 'recompile')
 
@@ -4850,7 +4863,6 @@ def output_lorentz_inv_loop(comparison_results, output='text'):
     if len(transfo_name_header) + 1 > transfo_col_size:
         transfo_col_size = len(transfo_name_header) + 1
     
-    misc.sprint(results)
     for transfo_name, value in results:
         if len(transfo_name) + 1 > transfo_col_size:
             transfo_col_size = len(transfo_name) + 1
@@ -5708,15 +5720,15 @@ minimum value of lambda to be considered in the CMS check."""\
             nwa_born=nwa_res['born']
             if len(cms_born) != len(lambdaCMS_list) or\
                  len(nwa_born) != len(lambdaCMS_list):
-                raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
-                                ' lambdaCMS values specified for process %s'%process
+                raise MadGraph5Error('Inconsistent list of results w.r.t. the'+\
+                                ' lambdaCMS values specified for process %s'%process)
             if pert_orders:
                 cms_finite=cms_res['finite'] 
                 nwa_finite=nwa_res['finite']
                 if len(cms_finite) != len(lambdaCMS_list) or\
                     len(nwa_finite) != len(lambdaCMS_list):
-                    raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
-                                ' lambdaCMS values specified for process %s'%process
+                    raise MadGraph5Error('Inconsistent list of results w.r.t. the'+\
+                                ' lambdaCMS values specified for process %s'%process)
         
             bpower = guess_lambdaorder(nwa_born,lambdaCMS_list,
                     expected=proc_res['born_order'], proc=process, res=resonance)
@@ -5931,8 +5943,8 @@ minimum value of lambda to be considered in the CMS check."""\
             general_error = "\n= Could not produce the cms check plot because of "+\
                                                     "the following error: %s"%str(e)
             try:
-                import Tkinter
-                if isinstance(e, Tkinter.TclError):
+                import six.moves.tkinter
+                if isinstance(e, six.moves.tkinter.TclError):
                     res_str += "\n= Plots are not generated because your system"+\
                                           " does not support graphical display."
                 else:

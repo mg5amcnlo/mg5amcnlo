@@ -9,8 +9,8 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: d g > t t~ d [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: s g > t t~ s [ real = QCD QED ] QCD^2=4 QED^2=2
 C     
 C     
 C     CONSTANTS
@@ -109,8 +109,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: d g > t t~ d [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: s g > t t~ s [ real = QCD QED ] QCD^2=4 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -234,8 +234,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: d g > t t~ d [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: s g > t t~ s [ real = QCD QED ] QCD^2=4 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -302,9 +302,9 @@ C     Amplitude(s) for diagram number 1
       CALL FFV1P0_3(W(1,4),W(1,3),GC_11,ZERO,ZERO,W(1,8))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,6),W(1,5),W(1,8),GC_11,AMP(2))
-      CALL FFV2_5_3(W(1,4),W(1,3),GC_51,GC_58,MDL_MZ,MDL_WZ,W(1,9))
+      CALL FFV2_5_3(W(1,4),W(1,3),-GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL FFV2_3_0(W(1,6),W(1,5),W(1,9),-GC_51,GC_58,AMP(3))
+      CALL FFV2_3_0(W(1,6),W(1,5),W(1,9),GC_50,GC_58,AMP(3))
       CALL FFV1P0_3(W(1,1),W(1,5),GC_1,ZERO,ZERO,W(1,6))
       CALL FFV1_1(W(1,3),W(1,2),GC_11,MDL_MT,MDL_WT,W(1,10))
 C     Amplitude(s) for diagram number 4
@@ -312,16 +312,16 @@ C     Amplitude(s) for diagram number 4
       CALL FFV1P0_3(W(1,1),W(1,5),GC_11,ZERO,ZERO,W(1,11))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,4),W(1,10),W(1,11),GC_11,AMP(5))
-      CALL FFV2_3_3(W(1,1),W(1,5),-GC_51,GC_58,MDL_MZ,MDL_WZ,W(1,12))
+      CALL FFV2_3_3(W(1,1),W(1,5),GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,12))
 C     Amplitude(s) for diagram number 6
-      CALL FFV2_5_0(W(1,4),W(1,10),W(1,12),GC_51,GC_58,AMP(6))
+      CALL FFV2_5_0(W(1,4),W(1,10),W(1,12),-GC_50,GC_58,AMP(6))
       CALL FFV1_2(W(1,4),W(1,2),GC_11,MDL_MT,MDL_WT,W(1,10))
 C     Amplitude(s) for diagram number 7
       CALL FFV1_0(W(1,10),W(1,3),W(1,6),GC_2,AMP(7))
 C     Amplitude(s) for diagram number 8
       CALL FFV1_0(W(1,10),W(1,3),W(1,11),GC_11,AMP(8))
 C     Amplitude(s) for diagram number 9
-      CALL FFV2_5_0(W(1,10),W(1,3),W(1,12),GC_51,GC_58,AMP(9))
+      CALL FFV2_5_0(W(1,10),W(1,3),W(1,12),-GC_50,GC_58,AMP(9))
 C     Amplitude(s) for diagram number 10
       CALL VVV1_0(W(1,11),W(1,2),W(1,8),GC_10,AMP(10))
       CALL FFV1_1(W(1,5),W(1,2),GC_11,ZERO,ZERO,W(1,11))
@@ -330,7 +330,7 @@ C     Amplitude(s) for diagram number 11
 C     Amplitude(s) for diagram number 12
       CALL FFV1_0(W(1,1),W(1,11),W(1,8),GC_11,AMP(12))
 C     Amplitude(s) for diagram number 13
-      CALL FFV2_3_0(W(1,1),W(1,11),W(1,9),-GC_51,GC_58,AMP(13))
+      CALL FFV2_3_0(W(1,1),W(1,11),W(1,9),GC_50,GC_58,AMP(13))
 C     JAMPs contributing to orders QCD=3 QED=0
       JAMP(1,1)=+1D0/2D0*(-AMP(2)-AMP(5)-IMAG1*AMP(10))
       JAMP(2,1)=+1D0/2D0*(+1D0/3D0*AMP(5)+1D0/3D0*AMP(8))

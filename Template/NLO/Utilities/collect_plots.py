@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import pickle
 import subprocess
 import sys
@@ -25,7 +27,7 @@ def combine_plots_HwU(jobs,out,normalisation=None):
     while p.poll() is None:
         line = p.stdout.readline()
         if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
-            print line[:-1]
+            print(line[:-1])
 
 with open("SubProcesses/job_status.pkl",'rb') as f:
     jobs_to_collect=pickle.load(f)

@@ -20,7 +20,10 @@
 #########################################################################################################
 #  TEST #################################################################################################
 #########################################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
+from six.moves import input
 sys.path.append('./Source/MadWeight/Python')
 import filecmp
 import unittest
@@ -279,10 +282,10 @@ class TestMWBuilder(unittest.TestCase):
 
 
 
-print 'WARNING: This test modify this version of the Template. The correct way to launch it is to first made a copy of the Template'
-y =raw_input('Do you want to continue? [y/n]')
+print('WARNING: This test modify this version of the Template. The correct way to launch it is to first made a copy of the Template')
+y =input('Do you want to continue? [y/n]')
 if y == 'y':
     unittest.main()
 else:
-    print 'stopped'
+    print('stopped')
 

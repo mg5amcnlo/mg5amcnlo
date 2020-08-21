@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -19,10 +19,17 @@
 and call immediately the command line interface scripts"""
 
 import sys
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph/aMCatNLO 5 works only with python 2.6 or later (but not python 3.X).\n\
+if   sys.version_info[1] < 7:
+    sys.exit('MadGraph/aMCatNLO 5 works only with python 2.7/3.7 or later .\n\
                Please upgrate your version of python.')
 
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip install six --user"\n'
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
+    
 import os
 import optparse
 
@@ -59,7 +66,7 @@ for i in range(len(sys.argv)-1):
     try:
         (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
         done = True
-    except MyOptParser.InvalidOption, error:
+    except MyOptParser.InvalidOption as error:
         pass 
     else:
         args += sys.argv[len(sys.argv)-i:]
@@ -67,8 +74,8 @@ if not done:
     # raise correct error:
     try:
         (options, args) = parser.parse_args()
-    except MyOptParser.InvalidOption, error:
-        print error
+    except MyOptParser.InvalidOption as error:
+        print(error)
         sys.exit(2)  
 
 if len(args) == 0:
@@ -79,7 +86,7 @@ import subprocess
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py')) or options.web):
-        print 'launch in debug mode'
+        print( 'launch in debug mode')
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
 
@@ -92,7 +99,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print( "For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -123,7 +130,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print( 'Running MG5 in debug mode')
 
 
 # Set logging level according to the logging level given by options
@@ -170,10 +177,10 @@ try:
             cmd_line = cmd_interface.aMCatNLOCmdShell()
         if not hasattr(cmd_line, 'do_%s' % args[0]):
             if parser_error:
-                print parser_error
-                print 'and %s  can not be interpreted as a valid command.' % args[0]
+                print( parser_error)
+                print( 'and %s  can not be interpreted as a valid command.' % args[0])
             else:
-                print 'ERROR: %s  not a valid command. Please retry' % args[0]
+                print( 'ERROR: %s  not a valid command. Please retry' % args[0])
         else:
             cmd_line.use_rawinput = False    
             cmd_line.run_cmd(' '.join(args))
@@ -188,9 +195,9 @@ try:
             cmd_line.cmdloop()
             
 except KeyboardInterrupt:
-    print 'writting history and directory and quit on KeyboardInterrupt' 
+    print( 'writting history and directory and quit on KeyboardInterrupt')
     pass
-except cmd_interface.aMCatNLOAlreadyRunning, error:
+except cmd_interface.aMCatNLOAlreadyRunning as error:
     logging.error(str(error))
     sys.exit()
 try: 
@@ -205,7 +212,7 @@ try:
     if cmd_line.history[-1] not in ['EOF','quit','exit']:
         cmd_line.results.store_result()
 except:
-    print error
+    print( error)
     pass
 
 

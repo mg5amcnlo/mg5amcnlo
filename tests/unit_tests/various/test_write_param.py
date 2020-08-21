@@ -13,8 +13,10 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import random
-import StringIO
+import six
+StringIO = six
 import os
 
 import tests.unit_tests as unittest
@@ -23,6 +25,8 @@ import madgraph.core.base_objects as base_objects
 
 import models.import_ufo as import_ufo
 import models.write_param_card as writter
+from six.moves import range
+import madgraph.various.misc as misc 
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -40,6 +44,7 @@ class TestParamWritting(unittest.TestCase):
         self.content = StringIO.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
+        self.content.seek(0)
         
     def test_create_param_dict(self):
         """Check that the dictionary is valid."""
@@ -102,7 +107,7 @@ class TestParamWritting(unittest.TestCase):
         start =result[:]
         for i in range(20):
             random.shuffle(start)
-            start.sort(self.writter.order_param)
+            start.sort(key=misc.cmp_to_key(self.writter.order_param))
             self.assertEqual(start, result, 
                '%s != %s' % ([p.name for p in start], [p.name for p in result]))
         
@@ -124,13 +129,15 @@ class TestParamWritting(unittest.TestCase):
         result = "    2   4 5.400000e-01 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)
+        self.content.seek(0)
         
         # check for block decay
         self.writter.write_param(param, 'DECAY')
         result = "DECAY   2   4 5.400000e-01 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)
-        
+        self.content.seek(0)
+                
         # check that fail on complex number
         wrongparam =  base_objects.ParamCardVariable('p8', 0.54 + 2j, 'first', [2,4])
         self.assertRaises(writter.ParamCardWriterError,self.writter.write_param,
@@ -142,7 +149,8 @@ class TestParamWritting(unittest.TestCase):
         result = "    2   4 2.000000e+00 # p8 \n"
         self.assertEqual(result, self.content.getvalue())
         self.content.truncate(0)               
-        
+        self.content.seek(0)
+                
     def test_write_qnumber(self):
         """ check if we can writte qnumber """
         
@@ -200,6 +208,7 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         self.content = StringIO.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
+        self.content.seek(0) # need in py3 to fully remove header
         
     def test_define_not_dep_param(self):
         """Check that we found all mass-width which are not external."""
@@ -316,5 +325,8 @@ DECAY  21 0.000000e+00 # g : 0.0
 DECAY  22 0.000000e+00 # a : 0.0 
 """.split('\n')
 
-        self.assertEqual(self.content.getvalue().split('\n'), goal)
+        text = self.content.getvalue()
+        #text = text.encode()
+        #misc.sprint(type(text))
+        self.assertEqual(text.split('\n'), goal)
     

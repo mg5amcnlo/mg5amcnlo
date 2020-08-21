@@ -10,9 +10,12 @@
 #
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 from aloha.aloha_object import *
 import aloha.aloha_lib as aloha_lib
 import cmath
+from six.moves import range
 
 class WrongFermionFlow(Exception):
     pass
@@ -29,7 +32,7 @@ def get_fermion_flow(expression, nb_fermion):
     try:
         expr = eval(expression)
     except Exception as error:
-        print error
+        print(error)
         return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
@@ -40,7 +43,7 @@ def get_fermion_flow(expression, nb_fermion):
     for term in expr:
         if term.vartype == 0: # Single object
             if not term.spin_ind in [[1,2], [2,1]]:
-                raise WrongFermionFlow, 'Fermion should be the first particles of any interactions'
+                raise WrongFermionFlow('Fermion should be the first particles of any interactions')
             if isinstance(term, (Gamma, Gamma5, Sigma)):
                 if term.spin_ind == [2,1]:
                     out[1] = 2
@@ -56,37 +59,37 @@ def get_fermion_flow(expression, nb_fermion):
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind
-                if ind1 not in link.keys():
+                if ind1 not in list(link.keys()):
                     link[ind1] = ind2
                 else:
-                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr
-                if ind2 not in rlink.keys():
+                    raise WrongFermionFlow('a spin indices should appear only once on the left indices of an object: %s' % expr)
+                if ind2 not in list(rlink.keys()):
                     rlink[ind2] = ind1
                 else: 
-                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr             
+                    raise WrongFermionFlow('a spin indices should appear only once on the left indices of an object: %s' % expr)             
              
             for i in range(1, nb_fermion):
-                if i in out.keys() or i in out.values():
+                if i in list(out.keys()) or i in list(out.values()):
                     continue
                 old = []
                 pos = i
                 while 1:
                     old.append(pos)
-                    if pos in link.keys() and link[pos] not in old:
+                    if pos in list(link.keys()) and link[pos] not in old:
                         pos = link[pos]
-                    elif pos in rlink.keys() and rlink[pos] not in old:
+                    elif pos in list(rlink.keys()) and rlink[pos] not in old:
                         pos = rlink[pos]
                     else:
-                        if pos in link.keys() and i in rlink.keys():
+                        if pos in list(link.keys()) and i in list(rlink.keys()):
                             out[i] = pos
                             break
-                        elif pos in rlink.keys() and i in link.keys():
+                        elif pos in list(rlink.keys()) and i in list(link.keys()):
                             out[pos] = i
                             break
                         else:
-                            raise WrongFermionFlow,  'incoherent IO state: %s' % expr
+                            raise WrongFermionFlow('incoherent IO state: %s' % expr)
     if not len(out) == nb_fermion //2:
-        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+        raise WrongFermionFlow('Not coherent Incoming/outcoming fermion flow')
     return out
 
 
@@ -112,10 +115,10 @@ def check_flow_validity(expression, nb_fermion):
     for term in expr:
         if term.vartype == 0: # Single object
             if not term.spin_ind in [[1,2], [2,1]]:
-                raise WrongFermionFlow, 'Fermion should be the first particles of any interactions'
+                raise WrongFermionFlow('Fermion should be the first particles of any interactions')
             if isinstance(term, (Gamma, Gamma5, Sigma)):
                 if not term.spin_ind == [2,1]:
-                    raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+                    raise WrongFermionFlow('Not coherent Incoming/outcoming fermion flow')
         
         elif term.vartype == 2: # product of object
             link, rlink = {}, {}
@@ -127,12 +130,12 @@ def check_flow_validity(expression, nb_fermion):
                 if isinstance(obj, (Gamma, Sigma)):
                     if (ind1 in range(1, nb_fermion+1) and ind1 % 2 == 1) or \
                        (ind2 in range(2, nb_fermion+1) and ind2 % 2 == 0 ):
-                        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
-                if ind1 not in link.keys():
+                        raise WrongFermionFlow('Not coherent Incoming/outcoming fermion flow')
+                if ind1 not in list(link.keys()):
                     link[ind1] = ind2
                 else:
                     rlink[ind1] = ind2
-                if ind2 not in link.keys():
+                if ind2 not in list(link.keys()):
                     link[ind2] = ind1
                 else: 
                     rlink[ind2] = ind1                    
@@ -141,12 +144,12 @@ def check_flow_validity(expression, nb_fermion):
                 pos = i
                 while 1:
                     old.append(pos)
-                    if pos in link.keys() and link[pos] not in old:
+                    if pos in list(link.keys()) and link[pos] not in old:
                         pos = link[pos]
-                    elif pos in rlink.keys() and rlink[pos] not in old:
+                    elif pos in list(rlink.keys()) and rlink[pos] not in old:
                         pos = rlink[pos]
                     elif pos != i+1:
-                        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+                        raise WrongFermionFlow('Not coherent Incoming/outcoming fermion flow')
                     elif pos == i+1:
                         break
    

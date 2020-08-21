@@ -18,16 +18,19 @@ constraints to this test is that the current version can still read the old
 model format. 
 The reference version is given here as a argument which can be changed by hand.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 import itertools
 import logging
 import os
 import shutil
-import me_comparator
-import madevent_comparator
+from . import me_comparator
+from . import madevent_comparator
 import unittest
 import subprocess
 
 from madgraph import MG5DIR
+from six.moves import range
 
 pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -47,7 +50,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """build the directory for mg5 run in the old template"""
         if cls.old_mg5:
             return cls.old_mg5
-        print 'create new parralel test'
+        
         init_dir = os.getcwd()
         os.chdir(MG5DIR)    
         # 1. bzr branch the present directory to a new directory
@@ -61,13 +64,13 @@ class OLDMG5Comparator(unittest.TestCase):
         devnull = open(os.devnull,'w')   
         status = subprocess.call(['bzr', 'branch', MG5DIR, filepath], stdout=devnull, stderr=devnull)   
         if status:
-            raise Exception, 'Impossible to configure old run'
+            raise Exception('Impossible to configure old run')
         
         #2. reverse the directory to its old status
         os.chdir(filepath)
         status = subprocess.call(['bzr', 'revert', '-r', str(cls.reference_number)], stdout=devnull, stderr=devnull)
         if status:
-            raise Exception, 'Impossible to configure old run'
+            raise Exception('Impossible to configure old run')
         
         cls.old_mg5 = pjoin(MG5DIR,filepath)
         os.chdir(init_dir)
@@ -134,7 +137,7 @@ class OLDMG5Comparator(unittest.TestCase):
         mg5_path = self.build_old_mg5()
         
         if 'v4' in model:
-            raise Exception, 'Not implemented'
+            raise Exception('Not implemented')
             #old_mg5 = me_comparator.MG5OldRunner()
             #old_mg5.setup(mg5_path)
             #current_mg5 = me_comparator.MG5Runner()
@@ -167,7 +170,7 @@ class OLDMG5Comparator(unittest.TestCase):
         
                 # Store output to a pickle file in the input_files directory
         if print_result:
-            print my_comp.results[0]
+            print(my_comp.results[0])
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)
             
@@ -181,7 +184,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         tolerance = 2e-02):   
                 
         if 'v4' in model:
-            raise Exception, 'Not implemented'
+            raise Exception('Not implemented')
             #old_mg5 = me_comparator.MG5OldRunner()
             #old_mg5.setup(mg5_path)
             #current_mg5 = me_comparator.MG5Runner()
@@ -591,7 +594,7 @@ class OLDMG5Comparator(unittest.TestCase):
         
         # Store list of non-zero processes and results in file
         for i in range(len(my_proc_list)//500):
-            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            print('step %s/%s' %(i+1,len(my_proc_list)//500 ))
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':2, 'QCD':2},
@@ -631,15 +634,15 @@ class OLDMG5Comparator(unittest.TestCase):
                 proc += particles[ind]
             return proc
                         
-        iter = itertools.product(range(len(particles)), repeat=5)
+        iter = itertools.product(list(range(len(particles))), repeat=5)
         for i in range(len(particles)**5//500):
             my_proc_list = []
             for j in range(0,500):
                 try:
-                    my_proc_list.append(get_process(iter.next()))
+                    my_proc_list.append(get_process(next(iter)))
                 except:
                     break
-            print 'step %s/%s' %(i+1,len(particles)**5//500 )
+            print('step %s/%s' %(i+1,len(particles)**5//500 ))
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list,
                              orders = {'QED':3, 'QCD':3},
@@ -665,15 +668,15 @@ class OLDMG5Comparator(unittest.TestCase):
                         
         
         for i, last in enumerate(last_particles):
-            iter = itertools.product(range(len(particles)), repeat=4)
+            iter = itertools.product(list(range(len(particles))), repeat=4)
             for j in range(len(particles)**4//500):
                 my_proc_list = []
                 for k in range(0,500):
                     try:
-                        my_proc_list.append(get_process(iter.next(), last))
+                        my_proc_list.append(get_process(next(iter), last))
                     except:
                         break
-                print 'step %s/%s' %(i*(len(particles)**4)//500+j+1, len(particles)**4//500 * len(last_particles))
+                print('step %s/%s' %(i*(len(particles)**4)//500+j+1, len(particles)**4//500 * len(last_particles)))
         # Store list of non-zero processes and results in file
                 self.compare_processes(my_proc_list,
                              orders = {'QED':3, 'QCD':3},
@@ -697,16 +700,16 @@ class OLDMG5Comparator(unittest.TestCase):
                 proc += boson[ind]            
             return proc 
         
-        iter_f = itertools.product(range(len(fermion)), repeat=2)
+        iter_f = itertools.product(list(range(len(fermion))), repeat=2)
         f_comb=-1
         for fermions in iter_f:
             f_comb+=1
-            iter = itertools.product(range(len(boson)), repeat=3)
+            iter = itertools.product(list(range(len(boson))), repeat=3)
             if not f_comb % 2:
-                print 'step %s/%s' % ((f_comb)//2 + 1, len(fermion)**2//2) 
+                print('step %s/%s' % ((f_comb)//2 + 1, len(fermion)**2//2)) 
                 my_proc_list = []
             for j in range(len(boson)**3):
-                my_proc_list.append( get_process(fermions, iter.next()))
+                my_proc_list.append( get_process(fermions, next(iter)))
         # Store list of non-zero processes and results in file
             if f_comb %2:
                 self.compare_processes(my_proc_list,
@@ -735,7 +738,7 @@ class OLDMG5Comparator(unittest.TestCase):
             sm_parts, mssm_parts)
 
         for i in range(len(my_proc_list)//500):
-            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            print('step %s/%s' %(i+1,len(my_proc_list)//500 ))
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':2, 'QCD':2},
@@ -789,7 +792,7 @@ class OLDMG5Comparator(unittest.TestCase):
         #my_proc_list = me_comparator.create_proc_list_enhanced(\
         #    sm_parts, mssm_parts, sm_parts)
         for i in range(len(my_proc_list)//500):
-            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            print('step %s/%s' %(i+1,len(my_proc_list)//500 ))
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':3, 'QCD':3},
@@ -814,7 +817,7 @@ class OLDMG5Comparator(unittest.TestCase):
                       final_part_list2,final_part_list3)
 
         for i in range(len(my_proc_list)//500):
-            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            print('step %s/%s' %(i+1,len(my_proc_list)//500 ))
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':3, 'QCD':3},
@@ -855,7 +858,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Store list of non-zero processes and results in file                                                                                                                          
         pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_cross_sm.pkl")
         for my_proc_list in proc_lists:
-            print '.'
+            print('.')
             self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm.log")

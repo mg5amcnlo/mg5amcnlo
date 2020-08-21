@@ -16,6 +16,7 @@
 """Methods and classes to export models and matrix elements to Pythia 8
 and C++ Standalone format."""
 
+from __future__ import absolute_import
 import fractions
 import glob
 import itertools
@@ -44,6 +45,8 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
@@ -92,8 +95,7 @@ class OneProcessExporterCPP(object):
         elif isinstance(matrix_elements, helas_objects.HelasMatrixElementList):
             self.matrix_elements = matrix_elements
         else:
-            raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "Wrong object type for matrix_elements: %s" % type(matrix_elements)
+            raise base_objects.PhysicsObject.PhysicsObjectError("Wrong object type for matrix_elements: %s" % type(matrix_elements))
 
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
@@ -127,8 +129,7 @@ class OneProcessExporterCPP(object):
         self.helas_call_writer = cpp_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
-            raise self.ProcessExporterCPPError, \
-                "helas_call_writer not CPPUFOHelasCallWriter"
+            raise self.ProcessExporterCPPError("helas_call_writer not CPPUFOHelasCallWriter")
 
         self.nexternal, self.ninitial = \
                         self.matrix_elements[0].get_nexternal_ninitial()
@@ -720,7 +721,7 @@ class OneProcessExporterCPP(object):
         beams = set([(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
                      for process in self.processes])
-
+        beams = sorted(list(beams))
         res_lines = []
 
         # Write a selection routine for the different processes with
@@ -932,7 +933,7 @@ class OneProcessExporterMatchbox(OneProcessExporterCPP):
         matrix_strings = []
         my_cs = color.ColorString()
                 
-        for i_color in xrange(len(color_denominators)):
+        for i_color in range(len(color_denominators)):
             # Then write the numerators for the matrix elements
             my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
             t_str=repr(my_cs)
@@ -944,7 +945,7 @@ class OneProcessExporterMatchbox(OneProcessExporterCPP):
             for match in all_matches:
                 ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
                 if ctype not in ['T', 'Tr']:
-                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                    raise self.ProcessExporterCPPError('Color Structure not handle by Matchbox')
                 tmp_color.append(arg)
             #compute the maximal size of the vector
             nb_index = sum(len(o) for o in tmp_color)
@@ -994,9 +995,8 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         for me in self.matrix_elements:
             if me.get_nexternal_ninitial() not in [(3,2),(4,2),(5,2)]:
                 nex,nin = me.get_nexternal_ninitial()
-                raise InvalidCmd,\
-                      "Pythia 8 can only handle 2->1,2,3 processes, not %d->%d" % \
-                      (nin,nex-nin)
+                raise InvalidCmd("Pythia 8 can only handle 2->1,2,3 processes, not %d->%d" % \
+                      (nin,nex-nin))
             
         self.process_class = self.process_name
         
@@ -1140,18 +1140,18 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                           for process in self.processes])
 
         # Define a number of useful sets
-        antiquarks = range(-1, -6, -1)
-        quarks = range(1,6)
-        antileptons = range(-11, -17, -1)
-        leptons = range(11, 17, 1)
+        antiquarks = list(range(-1, -6, -1))
+        quarks = list(range(1,6))
+        antileptons = list(range(-11, -17, -1))
+        leptons = list(range(11, 17, 1))
         allquarks = antiquarks + quarks
         antifermions = antiquarks + antileptons
         fermions = quarks + leptons
         allfermions = allquarks + antileptons + leptons
-        downfermions = range(-2, -5, -2) + range(-1, -5, -2) + \
-                       range(-12, -17, -2) + range(-11, -17, -2) 
-        upfermions = range(1, 5, 2) + range(2, 5, 2) + \
-                     range(11, 17, 2) + range(12, 17, 2)
+        downfermions = list(range(-2, -5, -2)) + list(range(-1, -5, -2)) + \
+                       list(range(-12, -17, -2)) + list(range(-11, -17, -2)) 
+        upfermions = list(range(1, 5, 2)) + list(range(2, 5, 2)) + \
+                     list(range(11, 17, 2)) + list(range(12, 17, 2))
 
         # The following gives a list from flavor combinations to "inFlux" values
         # allowed by Pythia8, see Pythia 8 document SemiInternalProcesses.html
@@ -1328,7 +1328,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         beams = set([(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
                      for process in self.processes])
-
+        beams = sorted(list(beams))
         # Now write a selection routine for final state ids
         for ibeam, beam_parts in enumerate(beams):
             if ibeam == 0:
@@ -1371,8 +1371,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
 
             if final_id_list and final_mirror_id_list or \
                not final_id_list and not final_mirror_id_list:
-                raise self.ProcessExporterCPPError,\
-                      "Missing processes, or both process and mirror process"
+                raise self.ProcessExporterCPPError("Missing processes, or both process and mirror process")
 
 
             ncombs = len(final_id_list)+len(final_mirror_id_list)
@@ -1391,9 +1390,8 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                            (i, l) in items if l > 0]).\
                                  replace('*1', ''))
                 if any([l>1 for (i, l) in items]):
-                    raise self.ProcessExporterCPPError,\
-                          "More than one process with identical " + \
-                          "external particles is not supported"
+                    raise self.ProcessExporterCPPError("More than one process with identical " + \
+                          "external particles is not supported")
 
             for final_ids in final_mirror_id_list:
                 items = [(i, len([ p for p in me.get_mirror_processes() \
@@ -1405,9 +1403,8 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                            (i, l) in items if l > 0]).\
                                  replace('*1', ''))
                 if any([l>1 for (i, l) in items]):
-                    raise self.ProcessExporterCPPError,\
-                          "More than one process with identical " + \
-                          "external particles is not supported"
+                    raise self.ProcessExporterCPPError("More than one process with identical " + \
+                          "external particles is not supported")
 
             if final_id_list:
                 res_lines.append("int flavors[%d][%d] = {%s};" % \
@@ -1886,7 +1883,7 @@ def get_mg5_info_lines():
 
     info = misc.get_pkg_info()
     info_lines = ""
-    if info and info.has_key('version') and  info.has_key('date'):
+    if info and 'version' in info and  'date' in info:
         info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
@@ -2000,7 +1997,7 @@ class UFOModelConverterCPP(object):
         the two lists params_indep and params_dep"""
 
         # Keep only dependences on alphaS, to save time in execution
-        keys = self.model['parameters'].keys()
+        keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
         params_ext = []
         for key in keys:
@@ -2050,7 +2047,7 @@ class UFOModelConverterCPP(object):
         the two lists coups_indep and coups_dep"""
 
         # Keep only dependences on alphaS, to save time in execution
-        keys = self.model['couplings'].keys()
+        keys = list(self.model['couplings'].keys())
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if "aS" in key:
@@ -2071,7 +2068,7 @@ class UFOModelConverterCPP(object):
                                                                    c.depend))
 
         # Convert coupling expressions from Python to C++
-        for coup in self.coups_dep.values() + self.coups_indep:
+        for coup in list(self.coups_dep.values()) + self.coups_indep:
             coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
 
     # Routines for writing the parameter files
@@ -2133,7 +2130,7 @@ class UFOModelConverterCPP(object):
                                    self.write_parameters(self.coups_indep)
         replace_dict['dependent_couplings'] = \
                                    "// Model couplings dependent on aS\n" + \
-                                   self.write_parameters(self.coups_dep.values())
+                                   self.write_parameters(list(self.coups_dep.values()))
 
         replace_dict['set_independent_parameters'] = \
                                self.write_set_parameters(self.params_indep)
@@ -2142,7 +2139,7 @@ class UFOModelConverterCPP(object):
         replace_dict['set_dependent_parameters'] = \
                                self.write_set_parameters(self.params_dep)
         replace_dict['set_dependent_couplings'] = \
-                               self.write_set_parameters(self.coups_dep.values())
+                               self.write_set_parameters(list(self.coups_dep.values()))
 
         replace_dict['print_independent_parameters'] = \
                                self.write_print_parameters(self.params_indep)
@@ -2151,7 +2148,7 @@ class UFOModelConverterCPP(object):
         replace_dict['print_dependent_parameters'] = \
                                self.write_print_parameters(self.params_dep)
         replace_dict['print_dependent_couplings'] = \
-                               self.write_print_parameters(self.coups_dep.values())
+                               self.write_print_parameters(list(self.coups_dep.values()))
 
         if 'include_prefix' not in replace_dict:
             replace_dict['include_prefix'] = ''
@@ -2370,7 +2367,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         the two lists params_indep and params_dep"""
 
         # Keep only dependences on alphaS, to save time in execution
-        keys = self.model['parameters'].keys()
+        keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
         params_ext = []
         for key in keys:

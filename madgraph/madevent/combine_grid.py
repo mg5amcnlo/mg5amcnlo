@@ -1,7 +1,9 @@
 from __future__ import division
+from __future__ import absolute_import
 import collections
 import math
 import os
+from six.moves import range
 try:
     import madgraph
 except ImportError:
@@ -60,7 +62,7 @@ class grid_information(object):
         elif isinstance(path, file):
             finput=path
         else:
-            raise Exception, "path should be a path or a file descriptor"
+            raise Exception("path should be a path or a file descriptor")
         
         line = finput.readline()
         if self.nonzero == 0:
@@ -79,7 +81,7 @@ class grid_information(object):
                 self.oneFail = True
                 return
             elif len(info) !=3:
-                raise Exception, "wrong formatting of %s"% finput.name
+                raise Exception("wrong formatting of %s"% finput.name)
             
             nonzero, ng, maxinvar = info
             self.nonzero+=nonzero
@@ -153,7 +155,7 @@ class grid_information(object):
             finput=path
             fname = finput.name
         else:
-            raise Exception, "path should be a path or a file descriptor"
+            raise Exception("path should be a path or a file descriptor")
          
         
         return self.results.add_results(fname,finput)
@@ -253,8 +255,8 @@ class grid_information(object):
         th_maxwgt = [R.th_maxwgt for R in self.results]
         th_nunwgt = [R.th_nunwgt for R in self.results]
         nb_data = len(th_nunwgt)
-        total_sum = sum(th_maxwgt[i] * th_nunwgt[i] for i in xrange(nb_data))
-        info = sorted([ (th_maxwgt[i], th_nunwgt[i]) for i in xrange(nb_data) 
+        total_sum = sum(th_maxwgt[i] * th_nunwgt[i] for i in range(nb_data))
+        info = sorted([ (th_maxwgt[i], th_nunwgt[i]) for i in range(nb_data) 
                                                           if th_nunwgt[i] > 0],
                       reverse=True)
 
@@ -547,7 +549,7 @@ class DiscreteSampler(dict):
             
         while 1:
             try:
-                line = fsock.next()
+                line = next(fsock)
             except StopIteration:
                 break
             line = line.lower()
@@ -580,7 +582,7 @@ class DiscreteSampler(dict):
   
         
         def next_line(fsock):
-            line = fsock.next()
+            line = next(fsock)
             if '#' in line:
                 line = line.split('#',1)[0]
             line = line.strip()
