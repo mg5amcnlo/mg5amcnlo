@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-2.8.0:
+2.8.0 (21/08/20):
       OM: pass to python3 by default
       OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the
           effective photon approximation. This mode behaves like the "3" one: The cut-off scale of the approximation

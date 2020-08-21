@@ -3380,7 +3380,7 @@ class RunCardLO(RunCard):
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
                 self['use_syst'] = False
-                if beam_id_split[0] == beam_id_split[1]:
+                if set([ abs(i) for i in beam_id_split[0]]) == set([ abs(i) for i in beam_id_split[1]]):
                     self.display_block.append('ecut')
                 self.display_block.append('beam_pol')
             else:
