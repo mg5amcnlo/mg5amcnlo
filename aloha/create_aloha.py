@@ -483,9 +483,9 @@ in presence of majorana particle/flow violation"""
             denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
         elif propa == "1N":
             if spin == 3:
-                numerator = 'IdentityL(1,2)'
+                numerator = '-1*IdentityL(1,2)'
             else:
-                numerator = "1"
+                numerator = "-1"
             denominator = "1"
         else:
             raise Exception
