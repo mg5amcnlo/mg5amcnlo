@@ -3739,6 +3739,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if isinstance(value, str):
                 madspin_cmd.mg5cmd.exec_cmd( 'set %s %s --no_save' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
         madspin_cmd.cluster = self.cluster
+        madspin_cmd.mother = self
         
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
 
@@ -3746,11 +3747,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         madspin_cmd.import_command_file(path)
 
-        # create a new run_name directory for this output
-        i = 1
-        while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
-            i+=1
-        new_run = '%s_decayed_%i' % (self.run_name,i)
+
+        if not madspin_cmd.me_run_name: 
+            # create a new run_name directory for this output
+            i = 1
+            while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
+                i+=1
+            new_run = '%s_decayed_%i' % (self.run_name,i)
+        else:
+            new_run = madspin_cmd.me_run_name
+            if os.path.exists(pjoin(self.me_dir,'Events', new_run)):
+                i = 1
+                while os.path.exists(pjoin(self.me_dir,'Events', '%s_%i' % (new_run,i))):
+                    i+=1
+                new_run = '%s_%i' % (new_run,i)
+
         evt_dir = pjoin(self.me_dir, 'Events')
 
         os.mkdir(pjoin(evt_dir, new_run))

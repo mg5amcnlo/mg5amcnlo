@@ -118,12 +118,9 @@ class TestDiagramSymmetry(unittest.TestCase):
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                 subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 23)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 19)
 
-        self.assertEqual(symmetry,
-                         [1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                          1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13,
-                          -14, -15, -16, -17, -21, -22, -23])
+        self.assertEqual(symmetry,[1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13, -14, -18, -19])
 
         return
 

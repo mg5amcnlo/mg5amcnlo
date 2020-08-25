@@ -27,7 +27,7 @@ ifeq "$(SUNAME)" "CYGWIN"
     CPP=gcc -E
     CFLAGS= $(DFLG)
     CXFLAGS = -I/usr/X11R6/include
-    FFLAGS= $(DFLG) -fno-second-underscore
+    FFLAGS= $(DFLG) -fno-second-underscore -std=legacy
     KPPFLAGS= -C -P -DLinux -DUNIX
     LOCAL = -lnsl
 #    BUILD_SHARED = false

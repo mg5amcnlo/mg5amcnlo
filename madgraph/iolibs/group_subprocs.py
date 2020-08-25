@@ -65,11 +65,21 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
+        if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
+                part2 = model.get_particle(22)
+                mass = part2.get('mass')
+                width = part2.get('mass')
+                spin = part2.get('spin')
+        else:
+            mass = part.get('mass')
+            width = part.get('width')
+            spin = part.get('spin')
 
-        return [((leg.get('number'), part.get('spin'),
-                  part.get('mass'), part.get('width'), part.get('color')),
+        return [((leg.get('number'), spin,
+                  mass, width, part.get('color')),
                  leg.get('number'))]
-        
+
+    
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify configs:
@@ -80,9 +90,18 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         if last_vertex:
             return ((0,),)
         else:
-            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            leg = vertex.get('legs')[-1]
+            part = model.get_particle(leg.get('id'))
+            if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
+                part2 = model.get_particle(22)
+                mass = part2.get('mass')
+                width = part2.get('width')
+            else:
+                mass = part.get('mass')
+                width = part.get('width')
+            
             return ((part.get('color'),
-                     part.get('mass'), part.get('width')),
+                     mass, width),
                     0)
 
     @staticmethod
@@ -289,7 +308,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         return sum([md.get_num_configs(model, nini) for md in 
                     self.get('mapping_diagrams')])
 
-    def find_mapping_diagrams(self):
+    def find_mapping_diagrams(self, max_tpropa=0):
         """Find all unique diagrams for all processes in this
         process class, and the mapping of their diagrams unto this
         unique diagram."""
@@ -297,6 +316,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         assert self.get('matrix_elements'), \
                "Need matrix elements to run find_mapping_diagrams"
 
+        if max_tpropa == 0:
+            max_tpropa = base_objects.Vertex.max_tpropa
+        
         matrix_elements = self.get('matrix_elements')
         model = matrix_elements[0].get('processes')[0].get('model')
         # mapping_diagrams: The configurations for the non-reducable
@@ -339,6 +361,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 # topologies (the contracted vertex has id == -2.)
                 if diagram.get_vertex_leg_numbers()!=[] and \
                                 max(diagram.get_vertex_leg_numbers()) > minvert:
+                    diagram_maps[ime].append(0)
+                    continue
+                if diagram.get_nb_t_channel() > max_tpropa:
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format
