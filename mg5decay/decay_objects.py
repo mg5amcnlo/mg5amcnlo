@@ -39,6 +39,8 @@
    
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import array
 import cmath
 import copy
@@ -46,7 +48,7 @@ import itertools
 import logging
 import math
 import os
-import re
+import re  as re_module
 import sys
 import time
 
@@ -63,6 +65,8 @@ import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 import models.model_reader as model_reader
+from six.moves import range
+from six.moves import zip
 
 ZERO = 0
 #===============================================================================
@@ -177,29 +181,24 @@ class DecayParticle(base_objects.Particle):
 
         #Check if partnum is an integer.
         if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "Final particle number %s must be an integer." % str(partnum)
+            raise self.PhysicsObjectError("Final particle number %s must be an integer." % str(partnum))
 
         #Check if onshell condition is Boolean number.
         if not isinstance(onshell, bool):
-            raise self.PhysicsObjectError, \
-                "%s must be a Boolean number" % str(onshell)
+            raise self.PhysicsObjectError("%s must be a Boolean number" % str(onshell))
                 
         #Check if the value is a Vertexlist(in base_objects) or a list of vertex
         if not isinstance(value, base_objects.VertexList):
-            raise self.PhysicsObjectError, \
-                "%s must be VertexList type." % str(value)
+            raise self.PhysicsObjectError("%s must be VertexList type." % str(value))
                     
         #Check if the model is a valid object.
         if not (isinstance(model, base_objects.Model) or model == {}):
-            raise self.PhysicsObjectError, \
-                "%s must be a Model" % str(model)
+            raise self.PhysicsObjectError("%s must be a Model" % str(model))
         elif model:
             #Check if the mother particle is in the 'model'
-            if not (self.get_pdg_code() in model.get('particle_dict').keys()):
-                raise self.PhysicsObjectError, \
-                    "The model, %s, does not contain particle %s." \
-                    %(model.get('name'), self.get_name())
+            if not (self.get_pdg_code() in list(model.get('particle_dict').keys())):
+                raise self.PhysicsObjectError("The model, %s, does not contain particle %s." \
+                    %(model.get('name'), self.get_name()))
 
                             
     def check_vertexlist(self, partnum, onshell, value, model = {}):
@@ -218,9 +217,8 @@ class DecayParticle(base_objects.Particle):
         #Find all the possible initial particle(s).
         #Check onshell condition if the model is given.
         if model:
-            if (abs(eval(self.get('mass')) == 0.)) and (len(value) != 0):
-                raise self.PhysicsObjectError, \
-                    "Massless particle %s cannot decay." % self['name']
+            if (abs(eval("mdl_"+self.get('mass'), globals()) == 0.)) and (len(value) != 0):
+                raise self.PhysicsObjectError("Massless particle %s cannot decay." % self['name'])
 
         for vert in value:
             # Reset the number of initial/final particles,
@@ -232,18 +230,16 @@ class DecayParticle(base_objects.Particle):
             if model:
                 # Calculate the total mass
                 total_mass = sum([abs(eval(model.get_particle(l['id']).get('mass'))) for l in vert['legs']])
-                ini_mass = abs(eval(self.get('mass')))
+                ini_mass = abs(eval("mdl_"+self.get('mass')))
                 
                 # Check the onshell condition
                 if (ini_mass.real > (total_mass.real - ini_mass.real))!=onshell:
-                    raise self.PhysicsObjectError, \
-                        "The on-shell condition is not satisfied."
+                    raise self.PhysicsObjectError("The on-shell condition is not satisfied.")
 
             for leg in vert.get('legs'):
                 # Check if all legs are label by true
                 if not leg.get('state'):
-                    raise self.PhysicsObjectError, \
-                        "The state of leg should all be true"
+                    raise self.PhysicsObjectError("The state of leg should all be true")
 
                 # Identify the initial particle
                 if leg.get('id') == self.get_pdg_code():
@@ -260,21 +256,18 @@ class DecayParticle(base_objects.Particle):
 
             # Check the number of final particles is the same as partnum
             if num_final != partnum:
-                raise self.PhysicsObjectError, \
-                    "The vertex is a %s -body decay, not a %s -body one."\
-                    % (str(num_final), str(partnum))
+                raise self.PhysicsObjectError("The vertex is a %s -body decay, not a %s -body one."\
+                    % (str(num_final), str(partnum)))
 
             # Check if there is any appropriate leg as initial particle.
             if num_ini == 0:
-                raise self.PhysicsObjectError, \
-                    "There is no leg satisfied the mother particle %s"\
-                    % str(self.get_pdg_code())
+                raise self.PhysicsObjectError("There is no leg satisfied the mother particle %s"\
+                    % str(self.get_pdg_code()))
 
             # Check if the vertex is radiation
             if radiation:
-                raise self.PhysicsObjectError, \
-                    "The vertex is radiactive for mother particle %s"\
-                    % str(self.get_pdg_code())
+                raise self.PhysicsObjectError("The vertex is radiactive for mother particle %s"\
+                    % str(self.get_pdg_code()))
 
         return True
 
@@ -288,47 +281,39 @@ class DecayParticle(base_objects.Particle):
 
         # Check if partnum is an integer.
         if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "Final particle number %s must be an integer." % str(partnum)
+            raise self.PhysicsObjectError("Final particle number %s must be an integer." % str(partnum))
         
         # Check if onshell condition is Boolean number.
         if not isinstance(onshell, bool):
-            raise self.PhysicsObjectError, \
-                "%s must be a Boolean number" % str(onshell)
+            raise self.PhysicsObjectError("%s must be a Boolean number" % str(onshell))
                 
         # Check if the value is a ChannelList
         if (not isinstance(value, ChannelList) and value):
-            raise self.PhysicsObjectError, \
-                "%s must be ChannelList type." % str(value)
+            raise self.PhysicsObjectError("%s must be ChannelList type." % str(value))
                 
 
         # Check if the partnum is correct for all channels in value
         if any(ch for ch in value if \
                    len(ch.get_final_legs()) != partnum):
-            raise self.PhysicsObjectError, \
-                "The final particle number of channel should be %d."\
-                % partnum
+            raise self.PhysicsObjectError("The final particle number of channel should be %d."\
+                % partnum)
         
         # Check if the initial particle in all channels are as self.
         if any(ch for ch in value if \
                    abs(ch.get_anti_initial_id()) != abs(self.get('pdg_code'))):
-            raise self.PhysicsObjectError, \
-                "The initial particle is not %d or its antipart." \
-                % self.get('pdg_code')
+            raise self.PhysicsObjectError("The initial particle is not %d or its antipart." \
+                % self.get('pdg_code'))
 
         # Check if the onshell condition is right
         if not (isinstance(model, base_objects.Model) or model == {}):
-            raise self.PhysicsObjectError, \
-                "%s must be a Model" % str(model)
+            raise self.PhysicsObjectError("%s must be a Model" % str(model))
         elif model:
             # Check if the mother particle is in the 'model'
-            if not (self.get_pdg_code() in model.get('particle_dict').keys()):
-                raise self.PhysicsObjectError, \
-                    "The model, %s, does not contain particle %s." \
-                    %(model.get('name'), self.get_name())
+            if not (self.get_pdg_code() in list(model.get('particle_dict').keys())):
+                raise self.PhysicsObjectError("The model, %s, does not contain particle %s." \
+                    %(model.get('name'), self.get_name()))
             if any([ch for ch in value if onshell != ch.get_onshell(model)]):
-                raise self.PhysicsObjectError, \
-                    "The onshell condition is not consistent with the model."
+                raise self.PhysicsObjectError("The onshell condition is not consistent with the model.")
         return True
 
 
@@ -340,13 +325,11 @@ class DecayParticle(base_objects.Particle):
         """
         # Check if partnum is an integer.
         if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "Final particle number %s must be an integer." % str(partnum)
+            raise self.PhysicsObjectError("Final particle number %s must be an integer." % str(partnum))
         
         # Check if the value is a DecayAmplitudeList
         if (not isinstance(value, DecayAmplitudeList) and value):
-            raise self.PhysicsObjectError, \
-                "%s must be DecayAmplitudeList type." % str(value)
+            raise self.PhysicsObjectError("%s must be DecayAmplitudeList type." % str(value))
                 
         return True
 
@@ -356,18 +339,15 @@ class DecayParticle(base_objects.Particle):
         if name == 'decay_vertexlist' or name == 'decay_channels':
             #Value must be a dictionary.
             if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                    "Decay_vertexlist or decay_channels %s must be a dictionary." % str(value)
+                raise self.PhysicsObjectError("Decay_vertexlist or decay_channels %s must be a dictionary." % str(value))
 
             # key must be two element tuple
             for key, item in value.items():
                 if not isinstance(key, tuple):
-                    raise self.PhysicsObjectError,\
-                        "Key %s must be a tuple." % str(key)
+                    raise self.PhysicsObjectError("Key %s must be a tuple." % str(key))
                 
                 if len(key) != 2:
-                    raise self.PhysicsObjectError,\
-                        "Key %s must have two elements." % str(key)
+                    raise self.PhysicsObjectError("Key %s must have two elements." % str(key))
                 
                 if name == 'decay_vertexlist':
                     self.check_vertexlist(key[0], key[1], item)
@@ -378,8 +358,7 @@ class DecayParticle(base_objects.Particle):
 
             #Value must be a dictionary.
             if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                    "Decay_amplitudes %s must be a dictionary." % str(value)
+                raise self.PhysicsObjectError("Decay_amplitudes %s must be a dictionary." % str(value))
 
             # For each key and item, check them with check_amplitudes
             for key, item in value.items():                
@@ -387,20 +366,17 @@ class DecayParticle(base_objects.Particle):
                     
         if name == 'vertexlist_found' or name == 'is_stable':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                    "Propery %s should be Boolean type." % name
+                raise self.PhysicsObjectError("Propery %s should be Boolean type." % name)
 
         if name == 'max_vertexorder':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Property %s should be int type." % name
+                raise self.PhysicsObjectError("Property %s should be int type." % name)
 
         # Check apx_decaywidth and apx_decaywidth_err
         if name == 'apx_decaywidth' or name == 'apx_decaywidth_err' \
                 or name == '2body_massdiff':
             if not isinstance(value, float) and not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                    "Property %s must be float type." % str(value)
+                raise self.PhysicsObjectError("Property %s must be float type." % str(value))
 
         super(DecayParticle, self).filter(name, value)
 
@@ -501,7 +477,7 @@ class DecayParticle(base_objects.Particle):
         # Write the decay table from 2-body decay.
         n = 2
         while n:
-            if n in self.get('decay_amplitudes').keys():
+            if n in list(self.get('decay_amplitudes').keys()):
                 # Do not print empty amplitudes
                 if len(self.get_amplitudes(n)):
                     # Titie line
@@ -575,15 +551,13 @@ class DecayParticle(base_objects.Particle):
         """
         
         #Raise error if self is not in model.
-        if not (self.get_pdg_code() in model.get('particle_dict').keys()):
-            raise self.PhysicsObjectError, \
-                    "The parent particle %s is not in the model %s." \
-                        % (self.get('name'), model.get('name'))
+        if not (self.get_pdg_code() in list(model.get('particle_dict').keys())):
+            raise self.PhysicsObjectError("The parent particle %s is not in the model %s." \
+                        % (self.get('name'), model.get('name')))
 
         #Raise error if option is not Boolean value
         if not isinstance(option, bool):
-            raise self.PhysicsObjectError, \
-                    "The option %s must be True or False." % str(option)
+            raise self.PhysicsObjectError("The option %s must be True or False." % str(option))
         
         #If 'vertexlist_found' is true and option is false,
         #no action is proceed.
@@ -692,8 +666,7 @@ class DecayParticle(base_objects.Particle):
             if self.check_channels(partnum, onshell, value_transform, model):
                 self['decay_channels'][(partnum, onshell)] = value_transform
         else:
-            raise self.PhysicsObjectError, \
-                "The input must be a list of diagrams."
+            raise self.PhysicsObjectError("The input must be a list of diagrams.")
 
     def get_max_level(self):
         """ Get the max channel level that the particle have so far. """
@@ -702,7 +675,7 @@ class DecayParticle(base_objects.Particle):
         # Initial value
         n = 2
         # Look at the amplitudes or channels to find the max_level
-        while self.get_amplitudes(n) or ((n,False) in self['decay_channels'].keys()):
+        while self.get_amplitudes(n) or ((n,False) in list(self['decay_channels'].keys())):
             n += 1
 
         # n is the failed value, return n-1.
@@ -713,14 +686,12 @@ class DecayParticle(base_objects.Particle):
            If no suitable amplitude is found, retun None.
         """
         if not isinstance(final_ids, list):
-            raise self.PhysicsObjectError,\
-                "The final particle ids %s must be a list of integer." \
-                %str(final_ids)
+            raise self.PhysicsObjectError("The final particle ids %s must be a list of integer." \
+                %str(final_ids))
 
         if any([not isinstance(i, int) for i in final_ids]):
-            raise self.PhysicsObjectError,\
-                "The final particle ids %s must be a list of integer." \
-                %str(final_ids)
+            raise self.PhysicsObjectError("The final particle ids %s must be a list of integer." \
+                %str(final_ids))
 
         # Sort the given id list first
         final_ids.sort()
@@ -742,8 +713,7 @@ class DecayParticle(base_objects.Particle):
         """
         #check the validity of arguments
         if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "The particle number %s must be an integer."  %str(partnum)
+            raise self.PhysicsObjectError("The particle number %s must be an integer."  %str(partnum))
 
         try:
             return self.get('decay_amplitudes')[partnum]
@@ -767,8 +737,7 @@ class DecayParticle(base_objects.Particle):
             if self.check_amplitudes(partnum, new_value):
                 self.decay_amplitudes[partnum] = new_value
         else:
-            raise self.PhysicsObjectError, \
-                "The input must be a list of decay amplitudes."
+            raise self.PhysicsObjectError("The input must be a list of decay amplitudes.")
         
               
     def find_channels(self, partnum, model, min_br=0):
@@ -796,16 +765,13 @@ class DecayParticle(base_objects.Particle):
 
         # Check validity of argument
         if not isinstance(partnum, int):
-            raise self.PhysicsObjectError, \
-                "Max final particle number %s should be integer." % str(partnum)
+            raise self.PhysicsObjectError("Max final particle number %s should be integer." % str(partnum))
         if not isinstance(model, DecayModel):
-            raise self.PhysicsObjectError, \
-                "The second argument %s should be a DecayModel object." \
-                % str(model)            
+            raise self.PhysicsObjectError("The second argument %s should be a DecayModel object." \
+                % str(model))            
         if not self in model['particles']:
-            raise self.PhysicsObjectError, \
-                "The model %s does not contain particle %s" \
-                % (model.get('name'), self.get('name'))
+            raise self.PhysicsObjectError("The model %s does not contain particle %s" \
+                % (model.get('name'), self.get('name')))
 
         # If vertexlist has not been found before, run model.find_vertexlist
         if not model['vertexlist_found']:
@@ -816,8 +782,8 @@ class DecayParticle(base_objects.Particle):
         model.get('stable_particles')
 
         # If the channel list exist, return.
-        if (partnum, True) in self['decay_channels'].keys() or \
-                (partnum, False) in self['decay_channels'].keys():
+        if (partnum, True) in list(self['decay_channels'].keys()) or \
+                (partnum, False) in list(self['decay_channels'].keys()):
             logger.info("Particle %s has found channels in %d-body level. " \
                             % (self['name'], partnum) +\
                         "No channel search will not proceed." )
@@ -876,8 +842,8 @@ class DecayParticle(base_objects.Particle):
         check_repeat = self.check_repeat
 
         # If there is a vertex in clevel, construct it
-        if (clevel, True) in self['decay_vertexlist'].keys() or \
-                (clevel, False) in self['decay_vertexlist'].keys():
+        if (clevel, True) in list(self['decay_vertexlist'].keys()) or \
+                (clevel, False) in list(self['decay_vertexlist'].keys()):
             for vert in (self.get_vertexlist(clevel, True) + \
                              self.get_vertexlist(clevel, False)):
                 
@@ -1152,7 +1118,7 @@ class DecayParticle(base_objects.Particle):
         # further speed improve, store the tag and avoid to recompute the final mass.
         if not hasattr(self, 'check_repeat_tag'):
             self.check_repeat_tag = {(clevel,onshell): {}}
-        elif not (clevel,onshell) in  self.check_repeat_tag.keys():
+        elif not (clevel,onshell) in  list(self.check_repeat_tag.keys()):
             self.check_repeat_tag[(clevel,onshell)] =  {}
       
         tag = channel.get('tag')
@@ -1180,17 +1146,16 @@ class DecayParticle(base_objects.Particle):
         """
 
         if not isinstance(clevel, int):
-            raise self.PhysicsObjectError, \
-                "The channel level %s must be an integer." % str(clevel)
+            raise self.PhysicsObjectError("The channel level %s must be an integer." % str(clevel))
 
         if not isinstance(model, DecayModel):
-            raise self.PhysicsObjectError, \
-                "The model must be an DecayModel object."
+            raise self.PhysicsObjectError("The model must be an DecayModel object.")
 
         # Reset the value of decay_amplitudes
         self.set_amplitudes(clevel, DecayAmplitudeList())
         # Sort the order of onshell channels according to their final mass list.
-        self.get_channels(clevel, True).sort(channelcmp_final)
+        self.get_channels(clevel, True).sort(key=lambda x: x["final_mass_list"], 
+                                             reverse=True)
 
         total_width = self.get('apx_decaywidth')
         for channel in self.get_channels(clevel, True):
@@ -1228,7 +1193,9 @@ class DecayParticle(base_objects.Particle):
                 if br.real < min_br:
                     self.decay_amplitudes[clevel].remove(amp)
                 
-        self.get_amplitudes(clevel).sort(amplitudecmp_width)
+        self.get_amplitudes(clevel).sort(key=lambda x: x['apx_decaywidth'].real,
+                                         reverse=True)
+
 
 
 
@@ -1352,7 +1319,7 @@ class DecayModel(model_reader.ModelReader):
         # Must set particles first so that the particle_dict
         # can point to DecayParticle
         # Futhermore, the set of interactions can have correct particle_dict
-        if 'particles' in init_dict.keys():
+        if 'particles' in list(init_dict.keys()):
             p =  init_dict['particles'][0]
             self.set('particles', init_dict['particles'], force)
 
@@ -1414,24 +1381,19 @@ class DecayModel(model_reader.ModelReader):
     def filter(self, name, value):
         if name == 'vertexlist_found':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                    "Property %s should be bool type." % name
+                raise self.PhysicsObjectError("Property %s should be bool type." % name)
         if name == 'max_vertexorder':
             if not isinstance(value, int):
-                raise self.PhysicsObjectError,\
-                    "Property %s should be int type." % name
+                raise self.PhysicsObjectError("Property %s should be int type." % name)
         if name == 'stable_particles' or name == 'decay_groups':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError,\
-                    "Property %s should be a list contains several particle list." % name
+                raise self.PhysicsObjectError("Property %s should be a list contains several particle list." % name)
             for plist in value:                
                 if not isinstance(plist, list):
-                    raise self.PhysicsObjectError,\
-                    "Property %s should be a list contains several particle list." % name
+                    raise self.PhysicsObjectError("Property %s should be a list contains several particle list." % name)
                 for p in plist:
                     if not isinstance(p, DecayParticle):
-                        raise self.PhysicsObjectError,\
-                            "Property %s should be a list contains several particle list." % name
+                        raise self.PhysicsObjectError("Property %s should be a list contains several particle list." % name)
 
         super(DecayModel, self).filter(name, value)
         
@@ -1532,8 +1494,7 @@ class DecayModel(model_reader.ModelReader):
             
         
         if not isinstance(number, int) or not isinstance(part, DecayParticle):
-            raise self.PhysicsObjectError, \
-                "Wrong argument types."
+            raise self.PhysicsObjectError("Wrong argument types.")
 
         amps = part.get_amplitudes(number)
         diagrams = sum([[d for d in amp['diagrams']] for amp in amps],[])
@@ -1545,8 +1506,7 @@ class DecayModel(model_reader.ModelReader):
             found = False
             for num, call in enumerate(calls):
                 if not call['helastag']:
-                    raise self.PhysicsObjectError, \
-                        "The helastag of helascalls should exist."
+                    raise self.PhysicsObjectError("The helastag of helascalls should exist.")
                 if call['helastag'] == helastag:
                     found = True
                     d['helas_number'] = num
@@ -1736,9 +1696,8 @@ class DecayModel(model_reader.ModelReader):
                     # (indication of mother appears in final state)
                     if temp_vertex in self.get_particle(pid)['decay_vertexlist'][(partnum, onshell)] and not force:
 
-                        raise self.PhysicsObjectError,\
-                            "found duplicated %d-point vertices in %s" \
-                            % (partnum+1, self.get_particle(pid)['name'])
+                        raise self.PhysicsObjectError("found duplicated %d-point vertices in %s" \
+                            % (partnum+1, self.get_particle(pid)['name']))
 
                     self.get_particle(pid)['decay_vertexlist'][(\
                             partnum, onshell)].append(temp_vertex)
@@ -1928,12 +1887,10 @@ class DecayModel(model_reader.ModelReader):
         
         # Raise error if the colorlist is not the right format.
         if not isinstance(colorlist, list):
-            raise self.PhysicsObjectError,\
-                "The argument must be a list."
+            raise self.PhysicsObjectError("The argument must be a list.")
 
         if any([not isinstance(i, int) for i in colorlist]):
-            raise self.PhysicsObjectError,\
-                "The argument must be a list of integer elements."
+            raise self.PhysicsObjectError("The argument must be a list of integer elements.")
 
         # Sort the colorlist and 
         colorlist.sort()
@@ -1975,9 +1932,9 @@ class DecayModel(model_reader.ModelReader):
 
         self.set_parameters_and_couplings(param_card)
         for param, value in self.get('parameter_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value))
+            exec("globals()[\'%s\'] = %s" % (param, value), globals())
         for param, value in self.get('coupling_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value))        
+            exec("globals()[\'%s\'] = %s" % (param, value), globals())        
 
         for particle in self.get('particles'):
             pid = abs(particle['pdg_code'])
@@ -1992,14 +1949,15 @@ class DecayModel(model_reader.ModelReader):
     def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
         
+        # Raise error for wrong type of q
+        if not isinstance(q, int) and not isinstance(q, int) and \
+                not isinstance(q, float):
+            raise self.PhysicsObjectError("The argument %s should be numerical type." %str(q))
+
         if q < 0.5:
             return
 
-        # Raise error for wrong type of q
-        if not isinstance(q, int) and not isinstance(q, long) and \
-                not isinstance(q, float):
-            raise self.PhysicsObjectError, \
-                "The argument %s should be numerical type." %str(q)
+
 
         # Declare global value. amZ0 is the alpha_s at Z pole
         global aS, amZ0, mdl_amZ0
@@ -2007,7 +1965,7 @@ class DecayModel(model_reader.ModelReader):
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
-                                                func.expr))
+                                                func.expr), globals())
 
         # Setup the alpha_s at different scale
         amt = 0.
@@ -2133,7 +2091,7 @@ class DecayModel(model_reader.ModelReader):
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
-                                                func.expr))
+                                                func.expr),  globals())
 
         # External parameters that must be recalculate for different energy
         # scale.
@@ -2154,7 +2112,7 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate derived parameters
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
         for param in derived_parameters:
-            exec("globals()[\'%s\'] = %s" % (param.name, param.expr))
+            exec("globals()[\'%s\'] = %s" % (param.name, param.expr), globals())
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
@@ -2181,7 +2139,7 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate all couplings
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
         for coup in couplings:
-            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr))
+            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr), globals())
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
                                                              coup.expr))
@@ -2593,7 +2551,7 @@ class DecayModel(model_reader.ModelReader):
                     # for loop to create errors.
                     # If the value is normal int, the particle in this position 
                     # is valid. Else, it is already removed. 
-                    ref_list = range(len(inter['particles']))
+                    ref_list = list(range(len(inter['particles'])))
                     for i, part in enumerate(inter['particles']):
                         try:
                             group_ids.append([n for (n,g) in \
@@ -2892,8 +2850,7 @@ class DecayModel(model_reader.ModelReader):
 
         # Raise error if precision is not a float
         if not isinstance(precision, float):
-            raise self.PhysicsObjectError, \
-                "The precision %s should be float type." % str(precision)
+            raise self.PhysicsObjectError("The precision %s should be float type." % str(precision))
 
         # If vertexlist has not been found before, run model.find_vertexlist
         if not self['vertexlist_found']:
@@ -2990,8 +2947,7 @@ class DecayModel(model_reader.ModelReader):
                             % str(os.path.join(path, name)))
 
         else:
-            raise PhysicsObjectError,\
-                "The file name of the decay table must be str." % str(name)
+            raise PhysicsObjectError("The file name of the decay table must be str." % str(name))
 
         summary_chart = ''
         summary_chart = (str('# DECAY WIDTH COMPARISON \n') +\
@@ -3100,8 +3056,7 @@ class DecayModel(model_reader.ModelReader):
                                                name))))
 
         else:
-            raise PhysicsObjectError,\
-                "The file name of the decay table must be str." % str(name)
+            raise PhysicsObjectError("The file name of the decay table must be str." % str(name))
 
         # Write the param_card used first
         fdata0 = open(mother_card_path, 'r')
@@ -3235,8 +3190,7 @@ class DecayModel(model_reader.ModelReader):
                                                name))))
 
         else:
-            raise PhysicsObjectError,\
-                "The file name of the decay table must be str." % str(name)
+            raise PhysicsObjectError("The file name of the decay table must be str." % str(name))
 
 
         collection = ''
@@ -3269,19 +3223,18 @@ class DecayModel(model_reader.ModelReader):
            compare the width with our estimation."""
 
         if not os.path.isfile(param_card):
-            raise MadGraph5Error, \
-                "No such file %s" % param_card
+            raise MadGraph5Error("No such file %s" % param_card)
     
         # Read in param_card
         logger.info("\nRead MG4 param_card: %s \n" % str(param_card))
         param_lines = open(param_card, 'r').read().split('\n')
 
         # Define regular expressions
-        re_decay = re.compile(\
+        re_decay = re_module.compile(\
             "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
-        re_two_body_decay = re.compile(\
+        re_two_body_decay = re_module.compile(\
             "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
-        re_three_body_decay = re.compile(\
+        re_three_body_decay = re_module.compile(\
             "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
 
         # Define the decay pid, total width
@@ -3430,14 +3383,12 @@ class Channel(base_objects.Diagram):
                     'apx_decaywidth', 'apx_br',
                     'apx_decaywidth_nextlevel']:
             if not isinstance(value, float):
-                raise self.PhysicsObjectError, \
-                    "Value %s is not a float" % str(value)
+                raise self.PhysicsObjectError("Value %s is not a float" % str(value))
         
         if name == 'onshell' or name == 'has_idpart' or \
                 name == 'apx_width_calculated':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid onshell condition." % str(value)
+                raise self.PhysicsObjectError("%s is not a valid onshell condition." % str(value))
 
         return super(Channel, self).filter(name, value)
     
@@ -3523,7 +3474,7 @@ class Channel(base_objects.Diagram):
             self['ini_pid'] = model.get_particle(self.get_anti_initial_id()).get_anti_pdg_code()
             return self['ini_pid']
         else:
-            raise self.PhysicsObjectError, "No model is provided to get initial id."
+            raise self.PhysicsObjectError("No model is provided to get initial id.")
 
     def check_gauge_dependence(self, model):
         """ compare the vertex ids to see if anyone of them may be illed."""
@@ -3569,8 +3520,7 @@ class Channel(base_objects.Diagram):
         if not isinstance(self['onshell'], bool):
             # Check if model is valid
             if not isinstance(model, base_objects.Model):
-                raise self.PhysicsObjectError, \
-                    "The argument %s must be a model." % str(model)
+                raise self.PhysicsObjectError("The argument %s must be a model." % str(model))
 
             self['final_mass_list'] =sorted([abs(eval(model.get_particle(l.get('id')).get('mass'))) \
                                                 for l in self.get_final_legs()])
@@ -3647,8 +3597,7 @@ class Channel(base_objects.Diagram):
 
                 # Check if this vertex has the right order
                 if fermion_mother['id'] != mother_code:
-                    raise PhysicsObjectError, \
-                        "The order of particle in interaction is not standard."
+                    raise PhysicsObjectError("The order of particle in interaction is not standard.")
 
             # Refind the fermion_order except for initial vertex
             if i != len(self['vertices'])-2:
@@ -3999,8 +3948,8 @@ class Channel(base_objects.Diagram):
         
     @classmethod
     def init_regular_expression(cls):
-        dico = dict((`i`, '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
-        cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+        dico = dict((repr(i), '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
+        cls.lor_pattern = re_module.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
                                         Gamma5\(%(2)s\)|
@@ -4012,7 +3961,7 @@ class Channel(base_objects.Diagram):
                                         ProjP\(%(2)s\)|
                                         P\(%(2)s\)
                                 )
-        """ % dico, re.VERBOSE)
+        """ % dico, re_module.VERBOSE)
 
 
     def get_apx_matrixelement_sq(self, model):
@@ -4086,15 +4035,28 @@ class Channel(base_objects.Diagram):
                 # Evaluate the coupling strength
                 vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
                 lorentz_factor = 0
+
+                for fct in model['functions']:
+                    if ';' in fct.expr:
+                        raise Exception('; is not allowed in function_library')
+                    exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                    exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
                 for key, v in vertex['couplings'].items():
                     if not hasattr(model, 'lorentz_dict'):
                         model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
                         self.init_regular_expression()
+                    
+                    lorentz =  model.lorentz_dict[vertex['lorentz'][key[1]]]
+                    structure = lorentz.structure
+                    if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+                        for ff in lorentz.formfactors:
+                            structure = structure.replace(ff.name, '(%s)' % ff.value)
                         
-                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
-                    lor_value = eval(new_structure % q_dict_lor)
+
+                    lor_value = eval(new_structure % q_dict_lor, locals(), globals())
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
@@ -4131,6 +4093,12 @@ class Channel(base_objects.Diagram):
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
         else:
+            for fct in model['functions']:
+                if ';' in fct.expr:
+                    raise Exception('; is not allowed in function_library')
+                exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
             M = abs(eval(ini_part.get('mass')))
             # The avg_E is lower by one more particle in the next-level.
             avg_E = (M/(len(self.get_final_legs())+1.))
@@ -4170,7 +4138,7 @@ class Channel(base_objects.Diagram):
 
                     try:                    
                         lor_value = eval(new_structure % q_dict_lor)
-                    except NameError , error:
+                    except NameError as error:
                         ufo_struct = model.lorentz_dict[vertex['lorentz'][key[1]]]
 
                         for obj in ufo_struct.formfactors:
@@ -4178,10 +4146,10 @@ class Channel(base_objects.Diagram):
                                                          obj.value)
                             while True:
                                 try:
-                                    exec('%s=%s' % (obj.name, val % q_dict_lor))
-                                except NameError, error:
+                                    exec('%s=%s' % (obj.name, val % q_dict_lor), globals())
+                                except NameError as error:
                                     failname = str(error).split("'")[1]
-                                    exec('%s=mdl_%s' % (failname, failname))
+                                    exec('%s=mdl_%s' % (failname, failname), globals())
                                 else:
                                     break
                         lor_value = eval(new_structure % q_dict_lor)
@@ -4594,27 +4562,23 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         if name == 'process':
             if not isinstance(value, base_objects.Process):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid Process object." % str(value)
+                raise self.PhysicsObjectError("%s is not a valid Process object." % str(value))
             # Reset the width and br
             self.reset_width_br()
 
         if name == 'diagrams':
             if not isinstance(value, ChannelList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid ChannelList object." % str(value)
+                raise self.PhysicsObjectError("%s is not a valid ChannelList object." % str(value))
             # Reset the width and br
             self.reset_width_br()
 
         if name == 'apx_decaywidth' and name == 'apx_br':
             if not isinstance(value, float):
-                raise self.PhysicsObjectError, \
-                        "%s is not a float." % str(value)
+                raise self.PhysicsObjectError("%s is not a float." % str(value))
 
         if name == 'exa_decaywidth':
             if not isinstance(value, float) and not isinstance(value,bool):
-                raise self.PhysicsObjectError, \
-                        "%s is not a float." % str(value)
+                raise self.PhysicsObjectError("%s is not a float." % str(value))
 
         return True
 
@@ -4653,8 +4617,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # Check the number of initial leg is 1
         if dia['vertices'][-1]['legs'][-1]['number'] != 1:
-            raise self.PhysicsObjectError, \
-                "The number of initial leg should be setted as 1."
+            raise self.PhysicsObjectError("The number of initial leg should be setted as 1.")
 
         # Append the initial leg.
         leglist = base_objects.LegList([base_objects.Leg({'id': dia.get_initial_id(model),
@@ -4663,7 +4626,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         # Extract legs from final legs of Channel.
         leglist.extend(base_objects.LegList(\
                 copy.deepcopy(sorted([l for l in dia.get_final_legs()], 
-                                     legcmp_bynumber))))
+                                     key=lambda x: x["number"]))))
+                                     
             
         # Set up process and model.
         self.set('process', base_objects.Process({'legs':leglist}))
@@ -4675,14 +4639,12 @@ class DecayAmplitude(diagram_generation.Amplitude):
             of outgoing legs are consistent with the process."""
 
         if not isinstance(new_dia, Channel):
-            raise self.PhysicsObjectError,\
-                "The argument should be Channel object."
+            raise self.PhysicsObjectError("The argument should be Channel object.")
 
         # Model must be provided in argument or in self['process']
         if not model:
             if not self['process']['model']:
-                raise self.PhysicsObjectError,\
-                    "No model is given either in argument or in process."
+                raise self.PhysicsObjectError("No model is given either in argument or in process.")
             else:
                 model = self['process']['model']
 
@@ -4705,12 +4667,14 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # initial leg
         non_std_numbers.append((new_dia.get_initial_id(model), 1))
-        non_std_numbers.sort(id_num_cmp)
+        import operator
+        non_std_numbers.sort(key = operator.itemgetter(0, 1))
+        #non_std_numbers.sort(id_num_cmp)
 
         # std_number: numbers of legs in process
         std_numbers = [(l.get('id'),l.get('number')) \
                            for l in sorted(self['process']['legs'])]
-        std_numbers.sort(id_num_cmp)
+        std_numbers.sort(key = operator.itemgetter(0, 1))
 
         # Return if the numbers in diagram is the same as process
         if non_std_numbers == std_numbers:
@@ -4819,8 +4783,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # Raise error if format is wrong
         else:
-            raise self.PhysicsObjectError,\
-                "Format %s must be \'normal\' or \'full\'." % str(format)
+            raise self.PhysicsObjectError("Format %s must be \'normal\' or \'full\'." % str(format))
 
         # Return output for full format case.
         return output
@@ -5003,8 +4966,7 @@ class AbstractModel(base_objects.Model):
             else:
                 return self['particle_type_dict'][abs(part)][1]
         else:
-            raise self.PhysicsObjectError, \
-                "Input should be Particle type or pdg_code(int)."
+            raise self.PhysicsObjectError("Input should be Particle type or pdg_code(int).")
 
 
     def get_particle_type_code(self, part):
@@ -5032,8 +4994,7 @@ class AbstractModel(base_objects.Model):
 
         # Check argument type
         if not force and not isinstance(pdg_code, int):
-            raise self.PhysicsObjectError,\
-                "Argument must be a pdg_code."
+            raise self.PhysicsObjectError("Argument must be a pdg_code.")
 
         # To ensure pdg_code is positive
         pdg_code = abs(pdg_code)
@@ -5046,7 +5007,7 @@ class AbstractModel(base_objects.Model):
 
         # Check the current abstract_particles
         if self.get_particle_type(pdg_code) \
-                in self['abstract_particles_dict'].keys():
+                in list(self['abstract_particles_dict'].keys()):
             # For existing type, record the serial number
             sn = len(self['abstract_particles_dict']\
                          [self.get_particle_type(pdg_code)])
@@ -5113,8 +5074,7 @@ class AbstractModel(base_objects.Model):
 
         # Check argument type
         if not force and not isinstance(part, base_objects.Particle):
-            raise self.PhysicsObjectError,\
-                "Argument must be a Particle object."
+            raise self.PhysicsObjectError("Argument must be a Particle object.")
 
         # Setup the particle_type_dict for all particle
         self['particle_type_dict'][part['pdg_code']] = \
@@ -5122,7 +5082,7 @@ class AbstractModel(base_objects.Model):
              self.get_particle_type(part, get_code=True))
 
         if self.get_particle_type(part) \
-                not in self['abstract_particles_dict'].keys():
+                not in list(self['abstract_particles_dict'].keys()):
             # if not found in existing particle, create a new abstract particle
             self.add_ab_particle(part['pdg_code'], force)
 
@@ -5133,8 +5093,7 @@ class AbstractModel(base_objects.Model):
 
         # Check argument type
         if not force and not isinstance(part_list, base_objects.ParticleList):
-            raise self.PhysicsObjectError,\
-                "Argument must be a ParticleList."
+            raise self.PhysicsObjectError("Argument must be a ParticleList.")
 
         # Call add_particle for each particle
         for part in part_list:
@@ -5170,16 +5129,16 @@ class AbstractModel(base_objects.Model):
         input_pdgcode_list = copy.copy(pdgcode_list)
         if std_output:
             # List of indices to record the original order
-            original_order = range(len(pdgcode_list))
+            original_order = list(range(len(pdgcode_list)))
 
             # Sort according to (particle_type, real_pid) of input_pdgcode_list
-            temp = zip(input_pdgcode_list, original_order)
+            temp = list(zip(input_pdgcode_list, original_order))
             temp.sort(key=lambda item: \
                           (self.get_particle_type(item[0]),item[0]))
             try:
-                input_pdgcode_list, original_order = zip(*temp)
+                input_pdgcode_list, original_order = list(zip(*temp))
             except:
-                print original_order, pdgcode_list
+                print(original_order, pdgcode_list)
 
         # Construct the abstract pid list
         for i, pdg_code in enumerate(input_pdgcode_list):
@@ -5196,7 +5155,7 @@ class AbstractModel(base_objects.Model):
             # appearing in the list.
             # There should be a abstract particle for this type,
             # if the setup_particles has been run correctly.
-            if not part_type in serial_number_dict.keys():
+            if not part_type in list(serial_number_dict.keys()):
                 pseudo_ab_particlelist.append(\
                         part_type_code)
 
@@ -5249,9 +5208,9 @@ class AbstractModel(base_objects.Model):
         # For std_output, reorder the pseudo_ab_particlelist
         # to be the same as pdgcode_list
         if std_output:
-            temp = zip(original_order, pseudo_ab_particlelist)
+            temp = list(zip(original_order, pseudo_ab_particlelist))
             temp.sort()
-            original_order, pseudo_ab_particlelist = zip(*temp)
+            original_order, pseudo_ab_particlelist = list(zip(*temp))
             pseudo_ab_particlelist = list(pseudo_ab_particlelist)
 
         return pseudo_ab_particlelist, serial_number_dict
@@ -5276,9 +5235,8 @@ class AbstractModel(base_objects.Model):
         try:
             return self['interaction_type_dict'][inter_id]
         except KeyError:
-            raise self.PhysicsObjectError, \
-                "Interaction #%d has not been imported into AbstractModel." \
-                % inter_id
+            raise self.PhysicsObjectError("Interaction #%d has not been imported into AbstractModel." \
+                % inter_id)
 
 
     def add_ab_interaction(self, inter_id, force=False, color = None):
@@ -5289,8 +5247,7 @@ class AbstractModel(base_objects.Model):
 
         # Check argument type
         if not force and not isinstance(inter_id, int):
-            raise self.PhysicsObjectError,\
-                "Argument must be an Interaction id."
+            raise self.PhysicsObjectError("Argument must be an Interaction id.")
         
         # Setup new interaction
         ab_inter = base_objects.Interaction()
@@ -5298,7 +5255,7 @@ class AbstractModel(base_objects.Model):
 
         # Check the current abstract_interactions
         if inter_type in \
-                self['abstract_interactions_dict'].keys():
+                list(self['abstract_interactions_dict'].keys()):
             # For existing type, record the serial number
             sn = len(self['abstract_interactions_dict'][inter_type])
         else:
@@ -5310,7 +5267,7 @@ class AbstractModel(base_objects.Model):
 
         # Type_sn is the serial number of the type
         if sn == 0:
-            type_sn = len(self['abstract_interactions_dict'].keys())
+            type_sn = len(list(self['abstract_interactions_dict'].keys()))
         else:
             type_sn = \
                 self['abstract_interactions_dict'][inter_type][0]['id']/1000
@@ -5335,8 +5292,7 @@ class AbstractModel(base_objects.Model):
             ab_inter['color'] = \
                 self['abstract_interactions_dict'][inter_type][0]['color']
         else:
-            raise self.PhysicsObjectError,\
-                "Error to add interaction. No color information available."
+            raise self.PhysicsObjectError("Error to add interaction. No color information available.")
 
         # couplings = G###cl##
         #              |  || |-> the serial number
@@ -5372,8 +5328,7 @@ class AbstractModel(base_objects.Model):
         # Check argument type
         if not force and not isinstance(inter_list, 
                                         base_objects.InteractionList):
-            raise self.PhysicsObjectError,\
-                "Argument must be an InteractionList."
+            raise self.PhysicsObjectError("Argument must be an InteractionList.")
 
         # Add all interactions except for
         # 1. radiation interaction, 2. interaction with all stable particles
@@ -5501,7 +5456,7 @@ class AbstractModel(base_objects.Model):
         for inter in inter_list:
 
             # Ignore interactions that cannot decay
-            if inter['id'] not in self['interaction_type_dict'].keys():
+            if inter['id'] not in list(self['interaction_type_dict'].keys()):
                 continue
 
             # Update the type dict
@@ -5534,7 +5489,7 @@ class AbstractModel(base_objects.Model):
         for inter in inter_list:
             # For possible anti-interaction, 
             # Update the interaction_type_dict, interaction_coupling_dict
-            if inter['id'] in anti_dict.keys():
+            if inter['id'] in list(anti_dict.keys()):
                     anti_inter_id = anti_dict[inter['id']]                    
             else:
                 continue
@@ -5583,7 +5538,7 @@ class AbstractModel(base_objects.Model):
             # appearing in the list.
             # There should be a abstract interaction for this type,
             # if the setup_interactions has been run correctly.
-            if not inter_type in serial_number_dict.keys():
+            if not inter_type in list(serial_number_dict.keys()):
                 pseudo_ab_interlist.append(\
                         inter_type_code)
 
@@ -5643,11 +5598,9 @@ class AbstractModel(base_objects.Model):
         """
 
         if not isinstance(ab_dia, Channel) or not isinstance(real_dia, Channel):
-            raise self.PhysicsObjectError,\
-                "The first two argument are not Channel objects."
+            raise self.PhysicsObjectError("The first two argument are not Channel objects.")
         if ab2realdict != None and not isinstance(ab2realdict, Ab2RealDict):
-            raise self.PhysicsObjectError,\
-                "The final argument should be Ab2RealDict, otherwise should be omitted."
+            raise self.PhysicsObjectError("The final argument should be Ab2RealDict, otherwise should be omitted.")
             
 
         # Interaction id list
@@ -5718,11 +5671,9 @@ class AbstractModel(base_objects.Model):
         The abstract_type of abstract diagram is constructed. """
 
         if not isinstance(ab_amp, DecayAmplitude):
-            raise self.PhysicsObjectError,\
-                "The first argument  is not DecayAmplitude object."
+            raise self.PhysicsObjectError("The first argument  is not DecayAmplitude object.")
         if not isinstance(real_dia, Channel):
-            raise self.PhysicsObjectError,\
-                "The second argument is not Channel object."
+            raise self.PhysicsObjectError("The second argument is not Channel object.")
 
         ab_dia = Channel({'onshell': True})
         ab_dia['vertices'] = copy.deepcopy(real_dia['vertices'])
@@ -5862,7 +5813,7 @@ class AbstractModel(base_objects.Model):
                 # Check diagrams in abstract amplitude
                 for j, ab_dia in enumerate(ab_amp['diagrams']):
 
-                    if not j in ab_amp['ab2real_dicts'][-1]['dia_sn_dict'].keys() and self.compare_diagrams(ab_dia, dia, ab_amp['ab2real_dicts'][-1]):
+                    if not j in list(ab_amp['ab2real_dicts'][-1]['dia_sn_dict'].keys()) and self.compare_diagrams(ab_dia, dia, ab_amp['ab2real_dicts'][-1]):
                         
                         # Update the dia_sn_dict
                         ab_amp['ab2real_dicts'][-1]['dia_sn_dict'][j] = i
@@ -5949,15 +5900,14 @@ class Ab2RealDict(base_objects.PhysicsObject):
         elif isinstance(ab_object, AbstractModel):
             ab_pids = ab_object.get_particlelist_type(real_pids, sn_dict = {ab_object.get_particle_type(ini_pid): 1})[0]
         else:
-            raise self.PhysicsObjectError, \
-                "The first argument is not necessary, otherwise it should be AbstractModel."
+            raise self.PhysicsObjectError("The first argument is not necessary, otherwise it should be AbstractModel.")
 
         # Reset final_legs_dict
         self['final_legs_dict'] = {}
 
         # So far, each ab_pid only has one real_pid
         for k, ab_pid in enumerate(ab_pids):
-            if not ab_pid in self['final_legs_dict'].keys():
+            if not ab_pid in list(self['final_legs_dict'].keys()):
                 self['final_legs_dict'][ab_pid] = real_pids[k]
             elif isinstance(self['final_legs_dict'][ab_pid], list):
                 logger.warning('multiple real id correspondence')
@@ -6035,6 +5985,7 @@ def legcmp(x, y):
 
 def legcmp_bynumber(x, y):
     """Define the leg comparison, useful in generation of process in DecayAmplitude."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['number'], y['number'])
     return mycmp
 
@@ -6057,18 +6008,21 @@ def channelcmp_final(x, y):
     """ Sort the channels by their final_mass_list. 
         This will be similar to sort by the final state particles."""
 
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['final_mass_list'], y['final_mass_list'])
 
     return -mycmp
 
 def amplitudecmp_width(x, y):
     """ Sort the amplitudes by their width."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x['apx_decaywidth'].real, y['apx_decaywidth'].real)
 
     return -mycmp
 
 def part_type_cmp(x, y):
     """ Sort the abstract particle type."""
+    misc.sprint("call to function not py3 compatible... you should not use it")
     mycmp = cmp(x[0], y[0])
 
     if mycmp == 0:
@@ -6078,7 +6032,8 @@ def part_type_cmp(x, y):
 
 def part_cmp(x, y):
     """ Sort the particle according to signed pdg_code."""
-
+    
+    misc.sprint("call to function not py3 compatible... you should not use it")
     return cmp(x.get_pdg_code(), y.get_pdg_code())
 
 

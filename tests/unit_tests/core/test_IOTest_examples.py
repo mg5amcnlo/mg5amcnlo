@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import tests.IOTests as IOTests
 import os 
 import shutil

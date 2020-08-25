@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
 from madgraph import core
 
 import copy
@@ -547,37 +548,37 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
         """Test automatic generation of wavefunction and amplitude calls"""
 
         goal = [ \
-            'CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,1))',
-            'CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,2))',
+            'CALL IXXXXX(P(0,4),me,NHEL(4),+1*IC(4),W(1,4))',
+            'CALL OXXXXX(P(0,5),me,NHEL(5),-1*IC(5),W(1,5))',
             'CALL VXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
-            'CALL FVOXXX(W(1,2),W(1,3),MGVX12,me,zero,W(1,1))',
-            'CALL FVIXXX(W(1,1),W(1,3),MGVX12,me,zero,W(1,2))',
-            'CALL JIOXXX(W(1,1),W(1,2),MGVX12,zero,zero,W(1,3))',
-            'CALL IOVXXX(W(1,1),W(1,2),W(1,3),MGVX12,AMP(1))',
-            'CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
-            'CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
+            'CALL FVOXXX(W(1,5),W(1,3),MGVX12,me,zero,W(1,4))',
+            'CALL FVIXXX(W(1,4),W(1,3),MGVX12,me,zero,W(1,5))',
+            'CALL JIOXXX(W(1,4),W(1,5),MGVX12,zero,zero,W(1,3))',
+            'CALL IOVXXX(W(1,4),W(1,5),W(1,3),MGVX12,AMP(1))',
+            'CALL VXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))',
+            'CALL VXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))',
             'CALL TXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
-            'CALL JVTAXX(W(1,2),W(1,3),MGVX2,zero,zero,W(1,1))',
-            'CALL JVTAXX(W(1,1),W(1,3),MGVX2,zero,zero,W(1,2))',
-            'CALL UVVAXX(W(1,1),W(1,2),MGVX2,zero,zero,zero,W(1,3))',
-            'CALL VVTAXX(W(1,1),W(1,2),W(1,3),MGVX2,zero,AMP(2))',
-            'CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
-            'CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))',
+            'CALL JVTAXX(W(1,5),W(1,3),MGVX2,zero,zero,W(1,4))',
+            'CALL JVTAXX(W(1,4),W(1,3),MGVX2,zero,zero,W(1,5))',
+            'CALL UVVAXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,3))',
+            'CALL VVTAXX(W(1,4),W(1,5),W(1,3),MGVX2,zero,AMP(2))',
+            'CALL VXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))',
+            'CALL VXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))',
             'CALL SXXXXX(P(0,3),-1*IC(3),W(1,3))',
             'CALL SXXXXX(P(0,4),-1*IC(4),W(1,4))',
-            'CALL JVSSXX(W(1,2),W(1,3),W(1,4),MGVX89,zero,zero,W(1,1))',
-            'CALL JVSSXX(W(1,1),W(1,3),W(1,4),MGVX89,zero,zero,W(1,2))',
-            'CALL HVVSXX(W(1,2),W(1,1),W(1,4),MGVX89,Musq2,Wusq2,W(1,3))',
-            'CALL HVVSXX(W(1,2),W(1,1),W(1,3),MGVX89,Musq2,Wusq2,W(1,4))',
-            'CALL VVSSXX(W(1,2),W(1,1),W(1,3),W(1,4),MGVX89,AMP(1))']
+            'CALL JVSSXX(W(1,5),W(1,3),W(1,4),MGVX89,zero,zero,W(1,4))',
+            'CALL JVSSXX(W(1,4),W(1,3),W(1,4),MGVX89,zero,zero,W(1,5))',
+            'CALL HVVSXX(W(1,5),W(1,4),W(1,4),MGVX89,Musq2,Wusq2,W(1,3))',
+            'CALL HVVSXX(W(1,5),W(1,4),W(1,3),MGVX89,Musq2,Wusq2,W(1,4))',
+            'CALL VVSSXX(W(1,5),W(1,4),W(1,3),W(1,4),MGVX89,AMP(1))']
 
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':11,
-                                           'number': 1,
+                                           'number': 4,
                                            'state':False}))
         myleglist.append(base_objects.Leg({'id':-11,
-                                           'number': 2,
+                                           'number': 5,
                                          'state':False}))
         myleglist.append(base_objects.Leg({'id':22,
                                            'number': 3,
@@ -621,10 +622,10 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
         myleglist = base_objects.LegList()
 
         myleglist.append(base_objects.Leg({'id':21,
-                                           'number': 1,
+                                           'number': 4,
                                            'state':False}))
         myleglist.append(base_objects.Leg({'id':21,
-                                           'number': 2,
+                                           'number': 5,
                                            'state':False}))
         myleglist.append(base_objects.Leg({'id': 8000002,
                                            'number': 3,

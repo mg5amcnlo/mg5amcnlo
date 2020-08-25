@@ -1,4 +1,6 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import collections
 import random
 import re
@@ -9,17 +11,50 @@ import time
 import os
 import shutil
 import sys
+import six
+from six.moves import filter
+from six.moves import range
+from six.moves import zip
+from functools import reduce
 
 pjoin = os.path.join
 
 if '__main__' == __name__:
     import sys
+    import os 
     sys.path.append('../../')
-import misc
+    root = os.path.dirname(__file__)
+    if os.path.basename(root) == 'internal':
+            __package__ = "internal"
+            sys.path.append(os.path.dirname(root))
+            import internal
+    else:
+        __package__ = "madgraph.various"
+
+try:
+    import madgraph
+except ImportError:
+    from . import misc
+    from . import banner as banner_mod
+else:
+    import madgraph.various.misc as misc
+    import madgraph.various.banner as banner_mod
 import logging
 import gzip
-import banner as banner_mod
+
+
+try:
+    import madgraph.various.hepmc_parser as hepmc_parser
+except Exception as error:
+    hepmc_parser = False
+    misc.sprint("No hepmc reader since", error)
+    pass
+
+
 logger = logging.getLogger("madgraph.lhe_parser")
+
+if six.PY3:
+    six.text_type = str
 
 class Particle(object):
     """ """
@@ -52,26 +87,20 @@ class Particle(object):
             if event:
                 self.event = event
             return
-        else:
-            try:
-                import madgraph.various.hepmc_parser as hepmc_parser
-            except Exception:
-                pass
-            else:
-                if isinstance(line, hepmc_parser.HEPMC_Particle):
-                    self.event = event
-                    self.event_id = len(event) #not yet in the event
-                    for key in ['pid', 'status', 'E','px','py','pz','mass']:
-                        setattr(self, key, getattr(line, key))
-                    self.mother1 = 1
-                    self.mother2 = 1
-                    self.color1 = 0
-                    self.color2 = 0
-                    self.vtim = 0
-                    self.comment = ''
-                    self.helicity = 9
-                    self.rwgt = 0
-                    return
+        elif hepmc_parser and isinstance(line, hepmc_parser.HEPMC_Particle):
+            self.event = event
+            self.event_id = len(event) #not yet in the event
+            for key in ['pid', 'status', 'E','px','py','pz','mass']:
+                setattr(self, key, getattr(line, key))
+            self.mother1 = 1
+            self.mother2 = 1
+            self.color1 = 0
+            self.color2 = 0
+            self.vtim = 0
+            self.comment = ''
+            self.helicity = 9
+            self.rwgt = 0
+            return
 
                 
         self.event = event
@@ -177,55 +206,57 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
     allow_empty_event = False
-
-    def __new__(self, path, mode='r', *args, **opt):
-        
-        if not path.endswith(".gz"):
-            return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
-        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
-            return EventFile.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            try:
-                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
-            except IOError, error:
-                raise
-            except Exception, error:
-                if mode == 'r':
-                    misc.gunzip(path)
-                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-
+    encoding = 'UTF-8'
 
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
 
+        if mode in ['r','rb']:
+            mode ='r'
+        self.mode = mode
+        
         self.to_zip = False
-        if path.endswith('.gz') and mode == 'w' and\
-                                              isinstance(self, EventFileNoGzip):
+        self.zip_mode = False
+        
+        if not path.endswith(".gz"):
+            self.file = open(path, mode, *args, **opt)
+        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
+            self.file = open(path[:-3], mode, *args, **opt)
             path = path[:-3]
-            self.to_zip = True # force to zip the file at close() with misc.gzip
+        else:            
+            try:
+                self.file =  gzip.GzipFile(path, mode, *args, **opt)
+                self.zip_mode =True
+            except IOError as error:
+                raise
+            except Exception as error:
+                misc.sprint(error)
+                if mode == 'r':
+                    misc.gunzip(path)
+                else:
+                    self.to_zip = True
+                self.file = open(path[:-3], mode, *args, **opt)
+                path = path[:-3]                
+
+
+        self.path = path
+
         
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
-        try:
-            super(EventFile, self).__init__(path, mode, *args, **opt)
-        except IOError:
-            if '.gz' in path and isinstance(self, EventFileNoGzip) and\
-                mode == 'r' and os.path.exists(path[:-3]):
-                super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
-            else:
-                raise
-                
+        
         self.banner = ''
-        if mode == 'r':
+        if mode in ['r', 'rb']:
             line = ''
             while '</init>' not in line.lower():
-                try:
-                    line  = super(EventFile, self).next()
-                except StopIteration:
+                line = self.file.readline()
+                if not line:
                     self.seek(0)
                     self.banner = ''
                     break 
-                if "<event" in line.lower():
+                if 'b' in mode or self.zip_mode:
+                    line = str(line.decode(self.encoding))
+                if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
                     break                     
@@ -241,6 +272,14 @@ class EventFile(object):
         output = banner.Banner()
         output.read_banner(self.banner)
         return output
+ 
+    @property
+    def name(self):
+        return self.file.name
+
+    @property
+    def closed(self):
+        return self.file.closed
 
     @property
     def cross(self):
@@ -255,7 +294,7 @@ class EventFile(object):
         return self._cross
     
     def __len__(self):
-        if self.closed:
+        if self.file.closed:
             return 0
         if hasattr(self,"len"):
             return self.len
@@ -268,54 +307,83 @@ class EventFile(object):
         self.seek(0)
         return self.len
 
+    def __iter__(self):
+        return self
+
     def next(self):
-        """get next event"""
-
+        
         if not self.eventgroup:
-            text = []
-            line = ''
-            mode = 0
-            while '</event>' not in line:
-                line = super(EventFile, self).next()
-                if '<event' in line:
-                    mode = 1
-                    text = []
-                if mode:
-                    text.append(line)
-            if self.parsing:
-                out = Event(text)
-                if len(out) == 0  and not self.allow_empty_event:
-                    raise Exception
-                return out
-            else:
-                return text
+            return self.next_event()
         else:
-            events = []
-            text = []
-            line = ''
-            mode = 0
-            while '</eventgroup>' not in line:
-                line = super(EventFile, self).next()
-                if '<eventgroup' in line:
-                    events=[]
-                    text = ''
-                elif '<event' in line:
-                    text = []
-                    mode = 1
-                elif '</event>' in line:
-                    if self.parsing:
-                        events.append(Event(text))
-                    else:
-                        events.append(text)
-                    text = []
-                    mode = 0
-                if mode:
-                    text.append(line)  
-            if len(events) == 0:
-                return self.next()
-            return events
-    
+            return self.next_eventgroup()
+        
+    __next__ = next
 
+    def next_event(self):        
+        
+        text = ''
+        line = ''
+        mode = 0
+        
+        while True:
+            # reading the next line of the file
+            line = self.file.readline()
+            if not line:
+                raise StopIteration
+            if 'b' in self.mode or self.zip_mode:
+                line = line.decode(self.encoding)
+            
+            if '<event' in line:
+                mode = 1
+                text = []
+            if mode:
+                text.append(line)
+                
+            if '</event>' in line:
+                if self.parsing:
+                    out = Event(text)
+                    if len(out) == 0  and not self.allow_empty_event:
+                        raise Exception
+                    return out
+                else:
+                    return text
+                
+                    
+    def next_eventgroup(self):
+        events = []
+        text = ''
+        line = ''
+        mode = 0
+        while '</eventgroup>' not in line:
+            
+            # reading the next line of the file
+            line = self.file.readline()
+            if not line:
+                raise StopIteration
+            if 'b' in self.mode:
+                line = line.decode(self.encoding)
+            
+            if '<eventgroup' in line:
+                events=[]
+                text = ''
+            elif '<event' in line:
+                text = []
+                mode=1
+            elif '</event>' in line:
+                if self.parsing:
+                    events.append(Event(text))
+                else:
+                    events.append('\n'.join(text))
+                    text = ''
+                    mode = 0
+            if mode:
+                text += line  
+        if len(events) == 0:
+            return self.next_eventgroup()
+
+        return events
+    
+    
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT
@@ -357,7 +425,8 @@ class EventFile(object):
         """
         if isinstance(event, Event):
             if self.eventgroup:
-                self.write('<eventgroup>\n%s\n</eventgroup>\n' % event)
+                tmp = '<eventgroup>\n%s\n</eventgroup>\n' % event
+                self.write(tmp)
             else:
                 self.write(str(event))
         elif isinstance(event, list):
@@ -382,13 +451,13 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, str):
+        elif isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
                 return event.reweight_data[unwgt_name]
         else:
-            unwgt_name = get_wgt.func_name
+            unwgt_name = get_wgt.__name__
 
         # check which weight to write
         if hasattr(self, "written_weight"):
@@ -582,9 +651,9 @@ class EventFile(object):
             nb_event += 1
             if opt["print_step"] and (nb_event % opt["print_step"]) == 0:
                 if hasattr(self,"len"):
-                    print("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start))
+                    print(("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start)))
                 else:
-                    print("currently at %s event [%is]" % (nb_event, time.time()-start))
+                    print(("currently at %s event [%is]" % (nb_event, time.time()-start)))
             for i in range(nb_fct):
                 value = fcts[i](event)
                 if not opt['no_output']:
@@ -613,9 +682,9 @@ class EventFile(object):
                 if not partition is None and (nb_file+1>len(partition)):
                     return nb_file
                 if zip:
-                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.name, nb_file)),'w')
+                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.path, nb_file)),'w')
                 else:
-                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.name, nb_file)),'w')                    
+                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.path, nb_file)),'w')                    
                 current.write(self.banner)
             current.write(str(event))
         if i!=0:
@@ -624,7 +693,7 @@ class EventFile(object):
              
         return nb_file +1
 
-    def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxint):
+    def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxsize):
         """take a HwU and add this event file for the function fct"""
                 
         if not isinstance(hwu, list):
@@ -646,7 +715,7 @@ class EventFile(object):
                     for h in hwu:
                         # register the variables
                         if isinstance(value, dict):
-                            h.add_line(value.keys())
+                            h.add_line(list(value.keys()))
                         else:
                         
                             h.add_line(name)
@@ -655,7 +724,7 @@ class EventFile(object):
                                 h.add_line(['%s_%s' % (name, key)
                                                     for key in event.reweight_data])
                             elif self.keep_wgt:
-                                h.add_line(self.keep_wgt.values())                            
+                                h.add_line(list(self.keep_wgt.values()))                            
                     self.first = False
                 # Fill the histograms
                 for h in hwu:
@@ -688,7 +757,7 @@ class EventFile(object):
                     if line.startswith('#'):
                         continue
                     data = line.split()
-                    print (int(data[0]), data[-3], data[-2], data[-1])
+                    print((int(data[0]), data[-3], data[-2], data[-1]))
                     yield (int(data[0]), data[-3], data[-2], data[-1])
         else:
             def next_data():
@@ -722,7 +791,7 @@ class EventFile(object):
                   "</header>\n")
         
         
-        nevt, smin, smax, scomp = sys_iterator.next()
+        nevt, smin, smax, scomp = next(sys_iterator)
         for i, orig_event in enumerate(self):
             if i < nevt:
                 continue
@@ -733,7 +802,7 @@ class EventFile(object):
                 new_event.syscalc_data['matchscale'] = "%s %s %s" % (smin, scomp, smax)
             out.write(str(new_event), nevt)
             try:
-                nevt, smin, smax, scomp = sys_iterator.next()
+                nevt, smin, smax, scomp = next(sys_iterator)
             except StopIteration:
                 break
             
@@ -799,32 +868,38 @@ class EventFile(object):
             
             
         return self.alpsrunner(scale)
-            
-            
-            
-        
-        
-        
     
-    
-class EventFileGzip(EventFile, gzip.GzipFile):
-    """A way to read/write a gzipped lhef event"""
-    
+    def seek(self, *args, **opts):
+        return self.file.seek(*args, **opts)
     
     def tell(self):
-        currpos = super(EventFileGzip, self).tell()
-        if not currpos:
-            currpos = self.size
-        return currpos
+        if self.zipmode:
+            currpos = self.file.tell()
+            if not currpos:
+                currpos = self.size
+            return currpos  
+        else: 
+            self.file.tell()          
+            
+    def write(self, text):
         
-class EventFileNoGzip(EventFile, file):
-    """A way to read a standard event file"""
-    
+        if self.zip_mode or 'b' in self.mode:
+            self.file.write(text.encode()) 
+        else:
+            self.file.write(text)           
+        
     def close(self,*args, **opts):
         
-        out = super(EventFileNoGzip, self).close(*args, **opts)
+        out = self.file.close(*args, **opts)
         if self.to_zip:
-            misc.gzip(self.name)
+            misc.gzip(self.path)
+            
+    def __del__(self):
+        try:
+            self.file.close()
+        except Exception:
+            pass
+        
     
 class MultiEventFile(EventFile):
     """a class to read simultaneously multiple file and read them in mixing them.
@@ -840,6 +915,7 @@ class MultiEventFile(EventFile):
         to only read all the files twice and not three times."""
         self.eventgroup = False
         self.files = []
+        #self.filesiter = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
         self.initial_nb_events = []
@@ -855,6 +931,7 @@ class MultiEventFile(EventFile):
                     self.add(p)
             else:
                 self.files = start_list
+                #self.filesiter = [f.__iter__() for f in self.files]
         self._configure = False
         
     def close(self,*args,**opts):
@@ -869,7 +946,6 @@ class MultiEventFile(EventFile):
         if across == 0:
             # No event linked to this channel -> so no need to include it
             return 
-        
         obj = EventFile(path)
         obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
@@ -881,19 +957,21 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(scale)
         self.files.append(obj)
+        #self.filesiter.append(obj.__iter__())
         if nb_event:
             obj.len = nb_event
         self._configure = False
         return obj
         
     def __iter__(self):
-        return self
-    
-    def next(self):
-
+        
         if not self._configure:
             self.configure()
-
+        return self
+            
+    def next(self):
+        if not self._configure:
+            self.configure()
         remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
         if remaining_event == 0:
             raise StopIteration
@@ -904,7 +982,7 @@ class MultiEventFile(EventFile):
             sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
-                event = obj.next()
+                event = next(obj)
                 if not self.eventgroup:
                     event.sample_scale = self.scales[i] # for file reweighting
                 else:
@@ -912,8 +990,10 @@ class MultiEventFile(EventFile):
                         evt.sample_scale = self.scales[i]
                 return event
         else:
-            raise Exception
+            raise StopIteration
+
     
+    __next__ = next
 
     def define_init_banner(self, wgt, lha_strategy, proc_charac=None):
         """define the part of the init_banner"""
@@ -925,7 +1005,7 @@ class MultiEventFile(EventFile):
         grouped_cross = {}
         grouped_error = {}
         for i,ff in enumerate(self.files):
-            filename = ff.name
+            filename = ff.path
             from_init = False
             Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')]
             if Pdir:
@@ -968,7 +1048,7 @@ class MultiEventFile(EventFile):
         if proc_charac and proc_charac['ninitial'] == 1:
             #special case for 1>N
             init_information = run_card.get_banner_init_information()
-            event = self.next()
+            event = next(self)
             init_information["idbmup1"] = event[0].pdg
             init_information["ebmup1"] = event[0].mass
             init_information["idbmup2"] = 0 
@@ -977,13 +1057,13 @@ class MultiEventFile(EventFile):
         else:
             # check special case without PDF for one (or both) beam
             if init_information["idbmup1"] in [0,9]:
-                event = self.next()
+                event = next(self)
                 init_information["idbmup1"]= event[0].pdg
                 if init_information["idbmup2"] == 0:
                     init_information["idbmup2"]= event[1].pdg
                 self.seek(0)
             if init_information["idbmup2"] in [0,9]:
-                event = self.next()
+                event = next(self)
                 init_information["idbmup2"] = event[1].pdg
                 self.seek(0)
         
@@ -1102,13 +1182,14 @@ class MultiEventFile(EventFile):
         (stop to write event when target is reached)
         """
 
-        if isinstance(get_wgt, str):
+
+        if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
                 return event.reweight_data[unwgt_name] * event.sample_scale
         else:
-            unwgt_name = get_wgt.func_name
+            unwgt_name = get_wgt.__name__
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
 
@@ -1145,7 +1226,12 @@ class MultiEventFile(EventFile):
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
         
-        if isinstance(path, str):
+        try:
+            str_type = (str,six.text_type)
+        except NameError:
+            str_type = (str)
+        
+        if isinstance(path, str_type):
             out = EventFile(path, 'w')
             if self.parsefile and not banner:    
                 banner = self.files[0].banner
@@ -1196,7 +1282,7 @@ class MultiEventFile(EventFile):
         """ """
         if self.parsefile:
             for f in self.files:
-                os.remove(f.name)
+                os.remove(f.path)
         else:
             for f in self.files:
                 os.remove(f)
@@ -1236,10 +1322,10 @@ class Event(list):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-        try:
+
+        if not isinstance(text, list):
             text = text.split('\n')
-        except Exception:
-            pass
+
         for line in text:
             line = line.strip()
             if not line: 
@@ -1393,8 +1479,8 @@ class Event(list):
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
                                       # the if is to create the order file on the flight
-            except ValueError, error:
-                raise Exception, 'Event File has unvalid weight. %s' % error
+            except ValueError as error:
+                raise Exception('Event File has unvalid weight. %s' % error)
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
@@ -1461,7 +1547,7 @@ class Event(list):
             
             info = Event.loweight_pattern.search(text)
             if not info:
-                raise Exception, '%s not parsed'% text
+                raise Exception('%s not parsed'% text)
             self.loweight={}
             self.loweight['n_qcd'] = int(info.group('nqcd'))
             self.loweight['ren_scale'] = float(info.group('ren_scale'))
@@ -1469,7 +1555,7 @@ class Event(list):
             self.loweight['tot_fact'] = float(info.group('totfact'))
             
             if info.group('idb1') == info.group('idb2'):
-                raise Exception, '%s not parsed'% text
+                raise Exception('%s not parsed'% text)
             
             if info.group('idb1') =="1":
                 args = info.group('beam1').split()
@@ -1597,8 +1683,8 @@ class Event(list):
                     else:
                         try:
                             setattr(new_particle, tag, self[nb_part + mother_id -1])
-                        except Exception, error:
-                            print error
+                        except Exception as error:
+                            print(error)
                             misc.sprint( self)
                             misc.sprint(nb_part + mother_id -1)
                             misc.sprint(tag)
@@ -1609,7 +1695,7 @@ class Event(list):
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
                 else:
-                    raise Exception, "Something weird happens. Please report it for investigation"
+                    raise Exception("Something weird happens. Please report it for investigation")
         # Need to correct the color information of the particle
         # first find the first available color index
         max_color=501
@@ -1747,7 +1833,7 @@ class Event(list):
         if not isinstance(filter, FourMomentum):
             pboost = FourMomentum()
             for p in self:
-                if filter(p):
+                if list(filter(p)):
                     pboost += p
         else:
             pboost = FourMomentum(pboost)
@@ -1789,22 +1875,21 @@ class Event(list):
             fourmass = FourMomentum(particle).mass
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception, "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass))
-            
+                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
                 
 
         if E/absE > threshold:
             logger.critical(self)
-            raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
+            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
         if px/abspx > threshold:
             logger.critical(self)
-            raise Exception, "Do not conserve Px %s, %s" % (px/abspx, px)         
+            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
         if py/abspy > threshold:
             logger.critical(self)
-            raise Exception, "Do not conserve Py %s, %s" % (py/abspy, py)
+            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
         if pz/abspz > threshold:
             logger.critical(self)
-            raise Exception, "Do not conserve Pz %s, %s" % (pz/abspz, pz)
+            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
             
         #2. check the color of the event
         self.check_color_structure() 
@@ -2007,7 +2092,7 @@ class Event(list):
             if part.status == 1: #final
                 try:
                     ind = order[1].index(part.pid)
-                except ValueError, error:
+                except ValueError as error:
                     if not allow_reversed:
                         raise error
                     else:
@@ -2021,7 +2106,7 @@ class Event(list):
             elif part.status == -1:
                 try:
                     ind = order[0].index(part.pid)
-                except ValueError, error:
+                except ValueError as error:
                     if not allow_reversed:
                         raise error
                     else:
@@ -2049,18 +2134,18 @@ class Event(list):
                 if particle.color1:
                     color_index[particle.color1] +=1
                     if -7 < particle.pdg < 0:
-                        raise Exception, "anti-quark with color tag"
+                        raise Exception("anti-quark with color tag")
                 if particle.color2:
                     color_index[particle.color2] +=1     
                     if 7 > particle.pdg > 0:
-                        raise Exception, "quark with anti-color tag"                
+                        raise Exception("quark with anti-color tag")                
                 
                 
         for key,value in color_index.items():
             if value > 2:
-                print self
-                print key, value
-                raise Exception, 'Wrong color_flow'           
+                print(self)
+                print(key, value)
+                raise Exception('Wrong color_flow')           
         
         
         #2. check that each parent present have coherent color-structure
@@ -2121,21 +2206,21 @@ class Event(list):
                 #only case is a epsilon_ijk structure.
                 if len(canticolors) + len(mcolors) != 3:
                     logger.critical(str(self))
-                    raise Exception, "Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs])              
+                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
                 else:
                     popup_index += canticolors
             elif manticolors != []:
                 #only case is a epsilon_ijk structure.
                 if len(ccolors) + len(manticolors) != 3:
                     logger.critical(str(self))
-                    raise Exception, "Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs])              
+                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
                 else:
                     popup_index += ccolors
 
             # Check that color popup (from epsilon_ijk) are raised only once
             if len(popup_index) != len(set(popup_index)):
                 logger.critical(self)
-                raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
+                raise Exception("Wrong color flow: identical poping-up index, %s" % (popup_index))
                
     def __eq__(self, other):
         """two event are the same if they have the same momentum. other info are ignored"""
@@ -2212,7 +2297,7 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, str):
+                if isinstance(k, (str, six.text_type)):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
@@ -2241,7 +2326,7 @@ class Event(list):
             if part.status == 1: #final
                 try:
                     ind = order[1].index(part.pid)
-                except ValueError, error:
+                except ValueError as error:
                     if not allow_reversed:
                         raise error
                     else:
@@ -2255,7 +2340,7 @@ class Event(list):
             elif part.status == -1:
                 try:
                     ind = order[0].index(part.pid)
-                except ValueError, error:
+                except ValueError as error:
                     if not allow_reversed:
                         raise error
                     else:
@@ -2344,60 +2429,13 @@ class Event(list):
         out = ''.join(out).replace('e','d')
         return out    
 
-class WeightFile(EventFile):
-    """A class to allow to read both gzip and not gzip file.
-       containing only weight from pythia --generated by SysCalc"""
-
-    def __new__(self, path, mode='r', *args, **opt):
-        if  path.endswith(".gz"):
-            try:
-                return gzip.GzipFile.__new__(WeightFileGzip, path, mode, *args, **opt)
-            except IOError, error:
-                raise
-            except Exception, error:
-                if mode == 'r':
-                    misc.gunzip(path)
-                return file.__new__(WeightFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            return file.__new__(WeightFileNoGzip, path, mode, *args, **opt)
-    
-    
-    def __init__(self, path, mode='r', *args, **opt):
-        """open file and read the banner [if in read mode]"""
-        
-        super(EventFile, self).__init__(path, mode, *args, **opt)
-        self.banner = ''
-        if mode == 'r':
-            line = ''
-            while '</header>' not in line.lower():
-                try:
-                    line  = super(EventFile, self).next()
-                except StopIteration:
-                    self.seek(0)
-                    self.banner = ''
-                    break 
-                if "<event" in line.lower():
-                    self.seek(0)
-                    self.banner = ''
-                    break                     
-
-                self.banner += line
-
-
-class WeightFileGzip(WeightFile, EventFileGzip):
-    pass
-
-class WeightFileNoGzip(WeightFile, EventFileNoGzip):
-    pass
-
-
 class FourMomentum(object):
     """a convenient object for 4-momenta operation"""
     
     def __init__(self, obj=0, px=0, py=0, pz=0, E=0):
         """initialize the four momenta"""
 
-        if obj is 0 and E:
+        if obj == 0 and E:
             obj = E
          
         if isinstance(obj, (FourMomentum, Particle)):
@@ -2411,7 +2449,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, str):
+        elif  isinstance(obj, (str, six.text_type)):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -2618,7 +2656,7 @@ class OneNLOWeight(object):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, str):
+        if isinstance(input, (str, six.text_type)):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -2893,7 +2931,7 @@ class NLO_PARTIALWEIGHT(object):
                 if pos < len(get_order[0]): #initial
                     try:
                         ind = order[0].index(pdgs[pos])
-                    except ValueError, error:
+                    except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
@@ -2909,7 +2947,7 @@ class NLO_PARTIALWEIGHT(object):
                 else: #final   
                     try:
                         ind = order[1].index(pdgs[pos])
-                    except ValueError, error:
+                    except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
@@ -2980,7 +3018,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, str):
+        if isinstance(input, (str,six.text_type)):
             self.parse(input)
         
             
@@ -3105,18 +3143,21 @@ class NLO_PARTIALWEIGHT(object):
 if '__main__' == __name__:   
     
     if False:
-        lhe = EventFile('unweighted_events.lhe.gz')
+        lhe = EventFile('unweighted_events.lhe')
         #lhe.parsing = False
         start = time.time()
         for event in lhe:
-            event.parse_lo_weight()
-        print 'old method -> ', time.time()-start
-        lhe = EventFile('unweighted_events.lhe.gz')
+            pass
+        s = time.time()
+        print(s-start)
+#            event.parse_lo_weight()
+#        print('old method -> ', time.time()-start)
+#        lhe = EventFile('unweighted_events.lhe.gz')
         #lhe.parsing = False
-        start = time.time()
-        for event in lhe:
-            event.parse_lo_weight_test()
-        print 'new method -> ', time.time()-start    
+#        start = time.time()
+#        for event in lhe:
+#            event.parse_lo_weight_test()
+#        print('new method -> ', time.time()-start)    
     
 
     # Example 1: adding some missing information to the event (here distance travelled)
@@ -3161,7 +3202,7 @@ if '__main__' == __name__:
                 nb_pass +=1     
 
                         
-        print nb_pass
+        print(nb_pass)
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
         gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
         ax = plt.subplot(gs1[0])
@@ -3173,8 +3214,8 @@ if '__main__' == __name__:
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
         ax.set_xlim([-4,4])
-        print "bin value:", n
-        print "start/end point of bins", bins
+        print("bin value:", n)
+        print("start/end point of bins", bins)
         plt.axis('on')
         plt.xlabel('weight ratio')
         plt.show()

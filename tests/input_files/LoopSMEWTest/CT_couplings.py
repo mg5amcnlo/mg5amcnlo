@@ -2,9 +2,11 @@
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
 # Date: Fri 18 Mar 2011 18:40:51
 
-from object_library import all_couplings, Coupling
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog
+from __future__ import absolute_import
+from .object_library import all_couplings, Coupling
+
+from .function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog
 
 ################
 # R2 couplings #

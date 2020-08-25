@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import logging.config
 import logging
 import pydoc
@@ -16,10 +17,10 @@ from madgraph import MG5DIR
 from madgraph import MadGraph5Error
 from madgraph.iolibs.files import cp
 #import madgraph.iolibs.save_load_object as save_load_object
-import loop_me_comparator
-import me_comparator
-from test_ML5 import procToFolderName
-from test_ML5EW import compare_processes
+from . import loop_me_comparator
+from . import me_comparator
+from .test_ML5 import procToFolderName
+from .test_ML5EW import compare_processes
 # The processes below are treated all together because they are relatively quick
 
 HCR_processes_short = []
@@ -183,7 +184,7 @@ if '__main__' == __name__:
         proc = HCR_processes_long_dic[savefile]
         proc_list.append(proc)
         res_list.append(loop_me_comparator.LoopMG5Runner.\
-        parse_check_output(file(os.path.join(HCRpath,savefile+'.dat'))))
+        parse_check_output(open(os.path.join(HCRpath,savefile+'.dat'))))
         runner = loop_me_comparator.LoopHardCodedRefRunner()
         runner.setup(proc_list,res_list,model)
         ML5MSSMQCDTest.create_pickle(proc_list,pickle_file,runner,ref_runner=None,\

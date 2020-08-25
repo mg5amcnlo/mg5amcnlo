@@ -15,6 +15,7 @@
 """Unit test Library for the objects in decay module."""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -35,6 +36,7 @@ import tests.input_files.import_vertexlist as import_vertexlist
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
+from six.moves import range
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -2953,7 +2955,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Subtest: test decay_objects.legcmp_bynumber
         l1 = base_objects.Leg({'number':1, 'id':10})
         l2 = base_objects.Leg({'number':2, 'id': 8})
-        sorted_legs = sorted([l2, l1], decay_objects.legcmp_bynumber)
+        sorted_legs = sorted([l2, l1], key=lambda x: x["number"])
         self.assertEqual([l1, l2], sorted_legs)
 
         # Note: initial id in process should be POSITIVE
@@ -3447,7 +3449,7 @@ class Test_AbstractModel(unittest.TestCase):
 
         # Check if new particle is in paticles and abstract_particles_dict
         self.assertTrue((4,6, True) in \
-                            ab_model['abstract_particles_dict'].keys())
+                            list(ab_model['abstract_particles_dict'].keys()))
         self.assertTrue(ab_model.get_particle(9914601))
 
         # Check properties
@@ -3541,7 +3543,7 @@ class Test_AbstractModel(unittest.TestCase):
 
             # Test if the abstract_interactions_dict has been established
             self.assertTrue(inter_type in \
-                                ab_model['abstract_interactions_dict'].keys())
+                                list(ab_model['abstract_interactions_dict'].keys()))
 
             # Test if the coupling_dict has been established
             for ab_key, real_coup in \
@@ -3565,7 +3567,7 @@ class Test_AbstractModel(unittest.TestCase):
 
             # Test anti interaction
             _has_anti = False
-            if inter['id'] in normal_sm['conj_int_dict'].keys():
+            if inter['id'] in list(normal_sm['conj_int_dict'].keys()):
                 _has_anti = True
             if _has_anti:
                 self.assertEqual(ab_model['interaction_type_dict'][normal_sm['conj_int_dict'][inter['id']]],
@@ -3586,9 +3588,9 @@ class Test_AbstractModel(unittest.TestCase):
 
         # Test if the lorentz and color types have no intersection
         # if the particles type are the same            
-        def lorentzcmp(x,y):
-            return cmp(x[1],y[1])
-        keylist = sorted(ab_model['abstract_interactions_dict'].keys(), lorentzcmp)
+        import operator
+        keylist = sorted(list(ab_model['abstract_interactions_dict'].keys()), 
+                         key=operator.itemgetter(1))
         #print normal_sm.get_particle(1000021)['self_antipart']
         #print "Interaction type (%d):" % len(keylist)
         #for k in keylist:

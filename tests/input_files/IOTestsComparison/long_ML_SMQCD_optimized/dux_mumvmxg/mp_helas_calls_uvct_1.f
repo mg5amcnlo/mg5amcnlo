@@ -80,17 +80,17 @@ C      if true.
       ENDIF
 
 C     Amplitude(s) for UVCT diagram with ID 14
-      CALL MP_FFV2_0(W(1,6),W(1,2),W(1,7),GC_47,AMPL(1,25))
-      AMPL(1,25)=AMPL(1,25)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+      CALL MP_FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMPL(2,25))
+      AMPL(2,25)=AMPL(2,25)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 15
-      CALL MP_FFV2_0(W(1,6),W(1,2),W(1,7),GC_47,AMPL(2,26))
-      AMPL(2,26)=AMPL(2,26)*(2.0D0*UVWFCT_G_2_1EPS)
+      CALL MP_FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMPL(1,26))
+      AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
 C     Amplitude(s) for UVCT diagram with ID 16
-      CALL MP_FFV2_0(W(1,1),W(1,8),W(1,7),GC_47,AMPL(1,27))
-      AMPL(1,27)=AMPL(1,27)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+      CALL MP_FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(2,27))
+      AMPL(2,27)=AMPL(2,27)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 17
-      CALL MP_FFV2_0(W(1,1),W(1,8),W(1,7),GC_47,AMPL(2,28))
-      AMPL(2,28)=AMPL(2,28)*(2.0D0*UVWFCT_G_2_1EPS)
+      CALL MP_FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(1,28))
+      AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
 
       GOTO 1001
  3000 CONTINUE

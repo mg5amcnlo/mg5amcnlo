@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: d~ u > ve e+ [ all = QCD QED ] QCD^2=0 QED^2=6
+C     Process: s~ c > ve e+ [ all = QCD QED ] QCD^2=0 QED^2=6
 C     
       IMPLICIT NONE
 C     
@@ -253,8 +253,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: d~ u > ve e+ [ all = QCD QED ] QCD^2=0 QED^2=6
+C     Process: s~ c > ve e+ [ all = QCD QED ] QCD^2=0 QED^2=6
 C     
       IMPLICIT NONE
 C     
@@ -310,9 +310,9 @@ C     ----------
       CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV2P0_3(W(1,2),W(1,1),GC_67,DCMPLX(CMASS_MDL_MW),W(1,5))
+      CALL FFV2P0_3(W(1,2),W(1,1),GC_124,DCMPLX(CMASS_MDL_MW),W(1,5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_67,AMP(1))
+      CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_124,AMP(1))
 C     JAMPs contributing to orders QCD=0 QED=2
       JAMP(1,1)=+AMP(1)
 

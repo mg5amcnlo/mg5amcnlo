@@ -248,12 +248,12 @@ C     ----------
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
       CALL FFV1_2(W(1,1),W(1,5),GC_5,ZERO,ZERO,W(1,6))
-      CALL FFV2_3(W(1,4),W(1,3),GC_47,MDL_MW,MDL_WW,W(1,7))
+      CALL FFV2_3(W(1,4),W(1,3),GC_11,MDL_MW,MDL_WW,W(1,7))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,6),W(1,2),W(1,7),GC_47,AMP(1))
+      CALL FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMP(1))
       CALL FFV1_1(W(1,2),W(1,5),GC_5,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 2
-      CALL FFV2_0(W(1,1),W(1,6),W(1,7),GC_47,AMP(2))
+      CALL FFV2_0(W(1,1),W(1,6),W(1,7),GC_11,AMP(2))
       JAMP(1)=-AMP(1)-AMP(2)
 
       ML5_0_MATRIX = 0.D0

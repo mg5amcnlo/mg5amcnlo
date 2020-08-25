@@ -29,7 +29,8 @@
 #! If None: try to find g77 or gfortran on the system
 #!
 # fortran_compiler = None
-# f2py_compiler = None 
+# f2py_compiler_py2 = None
+# f2py_compiler_py3 = None 
 
 
 #! Prefered C++ Compiler
@@ -159,9 +160,10 @@
 #!  relative path start from main directory
 # td_path = ./td
 
-#! lhapdf-config
+#! lhapdf-config --can be specify differently depending of your python version
 #!  If None: try to find one available on the system
-# lhapdf = lhapdf-config
+# lhapdf_py2 = lhapdf-config
+# lhapdf_py3 = lhapdf-config
 
 #! fastjet-config
 #!  If None: try to find one available on the system

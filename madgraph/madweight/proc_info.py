@@ -1,12 +1,15 @@
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import re
 import sys
 import string
+from six.moves import range
 
 
 try: 
-    import Cards
+    from . import Cards
     import madgraph.various.misc as misc
 except ImportError:
     import internal.madweight.Cards as Cards
@@ -48,7 +51,7 @@ class Decay_info:
             self.ParticlesFile=ParticlesFile #avoid multiple load of this file
 
     def read_config(self, file_name, mglabel2pid_dic):
-        print file_name
+        print(file_name)
         trappe=open(file_name, 'r')
         buff=trappe.readline()
         res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[\_a-zA-Z0-9]*)\s*(?P<width>[\_a-zA-Z0-9]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
@@ -76,7 +79,7 @@ class Decay_info:
                     topo[int(mg_id)]['channel']=SorT
                     topo[int(mg_id)]['pid']=int(pid_m)
                 else: 
-                    print "error: unexpected format in configs.inc "
+                    print("error: unexpected format in configs.inc ")
 
 
     def decay_structure(self,topo,mglabel2pid_dic):
@@ -105,7 +108,7 @@ class Decay_info:
 
         particles_from_HI=[]
         list_external=[]
-        for leg in range(-len(decay_item.keys()),0):
+        for leg in range(-len(list(decay_item.keys())),0):
             #print "  "
             #print "leg "
             #print leg
@@ -178,7 +181,7 @@ class Decay_info:
             tag=couple[0]
             pid_list=[]
             len_max=3
-            key_list=pid.keys()
+            key_list=list(pid.keys())
             while text:
                 text,add=self.first_part_pid(text,pid)
                 pid_list+=add
@@ -247,7 +250,7 @@ class Decay_info:
         """
 
         len_max=4
-        key_list=pid.keys()
+        key_list=list(pid.keys())
         while 1:
             num=min(len_max,len(text))
             if len_max==0:

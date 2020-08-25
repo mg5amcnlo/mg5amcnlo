@@ -19,18 +19,22 @@ Lex + Yacc framework"""
 
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import logging
 import numbers
 import os
 import re
 import sys
+from six.moves import input
+from six.moves import range
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 
-import aloha_lib
-from aloha_object import *
+from . import aloha_lib
+from .aloha_object import *
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
 from aloha.aloha_lib import KERNEL
@@ -175,27 +179,13 @@ class UFOExpressionParser(object):
         "expression : group"
         p[0] = p[1]
 
-    def p_expression_function1(self, p):
-        "expression : FUNCTION '(' expression ')'"
-        p1 = p[1]
-        re_groups = self.re_cmath_function.match(p1)
-        if re_groups:
-            p1 = re_groups.group("name")
-        p[0] = p1 + '(' + p[3] + ')'
-
-    def p_expression_function2(self, p):
-        "expression : FUNCTION '(' expression ',' expression ')'"
-        p1 = p[1]
-        re_groups = self.re_cmath_function.match(p1)
-        if re_groups:
-            p1 = re_groups.group("name")
-        p[0] = p1 + '(' + p[3] + ',' + p[5] + ')'
 
     def p_error(self, p):
         if p:
             try:
-                print p
-                print p[:]
+                print(p)
+                print(p[:])
+                print(p.value)
             except:
                 pass
             raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
@@ -227,7 +217,8 @@ class ALOHAExpressionParser(UFOExpressionParser):
             obj = p[1].split('(',1)[0]
         
         if obj in self.aloha_object:
-            p[0] = ''.join(p[1:])
+            p2 = [x for i,x in enumerate(p) if i>0]
+            p[0] = ''.join(p2)
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))
              p[0] = str(new)
@@ -268,63 +259,40 @@ class ALOHAExpressionParser(UFOExpressionParser):
         new = aloha_lib.KERNEL.add_function_expression(p[1], eval(p[2])) 
         p[0] = str(new)
 
-    def p_expression_function1(self, p):
-        "expression : FUNCTION '(' expression ')'"
-        
-        p1 = p[1]
-        if p1 in self.aloha_object:
-            p[0] = p[1]+'('+p[3]+')'
-            return 
-        re_groups = self.re_cmath_function.match(p1)
-        
-        if re_groups:
-            p1 = re_groups.group("name")
-        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]))
-        p[0] = str(new)
-    
-    def p_expression_function2(self, p):
-        "expression : FUNCTION '(' expression ',' expression ')'"
-        
+    def p_expression_function(self, p):
+        """expression : FUNCTION '(' expression ')'
+         expression : FUNCTION '(' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression  ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         expression : FUNCTION '(' expression ',' expression  ',' expression ',' expression ',' expression ',' expression  ',' expression  ',' expression ',' expression ',' expression  ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ',' expression ')'
+         """
         if p[1] in self.aloha_object:
-            p[0] = p[1]+'('+p[3]+','+ p[5]+')'
+            p[0] = ''.join(p[1:])
             return
-        
+         
         p1 = p[1]
         re_groups = self.re_cmath_function.match(p1)
         if re_groups:
             p1 = re_groups.group("name")
-        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]))
-        p[0] = str(new)
-    
-    def p_expression_function3(self, p):
-        "expression : FUNCTION '(' expression ',' expression ',' expression ')'"
-        
-        if p[1] in self.aloha_object:
-            p[0] = p[1]+'('+p[3]+','+ p[5]+','+p[7]+')'
-            return
-        
-        p1 = p[1]
-        re_groups = self.re_cmath_function.match(p1)
-        if re_groups:
-            p1 = re_groups.group("name")
-
-        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]),eval(p[7]))
-        p[0] = str(new)
-
-    def p_expression_function4(self, p):
-        "expression : FUNCTION '(' expression ',' expression ',' expression ',' expression ')'"
-        if p[1] in self.aloha_object:
-            p[0] = p[1]+'('+p[3]+','+ p[5]+','+ p[7]+','+ p[9]+')'            
-            return
-        
-        p1 = p[1]
-        re_groups = self.re_cmath_function.match(p1)
-        if re_groups:
-            p1 = re_groups.group("name")
-        args = [eval(p[2*i+1]) for i in [1,2,3,4]]
+        args = [eval(p[2*i+1]) for i in range(1, len(p)//2)]
         new = aloha_lib.KERNEL.add_function_expression(p1, *args)
         p[0] = str(new)
-    
+
     def p_expression_binop(self, p):
         '''expression : expression '=' expression
                       | expression '+' expression
@@ -351,7 +319,7 @@ if __name__ == '__main__':
     calc = ALOHAExpressionParser()
     while 1:
         try:
-            s = raw_input('calc > ')
+            s = input('calc > ')
         except EOFError:
             break
         if not s: continue

@@ -16,6 +16,7 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 
+from __future__ import absolute_import
 import copy
 import math
 import os

@@ -230,9 +230,9 @@ for (int i=0;i < nprocesses; i++)
 
 double Sigma_sm_gd_ddxd::sigmaHat() {  
     // Select between the different processes
-if(id1 == 21 && id2 == -2){
-// Add matrix elements for processes with beams (21, -2)
-return matrix_element[8]*2+matrix_element[9];
+if(id1 == -3 && id2 == 21){
+// Add matrix elements for processes with beams (-3, 21)
+return matrix_element[15]+matrix_element[16]+matrix_element[17];
 }
 else if(id1 == -2 && id2 == 21){
 // Add matrix elements for processes with beams (-2, 21)
@@ -246,37 +246,37 @@ else if(id1 == 1 && id2 == 21){
 // Add matrix elements for processes with beams (1, 21)
 return matrix_element[10]+matrix_element[11]+matrix_element[12];
 }
-else if(id1 == 21 && id2 == 1){
-// Add matrix elements for processes with beams (21, 1)
-return matrix_element[0]+matrix_element[1]+matrix_element[2];
-}
 else if(id1 == 2 && id2 == 21){
 // Add matrix elements for processes with beams (2, 21)
 return matrix_element[13]*2+matrix_element[14];
 }
-else if(id1 == 21 && id2 == 2){
-// Add matrix elements for processes with beams (21, 2)
-return matrix_element[3]*2+matrix_element[4];
+else if(id1 == 3 && id2 == 21){
+// Add matrix elements for processes with beams (3, 21)
+return matrix_element[10]+matrix_element[11]+matrix_element[12];
 }
 else if(id1 == 21 && id2 == -3){
 // Add matrix elements for processes with beams (21, -3)
 return matrix_element[5]+matrix_element[6]+matrix_element[7];
 }
-else if(id1 == 21 && id2 == 3){
-// Add matrix elements for processes with beams (21, 3)
-return matrix_element[0]+matrix_element[1]+matrix_element[2];
+else if(id1 == 21 && id2 == -2){
+// Add matrix elements for processes with beams (21, -2)
+return matrix_element[8]*2+matrix_element[9];
 }
 else if(id1 == 21 && id2 == -1){
 // Add matrix elements for processes with beams (21, -1)
 return matrix_element[5]+matrix_element[6]+matrix_element[7];
 }
-else if(id1 == -3 && id2 == 21){
-// Add matrix elements for processes with beams (-3, 21)
-return matrix_element[15]+matrix_element[16]+matrix_element[17];
+else if(id1 == 21 && id2 == 1){
+// Add matrix elements for processes with beams (21, 1)
+return matrix_element[0]+matrix_element[1]+matrix_element[2];
 }
-else if(id1 == 3 && id2 == 21){
-// Add matrix elements for processes with beams (3, 21)
-return matrix_element[10]+matrix_element[11]+matrix_element[12];
+else if(id1 == 21 && id2 == 2){
+// Add matrix elements for processes with beams (21, 2)
+return matrix_element[3]*2+matrix_element[4];
+}
+else if(id1 == 21 && id2 == 3){
+// Add matrix elements for processes with beams (21, 3)
+return matrix_element[0]+matrix_element[1]+matrix_element[2];
 }
 else {
 // Return 0 if not correct initial state assignment
@@ -287,14 +287,14 @@ else {
 // Select identity, colour and anticolour.
 
 void Sigma_sm_gd_ddxd::setIdColAcol() {
-    if(id1 == 21 && id2 == -2){
-// Pick one of the flavor combinations (1, -1, -2), (2, -2, -2), (3, -3, -2)
-int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
+    if(id1 == -3 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
 vector<double> probs;
-double sum = matrix_element[8]+matrix_element[9]+matrix_element[8];
-probs.push_back(matrix_element[8]/sum);
-probs.push_back(matrix_element[9]/sum);
-probs.push_back(matrix_element[8]/sum);
+double sum = matrix_element[16]+matrix_element[15]+matrix_element[17];
+probs.push_back(matrix_element[16]/sum);
+probs.push_back(matrix_element[15]/sum);
+probs.push_back(matrix_element[17]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
@@ -339,19 +339,6 @@ id3 = flavors[choice][0];
 id4 = flavors[choice][1];
 id5 = flavors[choice][2];
 }
-else if(id1 == 21 && id2 == 1){
-// Pick one of the flavor combinations (3, -3, 1), (2, -2, 1), (1, -1, 1)
-int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
-vector<double> probs;
-double sum = matrix_element[2]+matrix_element[1]+matrix_element[0];
-probs.push_back(matrix_element[2]/sum);
-probs.push_back(matrix_element[1]/sum);
-probs.push_back(matrix_element[0]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
 else if(id1 == 2 && id2 == 21){
 // Pick one of the flavor combinations 
 int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
@@ -365,14 +352,14 @@ id3 = flavors[choice][0];
 id4 = flavors[choice][1];
 id5 = flavors[choice][2];
 }
-else if(id1 == 21 && id2 == 2){
-// Pick one of the flavor combinations (3, -3, 2), (1, -1, 2), (2, -2, 2)
-int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
+else if(id1 == 3 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
 vector<double> probs;
-double sum = matrix_element[3]+matrix_element[3]+matrix_element[4];
-probs.push_back(matrix_element[3]/sum);
-probs.push_back(matrix_element[3]/sum);
-probs.push_back(matrix_element[4]/sum);
+double sum = matrix_element[12]+matrix_element[10]+matrix_element[11];
+probs.push_back(matrix_element[12]/sum);
+probs.push_back(matrix_element[10]/sum);
+probs.push_back(matrix_element[11]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
@@ -391,14 +378,14 @@ id3 = flavors[choice][0];
 id4 = flavors[choice][1];
 id5 = flavors[choice][2];
 }
-else if(id1 == 21 && id2 == 3){
-// Pick one of the flavor combinations (3, -3, 3), (1, -1, 3), (2, -2, 3)
-int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
+else if(id1 == 21 && id2 == -2){
+// Pick one of the flavor combinations (1, -1, -2), (2, -2, -2), (3, -3, -2)
+int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
 vector<double> probs;
-double sum = matrix_element[2]+matrix_element[0]+matrix_element[1];
-probs.push_back(matrix_element[2]/sum);
-probs.push_back(matrix_element[0]/sum);
-probs.push_back(matrix_element[1]/sum);
+double sum = matrix_element[8]+matrix_element[9]+matrix_element[8];
+probs.push_back(matrix_element[8]/sum);
+probs.push_back(matrix_element[9]/sum);
+probs.push_back(matrix_element[8]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
@@ -417,27 +404,40 @@ id3 = flavors[choice][0];
 id4 = flavors[choice][1];
 id5 = flavors[choice][2];
 }
-else if(id1 == -3 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
+else if(id1 == 21 && id2 == 1){
+// Pick one of the flavor combinations (3, -3, 1), (2, -2, 1), (1, -1, 1)
+int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
 vector<double> probs;
-double sum = matrix_element[16]+matrix_element[15]+matrix_element[17];
-probs.push_back(matrix_element[16]/sum);
-probs.push_back(matrix_element[15]/sum);
-probs.push_back(matrix_element[17]/sum);
+double sum = matrix_element[2]+matrix_element[1]+matrix_element[0];
+probs.push_back(matrix_element[2]/sum);
+probs.push_back(matrix_element[1]/sum);
+probs.push_back(matrix_element[0]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
 id5 = flavors[choice][2];
 }
-else if(id1 == 3 && id2 == 21){
-// Pick one of the flavor combinations 
+else if(id1 == 21 && id2 == 2){
+// Pick one of the flavor combinations (3, -3, 2), (1, -1, 2), (2, -2, 2)
+int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
+vector<double> probs;
+double sum = matrix_element[3]+matrix_element[3]+matrix_element[4];
+probs.push_back(matrix_element[3]/sum);
+probs.push_back(matrix_element[3]/sum);
+probs.push_back(matrix_element[4]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == 3){
+// Pick one of the flavor combinations (3, -3, 3), (1, -1, 3), (2, -2, 3)
 int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
 vector<double> probs;
-double sum = matrix_element[12]+matrix_element[10]+matrix_element[11];
-probs.push_back(matrix_element[12]/sum);
-probs.push_back(matrix_element[10]/sum);
-probs.push_back(matrix_element[11]/sum);
+double sum = matrix_element[2]+matrix_element[0]+matrix_element[1];
+probs.push_back(matrix_element[2]/sum);
+probs.push_back(matrix_element[0]/sum);
+probs.push_back(matrix_element[1]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
