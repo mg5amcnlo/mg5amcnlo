@@ -339,6 +339,13 @@ c
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision emscwgt(nexternal)
+      double precision emsca_a(nexternal,nexternal)
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal),emscasharp_a(nexternal,nexternal)
+     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
+     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
       double precision evnt_wgt
       integer i, j
       double precision mu_r
@@ -362,7 +369,18 @@ c
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if(dampMCsubt) then
-            factor=emscwgt(npartner)
+c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
+c define 'factor'.  This damping 'factor' is used only here, and not in
+c the following.  A subsequent call to assign_emsca_array, in
+c complete_xmcsubt, will set emsca_a and related quantities.  This means
+c that, event by event, MC damping factors D(mu_ij) corresponding to the
+c emscwgt_a determined now, are not computed with the actual mu_ij
+c scales used as starting scales (which are determined in the subsequent
+c call to assign_emsca_array), which however is fine statistically
+            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+c min(i_fks,j_fks) is the mother of the FKS pair
+            if(dampMCsubt)factor=emscwgt_a(min(i_fks,j_fks)
+     $           ,ipartners(npartner))
          else
             factor=1d0
          endif
@@ -640,15 +658,14 @@ c over colour partners
       double precision emsca
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
-      logical emscasharp_a(nexternal,nexternal)
-      double precision emsca_a(nexternal,nexternal),
-     #  emsca_bare_a(nexternal,nexternal)
-      double precision emsca_bare_a2(nexternal,nexternal)
-      double precision scalemin_a(nexternal,nexternal),
-     #  scalemax_a(nexternal,nexternal)
       double precision ptresc_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
-     #                emscasharp_a,scalemin_a,scalemax_a
+      double precision emsca_a(nexternal,nexternal)
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal),emscasharp_a(nexternal,nexternal)
+     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
+     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
 
       double precision ran2,iseed
       external ran2
@@ -1201,7 +1218,7 @@ c fills arrays relevant to shower scales, and computes Delta
       common/fks_indices/i_fks,j_fks
 
       double precision emsca_bare,ptresc,ref_scale,
-     & scalemin,scalemax,emscainv,emscafun
+     & scalemin,scalemax,emscainv
       double precision emscwgt(nexternal),emscav(nexternal)
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
@@ -1213,13 +1230,12 @@ c fills arrays relevant to shower scales, and computes Delta
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
       double precision emsca_a(nexternal,nexternal)
-      double precision emsca_bare_a(nexternal,nexternal),
-     & emsca_bare_a2(nexternal,nexternal)
-      logical emscasharp_a(nexternal,nexternal)
-      double precision scalemin_a(nexternal,nexternal),
-     & scalemax_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
-     #                emscasharp_a,scalemin_a,scalemax_a
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal),emscasharp_a(nexternal,nexternal)
+     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
+     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
 
@@ -4105,19 +4121,22 @@ c Consistency check
       include "run.inc"
       include "born_nhel.inc"
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
-      double precision emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal,nexternal),
-     &scalemin_a(nexternal,nexternal),scalemax_a(nexternal,nexternal),rrnd,ran2,emscainv,
-     &dum(5),xm12,qMC,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal,nexternal)
+      double precision rrnd,ran2,emscainv, dum(5),xm12,qMC
+     $     ,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal
+     $     ,nexternal)
       integer ileg,npartner,i,j
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
 
-      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
-     #                emscasharp_a,scalemin_a,scalemax_a
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal),emscasharp_a(nexternal,nexternal)
+     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
+     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -4139,7 +4158,8 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
       emsca_a=-1d0
-
+      emscwgt_a=0d0
+      
       call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
       do i=1,nexternal-1
          do j=1,nexternal-1
@@ -4148,6 +4168,7 @@ c Consistency check
                emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
      #                           (1d-3*scalemax_a(i,j))
                if(emscasharp_a(i,j))then
+                  if(qMC_a2(i,j).le.scalemax_a(i,j))emscwgt_a(i,j)=1d0
                   emsca_bare_a(i,j)=scalemax_a(i,j)
                   emsca_bare_a2(i,j)=scalemax_a(i,j)
                   emsca_a(i,j)=emsca_bare_a(i,j)
@@ -4162,8 +4183,15 @@ c Consistency check
      #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
                   ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
      #                          (scalemax_a(i,j)-scalemin_a(i,j))
-                  if(ptresc_a(i,j).lt.1d0)emsca_a(i,j)=emsca_bare_a(i,j)
-                  if(ptresc_a(i,j).ge.1d0)emsca_a(i,j)=scalemax_a(i,j)
+                  if(ptresc_a(i,j).le.0d0)then
+                     emscwgt_a(i,j)=1d0
+                     emsca_a(i,j)=emsca_bare_a(i,j)
+                  elseif(ptresc_a(i,j).lt.1d0)then
+                     emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
+                     emsca_a(i,j)=emsca_bare_a(i,j)
+                  else
+                     emsca_a(i,j)=scalemax_a(i,j)
+                  endif
                endif
             endif
          enddo

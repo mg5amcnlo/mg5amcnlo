@@ -3084,9 +3084,10 @@ c
      $     ,nexternal)
       logical emscasharp_a(nexternal,nexternal)
       double precision scalemin_a(nexternal,nexternal)
-     $     ,scalemax_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a
-     $     ,scalemin_a,scalemax_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
       character*4 abrv
       common/to_abrv/abrv
       include 'nFKSconfigs.inc'
