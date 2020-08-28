@@ -339,13 +339,16 @@ c
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol),bornbarstilde(max_bcol)
       double precision emscwgt(nexternal)
+      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal),emscasharp_a(nexternal,nexternal)
-     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
-     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
      $     ,scalemin_a,scalemax_a,emscwgt_a
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       double precision evnt_wgt
       integer i, j
       double precision mu_r
@@ -377,7 +380,7 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+            call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 c min(i_fks,j_fks) is the mother of the FKS pair
             if(dampMCsubt)factor=emscwgt_a(min(i_fks,j_fks)
      $           ,ipartners(npartner))
@@ -418,6 +421,16 @@ c min(i_fks,j_fks) is the mother of the FKS pair
      $     ,bornbars(max_bcol),bornbarstilde(max_bcol)
      $     ,emscwgt(nexternal),MCsec(nexternal-1,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum,dummy
+      logical emscasharp_a(nexternal,nexternal)
+      double precision emsca_a(nexternal,nexternal)
+     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+     $     ,scalemin_a,scalemax_a,emscwgt_a
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
@@ -442,7 +455,17 @@ c -- call to MC counterterm functions
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if(dampMCsubt) then
-            factor=emscwgt(npartner)
+c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
+c define 'factor'.  This damping 'factor' is used only here, and not in
+c the following.  A subsequent call to assign_emsca_array, in
+c complete_xmcsubt, will set emsca_a and related quantities.  This means
+c that, event by event, MC damping factors D(mu_ij) corresponding to the
+c emscwgt_a determined now, are not computed with the actual mu_ij
+c scales used as starting scales (which are determined in the subsequent
+c call to assign_emsca_array), which however is fine statistically
+            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+c min(i_fks,j_fks) is the mother of the FKS pair
+            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
          else
             factor=1d0
          endif
@@ -659,11 +682,12 @@ c over colour partners
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
       double precision ptresc_a(nexternal,nexternal)
+      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal),emscasharp_a(nexternal,nexternal)
-     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
-     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+     $     ,nexternal),scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
      $     ,scalemin_a,scalemax_a,emscwgt_a
 
@@ -1228,12 +1252,12 @@ c fills arrays relevant to shower scales, and computes Delta
 
       double precision emsca
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-
+      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal),emscasharp_a(nexternal,nexternal)
-     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
-     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
      $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled
@@ -4130,18 +4154,19 @@ c Consistency check
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
 
+      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal),emscasharp_a(nexternal,nexternal)
-     $     ,scalemin_a(nexternal,nexternal),scalemax_a(nexternal
-     $     ,nexternal),emscwgt_a(nexternal,nexternal)
+     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+     $     ,nexternal)
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
      $     ,scalemin_a,scalemax_a,emscwgt_a
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
-      double precision Eem,qMC_a2(nexternal-1,nexternal-1)
+      double precision Eem,qMC_a2(nexternal-1,nexternal-1),emscafun
       integer iBtoR(nexternal-1)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
