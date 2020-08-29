@@ -33,6 +33,8 @@
 ##
 ## BEGIN INCLUDE
 ##
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 #1 #########################################################################
@@ -48,8 +50,8 @@ def Clean_run(run_name):
         if os.path.isdir(element) and (element[0]=='P' or element[:4]=='MW_P'):
             status,mess=clean.suppress_dir(os.path.join(element,run_name))
             if not status:
-                print 'supress ',element,' failed:' 
-                print mess
+                print('supress ',element,' failed:') 
+                print(mess)
 
     os.chdir(os.pardir)
     
@@ -161,14 +163,14 @@ class Clean:
 
         if suppres and os.path.isfile(file):
             if 'n' in opt:
-                print 'schedulle deleting file',file
+                print('schedulle deleting file',file)
                 return 1,mess
             try:
                 os.remove(file)
             except:
                 pass
             if 's' not in opt:
-                print 'delete file',file
+                print('delete file',file)
             return 1,''
         elif suppres:
             return 0, 'not a file'+file
@@ -221,9 +223,9 @@ class Clean:
             if 'n' not in opt:
                 os.rmdir(pos)
                 if 's' not in opt:
-                    print 'delete dir',pos
+                    print('delete dir',pos)
             else:
-                print 'schedulle removing directory',pos
+                print('schedulle removing directory',pos)
                 
             return 1,''
         else:
@@ -237,4 +239,4 @@ if (__name__=='__main__'):
     go_to_main_dir()
     #Clean_event('fermi')
     #Clean_run('fermi')
-    print 'no cleaning by default'
+    print('no cleaning by default')

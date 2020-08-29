@@ -158,8 +158,8 @@ C     ----------
       CALL OXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
       CALL FFV1_2(W(1,1),W(1,2),GC_5,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,5),W(1,4),W(1,3),GC_47,AMP(1))
-      CALL FFV2_2(W(1,1),W(1,3),GC_47,ZERO,ZERO,W(1,5))
+      CALL FFV2_0(W(1,5),W(1,4),W(1,3),GC_11,AMP(1))
+      CALL FFV2_2(W(1,1),W(1,3),GC_11,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,5),W(1,4),W(1,2),GC_5,AMP(2))
       JAMP(1)=+AMP(1)+AMP(2)

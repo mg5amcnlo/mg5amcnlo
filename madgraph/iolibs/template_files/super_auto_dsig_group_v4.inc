@@ -97,6 +97,8 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
 
+      logical init_mode
+      common /to_determine_zero_hel/init_mode
 C ----------
 C BEGIN CODE
 C ----------
@@ -180,7 +182,7 @@ C   IMODE.EQ.0, regular run mode
 		call DS_set_min_points(10,'grouped_processes')
         DO J=1,SYMCONF(0)
           DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(init_mode.or.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
               DO IMIRROR=1,2
                 IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -201,7 +203,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
       LAST_ICONF=0
       DO J=1,SYMCONF(0)
          DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(init_mode.or.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
                DO IMIRROR=1,2
                   IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C                 Calculate PDF weight for all subprocesses
@@ -245,7 +247,7 @@ C       Turn caching on in dsigproc to avoid too many calls to switchmom
         LAST_ICONF=0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN		  
+            IF(init_mode.or.CONFSUB(I,SYMCONF(J)).NE.0) THEN		  
               DO K=1,2
                 IF(K.EQ.1.OR.MIRRORPROCS(I))THEN			
                   IPROC=I
@@ -264,7 +266,11 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+		  if(init_mode) then
+		    SELPROC(K,I,J) = 1d0
+		  else
+                    SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+		  endif
                   SUMPROB = SUMPROB + SELPROC(K,I,J) 
 		        ENDIF
               ENDDO
@@ -289,7 +295,7 @@ c     If we are still initializing the grid or simply not using one at all, then
       TOTWGT=0D0
       DO J=1,SYMCONF(0)
         DO I=1,MAXSPROC
-	  IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+	  IF(init_mode.or.CONFSUB(I,SYMCONF(J)).NE.0) THEN
           DO K=1,2
             TOTWGT=TOTWGT+SELPROC(K,I,J)
             IF(R.LT.TOTWGT)THEN
@@ -507,4 +513,8 @@ C
 %(read_write_good_hel)s
 
 
+     SUBROUTINE PRINT_ZERO_AMP()
 
+     %(print_zero_amp)s
+     return
+     end

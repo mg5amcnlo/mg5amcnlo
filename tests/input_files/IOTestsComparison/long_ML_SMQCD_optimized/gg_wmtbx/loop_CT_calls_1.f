@@ -95,8 +95,8 @@ C      if true.
         GOTO 1001
       ENDIF
 
-C     CutTools call for loop numbers 1,2,117,118,139,140,133,134,135,13
-C     6,137,138
+C     CutTools call for loop numbers
+C      1,2,117,118,139,140,133,134,135,136,137,138
       CALL ML5_0_LOOP_2(6,13,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,1)
 C     CutTools call for loop numbers 3,4,5,6,119,120,141,142,143,144
       CALL ML5_0_LOOP_3(1,2,13,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)

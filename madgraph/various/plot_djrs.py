@@ -14,11 +14,14 @@
 #
 ################################################################################
 """Example code to plot custom curves based on djrs.dat with matplotlib"""
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.pylab as pylab
+from six.moves import range
 
 
 ################################################################################
@@ -37,7 +40,7 @@ except ImportError:
     try:
         import internal
     except ImportError:
-        print "You need to specify the path to the MG5_aMC directory"    
+        print("You need to specify the path to the MG5_aMC directory")    
         sys.exit(1)
     else:
         from internal.histograms import *
@@ -53,7 +56,7 @@ if len(sys.argv) >1:
 else:
     #take the default path
     input_file = './Events/run_01/tag_1_djrs.dat'    
-print "Reading information from: ", input_file
+print("Reading information from: ", input_file)
 
 
 ################################################################################
@@ -133,7 +136,7 @@ fill_between_steps(h_1j.get('bins'), pdfmin, pdfmax, ax=main_frame, facecolor=l_
 ################################################################################
 #  ADDING RATIO PLOT
 ################################################################################
-ratio = [y_0j[i]/y_1j[i] if y_1j[i] else 0 for i in xrange(len(y_0j))]
+ratio = [y_0j[i]/y_1j[i] if y_1j[i] else 0 for i in range(len(y_0j))]
 ratio_frame.plot(h_0j.get('bins'), ratio, linestyle='steps')
 
 

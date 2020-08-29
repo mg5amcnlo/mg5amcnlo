@@ -16,16 +16,21 @@
 """Definitions of the objects needed both for MadFKS from real 
 and MadFKS from born"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+import madgraph.various.misc as misc
 from operator import itemgetter
 import copy
 import logging
 import array
 import fractions
+import six
+from six.moves import range
     
     
     
@@ -191,7 +196,7 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
 
     # and compare them
     if len(born_tags) != len(real_tags):
-        print '\n'.join([str(r) for r in real_tags]) + '\n'
+        print('\n'.join([str(r) for r in real_tags]) + '\n')
         raise FKSProcessError('Cannot map born/real configurations between \
                 %s and %s (i,j=%d,%d): not same number of configurations: %d %d' % \
                 (born_amp.get('process').nice_string().replace('Process:',''), 
@@ -209,8 +214,8 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
             real_tags.remove(btag)
             good_diags.pop(ir)
         except ValueError:
-            print real_tags, i, j, ij
-            print '\n'.join( d['diagram'].nice_string() for d in good_diags)
+            print(real_tags, i, j, ij)
+            print('\n'.join( d['diagram'].nice_string() for d in good_diags))
             raise FKSProcessError('Linking %s to %s: could not link born diagram %s' % \
                  (born_amp.get('process').nice_string().replace('Process:',''), 
                   real_amp.get('process').nice_string().replace('Process:',''),
@@ -228,7 +233,7 @@ def find_orders(amp): #test_written
     orders = {}
     for diag in amp.get('diagrams'):
         for order, value in diag.get('orders').items():
-            if value != 0 or order in amp['process']['orders'].keys():
+            if value != 0 or order in list(amp['process']['orders'].keys()):
                 try:
                     orders[order] = max(orders[order], value)
                 except KeyError:
@@ -329,7 +334,7 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
     elif pert == 'QED':
         color = 'charge'
     else:
-        raise FKSProcessError, "Only QCD or QED is allowed not  %s" % pert
+        raise FKSProcessError("Only QCD or QED is allowed not  %s" % pert)
     # the deepcopy statement is crucial
     leglist = FKSLegList(copy.deepcopy(leglist_orig))         
     #find the position of the first final state leg
@@ -349,7 +354,7 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
                                              if abs(l[color]) == col and not l['massless']])
     #no need to keep info on particles with color > i
     if pert == 'QCD':
-        for col in copy.copy(col_maxindex.keys()):
+        for col in copy.copy(list(col_maxindex.keys())):
             if abs(col) > abs(split[1][color]):
                 del col_maxindex[col]
 ###        for col in copy.copy(mass_col_maxindex.keys()):
@@ -366,7 +371,7 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
         except KeyError:
             pass
     #so now the maximum of the max_col entries should be the position to insert leg i
-    leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
+    leglist.insert(max(list(col_maxindex.values()) + list(mass_col_maxindex.values()) + [firstfinal - 1] ) + 1, split[1])
 ###    leglist.insert(max(col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
 #        leglist.insert(i, sleg)
@@ -486,7 +491,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                     if pp['mass'].lower() == 'zero':
                         soft_parts.append(pp.get_pdg_code())
 
-    return {'interactions': sorted(qcd_inter), 
+    return {'interactions': sorted(qcd_inter, key=misc.cmp_to_key(misc.dict_cmp)),
             'pert_particles': sorted(set(pert_parts)),
             'soft_particles': sorted(set(soft_parts))}    
 
@@ -555,7 +560,7 @@ def find_color_links(leglist, symm = False,pert = 'QCD'): #test written
         color = 'charge'
         zero = 0.
     else:
-        raise FKSProcessError,"Only QCD or QED is allowed not %s" % pert
+        raise FKSProcessError("Only QCD or QED is allowed not %s" % pert)
     color_links = []
     for leg1 in leglist:
         for leg2 in leglist:
@@ -637,7 +642,7 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
             string.coeff = string.coeff * fractions.Fraction(leg['charge']*3.)*\
             fractions.Fraction(1,3)            
     else:
-        raise FKSProcessError,"Only QCD or QED is allowed not %s"% pert
+        raise FKSProcessError("Only QCD or QED is allowed not %s"% pert)
     
     dict['replacements'] = replacements
     dict['string'] = string  
@@ -735,7 +740,7 @@ class FKSLegList(MG.LegList):
             color = 'charge'
             zero = 0.
         else:
-            raise FKSProcessError,"Only QCD and QED is allowed not %s"% pert
+            raise FKSProcessError("Only QCD and QED is allowed not %s"% pert)
         colors = sorted(set([abs(l[color]) for l in final_legs]))
         # first put massless particles, without any rearrangment
         if zero in colors:
@@ -825,25 +830,21 @@ class FKSLeg(MG.Leg):
 
         if name == 'fks':
             if not isinstance(value, str):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg fks flag" \
-                                                        % str(value)
+                raise self.PhysicsObjectError("%s is not a valid string for leg fks flag" \
+                                                        % str(value))
         if name in ['color', 'spin']:
             if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid leg %s flag" % \
-                                                 str(value),name
+                six.reraise(self.PhysicsObjectError, "%s is not a valid leg %s flag" % \
+                                                 str(value), name)
                                                  
         if name in ['massless','self_antipart','is_part']:
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid boolean for leg flag %s" % \
-                                                                    str(value),name
-        if name is 'charge':
+                six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
+                                                                    str(value), name)
+        if name == 'charge':
             if not isinstance(value, float):
-                raise self.PhysicsObjectError, \
-                    "%s is not a valid float for leg flag charge" \
-                    % str(value)                                                           
+                raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \
+                    % str(value))                                                           
         return super(FKSLeg,self).filter(name, value)
     
      

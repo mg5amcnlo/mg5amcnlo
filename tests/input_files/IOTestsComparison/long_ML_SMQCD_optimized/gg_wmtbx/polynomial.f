@@ -135,8 +135,8 @@ C
 C     
 C     FUNCTIONS
 C     
-      INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $AMP, ML5_0_ML5SQSOINDEX
+      INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP,
+     $  ML5_0_ML5SOINDEX_FOR_LOOP_AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -170,8 +170,8 @@ C
         CFTOT=CMPLX(CF_N(COLOR_ID,I)/(ONE*ABS(CF_D(COLOR_ID,I))),ZERO
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
-        CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+        CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))
+     $   =CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
@@ -182,8 +182,9 @@ C
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
-     $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I
+     $     ,ML5_0_ML5SOINDEX_FOR_LOOP_AMP(COLOR_ID)),LOOP_GROUP_NUMBER)
+     $     )
         ENDIF
       ENDDO
 
@@ -236,8 +237,8 @@ C
 C     
 C     FUNCTIONS
 C     
-      INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $AMP, ML5_0_ML5SQSOINDEX
+      INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP,
+     $  ML5_0_ML5SOINDEX_FOR_LOOP_AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -271,8 +272,8 @@ C
         CFTOT=CMPLX(CF_N(COLOR_ID,I)/(ONE*ABS(CF_D(COLOR_ID,I))),ZERO
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
-        CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+        CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))
+     $   =CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
@@ -283,8 +284,9 @@ C
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MP_ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
-     $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I
+     $     ,ML5_0_ML5SOINDEX_FOR_LOOP_AMP(COLOR_ID)),LOOP_GROUP_NUMBER)
+     $     )
         ENDIF
       ENDDO
 
@@ -911,12 +913,12 @@ C     Welcome to the computational heart of MadLoop...
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
             OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
             OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
             OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO
@@ -946,12 +948,12 @@ C     Welcome to the computational heart of MadLoop...
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
             OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
             OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
             OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO

@@ -145,10 +145,19 @@ C**************************************************************************
 C     compute the boost for the requested transformation
       implicit none
       double precision pin(0:3), pout(0:3)
-      double precision denom
+      double precision denom, control
 
       denom = pin(0)*pout(0) - pin(3)*pout(3)
       if (denom.ne.0d0) then
+         control = pin(0)*pout(0) + pin(3)*pout(3)
+         if (denom/control.gt.1d-12)then
+            get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
+c        pass in massless case
+         else if (abs(pin(0)+pin(3)).gt.abs(pin(0))) then
+            get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
+         else
+            get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
+         endif
          get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
       else if (pin(0).eq.pin(3)) then
          get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
@@ -460,6 +469,8 @@ c
       include 'run.inc'
       include 'run_config.inc'
 
+
+      
 c
 c     Arguments
 c
@@ -496,6 +507,9 @@ c
 C     
 C     GLOBAL
 C
+      logical init_mode
+      common/to_determine_zero_hel/init_mode
+      
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
@@ -543,7 +557,7 @@ C  BEGIN CODE
 C-----
       
       if ((nw .ge. maxevents).and.do_write_events) return
-
+      if (init_mode) return
 C     if all the necessary inputs to write the events have already been
 C     computed in the bias module, then directly jump to write_events
       if (AlreadySetInBiasModule) then
@@ -721,7 +735,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
             endif
             
             write(s_buff(4), cfmt) '<pdfrwt beam="', beam_number, '">',
-     $           n_pdfrw(1),(lpp(beam_number)*i_pdgpdf(i,1),i=1,n_pdfrw(1)),
+     $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
      $           '</pdfrwt>'
@@ -742,7 +756,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
      $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
             endif
             write(s_buff(5), cfmt) '<pdfrwt beam="',beam_number,'">',
-     $           n_pdfrw(2),(lpp(beam_number)*i_pdgpdf(i,2),i=1,n_pdfrw(2)),
+     $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
      $           '</pdfrwt>'

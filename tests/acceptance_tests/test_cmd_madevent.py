@@ -13,6 +13,8 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import subprocess
 import unittest
 import os
@@ -23,7 +25,7 @@ import logging
 import time
 import tempfile
 import math
-from __builtin__ import True
+
 
 logger = logging.getLogger('test_cmd')
 
@@ -91,7 +93,7 @@ class TestMECmdShell(unittest.TestCase):
 
         try:
             shutil.rmtree(self.run_dir)
-        except Exception, error:
+        except Exception as error:
             pass
         interface = MGCmd.MasterCmd()
         interface.no_notification()
@@ -111,22 +113,22 @@ class TestMECmdShell(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            print "install pythia-pgs"
+            print("install pythia-pgs")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
-            print "install MadAnalysis"
+            print("install MadAnalysis")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install MadAnalysis4')
+            out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
         if not misc.which('root'):
-            raise Exception, 'root is require for this test'
+            raise Exception('root is require for this test')
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
@@ -399,9 +401,9 @@ class TestMECmdShell(unittest.TestCase):
         
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
         
-        self.check_parton_output(syst=True)
+        self.check_parton_output(syst=False)
         self.check_parton_output('run_02', target_event=44, syst=False)
-        self.check_pythia_output(syst=True)        
+        self.check_pythia_output(syst=False)        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
         self.assertNotEqual(f1.split('\n'), f2.split('\n'))
@@ -519,6 +521,7 @@ class TestMECmdShell(unittest.TestCase):
         target = 440.779
         self.assertTrue(misc.equal(target, val1, 4*err1))                
         
+
         # run madspin
         fsock = open(pjoin(self.run_dir, 'Cards', 'madspin_card.dat'),'w')
         fsock.write('decay t > w+ b \n launch')
@@ -731,12 +734,12 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """import model sm
@@ -807,7 +810,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
@@ -873,7 +876,7 @@ class TestMEfromfile(unittest.TestCase):
         cwd = os.getcwd()
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -888,7 +891,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
@@ -978,7 +981,7 @@ class TestMEfromfile(unittest.TestCase):
         
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = MGCmd.MasterCmd()
@@ -1010,7 +1013,7 @@ class TestMEfromPdirectory(unittest.TestCase):
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         interface = MGCmd.MasterCmd()

@@ -32,12 +32,15 @@
 ##                                                                      ##
 ##########################################################################
 #Extension
+from __future__ import absolute_import
+from __future__ import print_function
 import os
-import popen2
 import re
 import sys
 import time
 import math
+from six.moves import range
+from six.moves import input
 
 try: 
     import madgraph.madweight.diagram_class as diagram_class
@@ -68,7 +71,7 @@ def verif_event(MWparam):
     for MW_dir in MWparam.MW_listdir:
         start=time.time()
         select=Lhco_filter(MW_dir,'input.lhco',MWparam)
-        print 'time Lhco_filter',time.time()-start
+        print('time Lhco_filter',time.time()-start)
 
 def restrict_event_passing_cut(MWparam):
     """ return the number of events in a (previous) run which pass the 'new' cut """
@@ -129,7 +132,7 @@ class Lhco_filter:
         partdef=lhco_all_particles_def()
         if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             partdef.use_bjet()
-        if self.MWparam.info.has_key('eventselection'):
+        if 'eventselection' in self.MWparam.info:
             partdef.update_hlt_cut(self.MWparam.info['eventselection'])	
 
         return partdef
@@ -140,13 +143,13 @@ class Lhco_filter:
 
         diag=diagram_class.MG_diagram(directory,1)
 
-        list=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
+        olist=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
         content=diag.output_type_info()
         
         total=0
         data={}
-        for i in range(0,len(list)):
-            data[list[i]]=content[i]
+        for i in range(0,len(olist)):
+            data[olist[i]]=content[i]
             total+=content[i]
         #data['n_out']=total
         
@@ -160,7 +163,7 @@ class Lhco_filter:
 
         data['begin']=[0,1]
         data['miss']=[0,1]
-        data['unknow']=range(0,10)
+        data['unknow']=list(range(0,10))
         self.nb_part=data
         return data
 
@@ -203,7 +206,7 @@ class Lhco_filter:
         
         list=['jet','bjet','electron','positron','muon','amuon','tau','atau','miss']
         if particle not in list:
-            print 'unknown type of particle'
+            print('unknown type of particle')
             return
         else:
             self.nb_part[particle]=int(number)
@@ -220,7 +223,7 @@ class Lhco_filter:
 
         #control input
         if not part_def:
-            print 'use default part_def'
+            print('use default part_def')
             part_def=self.partdef
         if not file:
             file='./Events/'+self.lhco_file
@@ -231,9 +234,9 @@ class Lhco_filter:
 
             
         #supress first X valid events:
-        if self.MWparam.info['mw_run'].has_key('21'):
+        if '21' in self.MWparam.info['mw_run']:
             self.start=int(self.MWparam.info['mw_run']['21'])
-            print 'start', self.start
+            print('start', self.start)
         else:
             self.start=0
             
@@ -277,7 +280,7 @@ class Lhco_filter:
                     self.event_position+=1                    
                 else:
                     list_part.append(part)
-                    if nb_part.has_key(identity):
+                    if identity in nb_part:
                         nb_part[identity]+=1
                     else:
                         nb_part[identity]=1
@@ -293,8 +296,8 @@ class Lhco_filter:
         if self.check_valid(nb_part):
             if nb_accepted < self.MWparam.info['mw_run']['nb_exp_events']:
                 self.write(list_part)	
-        print 'time  verif event Lhco_filter',time.time()-start
-        print self.write_events-self.start,'selected  events for ',self.directory,' subprocess'
+        print('time  verif event Lhco_filter',time.time()-start)
+        print(self.write_events-self.start,'selected  events for ',self.directory,' subprocess')
         # Comment this for multi-output run
         if self.write_events-self.start<self.MWparam.nb_event:
             name = self.directory.split('/')[-1]
@@ -308,18 +311,18 @@ class Lhco_filter:
     def check_valid(self,nb_part):
         """ check if we have the correct number of input for each type of particle """
 
-        list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
+        list_key=list(self.nb_part.keys())+[key for key in nb_part if key not in list(self.nb_part.keys())]
         try:
             for key in list_key:
                 if self.nb_part[key]==0:
-                    if not nb_part.has_key(key):
+                    if key not in nb_part:
                         continue
                     elif nb_part[key]==0:
                         continue
                     else:
                         return 0
                     
-                if not nb_part.has_key(key):
+                if key not in nb_part:
                     return 0
                 
                 if type(self.nb_part[key])==list:
@@ -329,10 +332,10 @@ class Lhco_filter:
                     return 0
             return 1
         except KeyError:
-            print nb_part
-            print self.nb_part
-            print key
-            if self.write_events:   print 'key error'
+            print(nb_part)
+            print(self.nb_part)
+            print(key)
+            if self.write_events:   print('key error')
             return 0
 
     write_order=['begin','jet','bjet','electron','positron','muon','amuon','tau','atau', 'photon','miss','init']
@@ -557,7 +560,7 @@ class lhco_all_particles_def(dict):
         def update_hlt_cut(self,hltcut):
             """ take the hlt cut from the Madweight card """
 
-            print 'update cut :',hltcut
+            print('update cut :',hltcut)
             for key in hltcut:
                 name,param=key.split('_')	
                 if(type(hltcut[key])==list):			
@@ -581,12 +584,12 @@ class lhco_all_particles_def(dict):
                     return name
                 
             if not self.nb_warning:
-                print 'Some particles are not identified to any types. This could occur if you specify some cuts.'
-                print 'Following lines shows  a sample of those unidentified lines:'
+                print('Some particles are not identified to any types. This could occur if you specify some cuts.')
+                print('Following lines shows  a sample of those unidentified lines:')
                 
             if self.nb_warning<10:
                 self.nb_warning+=1
-                print particle.line[:-1]
+                print(particle.line[:-1])
             return 'unknow'
 
 
@@ -680,18 +683,18 @@ class lhco_part(dict):
 class Test_one_file(Lhco_filter):
 
     def __init__(self):
-        self.lhco_file=raw_input('enter the name of the file to test : ').split()[0]
-        Card_pos=raw_input('give position to a MadWeight_card.dat: ').split()[0]
+        self.lhco_file=input('enter the name of the file to test : ').split()[0]
+        Card_pos=input('give position to a MadWeight_card.dat: ').split()[0]
         import MW_param
         self.MWparam=MW_param.MW_info(Card_pos)
         val=''
-        while val not in ['0','1']: val=raw_input('use the file info_part.dat (0/1)?')
+        while val not in ['0','1']: val=input('use the file info_part.dat (0/1)?')
         if val=='1':
             self.partdef=self.extract_file_info()
         else:
             self.nb_part={}
             for element in ['jet','bjet','electron','positron','muon','amuon','tau','atau','miss']:
-                value=raw_input('enter authorize value for the nb of particule of type '+element+' : ')
+                value=input('enter authorize value for the nb of particule of type '+element+' : ')
                 value.split()
                 if len(value)==1: self.nb_part[element]=int(value[0])
                 else: self.nb_part[element]=value
@@ -700,7 +703,7 @@ class Test_one_file(Lhco_filter):
         partdef=lhco_all_particles_def()
         if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             partdef.use_bjet()
-        if self.MWparam.info.has_key('eventselection'):
+        if 'eventselection' in self.MWparam.info:
             partdef.update_hlt_cut(self.MWparam.info['eventselection'])
         self.partdef=partdef
         #define internal variable
@@ -721,7 +724,7 @@ if(__name__=="__main__"):
             Lhco_filter('proc_card.dat')
     else:
         pos='/'.join(opt[0].split('/')[:-1])
-        print pos
+        print(pos)
         sys.path.append(pos)
-        print sys.path
+        print(sys.path)
         Test_one_file()

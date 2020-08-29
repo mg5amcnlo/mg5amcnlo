@@ -1,4 +1,6 @@
 
+from __future__ import absolute_import
+from __future__ import print_function
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
@@ -13,7 +15,7 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            from parameters import all_parameters
+            from .parameters import all_parameters
             list_of_parameters = [param for param in all_parameters if \
                                                        param.nature=='external']
         
@@ -61,5 +63,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat')
-    print 'done'
+    print('done')
     

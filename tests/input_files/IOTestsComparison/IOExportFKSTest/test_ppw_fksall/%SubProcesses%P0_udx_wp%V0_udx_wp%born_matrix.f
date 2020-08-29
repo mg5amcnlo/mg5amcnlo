@@ -306,7 +306,7 @@ C     ----------
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_47,AMP(1))
+      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_11,AMP(1))
 C     JAMPs contributing to orders QCD=0
       JAMP(1,1)=+AMP(1)
 
@@ -461,8 +461,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -556,8 +556,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
-     $ //'DEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 

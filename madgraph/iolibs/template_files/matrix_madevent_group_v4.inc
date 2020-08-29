@@ -20,7 +20,7 @@ C
     Include 'nexternal.inc'
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
-    PARAMETER (             NCOMB=%(ncomb)d)
+    PARAMETER (             NCOMB=%(ncomb)s)
     INTEGER    NGRAPHS
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
@@ -52,13 +52,19 @@ C
         INTEGER JHEL(2), J, JJ
         INTEGER THIS_NTRY(2)
         SAVE THIS_NTRY
-        DATA THIS_NTRY /0,0/
+	INTEGER NB_FAIL
+	SAVE NB_FAIL
+	DATA THIS_NTRY /0,0/
+	DATA NB_FAIL /0/
+	
 c
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
 C  
 C GLOBAL VARIABLES
 C  
+    logical init_mode
+    common /to_determine_zero_hel/init_mode
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
    
@@ -121,8 +127,8 @@ C ----------
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.2) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
@@ -155,9 +161,13 @@ C ----------
           endif
 	  ELSE
         JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.2)THEN
+        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.10)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+	      IF(init_mode) THEN
+                  IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
+                     PRINT *, 'Matrix Element/Good Helicity: %(proc_id)s ', i, 'IMIRROR', IMIRROR
+	          ENDIF
+	      ELSE IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I,IMIRROR)=.TRUE.
                  NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                  IGOOD(NGOOD(IMIRROR),IMIRROR) = I
@@ -169,11 +179,11 @@ C ----------
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
       ENDIF
-    ELSE             ! random helicity 
+    ELSE IF (.not.init_mode) then            ! random helicity 
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
 
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -188,6 +198,9 @@ c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
 
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+    ELSE
+	ANS = 1D0
+	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
     CALL RANMAR(R)
@@ -211,15 +224,20 @@ c         Set right sign for ANS, based on sign of chosen helicity
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
         ELSE IF(ANS.ne.0d0) THEN
+	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+			
 	        stop 1
+            else
+	    nb_fail = nb_fail +1
+	    endif
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL)
 C  
 %(info_lines)s
 C
@@ -233,7 +251,9 @@ C
 C CONSTANTS
 C  
     INTEGER    NGRAPHS
-    PARAMETER (NGRAPHS=%(ngraphs)d) 
+    PARAMETER (NGRAPHS=%(ngraphs)d)
+    INTEGER                 NCOMB         
+    PARAMETER (             NCOMB=%(ncomb)s)
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
@@ -253,6 +273,7 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    INTEGER IHEL
 C  
 C LOCAL VARIABLES 
 C  
@@ -282,6 +303,12 @@ C
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
+
+	logical init_mode
+	common/to_determine_zero_hel/init_mode
+
+	logical zeroamp_%(proc_id)s(NCOMB,NGRAPHS)
+	common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
 C  
 C COLOR DATA
 C  
@@ -292,11 +319,23 @@ C ----------
 if (first) then
 	first=.false.
 	%(fake_width_definitions)s
+
+	if(init_mode) then
+	   zeroamp_%(proc_id)s(:,:) = .true.
+	endif	
 endif
 
 
 %(helas_calls)s
 %(jamp_lines)s
+
+    if(init_mode)then
+      DO I=1, NGRAPHS	
+        if (AMP(I).ne.0) then
+       	  zeroamp_%(proc_id)s(ihel,i) = .false.
+       endif
+      ENDDO
+    endif	
 
     MATRIX%(proc_id)s = 0.D0 
 	DO M = 1, NAMPSO
@@ -306,9 +345,9 @@ endif
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
         ENDDO
 		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-		  ENDIF
+		  %(select_configs_if)s
+             MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+	      %(select_configs_endif)s
 		ENDDO
       ENDDO
 	ENDDO
@@ -317,11 +356,48 @@ endif
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+		  %(select_configs_if)s
             Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
-		  ENDIF
+		  %(select_configs_endif)s
 		enddo
 	  enddo
     Enddo
 
     END
+
+    SUBROUTINE PRINT_ZERO_AMP_%(proc_id)s()
+
+    IMPLICIT NONE
+    INTEGER    NGRAPHS
+    PARAMETER (NGRAPHS=%(ngraphs)d)
+
+    INTEGER    NCOMB
+    PARAMETER (NCOMB=%(ncomb)d)
+
+    logical zeroamp_%(proc_id)s(NCOMB, NGRAPHS)
+    common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
+
+    integer i,j
+    logical all_false
+
+    do i=1, NGRAPHS
+       all_false = .true.
+       do j=1,NCOMB
+       	  if (.not.zeroamp_%(proc_id)s(j, i)) then
+	     all_false = .false.
+	     exit
+	  endif
+       enddo	  
+       if (all_false) then
+       	  write(*,*) 'Amplitude/ZEROAMP:', %(proc_id)s, i
+       else
+          do j=1,NCOMB
+               if (zeroamp_%(proc_id)s(j, i)) then
+	         write(*,*) 'HEL/ZEROAMP:', %(proc_id)s, j  , i
+	      endif	    
+           enddo	
+       endif
+    enddo   
+
+    return
+    end

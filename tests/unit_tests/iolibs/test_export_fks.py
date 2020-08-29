@@ -12,10 +12,11 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """Unit test library for the export_FKS format routines"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os 
@@ -23,6 +24,9 @@ import sys
 import tempfile
 import glob
 import shutil
+import six
+from six.moves import zip
+from tests import test_manager
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -45,10 +49,12 @@ class TestFKSOutput(unittest.TestCase):
     identical results
     """
 
+#    @test_manager.bypass_for_py3
     def test_w_nlo_gen(self):
         """check that the new (memory and cpu efficient) and old generation
         mode at NLO give the same results for p p > w [QCD]
         """
+            
         path = tempfile.mkdtemp('', 'TMPWTest', None)
 
         def run_cmd(cmd):
@@ -91,7 +97,7 @@ class TestFKSOutput(unittest.TestCase):
             for old_l, new_l in zip(open(oldf), open(newf)):
                 self.assertEqual(old_l, new_l)
 
-
+#    @test_manager.bypass_for_py3
     def test_wj_loonly_gen(self):
         """check that the new (memory and cpu efficient) and old generation
         mode at NLO give the same results for p p > w j [LOonly=QCD]
@@ -104,13 +110,14 @@ class TestFKSOutput(unittest.TestCase):
 
         interface = MGCmd.MasterCmd()
         
-        run_cmd('generate p p > w+ j [LOonly=QCD]')
-        run_cmd('output %s' % os.path.join(path, 'W-oldway'))
+
         run_cmd('set low_mem_multicore_nlo_generation True')
         run_cmd('generate p p > w+ j [LOonly=QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
-        
+        run_cmd('generate p p > w+ j [LOonly=QCD]')
+        run_cmd('output %s' % os.path.join(path, 'W-oldway'))
+                
         # the P0 dirs
         for oldf in \
           (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.inc')) + \
@@ -139,6 +146,7 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
+    @test_manager.bypass_for_py3
     def test_w_nlo_gen_gosam(self):
         """check that the new generation mode works when gosam is set 
         for p p > w [QCD] 
@@ -156,10 +164,10 @@ class TestFKSOutput(unittest.TestCase):
             run_cmd('generate p p > w+ [QCD]')
             try:
                 run_cmd('output %s' % os.path.join(path, 'W-newway'))
-            except fks_common.FKSProcessError, err:
+            except fks_common.FKSProcessError as err:
                 # catch the error if gosam is not there
                 if not 'Generation of the virtuals with GoSam failed' in str(err):
-                    raise Exception, err
+                    raise Exception(err)
         except Exception as e:
             run_cmd('set low_mem_multicore_nlo_generation False')
             run_cmd('set OLP MadLoop')

@@ -2,11 +2,16 @@
 
 #Extension
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import re
 import string
 import sys
 import xml.sax.handler
+import six
+from six.moves import range
+from six.moves import input
 
 try:
     import madgraph.madweight.Cards as Cards
@@ -25,25 +30,25 @@ except ImportError:
 
 
 def create_TF_main(name,make, MW_dir):
-    print "start main program"
+    print("start main program")
     TF_file=Full_TF(name)
     TF_file.read_file("./data/TF_"+name+".dat")
 
-    print "deleting the current TFlib: "
+    print("deleting the current TFlib: ")
     os.system("rm ../../../lib/libTF.a  >& /dev/null")
      
     TF_file.create_ordering_file()
-    print "ordering_file.inc created"
+    print("ordering_file.inc created")
     list_var=TF_file.create_transfer_functions()
-    print "transfer_function.f created"
+    print("transfer_function.f created")
     TF_file.create_transfer_card(list_var)
-    print "transfer_card.dat created"
+    print("transfer_card.dat created")
     create_param_inc(list_var)
-    print "TF_param created"
+    print("TF_param created")
     create_ident_card(list_var)
-    print "ident_card created"      
+    print("ident_card created")      
     create_version(name)
-    print 'TransferFunctionVersion created'
+    print('TransferFunctionVersion created')
     fsock = open('nb_tf.inc','w').write('       integer nb_tf\n      parameter (nb_tf=1)\n')
     os.chdir('../../../') #go to main
     
@@ -53,10 +58,10 @@ def create_TF_main(name,make, MW_dir):
     for directory in MW_dir:
         obj=TF_in_SubProcesses(TF_file,directory)
         obj.write_transfer_function_file() 
-    print 'call_TF.f created in for all Subprocesses'
+    print('call_TF.f created in for all Subprocesses')
     os.chdir('./Source/MadWeight/transfer_function')
     update_dir(name,make,MW_dir)
-    print 'generation completed'       
+    print('generation completed')       
            
 
 #1 ################################################################################# 
@@ -404,14 +409,14 @@ class TF_in_SubProcesses:
         label_to_block=self.TF_data.find_label_to_block() #return {label:block}
         
         if pid in ['x1','x2']: #treat special case for initial particles
-            if label_to_block.has_key(pid):
+            if pid in label_to_block:
                 return label_to_block[pid]
             else:
                 return -1
         pid=abs(int(pid))
         if pid in particle_class.invisible_list:
             return -1
-        if label_to_block.has_key(pid_to_label[pid]):
+        if pid_to_label[pid] in label_to_block:
             return label_to_block[pid_to_label[pid]]
         else:
             return 0
@@ -446,7 +451,7 @@ class TF_in_SubProcesses:
         external_done=[]
         #add the definition for external function
         for block in self.blockname_list:
-            if isinstance(block, basestring):
+            if isinstance(block, six.string_types):
                 name_list='width_E_'+block+', width_THETA_'+block+', width_PHI_'+block
             else:
                 continue
@@ -492,7 +497,7 @@ class TF_in_SubProcesses:
         text='$B$ START_TRANSFER_FCT $E$\n' 
         
         met=0
-        if self.TF_data.label_to_block.has_key('met'):
+        if 'met' in self.TF_data.label_to_block:
             met = self.TF_data.label_to_block['met']
             #add new definition
             text+=' double precision p_met_exp(0:3),p_met_rec(0:3)\n'
@@ -507,7 +512,7 @@ class TF_in_SubProcesses:
         for i in range(0,len(self.blockname_list)):
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, basestring):
+            if not isinstance(blockname, six.string_types):
                 if met and blockname == -1 and i>2: #invisible particlule but not the initial part
                     text+=' do i=0,3\n p_met_rec(i)=p_met_rec(i)+p(i,%s)\n enddo\n' %(i+1)
                 continue
@@ -539,7 +544,7 @@ class TF_in_SubProcesses:
             text2+='\n'+self.text_tf_E_for_one_part(i)+'\n'
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, basestring):
+            if not isinstance(blockname, six.string_types):
                 text+=' if(MG_num.eq.%s) then\n tf_E_for_part=1d0\n return\n endif\n' % (i+1)
             else:
                 text+=' if(MG_num.eq.%s) then\n' %(i+1)
@@ -566,7 +571,7 @@ class TF_in_SubProcesses:
         text+='$B$ DEF_TF_E_FOR_ONE_PART $E$\n'
         
         blockname=self.blockname_list[i]            
-        if not isinstance(blockname, basestring):        
+        if not isinstance(blockname, six.string_types):        
             text+=' tf_E_for_%s=1d0\n' %(i+1) 
         else:
             text+=' tf_E_for_%s=1d0\n' %(i+1)
@@ -587,7 +592,7 @@ def create_param_inc(list_var):
 
 
     if list_var==[]:
-        print "TF_param created (no input)"
+        print("TF_param created (no input)")
         return
     
     common_text=''
@@ -716,7 +721,7 @@ def extract_tf_name(filepos='./Cards/proc_card.dat'):
     """ read the file to find the requested change of variable"""
     
     found=0
-    for line in file(filepos):
+    for line in open(filepos):
         if found:
             name=line.split()[0] #remove blank spae,end of line,...
             return name
@@ -735,9 +740,9 @@ if(__name__=="__main__"):
     opt=sys.argv
     if len(opt)<2:
         listdir=os.listdir('./Source/MadWeight/transfer_function/data')
-        print 'Available TF function:\n   ',
-        print '\n    '.join([content[3:-4] for content in listdir if (content.startswith('TF') and content.endswith('dat'))])
-        name=raw_input('Choose your Transfer Function\n')
+        print('Available TF function:\n   ', end=' ')
+        print('\n    '.join([content[3:-4] for content in listdir if (content.startswith('TF') and content.endswith('dat'))]))
+        name=input('Choose your Transfer Function\n')
     else:
         name=opt[1]
         if name in ['proc_card.dat','auto']:
@@ -749,7 +754,7 @@ if(__name__=="__main__"):
     os.chdir('./Source/MadWeight/transfer_function')
     create_TF_main(name,made_make,MW_dir)
     
-##    file=raw_input("file: ")
+##    file=six.input("file: ")
 ##    ff=open(file,'r')
 ##    gg=open(file+'_70.f','w')
 ##    text=ff.read()

@@ -16,6 +16,7 @@
 A user friendly interface to access all the function associated to MadWeight 
 """
 
+from __future__ import absolute_import
 import logging
 import os
 import subprocess
@@ -24,7 +25,9 @@ import glob
 import math
 import xml.sax.handler
 import shutil
-from cStringIO import StringIO
+from six import StringIO
+from six.moves import map
+from six.moves import range
 
 if __name__ == '__main__':
     import sys
@@ -52,7 +55,8 @@ try:
     import madgraph.various.banner as banner
     import madgraph.iolibs.files as files
     MADEVENT = False
-except ImportError, error:
+except ImportError as error:
+    raise 
     logger.debug(error)
     from internal import InvalidCmd, MadGraph5Error
     import internal.extended_cmd as cmd
@@ -112,7 +116,7 @@ class CmdExtended(cmd.Cmd):
         # and date, from the VERSION text file
         info = misc.get_pkg_info()
         info_line = ""
-        if info and info.has_key('version') and  info.has_key('date'):
+        if info and 'version' in info and  'date' in info:
             len_version = len(info['version'])
             len_date = len(info['date'])
             if len_version + len_date < 30:
@@ -235,7 +239,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     do_decay_events = remove_fct
     do_delphes = remove_fct
     do_pgs = remove_fct
-    
+    _True = [1,True,'1','T','t','.true.','True']
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -278,7 +282,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                                 '$MG:BOLD')
                 self.exec_cmd('set cluster_temp_path /tmp --no_save')
             elif self.options['cluster_type'] != 'condor':
-                raise Exception, 'cluster_temp_path needs to be define for MW. Please retry.'
+                raise Exception('cluster_temp_path needs to be define for MW. Please retry.')
         
     def do_define_transfer_fct(self, line):
         """MadWeight Function:Define the current transfer function"""
@@ -294,7 +298,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                          if (content.startswith('TF') and content.endswith('dat'))]
             for i, tfname in enumerate(possibilities):
                 question += ' %s / %s\n' % (i, tfname)
-            possibilities += range(len(possibilities))
+            possibilities += list(range(len(possibilities)))
             
             if args and args[0] in possibilities:
                 tfname = args[0]
@@ -341,9 +345,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
 #
 #       here check validity of some parameters
         if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['montecarlo_perm']=='t':
-           raise Exception, 'Cannot use mint if monte carlo over permutations'
+           raise Exception('Cannot use mint if monte carlo over permutations')
         if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['use_sobol']=='t':
-           raise Exception, 'sobol generator with mint not implemented'
+           raise Exception('sobol generator with mint not implemented')
  
 
         
@@ -356,7 +360,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 os.remove(pjoin(pdir, 'comp_madweight'))
             misc.compile(cwd=pdir)
             if not os.path.exists(pjoin(pdir, 'comp_madweight')):
-                raise Exception, 'compilation fails'
+                raise Exception('compilation fails')
         logger.info('MadWeight code has been compiled.')
         
     
@@ -405,12 +409,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     logger.warning('command launch_jobs does not recognized argument %s. This argument is ignored' % arg)
                 restrict, value = arg.split('=')
                 if restrict == '--create_dir=':
-                    if value in self.True:
+                    if value in self._True:
                         create_dir = True
                     else: 
                         create_dir = False
                 elif restrict == '--submit=':
-                    if value in self.True:
+                    if value in self._True:
                         launch = True
                     else: 
                         launch = False                
@@ -494,11 +498,11 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         cwd = pjoin(self.me_dir, 'SubProcesses', dirname, name)
         # Ensure that the code is working ONLY if TEMP_CLUSTER_PATH is define
         if self.options['run_mode'] == 0:
-            raise Exception , 'need to check the validity'
+            raise Exception('need to check the validity')
         else:
             # ensure that this is running with NO central disk !!!
             if not self.options['cluster_temp_path'] and not self.options['cluster_type'] == 'condor':
-                raise self.ConfigurationError, 'MadWeight requires temp_cluster_path options to be define'
+                raise self.ConfigurationError('MadWeight requires temp_cluster_path options to be define')
             self.cluster.submit2(exe, args, cwd, input_files=input_files, output_files=output_file)
 
 
@@ -508,13 +512,13 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         if len(args) >1:
             self.help_collect()
-            raise self.InvalidCmd, 'Invalid Command format'
+            raise self.InvalidCmd('Invalid Command format')
         elif len(args) == 1:
             if args not in ['-refine', '--refine']:
                 args[0] = '-refine'
             else:
                 self.help_collect()
-                raise self.InvalidCmd, 'Invalid Command format'
+                raise self.InvalidCmd('Invalid Command format')
 
     def do_collect(self, line):
         """MadWeight Function: making the collect of the results"""
@@ -685,12 +689,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if ans == 'y':
             try:
                 shutil.rmtree(pjoin(self.me_dir, 'Events', name))
-            except Exception, error:
+            except Exception as error:
                 logger.warning(error)
         for Pdir in self.MWparam.MW_listdir:
             try:
                 shutil.rmtree(pjoin(self.me_dir, 'SubProcesses', Pdir, name))
-            except Exception, error:
+            except Exception as error:
                 logger.warning(error)            
     
     def ask_edit_cards(self, cards, *arg, **opts):
@@ -1007,7 +1011,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
         elif name in ['log','subprocess','br']:           
             pass
         else:
-            raise Exception, name
+            raise Exception(name)
         if name != 'br':
             self.text = StringIO()
         

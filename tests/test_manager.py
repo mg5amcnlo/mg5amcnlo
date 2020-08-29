@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python3
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
@@ -27,9 +27,11 @@
    the NAME can contain regular expression (in python re standard format)
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
     sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
@@ -44,6 +46,7 @@ import unittest
 import time
 import datetime
 import shutil
+import subprocess
 import glob
 from functools import wraps
 
@@ -54,6 +57,9 @@ sys.path.insert(0, root_path)
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
 
+import six
+from six.moves import map
+
 import tests.IOTests
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -62,7 +68,7 @@ from madgraph import MG4DIR
 from madgraph.interface.extended_cmd import Cmd
 from madgraph.iolibs.files import cp, ln, mv
 import madgraph.various.misc as misc
-
+from tests import to_bypass
 
 #position of MG_ME
 MGME_dir = MG4DIR
@@ -79,6 +85,9 @@ _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
 _hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
 _hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
 _hc_comparison_modif_log = pjoin(_input_file_path,'IOTestsRefModifs.log')
+
+#_to_bypass = []
+#misc.sprint("define _to_bypass", id(_to_bypass))
 
 
 class MyTextTestRunner(unittest.TextTestRunner):
@@ -108,7 +117,7 @@ class MyTextTestRunner(unittest.TextTestRunner):
         self.stream.writeln()
         if not result.wasSuccessful():
             self.stream.write("FAILED (")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = list(map(len, (result.failures, result.errors)))
             if failed:
                 self.stream.writeln("failures=%d)" % failed)
                 self.stream.writeln(' '.join([str(t[0]).split()[0] for t in result.failures]))
@@ -142,20 +151,20 @@ class MyTextTestRunner(unittest.TextTestRunner):
         #self.stream.writeln()
         if not result.wasSuccessful():
             self.stream.write("FAILED (")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = list(map(len, (result.failures, result.errors)))
             if failed:
                 self.stream.write("failures=%d" % failed)
             if errored:
                 if failed: self.stream.write(", ")
                 self.stream.write("errors=%d" % errored)
             self.stream.writeln(")")
-            print to_check
+            print(to_check)
             to_check= to_check.rsplit('.',1)[1]
-            print to_check
+            print(to_check)
             if result.failures:
-                print 'fail', to_check,[str(R[0]) for R in result.failures]
+                print('fail', to_check,[str(R[0]) for R in result.failures])
             if result.errors:
-                print 'errors',to_check,[str(R[0]) for R in result.errors]
+                print('errors',to_check,[str(R[0]) for R in result.errors])
 
             if any(to_check in str(R[0]) for R in result.failures) or\
                any(to_check in str(R[0]) for R in result.errors):
@@ -224,7 +233,7 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
     all_test = TestFinder(package=package, expression=expression, re_opt=re_opt)
     import random
     random.shuffle(all_test)
-    print "to_crash"
+    print("to_crash")
     to_crash = TestFinder(package=package, expression=to_crash, re_opt=re_opt)
     to_crash.collect_dir(package, checking=True)
 
@@ -239,7 +248,7 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
         data.__class__ = TestSuiteModified
         testsuite.addTest(data)
         # Running it
-        print "run it for %s" % test_fct
+        print("run it for %s" % test_fct)
         output =  MyTextTestRunner(verbosity=verbosity).run_border(testsuite, to_crash[0])
     
     return output
@@ -257,7 +266,7 @@ def listIOTests(arg=['']):
     """
     
     if len(arg)!=1 or not isinstance(arg[0],str):
-        print "Exactly one argument, and in must be a string, not %s."%arg
+        print("Exactly one argument, and in must be a string, not %s."%arg)
         return
     arg=arg[0]
     
@@ -312,8 +321,8 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             return tarinfo
     
     if synchronize:
-        print "Please, prefer updating the reference file automatically "+\
-                                                          "rather than by hand."
+        print("Please, prefer updating the reference file automatically "+\
+                                                          "rather than by hand.")
         tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
         tar.add(_hc_comparison_files, \
                   arcname=path.basename(_hc_comparison_files), filter=noBackUps)
@@ -327,12 +336,12 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         log = open(_hc_comparison_modif_log,mode='a')
         log.write(text)
         log.close()
-        print "INFO:: Ref. tarball %s updated"%str(_hc_comparison_tarball)
+        print("INFO:: Ref. tarball %s updated"%str(_hc_comparison_tarball))
             
         return
     
     if len(arg)!=1 or not isinstance(arg[0],str):
-        print "Exactly one argument, and in must be a string, not %s."%arg
+        print("Exactly one argument, and in must be a string, not %s."%arg)
         return
     arg=arg[0]
 
@@ -386,7 +395,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
                                                  IOTestManager.testNames_filter:
                 name_filer_bu = IOTestManager.testNames_filter
                 IOTestManager.testNames_filter = ['ALL']
-                existing_tests = IOTestManager.all_tests.keys()
+                existing_tests = list(IOTestManager.all_tests.keys())
                 
             eval('IOTestsInstances[-1].'+IOTestFunction.split('.')[-1]+\
                                                              '(load_only=True)')
@@ -398,42 +407,42 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             
             setUp_time = time.time() - start
             if setUp_time > 0.5:                
-                print colored%(34,"Loading IOtest %s is slow (%s)"%
+                print(colored%(34,"Loading IOtest %s is slow (%s)"%
                         (colored%(32,'.'.join(IOTestFunction.split('.')[-3:])),
-                                             colored%(34,'%.2fs'%setUp_time)))
+                                             colored%(34,'%.2fs'%setUp_time))))
     if len(IOTestsInstances)==0:
-        print "No IOTest found."
+        print("No IOTest found.")
         return
     
     # runIOTests cannot be made a classmethod, so I use an instance, but it does 
     # not matter which one as no instance attribute will be used.
     try:
         modifications = IOTestsInstances[-1].runIOTests( update = update, 
-           force = force, verbose=True, testKeys=IOTestManager.all_tests.keys())
+           force = force, verbose=True, testKeys=list(IOTestManager.all_tests.keys()))
     except KeyboardInterrupt:
         if update:
             # Remove the BackUp of the reference files.
             if not path.isdir(hc_comparison_files_BackUp):
-                print "\nWARNING:: Update interrupted and modifications already "+\
-                                              "performed could not be reverted."
+                print("\nWARNING:: Update interrupted and modifications already "+\
+                                              "performed could not be reverted.")
             else:
                 shutil.rmtree(_hc_comparison_files)
                 mv(hc_comparison_files_BackUp,_hc_comparison_files)
-                print colored%(34,
-                "\nINFO:: Update interrupted, existing modifications reverted.")
+                print(colored%(34,
+                "\nINFO:: Update interrupted, existing modifications reverted."))
             sys.exit(0)
         else:
-            print "\nINFO:: IOTest runs interrupted."
+            print("\nINFO:: IOTest runs interrupted.")
             sys.exit(0)
  
     tot_time = time.time() - start
     
     if modifications == 'test_over':
-        print colored%(32,"\n%d IOTests "%len(IOTestManager.all_tests.keys()))+\
-                    "successfully tested in %s."%(colored%(34,'%.2fs'%tot_time))
+        print(colored%(32,"\n%d IOTests "%len(list(IOTestManager.all_tests.keys())))+\
+                    "successfully tested in %s."%(colored%(34,'%.2fs'%tot_time)))
         sys.exit(0)
     elif not isinstance(modifications,dict):
-        print "Error during the files update."
+        print("Error during the files update.")
         sys.exit(0)
 
     if len(modifications['missing'])>0:
@@ -441,7 +450,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         text += colored%(31,
                "The following files were not generated by the tests, fix this!")        
         text += '\n'+'\n'.join(["   %s"%mod for mod in modifications['missing']])
-        print text
+        print(text)
         modifications['missing'] = []
 
     if sum(len(v) for v in modifications.values())>0:
@@ -456,7 +465,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             text += colored%(32,"The following reference files have been %s :"%key)
             text += '\n'+'\n'.join(["   %s"%mod for mod in modifications[key]])
             text += '\n'
-        print text
+        print(text)
         try:
             answer = Cmd.timed_input(question=
           "Do you want to apply the modifications listed above? [y/n] >",default="y")
@@ -472,14 +481,14 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
                 tar.add(_hc_comparison_files, \
                       arcname=path.basename(_hc_comparison_files), filter=noBackUps)
                 tar.close()
-                print colored%(32,"INFO:: tarball %s updated"%str(_hc_comparison_tarball))
+                print(colored%(32,"INFO:: tarball %s updated"%str(_hc_comparison_tarball)))
             else:
-                print colored%(32,"INFO:: Reference %s updated"%\
-                                    str(os.path.basename(_hc_comparison_files)))
+                print(colored%(32,"INFO:: Reference %s updated"%\
+                                    str(os.path.basename(_hc_comparison_files))))
                 if len(modifications['created'])>0:
-                    print colored%(31,"Some ref. files have been created; add "+\
+                    print(colored%(31,"Some ref. files have been created; add "+\
                       "them to the revision with\n  "+
-                      "bzr add tests/input_files/IOTestsComparison")
+                      "bzr add tests/input_files/IOTestsComparison"))
            
                 # Make sure to remove the BackUp files
                 filelist = glob.glob(os.path.join(_hc_comparison_files,
@@ -490,18 +499,19 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             if path.isdir(hc_comparison_files_BackUp):
                 shutil.rmtree(_hc_comparison_files)
                 shutil.copytree(hc_comparison_files_BackUp,_hc_comparison_files)
-                print colored%(32,"INFO:: No modifications applied.")
+                print(colored%(32,"INFO:: No modifications applied."))
             else:
-                print colored%(31,
-                 "ERROR:: Could not revert the modifications. No backup found.")
+                print(colored%(31,
+                 "ERROR:: Could not revert the modifications. No backup found."))
     else:
-        print colored%(32,"\nNo modifications performed. No update necessary.")
+        print(colored%(32,"\nNo modifications performed. No update necessary."))
     
     # Remove the BackUp of the reference files.
     if path.isdir(hc_comparison_files_BackUp):
         shutil.rmtree(hc_comparison_files_BackUp)
 
 class TimeLimit(Exception): pass
+
 #===============================================================================
 # TestSuiteModified
 #===============================================================================
@@ -514,20 +524,26 @@ class TestSuiteModified(unittest.TestSuite):
     time_limit = 1
     mintime_limit=0
     time_db = {}
+    bypass = []
     stop_eval = False # bypass all following test when this is on True (but those in preserve)
 
     @tests.IOTests.set_global()
     def __call__(self, *args, **kwds):
 
-        bypass= []
+        bypass=list(TestSuiteModified.bypass) + to_bypass
         to_preserve=[]
 
 #        if 'TESTLHEParser' in str(self):
 #            TestSuiteModified.stop_eval = False
-
-        if any(name in str(self) for name in bypass):
+        if any(name in str(self) for name in bypass if isinstance(name,str)):
             MyTextTestRunner.stream.write('s')
-            return 
+            return
+        elif bypass:
+            fid = (self._tests[0]._testMethodName,self._tests[0]._testMethodDoc)
+            if fid in bypass:
+                MyTextTestRunner.bypassed.append(fid[0])
+                MyTextTestRunner.stream.write('B')
+                return                
 
         if  TestSuiteModified.stop_eval and \
                 all(name not in str(self) for name in to_preserve):
@@ -609,7 +625,7 @@ class TestFinder(list):
         if len(self) == 0:
             start = time.time()
             self.collect_dir(self.package, checking=True)
-            print 'loading test takes %ss'  % (time.time()-start)
+            print('loading test takes %ss'  % (time.time()-start))
     def __iter__(self):
         """ Check that a collect was performed (do it if needed) """
         self._check_if_obj_build()
@@ -643,7 +659,7 @@ class TestFinder(list):
 
             if status == 'file':
                 self.collect_file(directory + '/' + name, local_check)
-            elif status == "module":
+            elif status == "module" and name != 'input_files':
                 self.collect_dir(directory + '/' + name, local_check)
 
         if move:
@@ -683,9 +699,9 @@ class TestFinder(list):
         test functions should start with test
         """
         if not inspect.isclass(class_):
-            raise self.TestFinderError, 'wrong input class_'
+            raise self.TestFinderError('wrong input class_')
         if not issubclass(class_, unittest.TestCase):
-            raise self.TestFinderError, 'wrong input class_'
+            raise self.TestFinderError('wrong input class_')
 
         #devellop the name
         if base:
@@ -694,8 +710,8 @@ class TestFinder(list):
             base = class_.__name__
         candidate = [base + '.' + name for name in dir(class_) if \
                        name.startswith(prefix)\
-                       and inspect.ismethod(eval('class_.' + name))]
-
+                       and (inspect.ismethod(getattr(class_, name)) or 
+                           inspect.isfunction(getattr(class_, name)))]
         if not checking:
             self += candidate
         else:
@@ -708,13 +724,13 @@ class TestFinder(list):
 
         if isinstance(expression, list):
             pass
-        elif isinstance(expression, basestring):
+        elif isinstance(expression, six.string_types):
             if expression in '':
                 expression = ['.*'] #made an re authorizing all regular name
             else:
                 expression = [expression]
         else:
-            raise self.TestFinderError, 'obj should be list or string'
+            raise self.TestFinderError('obj should be list or string')
 
         self.rule = []
         for expr in expression:
@@ -728,8 +744,8 @@ class TestFinder(list):
     def check_valid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, basestring):
-            raise self.TestFinderError, 'check valid take a string argument'
+        if not isinstance(name, six.string_types):
+            raise self.TestFinderError('check valid take a string argument')
 
         for specific_format in self.format_possibility(name):
             for expr in self.rule:
@@ -751,23 +767,23 @@ class TestFinder(list):
     def passin_pyformat(cls, name):
         """ transform a relative position in a python import format """
 
-        if not isinstance(name, basestring):
-            raise cls.TestFinderError, 'collect_file takes a file position'
+        if not isinstance(name, six.string_types):
+            raise cls.TestFinderError('collect_file takes a file position')
 
         name = name.replace('//', '/') #sanity
         #deal with begin/end
         if name.startswith('./'):
             name = name[2:]
         if not name.endswith('.py'):
-            raise cls.TestFinderError, 'Python files should have .py extension'
+            raise cls.TestFinderError('Python files should have .py extension')
         else:
             name = name[:-3]
 
         if name.startswith('/'):
-            raise cls.TestFinderError, 'path must be relative'
+            raise cls.TestFinderError('path must be relative')
         if '..' in name:
-            raise cls.TestFinderError, 'relative position with \'..\' is' + \
-                ' not supported for the moment'
+            raise cls.TestFinderError('relative position with \'..\' is' + \
+                ' not supported for the moment')
 
         #replace '/' by points -> Python format
         name = name.replace('/', '.')
@@ -883,6 +899,15 @@ class IOTestFinder(TestFinder):
             logging.critical("file %s takes a long time to load (%.4fs)" % \
                                                          (pyname, time_to_load))
 
+def bypass_for_py3(fct):
+
+    if six.PY3:
+        to_bypass.append((fct.__name__, fct.__doc__))
+        #global BYPASS
+    
+    return fct
+
+            
 if __name__ == "__main__":
 
     help = """
@@ -973,7 +998,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 
     parser.add_option("-N", "--notification", default=45,
           help="Running time, below which no notification is raised. (-1 for no notification)")        
-
+    parser.add_option("", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
+                  help='For mac user, forbids to use caffeinate when running with a script')
     
     (options, args) = parser.parse_args()
 
@@ -992,7 +1018,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
             args = ''
     else:
         if len(args)>1:
-            print "Specify at most one argument to specify what IOTests to run."
+            print("Specify at most one argument to specify what IOTests to run.")
         if len(args) == 0:
             args = ['ALL/ALL/ALL']
 
@@ -1000,7 +1026,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
             if len(args)==1:
                 args = ['%s/ALL/ALL'%str(args[0])]
             else:
-                print "Specify the name of the IOTest group you want to run."
+                print("Specify the name of the IOTest group you want to run.")
         else:
             specs = args[0].split('/')
             if len(specs)==1:
@@ -1013,10 +1039,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                 args = ['%s/%s/%s'%(specs[0],
                   (specs[1] if specs[1][:7]!='testIO_' else specs[1]),specs[2])]
             else:
-                print "The IOTest specification can include at most two '/'."                 
+                print("The IOTest specification can include at most two '/'.")                 
 
     if len(args) == 1 and args[0]=='help':
-        print help
+        print(help)
         sys.exit(0)
 
     if options.path == 'U':
@@ -1046,10 +1072,18 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         logging.getLogger('tutorial').setLevel('ERROR')
     except:
         pass
+
+    if sys.platform == "darwin" and options.nosleep:
+        logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
+        pid = os.getpid()
+        subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
+        
+
+
     
     if options.synchronize and IOTestManager._compress_ref_fodler:
-        print "The tarball synchronization is not necessary since"+ \
-          " MadGraph5_aMCatNLO is configured not to compress the references files."
+        print("The tarball synchronization is not necessary since"+ \
+          " MadGraph5_aMCatNLO is configured not to compress the references files.")
     
     if options.IOTests=='No' and not options.synchronize:
         if not options.border_effect:
@@ -1061,9 +1095,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                 package=options.path, timelimit=[options.mintime,options.timed])
     else:
         if options.IOTests=='L':
-            print "Listing all tests defined in the reference files ..."
-            print '\n'.join("> %s/%s"%(colored%(34,test[0]),colored%(32,test[1]))
-            for test in listIOTests(args) if IOTestManager.need(test[0],test[1]))
+            print("Listing all tests defined in the reference files ...")
+            print('\n'.join("> %s/%s"%(colored%(34,test[0]),colored%(32,test[1]))
+            for test in listIOTests(args) if IOTestManager.need(test[0],test[1])))
             exit()
         if options.force:
             force = 10
@@ -1079,8 +1113,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     if 0 < float(options.notification) < time.time()-start_time:
         if isinstance(output, unittest.runner.TextTestResult):
             run = output.testsRun
-            failed, errored, skipped = map(len, 
-                               (output.failures, output.errors, output.skipped))
+            failed, errored, skipped = list(map(len, 
+                               (output.failures, output.errors, output.skipped)))
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
         misc.apple_notify("tests finished", str(output))

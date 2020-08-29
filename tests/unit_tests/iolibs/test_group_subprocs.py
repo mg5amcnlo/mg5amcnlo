@@ -15,7 +15,9 @@
 
 """Unit test library for the export v4 format routines"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os 
@@ -34,6 +36,7 @@ import madgraph.core.color_algebra as color
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
+from six.moves import range
 
 #===============================================================================
 # SubProcessGroupTest
@@ -285,13 +288,13 @@ class SubProcessGroupTest(unittest.TestCase):
                           {0: [1, 2, 3]},
                           {0: [1, 2, 3], 1: [1, 3, 2]},
                           {0: [1, 2, 3], 1: [1, 3, 2]},
-                          {0: [1, 2, 3, 4, 5, 6], 1: [7, 8, 9, 1, 2, 3], 2: [7, 8, 9], 3: [1, 2, 3], 4: [1, 2, 3], 5: [7, 8, 9, 4, 5, 6], 6: [7, 8, 9], 7: [1, 2, 3, 4, 5, 6], 8: [1, 2, 3], 9: [1, 2, 3]},
+                          {0: [1, 2, 2, 3, 4, 4], 1: [5, 6, 7, 1, 2, 2], 2: [5, 6, 7], 3: [1, 2, 2], 4: [1, 2, 2], 5: [5, 6, 7, 3, 4, 4], 6: [5, 6, 7], 7: [1, 2, 2, 3, 4, 4], 8: [1, 2, 2], 9: [1, 2, 2]},
                           {0: [1, 2, 3], 1: [1, 3, 2]}]]
         diags_for_config =  [[[[2], [3], [4]],
                               [[1], [2], [3]],
                               [[1, 1], [2, 3], [3, 2]],
                               [[1, 1], [2, 3], [3, 2]],
-                              [[1, 4, 0, 1, 1, 0, 0, 1, 1, 1], [2, 5, 0, 2, 2, 0, 0, 2, 2, 2], [3, 6, 0, 3, 3, 0, 0, 3, 3, 3], [4, 0, 0, 0, 0, 4, 0, 4, 0, 0], [5, 0, 0, 0, 0, 5, 0, 5, 0, 0], [6, 0, 0, 0, 0, 6, 0, 6, 0, 0], [0, 1, 1, 0, 0, 1, 1, 0, 0, 0], [0, 2, 2, 0, 0, 2, 2, 0, 0, 0], [0, 3, 3, 0, 0, 3, 3, 0, 0, 0]],
+                              [[1, 4, 0, 1, 1, 0, 0, 1, 1, 1], [2, 5, 0, 2, 2, 0, 0, 2, 2, 2], [4, 0, 0, 0, 0, 4, 0, 4, 0, 0], [5, 0, 0, 0, 0, 5, 0, 5, 0, 0], [0, 1, 1, 0, 0, 1, 1, 0, 0, 0], [0, 2, 2, 0, 0, 2, 2, 0, 0, 0], [0, 3, 3, 0, 0, 3, 3, 0, 0, 0]],
                               [[1, 1], [2, 3], [3, 2]]]]
         #new_diagram_maps = []
         #new_diags_for_config = []
@@ -325,6 +328,7 @@ class SubProcessGroupTest(unittest.TestCase):
             for igroup, group in enumerate(subprocess_groups):
                 group.get('matrix_elements')
                 #dmaps.append(group.get('diagram_maps'))
+                
                 self.assertEqual(group.get('diagram_maps'),
                                  diagram_maps[nfs-2][igroup])
                 #diags.append([group.get_subproc_diagrams_for_config(ic) for\

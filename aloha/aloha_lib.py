@@ -43,12 +43,15 @@
 
 
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 from array import array
 import collections
 from fractions import Fraction
 import numbers
 import re
 import aloha # define mode of writting
+from six.moves import range
 
 try:
     import madgraph.various.misc as misc
@@ -143,13 +146,13 @@ class Computation(dict):
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
                 try:
                     expr = expression.expand().get_rep([0])
-                except KeyError, error:
+                except KeyError as error:
                     if error.args != ((0,),):
                         raise
                     else:
-                        raise aloha.ALOHAERROR, '''Error in input format. 
+                        raise aloha.ALOHAERROR('''Error in input format. 
     Argument of function (or denominator) should be scalar.
-    We found %s''' % expression
+    We found %s''' % expression)
                 new = expr.simplify()
                 if not isinstance(new, numbers.Number):
                     new = new.factorize()
@@ -171,10 +174,10 @@ class Computation(dict):
             else:
                 module = 'cmath.'
             try:
-                return str(eval("%s%s(%s)" % (module,fct_tag, ','.join(`x` for x in argument))))
-            except Exception, error:
-                print error
-                print "cmath.%s(%s)" % (fct_tag, ','.join(`x` for x in argument))
+                return str(eval("%s%s(%s)" % (module,fct_tag, ','.join(repr(x) for x in argument))))
+            except Exception as error:
+                print(error)
+                print("cmath.%s(%s)" % (fct_tag, ','.join(repr(x) for x in argument)))
         if str(fct_tag)+str(argument) in self.inverted_fct:
             tag = self.inverted_fct[str(fct_tag)+str(argument)]
             v = tag.split('(')[1][:-1]
@@ -223,7 +226,7 @@ class AddVariable(list):
             if not hasattr(term, 'vartype'):
                 if isinstance(term, dict):
                     # allow term of type{(0,):x}
-                    assert term.values() == [0]
+                    assert list(term.values()) == [0]
                     term = term[(0,)]
                 constant += term
                 del self[pos]
@@ -265,7 +268,7 @@ class AddVariable(list):
                 else:
                     nbminus += 1
         if countprefact and max(countprefact.values()) >1:
-            fact_prefactor = sorted(countprefact.items(), key=lambda x: x[1], reverse=True)[0][0]
+            fact_prefactor = sorted(list(countprefact.items()), key=lambda x: x[1], reverse=True)[0][0]
         else:
             fact_prefactor = 1
         if nbplus < nbminus:
@@ -560,7 +563,7 @@ class AddVariable(list):
                 else:
                     nbminus += 1
     
-            newadd.prefactor = sorted(countprefact.items(), key=lambda x: x[1], reverse=True)[0][0]
+            newadd.prefactor = sorted(list(countprefact.items()), key=lambda x: x[1], reverse=True)[0][0]
             if nbplus < nbminus:
                 newadd.prefactor *= -1
             if newadd.prefactor != 1:
@@ -621,7 +624,7 @@ class MultVariable(array):
         """ initialization of the object with default value """        
         #array.__init__(self, 'i', old) <- done already in new !!
         self.prefactor = prefactor
-        assert isinstance(self.prefactor, (float,int,long,complex))
+        assert isinstance(self.prefactor, (float,int,int,complex))
     
     def get_id(self):
         assert len(self) == 1
@@ -684,7 +687,7 @@ class MultVariable(array):
 #                    self.append(new_id)
 #            return self
         else:
-            raise Exception, 'Cann\'t replace a Variable by %s' % type(expression)
+            raise Exception('Cann\'t replace a Variable by %s' % type(expression))
         
     
     def get_all_var_names(self):
@@ -785,7 +788,7 @@ class MultVariable(array):
             text = '(%s)' % (' * '.join(t))
         return text
         
-    __rep__ = __str__
+    __repr__ = __str__
     
     def factorize(self):
         return self
@@ -1457,12 +1460,14 @@ class IndicesIterator:
         else:
             # Special case for Scalar object
             self.data = 0
-            self.next = self.nextscalar
                 
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
+        if not self.len:
+            return self.nextscalar()
+
         for i in range(self.len):
             if self.data[i] < 3:
                 self.data[i] += 1
@@ -1470,6 +1475,8 @@ class IndicesIterator:
             else:
                 self.data[i] = 0
         raise StopIteration
+    #Python2
+    next = __next__
             
     def nextscalar(self):
         if self.data:
@@ -1495,6 +1502,6 @@ if '__main__' ==__name__:
     import cProfile
     def create():
         for i in range(10000):
-            LorentzObjectRepresentation.compare_indices(range(i%10),[4,3,5])       
+            LorentzObjectRepresentation.compare_indices(list(range(i%10)),[4,3,5])       
         
     cProfile.run('create()')

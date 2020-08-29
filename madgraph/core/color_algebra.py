@@ -16,11 +16,15 @@
 """Classes and methods required for all calculations related to SU(N) color 
 algebra."""
 
+from __future__ import absolute_import
 import array
 import copy
 import fractions
 import itertools
 import madgraph.various.misc as misc
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 #===============================================================================
 # ColorObject
@@ -31,8 +35,11 @@ class ColorObject(array.array):
 
     def __new__(cls, *args):
         """Create a new ColorObject, assuming an integer array"""
-        return super(ColorObject, cls).__new__(cls, 'i', args)
-
+        try:
+            return super(ColorObject, cls).__new__(cls, 'i', args)
+        except TypeError:
+            assert args[0] == 'i' #happens when unpacking pickle with py3
+            return super(ColorObject, cls).__new__(cls, 'i', args[1])
     def __reduce__(self):
         """Special method needed to pickle color objects correctly"""
         return (self.__class__, tuple([i for i in self]))
@@ -296,6 +303,9 @@ class f(ColorObject):
     def __init__(self, *args):
         """Ensure f and d objects have strictly 3 indices"""
         
+        # for py3 from pickle
+        if len(args) !=3 and args[0] == 'i':
+            args = args[1]
         assert len(args) == 3, "f and d objects must have three indices!"
         
         super(f, self).__init__()
@@ -808,7 +818,7 @@ class ColorString(list):
         dictionary written as {old_index:new_index,...}, does that for ALL 
         color objects."""
 
-        map(lambda col_obj: col_obj.replace_indices(repl_dict), self)
+        list(map(lambda col_obj: col_obj.replace_indices(repl_dict), self))
 
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 
@@ -833,8 +843,7 @@ class ColorString(list):
         are still non trivial color objects."""
 
         if self:
-            raise ValueError, \
-                "String %s cannot be simplified to a number!" % str(self)
+            raise ValueError("String %s cannot be simplified to a number!" % str(self))
 
         if self.Nc_power >= 0:
             return (self.coeff * fractions.Fraction(\
@@ -1050,7 +1059,7 @@ class ColorFactor(list):
         dictionary written as {old_index:new_index,...}, does that for ALL 
         color strings."""
 
-        map(lambda col_str:col_str.replace_indices(repl_dict), self)
+        list(map(lambda col_str:col_str.replace_indices(repl_dict), self))
 
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 

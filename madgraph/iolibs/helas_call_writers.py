@@ -13,9 +13,10 @@
 #
 ################################################################################
 """Classes for writing Helas calls. HelasCallWriter is the base class."""
+from __future__ import absolute_import
+
 
 import re
-
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -24,6 +25,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
+from six.moves import range
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
@@ -64,22 +66,21 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self['model'] = base_objects.Model()
         self['wavefunctions'] = {}
         self['amplitudes'] = {}
+        self.width_tchannel_set_tozero = False
 
     def filter(self, name, value):
         """Filter for model property values"""
 
         if name == 'model':
             if not isinstance(value, base_objects.Model):
-                raise self.PhysicsObjectError, \
-                    "Object of type %s is not a model" % type(value)
+                raise self.PhysicsObjectError("Object of type %s is not a model" % type(value))
 
         if name == 'wavefunctions':
             # Should be a dictionary of functions returning strings, 
             # with keys (spins, flow state)
             if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for wavefunction" % \
-                                                                str(value)
+                raise self.PhysicsObjectError("%s is not a valid dictionary for wavefunction" % \
+                                                                str(value))
 
             for key in value.keys():
                 self.add_wavefunction(key, value[key])
@@ -88,9 +89,8 @@ class HelasCallWriter(base_objects.PhysicsObject):
             # Should be a dictionary of functions returning strings, 
             # with keys (spins, flow state)
             if not isinstance(value, dict):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid dictionary for amplitude" % \
-                                                                str(value)
+                raise self.PhysicsObjectError("%s is not a valid dictionary for amplitude" % \
+                                                                str(value))
 
             for key in value.keys():
                 self.add_amplitude(key, value[key])
@@ -281,14 +281,15 @@ class HelasCallWriter(base_objects.PhysicsObject):
             #misc.sprint(wavefunction['number_external'])
             call = self["wavefunctions"][wavefunction.get_call_key()](\
                                                                    wavefunction)
-            if wavefunction.is_t_channel():
-                call = re.sub(',\s*fk_\w*\s*,', ', ZERO,', call)
-            else:   
-                call = self["wavefunctions"][wavefunction.get_call_key()](\
-                                                                   wavefunction)            
-            return call
-        except KeyError:
+        except KeyError as error:
             return ""
+        
+        if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
+            call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
+            if n:
+                self.width_tchannel_set_tozero = True
+        return call
+        
 
     def get_amplitude_call(self, amplitude):
         """Return the function for writing the amplitude
@@ -296,7 +297,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         try:
             call = self["amplitudes"][amplitude.get_call_key()]
-        except KeyError, error:
+        except KeyError as error:
             return ""
         else:
             return call(amplitude)
@@ -334,10 +335,15 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Customized constructor
 
-    def __init__(self, argument={}):
+    def __init__(self, argument={}, options={}):
         """Allow generating a HelasCallWriter from a Model
         """
 
+        default_options = {'zerowidth_tchannel': True}
+        
+        self.options = dict(default_options)
+        self.options.update(options)
+        
         if isinstance(argument, base_objects.Model):
             super(HelasCallWriter, self).__init__()
             self.set('model', argument)
@@ -604,9 +610,8 @@ class FortranHelasCallWriter(HelasCallWriter):
         # If function not already existing, try to generate it.
 
         if len(wavefunction.get('mothers')) > 3:
-            raise self.PhysicsObjectError, \
-                  """Automatic generation of Fortran wavefunctions not
-                  implemented for > 3 mothers"""
+            raise self.PhysicsObjectError("""Automatic generation of Fortran wavefunctions not
+                  implemented for > 3 mothers""")
 
         self.generate_helas_call(wavefunction)
         return super(FortranHelasCallWriter, self).get_wavefunction_call(\
@@ -625,9 +630,8 @@ class FortranHelasCallWriter(HelasCallWriter):
         # If function not already existing, try to generate it.
 
         if len(amplitude.get('mothers')) > 4:
-            raise self.PhysicsObjectError, \
-                  """Automatic generation of Fortran amplitudes not
-                  implemented for > 4 mothers"""
+            raise self.PhysicsObjectError("""Automatic generation of Fortran amplitudes not
+                  implemented for > 4 mothers""")
 
         self.generate_helas_call(amplitude)
         return super(FortranHelasCallWriter, self).get_amplitude_call(amplitude)
@@ -655,8 +659,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
-            raise self.PhysicsObjectError, \
-                  "get_helas_call must be called with wavefunction or amplitude"
+            raise self.PhysicsObjectError("get_helas_call must be called with wavefunction or amplitude")
 
         call = "CALL "
 
@@ -847,16 +850,14 @@ class FortranHelasCallWriter(HelasCallWriter):
         if isinstance(arg, helas_objects.HelasWavefunction):
             return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          FortranHelasCallWriter.sort_wf[l2] - \
-                          FortranHelasCallWriter.sort_wf[l1]))
+                                  key= lambda l: FortranHelasCallWriter.sort_wf[l],
+                                  reverse=True))
 
         if isinstance(arg, helas_objects.HelasAmplitude):
             return "".join(sorted([HelasCallWriter.mother_dict[\
             wf.get_spin_state_number()] for wf in arg.get('mothers')],
-                          lambda l1, l2: \
-                          FortranHelasCallWriter.sort_amp[l2] - \
-                          FortranHelasCallWriter.sort_amp[l1]))
+                                  key= lambda l: FortranHelasCallWriter.sort_amp[l],
+                                  reverse=True))
 
     @staticmethod
     def sorted_mothers(arg):
@@ -1013,13 +1014,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     mp_prefix = check_param_card.ParamCard.mp_prefix
 
-    def __init__(self, argument={}, hel_sum = False):
+    def __init__(self, argument={}, hel_sum = False, options={}):
         """Allow generating a HelasCallWriter from a Model.The hel_sum argument
         specifies if amplitude and wavefunctions must be stored specifying the
         helicity, i.e. W(1,i) vs W(1,i,H).
         """
         self.hel_sum = hel_sum
-        super(FortranUFOHelasCallWriter, self).__init__(argument)
+        super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
         """ Returns the string for accessing the wavefunction with number in
@@ -1095,8 +1096,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
-            raise self.PhysicsObjectError, \
-                  "generate_helas_call must be called with wavefunction or amplitude"
+            raise self.PhysicsObjectError("generate_helas_call must be called with wavefunction or amplitude")
         
         call = "CALL "
 
@@ -1266,8 +1266,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 elif lcutpart.get('spin')==2 or lcutpart.get('spin')==3:
                     res.append("DO I=1,4")
                 else:
-                    raise self.PhysicsObjectError, \
-                  "The L-cut particle type is not supported"
+                    raise self.PhysicsObjectError("The L-cut particle type is not supported")
                 # Temporarily relabel the 'me_id' attribute of the external wfs
                 # in this wavefunction's mothers so to have them matching the
                 # convention in the loop helas calls.
@@ -1506,8 +1505,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             
         if isinstance(argument, helas_objects.HelasAmplitude) and \
                                                   argument.get('type')=='loop':
-           raise MadGraph5Error, 'There should not be any helas call '+\
-                                'associated with helas amplitudes of type loop.'
+           raise MadGraph5Error('There should not be any helas call '+\
+                                'associated with helas amplitudes of type loop.')
 
         # Check if we need to append a charge conjugation flag
         l = [str(l) for l in argument.get('lorentz')]
@@ -1622,8 +1621,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
-            raise self.PhysicsObjectError, \
-                  "get_helas_call must be called with wavefunction or amplitude"
+            raise self.PhysicsObjectError("get_helas_call must be called with wavefunction or amplitude")
         
         call = ""
 
@@ -1752,8 +1750,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                                    and wf.get('spin') == 3 \
                                    and wf.get('mass').lower() == 'zero']
                 if not gauge_check_wfs:
-                    raise HelasWriterError, \
-                          'no massless spin one particle for gauge check'
+                    raise HelasWriterError('no massless spin one particle for gauge check')
                 gauge_check_wf = wfs.pop(wfs.index(gauge_check_wfs[0]))
                 res.append(self.generate_helas_call(gauge_check_wf, True)(\
                                                     gauge_check_wf))
@@ -1774,8 +1771,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
 
         if not isinstance(argument, helas_objects.HelasWavefunction) and \
            not isinstance(argument, helas_objects.HelasAmplitude):
-            raise self.PhysicsObjectError, \
-                  "get_helas_call must be called with wavefunction or amplitude"
+            raise self.PhysicsObjectError("get_helas_call must be called with wavefunction or amplitude")
         
         call_function = None
 

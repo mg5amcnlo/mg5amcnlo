@@ -19,7 +19,10 @@ from __future__ import division
 
 # The following lines are needed to run the
 # diagram generation using __main__
+from __future__ import absolute_import
+from __future__ import print_function
 import os, sys
+from six.moves import range
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.realpath(os.path.join(root_path,'..','..'))
 sys.path.insert(0, root_path)
@@ -61,7 +64,7 @@ class TestDrawingOption(unittest.TestCase):
         
         if not hasattr(self, 'store_diagram'):
             filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
             TestDrawingOption.store_diagram = pickle.load(filehandler)
         try:
             _model
@@ -129,7 +132,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         
         if not hasattr(self, 'store_diagram'):
             filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
             TestDrawingS_EPS.store_diagram = pickle.load(filehandler)
         try:
             _model
@@ -236,8 +239,8 @@ if __name__ == '__main__':
         if gen_line.startswith('OUTPUT:'):
             output = True
             gen_line = gen_line[7:]
-            print 'WITH OUTPUT :',
-        print gen_line, ':',
+            print('WITH OUTPUT :', end=' ')
+        print(gen_line, ':', end=' ')
         gen_line_with_order = gen_line + ' QCD=99'
         cmd.exec_cmd('generate ' + gen_line_with_order)
         if output:
@@ -257,7 +260,7 @@ if __name__ == '__main__':
                 amplitude = matrix_elements[0].get('base_amplitude')     
         else:
             amplitude = cmd._curr_amps[0]
-        print len(amplitude['diagrams'])
+        print(len(amplitude['diagrams']))
             
                                                     
         diag_content[gen_line] = {}
@@ -269,7 +272,7 @@ if __name__ == '__main__':
     file_test_diagram = open(os.path.join(_file_path , \
                                     '../input_files/test_draw.obj'), 'w')
     pickle.dump(diag_content, file_test_diagram)
-    print 'done'
+    print('done')
 
 
 
