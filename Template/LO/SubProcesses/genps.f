@@ -663,12 +663,13 @@ c
 c     Local
 c
       logical pass
+      double precision tmass(-max_branch:-1)
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
       integer iopposite ! index for t-channel mapping for the part not handle by itree
 c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
-      double precision costh,phi,tmin,tmax,t
-      double precision ma2,mb2,m12,mn2,s1
+      double precision costh,phi,tmin,tmax,t,tmin_temp, tmax_temp
+      double precision ma,ma2,mb2,m12,mn2,s1,mi2
 c
 c     External
 c
@@ -810,7 +811,7 @@ c
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
-
+         
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -848,7 +849,14 @@ c       - M(ibranch) is the total mass available (Pa+Pb)^2
 c       - M(ibranch-1) is the mass of P2  (all the remaining particles)      
 c
 c     This assumes that P(0, ibranch) is set to the T-channel propa (likely)
+c      do ibranch = -ns_channel-1,-nbranch,-1
+c         totmass=totmass+m(itree(2,ibranch))
+c      enddo
       do ibranch=-ns_channel-1,-nbranch+1,-1
+c         totmass=totmass-m(itree(2,ibranch))      !for remaining particles
+c         smin = totmass**2                        !This affects t_min/max
+c         smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
          if (ibranch.ne.-ns_channel-1)then
             pother(:) = P(:,ibranch+1)
             iopposite = ibranch +1
@@ -895,7 +903,12 @@ c$$$         write(*,*) 'm12= Pd**2 = ', m12 ,DSQRT(m12)
 c$$$         write(*,*) 'mn2 = Pc**2 =', mn2, DSQRT(mn2)
          
 C     WRITE(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
+         
          call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+c         call yminmax(s1,0d0,m12,ma2,mb2,smax,tmin_temp,tmax_temp)
+c         if (tmin_temp.lt.tmin) tmin = tmin_temp
+c         if (tmax_temp.gt.tmax) tmax = tmax_temp
+         
 c
 c     Call for 0<x<1
 c
@@ -907,14 +920,14 @@ c
 c     call for -1<x<1
 c
 
-c         write(*,*) 'tmin, tmax',tmin,tmax
+c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
       if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0, -tmin/stot)
+     $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
 
       else
@@ -923,10 +936,11 @@ c         tmax = max(tmax,0d0) !This line if want really t freedom
          t = stot*(-x(-ibranch))
       endif
 
-         if (t .lt. tmin .or. t .gt. tmax) then
-            jac=-3d0
-            return
-         endif
+c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
+      if (t .lt. tmin .or. t .gt. tmax) then
+         jac=-3d0
+         return
+      endif
 c
 c     tmin and tmax set to -s,+s for jacobian because part of jacobian
 c     was determined from choosing the point x from the grid based on
@@ -943,7 +957,13 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         call gentcms(p(0,itree(1,ibranch)),p(0,iopposite),t,phi,
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,iopposite),t,phi,mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 c$$$         write(*,*) 'RESULT'
@@ -1094,7 +1114,7 @@ c-----
       endif
       end
 
-      subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
+      subroutine gentcms(pa,pb,t,phi,ma2,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
 c     given the values t, and phi
@@ -1106,7 +1126,7 @@ c*************************************************************************
 c
 c     Arguments
 c
-      double precision t,phi,m1,m2               !inputs
+      double precision t,phi,m1,m2,ma               !inputs
       double precision pa(0:3),pb(0:3),jac
       double precision p1(0:3),pr(0:3)           !outputs
 c
@@ -1130,7 +1150,7 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-      ma2 = dot(pa,pa)
+c      ma2 = ma*ma
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c
