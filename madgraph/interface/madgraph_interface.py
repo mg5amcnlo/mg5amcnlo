@@ -4653,15 +4653,15 @@ This implies that with decay chains:
                 coupling_alias['QED'] = 'EW'
                 coupling_alias['QED^2'] = 'EW^2'
             if 'aEW' not in model_orders:
-                coupling_alias['aEW'] = 'EW^2'
+                coupling_alias['aEW'] = 'EW^2=2*'
         elif 'QED' in model_orders:
             coupling_alias['EW'] = 'QED'
             coupling_alias['EW^2'] = 'QED^2'
             if 'aEW' not in model_orders:
-                coupling_alias['aEW'] = 'QED^2'
+                coupling_alias['aEW'] = 'QED^2=2*'
         if 'QCD' in model_orders:
             if 'aS' not in model_orders:
-                coupling_alias['aS'] = 'QCD^2'
+                coupling_alias['aS'] = 'QCD^2=2*'
         
         ## The 'split_orders' (i.e. those for which individual matrix element
         ## evalutations must be provided for each corresponding order value) are
@@ -4671,9 +4671,16 @@ This implies that with decay chains:
         while order_re:
             type = order_re.group('type')
             name =  order_re.group('name')
+            value = int(order_re.group('value'))
             if name in coupling_alias:
-                logger.info("change syntax %s to %s to correspond to UFO model convention", name, coupling_alias[name])
+                old_name,old_value = name,value
+                
                 name = coupling_alias[name]
+                if name.endswith('=2*'):
+                    name = name[:-3]
+                    value *= 2
+                logger.info("change syntax %s=%s to %s=%s to correspond to UFO model convention", 
+                            old_name, old_value, name, value)
             if name.endswith('^2'):
                 basename = name[:-2]
                 if basename not in model_orders:
@@ -4684,13 +4691,10 @@ This implies that with decay chains:
                     raise self.InvalidCmd, "Type of squared order "+\
                                  "constraint '%s'"% type+" is not supported."
                 if type == '=':
-                    
-                    value = order_re.group('value')
                     logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
                                        {'n':name, 'v': value})
                     type = "<="
-                squared_orders[basename] = \
-                                         (int(order_re.group('value')),type)
+                squared_orders[basename] = (value,type)
             else:
                 if name not in model_orders:
                     valid = list(model_orders) + coupling_alias.keys()
@@ -4699,7 +4703,6 @@ This implies that with decay chains:
                     raise self.InvalidCmd, \
                       "Amplitude order constraints can only be of type %s"%\
                     (', '.join(self._valid_amp_so_types))+", not '%s'."%type
-                value = int(order_re.group('value'))
                 if type in ['=', '<=']:
                     if type == '=' and value != 0:
                         logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
@@ -4716,10 +4719,10 @@ This implies that with decay chains:
                     constrained_orders[name] = (value, type)
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
-             
+            
             line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
-            order_re = order_pattern.match(line)          
-        
+            order_re = order_pattern.match(line)   
+                   
         # handle the case where default is not 99 and some coupling defined
         if self.options['default_unset_couplings'] != 99 and \
                                                      (orders or squared_orders): 
