@@ -4644,6 +4644,25 @@ This implies that with decay chains:
         squared_orders = {}
         orders = {}
         constrained_orders = {}
+        
+        # define the various coupling order alias 
+        coupling_alias = {}
+        model_orders = self._curr_model.get('coupling_orders')
+        if 'EW' in model_orders:
+            if 'QED' not in model_orders:
+                coupling_alias['QED'] = 'EW'
+                coupling_alias['QED^2'] = 'EW^2'
+            if 'aEW' not in model_orders:
+                coupling_alias['aEW'] = 'EW^2'
+        elif 'QED' in model_orders:
+            coupling_alias['EW'] = 'QED'
+            coupling_alias['EW^2'] = 'QED^2'
+            if 'aEW' not in model_orders:
+                coupling_alias['aEW'] = 'QED^2'
+        if 'QCD' in model_orders:
+            if 'aS' not in model_orders:
+                coupling_alias['aS'] = 'QCD^2'
+        
         ## The 'split_orders' (i.e. those for which individual matrix element
         ## evalutations must be provided for each corresponding order value) are
         ## defined from the orders specified in between [] and any order for
@@ -4651,24 +4670,35 @@ This implies that with decay chains:
         split_orders = []
         while order_re:
             type = order_re.group('type')
-            if order_re.group('name').endswith('^2'):
+            name =  order_re.group('name')
+            if name in coupling_alias:
+                logger.info("change syntax %s to %s to correspond to UFO model convention", name, coupling_alias[name])
+                name = coupling_alias[name]
+            if name.endswith('^2'):
+                basename = name[:-2]
+                if basename not in model_orders:
+                    valid = list(model_orders) + coupling_alias.keys()
+                    raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
+
                 if type not in self._valid_sqso_types:
                     raise self.InvalidCmd, "Type of squared order "+\
                                  "constraint '%s'"% type+" is not supported."
                 if type == '=':
-                    name =  order_re.group('name')
+                    
                     value = order_re.group('value')
                     logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
                                        {'n':name, 'v': value})
                     type = "<="
-                squared_orders[order_re.group('name')[:-2]] = \
+                squared_orders[basename] = \
                                          (int(order_re.group('value')),type)
             else:
+                if name not in model_orders:
+                    valid = list(model_orders) + coupling_alias.keys()
+                    raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
                     raise self.InvalidCmd, \
                       "Amplitude order constraints can only be of type %s"%\
                     (', '.join(self._valid_amp_so_types))+", not '%s'."%type
-                name = order_re.group('name')
                 value = int(order_re.group('value'))
                 if type in ['=', '<=']:
                     if type == '=' and value != 0:

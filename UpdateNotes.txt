@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.0.4 ()
+    MZ: Change syntax meaning in 3.0 series to be consistent with the one of 2.0 series
+        QCD<=X, QED<=Y are now applying restriction at the amplitude level (not the amplitude square anymore)
+	For applying constrained at the amplitude square level you can use aEW<=X, aS<=Y (new syntax)
+	or use the same syntax as 2.0 series (QCD^2<=X, QED^2<=Y)
+    OM: Allow to use EW<=X instead of QED<=X (with the same meaning as above: restriction at the amplitude level)
+        Allow to use EW^2<=Y instead of aEW<=Y or QED^2<=Y (with the same meaning as above: restriction at the amplitude square level)
+
 3.0.3 (21/06/20)
      include up to 2.7.3
 
