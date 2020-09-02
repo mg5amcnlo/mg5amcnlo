@@ -27,6 +27,7 @@ C
       external NextUnopen
       double precision t_before
       logical fopened
+      integer nb_tchannel
 c
 c     Global
 c
@@ -159,7 +160,7 @@ c
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
       write(*,*) "Completed mapping",nexternal
       ndim = 3*(nexternal-nincoming)-4
       if (nincoming.gt.1.and.abs(lpp(1)) .ge. 1) ndim=ndim+1
@@ -173,6 +174,12 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
+      ncall =  ncall * max(1., min(3., (nb_tchannel+1.)/2.))
+      if (nb_tchannel.gt.1) then
+         itmin = itmin +1
+         itmax = itmax +1
+      endif
+
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
       call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 

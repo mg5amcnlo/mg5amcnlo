@@ -520,7 +520,7 @@ c     local
       integer nbranch,ndim,nconfigs
       integer ninvar
       integer nparticles,nfinal
-
+      integer nb_tchannel
 
 c
 c     Arguments
@@ -595,7 +595,7 @@ c        Start graph mapping
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
-         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
          maxwgt=0d0
          nparticles   = nexternal
          nfinal       = nparticles-nincoming

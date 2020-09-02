@@ -4644,13 +4644,10 @@ c           This is dummy particle used in multiparticle vertices
             # For t-channels, just need the first non-empty one
             tchannels = [t for s,t in stchannels if t != None][0]
                  
-            if True:
-                tchannels = ProcessExporterFortranME.reorder_tchannels(tchannels)
+            # pass to ping-pong strategy for t-channel
+            #  this is directly related to change in genps.f
+            tchannels = ProcessExporterFortranME.reorder_tchannels(tchannels)
             
-            
-            
-
-
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
                                      tchannels])
