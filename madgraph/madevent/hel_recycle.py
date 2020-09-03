@@ -9,17 +9,19 @@ from copy import copy
 from itertools import product
 from functools import reduce 
 
-# try:
-#     import madgraph
-# except:
-#     sprint = lambda x: print(x)
-# else:
-#     from madgraph.various.misc import sprint
-# Remove
-#from ipdb import set_trace
+try:
+     import madgraph
+except:
+     import internal.misc as misc
+else:
+     import madgraph.various.misc as misc
 import mmap
-import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = misc.tqdm
 
+    
 def get_num_lines(file_path):
     fp = open(file_path, 'r+')
     buf = mmap.mmap(fp.fileno(),0)
@@ -644,7 +646,7 @@ class HelicityRecycler():
 
             self.prepare_bools()
 
-            for line_num, line in tqdm.tqdm(enumerate(input_file), total=get_num_lines(self.input_file)):
+            for line_num, line in tqdm(enumerate(input_file), total=get_num_lines(self.input_file)):
                 if line_num == 0:
                     line_cache = line
                     continue
