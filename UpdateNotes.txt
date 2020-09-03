@@ -1,12 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.0.4 ()
-    MZ: Change syntax meaning in 3.0 series to be consistent with the one of 2.0 series
-        QCD<=X, QED<=Y are now applying restriction at the amplitude level (not the amplitude square anymore)
-	The previous syntax of 3.0 is replaced by aEW<=X, aS<=Y which are equivalent to 
-	QCD^2<=2*X, QED^2<=2*Y (constrained at the diagram squared level)
-    OM: Allow to use EW<=X instead of QED<=X (with the same meaning as above: restriction at the amplitude level)
-        Allow to use EW^2<=Y instead of aEW<=Y/2 or QED^2<=Y/2 (with the same meaning as above: restriction at the amplitude square level)
+    MZ: Change syntax meaning in 3.0 series to be consistent with the one of 2.0 series:
+        QCD<=X, QED<=Y apply at the amplitude level (not to the squared amplitude anymore).
+        Squared-amplitude constraints can be imposed by using the usual squared-order 
+        syntax, e.g.:
+	QCD^2<=X, QED^2<=Y (constrained at the diagram squared level).
+    OM: Some aliases have been added for the orders constraints:
+            - aEW<=X / aS<=Y is equivalent to QCD^2<=2X / QED^2<=2Y
+            - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
 3.0.3 (21/06/20)
      include up to 2.7.3
