@@ -29,6 +29,7 @@ import subprocess
 import shutil
 import stat
 import sys
+import six
 from six.moves import range
 from six.moves import zip
 
@@ -44,7 +45,8 @@ except ImportError:
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    import internal.hel_recycle as hel_recycle
+    if six.PY3:
+        import internal.hel_recycle as hel_recycle
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -55,7 +57,8 @@ else:
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    import madgraph.madevent.hel_recycle as hel_recycle
+    if six.PY3:
+        import madgraph.madevent.hel_recycle as hel_recycle
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -251,7 +254,7 @@ class gensym(object):
                 split_out = split_file[:-1] + [basename]
                 out_file = pjoin('/', '/'.join(split_out))
 
-                basename = f'template_{split_file[-1].replace("_orig", "")}'
+                basename = 'template_%s' % split_file[-1].replace("_orig", "")
                 split_templ = split_file[:-1] + [basename]
                 templ_file = pjoin('/', '/'.join(split_templ))
 
