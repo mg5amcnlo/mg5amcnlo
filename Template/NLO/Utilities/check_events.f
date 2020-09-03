@@ -10,7 +10,7 @@ c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
-     # isavePDF,itemp,ii
+     # isavePDF,itemp,ii,imcdelta
       integer numscales,numPDFpairs,numPDFs
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
@@ -76,6 +76,10 @@ c negative number of events
      # xmin_wgt_resc_pdf(0:maxPDFs,maxPDFsets)
       integer istep
       double precision percentage
+
+      logical mcatnlo_delta
+      common /cMCatNLO_Delta/ mcatnlo_delta
+
       include 'dbook.inc'
 
       call setcharges(charges)
@@ -119,6 +123,15 @@ c read from events
       read (*,*) idec
       if(idec.eq.0)call setdecmat()
 
+      write (*,*) 'Enter 0 for MCatNLO-Delta'
+      write (*,*) '      1 otherwise'
+      read (*,*) imcdelta
+      if (imcdelta.eq.0) then
+         mcatnlo_delta=.true.
+      else
+         mcatnlo_delta=.false.
+      endif
+      
       ifile=34
       open (unit=ifile,file=event_file,status='old')
       open (unit=51,file='res_wgt',status='unknown')
