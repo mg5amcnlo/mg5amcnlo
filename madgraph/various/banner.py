@@ -3271,6 +3271,21 @@ class RunCardLO(RunCard):
             if self['gridpack']:
                 self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
                 
+        # check that ebeam is bigger than the associated mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+            if self['mass_ion%i' % i] == -1:
+                if self['ebeam%i' % i] < 0.938:
+                    if self['ebeam%i' %i] == 0:
+                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        self.set('ebeam%i' %i, 0.938)
+                    else:
+                        raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+            elif self['ebeam%i' % i] < self['mass_ion%i' % i]:    
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
+                    self.set('ebeam%i' %i, self['mass_ion%i' % i])
 
     def update_system_parameter_for_include(self):
         
@@ -4251,6 +4266,19 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'rw_rscale' has two or more identical entries. They have to be all different for the code to work correctly.")
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
+
+
+        # check that ebeam is bigger than the proton mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+
+            if self['ebeam%i' % i] < 0.938:
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    self.set('ebeam%i' %i, 0.938)
+                else:
+                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
 
 
     def update_system_parameter_for_include(self):
