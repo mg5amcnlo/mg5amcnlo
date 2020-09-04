@@ -438,10 +438,27 @@ class UFOMG5Converter(object):
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
-       
-        if hasattr(model, '__arxiv__'):
-            logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
-       
+
+        if hasattr(model, '__header__'):
+            header = model.__header__
+            if len(header) > 500 or header.count('\n') > 5:
+                logger.debug("Too long header")
+            else:
+                logger.info("\n"+header)
+        else:
+            f =collections.defaultdict(lambda : 'n/a')
+            for key in ['author', 'version', 'email', 'arxiv']:
+                if hasattr(model, '__%s__' % key):
+                    val = getattr(model, '__%s__' % key)
+                    if 'Duhr' in val:
+                        continue
+                    f[key] = getattr(model, '__%s__' % key)
+                    
+            if len(f)>2:
+                logger.info("This model [version %(version)s] is provided by %(author)s (email: %(email)s). Please cite %(arxiv)s" % f, '$MG:color:BLACK')
+            elif hasattr(model, '__arxiv__'):
+                logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
+            
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
