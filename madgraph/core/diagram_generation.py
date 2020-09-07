@@ -1667,9 +1667,9 @@ class MultiProcess(base_objects.PhysicsObject):
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
 
-        # Set automatic coupling orders if born_orders are not specified
+        # Set automatic coupling orders if born_sq_orders are not specified
         # otherwise skip
-        if not process_definition['born_orders']:
+        if not process_definition['born_sq_orders']:
             process_definition.set('orders', MultiProcess.\
                                find_optimal_process_orders(process_definition,
                                                            diagram_filter))

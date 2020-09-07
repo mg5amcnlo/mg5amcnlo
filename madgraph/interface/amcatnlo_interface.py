@@ -475,10 +475,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 if o not in myprocdef['orders'].keys():
                     myprocdef['orders'][o] = 0
                     logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
-                                    'If this is not what you need, please regenerate with the correct orders.') % o)
+                                   'If this is not what you need, please regenerate with the correct orders.') % o)
 
         # this is in case no orders have been passed
-        if not myprocdef['orders']:
+        if not myprocdef['squared_orders'] and not myprocdef['orders']:
             # find the minimum weighted order, then extract the values for the varius
             # couplings in the model
             weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
@@ -492,20 +492,34 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error,'\nAutomatic process-order determination lead to negative constraints:\n' + \
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.'
-            orders = {'QED': qed, 'QCD': qcd}
+            orders = {'QED': 2*qed, 'QCD': 2*qcd}
             # set all the other coupling to zero
             for o in myprocdef['model'].get_coupling_orders():
                 if o not in ['QED', 'QCD']:
                     orders[o] = 0
 
-            myprocdef.set('orders', orders)
+            myprocdef.set('squared_orders', orders)
             # warn the user of what happened
-            logger.info(('Setting the born orders automatically in the process definition to %s.\n' + \
+            logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
                             'If this is not what you need, please regenerate with the correct orders.'), 
-                            ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['orders'].items()]), 
+                            ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
                             '$MG:BOLD')
 
-        myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
+        # now check that all couplings that are there in orders also appear
+        # in squared_orders. If not, set the corresponding one
+        for k, v in myprocdef['orders'].items():
+            if k not in myprocdef['squared_orders'].keys():
+                myprocdef['squared_orders'][k] = 2*v 
+                logger.warning('Order %s is not constrained as squared_orders. Using: %s^2=%d' % (k,k,2*v) )
+
+        # check that all the couplings of the model have been constrained
+        # in the squared orders, otherwise set the others to zero
+        for o in myprocdef['model'].get('coupling_orders'):
+            if o not in myprocdef['squared_orders'].keys():
+                logger.warning('No squared order constraint for order %s. Setting to 0' % o)
+                myprocdef['squared_orders'][o] = 0 
+
+        myprocdef['born_sq_orders'] = copy.copy(myprocdef['squared_orders'])
         # split all orders in the model, for the moment it's the simplest solution
         # mz02/2014
         myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
@@ -513,6 +527,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # now set the squared orders
         if not myprocdef['squared_orders']:
+            logger.warning('No squared orders have been provided, will be guessed by the order constraints')
             for ord, val in myprocdef['orders'].items():
                 myprocdef['squared_orders'][ord] = 2 * val
 
@@ -525,11 +540,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 except KeyError:
                     # if the order is not specified
                     # then MG does not put any bound on it
-                    myprocdef['orders'][pert] = 99
+                    ###myprocdef['orders'][pert] = 99
+                    pass
                 try:
                     myprocdef['squared_orders'][pert] += 2
                 except KeyError:
-                    myprocdef['squared_orders'][pert] = 200
+                    # the order is not provided, assume
+                    # it is originally zero
+                    myprocdef['squared_orders'][pert] = 2
 
         # update also the WEIGHTED entry
         if 'WEIGHTED' in myprocdef['orders'].keys():
@@ -540,24 +558,16 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             myprocdef['squared_orders']['WEIGHTED'] += 2 * \
                     max([myprocdef.get('model').get('order_hierarchy')[ord] for \
                     ord in myprocdef['perturbation_couplings']])
+        # if [orders] have not been specified, 
         # finally set perturbation_couplings to **all** the coupling orders 
-        # avaliable in the model
-        myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
+        # avaliable in the model.
+        # This is necessary because when doing EW corrections one only specifies
+        # squared-orders constraints. In that case, all kind of splittings/loop-particles
+        # must be included
+        if not myprocdef['orders']:
+            myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
-
-        myprocdef['orders'] = {}
         self._curr_proc_defs.append(myprocdef)
-
-#        if myprocdef['perturbation_couplings']!=['QCD']:
-#            message = ""FKS for reals only available in QCD for now, you asked %s" \
-#                        % ', '.join(myprocdef['perturbation_couplings'])"
-#            logger.info("%s. Checking for loop induced")
-#            new_line = ln
-#                
-#                
-#                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-#                        % ', '.join(myprocdef['perturbation_couplings']))
-        ##
 
         # if the new nlo process generation mode is enabled, the number of cores to be
         # used has to be passed

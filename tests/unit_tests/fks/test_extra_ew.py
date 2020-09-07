@@ -42,12 +42,12 @@ class TestAMCatNLOEW(unittest.TestCase):
         In particular the correct number of born diagrams, real-emission processes
         and diagrams is checked"""
         cmd_list = [
-            'u u~ > d d~ QED=0 QCD=2 [real=QCD]',
-            'u u~ > d d~ QED=0 QCD=2 [real=QED]',
-            'u u~ > d d~ QED=0 QCD=2 [real=QED QCD]',
-            'u u~ > d d~ QCD=2 QED=2 [real=QCD]',
-            'u u~ > d d~ QCD=2 QED=2 [real=QED]',
-            'u u~ > d d~ QCD=2 QED=2 [real=QED QCD]']
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QCD]',
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QED]',
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QED QCD]',
+            'u u~ > d d~ QCD^2=4 QED^2=4 [real=QCD]',
+            'u u~ > d d~ QCD^2=4 QED^2=4 [real=QED]',
+            'u u~ > d d~ QCD^2=4 QED^2=4 [real=QED QCD]']
 
         # exp[ected splitting types
         split_type_list = [['QCD'],
@@ -58,12 +58,12 @@ class TestAMCatNLOEW(unittest.TestCase):
                            ['QED','QCD']]
 
         # expected born_orders
-        born_orders_list = [{'QED':0, 'QCD':2},
-                            {'QED':0, 'QCD':2},
-                            {'QED':0, 'QCD':2},
-                            {'QED':2, 'QCD':2},
-                            {'QED':2, 'QCD':2},
-                            {'QED':2, 'QCD':2}]
+        born_orders_list = [{'QED':0, 'QCD':4},
+                            {'QED':0, 'QCD':4},
+                            {'QED':0, 'QCD':4},
+                            {'QED':4, 'QCD':4},
+                            {'QED':4, 'QCD':4},
+                            {'QED':4, 'QCD':4}]
 
         # perturbation couplings (always set to [QED, QCD]
         pert_couplings_list = 9*[['QED','QCD']]
@@ -87,17 +87,17 @@ class TestAMCatNLOEW(unittest.TestCase):
         nrealproc_list = [3, 6, 6, 6, 6, 6]
 
         # number of expected real emission diagrams
-        # u u~ > d d~ g has 5 with QED=0, 17 with QED=2
-        # u u~ > d d~ a has 4 with QED=1, 17 with QED=3
+        # u u~ > d d~ g has 5 with QED^2=0, 17 with QED^2=4
+        # u u~ > d d~ a has 4 with QED^2=2, 17 with QED^2=6
         #
-        # for e.g. 'u u~ > d d~ QED=0 QCD=2 [real=QED]'
+        # for e.g. 'u u~ > d d~ QED^2=0 QCD^2=2 [real=QED]'
         # the real emissions are ordered as follows:
-        #   u u~ > d d~ a [ QED ] QED=2 QCD=4
-        #   a u~ > d d~ u~ [ QED ] QED=2 QCD=4
-        #   u u~ > d d~ g [ QED ] QED=2 QCD=4
-        #   g u~ > d d~ u~ [ QED ] QED=2 QCD=4
-        #   u a > d d~ u [ QED ] QED=2 QCD=4
-        #   u g > d u d~ [ QED ] QED=2 QCD=4
+        #   u u~ > d d~ a [ QED ] QED^2=4 QCD^2=8
+        #   a u~ > d d~ u~ [ QED ] QED^2=4 QCD^2=8
+        #   u u~ > d d~ g [ QED ] QED^2=4 QCD^2=8
+        #   g u~ > d d~ u~ [ QED ] QED^2=4 QCD^2=8
+        #   u a > d d~ u [ QED ] QED^2=4 QCD^2=8
+        #   u g > d u d~ [ QED ] QED^2=4 QCD^2=8
         nrealdiags_list = [[5, 5, 5],
                            [4, 4, 17, 17, 4, 17],
                            [4, 4, 17, 17, 4, 17],
@@ -115,7 +115,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             # check that the extra_cnt_amp_list is empty
             self.assertEqual(0, len(fksprocess.extra_cnt_amp_list))
 
-            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
+            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_sq_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
             self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
 
@@ -137,20 +137,20 @@ class TestAMCatNLOEW(unittest.TestCase):
         orders are set.
         """
         cmd_list = [
-            'u u~ > d d~ QED=0 QCD=2 [real=QED]',
-            'u u~ > d d~ QCD=2 [real=QED]',
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QED]',
+            'u u~ > d d~ QCD^2=4 [real=QED]',
             'u u~ > d d~ [real=QED]',
             \
-            'u u~ > d d~ QED=0 QCD=2 [real=QED QCD]',
-            'u u~ > d d~ QCD=2 [real=QED QCD]',
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QED QCD]',
+            'u u~ > d d~ QCD^2=4 [real=QED QCD]',
             'u u~ > d d~ [real=QED QCD]',
             \
-            'u u~ > d d~ QED=0 QCD=2 [real=QCD]',
-            'u u~ > d d~ QCD=2 [real=QCD]',
+            'u u~ > d d~ QED^2=0 QCD^2=4 [real=QCD]',
+            'u u~ > d d~ QCD^2=4 [real=QCD]',
             'u u~ > d d~ [real=QCD]']
 
         # expected born_orders
-        born_orders_list = 9*[{'QED':0, 'QCD':2}]
+        born_orders_list = 9*[{'QED':0, 'QCD':4}]
 
         # perturbation couplings (always set to [QED, QCD]
         pert_couplings_list = 9*[['QED','QCD']]
@@ -171,17 +171,17 @@ class TestAMCatNLOEW(unittest.TestCase):
         nrealproc_list = [6, 6, 6, 6, 6, 6, 3, 3, 3]
 
         # number of expected real emission diagrams
-        # u u~ > d d~ g has 5 with QED=0, 17 with QED=2
-        # u u~ > d d~ a has 4 with QED=1, 17 with QED=3
+        # u u~ > d d~ g has 5 with QED^2=0, 17 with QED^2=4
+        # u u~ > d d~ a has 4 with QED^2=2, 17 with QED^2=6
         #
-        # for e.g. 'u u~ > d d~ QED=0 QCD=2 [real=QED]'
+        # for e.g. 'u u~ > d d~ QED^2=0 QCD^2=4 [real=QED]'
         # the real emissions are ordered as follows:
-        #   u u~ > d d~ a [ QED ] QED=2 QCD=4
-        #   a u~ > d d~ u~ [ QED ] QED=2 QCD=4
-        #   u u~ > d d~ g [ QED ] QED=2 QCD=4
-        #   g u~ > d d~ u~ [ QED ] QED=2 QCD=4
-        #   u a > d d~ u [ QED ] QED=2 QCD=4
-        #   u g > d u d~ [ QED ] QED=2 QCD=4
+        #   u u~ > d d~ a [ QED ] QED^2=4 QCD^2=8
+        #   a u~ > d d~ u~ [ QED ] QED^2=4 QCD^2=8
+        #   u u~ > d d~ g [ QED ] QED^2=4 QCD^2=8
+        #   g u~ > d d~ u~ [ QED ] QED^2=4 QCD^2=8
+        #   u a > d d~ u [ QED ] QED^2=4 QCD^2=8
+        #   u g > d u d~ [ QED ] QED^2=4 QCD^2=8
         nrealdiags_list = 3*[[4, 4, 17, 17, 4, 17]] + \
                           3*[[4, 4, 17, 17, 4, 17]] + \
                           3*[[5, 5, 5]]
@@ -193,10 +193,13 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 
+            # no orders should be specified, only squared orders
+            self.assertEqual(fksprocess.born_amp['process']['orders'], {})
+
             # check that the extra_cnt_amp_list is empty
             self.assertEqual(0, len(fksprocess.extra_cnt_amp_list))
 
-            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
+            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_sq_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
             self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
 
@@ -221,7 +224,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_set('include_lepton_initiated_processes True')
         self.interface.do_define('p p a')
-        self.interface.do_generate('p p > t t~ QED=2 QCD=2 [real=QCD QED]')
+        self.interface.do_generate('p p > t t~ QED^2=4 QCD^2=4 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
         #there should be 12 processes: 4 qqbar + 4qbarq + gg + ga + ag + aa  
@@ -283,7 +286,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_set('include_lepton_initiated_processes True')
         self.interface.do_define('p p a')
-        self.interface.do_generate('p p > t t~ QED=2 QCD=1 [real=QCD QED]')
+        self.interface.do_generate('p p > t t~ QED^2=4 QCD^2=2 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
         #there should be 12 processes: 4 qqbar + 4qbarq + gg + ga + ag + aa  
@@ -344,7 +347,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
-        self.interface.do_generate('u u~ > jj jj QED=0 QCD=2 [real=QCD]')
+        self.interface.do_generate('u u~ > jj jj QED^2=0 QCD^2=4 [real=QCD]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
         # just one born processes u u~ > g g
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 1)
@@ -375,7 +378,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=0 [real=QED]')
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=0 [real=QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
         # just one born processes u u~ > a a 
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 1)
@@ -409,7 +412,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        for orders in ['QED=0 QCD=2 [real=QED]', 'QED=1 QCD=1 [real=QCD]']:
+        for orders in ['QED^2=0 QCD^2=4 [real=QED]', 'QED^2=2 QCD^2=2 [real=QCD]']:
             self.interface.do_generate('u u~ > jj jj %s' % orders) 
             # two born processes u u~ > g g and g a
             self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
@@ -465,7 +468,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        for orders in ['QED=1 QCD=1 [real=QED]', 'QED=2 QCD=0 [real=QCD]']:
+        for orders in ['QED^2=2 QCD^2=2 [real=QED]', 'QED^2=4 QCD^2=0 [real=QCD]']:
             self.interface.do_generate('u u~ > jj jj %s' % orders) 
             # two born processes u u~ > g a and a a
             self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
@@ -516,7 +519,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=0 QCD=2 [real=QED QCD]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=0 QCD^2=4 [real=QED QCD]') 
         # two born processes u u~ > g g and g a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
         target_ids = [[21,21], [22,21]]
@@ -570,7 +573,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=1 QCD=1 [real=QED QCD]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=2 QCD^2=2 [real=QED QCD]') 
         # all three born processes u u~ > g g, g a and a a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
         target_ids = [[21,21], [22,21], [22,22]]
@@ -626,7 +629,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=0 [real=QCD QED]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=0 [real=QCD QED]') 
         # two born processes u u~ > g a and a a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
         target_ids = [[22,21], [22,22]]
@@ -676,7 +679,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=1 QCD=2 [real=QCD]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=2 QCD^2=4 [real=QCD]') 
         # two born processes u u~ > g g and g a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
         target_ids = [[21,21], [22,21]]
@@ -731,7 +734,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        for orders in ['QED=1 QCD=2 [real=QED]', 'QED=2 QCD=1 [real=QCD]']:
+        for orders in ['QED^2=2 QCD^2=4 [real=QED]', 'QED^2=4 QCD^2=2 [real=QCD]']:
             self.interface.do_generate('u u~ > jj jj %s' % orders) 
             # all three born processes u u~ > g g , g a , aa
             self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
@@ -798,7 +801,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=1 [real=QED]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=2 [real=QED]') 
         # two born processes u u~ > g a and a a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
         target_ids = [[22,21], [22,22]]
@@ -848,7 +851,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QCD]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=4 [real=QCD]') 
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
         target_ids = [[21,21], [22,21], [22,22]]
         for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
@@ -918,7 +921,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QED]') 
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=4 [real=QED]') 
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
         target_ids = [[21,21], [22,21], [22,22]]
         for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
@@ -989,7 +992,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
-        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QCD QED]')
+        self.interface.do_generate('u u~ > jj jj QED^2=4 QCD^2=4 [real=QCD QED]')
         # three born processes u u~ > g g ; a g ; a a
         self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
         target_ids = [[21,21], [22,21], [22,22]]
@@ -1071,9 +1074,9 @@ class TestAMCatNLOEW(unittest.TestCase):
         newinterface = mgcmd.MasterCmd()
         newinterface2 = mgcmd.MasterCmd()
         # generate the processes
-        self.interface.do_generate('u u~ > t t~ QED=0 QCD=2 [real=QCD QED]')
-        newinterface.do_generate('c c~ > t t~ QED=0 QCD=2 [real=QCD QED]')
-        newinterface2.do_generate('d d~ > t t~ QED=0 QCD=2 [real=QCD QED]')
+        self.interface.do_generate('u u~ > t t~ QED^2=0 QCD^2=4 [real=QCD QED]')
+        newinterface.do_generate('c c~ > t t~ QED^2=0 QCD^2=4 [real=QCD QED]')
+        newinterface2.do_generate('d d~ > t t~ QED^2=0 QCD^2=4 [real=QCD QED]')
 
         fksproc1 = self.interface._fks_multi_proc
         fksproc2 = newinterface._fks_multi_proc
@@ -1114,8 +1117,8 @@ class TestAMCatNLOEW(unittest.TestCase):
             return me
 
     def notest_special_dijet_equal_process_qcd_qed_virt_test(self):
-        fksme1 = self.load_fksME('aa_emep_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > e- e+ QED=2 QCD=2 [QCD QED]')
-        fksme2 = self.load_fksME('aa_mummup_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > mu- mu+ QED=2 QCD=2 [QCD QED]')
+        fksme1 = self.load_fksME('aa_emep_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > e- e+ QED^2=4 QCD^2=4 [QCD QED]')
+        fksme2 = self.load_fksME('aa_mummup_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > mu- mu+ QED^2=4 QCD^2=4 [QCD QED]')
         self.assertEqual(fksme1,fksme2)
 
     def test_combine_equal_processes_dijet_qcd_qed_virt(self):
@@ -1127,16 +1130,16 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_import('model loop_qcd_qed_sm-no_widths')
 
-        self.interface.do_generate('u u~ > g g QED=0 QCD=2 [QCD QED]')
+        self.interface.do_generate('u u~ > g g QED^2=0 QCD^2=4 [QCD QED]')
         fksproc1 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('c c~ > g g QED=0 QCD=2 [QCD QED]')
+        self.interface.do_generate('c c~ > g g QED^2=0 QCD^2=4 [QCD QED]')
         fksproc2 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('d d~ > g g QED=0 QCD=2 [QCD QED]')
+        self.interface.do_generate('d d~ > g g QED^2=0 QCD^2=4 [QCD QED]')
         fksproc3 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('b b~ > g g QED=0 QCD=2 [QCD QED]')
+        self.interface.do_generate('b b~ > g g QED^2=0 QCD^2=4 [QCD QED]')
         fksproc4 = copy.copy(self.interface._fks_multi_proc)
 
         fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
@@ -1144,10 +1147,10 @@ class TestAMCatNLOEW(unittest.TestCase):
         fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
         fksme4 = fks_helas.FKSHelasMultiProcess(fksproc4)['matrix_elements'][0]
 
-##        fksme1 = self.load_fksME('uux_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','u u~ > g g QED=0 QCD=2 [QCD QED]')
-##        fksme2 = self.load_fksME('ccx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','c c~ > g g QED=0 QCD=2 [QCD QED]')
-##        fksme3 = self.load_fksME('ddx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','d d~ > g g QED=0 QCD=2 [QCD QED]')
-##        fksme4 = self.load_fksME('bbx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','b b~ > g g QED=0 QCD=2 [QCD QED]')
+##        fksme1 = self.load_fksME('uux_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','u u~ > g g QED^2=0 QCD^2=4 [QCD QED]')
+##        fksme2 = self.load_fksME('ccx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','c c~ > g g QED^2=0 QCD^2=4 [QCD QED]')
+##        fksme3 = self.load_fksME('ddx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','d d~ > g g QED^2=0 QCD^2=4 [QCD QED]')
+##        fksme4 = self.load_fksME('bbx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','b b~ > g g QED^2=0 QCD^2=4 [QCD QED]')
         # check that the u and d initiated are not equal
         self.assertNotEqual(fksme2,fksme3)
 
@@ -1174,20 +1177,20 @@ class TestAMCatNLOEW(unittest.TestCase):
         else:
             self.interface.do_set('complex_mass_scheme True')
             self.interface.do_import('model 2HDMCMStIIymbMSbar')
-            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."
-            self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD] ..."
+            self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD]')
             uux_proc = copy.copy(self.interface._fks_multi_proc)
             uux_me = fks_helas.FKSHelasMultiProcess(uux_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'),uux_me)            
-            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."            
-            self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD] ..."            
+            self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD]')
             ccx_proc = copy.copy(self.interface._fks_multi_proc)
             ccx_me = fks_helas.FKSHelasMultiProcess(ccx_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'),ccx_me)
             uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
             ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))
-            print "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."             
-            self.interface.do_generate('d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            print "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD] ..."             
+            self.interface.do_generate('d d~ > h+ w- b b~ / h1 h2 h3 QED^2=2 YB=1 YT=1 QCD^2=2 [QCD]')
             ddx_proc = copy.copy(self.interface._fks_multi_proc)
             ddx_me = fks_helas.FKSHelasMultiProcess(ddx_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','ddx_hpwmbbx.pkl'),ddx_me)  
@@ -1204,19 +1207,19 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_import('model loop_qcd_qed_sm-no_widths')
 
-        self.interface.do_generate('u u~ > e+ e- QED=2 QCD=0 [QED]')
+        self.interface.do_generate('u u~ > e+ e- QED^2=4 QCD^2=0 [QED]')
         fksproc1 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('c c~ > e+ e- QED=2 QCD=0 [QED]')
+        self.interface.do_generate('c c~ > e+ e- QED^2=4 QCD^2=0 [QED]')
         fksproc2 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('d d~ > e+ e- QED=2 QCD=0 [QED]')
+        self.interface.do_generate('d d~ > e+ e- QED^2=4 QCD^2=0 [QED]')
         fksproc3 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('b b~ > e+ e- QED=2 QCD=0 [QED]')
+        self.interface.do_generate('b b~ > e+ e- QED^2=4 QCD^2=0 [QED]')
         fksproc4 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('s s~ > e+ e- QED=2 QCD=0 [QED]')
+        self.interface.do_generate('s s~ > e+ e- QED^2=4 QCD^2=0 [QED]')
         fksproc5 = copy.copy(self.interface._fks_multi_proc)
 
         fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
@@ -1249,8 +1252,8 @@ class TestAMCatNLOEW(unittest.TestCase):
         newinterface = mgcmd.MasterCmd()
         newinterface2 = mgcmd.MasterCmd()
         # generate the processes
-        self.interface.do_generate('u u~ > t t~ QED=0 QCD=2 [real=QCD]')
-        newinterface.do_generate('d d~ > t t~ QED=0 QCD=2 [real=QCD]')
+        self.interface.do_generate('u u~ > t t~ QED^2=0 QCD^2=4 [real=QCD]')
+        newinterface.do_generate('d d~ > t t~ QED^2=0 QCD^2=4 [real=QCD]')
 
         fksproc1 = self.interface._fks_multi_proc
         fksproc2 = newinterface._fks_multi_proc
@@ -1280,14 +1283,14 @@ class TestAMCatNLOEW(unittest.TestCase):
         quarks=[1,2,3,4,5]
         # default should be set to false
         # initial state leptons
-        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QED]')
+        self.interface.do_generate('a a > w+ w- QED^2=4 QCD^2=0 [real=QED]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals
         for real in reals[0]+reals[1]:
             self.assertTrue(all([lep not in [abs(l['id']) for l in real['leglist']] for lep in leptons]))
 
         # chack that this does not affect final state photons
-        self.interface.do_generate('u u~ > g a QED=1 QCD=1 [real=QCD]')
+        self.interface.do_generate('u u~ > g a QED^2=2 QCD^2=2 [real=QCD]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[2]]))
@@ -1295,7 +1298,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         # now set it to true
         self.interface.do_set('include_lepton_initiated_processes True')
         # initial state leptons
-        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QED]')
+        self.interface.do_generate('a a > w+ w- QED^2=4 QCD^2=0 [real=QED]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[0]]))

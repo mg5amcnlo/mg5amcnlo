@@ -1055,13 +1055,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         for all the orders which are split"""
 
         born_orders = {}
-        for ordd, val in matrix_element.born_me['processes'][0]['born_orders'].items():
-            # factor 2 to pass to squared orders
-            born_orders[ordd] = 2 * val 
+        for ordd, val in matrix_element.born_me['processes'][0]['born_sq_orders'].items():
+            born_orders[ordd] = val 
 
         nlo_orders = {}
         for ordd, val in matrix_element.born_me['processes'][0]['squared_orders'].items():
-            # no need to multiply by 2 here
             nlo_orders[ordd] = val
         
         split_orders = \
