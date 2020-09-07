@@ -903,7 +903,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if hasattr(self, 'aloha_model'):
             aloha_model = self.aloha_model
         else:
-            aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            try:
+                with misc.MuteLogger(['madgraph.models'], [60]):
+                    aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            except ImportError:
+                aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
