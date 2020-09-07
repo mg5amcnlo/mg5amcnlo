@@ -38,7 +38,8 @@ c     Global
 c
       include 'maxamps.inc'
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest,	tstrategy
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
@@ -247,7 +248,8 @@ c
       common/to_smin/ Smin
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest,	tstrategy
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)

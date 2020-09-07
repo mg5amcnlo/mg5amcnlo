@@ -4640,16 +4640,17 @@ c           This is dummy particle used in multiparticle vertices
                 else:
                     stchannels.append((empty_verts, None))
 
+
             # For t-channels, just need the first non-empty one
             tchannels = [t for s,t in stchannels if t != None][0]
                  
-            # pass to ping-pong strategy for t-channel
+            # pass to ping-pong strategy for t-channel for 3 ore more T-channel
             #  this is directly related to change in genps.f
-            tchannels = ProcessExporterFortranME.reorder_tchannels(tchannels)
+            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels)
             
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
-                                     tchannels])
+                                     tchannels, tchannels_strategy])
 
             # Make sure empty_verts is same length as real vertices
             if any([s for s,t in stchannels]):
@@ -4672,6 +4673,7 @@ c           This is dummy particle used in multiparticle vertices
             # Correspondance between the config and the diagram = amp2
             lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                      mapconfigs[iconfig]))
+            lines.append("data tstrategy(%d)/%d/" % (nconfigs, tchannels_strategy))
             # Number of QCD couplings in this diagram
             nqcd = 0
             for h in helas_diags:
@@ -4729,9 +4731,22 @@ c           This is dummy particle used in multiparticle vertices
 
     #===========================================================================
     # reoder t-channels
-    #===========================================================================    
+    #===========================================================================
+    ordering = 0    
     @staticmethod
     def reorder_tchannels(tchannels):
+        
+        # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        ProcessExporterFortranME.ordering +=1
+        if len(tchannels) < 4:
+            return tchannels, 2 #-2 is ping-pong strategy but does not matter here
+        else:
+            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+    
+    
+    @staticmethod
+    def reorder_tchannels_pingpong(tchannels):
         """change the tchannel ordering to pass to a ping-pong strategy.
            assume ninitial == 2
         

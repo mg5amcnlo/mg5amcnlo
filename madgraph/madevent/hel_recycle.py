@@ -580,6 +580,8 @@ class HelicityRecycler():
                         if name in name2dep:
                             name2dep[name].nb_used +=1
                             obj.linkdag.append(name2dep[name])
+            else:
+                return ''
 
           
         return new_objs

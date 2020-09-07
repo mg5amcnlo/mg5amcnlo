@@ -47,6 +47,7 @@ c
 c     DATA
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'

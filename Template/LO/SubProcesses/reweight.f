@@ -599,6 +599,7 @@ C   local variables
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy
       double precision asref, pt2prev(n_max_cl),pt2min
       integer n, ibeam(2), iqcd(0:2)
       integer idfl, idmap(-nexternal:nexternal)
@@ -1352,6 +1353,7 @@ C   local variables
       logical setclscales
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'

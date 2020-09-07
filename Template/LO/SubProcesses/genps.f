@@ -163,7 +163,8 @@ c
 
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
 
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -321,7 +322,7 @@ c
       endif
       pswgt = 1d0
       jac   = 1d0
-      call one_tree(iforest(1,-max_branch,iconfig),mincfig,
+      call one_tree(iforest(1,-max_branch,iconfig), tstrategy(iconfig),mincfig,
      &     nbranch,P,M,S,X,jac,pswgt)
 c
 c     Add what I think are the essentials
@@ -632,7 +633,7 @@ c     Initialize dsig (needed for subprocess group running mode)
       return
       end
 
-      subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
+      subroutine one_tree(itree,tstrategy,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
 c     Calculates the momentum for everything below in the tree until
 c     it reaches the end.
@@ -652,6 +653,7 @@ c
 c     Arguments
 c
       integer itree(2,-max_branch:-1) !Structure of configuration
+      integer tstrategy ! current strategy for t-channel
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
       double precision pother(0:3)
@@ -839,6 +841,12 @@ c     Particle Kinematics Chapter 6 section 3 page 166
 c
 c     From here, on we can just pretend this is a 2->2 scattering with
 c     Pa                    + Pb     -> P1          + P2
+
+      if (tstrategy.eq.-2) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
+cc       T-channel ping-pong strategy starting with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+         
 c     No -flipping case:      
 c      p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
 c       -  M(ibranch) is the total mass available (Pa+Pb)^2
@@ -993,7 +1001,102 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo
+      else if (tstrategy.eq.2) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cc       T-channel One side eat all strategy ending with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
+c     Now perform the t-channel decay sequence. Most of this comes from: 
+c     Particle Kinematics Chapter 6 section 3 page 166
+c
+c     From here, on we can just pretend this is a 2->2 scattering with
+c     Pa                    + Pb     -> P1          + P2
+c     p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c     M(ibranch) is the total mass available (Pa+Pb)^2
+c     M(ibranch-1) is the mass of P2  (all the remaining particles)
+c
+      do ibranch=-ns_channel-1,-nbranch+1,-1
+         s1  = m(ibranch)**2                        !Total mass available
+         ma2 = m(2)**2
+         mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
+         m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+c
+c     Call for 0<x<1
+c
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     &        .5d0*(tmin/stot+1d0),
+c     &        .5d0*(tmax/stot+1d0))
+c         t   = Stot*(x(-ibranch)*2d0-1d0)
+c
+c     call for -1<x<1
+c
+
+c         write(*,*) 'tmin, tmax',tmin,tmax
+
+      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         tmax = max(tmax,0d0) !This line if want really t freedom
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0d0, -tmin/stot)
+         t = stot*(-x(-ibranch))
+
+      else
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        -tmax/stot, -tmin/stot)
+         t = stot*(-x(-ibranch))
+      endif
+
+         if (t .lt. tmin .or. t .gt. tmax) then
+            jac=-3d0
+            return
+         endif
+c
+c     tmin and tmax set to -s,+s for jacobian because part of jacobian
+c     was determined from choosing the point x from the grid based on
+c     tmin and tmax.  (ie wgt contains some of the jacobian)
+c
+         tmin=-stot
+         tmax= stot
+         call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+         phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+         jac = jac*(tmax-tmin)*2d0*pi /2d0              ! I need /2d0 if -1<x<1
+c
+c     Finally generate the momentum. The call is of the form
+c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
+c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
+c
+
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi, mi2,
+     &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
+     &        p(0,ibranch),jac)
+
+         if (jac .lt. 0d0) then
+c            nerr=nerr+1
+c            if(nerr.le.5)
+c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
+            return              !Failed, probably due to negative x
+         endif
+
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      enddo
+
+      else
+         write(*,*) 'not supported tstrategy'
+         stop 2
+      endif
+
+c     
 c     We need to get the momentum of the last external particle.
 c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
