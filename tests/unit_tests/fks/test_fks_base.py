@@ -144,8 +144,10 @@ class TestFKSProcess(unittest.TestCase):
 
     # PROCESS: d d~ > u u~
     dict2_qcd = {'legs' : myleglist2, 
-                 'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
-                 'squared_orders':{'QCD':6, 'QED':0, 'WEIGHTED':6},
+                 #'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
+                 #'squared_orders':{'QCD':6, 'QED':0, 'WEIGHTED':6},
+                 'born_sq_orders':{'QCD':4, 'QED':0},
+                 'squared_orders':{'QCD':6, 'QED':0},
                  'split_orders':['QCD', 'QED'],
                  'sqorders_types':{'QED':'=', 'QCD':'='},
                  'model': mymodel,
@@ -159,8 +161,10 @@ class TestFKSProcess(unittest.TestCase):
                  'overall_orders': {}}
     
     dict2_qed = {'legs' : myleglist2, 
-                 'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
-                 'squared_orders':{'QCD':4, 'QED':2, 'WEIGHTED':8},
+                 #'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
+                 #'squared_orders':{'QCD':4, 'QED':2, 'WEIGHTED':8},
+                 'born_sq_orders':{'QCD':4, 'QED':0},
+                 'squared_orders':{'QCD':4, 'QED':2},
                  'split_orders':['QCD', 'QED'],
                  'sqorders_types':{'QED':'=', 'QCD':'='},
                  'model': mymodel,
@@ -175,8 +179,10 @@ class TestFKSProcess(unittest.TestCase):
     
     # PROCESS: d d~ > a a
     dict3_qcd = {'legs' : myleglist3, 
-                 'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
-                 'squared_orders':{'QCD':2, 'QED':4, 'WEIGHTED':10},
+                 #'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
+                 #'squared_orders':{'QCD':2, 'QED':4, 'WEIGHTED':10},
+                 'born_sq_orders':{'QCD':0, 'QED':4},
+                 'squared_orders':{'QCD':2, 'QED':4},
                  'split_orders':['QCD', 'QED'],
                  'sqorders_types':{'QED':'=', 'QCD':'='},
                  'model': mymodel,
@@ -190,8 +196,10 @@ class TestFKSProcess(unittest.TestCase):
                  'overall_orders': {}}
     
     dict3_qed = {'legs' : myleglist3, 
-                 'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
-                 'squared_orders':{'QCD':0, 'QED':6, 'WEIGHTED':12},
+                 #'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
+                 #'squared_orders':{'QCD':0, 'QED':6, 'WEIGHTED':12},
+                 'born_sq_orders':{'QCD':0, 'QED':4},
+                 'squared_orders':{'QCD':0, 'QED':6},
                  'split_orders':['QCD', 'QED'],
                  'sqorders_types':{'QED':'=', 'QCD':'='},
                  'model': mymodel,
