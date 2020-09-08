@@ -4740,10 +4740,121 @@ c           This is dummy particle used in multiparticle vertices
         #Note that this counts the number of vertex (one more vertex compare to T)
         ProcessExporterFortranME.ordering +=1
         if len(tchannels) < 4:
+            return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
             return tchannels, 2 #-2 is ping-pong strategy but does not matter here
         else:
             return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
-    
+
+    @staticmethod
+    def reorder_tchannels_flipside(tchannels):
+        """change the tchannel ordering to pass to a ping-pong strategy.
+           assume ninitial == 2
+        
+        We assume that we receive something like this
+        
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-1)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-N+2)
+                |                
+                X --------- L
+                |
+                | (-N+1) 
+                |                
+        -N ----- X ------- P        
+        
+        coded as 
+        (1 -2 > -X) (-X 4 > -X-1) (-X-1 -1 > -X-2) ...
+        ((-N+3) 3 > (-N+2)) ((-n+2) L > (-n+1)) ((-n+1) P > -N)
+        
+        we want to convert this as:
+        -N ----- X ------- -2
+                |
+                | (-N+1) 
+                |
+                X -------- 4
+                | 
+                | (-N+2)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-X-1)
+                |                
+                X --------- L
+                |
+                | (-X) 
+                |                
+        2 ----- X ------- P          
+        
+        coded as 
+        ( 2 P > -X) (-X L > -X-1) (-X-1 3 > -X-2)... (-X-L -2 > -N)
+        """
+               # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        if len(tchannels) < 2:
+            return tchannels
+
+        out = []
+        oldid2new = {}
+        
+        # initialisation
+        # id of the first T-channel (-X)
+        propa_id = tchannels[0]['legs'][-1]['number'] 
+        #
+        # Setup the last vertex to refenence the second id beam
+        # -N (need to setup it to 2.
+        initialid = tchannels[-1]['legs'][-1]['number']       
+        oldid2new[initialid] = 2
+        
+
+        
+        i = 0 
+        while tchannels:
+            old_vert = tchannels.pop()
+                
+            #copy the vertex /leglist to avoid side effects
+            new_vert = base_objects.Vertex(old_vert)
+            new_vert['legs'] = [base_objects.Leg(l) for l in old_vert['legs']]
+            # vertex taken from the bottom we have 
+            # (-N+1 X > -N) we need to flip to pass to 
+            # -N X > -N+1 (and then relabel -N and -N+1
+            # to be secure  we also support (X -N+1 > -N)
+            legs = new_vert['legs'] # shorcut
+            id1 = legs[0]['number']
+            id2 = legs[1]['number'] 
+            if id1 > id2:
+                legs[0], legs[1] = legs[1], legs[0]
+            else:
+                legs[0], legs[2] = legs[2], legs[0]
+            
+            # the only new relabelling is the last element of the list
+            # always thanks to the above flipping
+            old_propa_id = new_vert['legs'][-1]['number'] 
+            oldid2new[old_propa_id] = propa_id
+
+            #pass to new convention for leg numbering:
+            for l in new_vert['legs']:
+                if l['number'] in  oldid2new:
+                    l['number'] = oldid2new[l['number']]    
+            
+            # new_vert is now ready
+            out.append(new_vert)
+            # prepare next iteration
+            propa_id -=1
+            i +=1
+
+        return out
     
     @staticmethod
     def reorder_tchannels_pingpong(tchannels):

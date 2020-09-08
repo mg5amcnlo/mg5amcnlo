@@ -707,7 +707,12 @@ c     Determine number of s channel branches, this doesn't count
 c     the s channel p1+p2
 c
       ns_channel=1
-      do while(itree(1,-ns_channel) .ne. 1 .and.ns_channel.lt.nbranch)
+      iopposite = 1
+      if (abs(tstrategy).eq.1) then
+         iopposite = 2
+      endif
+      
+      do while(itree(1,-ns_channel) .ne. iopposite .and.ns_channel.lt.nbranch)
          m(-ns_channel)=0d0                 
          ns_channel=ns_channel+1         
       enddo
