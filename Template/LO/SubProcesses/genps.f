@@ -1001,6 +1001,33 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo
+
+c     
+c     We need to get the momentum of the last external particle.
+c     This should just be the sum of p(0,2) and the remaining
+c     momentum from our last t channel 2->2
+c
+      if (nt_channel.eq.1) then
+c$$$         write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         enddo
+      else
+c$$$                  write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,-nbranch+2)
+         enddo
+      endif
+
+
       else if (tstrategy.eq.2) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc       T-channel One side eat all strategy ending with 2
@@ -1090,35 +1117,20 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo
-
-      else
-         write(*,*) 'not supported tstrategy'
-         stop 2
-      endif
-
-c     
+c
 c     We need to get the momentum of the last external particle.
 c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
 c
-      if (nt_channel.eq.1) then
-c$$$         write(*,*) 'need to assign last', itree(2,-nbranch)
-c$$$         write(*,*) 'nbranch is at', nbranch
-c$$$         do i=-nbranch,nexternal
-c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
-c$$$         enddo
-         do i=0,3
-            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
-         enddo
+      do i=0,3
+         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+      enddo
+
+
+      
       else
-c$$$                  write(*,*) 'need to assign last', itree(2,-nbranch)
-c$$$         write(*,*) 'nbranch is at', nbranch
-c$$$         do i=-nbranch,nexternal
-c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
-c$$$         enddo
-         do i=0,3
-            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,-nbranch+2)
-         enddo
+         write(*,*) 'not supported tstrategy'
+         stop 2
       endif
 
       endif                     !t-channel stuff
