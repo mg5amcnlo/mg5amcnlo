@@ -1617,28 +1617,23 @@ c incoming momenta should always be particle 1 and 2.
                cycle
             endif
             if (idup_in(i).eq.idup_s(j)) then
-c found the same particles
-               if (any(icolup_in(1:2,i).ne.icolup_s(1:2,j))) then
-                  write (*,*) 'montecarlocounter.f: '/
-     $                 /'States not compatible #3'
-                  write (*,*) 'returned by Pythia:'
-                  write (*,*) idup_in(1:nup_in)
-                  write (*,*) icolup_in(1,1:nup_in)
-                  write (*,*) icolup_in(2,1:nup_in)
-                  write (*,*) 'available in MG5_aMC:'
-                  write (*,*) idup_s(1:nup_in)
-                  write (*,*) icolup_s(1,1:nup_in)
-                  write (*,*) icolup_s(2,1:nup_in)
-                  stop 1
+c found the same particle ID. Check that colour is okay. 
+               if (all(icolup_in(1:2,i).eq.icolup_s(1:2,j))) then
+                  exit ! Agreement found.
                endif
-               exit
             endif
          enddo
          if (j.gt.nexternal-1) then
-c went all the way through the 2nd do-loop without finding the corresponding particle...
+c went all the way through the 2nd do-loop without finding the corresponding particle.
             write (*,*) 'montecarlocounter.f: States not compatible #2'
+            write (*,*) 'returned by Pythia:'
             write (*,*) idup_in(1:nup_in)
+            write (*,*) icolup_in(1,1:nup_in)
+            write (*,*) icolup_in(2,1:nup_in)
+            write (*,*) 'available in MG5_aMC:'
             write (*,*) idup_s(1:nup_in)
+            write (*,*) icolup_s(1,1:nup_in)
+            write (*,*) icolup_s(2,1:nup_in)
             stop 1
          endif
       enddo
