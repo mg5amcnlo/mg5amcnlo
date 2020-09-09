@@ -17,6 +17,7 @@
 import collections
 import fractions
 import logging
+import math
 import os
 import re
 import sys
@@ -1869,6 +1870,11 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
         self.coupling_order_dict ={}
+        self.autowidth =  []
+     
+    def modify_autowidth(self, cards, id):
+        self.autowidth.append([int(id[0])])
+        return math.log10(2*len(self.autowidth))
      
     def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
                                                       complex_mass_scheme=None):
@@ -1888,7 +1894,8 @@ class RestrictModel(model_reader.ModelReader):
         # compute the value of all parameters
         # Get the list of definition of model functions, parameter values. 
         model_definitions = self.set_parameters_and_couplings(param_card, 
-                                        complex_mass_scheme=complex_mass_scheme)
+                                        complex_mass_scheme=complex_mass_scheme,
+                                        auto_width=self.modify_autowidth)
         
         # Simplify conditional statements
         logger.log(self.log_level, 'Simplifying conditional expressions')
@@ -1941,8 +1948,23 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
+                
+        #
+        # restore auto-width value 
+        #
+        #for lhacode in self.autowidth:
+        for parameter in self['parameters'][('external',)]:
+            if parameter.lhablock.lower() == 'decay' and parameter.lhacode in self.autowidth:
+                parameter.value = 'auto'
+                if parameter.name in self['parameter_dict']:
+                    self['parameter_dict'][parameter.name] = 'auto'
+                elif parameter.name.startswith('mdl_'):
+                    self['parameter_dict'][parameter.name[4:]] = 'auto'
+                else:
+                    raise Exception
 
-                    
+
+        
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
@@ -2485,6 +2507,7 @@ class RestrictModel(model_reader.ModelReader):
             logger_mod.log(self.log_level,'remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
+            
 
     def optimise_interaction(self, interaction):
         

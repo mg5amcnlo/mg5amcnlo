@@ -218,7 +218,7 @@ class ParamCardWriter(object):
         if info.startswith('mdl_'):
             info = info[4:]
     
-        if param.value.imag != 0:
+        if param.value != 'auto' and param.value.imag != 0:
             raise ParamCardWriterError, 'All External Parameter should be real (not the case for %s)'%param.name
     
 
@@ -232,6 +232,8 @@ class ParamCardWriter(object):
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
             text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
+        elif param.value == 'auto':
+            text = '''DECAY %s auto # %s \n''' % (lhacode, info)
         else:
             text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
         self.fsock.write(text)             
