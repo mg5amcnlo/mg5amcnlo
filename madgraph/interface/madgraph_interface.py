@@ -6801,7 +6801,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             data['last_check'] = time.time()
 
         #check if we need to update.
-        if time.time() - data['last_check'] < update_delay:
+        if time.time() - float(data['last_check']) < float(update_delay):
             return
 
         logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)
