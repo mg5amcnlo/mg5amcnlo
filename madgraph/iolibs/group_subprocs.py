@@ -65,7 +65,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
-        if abs(part.get('pdg_code')) in [23,25]:# and leg.get('state') == False:
+        if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('mass')
@@ -378,6 +378,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                     mapping_diagrams.append(diagram)
                     diagram_maps[ime].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
+        misc.sprint("find mapping diagrams", len(diagram_maps))
         return mapping_diagrams, diagram_maps
 
     def get_subproc_diagrams_for_config(self, iconfig):

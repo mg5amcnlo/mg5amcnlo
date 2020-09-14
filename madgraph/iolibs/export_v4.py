@@ -4739,9 +4739,16 @@ c           This is dummy particle used in multiparticle vertices
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         ProcessExporterFortranME.ordering +=1
-        if len(tchannels) < 4:
-            return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
-            return tchannels, 2 #-2 is ping-pong strategy but does not matter here
+        if len(tchannels) < 3:
+            return tchannels, 2
+        elif len(tchannels) < 4:
+            #
+            first = tchannels[0]['legs'][1]['number']
+            last = tchannels[-1]['legs'][1]['number']
+            if first > last:
+                return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+            else:
+                return tchannels, 2 #-2 is ping-pong strategy but does not matter here
         else:
             return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
 
@@ -4800,7 +4807,8 @@ c           This is dummy particle used in multiparticle vertices
         coded as 
         ( 2 P > -X) (-X L > -X-1) (-X-1 3 > -X-2)... (-X-L -2 > -N)
         """
-               # no need to modified anything if 1 or less T-Channel
+        
+        # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         if len(tchannels) < 2:
             return tchannels
@@ -4816,9 +4824,8 @@ c           This is dummy particle used in multiparticle vertices
         # -N (need to setup it to 2.
         initialid = tchannels[-1]['legs'][-1]['number']       
         oldid2new[initialid] = 2
-        
-
-        
+        oldid2new[1] = initialid
+            
         i = 0 
         while tchannels:
             old_vert = tchannels.pop()
@@ -4828,26 +4835,28 @@ c           This is dummy particle used in multiparticle vertices
             new_vert['legs'] = [base_objects.Leg(l) for l in old_vert['legs']]
             # vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 
-            # -N X > -N+1 (and then relabel -N and -N+1
-            # to be secure  we also support (X -N+1 > -N)
+            # -N X > -N+1 (and then relabel -N and -N+1  
             legs = new_vert['legs'] # shorcut
             id1 = legs[0]['number']
-            id2 = legs[1]['number'] 
-            if id1 > id2:
+            id2 = legs[1]['number']
+            id3 = legs[2]['number']
+            # to be secure  we also support (X -N+1 > -N)
+            if id3 == id2 -1 and id1 !=1:
                 legs[0], legs[1] = legs[1], legs[0]
-            else:
-                legs[0], legs[2] = legs[2], legs[0]
-            
+            #flipping side
+            legs[0], legs[2] = legs[2], legs[0]
+
             # the only new relabelling is the last element of the list
             # always thanks to the above flipping
             old_propa_id = new_vert['legs'][-1]['number'] 
             oldid2new[old_propa_id] = propa_id
 
+            
             #pass to new convention for leg numbering:
             for l in new_vert['legs']:
                 if l['number'] in  oldid2new:
-                    l['number'] = oldid2new[l['number']]    
-            
+                    l['number'] = oldid2new[l['number']]  
+                    
             # new_vert is now ready
             out.append(new_vert)
             # prepare next iteration

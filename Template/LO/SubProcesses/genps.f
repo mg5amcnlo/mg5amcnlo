@@ -722,7 +722,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-
 c
 c     Determine masses for all intermediate states.  Starting
 c     from outer most (real particle) states
@@ -1033,7 +1032,7 @@ c$$$         enddo
       endif
 
 
-      else if (tstrategy.eq.2) then
+      else if (tstrategy.eq.2.or.tstrategy.eq.1) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc       T-channel One side eat all strategy ending with 2
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -1049,12 +1048,26 @@ c     M(ibranch-1) is the mass of P2  (all the remaining particles)
 c
       do ibranch=-ns_channel-1,-nbranch+1,-1
          s1  = m(ibranch)**2                        !Total mass available
-         ma2 = m(2)**2
+         ma2 = m(tstrategy)**2
          mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
          call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+
+         if(.false.) then
+             write(*,*) itree(1, ibranch), 'a----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+             write(*,*)        '                       |           '
+             write(*,*)   	   '                       |           '
+             write(*,*)   	   '                       | ',ibranch
+             write(*,*)   	   '                       |           '
+             write(*,*)        '                       |           '
+             write(*,*) tstrategy, '-----------T---------- m=', m(ibranch-1), ibranch-1
+             write(*,*) 'S', dsqrt(s1), 'm_top=', dsqrt(mb2), 'M_bottom', dsqrt(ma2)
+             
+c     write(*,*) m(1), m(2), m(3), m(4), m(5)
+            write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+         endif
 c
 c     Call for 0<x<1
 c
@@ -1109,7 +1122,7 @@ c
             mi2 = tmass(itree(1,ibranch))
          endif
          tmass(ibranch) = t
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi, mi2,
+         call gentcms(p(0,itree(1,ibranch)),p(0,tstrategy),t,phi, mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
@@ -1128,7 +1141,7 @@ c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
 c
       do i=0,3
-         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,tstrategy)
       enddo
 
 

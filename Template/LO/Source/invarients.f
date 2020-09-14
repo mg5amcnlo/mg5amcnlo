@@ -236,7 +236,7 @@ c         do j=1,3*nbranch-4+2
 
          write(*,*) 'Determine nb_t'
          ns_channel=1
-         do while(iforest(1,-ns_channel,mincfig) .ne. 1 .and.ns_channel.lt.nbranch)
+         do while((iforest(1,-ns_channel,mincfig) .ne. 1.and.iforest(1,-ns_channel,mincfig) .ne. 2).and.ns_channel.lt.nbranch)
             ns_channel=ns_channel+1
          enddo
          ns_channel=ns_channel - 1
