@@ -6003,9 +6003,12 @@ This implies that with decay chains:
             if six.PY3:
                 self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py3' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py3']
             else:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py2']
+            
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
