@@ -65,7 +65,7 @@ c     instead of stopping the code, as this might accidentally happen.
 
       ipart=ipdg
       if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22) ipart=7
+      if(iabs(ipart).eq.22.or.iabs(ipart).eq.7) ipart=7
       iporg=ipart
 
 c     This will be called for any PDG code, but we only support up to 7

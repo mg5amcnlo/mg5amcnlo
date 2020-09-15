@@ -66,7 +66,7 @@ c     instead of stopping the code, as this might accidentally happen.
 
       ipart=ipdg
       if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22) ipart=7
+      if(iabs(ipart).eq.22.or.iabs(ipart).eq.7) ipart=7
       if(abs(ipart).eq.8) ipart=sign(11,ipart)
       if(abs(ipart).eq.9) ipart=sign(13,ipart)
       if(abs(ipart).eq.10) ipart=sign(15,ipart)
