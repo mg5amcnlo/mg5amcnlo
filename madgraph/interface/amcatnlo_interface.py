@@ -453,6 +453,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         #validate_model will reset self._generate_info; to avoid
         #this store it
         geninfo = self._generate_info
+
+        # this is for the sudakov approx of EW corrections 
+        self.ewsudakov = False
+        if 'SDK' in proc_type[2]:
+            proc_type[2].remove('SDK')
+            line = line.replace('SDK', '')
+            self.ewsudakov = True
+            logger.warning('LINE' + line)
+
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
         self._generate_info = geninfo
 
@@ -580,7 +589,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         fks_options = {'OLP': self.options['OLP'],
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
-                       'ncores_for_proc_gen': self.ncores_for_proc_gen}
+                       'ncores_for_proc_gen': self.ncores_for_proc_gen,
+                       'ewsudakov': self.ewsudakov}
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
         except AttributeError: 
