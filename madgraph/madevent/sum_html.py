@@ -546,7 +546,7 @@ class Combine_results(list, OneResult):
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s > %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
@@ -696,19 +696,6 @@ function UrlExists(url) {
    return 1==2;
   }
   return http.status!=404;
-}
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-        if ( ! UrlExists(alt)){
-         obj.href = alt;
-         return true;
-        }
-       obj.href = alt;
-       return false;
-    }
-    obj.href = url;
-    return 1==1;
 }
 </script>
 """ 
