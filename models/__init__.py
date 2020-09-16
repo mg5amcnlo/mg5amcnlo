@@ -43,14 +43,15 @@ def load_model(name, decay=False):
             return sys.modules[model_pos]
         except Exception as error:
             pass
-        for p in os.environ['PYTHONPATH'].split(':'):
-            new_name = os.path.join(p, name)
-            try:
-                return load_model(new_name, decay)
-            except Exception:
-                pass
-            except ImportError:
-                pass
+        if 'PYTHONPATH' in os.environ:
+            for p in os.environ['PYTHONPATH'].split(':'):
+                new_name = os.path.join(p, name)
+                try:
+                    return load_model(new_name, decay)
+                except Exception:
+                    pass
+                except ImportError:
+                    pass
     elif path_split[-1] in sys.modules:
         model_path = os.path.realpath(os.sep.join(path_split))
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))

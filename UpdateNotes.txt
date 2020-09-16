@@ -1,6 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.9.0 ()
+      Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
+      OM: Various optimization fot T-channel integration
+          - merging Z/H channel with photon for S-channel if the process is generated with $ z h
+	  - use ping pong strategy for triple or more T-channel
+	  - let madgraph decides the ordering of T-channel for double T-channel
+	  - increase number of phase-space point/iteration for double or more T-channel
+
 2.8.0 (21/08/20):
       OM: pass to python3 by default
       OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the

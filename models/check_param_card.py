@@ -1323,7 +1323,7 @@ class ParamCardRule(object):
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0), '$MG:BOLD')                            
                         elif log:
-                            logger.log(log,'For model consistency, update %s with id %s to value %s',
+                            logger.log(log,'For model consistency, update %s with id %s to value %s' %
                                         (block, id, 1.0))
 
         

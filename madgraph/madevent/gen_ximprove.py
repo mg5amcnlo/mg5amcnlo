@@ -1085,7 +1085,7 @@ class gen_ximprove(object):
             if C.get('axsec') == 0:
                 continue
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
-                logger.debug("channel %s is at lum=%s (need to improve by %s) (xsec=%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
+                logger.debug("channel %s need to improve by %.2f (xsec=%s pb, iter=%s)", C.name, goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'), int(C.get('maxit')))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'),
               (1/(100*math.sqrt(self.err_goal)))*all_channels[-1].get('axsec')):
@@ -1162,7 +1162,7 @@ class gen_ximprove_v4(gen_ximprove):
         f.close()
     
     def increase_precision(self, rate=3):
-        misc.sprint(rate)
+        #misc.sprint(rate)
         if rate < 3:
             self.max_event_in_iter = 20000
             self.min_events = 7500

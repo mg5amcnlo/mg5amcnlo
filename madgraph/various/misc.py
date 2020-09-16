@@ -2249,8 +2249,6 @@ the file and returns last line in an internal buffer."""
             return line
         else:
             raise StopIteration
-
-
 def tqdm(iterator, **opts):
     return iterator
 

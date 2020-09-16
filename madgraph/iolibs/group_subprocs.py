@@ -67,7 +67,6 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         part = model.get_particle(leg.get('id'))
         if abs(part.get('pdg_code')) in [23,25] and (
             leg.get('state') == False or leg.get('onshell') == False):
-                misc.sprint(leg.get('id'),leg.get('state') , leg.get('onshell'))
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('mass')
@@ -96,7 +95,6 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
             part = model.get_particle(leg.get('id'))
             if abs(part.get('pdg_code')) in [23,25] and (
             leg.get('state') == False or leg.get('onshell') == False):
-                misc.sprint(leg.get('state') , leg.get('onshell'))
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('width')
@@ -321,7 +319,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                "Need matrix elements to run find_mapping_diagrams"
 
         if max_tpropa == 0:
-            max_tpropa = base_objects.Vertex.max_tpropa
+            max_tpropa = int(base_objects.Vertex.max_tpropa)
         
         matrix_elements = self.get('matrix_elements')
         model = matrix_elements[0].get('processes')[0].get('model')
@@ -367,7 +365,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                                 max(diagram.get_vertex_leg_numbers()) > minvert:
                     diagram_maps[ime].append(0)
                     continue
-                if diagram.get_nb_t_channel() > max_tpropa:
+                if diagram.get_nb_t_channel() > int(max_tpropa):
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format
@@ -382,7 +380,6 @@ class SubProcessGroup(base_objects.PhysicsObject):
                     mapping_diagrams.append(diagram)
                     diagram_maps[ime].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
-        misc.sprint("find mapping diagrams", len(diagram_maps))
         return mapping_diagrams, diagram_maps
 
     def get_subproc_diagrams_for_config(self, iconfig):
