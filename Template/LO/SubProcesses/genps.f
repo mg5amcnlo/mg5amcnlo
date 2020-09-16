@@ -656,7 +656,7 @@ c
       integer tstrategy ! current strategy for t-channel
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
-      double precision pother(0:3)
+      double precision pother(0:3), ptemp(0:3)
       double precision M(-max_branch:max_particles)
       double precision S(-max_branch:0)
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
@@ -936,7 +936,7 @@ c
 
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
-      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+      if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
@@ -965,7 +965,9 @@ c
          call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
      &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
          phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
-         jac = jac*(tmax-tmin)*2d0*pi /2d0              ! I need /2d0 if -1<x<1
+         jac = jac*(tmax-tmin)*2d0*pi /2d0 ! I need /2d0 if -1<x<1
+
+         
 c
 c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
@@ -1080,7 +1082,29 @@ c     call for -1<x<1
 c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
+         if(.false.) then
+            ! NOT VALIDATED METHOD
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0d0, 1d0)
+            costh= 2d0*x(-ibranch)-1d0
+            call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+            phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+            jac = jac * 4d0*pi
+                     m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+         call mom2cx(s1,m(itree(2,ibranch)),m(ibranch-1),costh,phi,
+     &        p(0,itree(2,ibranch)),p(0,ibranch))
 
+         DO I=0,3
+            ptemp(I) = P(I,tstrategy) + P(I,itree(1, ibranch))
+         ENDDO
+         call boostm(p(0,itree(2,ibranch)),ptemp,m(itree(2,ibranch)),p(0,itree(2,ibranch)))
+         call boostm(p(0,ibranch),ptemp,m(ibranch),p(0,ibranch))
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+         cycle
+      endif
+         
       if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
