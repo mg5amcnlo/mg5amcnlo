@@ -388,10 +388,13 @@ class HelicityRecycler():
         self.template_file = 'template_matrix.f'
         
         self.template_dict = {}
+        #initialise everything as for zero matrix element
         self.template_dict['helicity_lines'] = '\n'
         self.template_dict['helas_calls'] = []
         self.template_dict['jamp_lines'] = '\n'
         self.template_dict['amp2_lines'] = '\n'
+        self.template_dict['ncomb'] = '0'  
+        self.template_dict['nwavefuncs'] = '0' 
 
         self.dag = DAG()
 
@@ -703,7 +706,26 @@ class HelicityRecycler():
                 out_file.write(line)
         out_file.close()
 
+    def write_zero_matrix_element(self):
+        out_file = open(self.output_file, 'w+')
+        self.template_dict['ncomb'] = '0'  
+        self.template_dict['nwavefuncs'] = '0'  
+        self.template_dict['helas_calls'] = ''    
+        with open(self.template_file, 'r') as file:
+            for line in file:
+                s = Template(line)
+                line = s.safe_substitute(self.template_dict)
+                line = '\n'.join([do_multiline(sub_lines) for sub_lines in line.split('\n')])
+                out_file.write(line)
+        out_file.close()
+
+
     def generate_output_file(self):
+        if not self.good_elements:
+            misc.sprint("No helicity", self.input_file)
+            self.write_zero_matrix_element()
+            return
+        
         atexit.register(self.clean_up)
         self.read_orig()
         self.read_template()

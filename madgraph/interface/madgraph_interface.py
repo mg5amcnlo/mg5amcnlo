@@ -8257,9 +8257,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not 'no_helrecycling' in flaglist:
                 for (name, flag, out) in wanted_lorentz[:]:
                     if out == 0:
-                        for i in range(1, len(name[0])):
-                            newflag = list(flag) + ['P1N']
-                            wanted_lorentz.append((name, tuple(newflag), i))
+                        newflag = list(flag) + ['P1N']
+                        wanted_lorentz.append((name, tuple(newflag), -1))
                 
             # For a unique output of multiple type of exporter need to store this
             # information.             

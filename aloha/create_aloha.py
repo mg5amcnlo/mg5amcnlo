@@ -926,7 +926,20 @@ class AbstractALOHAModel(dict):
         # self.explicit_combine = False
         request = {}
 
+        #handle special outgoing=-1 flag (which means do it for all particle outgoing)
+        # use for P1N
+        for list_l_name, tag, outgoing in data[:]:
+            if outgoing == -1: #means do for all particle.
+                data.remove((list_l_name, tag, outgoing))
+                l_name = list_l_name[0]
+                lorentz = eval('self.model.lorentz.%s' % l_name)
+                for i in range(len(lorentz.spins)):
+                    data.append((list_l_name, tag, i+1))
+                
+                
+
         for list_l_name, tag, outgoing in data:
+            
             #allow tag to have integer for retro-compatibility
             all_tag = tag[:]
             conjugate = [i for i in tag if isinstance(i, int)]
