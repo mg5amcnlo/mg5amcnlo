@@ -27,7 +27,7 @@ $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
-	 real_me_chooser.o chooser_functions.o				\
+	 real_me_chooser.o chooser_functions.o recmom.o			\
 	 genps_fks.o setcuts.o setscales.o veto_xsec.o		 	\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o				\
@@ -63,7 +63,7 @@ TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=reweight_xsec_events.o handling_lhe_events.o			\
+RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\

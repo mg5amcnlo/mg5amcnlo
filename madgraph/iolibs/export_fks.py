@@ -701,6 +701,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
+                     'recmom.f',
                      'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
                      'vegas2.for',
