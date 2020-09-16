@@ -270,7 +270,7 @@ class OneResult(object):
                           # this can happen if we force maxweight
         self.th_nunwgt = 0 # associated number of event with th_maxwgt 
                            #(this is theoretical do not correspond to a number of written event)
-
+        self.timing = 0
         return
     
     #@cluster.multiple_try(nb_try=5,sleep=20)
@@ -286,7 +286,7 @@ class OneResult(object):
         
         i=0
         found_xsec_line = False
-        for line in finput:            
+        for line in finput:           
             # Exit as soon as we hit the xml part. Not elegant, but the part
             # below should eventually be xml anyway.
             if '<' in line:
@@ -347,7 +347,7 @@ class OneResult(object):
             xml.append(line)
 
         if xml:
-            self.parse_xml_results('\n'.join(xml))        
+            self.parse_xml_results('\n'.join(xml))       
         
         # this is for amcatnlo: the number of events has to be read from another file
         if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
@@ -368,6 +368,12 @@ class OneResult(object):
                 self.run_statistics.load_statistics(statistics_node[0])
             except ValueError as IndexError:
                 logger.warning('Fail to read run statistics from results.dat')
+        else:
+            lo_statistics_node = dom.getElementsByTagName("lo_statistics")[0]
+            timing = lo_statistics_node.getElementsByTagName('cumulated_time')[0]
+            timing= timing.firstChild.nodeValue
+            self.timing = 0.3 + float(timing) #0.3 is the typical latency of bash script/...
+
 
     def set_mfactor(self, value):
         self.mfactor = int(value)
@@ -448,6 +454,7 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
+        self.timing = sum([one.timing for one in self])
         if update_statistics:
             self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
@@ -463,6 +470,7 @@ class Combine_results(list, OneResult):
         self.xsec = sum([one.xsec for one in self]) /nbjobs
         self.xerrc = sum([one.xerrc for one in self]) /nbjobs
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
+        self.timing = sum([one.timing for one in self]) #no average here 
         if error:
             self.xerrc = error
             self.xerru = error
@@ -547,7 +555,7 @@ class Combine_results(list, OneResult):
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s > %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
@@ -672,6 +680,10 @@ class Combine_results(list, OneResult):
             line = '%s %s %s %s %s %s\n' % (i+1, self.ysec_iter[i], self.yerr_iter[i], 
                       self.eff_iter[i], self.maxwgt_iter[i], self.yasec_iter[i]) 
             fsock.writelines(line)
+
+        if self.timing:
+            text = """<lo_statistics>\n<cumulated_time> %s </cumulated_time>\n</lo_statistics>"""
+            fsock.writelines(text % self.timing)
         
 
 
@@ -694,19 +706,6 @@ function UrlExists(url) {
   }
   return http.status!=404;
 }
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-        if ( ! UrlExists(alt)){
-         obj.href = alt;
-         return true;
-        }
-       obj.href = alt;
-       return false;
-    }
-    obj.href = url;
-    return 1==1;
-}
 </script>
 """ 
 
@@ -716,7 +715,6 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
     run = cmd.results.current['run_name']
     all = Combine_results(run)
 
-    
     for Pdir in cmd.get_Pdir():
         P_comb = Combine_results(Pdir)
         
@@ -759,7 +757,13 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
         all.append(P_comb)
     all.compute_values()
 
-
+    try:
+        all_channels = sum([list(P) for P in all],[])
+        timings = sum(x.timing for x in all_channels)
+        logger.info('sum of cpu time of last step: %s', misc.format_time(timings))
+    except Exception as error:
+        logger.debug(str(error))
+        pass
 
     return all
 

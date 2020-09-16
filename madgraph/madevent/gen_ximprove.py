@@ -993,7 +993,7 @@ class gen_ximprove_v4(gen_ximprove):
         f.close()
     
     def increase_precision(self, rate=3):
-        misc.sprint(rate)
+        #misc.sprint(rate)
         if rate < 3:
             self.max_event_in_iter = 20000
             self.min_events = 7500

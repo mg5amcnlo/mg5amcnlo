@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.8.1 ()
+
 
 2.8.0 (21/08/20):
       OM: pass to python3 by default
