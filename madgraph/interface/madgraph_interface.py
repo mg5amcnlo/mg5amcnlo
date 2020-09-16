@@ -2848,7 +2848,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'ninja':'./HEPTools/lib',
                        'collier':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
-                       'applgrid':'applgrid-config',
+                       'pineappl':'pineappl',
                        'cluster_temp_path':None,
                        'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'cluster_local_path': None,

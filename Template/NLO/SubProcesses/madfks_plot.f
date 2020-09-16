@@ -11,9 +11,9 @@ c Wrapper routines for the fixed order analyses
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
       nwgt=1
       if (.not.allocated(weights_info)) allocate(weights_info(1))
       weights_info(nwgt)="central value               "
@@ -109,7 +109,7 @@ c set the weights_info string for PDF variation
 c start with central member of the first set
          call InitPDFm(1,0)
       endif
-      if(iappl.ne.0)then
+      if(pineappl)then
 c Initialize grid parameters to negative values.
          appl_Q2min   = -1d0
          appl_Q2max   = -1d0
@@ -162,9 +162,9 @@ c To keep track of the accumulated results:
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
 c
       if(usexinteg.and..not.mint) then
          xnorm=1.d0/float(itmax)
@@ -174,8 +174,8 @@ c
          xnorm=1d0
       endif
       if(useitmax)xnorm=xnorm/float(itmax)
-c Normalization factor for the APPLgrid grids
-      if(iappl.ne.0) appl_norm_histo = 1d0 / dble(ncall*itmax)
+c Normalization factor for the PineAPPL grids
+      if(pineappl) appl_norm_histo = 1d0 / dble(ncall*itmax)
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
@@ -253,9 +253,9 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
       integer amp_pos_plot
       common /campposplot/ amp_pos_plot
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
 c Born, n-body or (n+1)-body contribution. For more information
 C  about itype, see the comments about plot_id inside
 C  the fill_plot subroutine of fks_singular.f
@@ -288,7 +288,7 @@ c Fill the arrays (momenta, status and PDG):
          enddo
          p(4,i)=pmass(i)
       enddo
-      if(iappl.ne.0)then
+      if(pineappl)then
          appl_itype = ibody
          if(ibody.eq.2)then
 c      special treatment for collinear

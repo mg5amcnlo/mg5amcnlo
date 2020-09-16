@@ -1026,8 +1026,8 @@ c bpower.
       common /dsymfactor/diagramsymmetryfactor
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       logical needrndec
       parameter (needrndec=.false.)
       real*8 ran2
@@ -1036,7 +1036,7 @@ c bpower.
       common/crndec/rndec
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
-      include "appl_common.inc" 
+      include "pineappl_common.inc" 
       integer orders(nsplitorders)
 C
       call cpu_time(tBefore)
@@ -1048,8 +1048,8 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
-         if (iappl.ne.0) then 
-         ! applgrid stuff
+         if (pineappl) then 
+         ! PineAPPL stuff
          appl_amp_split_size = amp_split_size
            do j=1,amp_split_size
              call amp_split_pos_to_orders(j, orders)
@@ -2265,15 +2265,15 @@ c add the weights to the array
       return
       end
 
-      subroutine fill_applgrid_weights(vegas_wgt)
-c Fills the ApplGrid weights of appl_common.inc. This subroutine assumes
+      subroutine fill_pineappl_weights(vegas_wgt)
+c Fills the FineAPPL weights of pineappl_common.inc. This subroutine assumes
 c that there is an unique PS configuration: at most one Born, one real
 c and one set of counter terms. Among other things, this means that one
 c must do MC over FKS directories.
       use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'appl_common.inc'
+      include 'pineappl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
       integer orders(nsplitorders)
@@ -2314,7 +2314,7 @@ c must do MC over FKS directories.
          endif
          ! consistency check
          if (appl_qcdpower(pos).ne.qcdpower(i)) then
-           write(*,*) 'ERROR in fill_applgrid_weights, QCDpower',
+           write(*,*) 'ERROR in fill_pineappl_weights, QCDpower',
      %        appl_qcdpower(pos), qcdpower(i)  
            stop 1
          endif
@@ -2533,7 +2533,7 @@ c the momenta are identical.
          !  final(initial) confs are integrated (e.g. a a > e+ e-)
          !  This gives no problem for normal histogramming (and in
          !  fact plot_id 11 13 and 14 are merged into ibody=2 in
-         !  outfun, but it gives troubles e.g. with applgrid. 
+         !  outfun, but it gives troubles e.g. with applgrid/pineappl. 
          !  Note that the separation between soft and soft-virtual
          !  may not be needed in reality
          if (itype(i).eq.2) then

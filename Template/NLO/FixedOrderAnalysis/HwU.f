@@ -35,14 +35,14 @@ c and sets the number of weights that need to be included for each point.
       integer i,nweights
       character*(*) wgt_info(*)
 
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
 
 C     Initialize the number of bins of the aMCfast grids
-      if(iappl.ne.0) appl_obs_nbins = 0
+      if(pineappl) appl_obs_nbins = 0
 
       call HwU_deallocate_all
       max_plots=0
@@ -95,16 +95,16 @@ c plot range (from 'xmin' to 'xmax') should be given.
       integer label,nbin_l,i,j
       character*(*) title_l
       double precision xmin,xmax
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
       double precision del
 
-c     Initialize the grids only if the switch "iappl" is different from zero
+c     Initialize the grids only if the switch "pineappl" is set to True
 c     and if the title  does not contain the word "Born". 
-      if(iappl.ne.0.and.index(title_l,"Born").eq.0)then
+      if(pineappl.and.index(title_l,"Born").eq.0)then
 c     Observable parameters
 c     Compute number of bins and edges only if they have not been given by the user.
          if(appl_obs_nbins.eq.0)then
@@ -119,11 +119,11 @@ c     compute bin edges
          appl_obs_min = appl_obs_bins(0)
          appl_obs_max = appl_obs_bins(appl_obs_nbins)
          if(abs(appl_obs_max-xmax).gt.0.00000001d0)then
-            write(*,*) 'APPLgrid Histogram: ', 
+            write(*,*) 'PineAPPL Histogram: ', 
      1                 'Change of the upper limit:',xmax,'-->',
      2                  appl_obs_max
          endif
-c     Initialize APPLgrid routines
+c     Initialize PineAPPL routines
          call APPL_init
 c     Keep track of the position of this histogram
          nh_obs = nh_obs + 1
@@ -167,18 +167,18 @@ c the same number of weights.
       integer label,i,j,bin
       double precision x, wgts(*)
 
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
-      if(iappl.ne.0)then
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      if(pineappl)then
          do j=1,nh_obs
             if(label.eq.ih_obs(j))then
                appl_obs_num   = j
                appl_obs_histo = x
-c     Fill the reference APPLgrid histograms
-c     Fill the APPLgrid files
+c     Fill the reference PineAPPL histograms
+c     Fill the PineAPPL files
                call APPL_fill
             endif
          enddo

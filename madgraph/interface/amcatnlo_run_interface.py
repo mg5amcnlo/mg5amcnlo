@@ -2019,7 +2019,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 if fixed_order:
                     lch=len(channels)
                     maxchannels=20    # combine up to 20 channels in a single job
-                    if self.run_card['iappl'] != 0: maxchannels=1
+                    if self.run_card['pineappl']: maxchannels=1
                     njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
                            else int(lch/maxchannels))
                     for nj in range(1,njobs+1):
@@ -2246,7 +2246,7 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
-            if fixed_order and self.run_card['iappl'] == 0 \
+            if fixed_order and (not self.run_card['pineappl']) \
                and self.run_card['req_acc_FO'] > 0:
                 jobs_to_run_new,jobs_to_collect= \
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
@@ -2914,79 +2914,30 @@ RESTART = %(mint_mode)s
                 logger.debug(line[:-1])
 
             
-    def applgrid_combine(self,cross,error,jobs):
-        """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
-        logger.debug('Combining APPLgrids \n')
+    def pineappl_combine(self,cross,error,jobs):
+        """Combines the PineAPPL grids in all the SubProcess/P*/all_G*/ directories"""
+        logger.debug('Combining PineAPPL grids \n')
         all_jobs=[]
         for job in jobs:
             if job['resultABS'] == 0.0:
-                logger.warning('applgrid_combine: Job\n%s\nwill be skipped, as it returned zero cross-section' %
+                logger.warning('pineappl_combine: Job\n%s\nwill be skipped, as it returned zero cross-section' %
                         job['dirname'])
                 continue
             all_jobs.append(job['dirname'])
         ngrids=len(all_jobs)
-        nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.root")])
+        nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.pineappl")])
         for obs in range(0,nobs):
-            gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
-            # combine APPLgrids from different channels for observable 'obs'
-            if self.run_card["iappl"] == 1:
+            gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.pineappl") for job in all_jobs]
+            # combine PineAPPL grid from different channels for observable 'obs'
+            if self.run_card["pineappl"]:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 misc.call(['pineappl','merge', pjoin(self.me_dir,"Events",
-                        self.run_name,"amcblast_obs_"+str(obs)+".root")]+ gdir)
-            else:
-                raise aMCatNLOError('iappl parameter can only be 0 or 1')
+                        self.run_name,"amcblast_obs_"+str(obs)+".pineappl")]+ gdir)
+
             # after combining, delete the original grids
             for ggdir in gdir:
                 os.remove(ggdir)
-
-        
-    def applgrid_distribute(self,options,mode,p_dirs):
-        """Distributes the APPLgrids ready to be filled by a second run of the code"""
-        # if no appl_start_grid argument given, guess it from the time stamps 
-        # of the starting grid files
-        if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles = misc.glob(pjoin('*', 'amcblast_obs_0_starting_grid.root'),
-                               pjoin(self.me_dir,'Events')) 
-            
-            time_stamps={}
-            for root_file in gfiles:
-                time_stamps[root_file]=os.path.getmtime(root_file)
-            options['appl_start_grid']= \
-                max(time_stamps.iterkeys(), key=(lambda key: 
-                                               time_stamps[key])).split('/')[-2]
-            logger.info('No --appl_start_grid option given. '+\
-                    'Guessing that starting_grid from run "%s" should be used.' \
-                            % options['appl_start_grid'])
-
-        if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
-            self.appl_start_grid = options['appl_start_grid']
-            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
-            # check that this dir exists and at least one grid file is there
-            if not os.path.exists(pjoin(start_grid_dir,
-                                           'amcblast_obs_0_starting_grid.root')):
-                raise self.InvalidCmd('APPLgrid file not found: %s' % \
-                       pjoin(start_grid_dir,'amcblast_obs_0_starting_grid.root'))
-            else:
-                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir( \
-                        start_grid_dir) if name.endswith("_starting_grid.root")]
-                nobs =len(all_grids)
-                gstring=" ".join(all_grids)
-        if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
-            raise self.InvalidCmd('No APPLgrid name currently defined.'+
-                                             'Please provide this information.')             
-        #copy the grid to all relevant directories
-        for pdir in p_dirs:
-            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,
-                        "SubProcesses",pdir)) if file.startswith(mode+'_G') and 
-                   os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
-            for g_dir in g_dirs:
-                for grid in all_grids:
-                    obs=grid.split('_')[-3]
-                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,
-                                                    'grid_obs_'+obs+'_in.root'))
-
-
 
 
     def collect_log_files(self, jobs, integration_step):
@@ -3030,12 +2981,11 @@ RESTART = %(mint_mode)s
             files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
         # Collect the plots and put them in the Events/run* folder
         self.combine_plots_FO(folder_name,jobs)
-        # If doing the applgrid-stuff, also combine those grids
-        # and put those in the Events/run* folder
-        if self.run_card['iappl'] != 0:
+        # If PineAPPL is linked, combine the grid to be put inside Events/run_XX
+        if self.run_card['pineappl']:
             cross=self.cross_sect_dict['xsect']
             error=self.cross_sect_dict['errt']
-            self.applgrid_combine(cross,error,jobs)
+            self.pineappl_combine(cross,error,jobs)
 
 
     def setup_cluster_or_multicore(self):
@@ -5117,11 +5067,11 @@ RESTART = %(mint_mode)s
 
             self.make_opts_var['lhapdf'] = ""
 
-        # read the run_card to find if applgrid is used or not
-        if self.run_card['iappl'] != 0:
-            self.make_opts_var['applgrid'] = 'True'
-            # check versions of applgrid
-            for code in ['applgrid']:
+        # read the run_card to find if PineAPPL is used or not
+        if self.run_card['pineappl']:
+            self.make_opts_var['pineappl'] = 'True'
+            # check validity of the PineAPPL installation
+            for code in ['pineappl']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -5129,13 +5079,13 @@ RESTART = %(mint_mode)s
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                        'Please set the path to %s-config by using \n' + \
                        'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
-                else:
-                    output, _ = p.communicate()
-                    if code is 'applgrid' and output < '1.4.63':
-                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                                             +' You are using %s',output)
+                ##else:
+                ##    output, _ = p.communicate()
+                ##    if code is 'applgrid' and output < '1.4.63':
+                ##        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
+                ##                             +' You are using %s',output)
         else:
-            self.make_opts_var['applgrid'] = ""
+            self.make_opts_var['pineappl'] = ""
 
         if 'fastjet' in self.options.keys() and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
@@ -5544,8 +5494,6 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
                             "the last available results")
 _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
-_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
-                            help="For use with APPLgrid only: start from existing grids")
 _launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
                             help="Run the reweight module (reweighting by different model parameters)")
 _launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
@@ -5600,8 +5548,6 @@ _calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='s
                             help="Skip compilation. Ignored if no executable is found")
 _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
-_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
-                            help="For use with APPLgrid only: start from existing grids")
 _calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from " + \
                             "the last available results")

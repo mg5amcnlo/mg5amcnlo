@@ -1,6 +1,7 @@
 *     -*-fortran-*-
 ************************************************************************
 *     NLO mode of aMC@NLO
+*     Common blocks needed for the PineAPPL interface
 ************************************************************************
       include 'orders.inc'
 *     Amp split size
@@ -10,7 +11,7 @@
 
 *     Initial state map to be used together with the info in appl_flavmap
       integer appl_nlumi
-      include 'appl_maxproc.inc'
+      include 'pineappl_maxproc.inc'
       integer appl_nproc(mxpdflumi)
       integer appl_lumimap(2,max_nproc,mxpdflumi)
       common / appl_common_lumi / appl_lumimap,appl_nproc,appl_nlumi
@@ -62,7 +63,7 @@
      6                                appl_obs_num
 
 *     This is the actual hadronic event weight, computed with the LHAPDF set
-*     defined above, needed for checks in the C++ applgrid interface
+*     defined above, needed for checks in the C++ pineappl interface
 *     Save also the vegas weight, needed to fill histograms and for checks
 *     appl_www_histo is the same weight used to will the amcatnlo
 *     histograms in the madfks routine

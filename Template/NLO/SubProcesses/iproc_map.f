@@ -205,7 +205,7 @@ c Print the map to the screen
 
 ************************************************************************
 *     The following routine sets up the flavour map that needs to be
-*     feeded to APPLgrid in the initialization stage.
+*     feeded to PineAPPL in the initialization stage.
 ************************************************************************
       subroutine setup_flavourmap
 *
@@ -215,8 +215,8 @@ c Print the map to the screen
       include 'nexternal.inc'
       include 'genps.inc'
       include "leshouche_decl.inc"
-      include "reweight_appl.inc"
-      include "appl_common.inc"
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
 *
       character*200 buffer
       integer procnum,i,l,j,ll,found_a,found_m
@@ -259,7 +259,7 @@ c Print the map to the screen
             write(*,*) 'ERROR in iproc_map.f, too many processes'
             write(*,*) 'increase mxpdflumi and max_nproc' //
      %                 ' inside appl_comon.inc'
-            write(*,*) 'and __max_nproc__ in appl_interface.cc'
+            write(*,*) 'and __max_nproc__ in pineappl_interface.cc'
             write(*,*) 'Make sure to assign all variables the same value!'
             stop 1
          endif

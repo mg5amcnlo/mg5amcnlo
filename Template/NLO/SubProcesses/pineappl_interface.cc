@@ -15,7 +15,7 @@
 
 #include "orders.h"
 
-#include "appl_maxproc.h"
+#include "pineappl_maxproc.h"
 
 /*
   fNLO mode of aMCatNLO
@@ -278,7 +278,7 @@ extern "C" void appl_fill_()
     // Histogram number
     int nh = appl_common_histokin_.obs_num - 1;
 
-    // translate (index,nh) -> index of the APPLgrid
+    // translate (index,nh) -> index of the PineAPPL grid
     int const grid_index = translation_tables.at(nh).at(index);
 
     int k;
@@ -370,7 +370,7 @@ extern "C" void appl_term_()
         389379660.0 * appl_common_histokin_.norm_histo);
 
     // Write grid to file
-    pineappl_grid_write(grid_obs[nh], ("grid_obs_" + std::to_string(nh) + "_out.root").c_str());
+    pineappl_grid_write(grid_obs[nh], ("grid_obs_" + std::to_string(nh) + "_out.pineappl").c_str());
 
     pineappl_grid_delete(grid_obs[nh]);
 }

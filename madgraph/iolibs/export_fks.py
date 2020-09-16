@@ -393,19 +393,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===============================================================================
     # write a initial states map, useful for the fast PDF NLO interface
     #===============================================================================
-    def write_applgrid_maxproc_files(self, nmaxpdf, subproc_path):
+    def write_maxproc_files(self, nmaxpdf, subproc_path):
         """write the c++ and fortran header files with the max number of pdf pairs
         """
         # fortran
         content = "      integer mxpdflumi\n      integer max_nproc\n      parameter(mxpdflumi=%d,max_nproc=%d)\n" \
                 % (nmaxpdf, nmaxpdf)
-        fout = open(pjoin(subproc_path, 'appl_maxproc.inc'), 'w')
+        fout = open(pjoin(subproc_path, 'pineappl_maxproc.inc'), 'w')
         fout.write(content)
         fout.close()
 
         # c++
         content = "#define  __max_nproc__ %d" % (nmaxpdf)
-        fout = open(pjoin(subproc_path, 'appl_maxproc.h'), 'w')
+        fout = open(pjoin(subproc_path, 'pineappl_maxproc.h'), 'w')
         fout.write(content)
         fout.close()
 
@@ -660,10 +660,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
-                     'appl_interface.cc',
-                     'appl_interface_dummy.f',
-                     'appl_common.inc',
-                     'reweight_appl.inc',
+                     'pineappl_interface.cc',
+                     'pineappl_interface_dummy.f',
+                     'pineappl_common.inc',
+                     'reweight_pineappl.inc',
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
                      'fjcore.cc',
@@ -717,8 +717,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
-                     'appl_maxproc.inc',
-                     'appl_maxproc.h',
+                     'pineappl_maxproc.inc',
+                     'pineappl_maxproc.h',
                      'timing_variables.inc']
 
         for file in linkfiles:

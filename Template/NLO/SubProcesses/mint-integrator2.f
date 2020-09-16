@@ -105,9 +105,9 @@ c others: same as 1 (for now)
       common/c_avg_virt/average_virtual,virtual_fraction
       logical new_point
       common /c_new_point/ new_point
-c APPLgrid switch
-      integer iappl
-      common /for_applgrid/ iappl
+c PineAPPL switch
+      logical pineappl
+      common /for_pineappl/ pineappl
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
       integer                                   npoints
@@ -552,13 +552,13 @@ c the abs is to avoid tiny negative values
       enddo
 C If there was a large fluctation in this iteration, be careful with
 C including it in the accumalated results and plots.
-      if (efrac(1).gt.0.3d0 .and. iappl.eq.0 .and. nit.gt.3) then
+      if (efrac(1).gt.0.3d0 .and. (.not.pineappl) .and. nit.gt.3) then
 c Do not include the results in the plots
          if (fixed_order) call accum(.false.)
          if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1)
      $        ,HwU_values)
       endif
-      if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. iappl.eq.0) then
+      if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. (.not.pineappl)) then
 c Do not include the results in the updating of the grids.
          write (*,*) 'Large fluctuation ( >30 % ).'
      &        //'Not including iteration in results.'

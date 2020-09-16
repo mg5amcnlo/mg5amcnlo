@@ -111,14 +111,14 @@ else
   endif
 endif
 
-# Option APPLGrid
-ifneq ($(applgrid),)
+# Option PineAPPL
+ifneq ($(pineappl),)
   APPLLIBS=$(shell pkg-config pineappl_capi --libs)
   CXXFLAGS+=$(shell pkg-config pineappl_capi --cflags)
-  applgrid_interface=appl_interface.o
+  pineappl_interface=pineappl_interface.o
 else
   APPLLIBS=
-  applgrid_interface=appl_interface_dummy.o
+  pineappl_interface=pineappl_interface_dummy.o
 endif
 
 # Madloop

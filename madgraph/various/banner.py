@@ -3747,7 +3747,7 @@ class RunCardNLO(RunCard):
         self.add_param('epsgamma', 1.0)
         self.add_param('isoem', True)        
         self.add_param('maxjetflavor', 4, hidden=True)
-        self.add_param('iappl', 0)   
+        self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
         #internal variable related to FO_analyse_card
@@ -3810,11 +3810,11 @@ class RunCardNLO(RunCard):
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:BOLD')            
                                 
-        # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
-        if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
-            raise InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
-        if self['iappl'] != 0 and not self['reweight_scale']:
-            raise InvalidRunCard('APPLgrid generation only possible with including' +\
+        # For interface to PINEAPPL, need to use LHAPDF and reweighting to get scale uncertainties
+        if self['pineappl'] and self['pdlabel'].lower() != 'lhapdf':
+            raise InvalidRunCard('PineAPPL generation only possible with the use of LHAPDF')
+        if self['pineappl'] and not self['reweight_scale']:
+            raise InvalidRunCard('PineAPPL generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         # Hidden values check

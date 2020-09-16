@@ -32,13 +32,13 @@
       subroutine HwU_write_file
       implicit none
       double precision xnorm
-c     APPLgrid commons (this may not be the best place to put it)
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons (this may not be the best place to put it)
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer j
-      if(iappl.ne.0)then
+      if(pineappl)then
          do j=1,nh_obs
            appl_obs_num = j
            call APPL_term
