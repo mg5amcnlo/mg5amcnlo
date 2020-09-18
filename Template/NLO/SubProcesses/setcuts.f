@@ -153,6 +153,7 @@ c     fully ensure that this is not a jet/lepton/photon
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
+      use mint_module
       implicit none
       double precision zero,vtiny
       parameter (zero=0.d0,vtiny=1d-8)
@@ -163,7 +164,6 @@ c variable ptj
       include 'coupl.inc'
       include 'nFKSconfigs.inc'
       include "fks_info.inc"
-      include "mint.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
@@ -630,14 +630,13 @@ c
 
 
       subroutine sChan_order(ns_channel,order)
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'maxparticles.inc'
       include 'maxconfigs.inc'
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      logical new_point
-      common /c_new_point/new_point
       double precision ran2,rnd
       integer i,j,order(-nexternal:0),ipos,ns_channel,npos
      $     ,pos(nexternal),ord(-nexternal:0)

@@ -39,6 +39,7 @@ C
       LOGICAL GOODHEL(NCOMB,2)
       INTEGER NTRY(2)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+
 C     
 C     LOCAL VARIABLES 
 C     
@@ -54,6 +55,7 @@ C
       INTEGER THIS_NTRY(2)
       SAVE THIS_NTRY
       DATA THIS_NTRY /0,0/
+C     
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
 C      entries with ref_helicity_grid%%n_tot_entries
@@ -66,6 +68,9 @@ C
 
       CHARACTER*101         HEL_BUFF
       COMMON/TO_HELICITY/  HEL_BUFF
+
+      INTEGER NB_SPIN_STATE_IN(2)
+      COMMON /NB_HEL_STATE/ NB_SPIN_STATE_IN
 
       INTEGER IMIRROR
       COMMON/TO_MIRROR/ IMIRROR
@@ -137,18 +142,20 @@ C     ----------
 
         !   If the helicity grid status is 0, this means that it is not yet initialized.
         !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
-      IF ((ISHEL(IMIRROR).EQ.0.AND.ISUM_HEL.EQ.0).OR.(DS_GET_DIM_STATUS
-     $('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1)) THEN
+      IF ((ISHEL(IMIRROR).EQ.0.AND.ISUM_HEL.EQ.0)
+     $ .OR.(DS_GET_DIM_STATUS('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1))
+     $  THEN
         DO I=1,NCOMB
-          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.(ISU
-     $M_HEL.NE.0).OR.THIS_NTRY(IMIRROR).LE.2) THEN
+          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR)
+     $     .LE.MAXTRIES.OR.(ISUM_HEL.NE.0).OR.THIS_NTRY(IMIRROR).LE.2)
+     $      THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2D0  ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
+                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2D0
               ENDIF
             ENDDO
             IF (ISUM_HEL.NE.0.AND.DS_GET_DIM_STATUS('Helicity')
@@ -169,8 +176,8 @@ C     ----------
           HEL_JACOBIAN   = 1.0D0
             !         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
           REF_HELICITY_GRID = DS_GET_DIMENSION(REF_GRID,'Helicity')
-          IF((DS_GET_DIM_STATUS('Helicity').EQ.1).AND.(REF_HELICITY_GRI
-     $D%%N_TOT_ENTRIES.EQ.0)) THEN
+          IF((DS_GET_DIM_STATUS('Helicity').EQ.1)
+     $     .AND.(REF_HELICITY_GRID%%N_TOT_ENTRIES.EQ.0)) THEN
               !           If we finished the initialization we can update the grid so as to start sampling over it.
               !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
@@ -431,8 +438,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       SQSOINDEX1=SOINDEX_FOR_SQUARED_ORDERS1(SQORDERS)
       END
@@ -526,8 +533,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
-     $ //'DEX1'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' GET_SQUARED_ORDERS_FOR_SOINDEX1'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 

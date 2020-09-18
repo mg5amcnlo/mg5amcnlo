@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
 import re,string,os,sys,subprocess
 locdir,thisFile = os.path.split(os.path.abspath(sys.argv[0]))
 srcdir = os.path.join(locdir,'src')

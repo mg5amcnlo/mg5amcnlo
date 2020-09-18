@@ -9,8 +9,8 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: u g > w+ d [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: c g > w+ s [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: u g > w+ d [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: c g > w+ s [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
 C     
 C     CONSTANTS
@@ -85,8 +85,8 @@ C          different coupling combinations
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX3(J, I)
           ENDDO
-          IF (ABS(ANS(I)).GT.ANS_MAX*TINY) AMP_SPLIT(ORDERS_TO_AMP_SPLI
-     $T_POS(AMP_ORDERS)) = ANS(I)
+          IF (ABS(ANS(I)).GT.ANS_MAX*TINY)
+     $      AMP_SPLIT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) = ANS(I)
         ENDIF
       ENDDO
 
@@ -109,8 +109,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u g > w+ d [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: c g > w+ s [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: u g > w+ d [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: c g > w+ s [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -226,8 +226,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u g > w+ d [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: c g > w+ s [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: u g > w+ d [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: c g > w+ s [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -279,8 +279,8 @@ C     ----------
       CALL OXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
       CALL FFV1_2(W(1,1),W(1,2),GC_5,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,5),W(1,4),W(1,3),GC_47,AMP(1))
-      CALL FFV2_2(W(1,1),W(1,3),GC_47,ZERO,ZERO,W(1,5))
+      CALL FFV2_0(W(1,5),W(1,4),W(1,3),GC_11,AMP(1))
+      CALL FFV2_2(W(1,1),W(1,3),GC_11,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,5),W(1,4),W(1,2),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=1 QED=1
@@ -347,8 +347,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSPLITORDERS
-        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDER
-     $B,I)
+        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)
+     $   +AMPSPLITORDERS(AMPORDERB,I)
       ENDDO
       SQSOINDEX3=SQSOINDEX_FROM_ORDERS3(SQORDERS)
       END

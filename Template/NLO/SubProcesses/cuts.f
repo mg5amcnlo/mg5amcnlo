@@ -139,7 +139,7 @@ c DeltaR and invariant mass cuts
                            return
                         endif
                      endif
-                     if (ipdg(i).eq.-ipdg(j)) then
+                     if (ipdg_reco(i).eq.-ipdg_reco(j)) then
                         if (drll_sf.gt.0d0) then
                            if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll_sf**2) then
                               passcuts_user=.false.
@@ -442,8 +442,6 @@ c
 
 
 
-
-
 C***************************************************************
 C***************************************************************
 C NO NEED TO CHANGE ANY OF THE FUNCTIONS BELOW
@@ -563,10 +561,10 @@ C
 C
     2 IF (N.EQ.1)            RETURN
       IF (MODE)    10,20,30
-   10 CALL SORTTI (A,INDEX,N)
+   10 STOP 5 ! CALL SORTTI (A,INDEX,N)
       GO TO 40
 C
-   20 CALL SORTTC(A,INDEX,N)
+   20 STOP 5 ! CALL SORTTC(A,INDEX,N)
       GO TO 40
 C
    30 CALL SORTTF (A,INDEX,N)

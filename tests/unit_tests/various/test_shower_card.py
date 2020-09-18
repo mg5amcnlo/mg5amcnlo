@@ -12,11 +12,16 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
 import os
 import sys
 import tests.unit_tests as unittest
 
 import madgraph.various.shower_card as shower_card
+from six.moves import zip
+
+import madgraph.various.misc as misc
+pjoin = os.path.join
 
 
 class TestShowerCard(unittest.TestCase):
@@ -519,3 +524,17 @@ PYUTI="mcatnlo_pyan_stdhep.o"
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
+
+    def test_shower_card_edit(self):
+
+        self.card.testing = True
+        new_text = self.card.text
+        old_card = shower_card.ShowerCard(new_text, testing=True)
+        new_text = old_card.set_param('ue_enabled', '.false.', write_to=True)
+        new_card = shower_card.ShowerCard(new_text, testing=True)
+        self.assertFalse(new_card['ue_enabled'])
+
+        new_text = old_card.set_param('ue_enabled', '1', write_to=True)
+        new_card = shower_card.ShowerCard(new_text, testing=True)
+        self.assertTrue(new_card['ue_enabled'])
+        

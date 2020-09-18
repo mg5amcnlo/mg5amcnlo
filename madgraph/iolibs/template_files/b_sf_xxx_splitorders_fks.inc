@@ -29,6 +29,9 @@ C
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
       integer amp_orders(nsplitorders)
+      double precision tiny
+      parameter (tiny = 1d-12)
+      double precision max_val
 C
 C     FUNCTIONS
 C
@@ -40,9 +43,15 @@ C
 	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
+      max_val = 0d0
 
 C reset the amp_split_cnt array
 amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
+
+
+do i = 1, nsqampso
+ max_val = max(max_val, abs(ans(I)))
+enddo
 
       do i = 1, nsqampso
         if (keep_order_cnt(qcd_pos, i)) then
@@ -52,9 +61,13 @@ amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 C take into account the fact that this is for QCD
           if (j.eq.qcd_pos) amp_orders(j) = amp_orders(j) + 2
          enddo
-         amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+         !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+         if(abs(ans(i)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(i)
         endif
       enddo
+
+C this is to avoid fake non-zero contributions 
+if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
 return
 END

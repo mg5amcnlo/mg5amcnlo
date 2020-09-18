@@ -15,6 +15,7 @@
 """Unit tests for four-fermion models."""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import logging
 import math
@@ -32,6 +33,8 @@ import madgraph.various.process_checks as process_checks
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -81,7 +84,6 @@ class Models4FermionTest(unittest.TestCase):
 
             values[model] = evaluator.evaluate_matrix_element(matrix_element,
                                                               p)[0]
-
             
         self.assertAlmostEqual(values['scalar'], values['4ferm'], 3)
 
@@ -92,16 +94,20 @@ class TestSchannelModels(Models4FermionTest):
     """Test class for the s-channel type 4-fermion model"""
 
     def setUp(self):
+
+        
+
+       
+        self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion')
+        self.full_model_4ferm = \
+                               model_reader.ModelReader(self.base_model_4ferm)
+        self.full_model_4ferm.set_parameters_and_couplings()
+        
         self.base_model_scalar = import_ufo.import_model('sextet_diquarks')
         self.full_model_scalar = \
                                model_reader.ModelReader(self.base_model_scalar)
         self.full_model_scalar.set_parameters_and_couplings()
         self.full_model_scalar.get('parameter_dict')['mdl_MSIX'] = 1.e5
-        
-        self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion')
-        self.full_model_4ferm = \
-                               model_reader.ModelReader(self.base_model_4ferm)
-        self.full_model_4ferm.set_parameters_and_couplings()
     
     def test_uu_to_tt_sch(self):
         """Test the process u u > t t between s-channel and 4fermion vertex"""

@@ -69,6 +69,10 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+      integer nb_spin_state(2)
+      data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
+      common /nb_hel_state/ nb_spin_state
+
       include 'coupl.inc'
       include 'run.inc'
 C   ICONFIG has this config number
@@ -132,9 +136,11 @@ C     Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative summed weights:'
+	if (SUMPROB.ne.0d0)then
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dE12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
         ENDDO
+	endif
         SUMPROB=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
@@ -144,9 +150,11 @@ C     Output weights and number of events
           ENDDO
         ENDDO
         WRITE(*,*)'Relative number of events:'
+	if (SUMPROB.ne.0d0)then
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dE12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
         ENDDO
+	ENDIF
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dI12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
@@ -436,6 +444,9 @@ C       Flip CM_RAP (to get rapidity right)
       DSIGPROC=0D0
 
       IF (PASSCUTS(P1)) THEN
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12)then
+        nb_pass_cuts = nb_pass_cuts + 1
+      endif
 %(call_dsig_proc_lines)s
       ENDIF
 
@@ -450,7 +461,6 @@ C       Flip back local momenta P1 if cached
       RETURN
 
       END
-
 
 C     -----------------------------------------
 C     Subroutine to map three positive integers

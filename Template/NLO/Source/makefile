@@ -13,6 +13,7 @@ GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o		\
 	  zerox64_cernlib.o
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
+.f90.o: ; $(FC) $(FFLAGS) -c $*.f90
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
     $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc

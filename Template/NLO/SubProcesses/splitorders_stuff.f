@@ -33,13 +33,35 @@ C array an integer number
       integer i,j
       integer base, step
       parameter(base=100)
+      ! this is for the printout of the informations
+      logical firsttime, firsttime_contr(amp_split_size)
+      data firsttime/.true./
+      data firsttime_contr/amp_split_size * .true./
+      integer orders_to_amp_split_pos
+
+      ! print out some extra informations
+      if (firsttime) write(*,fmt='(a)',advance="NO") 
+     $    "INFO: orders_tag_plot is computed as:"
 
       get_orders_tag=0
       step=1
       do i =1, nsplitorders
+        if (firsttime) write(*,fmt='(3a,i8)',advance="NO") 
+     $      "         + ", ordernames(i), " * ", step
         get_orders_tag=get_orders_tag+step*ord(i)
         step=step*100
       enddo
+      if (firsttime) then
+        write(*,*)
+        firsttime=.false.
+      endif
+
+      if (firsttime_contr(orders_to_amp_split_pos(ord))) then
+        write(*,*) 'orders_tag_plot= ', get_orders_tag, ' for ',
+     #     (ordernames(i),",",i=1,nsplitorders), ' = ',
+     #     (ord(i),",",i=1,nsplitorders)
+        firsttime_contr(orders_to_amp_split_pos(ord)) = .false.
+      endif
 
       return 
       end

@@ -17,6 +17,7 @@
 from born"""
 
 
+from __future__ import absolute_import
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -27,16 +28,21 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 from madgraph import InvalidCmd
+import madgraph.various.misc as misc
 import copy
 import logging
 import array
 import multiprocessing
 import signal
 import tempfile
-import cPickle
+import six
+import six.moves.cPickle as cPickle
 import itertools
 import os
-
+import sys
+from six.moves import zip
+from madgraph import MG5DIR
+pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
 
 
@@ -44,7 +50,6 @@ logger = logging.getLogger('madgraph.fks_helas_objects')
 def async_generate_real(args):
     i = args[0]
     real_amp = args[1]
-
     #amplitude generation
     amplitude = real_amp.generate_real_amplitude()
     # check that the amplitude has diagrams, otherwise quit here
@@ -80,8 +85,9 @@ def async_generate_real(args):
 
     outdata = [amplitude,helasreal]
 
-    output = tempfile.NamedTemporaryFile(delete = False)   
-    cPickle.dump(outdata,output,protocol=2)
+    output = tempfile.NamedTemporaryFile(delete = False)
+
+    six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
     return [output.name,helasreal.get_num_configs(),helasreal.get_nexternal_ninitial()[0]]
@@ -99,7 +105,6 @@ def async_generate_born(args):
 
     logger.info('Generating born %s' % \
             born.born_amp['process'].nice_string(print_weighted=False).replace('Process', 'process'))
-    
     #load informations on reals from temp files
     helasreal_list = []
     amp_to_remove = []
@@ -156,8 +161,8 @@ def async_generate_born(args):
     
     outdata = helasfull
     
-    output = tempfile.NamedTemporaryFile(delete = False)   
-    cPickle.dump(outdata,output,protocol=2)
+    output = tempfile.NamedTemporaryFile(delete = False)  
+    six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
     return [output.name,metag,has_loops,processes,helasfull.born_me.get_num_configs(),helasfull.get_nexternal_ninitial()[0]]
@@ -170,7 +175,7 @@ def async_finalize_matrix_elements(args):
     duplist = args[2]
     
     infile = open(mefile,'rb')
-    me = cPickle.load(infile)
+    me = six.moves.cPickle.load(infile)
     infile.close()    
 
     #set unique id based on position in unique me list
@@ -194,7 +199,7 @@ def async_finalize_matrix_elements(args):
     
     for iother,othermefile in enumerate(duplist):
         infileother = open(othermefile,'rb')
-        otherme = cPickle.load(infileother)
+        otherme = six.moves.cPickle.load(infileother)
         infileother.close()
         # before entering this function, only the born
         # processes were compared. Now compare the
@@ -220,8 +225,8 @@ def async_finalize_matrix_elements(args):
     #data to write to file
     outdata = me
 
-    output = tempfile.NamedTemporaryFile(delete = False)   
-    cPickle.dump(outdata,output,protocol=2)
+    output = tempfile.NamedTemporaryFile(delete = False)
+    six.moves.cPickle.dump(outdata,output,protocol=2)
     output.close()
     
     #data to be returned to parent process (filename plus small objects only)
@@ -243,8 +248,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         if name == 'real_matrix_elements':
             if not isinstance(value, helas_objects.HelasMultiProcess):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list for real_matrix_element " % str(value)                             
+                raise self.PhysicsObjectError("%s is not a valid list for real_matrix_element " % str(value))                             
     
     def __init__(self, fksmulti, loop_optimized = False, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
@@ -317,24 +321,27 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             logger.info('Generating real matrix elements...')
+            import time
             try:
                 # the very large timeout passed to get is to be able to catch
                 # KeyboardInterrupts
-                realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
+                modelpath = born_procs[0].born_amp['process']['model'].get('modelpath')
+                #modelpath = self.get('processes')[0].get('model').get('modelpath')
+                with misc.TMP_variable(sys, 'path', sys.path + [pjoin(MG5DIR, 'models'), modelpath]):
+                    realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
             except KeyboardInterrupt:
                 pool.terminate()
-                raise KeyboardInterrupt 
+                raise KeyboardInterrupt
 
             # sometimes empty output from map_async can be there if the amplitude has no diagrams
             # these empty entries need to be discarded
-            for rout, ramp, rpdg  in zip(realmapout, real_amp_list, pdg_list):
+            for rout, ramp, rpdg  in zip(list(realmapout), list(real_amp_list), list(pdg_list)):
                 if not rout:
                     realmapout.remove(rout)
                     real_amp_list.remove(ramp)
                     pdg_list.remove(rpdg)
-
-            #realmapout = [r for r in realmapout if r]
-
+            realmapout = [r for r in realmapout if r]
+            
             realmapfiles = []
             for realout in realmapout:
                 realmapfiles.append(realout[0])
@@ -473,6 +480,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
+            
         
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
@@ -690,7 +698,7 @@ class FKSHelasProcess(object):
             # combine for example u u~ > t t~ and c c~ > t t~
             if fksproc.ncores_for_proc_gen:
                 # new NLO (multicore) generation mode 
-                for real_me, proc in itertools.izip(real_me_list,fksproc.real_amps):
+                for real_me, proc in zip(real_me_list,fksproc.real_amps):
                     fksreal_me = FKSHelasRealProcess(proc, real_me, **opts)
                     try:
                         other = self.real_processes[self.real_processes.index(fksreal_me)]

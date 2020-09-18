@@ -17,10 +17,12 @@
      by local file mjobs.dat in the channel directory.
 """
 from __future__ import division
+from __future__ import absolute_import
 import math
 import os
 import re
 import logging
+from six.moves import range
 
 try:
     import madgraph
@@ -150,7 +152,7 @@ class CombineRuns(object):
                 nb_evt+=1
                 data = line.split()
                 if not len(data) == 6:
-                    raise MadGraph5Error, "Line after <event> should have 6 entries"
+                    raise MadGraph5Error("Line after <event> should have 6 entries")
                 if float(data[2]) > 0:
                     sign = ''
                 else:

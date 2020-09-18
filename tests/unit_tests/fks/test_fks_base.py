@@ -15,8 +15,11 @@
 
 """Testing modules for FKS_process class"""
 
+from __future__ import absolute_import
 import sys
 import os
+from six.moves import range
+from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -27,179 +30,189 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
+import six
 
 
 class TestFKSProcess(unittest.TestCase):
     """a class to test FKS Processes"""
 
-    # the model, import the SM but remove 2nd and 3rd gen quarks
-    remove_list = [3,4,5,6,-3,-4,-5,-6]
-    mymodel = import_ufo.import_model('sm')
-    for p in mymodel['particles']:
-        if p.get_pdg_code() in remove_list:
-            mymodel['particles'].remove(p)
-    for ii in mymodel['interactions']:
-        if any([p.get_pdg_code() in remove_list for p in ii['particles']]):
-                mymodel['interactions'].remove(ii)
-
-    myleglist = MG.LegList()
-    # PROCESS: u g > u g 
-    mylegs = [{
-        'id': 2,
-        'number': 1,
-        'state': False}, 
-        { 
-        'id': 21,
-        'number': 2,
-        'state': False},
-        {
-        'id': 2,
-        'number': 3,
-        'state': True},
-        {
-        'id': 21,
-        'number': 4,
-        'state': True}]
-
-    for i in mylegs:
-        myleglist.append(MG.Leg(i))
-
-    myleglist2 = MG.LegList()
-    # PROCESS: d d~ > u u~
-    mylegs2 = [{ 
-        'id': 1,
-        'number': 1,
-        'state': False}, 
-        { 
-        'id': -1,
-        'number': 2,
-        'state': False},
-        {
-        'id': 2,
-        'number': 3,
-        'state': True},
-        {
-        'id': -2,
-        'number': 4,
-        'state': True}]
-
-    for i in mylegs2:
-        myleglist2.append(MG.Leg(i))
+    
+    def setUp(self):
         
-        myleglist3 = MG.LegList()
-    # PROCESS: d d~ > a a
-    mylegs3 = [{ 
-        'id': 1,
-        'number': 1,
-        'state': False}, 
-        { 
-        'id': -1,
-        'number': 2,
-        'state': False},
-        {
-        'id': 22,
-        'number': 3,
-        'state': True},
-        {
-        'id': 22,
-        'number': 4,
-        'state': True}]
-
-    for i in mylegs3:
-        myleglist3.append(MG.Leg(i))
+        if hasattr(TestFKSProcess, "myproc"):
+            return
+        
+        # the model, import the SM but remove 2nd and 3rd gen quarks
+        remove_list = [3,4,5,6,-3,-4,-5,-6]
+        mymodel = import_ufo.import_model('sm')
+        for p in mymodel['particles']:
+            if p.get_pdg_code() in remove_list:
+                mymodel['particles'].remove(p)
+        for ii in mymodel['interactions']:
+            if any([p.get_pdg_code() in remove_list for p in ii['particles']]):
+                    mymodel['interactions'].remove(ii)
     
-    # PROCESS: u g > u g 
-    dict_qcd = {'legs' : myleglist, 
-                'orders':{'QCD':4, 'QED':0},
-                'born_orders':{'QCD':2, 'QED':0},
-                'squared_orders':{'QCD':6, 'QED':0},
-                'split_orders':['QCD', 'QED'],
-                'sqorders_types':{'QED':'=', 'QCD':'='},
-                'model': mymodel,
-                'id': 1,
-                'required_s_channels':[],
-                'forbidden_s_channels':[],
-                'forbidden_particles':[],
-                'is_decay_chain': False,
-                'perturbation_couplings':['QCD'],
-                'decay_chains': MG.ProcessList(),
-                'overall_orders': {}}
+        myleglist = MG.LegList()
+        # PROCESS: u g > u g 
+        mylegs = [{
+            'id': 2,
+            'number': 1,
+            'state': False}, 
+            { 
+            'id': 21,
+            'number': 2,
+            'state': False},
+            {
+            'id': 2,
+            'number': 3,
+            'state': True},
+            {
+            'id': 21,
+            'number': 4,
+            'state': True}]
     
-    dict_qed = {'legs' : myleglist, 
-                'orders':{'QCD':2, 'QED':2},
-                'born_orders':{'QCD':2, 'QED':0},
-                'squared_orders':{'QCD':4, 'QED':2},
-                'split_orders':['QCD', 'QED'],
-                'sqorders_types':{'QED':'=', 'QCD':'='},
-                'model': mymodel,
-                'id': 1,
-                'required_s_channels':[],
-                'forbidden_s_channels':[],
-                'forbidden_particles':[],
-                'is_decay_chain': False,
-                'perturbation_couplings':['QED'],
-                'decay_chains': MG.ProcessList(),
-                'overall_orders': {}}
-
-    # PROCESS: d d~ > u u~
-    dict2_qcd = {'legs' : myleglist2, 
-                 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
-                 'model': mymodel,
-                 'id': 1,
-                 'required_s_channels':[],
-                 'forbidden_s_channels':[],
-                 'forbidden_particles':[],
-                 'is_decay_chain': False,
-                 'perturbation_couplings':['QCD'],
-                 'decay_chains': MG.ProcessList(),
-                 'overall_orders': {}}
+        for i in mylegs:
+            myleglist.append(MG.Leg(i))
     
-    dict2_qed = {'legs' : myleglist2, 
-                 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
-                 'model': mymodel,
-                 'id': 1,
-                 'required_s_channels':[],
-                 'forbidden_s_channels':[],
-                 'forbidden_particles':[],
-                 'is_decay_chain': False,
-                 'perturbation_couplings':['QED'],
-                 'decay_chains': MG.ProcessList(),
-                 'overall_orders': {}}
+        myleglist2 = MG.LegList()
+        # PROCESS: d d~ > u u~
+        mylegs2 = [{ 
+            'id': 1,
+            'number': 1,
+            'state': False}, 
+            { 
+            'id': -1,
+            'number': 2,
+            'state': False},
+            {
+            'id': 2,
+            'number': 3,
+            'state': True},
+            {
+            'id': -2,
+            'number': 4,
+            'state': True}]
     
-    # PROCESS: d d~ > a a
-    dict3_qcd = {'legs' : myleglist3, 
-                 'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
-                 'model': mymodel,
-                 'id': 1,
-                 'required_s_channels':[],
-                 'forbidden_s_channels':[],
-                 'forbidden_particles':[],
-                 'is_decay_chain': False,
-                 'perturbation_couplings':['QCD'],
-                 'decay_chains': MG.ProcessList(),
-                 'overall_orders': {}}
+        for i in mylegs2:
+            myleglist2.append(MG.Leg(i))
+            
+            myleglist3 = MG.LegList()
+        # PROCESS: d d~ > a a
+        mylegs3 = [{ 
+            'id': 1,
+            'number': 1,
+            'state': False}, 
+            { 
+            'id': -1,
+            'number': 2,
+            'state': False},
+            {
+            'id': 22,
+            'number': 3,
+            'state': True},
+            {
+            'id': 22,
+            'number': 4,
+            'state': True}]
     
-    dict3_qed = {'legs' : myleglist3, 
-                 'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
-                 'model': mymodel,
-                 'id': 1,
-                 'required_s_channels':[],
-                 'forbidden_s_channels':[],
-                 'forbidden_particles':[],
-                 'is_decay_chain': False,
-                 'perturbation_couplings':['QED'],
-                 'decay_chains': MG.ProcessList(),
-                 'overall_orders': {}}
+        for i in mylegs3:
+            myleglist3.append(MG.Leg(i))
+        
+        # PROCESS: u g > u g 
+        dict_qcd = {'legs' : myleglist, 
+                    'orders':{'QCD':4, 'QED':0},
+                    'born_orders':{'QCD':2, 'QED':0},
+                    'squared_orders':{'QCD':6, 'QED':0},
+                    'split_orders':['QCD', 'QED'],
+                    'sqorders_types':{'QED':'=', 'QCD':'='},
+                    'model': mymodel,
+                    'id': 1,
+                    'required_s_channels':[],
+                    'forbidden_s_channels':[],
+                    'forbidden_particles':[],
+                    'is_decay_chain': False,
+                    'perturbation_couplings':['QCD'],
+                    'decay_chains': MG.ProcessList(),
+                    'overall_orders': {}}
+        
+        dict_qed = {'legs' : myleglist, 
+                    'orders':{'QCD':2, 'QED':2},
+                    'born_orders':{'QCD':2, 'QED':0},
+                    'squared_orders':{'QCD':4, 'QED':2},
+                    'split_orders':['QCD', 'QED'],
+                    'sqorders_types':{'QED':'=', 'QCD':'='},
+                    'model': mymodel,
+                    'id': 1,
+                    'required_s_channels':[],
+                    'forbidden_s_channels':[],
+                    'forbidden_particles':[],
+                    'is_decay_chain': False,
+                    'perturbation_couplings':['QED'],
+                    'decay_chains': MG.ProcessList(),
+                    'overall_orders': {}}
     
-    myproc = MG.Process(dict_qcd)
-    myproc2 = MG.Process(dict2_qcd)
-    myprocaa= MG.Process(dict3_qcd)
-    myproc_qed = MG.Process(dict_qed)
-    myproc2_qed = MG.Process(dict2_qed)
-    myprocaa_qed = MG.Process(dict3_qed)
+        # PROCESS: d d~ > u u~
+        dict2_qcd = {'legs' : myleglist2, 
+                     'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
+                     'model': mymodel,
+                     'id': 1,
+                     'required_s_channels':[],
+                     'forbidden_s_channels':[],
+                     'forbidden_particles':[],
+                     'is_decay_chain': False,
+                     'perturbation_couplings':['QCD'],
+                     'decay_chains': MG.ProcessList(),
+                     'overall_orders': {}}
+        
+        dict2_qed = {'legs' : myleglist2, 
+                     'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
+                     'model': mymodel,
+                     'id': 1,
+                     'required_s_channels':[],
+                     'forbidden_s_channels':[],
+                     'forbidden_particles':[],
+                     'is_decay_chain': False,
+                     'perturbation_couplings':['QED'],
+                     'decay_chains': MG.ProcessList(),
+                     'overall_orders': {}}
+        
+        # PROCESS: d d~ > a a
+        dict3_qcd = {'legs' : myleglist3, 
+                     'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
+                     'model': mymodel,
+                     'id': 1,
+                     'required_s_channels':[],
+                     'forbidden_s_channels':[],
+                     'forbidden_particles':[],
+                     'is_decay_chain': False,
+                     'perturbation_couplings':['QCD'],
+                     'decay_chains': MG.ProcessList(),
+                     'overall_orders': {}}
+        
+        dict3_qed = {'legs' : myleglist3, 
+                     'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
+                     'model': mymodel,
+                     'id': 1,
+                     'required_s_channels':[],
+                     'forbidden_s_channels':[],
+                     'forbidden_particles':[],
+                     'is_decay_chain': False,
+                     'perturbation_couplings':['QED'],
+                     'decay_chains': MG.ProcessList(),
+                     'overall_orders': {}}
+    
+        
+        TestFKSProcess.myproc = MG.Process(dict_qcd)
+        TestFKSProcess.myproc2 = MG.Process(dict2_qcd)
+        TestFKSProcess.myprocaa= MG.Process(dict3_qcd)
+        TestFKSProcess.myproc_qed = MG.Process(dict_qed)
+        TestFKSProcess.myproc2_qed = MG.Process(dict2_qed)
+        TestFKSProcess.myprocaa_qed = MG.Process(dict3_qed)
+        TestFKSProcess.mymodel = mymodel
     
     
     def test_FKSMultiProcess(self):
@@ -647,8 +660,9 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),11)
-        for real, fks_info in zip(myfks.real_amps, target_fks_infos):
-            self.assertEqual(real.fks_infos, fks_info)
+        for real in myfks.real_amps:
+            self.assertIn(real.fks_infos, target_fks_infos)
+
 
     def test_FKSProcess_aguux_qed(self):
         """tests that for a g > u u~ all the relevant QED splittings are there"""
@@ -745,12 +759,17 @@ class TestFKSProcess(unittest.TestCase):
         #u g > g u
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
         #take the third real of the first leg for this process 2j 21 >2 21 21i
-        leglist = fksproc.reals[0][2]['leglist']
+        if six.PY2:
+            leglist = fksproc.reals[0][2]['leglist']
+            leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        else:
+            leglist = fksproc.reals[0][0]['leglist']
+            leglist_qed = fksproc_qed.reals[0][2]['leglist']
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1, 2,\
                                            [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
         # 2j 21 > 2 21 22i
-        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        #leglist_qed = fksproc_qed.reals[0][0]['leglist']
         realproc_qed = fks_base.FKSRealProcess(fksproc_qed.born_amp['process'],leglist_qed,1,2,\
                                            [[2,21,21,2]], ['QED'],\
                                             perturbed_orders = ['QED'])
@@ -867,12 +886,21 @@ class TestFKSProcess(unittest.TestCase):
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
 
         #take the first real for this process 2j 21 >2 21 21i
-        leglist = fksproc.reals[0][2]['leglist']
+        if six.PY2:
+            leglist = fksproc.reals[0][2]['leglist']
+            # 2j 21 > 21 2 22i for QED process
+            leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        else:
+            leglist = fksproc.reals[0][0]['leglist']
+            # 2j 21 > 21 2 22i for QED process
+            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist], [2,21,2,21,21])
 
-        # 2j 21 > 21 2 22i for QED process
-        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        
+        
+        
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist_qed], [2,21,2,21,22])
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1,0,\
@@ -1388,10 +1416,24 @@ class TestFKSProcess(unittest.TestCase):
                          [len(real) for real in target])                
         for i in range(len(fksproc.reals)):
             for j in range(len(fksproc.reals[i])):
-                self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
+                if six.PY3:
+                    for k in range(len(fksproc.reals[i])):
+                        if fksproc.reals[i][j]['leglist'] ==  target[i][k]:
+                            break
+                    else:
+                        self.assertTrue(False)
+                else:    
+                    self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
         for i in range(len(fksproc_qed.reals)):
             for j in range(len(fksproc_qed.reals[i])):
-                self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
+                if six.PY3:
+                    for k in range(len(fksproc_qed.reals[i])):
+                        if fksproc_qed.reals[i][j]['leglist'] ==  target[i][k]:
+                            break
+                    else:
+                        self.assertTrue(False)
+                else:
+                    self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
         
         #process is d d~ > u u~
         fksproc2 = fks_base.FKSProcess(self.myproc2)

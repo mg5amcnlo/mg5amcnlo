@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -23,7 +24,8 @@ import logging
 import tempfile
 import time
 import math
-from cStringIO import StringIO
+from io import StringIO
+#from cStringIO import StringIO
 
 logger = logging.getLogger('test_cmd')
 
@@ -85,7 +87,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         try:
             shutil.rmtree(self.path)
-        except Exception, error:
+        except Exception as error:
             pass
 
         interface = MGCmd.MasterCmd()
@@ -95,6 +97,8 @@ class MECmdShell(IOTests.IOTestManager):
         for multi in multiparticles:
             run_cmd('define %s' % multi)
         if isinstance(process, str):
+            if process.startswith('e') and '[' in process:
+                run_cmd('set include_lepton_initiated_processes True')
             run_cmd('generate %s' % process)
         else:
             for p in process:
@@ -166,7 +170,7 @@ class MECmdShell(IOTests.IOTestManager):
         """
         
         cmd = os.getcwd()
-        self.generate(['e+ e- > p p p [real=QCD]'], 'sm' )
+        self.generate('e+ e- > p p p [real=QCD]', 'sm' )
         self.assertEqual(cmd, os.getcwd())
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
@@ -297,7 +301,6 @@ class MECmdShell(IOTests.IOTestManager):
         """tests if the p p > go go (in the mssm) process works"""
         start= time.time()
         self.generate(['p p > go go [real=QCD]'], 'MSSM_SLHA2')
-        misc.sprint( 'ppgg[real=QCD] generated in', time.time()-start)
 
 
         ####NLO
@@ -312,7 +315,6 @@ class MECmdShell(IOTests.IOTestManager):
 
         start = time.time()
         self.do('launch NLO -f')
-        misc.sprint( 'launch in NLO in ', time.time()-start)
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
@@ -330,7 +332,6 @@ class MECmdShell(IOTests.IOTestManager):
 
         start = time.time()
         self.do('launch aMC@NLO -fp')
-        misc.sprint( 'launch in aMC@NLO in ', time.time()-start)
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))
@@ -489,7 +490,7 @@ class MECmdShell(IOTests.IOTestManager):
         """check that py6pt event generation stops in this case (because of fsr)"""
         
         cmd = os.getcwd()
-        self.generate(['e+ e- > t t~ [real=QCD]'], 'sm')
+        self.generate('e+ e- > t t~ [real=QCD]', 'sm')
         #change to py6
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       

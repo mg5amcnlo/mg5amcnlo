@@ -102,11 +102,13 @@ C     But it is really not time consuming and I would rather be safe.
       CALL MP_UPDATE_AS_PARAM()
 
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR.
-     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.GOODHEL(H))))
+     $    THEN
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
           DO I=1,NEXTERNAL
@@ -118,24 +120,24 @@ C         Handle the possible requirement of specific polarizations
           CALL MP_OXXXXX(P(0,4),MDL_MT,NHEL(4),+1*IC(4),W(1,4,H))
           CALL MP_IXXXXX(P(0,5),MDL_MB,NHEL(5),-1*IC(5),W(1,5,H))
           CALL MP_VVV1P0_1(W(1,1,H),W(1,2,H),GC_4,ZERO,ZERO,W(1,6,H))
-          CALL MP_FFV2_1(W(1,4,H),W(1,3,H),GC_47,MDL_MB,ZERO,W(1,7,H))
+          CALL MP_FFV2_1(W(1,4,H),W(1,3,H),GC_11,MDL_MB,ZERO,W(1,7,H))
 C         Amplitude(s) for born diagram with ID 1
           CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMP(1,H))
-          CALL MP_FFV2_2(W(1,5,H),W(1,3,H),GC_47,MDL_MT,MDL_WT,W(1,8,H)
+          CALL MP_FFV2_2(W(1,5,H),W(1,3,H),GC_11,MDL_MT,MDL_WT,W(1,8,H)
      $     )
 C         Amplitude(s) for born diagram with ID 2
           CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMP(2,H))
           CALL MP_FFV1_1(W(1,4,H),W(1,1,H),GC_5,MDL_MT,MDL_WT,W(1,9,H))
           CALL MP_FFV1_2(W(1,5,H),W(1,2,H),GC_5,MDL_MB,ZERO,W(1,10,H))
 C         Amplitude(s) for born diagram with ID 3
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_47,AMP(3,H))
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMP(3,H))
 C         Amplitude(s) for born diagram with ID 4
           CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMP(4,H))
           CALL MP_FFV1_2(W(1,5,H),W(1,1,H),GC_5,MDL_MB,ZERO,W(1,11,H))
           CALL MP_FFV1_1(W(1,4,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,12,H)
      $     )
 C         Amplitude(s) for born diagram with ID 5
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_47,AMP(5,H))
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMP(5,H))
 C         Amplitude(s) for born diagram with ID 6
           CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMP(6,H))
 C         Amplitude(s) for born diagram with ID 7
@@ -154,19 +156,19 @@ C         Counter-term amplitude(s) for loop diagram number 10
      $     ,R2_GGG_2,AMPL(1,4))
 C         Counter-term amplitude(s) for loop diagram number 11
           CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),R2_GQQ,AMPL(1,5))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,6))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,7))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,8))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,9))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,10))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,11))
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQG_1EPS
      $     ,AMPL(2,12))
           CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQB,AMPL(1,13))
           CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),UV_GQQT,AMPL(1,14))
@@ -184,36 +186,36 @@ C         Counter-term amplitude(s) for loop diagram number 14
      $     ,R2_GGG_2,AMPL(1,18))
 C         Counter-term amplitude(s) for loop diagram number 15
           CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),R2_GQQ,AMPL(1,19))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,20))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,21))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,22))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,23))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,24))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB_1EPS
      $     ,AMPL(2,25))
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQG_1EPS
      $     ,AMPL(2,26))
           CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQB,AMPL(1,27))
           CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),UV_GQQT,AMPL(1,28))
 C         Counter-term amplitude(s) for loop diagram number 17
-          CALL MP_FFV2_0(W(1,13,H),W(1,4,H),W(1,3,H),R2_SXCW,AMPL(1,29)
+          CALL MP_FFV2_0(W(1,13,H),W(1,4,H),W(1,3,H),R2_BXTW,AMPL(1,29)
      $     )
 C         Counter-term amplitude(s) for loop diagram number 21
-          CALL MP_FFV2_0(W(1,5,H),W(1,15,H),W(1,3,H),R2_SXCW,AMPL(1,30)
+          CALL MP_FFV2_0(W(1,5,H),W(1,15,H),W(1,3,H),R2_BXTW,AMPL(1,30)
      $     )
-          CALL MP_FFV2_1(W(1,9,H),W(1,3,H),GC_47,MDL_MB,ZERO,W(1,17,H))
+          CALL MP_FFV2_1(W(1,9,H),W(1,3,H),GC_11,MDL_MB,ZERO,W(1,17,H))
 C         Counter-term amplitude(s) for loop diagram number 22
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,10,H),W(1,17,H),R2_QQQ,R2_QQB
      $     ,AMPL(1,31))
           CALL MP_R2_QQ_2_0(W(1,10,H),W(1,17,H),UV_BMASS_1EPS,AMPL(2
      $     ,32))
           CALL MP_R2_QQ_2_0(W(1,10,H),W(1,17,H),UV_BMASS,AMPL(1,33))
-          CALL MP_FFV2_2(W(1,10,H),W(1,3,H),GC_47,MDL_MT,MDL_WT,W(1,18
+          CALL MP_FFV2_2(W(1,10,H),W(1,3,H),GC_11,MDL_MT,MDL_WT,W(1,18
      $     ,H))
 C         Counter-term amplitude(s) for loop diagram number 23
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,18,H),W(1,9,H),R2_QQQ,R2_QQT
@@ -222,23 +224,23 @@ C         Counter-term amplitude(s) for loop diagram number 23
      $     )
           CALL MP_R2_QQ_2_0(W(1,18,H),W(1,9,H),UV_TMASS,AMPL(1,36))
 C         Counter-term amplitude(s) for loop diagram number 24
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),R2_SXCW,AMPL(1,37)
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),R2_BXTW,AMPL(1,37)
      $     )
 C         Counter-term amplitude(s) for loop diagram number 25
           CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),R2_GQQ,AMPL(1,38))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,39))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,40))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,41))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,42))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,43))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,44))
-          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,45))
           CALL MP_FFV1_0(W(1,5,H),W(1,17,H),W(1,2,H),UV_GQQB,AMPL(1,46)
      $     )
@@ -246,19 +248,19 @@ C         Counter-term amplitude(s) for loop diagram number 25
      $     )
 C         Counter-term amplitude(s) for loop diagram number 27
           CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),R2_GQQ,AMPL(1,48))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,49))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,50))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,51))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,52))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,53))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,54))
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,55))
           CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQB,AMPL(1,56))
           CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),UV_GQQT,AMPL(1,57))
@@ -279,9 +281,9 @@ C         Counter-term amplitude(s) for loop diagram number 29
      $     )
           CALL MP_R2_QQ_2_0(W(1,20,H),W(1,9,H),UV_TMASS,AMPL(1,63))
 C         Counter-term amplitude(s) for loop diagram number 31
-          CALL MP_FFV2_0(W(1,5,H),W(1,19,H),W(1,3,H),R2_SXCW,AMPL(1,64)
+          CALL MP_FFV2_0(W(1,5,H),W(1,19,H),W(1,3,H),R2_BXTW,AMPL(1,64)
      $     )
-          CALL MP_FFV2_2(W(1,11,H),W(1,3,H),GC_47,MDL_MT,MDL_WT,W(1,21
+          CALL MP_FFV2_2(W(1,11,H),W(1,3,H),GC_11,MDL_MT,MDL_WT,W(1,21
      $     ,H))
 C         Counter-term amplitude(s) for loop diagram number 35
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,21,H),W(1,12,H),R2_QQQ,R2_QQT
@@ -289,7 +291,7 @@ C         Counter-term amplitude(s) for loop diagram number 35
           CALL MP_R2_QQ_2_0(W(1,21,H),W(1,12,H),UV_TMASS_1EPS,AMPL(2
      $     ,66))
           CALL MP_R2_QQ_2_0(W(1,21,H),W(1,12,H),UV_TMASS,AMPL(1,67))
-          CALL MP_FFV2_1(W(1,12,H),W(1,3,H),GC_47,MDL_MB,ZERO,W(1,22,H)
+          CALL MP_FFV2_1(W(1,12,H),W(1,3,H),GC_11,MDL_MB,ZERO,W(1,22,H)
      $     )
 C         Counter-term amplitude(s) for loop diagram number 36
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,11,H),W(1,22,H),R2_QQQ,R2_QQB
@@ -298,23 +300,23 @@ C         Counter-term amplitude(s) for loop diagram number 36
      $     ,69))
           CALL MP_R2_QQ_2_0(W(1,11,H),W(1,22,H),UV_BMASS,AMPL(1,70))
 C         Counter-term amplitude(s) for loop diagram number 37
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),R2_SXCW,AMPL(1
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),R2_BXTW,AMPL(1
      $     ,71))
 C         Counter-term amplitude(s) for loop diagram number 38
           CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),R2_GQQ,AMPL(1,72))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,73))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,74))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,75))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,76))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,77))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,78))
-          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,79))
           CALL MP_FFV1_0(W(1,21,H),W(1,4,H),W(1,2,H),UV_GQQB,AMPL(1,80)
      $     )
@@ -322,19 +324,19 @@ C         Counter-term amplitude(s) for loop diagram number 38
      $     )
 C         Counter-term amplitude(s) for loop diagram number 40
           CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),R2_GQQ,AMPL(1,82))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,83))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,84))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,85))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,86))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,87))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,88))
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,89))
           CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),UV_GQQB,AMPL(1,90)
      $     )
@@ -355,23 +357,23 @@ C         Counter-term amplitude(s) for loop diagram number 42
      $     ,96))
           CALL MP_R2_QQ_2_0(W(1,11,H),W(1,24,H),UV_BMASS,AMPL(1,97))
 C         Counter-term amplitude(s) for loop diagram number 44
-          CALL MP_FFV2_0(W(1,23,H),W(1,4,H),W(1,3,H),R2_SXCW,AMPL(1,98)
+          CALL MP_FFV2_0(W(1,23,H),W(1,4,H),W(1,3,H),R2_BXTW,AMPL(1,98)
      $     )
 C         Counter-term amplitude(s) for loop diagram number 48
           CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),R2_GQQ,AMPL(1,99))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,100))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,101))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,102))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,103))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,104))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,105))
-          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,106))
           CALL MP_FFV1_0(W(1,5,H),W(1,22,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,107))
@@ -380,19 +382,19 @@ C         Counter-term amplitude(s) for loop diagram number 48
 C         Counter-term amplitude(s) for loop diagram number 50
           CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),R2_GQQ,AMPL(1,109)
      $     )
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,110))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,111))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,112))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,113))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,114))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,115))
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,116))
           CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,117))
@@ -401,19 +403,19 @@ C         Counter-term amplitude(s) for loop diagram number 50
 C         Counter-term amplitude(s) for loop diagram number 51
           CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),R2_GQQ,AMPL(1,119)
      $     )
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,120))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,121))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,122))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,123))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,124))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,125))
-          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,126))
           CALL MP_FFV1_0(W(1,18,H),W(1,4,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,127))
@@ -422,19 +424,19 @@ C         Counter-term amplitude(s) for loop diagram number 51
 C         Counter-term amplitude(s) for loop diagram number 53
           CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),R2_GQQ,AMPL(1,129)
      $     )
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,130))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,131))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,132))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,133))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,134))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,135))
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,136))
           CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,137))
@@ -485,19 +487,19 @@ C         Counter-term amplitude(s) for loop diagram number 59
 C         Counter-term amplitude(s) for loop diagram number 62
           CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),R2_GQQ,AMPL(1,159)
      $     )
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,160))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,161))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,162))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,163))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,164))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,165))
-          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,166))
           CALL MP_FFV1_0(W(1,5,H),W(1,24,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,167))
@@ -506,19 +508,19 @@ C         Counter-term amplitude(s) for loop diagram number 62
 C         Counter-term amplitude(s) for loop diagram number 65
           CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),R2_GQQ,AMPL(1,169)
      $     )
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,170))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,171))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,172))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,173))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,174))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB_1EPS
      $     ,AMPL(2,175))
-          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,176))
           CALL MP_FFV1_0(W(1,20,H),W(1,4,H),W(1,1,H),UV_GQQB,AMPL(1
      $     ,177))
@@ -541,7 +543,7 @@ C         Counter-term amplitude(s) for loop diagram number 71
      $     ,183))
           CALL MP_R2_QQ_2_0(W(1,26,H),W(1,12,H),UV_TMASS,AMPL(1,184))
 C         Counter-term amplitude(s) for loop diagram number 73
-          CALL MP_FFV2_0(W(1,5,H),W(1,25,H),W(1,3,H),R2_SXCW,AMPL(1
+          CALL MP_FFV2_0(W(1,5,H),W(1,25,H),W(1,3,H),R2_BXTW,AMPL(1
      $     ,185))
           CALL MP_FFV1_2(W(1,10,H),W(1,1,H),GC_5,MDL_MB,ZERO,W(1,27,H))
 C         Counter-term amplitude(s) for loop diagram number 77
@@ -558,24 +560,24 @@ C         Counter-term amplitude(s) for loop diagram number 78
      $     ,190))
           CALL MP_R2_QQ_2_0(W(1,10,H),W(1,28,H),UV_BMASS,AMPL(1,191))
 C         Counter-term amplitude(s) for loop diagram number 80
-          CALL MP_FFV2_0(W(1,27,H),W(1,4,H),W(1,3,H),R2_SXCW,AMPL(1
+          CALL MP_FFV2_0(W(1,27,H),W(1,4,H),W(1,3,H),R2_BXTW,AMPL(1
      $     ,192))
 C         Counter-term amplitude(s) for loop diagram number 84
           CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),R2_GQQ,AMPL(1,193)
      $     )
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,194))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,195))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,196))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,197))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,198))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,199))
-          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,200))
           CALL MP_FFV1_0(W(1,5,H),W(1,28,H),W(1,2,H),UV_GQQB,AMPL(1
      $     ,201))
@@ -584,19 +586,19 @@ C         Counter-term amplitude(s) for loop diagram number 84
 C         Counter-term amplitude(s) for loop diagram number 87
           CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),R2_GQQ,AMPL(1,203)
      $     )
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQG_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,204))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,205))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,206))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,207))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,208))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB_1EPS
      $     ,AMPL(2,209))
-          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQQ_1EPS
+          CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,210))
           CALL MP_FFV1_0(W(1,26,H),W(1,4,H),W(1,2,H),UV_GQQB,AMPL(1
      $     ,211))
@@ -655,71 +657,71 @@ C         Counter-term amplitude(s) for loop diagram number 132
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,16,H),R2_3GQ,AMPL(1,236)
      $     )
 C         Amplitude(s) for UVCT diagram with ID 135
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(1,237))
-          AMPL(1,237)=AMPL(1,237)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(2,237))
+          AMPL(2,237)=AMPL(2,237)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 136
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(2,238))
-          AMPL(2,238)=AMPL(2,238)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(1,238))
+          AMPL(1,238)=AMPL(1,238)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 137
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(1,239))
-          AMPL(1,239)=AMPL(1,239)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(2,239))
+          AMPL(2,239)=AMPL(2,239)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 138
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(2,240))
-          AMPL(2,240)=AMPL(2,240)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(1,240))
+          AMPL(1,240)=AMPL(1,240)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 139
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_47,AMPL(1,241))
-          AMPL(1,241)=AMPL(1,241)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(2,241))
+          AMPL(2,241)=AMPL(2,241)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 140
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_47,AMPL(2,242))
-          AMPL(2,242)=AMPL(2,242)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(1,242))
+          AMPL(1,242)=AMPL(1,242)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 141
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(1,243))
-          AMPL(1,243)=AMPL(1,243)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(2,243))
+          AMPL(2,243)=AMPL(2,243)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 142
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(2,244))
-          AMPL(2,244)=AMPL(2,244)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(1,244))
+          AMPL(1,244)=AMPL(1,244)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 143
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_47,AMPL(1,245)
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(2,245)
      $     )
-          AMPL(1,245)=AMPL(1,245)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          AMPL(2,245)=AMPL(2,245)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 144
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_47,AMPL(2,246)
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(1,246)
      $     )
-          AMPL(2,246)=AMPL(2,246)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          AMPL(1,246)=AMPL(1,246)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 145
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(1,247))
-          AMPL(1,247)=AMPL(1,247)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(2,247))
+          AMPL(2,247)=AMPL(2,247)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 146
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(2,248))
-          AMPL(2,248)=AMPL(2,248)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(1,248))
+          AMPL(1,248)=AMPL(1,248)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 147
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(1,249))
-          AMPL(1,249)=AMPL(1,249)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(2,249))
+          AMPL(2,249)=AMPL(2,249)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 148
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(2,250))
-          AMPL(2,250)=AMPL(2,250)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(1,250))
+          AMPL(1,250)=AMPL(1,250)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 149
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(1,251))
-          AMPL(1,251)=AMPL(1,251)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(2,251))
+          AMPL(2,251)=AMPL(2,251)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 150
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(2,252))
-          AMPL(2,252)=AMPL(2,252)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_2_1EPS)
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(1,252))
+          AMPL(1,252)=AMPL(1,252)*(1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0
+     $     +2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1)
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS

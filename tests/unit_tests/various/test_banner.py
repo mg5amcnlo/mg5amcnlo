@@ -14,16 +14,18 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import StringIO
+import six
+StringIO = six
 from madgraph import MG5DIR
 
-import StringIO
+
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -56,7 +58,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue(mybanner.has_key('slha'))
+        self.assertTrue('slha' in mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -202,6 +204,48 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertRaises(Exception, self.config.__setitem__, 'dict', [1,2,3])
         self.assertRaises(Exception, self.config.__setitem__, 'dict', {'test':'test'})
         self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")
+
+    def test_integer_handling(self):
+
+        self.config.add_param("int", 1)
+        self.config['int'] = '30*2'
+        self.assertEqual(self.config['int'] ,30*2)
+        
+        self.config['int'] = 3.0
+        self.assertEqual(self.config['int'] ,3)
+         
+        self.config['int'] = '3k'
+        self.assertEqual(self.config['int'] ,3000)
+        
+        self.config['int'] = '3M'
+        self.assertEqual(self.config['int'] ,3000000)                        
+
+        self.config['int'] = '4d1'
+        self.assertEqual(self.config['int'] ,40) 
+
+        self.config['int'] = '30/2'
+        self.assertEqual(self.config['int'] , 15)
+
+    def test_float_handling(self):
+
+        self.config.add_param("int", 1.0)
+        self.config['int'] = '30*2'
+        self.assertEqual(self.config['int'] ,30*2)
+        
+        self.config['int'] = 3.0
+        self.assertEqual(self.config['int'] ,3)
+         
+        self.config['int'] = '3k'
+        self.assertEqual(self.config['int'] ,3000)
+        
+        self.config['int'] = '3M'
+        self.assertEqual(self.config['int'] ,3000000)                        
+
+        self.config['int'] = '4d1'
+        self.assertEqual(self.config['int'] ,40) 
+
+        self.config['int'] = '30/4'
+        self.assertEqual(self.config['int'] , 15/2.)
 
     def test_auto_handling(self):
         """check that any parameter can be set on auto and recover"""

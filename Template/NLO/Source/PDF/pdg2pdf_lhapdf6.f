@@ -65,32 +65,30 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
       ipart=ipdg
-      if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22.or.iabs(ipart).eq.7) ipart=7
-      if(abs(ipart).eq.8) ipart=sign(11,ipart)
-      if(abs(ipart).eq.9) ipart=sign(13,ipart)
-      if(abs(ipart).eq.10) ipart=sign(15,ipart)
-      iporg=ipart
-
-C The commented part below does not apply any longer, as filtering 
-C   is done in the LHAPDF call
-Cc     This will be called for any PDG code, but we only support up to 7
-CC      if(iabs(ipart).gt.7)then
-CC         write(*,*) 'PDF not supported for pdg ',ipdg
-CC         write(*,*) 'For lepton colliders, please set the lpp* '//
-CC     $    'variables to 0 in the run_card'  
-CC         open(unit=26,file='../../../error',status='unknown')
-CC         write(26,*) 'Error: PDF not supported for pdg ',ipdg
-CC         stop 1
-CC         pdg2pdf=0d0
-CC         return
-CC      endif
+      if(iabs(ipart).eq.21) then
+         ipart=0
+      else if(iabs(ipart).eq.22) then
+         ipart=7
+      else if(iabs(ipart).eq.7) then
+         ipart=7
+      else if(iabs(ipart).gt.7)then
+c     This will be called for any PDG code, but we only support up to 7
+C         write(*,*) 'PDF not supported for pdg ',ipdg
+C         write(*,*) 'For lepton colliders, please set the lpp* '//
+C     $    'variables to 0 in the run_card'  
+C         open(unit=26,file='../../../error',status='unknown')
+C         write(26,*) 'Error: PDF not supported for pdg ',ipdg
+C         stop 1
+         pdg2pdf=0d0
+         return
+      endif
 
 c     Determine the iset used in lhapdf
       call getnset(iset)
 c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
 
+      iporg=ipart
       ireuse = 0
       ii=i_replace
       do i=1,20

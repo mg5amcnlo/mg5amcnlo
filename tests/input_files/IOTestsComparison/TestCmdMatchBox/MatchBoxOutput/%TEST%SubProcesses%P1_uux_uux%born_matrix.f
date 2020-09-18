@@ -437,28 +437,36 @@ C     JAMPs contributing to orders QCD=2
 
       INTEGER IN1, IN2, OUT
 
-      IF (IN1.EQ.0.AND.IN2.EQ.1)THEN
-        OUT = 1
-
-
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.0)THEN
+      IF (IN1.EQ.0.AND.IN2.EQ.0)THEN
         OUT = 2
 
 
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.5)THEN
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.1)THEN
+        OUT = 1
+
+
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.2)THEN
         OUT = 0
-
-
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.4)THEN
-        OUT = 4
 
 
       ELSEIF (IN1.EQ.0.AND.IN2.EQ.3)THEN
         OUT = 3
 
 
-      ELSEIF (IN1.EQ.0.AND.IN2.EQ.2)THEN
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.4)THEN
+        OUT = 4
+
+
+      ELSEIF (IN1.EQ.0.AND.IN2.EQ.5)THEN
         OUT = 0
+
+
+      ELSEIF (IN1.EQ.1.AND.IN2.EQ.0)THEN
+        OUT = 2
+
+
+      ELSEIF (IN1.EQ.1.AND.IN2.EQ.1)THEN
+        OUT = 4
 
 
       ELSEIF (IN1.EQ.1.AND.IN2.EQ.2)THEN
@@ -475,14 +483,6 @@ C     JAMPs contributing to orders QCD=2
 
       ELSEIF (IN1.EQ.1.AND.IN2.EQ.5)THEN
         OUT = 0
-
-
-      ELSEIF (IN1.EQ.1.AND.IN2.EQ.0)THEN
-        OUT = 2
-
-
-      ELSEIF (IN1.EQ.1.AND.IN2.EQ.1)THEN
-        OUT = 4
 
       ELSE
         OUT = - 1
@@ -567,8 +567,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       MG5_1_SQSOINDEX=MG5_1_SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -662,8 +662,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_SQUARED_ORDERS_FO'
-     $ //'R_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' MG5_1_GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -702,8 +702,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_ORDERS_FOR_AMPSOI'
-     $ //'NDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' MG5_1_GET_ORDERS_FOR_AMPSOINDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
@@ -745,8 +745,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_SOINDEX_FOR_AMPORDERS'
-     $ //''
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' MG5_1_SOINDEX_FOR_AMPORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 

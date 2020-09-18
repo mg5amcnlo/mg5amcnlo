@@ -11,8 +11,8 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u~ u > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: c~ c > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 2 3 
 
 C     
@@ -36,6 +36,9 @@ C
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       COMMON /C_KEEP_ORDER_CNT/ KEEP_ORDER_CNT
       INTEGER AMP_ORDERS(NSPLITORDERS)
+      DOUBLE PRECISION TINY
+      PARAMETER (TINY = 1D-12)
+      DOUBLE PRECISION MAX_VAL
 C     
 C     FUNCTIONS
 C     
@@ -47,10 +50,16 @@ C
       CALL SB_SF_004_SPLITORDERS(P,ANS)
 C     color-linked borns are called for QCD-type emissions
       ANS_SUMMED = 0D0
+      MAX_VAL = 0D0
 
 C     reset the amp_split_cnt array
       AMP_SPLIT_CNT(1:AMP_SPLIT_SIZE,1:2,1:NSPLITORDERS) = DCMPLX(0D0
      $ ,0D0)
+
+
+      DO I = 1, NSQAMPSO
+        MAX_VAL = MAX(MAX_VAL, ABS(ANS(I)))
+      ENDDO
 
       DO I = 1, NSQAMPSO
         IF (KEEP_ORDER_CNT(QCD_POS, I)) THEN
@@ -60,10 +69,15 @@ C     reset the amp_split_cnt array
 C           take into account the fact that this is for QCD
             IF (J.EQ.QCD_POS) AMP_ORDERS(J) = AMP_ORDERS(J) + 2
           ENDDO
-          AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1,QCD_POS)
-     $      = ANS(I)
+            !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+          IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
+     $      AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1
+     $     ,QCD_POS) = ANS(I)
         ENDIF
       ENDDO
+
+C     this is to avoid fake non-zero contributions 
+      IF (ABS(ANS_SUMMED).LT.MAX_VAL*TINY) ANS_SUMMED=0D0
 
       RETURN
       END
@@ -79,8 +93,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u~ u > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: c~ c > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 2 3 
 
 C     
@@ -164,8 +178,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u~ u > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: c~ c > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
 C     spectators: 2 3 
 
 C     

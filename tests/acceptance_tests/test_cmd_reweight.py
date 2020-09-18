@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import subprocess
 import math
 import unittest
@@ -23,6 +24,7 @@ import sys
 import logging
 import time
 import tempfile   
+from six.moves import zip
 
 logger = logging.getLogger('test_cmd')
 
@@ -135,17 +137,22 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if logger.level <= 10:
             me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
         
-        solutions = [12.905371, 12.271068, 12.271753, 12.436969, 12.330121, 12.441459, 12.290359, 12.406486, 12.352107, 11.862291, 12.346005, 12.603302, 12.483697, 12.597262, 12.352434, 11.841136, 12.559252, 12.693822, 12.073114, 12.080773, 12.088188, 12.169921, 12.36124, 12.620677, 12.641769]
+        #solutions = [12.905371, 12.271068, 12.271753, 12.436969, 12.330121, 12.441459, 12.290359, 12.406486, 12.352107, 11.862291, 12.346005, 12.603302, 12.483697, 12.597262, 12.352434, 11.841136, 12.559252, 12.693822, 12.073114, 12.080773, 12.088188, 12.169921, 12.36124, 12.620677, 12.641769]
+        solutions = [14.288834, 13.551237, 13.564131, 13.745311, 13.620339, 13.750088, 13.611093, 13.709763, 13.670902, 13.071603, 13.658932, 13.939627, 13.827959, 13.932638, 13.669482, 13.045913, 13.888161, 14.045136, 13.319103, 13.327884, 13.336799, 13.430042, 13.658435, 13.959817, 13.984111]
+        #solutions = []
         for i,event in enumerate(lhe):
             
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1'])
+            #continue
             self.assertTrue('rwgt_1' in rwgt_data)
             self.assertTrue(misc.equal(rwgt_data['rwgt_1'], solutions[i]))
         #misc.sprint(solutions)
@@ -154,7 +161,6 @@ class TestMECmdRWGT(unittest.TestCase):
         """ testing that we can reweight the tt~ sample when increasing the top mass
         """
         me_cmd = self.get_MEcmd(pjoin(_pickle_path, 'ttbar.lhe.gz'))
-        
         cmd_lines = """
         change output 2.0
         launch
@@ -164,8 +170,9 @@ class TestMECmdRWGT(unittest.TestCase):
         ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
         ff.write(cmd_lines)
         ff.close()
-        
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        #misc.sprint(self.run_dir)
+        if 1:
+        #with misc.stdchannel_redirected(sys.stdout, os.devnull):
             me_cmd.run_cmd('reweight run_01 --from_cards')
 
         #check that initial file is untouched!        
@@ -206,8 +213,12 @@ class TestMECmdRWGT(unittest.TestCase):
         ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
         ff.write(cmd_lines)
         ff.close()
-        
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        mad_logger = logging.getLogger('madgraph')
+
+        if mad_logger.level > 20: 
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
             me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
@@ -236,22 +247,26 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        if 1: #with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        mad_logger = logging.getLogger('madgraph')
+        if mad_logger.level > 20: 
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
             me_cmd.run_cmd('reweight run_01 --from_cards')
-        
-        solutions = [41.511565, 41.930505, 41.511565, 41.511565, 41.586169, 41.511565, 41.511565, 41.511565, 41.511565, 42.046806, 41.511565, 44.164503, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.778368, 41.511565, 42.05448, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.115494, 41.511854, 41.511567, 41.511565, 42.00028, 42.120605, 41.514867, -41.511565, 41.511565, 45.125706, 41.511565, 42.180208, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.997509, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513926, 41.511565, 41.882499, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 47.532736, 41.511565, 41.809063, 41.511565, 41.511565, 41.511565, 41.927695, 41.511565, 41.511565, 41.555692, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 42.029675, 41.725129, 41.511565, 41.511565, 41.511778, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.050439, 41.511565, 41.511565, 41.511565, -41.511565, 42.071105, 41.511565, 41.511565]
+        #solutions = [41.511565, 41.930505, 41.511565, 41.511565, 41.586169, 41.511565, 41.511565, 41.511565, 41.511565, 42.046806, 41.511565, 44.164503, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.778368, 41.511565, 42.05448, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.115494, 41.511854, 41.511567, 41.511565, 42.00028, 42.120605, 41.514867, -41.511565, 41.511565, 45.125706, 41.511565, 42.180208, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.997509, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513926, 41.511565, 41.882499, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 47.532736, 41.511565, 41.809063, 41.511565, 41.511565, 41.511565, 41.927695, 41.511565, 41.511565, 41.555692, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 42.029675, 41.725129, 41.511565, 41.511565, 41.511778, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.050439, 41.511565, 41.511565, 41.511565, -41.511565, 42.071105, 41.511565, 41.511565]
+        solutions =  [41.511565, 41.75164, 41.511565, 41.511565, 41.557009, 41.511565, 41.511565, 41.511565, 41.511565, 41.759881, 41.511565, 44.717244, 41.511565, -41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 42.041827, 41.511565, 41.663092, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.920917, 41.511736, 41.511566, 41.511565, 205.29791, 42.538389, 41.513573, -41.511565, 41.511565, 44.650974, 41.511565, 42.549187, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.431553, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.513265, 41.511565, 43.902643, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 8853.0397, 41.511565, 333.38491, 41.511565, 41.511565, 41.511565, 75.701362, 41.511565, 41.511565, 41.54695, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, -41.511565, 41.511565, 41.454923, 41.53984, 41.511565, 41.511565, 41.511743, 41.511565, 41.511565, 41.511565, 41.511565, 41.511565, 41.732627, 41.511565, 41.511565, 41.511565, -41.511565, 41.395865, 41.511565, 41.511565]
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_1.lhe.gz'))
         lhe_orig = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
-        from itertools import izip
+        
         i=-1
         #solutions = []
-        for event, event_orig in izip(lhe, lhe_orig): 
+        for event, event_orig in zip(lhe, lhe_orig): 
             i+=1
             rwgt_data = event_orig.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1_tree'])
+            #continue
             self.assertTrue('rwgt_1_tree' in rwgt_data)
             self.assertEqual(event.wgt, rwgt_data['rwgt_1_tree'])
-            #misc.sprint(abs(event.wgt))
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
             nlo1 = event.parse_nlo_weight()
             nlo2 = event_orig.parse_nlo_weight()
@@ -259,6 +274,7 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertNotEqual(nlo1.total_wgt, nlo2.total_wgt)
 
         #misc.sprint(solutions)
+        #raise Exception
 
     def test_loop_improved_reweighting(self):
         """ check identical re-weighting in ttbar 
@@ -280,15 +296,17 @@ class TestMECmdRWGT(unittest.TestCase):
         ff = open(pjoin(self.run_dir, 'Cards', 'reweight_card.dat'),'w')
         ff.write(cmd_lines)
         ff.close()
-        
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if logger.level <=10:
             me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
         
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'events.lhe.gz'))
         lhe2=  lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_tree_rwgt_1.lhe.gz'))
         solutions = [-113.54512, -113.58961, 113.54938, 113.48467, 113.54938, 113.12672, -113.4863, 113.54938, 113.54938, -113.26805, 105.5589, 110.41614, -113.57167, -113.26911, 113.53355, 113.54938, 113.54869, 113.43885, 113.4151, 113.43279, -113.59921, -113.54938, 113.47688, -113.41315, 113.54938, 113.54938, 113.50453, 113.54938, -113.34559, 113.41821, 113.50674, 113.54273, -113.55721, 113.5204, 113.54938, 113.9101, 113.54938, 110.76533, 85.233315, 113.38153, 113.4684, 113.41541, 113.54272, 114.08548, -113.54938, -113.48963, 113.47811, 86.336518, -113.53947, 113.62442, 113.54938, 119.1288, -113.54595, 113.39149, 113.6222, -113.50107, 114.29253, 81.891469, 113.43238, 113.59844, 112.58522, 113.53639, 111.24306, -113.52251, -113.42222, 113.53443, 113.52775, 113.59714, 101.79775, -173.10123, -113.64323, -113.52939, 113.76665, 113.38901, 113.54938, -113.85094, 112.01344, 113.52052, 113.54769, 113.54938, 113.54938, -113.74874, 114.35555, 113.49268, 113.1658, -113.54938, 113.54938, 113.45114, -106.86842, -113.25424, 113.54488, -113.70535, 113.53027, 113.02052, 113.54938, 113.54938, 113.48797, 113.5419, 113.47777, 113.53698, -113.54938, 113.58857, -113.59011, -113.53687, -113.5632, -113.54938, 50.881047, 113.54904, 113.54696, -113.53998, 98.021403, 113.52701, 113.54544, 112.85106, 113.54891, 113.54938, 113.48127, 113.27728, 113.43749, 113.4915, 113.5246, 113.48554, 113.48386, 112.76115, -113.51762, 113.54938, 112.42106, 113.47272, 115.03299, -113.53507, 113.3365, 113.48839, -113.62701, 113.54938, 113.54019, 115.84251, 113.45177, -113.5123, 113.54938, 113.53011, 109.36941, 112.78596, 113.53325, -113.62137, 113.19992, 114.3632, 113.557, 113.54938, 113.5199, 113.42012, -113.57844, 49.469316, 112.17603, 113.51455, 113.51559, 113.54938]
         for i,event in enumerate(lhe): 
-            event2 = lhe2.next()
+            event2 = next(lhe2)
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['MYNLO_tree'])
             if i < len(solutions):
@@ -301,6 +319,7 @@ class TestMECmdRWGT(unittest.TestCase):
         """
         me_cmd = self.get_MEcmd(pjoin(_pickle_path, 'wj_zj.lhe.gz'))
         
+        
         cmd_lines = """
         launch --rwgt_name=SINGLE
         set aEWM1 150
@@ -312,9 +331,11 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.write(cmd_lines)
         ff.close()
         
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+        if not self.debugging:
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_cmd.run_cmd('reweight run_01 --from_cards')
+        else:
             me_cmd.run_cmd('reweight run_01 --from_cards')
-            
 
 
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
@@ -324,6 +345,7 @@ class TestMECmdRWGT(unittest.TestCase):
         for i,event in enumerate(lhe):
             
             rwgt_data = event.parse_reweight()
+            #misc.sprint(rwgt_data)
             self.assertTrue('SINGLE' in rwgt_data)
             self.assertTrue('NAME_0' in rwgt_data)
             self.assertTrue('NAME_1' in rwgt_data)
@@ -335,11 +357,12 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertTrue(misc.equal(rwgt_data['NAME_1'], solutions2[i]))
             
 
-    def test_nlo_reweighting_comb(self):
+    def old_test_nlo_reweighting_comb(self):
         """check that nlo reweighting is working.
            The main point is to check the recombination of the weights
            Since the rest should be either checked by the lhe_parser class
-           or by the various check of the standalone checks
+           or by the various check of the standalone checks.
+           This way of combining weights is now outdated
         """
         
         # create a reweight directory   
@@ -357,10 +380,10 @@ class TestMECmdRWGT(unittest.TestCase):
             m_opts['lhapdf'] = True
             m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
             m_opts['llhapdf'] = subprocess.Popen([interface.options['lhapdf'], '--libs'], 
-                    stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+                    stdout = subprocess.PIPE).stdout.read().strip().split()[0].decode()
             m_opts['f2pymode'] = True
         else:
-            raise Exception, "need LHAPDF"
+            raise Exception("need LHAPDF")
             lhapdf = False
             lhapdfversion = 0
 
@@ -376,15 +399,15 @@ class TestMECmdRWGT(unittest.TestCase):
             if self.path not in sys.path:
                 sys.path.insert(0, self.path)
             mod_name = 'rw_mevirt.Source.rwgt2py'
-            if mod_name in sys.modules.keys():
+            if mod_name in list(sys.modules.keys()):
                 del sys.modules[mod_name]
                 tmp_mod_name = mod_name
                 while '.' in tmp_mod_name:
                     tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                     del sys.modules[tmp_mod_name]
-                mymod = __import__(mod_name, globals(), locals(), [],-1)  
+                mymod = __import__(mod_name, globals(), locals(), [])  
             else:
-                mymod = __import__(mod_name, globals(), locals(), [],-1) 
+                mymod = __import__(mod_name, globals(), locals(), []) 
                 
             mymod =  mymod.Source.rwgt2py
             #mymod.initialise([1,1], 244600)

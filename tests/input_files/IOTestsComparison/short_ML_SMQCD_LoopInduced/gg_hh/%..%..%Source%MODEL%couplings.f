@@ -16,6 +16,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
+      LOGICAL UPDATELOOP
+      COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
       READLHA = .TRUE.
@@ -39,6 +41,8 @@ C
       LOGICAL READLHA
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
+      LOGICAL UPDATELOOP
+      COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'

@@ -148,14 +148,11 @@ c To keep track of the accumulated results:
 
       subroutine topout
       use extra_weights
+      use mint_module
       implicit none
       include "nexternal.inc"
       include 'run.inc'
       integer ii,jj,n,kk,nn
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
-      integer itmax,ncall
-      common/citmax/itmax,ncall
       logical useitmax
       common/cuseitmax/useitmax
       real*8 xnorm
@@ -166,16 +163,10 @@ c To keep track of the accumulated results:
       common /for_pineappl/ pineappl
       include "pineappl_common.inc"
 c
-      if(usexinteg.and..not.mint) then
-         xnorm=1.d0/float(itmax)
-      elseif(mint) then
-         xnorm=1.d0/float(ncall)
-      else
-         xnorm=1d0
-      endif
+      xnorm=1.d0/float(ncalls0)
       if(useitmax)xnorm=xnorm/float(itmax)
 c Normalization factor for the PineAPPL grids
-      if(pineappl) appl_norm_histo = 1d0 / dble(ncall*itmax)
+      if(pineappl) appl_norm_histo = 1d0 / dble(ncalls0*itmax)
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')

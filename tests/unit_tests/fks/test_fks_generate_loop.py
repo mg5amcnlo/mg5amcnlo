@@ -15,6 +15,7 @@
 
 """Testing modules for FKS_process class"""
 
+from __future__ import absolute_import
 import sys
 import os
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]

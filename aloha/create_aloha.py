@@ -13,9 +13,11 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import cmath
 import copy
-import cPickle
+import operator
+import six.moves.cPickle
 import glob
 import logging
 import numbers
@@ -26,6 +28,9 @@ import sys
 import time
 from madgraph.interface.tutorial_text import output
 
+from six.moves import range
+from six.moves import zip
+
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
@@ -35,13 +40,15 @@ import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
+import models
 try:
     import madgraph.iolibs.files as files
     import madgraph.various.misc as misc
 except Exception:
     import aloha.files as files
     import aloha.misc as misc
-    
+
+   
 aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
 
@@ -110,7 +117,7 @@ class AbstractRoutine(object):
                 rank = max(sum(coeff), rank)
             return rank -1 # due to the coefficient associate to the wavefunctions
         else:
-            raise ALOHAERROR, '%s is not a valid information that can be computed' % info
+            raise ALOHAERROR('%s is not a valid information that can be computed' % info)
 
 
 class AbstractRoutineBuilder(object):
@@ -191,7 +198,7 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        nb_fermion = len([1 for s in self.spins if s % 2 == 0])   
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])  
         if isinstance(pair, tuple):
             if len(pair) ==1 :
                 pair = pair[0]
@@ -206,7 +213,7 @@ class AbstractRoutineBuilder(object):
             if not data == target:
                 text = """Unable to deal with 4(or more) point interactions
 in presence of majorana particle/flow violation"""
-                raise ALOHAERROR, text
+                raise ALOHAERROR(text)
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
@@ -238,6 +245,7 @@ in presence of majorana particle/flow violation"""
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
         
+
         output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('FCT')])
@@ -255,7 +263,7 @@ in presence of majorana particle/flow violation"""
         
         if need_P_sign:
             expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
-        
+
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
         return lorentz_expr
@@ -285,7 +293,7 @@ in presence of majorana particle/flow violation"""
                 lorentz = eval(lorentz)
             except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
-                raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
+                raise ALOHAERROR('unknow type in Lorentz Evaluation: %s ' % str(error)) 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):
@@ -302,8 +310,13 @@ in presence of majorana particle/flow violation"""
                 # check if we need a special propagator
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
-                    massless = True
-                    self.denominator = None
+                    if spin == 3 and aloha.unitary_gauge == 2:
+                        misc.sprint(spin)
+                        lorentz *= complex(0,1) * self.get_custom_propa('1PS', spin, id)
+                        continue
+                    else:
+                        massless = True
+                        self.denominator = None
                 elif propa == []:
                     massless = False
                     self.denominator = None
@@ -430,9 +443,46 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        propagator = getattr(self.model.propagators, propa)
-        numerator = propagator.numerator
-        denominator = propagator.denominator      
+        if not propa.startswith('1'):
+            propagator = getattr(self.model.propagators, propa)
+            numerator = propagator.numerator
+            denominator = propagator.denominator      
+        elif propa == "1L":
+            numerator = "EPSL(1,id) * EPSL(2,id)"
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1T":
+            numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1A":
+            numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
+            denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa in ["1P"]:
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFP(1,id)*UFPC(2,id)"
+            else:
+                numerator =  "VFP(1,id)*VFPC(2,id)"
+               
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        
+        elif propa == "1M":
+            # shift and flip the tag if we multiply by C matrices
+            spin_id = id
+            if (id + 1) // 2 in self.conjg:
+                spin_id += _conjugate_gap + id % 2 - (id +1) % 2
+            if (spin_id % 2):
+                numerator =  "UFM(1,id)*UFMC(2,id)"
+            else:
+                numerator =  "VFM(1,id)*VFMC(2,id)"
+            denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1PS":
+            numerator = "(-1*(P(-1,id)*PBar(-1,id)) * Metric(1, 2) + P(1,id)*PBar(2,id) + PBar(1,id)*P(2,id))"
+            denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
+        else:
+            raise Exception
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
@@ -474,15 +524,16 @@ in presence of majorana particle/flow violation"""
         
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
-            denominator = self.mod_propagator_expression(tag, denominator)      
+            denominator = self.mod_propagator_expression(tag, denominator)  
+                
         numerator = self.parse_expression(numerator, needPflipping)
-        
+      
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
             self.denominator = eval(self.denominator)
             if not isinstance(self.denominator, numbers.Number):
                 self.denominator = self.denominator.simplify().expand().simplify().get((0,))
-                
+        needPflipping = False
         if spin ==4:
             return eval(numerator) * propaR
         else:
@@ -615,7 +666,6 @@ class AbstractALOHAModel(dict):
         
         # Option
         self.explicit_combine = explicit_combine
-        
         # Extract the model name if combined with restriction
         model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
@@ -626,15 +676,16 @@ class AbstractALOHAModel(dict):
                os.path.isfile(os.path.join(root_path, "models", name,
                                            "restrict_%s.dat" % rest)):
                 model_name = model_name_re.group("name")
-
         # load the UFO model
-        try:
-            python_pos = model_name 
-            __import__(python_pos)
-        except Exception:
-            python_pos = 'models.%s' % model_name 
-            __import__(python_pos)
-        self.model = sys.modules[python_pos]
+        self.model = models.load_model(model_name)
+#         
+#         try:
+#             python_pos = model_name 
+#             __import__(python_pos)
+#         except Exception:
+#             python_pos = 'models.%s' % model_name 
+#             __import__(python_pos)
+#         self.model = sys.modules[python_pos]
         # find the position on the disk
         self.model_pos = os.path.dirname(self.model.__file__)
 
@@ -686,8 +737,12 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         
         fsock = open(filepos, 'w')
-        cPickle.dump(dict(self), fsock)
-        
+        t=dict(self)
+        try:
+            six.moves.cPickle.dump(dict(self), fsock)
+        except:
+            logger.info('aloha not saved')
+            
     def load(self, filepos=None):
         """ reload the pickle file """
         return False
@@ -695,7 +750,7 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
             fsock = open(filepos, 'r')
-            self.update(cPickle.load(fsock))        
+            self.update(six.moves.cPickle.load(fsock))        
             return True
         else:
             return False
@@ -836,7 +891,7 @@ class AbstractALOHAModel(dict):
                                 realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
                                 try:
                                     self[(realname, outgoing)].add_combine(m)
-                                except Exception,error:
+                                except Exception as error:
                                     self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                        
         if save:
@@ -875,7 +930,7 @@ class AbstractALOHAModel(dict):
             tag = tag + ['C%s'%i for i in conjugate]             
             tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
-            conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
+            conjugate = tuple([int(float(c[1:])) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
             if loop:
                 aloha.loop_mode = True
@@ -910,7 +965,7 @@ class AbstractALOHAModel(dict):
                     if a[0] < b[0]: return -1
                     else: return 1
                 routines = request[l_name][conjg]
-                routines.sort(sorting)
+                routines.sort(key=misc.cmp_to_key(sorting))
                 if not conjg:
                     # No need to conjugate -> compute directly
                     self.compute_aloha(builder, routines=routines)
@@ -936,7 +991,7 @@ class AbstractALOHAModel(dict):
             if not self.explicit_combine:
                 lorentzname = list_l_name[0]
                 lorentzname += ''.join(tag)
-                if self.has_key((lorentzname, outgoing)):
+                if (lorentzname, outgoing) in self:
                     self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                 else:
                     lorentz = eval('self.model.lorentz.%s' % list_l_name[0])
@@ -953,7 +1008,7 @@ class AbstractALOHAModel(dict):
                         if a[0] < b[0]: return -1
                         else: return 1
                     routines = request[list_l_name[0]][conjg]
-                    routines.sort(sorting)
+                    routines.sort(key=operator.itemgetter(0))
                     if not conjg:
                         # No need to conjugate -> compute directly
                         self.compute_aloha(builder, routines=routines)
@@ -1060,8 +1115,8 @@ class AbstractALOHAModel(dict):
                 break
         else: 
 
-            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s' % \
-                        (name, ext, '\n'.join(paths))
+            raise ALOHAERROR('No external routine \"%s.%s\" in directories\n %s' % \
+                        (name, ext, '\n'.join(paths)))
        
         if output_dir:
             for filepath in ext_files:
@@ -1084,8 +1139,8 @@ class AbstractALOHAModel(dict):
                         if part1.spin == 2 and (i % 2 != j % 2 ):
                             continue 
                         for lorentz in vertex.lorentz:
-                            if self.symmetries.has_key(lorentz.name):
-                                if self.symmetries[lorentz.name].has_key(i+1):
+                            if lorentz.name in self.symmetries:
+                                if i+1 in self.symmetries[lorentz.name]:
                                     self.symmetries[lorentz.name][i+1] = max(self.symmetries[lorentz.name][i+1], j+1)
                                 else:
                                     self.symmetries[lorentz.name][i+1] = j+1
@@ -1226,7 +1281,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     text +='\n'
     
 
-    file(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
+    open(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
 
 
             

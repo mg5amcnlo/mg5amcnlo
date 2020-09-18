@@ -12,7 +12,10 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 from cmd import Cmd
+from six.moves import zip
 """ Basic test of the command interface """
 
 import unittest
@@ -34,7 +37,8 @@ pjoin = os.path.join
 class TestAMCatNLOEW(unittest.TestCase):
     """ a suite of extra tests for the ew stuff """
     
-    interface = mgcmd.MasterCmd()
+    def setUp(self):
+        self.interface = mgcmd.MasterCmd()
 
     def test_generate_fks_ew(self):
         """check that the generate command works as expected.
@@ -65,7 +69,7 @@ class TestAMCatNLOEW(unittest.TestCase):
                             {'QED':2, 'QCD':2}]
 
         # perturbation couplings (always set to [QED, QCD]
-        pert_couplings_list = 9*[['QED','QCD']]
+        pert_couplings_list = 9*[['QCD','QED']]
 
         # expected squared_orders (should take into
         #  account the perturbation
@@ -116,7 +120,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
-            self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
+            self.assertEqual(sorted(pert_couplings), sorted(fksprocess.born_amp['process']['perturbation_couplings']))
 
             self.assertEqual(len(fksprocess.born_amp['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
@@ -152,7 +156,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         born_orders_list = 9*[{'QED':0, 'QCD':2}]
 
         # perturbation couplings (always set to [QED, QCD]
-        pert_couplings_list = 9*[['QED','QCD']]
+        pert_couplings_list = 9*[['QCD','QED']]
 
         # expected squared_orders (should take into
         #  account the perturbation
@@ -197,7 +201,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
-            self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
+            self.assertEqual(sorted(pert_couplings), sorted(fksprocess.born_amp['process']['perturbation_couplings']))
 
             self.assertEqual(len(fksprocess.born_amp['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
@@ -1105,7 +1109,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             return save_load_object.load_from_file(pjoin(root_path,'input_files',save_name))
         else:
             self.interface.do_import('model %s'%model_name)
-            print "Regenerating %s ..."%process_def
+            print(( "Regenerating %s ..."%process_def))
             self.interface.do_generate(process_def)
             proc = copy.copy(self.interface._fks_multi_proc)
             me = fks_helas.FKSHelasMultiProcess(proc)['matrix_elements'][0]
@@ -1173,19 +1177,19 @@ class TestAMCatNLOEW(unittest.TestCase):
         else:
             self.interface.do_set('complex_mass_scheme True')
             self.interface.do_import('model 2HDMCMStIIymbMSbar')
-            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."
+            print( "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")
             self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             uux_proc = copy.copy(self.interface._fks_multi_proc)
             uux_me = fks_helas.FKSHelasMultiProcess(uux_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'),uux_me)            
-            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."            
+            print( "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")            
             self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             ccx_proc = copy.copy(self.interface._fks_multi_proc)
             ccx_me = fks_helas.FKSHelasMultiProcess(ccx_proc)['matrix_elements'][0]
             save_load_object.save_to_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'),ccx_me)
             uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
             ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))
-            print "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."             
+            print( "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ...")             
             self.interface.do_generate('d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
             ddx_proc = copy.copy(self.interface._fks_multi_proc)
             ddx_me = fks_helas.FKSHelasMultiProcess(ddx_proc)['matrix_elements'][0]

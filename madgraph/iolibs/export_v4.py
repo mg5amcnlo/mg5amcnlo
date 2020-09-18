@@ -12,11 +12,14 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
+from six.moves import range
+from six.moves import zip
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
-from cStringIO import StringIO
+from six import StringIO
 from distutils import dir_util
 import itertools
 import fractions
@@ -24,6 +27,7 @@ import glob
 import logging
 import math
 import os
+import io
 import re
 import shutil
 import subprocess
@@ -141,11 +145,11 @@ class VirtualExporter(object):
         return False, matrix_element
            
     def export_model_files(self, model_v4_path):
-        raise Exception, "V4 model not supported by this type of exporter. Please use UFO model"
+        raise Exception("V4 model not supported by this type of exporter. Please use UFO model")
         return
     
     def export_helas(self, HELAS_PATH):
-        raise Exception, "V4 model not supported by this type of exporter. Please use UFO model"
+        raise Exception("V4 model not supported by this type of exporter. Please use UFO model")
         return
 
 #===============================================================================
@@ -228,10 +232,11 @@ class ProcessExporterFortran(VirtualExporter):
             run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
                                             processes)
-          
-    
+        
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
-        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        shutil.copyfile(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'),
+                        pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        
         
         
     #===========================================================================
@@ -298,14 +303,14 @@ class ProcessExporterFortran(VirtualExporter):
         if self.opt['clean']:
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
-            if os.environ.has_key('MADGRAPH_BASE'):
+            if 'MADGRAPH_BASE' in os.environ:
                 misc.call([pjoin('bin', 'internal', 'clean_template'),
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
                     misc.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
-                except Exception, why:
+                except Exception as why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
                                                 % (os.path.basename(self.dir_path),why))
 
@@ -344,7 +349,7 @@ class ProcessExporterFortran(VirtualExporter):
             MA5_interpreter = common_run_interface.CommonRunCmd.\
                           get_MadAnalysis5_interpreter(MG5DIR,ma5_path,loglevel=100)
         except (Exception, SystemExit) as e:
-            logger.warning('Fail to create a MadAnalysis5 instance. Therefore the default analysis with MadAnalysis5 will be empty.')
+            logger.warning('Fail to create a MadAnalysis5 instance. Therefore the default analysis with MadAnalysis5 will be empty')
             return
         if MA5_interpreter is None:
             return
@@ -880,7 +885,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Make sure aloha is in quadruple precision if needed
         old_aloha_mp=aloha.mp_precision
         aloha.mp_precision=self.opt['mp']
-
+        self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
@@ -916,7 +921,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
+        if any([any([tag.startswith('L') for tag in d[1]]) for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
@@ -952,7 +957,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         info = misc.get_pkg_info()
         info_lines = ""
-        if info and info.has_key('version') and  info.has_key('date'):
+        if info and 'version' in info and  'date' in info:
             info_lines = "#  Generated by MadGraph5_aMC@NLO v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
@@ -992,7 +997,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         switchmom in madevent"""
 
         nexternal = matrix_element.get_nexternal_ninitial()[0]
-        int_list = range(1, nexternal + 1)
+        int_list = list(range(1, nexternal + 1))
 
         return "DATA (IC(I,1),I=1,%i) /%s/" % (nexternal,
                                                      ",".join([str(i) for \
@@ -1037,7 +1042,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         ret_list = []  
         for index, order in enumerate(orders):      
-            for k in xrange(0, len(order), n):
+            for k in range(0, len(order), n):
                 ret_list.append("DATA (%s(%3r,i),i=%3r,%3r) /%s/" % \
                   (array_name,index + 1, k + 1, min(k + n, len(order)),
                               ','.join(["%5r" % i for i in order[k:k + n]])))
@@ -1049,7 +1054,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         of name 'name'. It splits rows in chunks of size n."""
         
         ret_list = []
-        for k in xrange(0, len(list), n):
+        for k in range(0, len(list), n):
             ret_list.append("DATA (%s(i),i=%3r,%3r) /%s/" % \
                   (name, k + 1, min(k + n, len(list)),
                                   ','.join(["%5r" % i for i in list[k:k + n]])))
@@ -1073,12 +1078,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
 
-                for k in xrange(0, len(num_list), n):
+                assert all([int(i)==i for i in num_list])
+
+                for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % i for i in num_list[k:k + n]])))
+                                     ','.join(["%5i" % int(i) for i in num_list[k:k + n]])))
                 my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
                 ret_list.append("C %s" % repr(my_cs))
+
             return ret_list
 
 
@@ -1223,7 +1231,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         if(not isinstance(color_amplitudes,list) or 
            not (color_amplitudes and isinstance(color_amplitudes[0],list))):
-                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_coefs"
+                raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_coefs")
 
         res_list = []
         my_cs = color.ColorString()
@@ -1247,7 +1255,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if color_basis:
                 my_cs.from_immutable(sorted(color_basis.keys())[index])
                 res_list.append("C %s" % repr(my_cs))
-            for k in xrange(0, len(num_list), n):
+            for k in range(0, len(num_list), n):
                 res_list.append("DATA (NUMCCOEF%s(%3r,i),i=%6r,%6r) /%s/" % \
                     (tag_letter,index + 1, k + 1, min(k + n, len(num_list)),
                                  ','.join(["%6r" % i for i in num_list[k:k + n]])))
@@ -1279,36 +1287,36 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if(col_amps and isinstance(col_amps[0],list)):
                 color_amplitudes=col_amps
             else:
-                raise MadGraph5Error, error_msg%'col_amps'
+                raise MadGraph5Error(error_msg%'col_amps')
         else:
-            raise MadGraph5Error, error_msg%'col_amps'
+            raise MadGraph5Error(error_msg%'col_amps')
         
         # Verify the sanity of the split_order_amps and split_order_names args
         if isinstance(split_order_amps,list):
             for elem in split_order_amps:
                 if len(elem)!=2:
-                    raise MadGraph5Error, error_msg%'split_order_amps'
+                    raise MadGraph5Error(error_msg%'split_order_amps')
                 # Check the first element of the two lists to make sure they are
                 # integers, although in principle they should all be integers.
                 if not isinstance(elem[0],tuple) or \
                    not isinstance(elem[1],tuple) or \
                    not isinstance(elem[0][0],int) or \
                    not isinstance(elem[1][0],int):
-                    raise MadGraph5Error, error_msg%'split_order_amps'
+                    raise MadGraph5Error(error_msg%'split_order_amps')
         else:
-            raise MadGraph5Error, error_msg%'split_order_amps'
+            raise MadGraph5Error(error_msg%'split_order_amps')
         
         if not split_order_names is None:
             if isinstance(split_order_names,list):
                 # Should specify the same number of names as there are elements
                 # in the key of the split_order_amps.
                 if len(split_order_names)!=len(split_order_amps[0][0]):
-                    raise MadGraph5Error, error_msg%'split_order_names'
+                    raise MadGraph5Error(error_msg%'split_order_names')
                 # Check the first element of the list to be a string
                 if not isinstance(split_order_names[0],str):
-                    raise MadGraph5Error, error_msg%'split_order_names'                    
+                    raise MadGraph5Error(error_msg%'split_order_names')                    
             else:
-                raise MadGraph5Error, error_msg%'split_order_names'                
+                raise MadGraph5Error(error_msg%'split_order_names')                
         
         # Now scan all contributing orders to be individually computed and 
         # construct the list of color_amplitudes for JAMP to be constructed
@@ -1317,8 +1325,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for i, amp_order in enumerate(split_order_amps):
             col_amps_order = []
             for jamp in color_amplitudes:
-                col_amps_order.append(filter(lambda col_amp: 
-                                               col_amp[1] in amp_order[1],jamp))
+                col_amps_order.append([col_amp for col_amp in jamp if col_amp[1] in amp_order[1]])
             if split_order_names:
                 res_list.append('C JAMPs contributing to orders '+' '.join(
                               ['%s=%i'%order for order in zip(split_order_names,
@@ -1351,9 +1358,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if(col_amps and isinstance(col_amps[0],list)):
                 color_amplitudes=col_amps
             else:
-                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+                raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_lines")
         else:
-            raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+            raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_lines")
 
 
         res_list = []
@@ -1446,9 +1453,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
             # Fill in missing entries of pdgtopdf
             for pdg in sum(initial_states,[]):
-                if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
+                if not pdg in pdgtopdf and not pdg in list(pdgtopdf.values()):
                     pdgtopdf[pdg] = pdg
-                elif pdg not in pdgtopdf and pdg in pdgtopdf.values():
+                elif pdg not in pdgtopdf and pdg in list(pdgtopdf.values()):
                     # If any particle has pdg code 7, we need to use something else
                     pdgtopdf[pdg] = 6000000 + pdg
                     
@@ -1480,7 +1487,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                  % (i + 1, i + 1)
 
                 for nbi,initial_state in enumerate(init_states):
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
                                         ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
@@ -1506,7 +1513,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pdf_lines = pdf_lines + "\nPD(IPROC)="
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
                     else:
@@ -1650,7 +1657,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 # Reorganize s-channel vertices to get a list of all
                 # subprocesses for each vertex
-                schannels = zip(*[s for s,t in stchannels])
+                schannels = list(zip(*[s for s,t in stchannels]))
             else:
                 schannels = []
 
@@ -1753,7 +1760,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             logger.warning('No Fortran Compiler detected! Please install one')
             f77_compiler = default_compiler['fortran'] # maybe misc fail so try with it
         else:
-            raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
+            raise MadGraph5Error('No Fortran Compiler detected! Please install one')
         logger.info('Use Fortran compiler ' + f77_compiler)
         
         
@@ -1783,7 +1790,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         self.replace_make_opt_f_compiler(to_replace)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
+        if 'MADGRAPH_DATA' not in os.environ and ReadWrite:
             self.replace_make_opt_f_compiler(to_replace, pjoin(MG5DIR, 'Template', 'LO'))
         
         return f77_compiler
@@ -1803,7 +1810,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            if 'clang' in out and  misc.which('clang'):
+            out = out.decode()
+            if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
                 compiler = 'g++'
@@ -1815,11 +1823,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             logger.warning('No c++ Compiler detected! Please install one')
             compiler = default_compiler # maybe misc fail so try with it
         else:
-            raise MadGraph5Error, 'No c++ Compiler detected! Please install one'
+            raise MadGraph5Error('No c++ Compiler detected! Please install one')
         logger.info('Use c++ compiler ' + compiler)
         self.replace_make_opt_c_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite and \
+        if 'MADGRAPH_DATA' not in os.environ and ReadWrite and \
            not __debug__ and not os.path.exists(pjoin(MG5DIR,'bin','create_release.py')):
             self.replace_make_opt_c_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
         
@@ -2039,7 +2047,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
-        if 'mode' in self.opt and self.opt['mode'] == "reweight":
+        if False:#'mode' in self.opt and self.opt['mode'] == "reweight":
             #add the module to hande the NLO weight
             files.copytree(pjoin(MG5DIR, 'Template', 'RWGTNLO'),
                           pjoin(self.dir_path, 'Source'))
@@ -2047,7 +2055,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
             
-        if self.prefix_info:
+        if self.prefix_info: 
             self.write_f2py_splitter()
             self.write_f2py_makefile()
             self.write_f2py_check_sa(matrix_elements,
@@ -2071,17 +2079,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         template = """
 %(python_information)s
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in):: procid
 CF2PY integer, intent(in) :: npdg
 CF2PY double precision, intent(out) :: ANS
 CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALE2
   integer pdgs(*)
-  integer npdg, nhel
+  integer npdg, nhel, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
   include 'coupl.inc'
@@ -2104,13 +2113,45 @@ CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters
       RETURN
       END
+      
+      
+      subroutine CHANGE_PARA(name, value)
+      implicit none
+CF2PY intent(in) :: name
+CF2PY intent(in) :: value
 
-    subroutine get_pdg_order(PDG)
+      character*512 name
+      double precision value
+
+      include '../Source/MODEL/input.inc'
+      include '../Source/MODEL/coupl.inc'
+
+      SELECT CASE (name)
+         %(parameter_setup)s
+         CASE DEFAULT
+            write(*,*) 'no parameter matching', name, value
+      END SELECT
+
+      return
+      end
+      
+    subroutine update_all_coup()
+    implicit none
+     call coup()
+    return 
+    end
+      
+
+    subroutine get_pdg_order(PDG, ALLPROC)
   IMPLICIT NONE
 CF2PY INTEGER, intent(out) :: PDG(%(nb_me)i,%(maxpart)i)  
+CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
   INTEGER PDG(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
   DATA PDGS/ %(pdgs)s /
+  DATA PIDS/ %(pids)s /
   PDG = PDGS
+  ALLPROC = PIDS
   RETURN
   END 
 
@@ -2126,52 +2167,81 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
   
         """
          
-        allids = self.prefix_info.keys()
+        allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
-        min_nexternal = min([len(ids) for ids in allids])
-        max_nexternal = max([len(ids) for ids in allids])
+        min_nexternal = min([len(ids[0]) for ids in allids])
+        max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for key, (prefix, tag) in self.prefix_info.items():
-            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+        for (key, pid), (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
-            current = [ids for ids in allids if len(ids)==n_ext]
-            if not current:
+            current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
+            current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
+            if not current_id:
                 continue
             if min_nexternal != max_nexternal:
                 if n_ext == min_nexternal:
                     text.append('       if (npdg.eq.%i)then' % n_ext)
                 else:
                     text.append('       else if (npdg.eq.%i)then' % n_ext)
-            for ii,pdgs in enumerate(current):
+            for ii,pdgs in enumerate(current_id):
+                pid = current_pid[ii]
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
                 if ii==0:
-                    text.append( ' if(%s) then ! %i' % (condition, i))
+                    text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, ii))
                 else:
-                    text.append( ' else if(%s) then ! %i' % (condition,i))
-                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[pdgs][0])
+                    text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,ii))
+                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[(pdgs,pid)][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
             text.append('endif')
+
+        params = self.get_model_parameter(self.model)
+        parameter_setup =[]
+        for key, var in params.items():
+            parameter_setup.append('        CASE ("%s")\n          %s = value' 
+                                   % (key, var))
 
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
                           'maxpart': max_nexternal,
                           'nb_me': len(allids),
                           'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
-                                             for i in range(max_nexternal) for pdg in allids),
-                          'prefix':'\',\''.join(allprefix)
+                                           for i in range(max_nexternal) for (pdg,pid) in allids),
+                          'prefix':'\',\''.join(allprefix),
+                          'pids': ','.join(str(pid) for (pdg,pid) in allids),
+                          'parameter_setup': '\n'.join(parameter_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
+    
+    def get_model_parameter(self, model):
+        """ returns all the model parameter
+        """
+        params = {}
+        for p in model.get('parameters')[('external',)]:
+            name = p.name
+            nopref = name[4:] if name.startswith('mdl_') else name
+            params[nopref] = name
             
+            block = p.lhablock
+            lha = '_'.join([str(i) for i in p.lhacode])
+            params['%s_%s' % (block.upper(), lha)] = name
+
+        return params                      
+                                        
+        
+        
+        
+         
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
@@ -2259,10 +2329,10 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             elif self.cmd_options['prefix'] == 'proc':
                 proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
             else:
-                raise Exception, '--prefix options supports only \'int\' and \'proc\''
+                raise Exception('--prefix options supports only \'int\' and \'proc\'')
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids)] = [proc_prefix, proc.get_tag()] 
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()] 
                 
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -2380,7 +2450,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             writers.FortranWriter.downcase = False
 
             
-        if not self.opt.has_key('sa_symmetry'):
+        if 'sa_symmetry' not in self.opt:
             self.opt['sa_symmetry']=False
 
 
@@ -2528,9 +2598,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                 content = '\n' + open(replace_dict['template_file2'])\
                                    .read()%replace_dict
                 writer.writelines(content)
-            return len(filter(lambda call: call.find('#') != 0, helas_calls))
+            return len([call for call in helas_calls if call.find('#') != 0])
         else:
-            replace_dict['return_value'] = len(filter(lambda call: call.find('#') != 0, helas_calls))
+            replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
 
     def write_check_sa_splitOrders(self,squared_orders, split_orders, nexternal,
@@ -2587,7 +2657,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                                                          get_line_denominators()
         matrix_strings = []
         my_cs = color.ColorString()
-        for i_color in xrange(len(color_denominators)):
+        for i_color in range(len(color_denominators)):
             # Then write the numerators for the matrix elements
             my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
             t_str=repr(my_cs)
@@ -2602,7 +2672,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                 if ctype in ['ColorOne' ]:
                     continue
                 if ctype not in ['T', 'Tr' ]:
-                    raise MadGraph5Error, 'Color Structure not handled by Matchbox: %s'  % ctype
+                    raise MadGraph5Error('Color Structure not handled by Matchbox: %s'  % ctype)
                 tmparg += ['0']
                 arg +=tmparg
             for j, v in enumerate(arg):
@@ -2645,9 +2715,9 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
             if(col_amps and isinstance(col_amps[0],list)):
                 col_amps=col_amps
             else:
-                raise MadGraph5Error, error_msg % 'col_amps'
+                raise MadGraph5Error(error_msg % 'col_amps')
         else:
-            raise MadGraph5Error, error_msg % 'col_amps'
+            raise MadGraph5Error(error_msg % 'col_amps')
 
         text = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
                                             JAMP_format=JAMP_format,
@@ -3166,9 +3236,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             file = file % replace_dict
             # Write the file
             writer.writelines(file)
-            return len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor
+            return len([call for call in helas_calls if call.find('#') != 0]),ncolor
         else:
-            replace_dict['return_value'] = (len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor)
+            replace_dict['return_value'] = (len([call for call in helas_calls if call.find('#') != 0]),ncolor)
             
     #===========================================================================
     # write_source_makefile
@@ -3216,8 +3286,7 @@ c     channel position
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
 
         if ninitial < 1 or ninitial > 2:
-            raise writers.FortranWriter.FortranWriterError, \
-                  """Need ninitial = 1 or 2 to write auto_dsig file"""
+            raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
 
         replace_dict = {}
 
@@ -3371,7 +3440,7 @@ c     channel position
 
                 # Reorganize s-channel vertices to get a list of all
                 # subprocesses for each vertex
-                schannels = zip(*[s for s,t in stchannels])
+                schannels = list(zip(*[s for s,t in stchannels]))
             else:
                 schannels = []
 
@@ -3458,6 +3527,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
+    done_warning_tchannel = False
     
     # helper function for customise helas writter
     @staticmethod
@@ -3845,7 +3915,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+
+        # set limitation linked to the model
+    
+        
         # indicate the PDG of all initial particle
         try:
             pdgs1 = [p.get_initial_pdg(1) for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes') if p.get_initial_pdg(1)]
@@ -3901,7 +3976,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if makejpg:
             try:
                 os.remove(pjoin(self.dir_path,'HTML','card.jpg'))
-            except Exception, error:
+            except Exception as error:
                 pass
             
             if misc.which('gs'):
@@ -3976,6 +4051,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             # Set lowercase/uppercase Fortran code
             writers.FortranWriter.downcase = False
 
+        # check if MLM/.../ is supported for this matrix-element and update associate flag
+        if self.model and 'MLM' in self.model["limitations"]:
+            if 'MLM' not in self.proc_characteristic["limitations"]:
+                used_couplings = matrix_element.get_used_couplings(output="set") 
+                for vertex in self.model.get('interactions'):
+                    particles = [p for p in vertex.get('particles')]
+                    if 21 in [p.get('pdg_code') for p in particles]:
+                        colors = [par.get('color') for par in particles]
+                        if 1 in colors:
+                            continue
+                        elif 'QCD' not in vertex.get('orders'):
+                            for bad_coup in vertex.get('couplings').values():
+                                if bad_coup in used_couplings:
+                                    self.proc_characteristic["limitations"].append('MLM')
+                                    break
+
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':''}
@@ -3983,13 +4074,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
-        
+        if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
+            logger.warning("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False")
+            ProcessExporterFortranME.done_warning_tchannel = True
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
 
         #adding the support for the fake width (forbidding too small width)
         mass_width = matrix_element.get_all_mass_widths()
+        mass_width = sorted(list(mass_width))
         width_list = set([e[1] for e in mass_width])
         
         replace_dict['fake_width_declaration'] = \
@@ -3998,6 +4092,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
         one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        
         for m, w in mass_width:
             if w == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
@@ -4108,7 +4203,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ampsplitorders']='\n'.join(amp_so)
         replace_dict['sqsplitorders']='\n'.join(sqamp_so)
         
-        
+
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
         jamp_lines = self.get_JAMP_lines_split_order(\
@@ -4120,6 +4215,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                           'iolibs/template_files/%s' % self.matrix_file)
         replace_dict['template_file2'] = pjoin(_file_path, \
                           'iolibs/template_files/split_orders_helping_functions.inc')      
+        
+        s1,s2 = matrix_element.get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
+        
         if writer:
             file = open(replace_dict['template_file']).read()
             file = file % replace_dict
@@ -4128,9 +4228,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                                             .read()%replace_dict
             # Write the file
             writer.writelines(file)
-            return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+            return len([call for call in helas_calls if call.find('#') != 0]), ncolor
         else:
-            replace_dict['return_value'] = (len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor)
+            replace_dict['return_value'] = (len([call for call in helas_calls if call.find('#') != 0]), ncolor)
             return replace_dict
         
     #===========================================================================
@@ -4171,8 +4271,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                                            p.get('color')>1])))
 
         if ninitial < 1 or ninitial > 2:
-            raise writers.FortranWriter.FortranWriterError, \
-                  """Need ninitial = 1 or 2 to write auto_dsig file"""
+            raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
 
         replace_dict = {}
 
@@ -4247,7 +4346,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         lines = self.get_icolamp_lines(mapconfigs, matrix_element, 1)
         lines.insert(0, "logical icolamp(%d,%d,1)" % \
-                        (max(len(matrix_element.get('color_basis').keys()), 1),
+                        (max(len(list(matrix_element.get('color_basis').keys())), 1),
                          len(mapconfigs)))
 
 
@@ -4536,7 +4635,7 @@ c           This is dummy particle used in multiparticle vertices
 
                 # Reorganize s-channel vertices to get a list of all
                 # subprocesses for each vertex
-                schannels = zip(*[s for s,t in stchannels])
+                schannels = list(zip(*[s for s,t in stchannels]))
             else:
                 schannels = []
 
@@ -4759,11 +4858,9 @@ c           This is dummy particle used in multiparticle vertices
         lines = []
 
         # Extract process with all decays included
-        final_legs = filter(lambda leg: leg.get('state') == True,
-                       matrix_element.get('processes')[0].get_legs_with_decays())
+        final_legs = [leg for leg in matrix_element.get('processes')[0].get_legs_with_decays() if leg.get('state') == True]
 
-        ninitial = len(filter(lambda leg: leg.get('state') == False,
-                              matrix_element.get('processes')[0].get('legs')))
+        ninitial = len([leg for leg in matrix_element.get('processes')[0].get('legs') if leg.get('state') == False])
 
         identical_indices = {}
 
@@ -4776,12 +4873,12 @@ c           This is dummy particle used in multiparticle vertices
                 identical_indices[leg.get('id')] = [i + ninitial + 1]
 
         # Remove keys which have only one particle
-        for key in identical_indices.keys():
+        for key in list(identical_indices.keys()):
             if len(identical_indices[key]) < 2:
                 del identical_indices[key]
 
         # Write mg.sym file
-        lines.append(str(len(identical_indices.keys())))
+        lines.append(str(len(list(identical_indices.keys()))))
         for key in identical_indices.keys():
             lines.append(str(len(identical_indices[key])))
             for number in identical_indices[key]:
@@ -4979,8 +5076,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         ncomb = matrix_elements[0].get_helicity_combinations()
         for me in matrix_elements[1:]:
             if ncomb!=me.get_helicity_combinations():
-                raise MadGraph5Error, "All grouped processes must share the "+\
-                                       "same number of helicity configurations."                
+                raise MadGraph5Error("All grouped processes must share the "+\
+                                       "same number of helicity configurations.")                
 
         filename = 'driver.f'
         self.write_driver(writers.FortranWriter(filename),ncomb,
@@ -5125,6 +5222,16 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symfact_orig.dat'
         self.write_symfact_file(open(filename, 'w'), symmetry)
+        
+        # check consistency
+        for i, sym_fact in enumerate(symmetry):
+            
+            if sym_fact >= 0:
+                continue
+            if nqcd_list[i] != nqcd_list[abs(sym_fact)-1]:
+                misc.sprint(i, sym_fact, nqcd_list[i], nqcd_list[abs(sym_fact)])
+                raise Exception("identical diagram with different QCD powwer")
+        
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
@@ -5198,6 +5305,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         ncomb=matrix_elements[0].get_helicity_combinations()
         replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+
+        s1,s2 = matrix_elements[0].get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
         
         if writer:
             file = open(pjoin(_file_path, \
@@ -5485,7 +5596,8 @@ class UFO_model_to_mg4(object):
     
         lower_dict={}
         duplicate = set()
-        keys = self.model['parameters'].keys()
+        keys = list(self.model['parameters'].keys())
+        keys.sort()
         for key in keys:
             for param in self.model['parameters'][key]:
                 lower_name = param.name.lower()
@@ -5493,7 +5605,7 @@ class UFO_model_to_mg4(object):
                     continue
                 try:
                     lower_dict[lower_name].append(param)
-                except KeyError,error:
+                except KeyError as error:
                     lower_dict[lower_name] = [param]
                 else:
                     duplicate.add(lower_name)
@@ -5550,7 +5662,7 @@ class UFO_model_to_mg4(object):
         """modify the couplings to fit with MG4 convention """
             
         # Keep only separation in alphaS        
-        keys = self.model['parameters'].keys()
+        keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
         for key in keys:
             to_add = [o for o in self.model['parameters'][key] if o.name]
@@ -5562,7 +5674,7 @@ class UFO_model_to_mg4(object):
             else:
                 self.params_indep += to_add
         # same for couplings
-        keys = self.model['couplings'].keys()
+        keys = list(self.model['couplings'].keys())
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if any([(k in key) for k in self.PS_dependent_key]):
@@ -5611,13 +5723,18 @@ class UFO_model_to_mg4(object):
         
         if format == 'fortran':
             fsock = writers.FortranWriter(file_path, 'w')
-        else:
-            fsock = open(file_path, 'w')
-        
-        file.writelines(fsock, comment * 77 + '\n')
-        file.writelines(fsock,'%(comment)s written by the UFO converter\n' % \
+            write_class = io.FileIO
+            
+            write_class.writelines(fsock, comment * 77 + '\n')
+            write_class.writelines(fsock, '%(comment)s written by the UFO converter\n' % \
                                {'comment': comment + (6 - len(comment)) *  ' '})
-        file.writelines(fsock, comment * 77 + '\n\n')
+            write_class.writelines(fsock, comment * 77 + '\n\n')
+        else:
+            fsock = open(file_path, 'w')  
+            fsock.writelines(comment * 77 + '\n')
+            fsock.writelines('%(comment)s written by the UFO converter\n' % \
+                                   {'comment': comment + (6 - len(comment)) *  ' '})
+            fsock.writelines(comment * 77 + '\n\n')
         return fsock       
 
     
@@ -5681,23 +5798,29 @@ class UFO_model_to_mg4(object):
         if self.opt['loop_induced']:
             #loop induced follow MadEvent way to handle the card.
             load_card = ''
-            lha_read_filename='lha_read.f'            
+            lha_read_filename='lha_read.f' 
+            updateloop_default = '.true.'           
         elif self.opt['export_format'] in ['madloop','madloop_optimized', 'madloop_matchbox']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
+            updateloop_default = '.true.'
         elif self.opt['export_format'].startswith('standalone') \
             or self.opt['export_format'] in ['madweight', 'plugin']\
             or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
+            updateloop_default = '.true.'
         else:
             load_card = ''
             lha_read_filename='lha_read.f'
+            updateloop_default = '.false.'
+            
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
                                        os.path.join(self.dir_path,'lha_read.f'))
         
         file=file%{'includes':'\n      '.join(includes),
-                   'load_card':load_card}
+                   'load_card':load_card,
+                   'updateloop_default': updateloop_default}
         writer=open(os.path.join(self.dir_path,'rw_para.f'),'w')
         writer.writelines(file)
         writer.close()
@@ -5943,7 +6066,17 @@ class UFO_model_to_mg4(object):
                 
         # First make sure it is a CTparameter
         if param not in self.allCTparameters and \
-           cjg_param not in self.allCTparameters:
+                                          cjg_param not in self.allCTparameters:
+            if hasattr(self.model, "notused_ct_params"):
+                if param.endswith(('_fin_','_1eps_','_2eps_')):
+                    limit = -2
+                elif param.endswith(('_1eps','_2eps')):
+                    limit =-1
+                else:
+                    limit = 0
+                base = '_'.join(param.split('_')[1:limit])
+                if base in self.model.notused_ct_params:
+                    return False
             return True
         
         # Now check if it is in the list of CTparameters actually used
@@ -5961,7 +6094,7 @@ class UFO_model_to_mg4(object):
             return
         
         # All CTparameters appearin in all CT couplings        
-        allCTparameters=self.model.map_CTcoup_CTparam.values()
+        allCTparameters=list(self.model.map_CTcoup_CTparam.values())
         # Define in this class the list of all CT parameters
         self.allCTparameters=list(\
                             set(itertools.chain.from_iterable(allCTparameters)))
@@ -6020,10 +6153,18 @@ class UFO_model_to_mg4(object):
             fsock.writelines("aS = G**2/4/pi\n")
         if mp:
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
+
+        # these are the parameters needed for the loops
+        if hasattr(self, 'allCTparameters') and self.allCTparameters:
+            ct_params = [param for param in self.params_dep \
+                if self.check_needed_param(param.name) and \
+                   param.name.lower() in self.allCTparameters]
+        else:
+            ct_params = []
+        
         for param in self.params_dep:
-            # check whether the parameter is a CT parameter
-            # if yes,just used the needed ones
-            if not self.check_needed_param(param.name):
+            # skip the CT parameters, which have already been done before
+            if not self.check_needed_param(param.name) or param in ct_params:
                 continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
@@ -6031,6 +6172,20 @@ class UFO_model_to_mg4(object):
             elif mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))
+
+        fsock.write_comments('\nParameters that should be updated for the loops.\n')
+
+        # do not skip the evaluation of these parameters in MP
+        if not mp and ct_params: fsock.writelines('if (updateloop) then')
+        for param in ct_params:
+            if dp:
+                fsock.writelines("%s = %s\n" % (param.name,
+                                            self.p_to_f.parse(param.expr)))
+            elif mp:
+                fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
+                                            self.mp_p_to_f.parse(param.expr)))
+
+        if not mp and ct_params: fsock.writelines('endif')
 
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
 
@@ -6134,7 +6289,9 @@ class UFO_model_to_mg4(object):
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
-        fsock.writelines("""include \'input.inc\'
+        fsock.writelines("""logical updateloop
+                            common /to_updateloop/updateloop
+                            include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
@@ -6165,6 +6322,8 @@ class UFO_model_to_mg4(object):
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
+                            logical updateloop
+                            common /to_updateloop/updateloop
                             include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
@@ -6279,12 +6438,11 @@ class UFO_model_to_mg4(object):
         if ufo_fct:
             for fct in ufo_fct:
                 # already handle by default
-                if fct.name not in ["complexconjugate", "re", "im", "sec", 
+                if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
                                     "grreglog","regsqrt"]:
                     additional_fct.append(fct.name)
-
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
@@ -6675,12 +6833,13 @@ class UFO_model_to_mg4(object):
         ufo_fct = self.model.get('functions')
         if ufo_fct:
             fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
+            done = []
             for fct in ufo_fct:
                 # already handle by default
-                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
+                if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt"]:
-
+                                    "grreglog","regsqrt"] + done:
+                    done.append(str(fct.name.lower()))
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -6974,7 +7133,6 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
       'cuttools_dir': cmd._cuttools_dir,
       'iregi_dir':cmd._iregi_dir,
-      'pjfry_dir':cmd.options['pjfry'],
       'golem_dir':cmd.options['golem'],
       'samurai_dir':cmd.options['samurai'],
       'ninja_dir':cmd.options['ninja'],
@@ -7003,7 +7161,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                     ExporterClass=loop_exporters.LoopProcessExporterFortranMatchBox
                     MadLoop_SA_options['export_format'] = 'madloop_matchbox'
                 else:
-                    raise Exception, "output_type not recognize %s" % output_type
+                    raise Exception("output_type not recognize %s" % output_type)
             return ExporterClass(cmd._export_dir, MadLoop_SA_options)
         else:
             raise MadGraph5Error('MG5_aMC cannot find the \'loop_material\' directory'+\
@@ -7096,9 +7254,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                 return cmd._export_plugin(cmd._export_dir, opt)
 
         else:
-            raise Exception, 'Wrong export_v4 format'
+            raise Exception('Wrong export_v4 format')
     else:
-        raise MadGraph5Error, 'Output type %s not reckognized in ExportV4Factory.'
+        raise MadGraph5Error('Output type %s not reckognized in ExportV4Factory.')
     
             
 
@@ -7123,8 +7281,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         other helper files."""
 
         if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
-            raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "subproc_group object not SubProcessGroup"
+            raise base_objects.PhysicsObject.PhysicsObjectError("subproc_group object not SubProcessGroup")
 
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\

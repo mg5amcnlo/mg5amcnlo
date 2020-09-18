@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -249,8 +249,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
-C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -306,7 +306,7 @@ C     ----------
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_47,AMP(1))
+      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_11,AMP(1))
 C     JAMPs contributing to orders QCD=0 QED=1
       JAMP(1,1)=+AMP(1)
 
@@ -461,8 +461,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -556,8 +556,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
-     $ //'DEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 

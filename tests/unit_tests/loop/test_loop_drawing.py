@@ -16,6 +16,8 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import itertools
 import logging
@@ -23,6 +25,7 @@ import math
 import os
 import pickle
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -61,10 +64,13 @@ class TestLoopDrawer(unittest.TestCase):
             TestLoopDrawer.model = TestLoopDrawer.cmd._curr_model
             try:
                 TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
-                                            '../../input_files/test_draw_nlo.obj'), 'r'))
-            except Exception, error:
-                print error
+                                            '../../input_files/test_draw_nlo.obj'), 'rb'))
+            except Exception as error:
+                print(error)
+                raise Exception
                 pass
+            TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                            '../../input_files/test_draw_nlo.obj'), 'rb'))
 
     class FakeAMP(dict):
         
@@ -393,6 +399,8 @@ class TestLoopDrawer(unittest.TestCase):
             self.assertnozerolength(diagram)
 
     def test_NLO_draw_uux_uuxddx(self):
+        TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                            '../../input_files/test_draw_nlo.obj'), 'rb'))
         for i in range(139,140):
             diagram = copy.deepcopy(self.store_diagram['u u~ > u u~ d d~'][i])
             structure = self.store_diagram['u u~ > u u~ d d~']['structure']
@@ -937,8 +945,8 @@ if __name__ == '__main__':
     #Those one are generated with cmd and store in files with pickle module.
     model_path = pjoin(_file_path, '../../input_files','LoopSMTest')
     process_diag = {}
-    process_diag['g g > g g'] = range(85)#[0, 12]
-    process_diag['g g > g g g'] = range(1500, 1600)
+    process_diag['g g > g g'] = list(range(85))#[0, 12]
+    process_diag['g g > g g g'] = list(range(1500, 1600))
     process_diag['u u~ > u u~ g'] =[51]
     process_diag['u u~ > u u~ d d~'] = [139]
     cmd = MasterCmd()
@@ -946,12 +954,12 @@ if __name__ == '__main__':
     # Create the diagrams
     diag_content = {}
     for gen_line, pos_list in process_diag.items():
-        print gen_line, ':',
+        print(gen_line, ':', end=' ')
         gen_line_with_order = gen_line + ' [virt=QCD]'
         cmd.do_generate(gen_line_with_order)
         #Look for decay chains
         amplitude = cmd._curr_amps[0]
-        print len(amplitude.get('diagrams'))
+        print(len(amplitude.get('diagrams')))
         diag_content[gen_line] = {}
         diag_content[gen_line]['structure'] = amplitude.get('structure_repository')
         for pos in pos_list:
@@ -959,18 +967,18 @@ if __name__ == '__main__':
 
     # register the full amplitutde
     process_diag = {}
-    process_diag['g g > g g'] = range(200,230)#[0, 12]
-    process_diag['d d~ > e+ e- mu+ mu-'] = range(72)
+    process_diag['g g > g g'] = list(range(200,230))#[0, 12]
+    process_diag['d d~ > e+ e- mu+ mu-'] = list(range(72))
     cmd = MasterCmd()
     cmd.do_import('model %s' % model_path )
     # Create the diagrams
     for gen_line, pos_list in process_diag.items():
-        print gen_line, ':',
+        print(gen_line, ':', end=' ')
         gen_line_with_order = gen_line + ' [virt=QCD]'
         cmd.do_generate(gen_line_with_order)
         #Look for decay chains
         amplitude = cmd._curr_amps[0]
-        print len(amplitude.get('diagrams'))
+        print(len(amplitude.get('diagrams')))
         matrix_elements = loop_helas_objects.LoopHelasProcess(cmd._curr_amps)
         matrix_element = matrix_elements.get('matrix_elements')[0]
         diag = matrix_element.get_base_amplitude().get('diagrams')
@@ -984,7 +992,7 @@ if __name__ == '__main__':
     file_test_diagram = open(os.path.join(_file_path , \
                                     '../../input_files/test_draw_nlo.obj'), 'w')
     pickle.dump(diag_content, file_test_diagram)
-    print 'done'
+    print('done')
         
         
         

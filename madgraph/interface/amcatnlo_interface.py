@@ -16,6 +16,8 @@
    Uses the cmd package for command interpretation and tab completion.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import logging
 import pydoc
@@ -30,7 +32,7 @@ import signal
 import tempfile
 import itertools
 import os
-import cPickle
+import six.moves.cPickle
 
 
 import madgraph
@@ -55,6 +57,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
+from six.moves import range
 
 #usefull shortcut
 pjoin = os.path.join
@@ -78,7 +81,7 @@ def generate_directories_fks_async(i):
     olpopts = arglist[6]
     
     infile = open(mefile,'rb')
-    me = cPickle.load(infile)
+    me = six.moves.cPickle.load(infile)
     infile.close()      
     
     calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
@@ -88,9 +91,10 @@ def generate_directories_fks_async(i):
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-    
-    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic, processes]
-
+    if six.PY2:
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic, processes]
+    else:
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -172,8 +176,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 return
             else:
                 self.help_launch()
-                raise self.InvalidCmd, \
-                       'No default location available, please specify location.'
+                raise self.InvalidCmd('No default location available, please specify location.')
         
         if len(args) > 2:
             self.help_launch()
@@ -181,7 +184,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
         elif len(args) == 2:
             if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
+                raise self.InvalidCmd('%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1])
         else:
             #check if args[0] is path or mode
             if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto'] and self._done_export:
@@ -191,7 +194,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args.append('auto')
             else:
                 self.help_launch()
-                raise self.InvalidCmd, '%s is not a valid process directory nor run mode' % args[0]
+                raise self.InvalidCmd('%s is not a valid process directory nor run mode' % args[0])
 
         mode = args[1]
         
@@ -203,7 +206,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
             path = pjoin(MG4DIR,args[0])
         else:    
-            raise self.InvalidCmd, '%s is not a valid directory' % args[0]
+            raise self.InvalidCmd('%s is not a valid directory' % args[0])
         args[0] = path
                 
         # inform where we are for future command
@@ -211,10 +214,10 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
         # check for incompatible options/modes
         if options['multicore'] and options['cluster']:
-            raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
-                    ' are not compatible. Please choose one.'
+            raise self.InvalidCmd('options -m (--multicore) and -c (--cluster)' + \
+                    ' are not compatible. Please choose one.')
         if mode == 'NLO' and options['reweightonly']:
-            raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
+            raise self.InvalidCmd('option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"')
 
 
 class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
@@ -249,8 +252,8 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             if len(args) > 1 and args[1] == 'aloha':
                 try:
                     return self.aloha_complete_output(text, line, begidx, endidx)
-                except Exception, error:
-                    print error
+                except Exception as error:
+                    print(error)
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -374,7 +377,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              'born': self._fks_multi_proc.get_born_amplitudes,
                              'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
-                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
@@ -391,7 +394,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self._curr_amps = diagram_generation.AmplitudeList()
 
             if args[0] == 'diagrams_text':
-                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
@@ -411,20 +414,20 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self._curr_amps = diagram_generation.AmplitudeList()
                     
             elif args[0] == 'processes':
-                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
                     if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
-                    print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+                    print('\n'.join(amp.nice_string_processes() for amp in self._curr_amps))
                 else:
-                    print 'Born processes:'
-                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']())
-                    print 'Real processes:'
-                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
-                    print 'Loop processes:'
-                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['loop']())
+                    print('Born processes:')
+                    print('\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']()))
+                    print('Real processes:')
+                    print('\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']()))
+                    print('Loop processes:')
+                    print('\n'.join(amp.nice_string_processes() for amp in get_amps_dict['loop']()))
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -470,9 +473,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # if some orders have been set by the user,
         # check that all the orders of the model have been specified
         # set to zero those which have not been specified and warn the user
-        if myprocdef['orders'] and not all([o in myprocdef['orders'].keys() for o in myprocdef['model'].get_coupling_orders()]):
+        if myprocdef['orders'] and not all([o in list(myprocdef['orders'].keys()) for o in myprocdef['model'].get_coupling_orders()]):
             for o in myprocdef['model'].get_coupling_orders():
-                if o not in myprocdef['orders'].keys():
+                if o not in list(myprocdef['orders'].keys()):
                     myprocdef['orders'][o] = 0
                     logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
                                     'If this is not what you need, please regenerate with the correct orders.') % o)
@@ -483,11 +486,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             # couplings in the model
             weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
             if not weighted:
-                raise MadGraph5Error,'\nProcess orders cannot be determined automatically. \n' + \
-                                      'Please specify them from the command line.'
+                raise MadGraph5Error('\nProcess orders cannot be determined automatically. \n' + \
+                                      'Please specify them from the command line.')
 
             # this is a very rough attempt, and works only to guess QED/QCD
             qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+            if qed < 0 or qcd < 0:
+                raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \
+                      ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
+                      'Please specify the coupling orders from the command line.')
             orders = {'QED': qed, 'QCD': qcd}
             # set all the other coupling to zero
             for o in myprocdef['model'].get_coupling_orders():
@@ -515,7 +522,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # then increase the orders which are perturbed
         for pert in myprocdef['perturbation_couplings']:
             # if orders have been specified increase them
-            if myprocdef['orders'].keys() != ['WEIGHTED']:
+            if list(myprocdef['orders'].keys()) != ['WEIGHTED']:
                 try:
                     myprocdef['orders'][pert] += 2
                 except KeyError:
@@ -528,7 +535,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     myprocdef['squared_orders'][pert] = 200
 
         # update also the WEIGHTED entry
-        if 'WEIGHTED' in myprocdef['orders'].keys():
+        if 'WEIGHTED' in list(myprocdef['orders'].keys()):
             myprocdef['orders']['WEIGHTED'] += 1 * \
                     max([myprocdef.get('model').get('order_hierarchy')[ord] for \
                     ord in myprocdef['perturbation_couplings']])
@@ -659,15 +666,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
-                                 a1.get_number_of_diagrams())
-
+            self._curr_amps.sort(key = lambda a: a.get_number_of_diagrams(), reverse=True)
+                
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
                 if group:
-                    raise MadGraph5Error, "Cannot group subprocesses when "+\
-                                                              "exporting to NLO"
+                    raise MadGraph5Error("Cannot group subprocesses when "+\
+                                                              "exporting to NLO")
                 else:
                     self._curr_matrix_elements = \
                              fks_helas.FKSHelasMultiProcess(\
@@ -777,7 +783,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     # the very large timeout passed to get is to be able to catch
                     # KeyboardInterrupts
                     diroutputmap = pool.map_async(generate_directories_fks_async,
-                                                  range(len(glob_directories_map))).get(9999999)
+                                                  list(range(len(glob_directories_map)))).get(9999999)
                 except KeyboardInterrupt:
                     pool.terminate()
                     raise KeyboardInterrupt 
@@ -795,7 +801,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 proc_charac['nexternal'] = max([diroutput[3]['nexternal'] for diroutput in diroutputmap])
                 ninitial_set = set([diroutput[3]['ninitial'] for diroutput in diroutputmap])
                 if len(ninitial_set) != 1:
-                    raise MadGraph5Error, ("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
+                    raise MadGraph5Error("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
 
                 self.born_processes = []
@@ -809,8 +815,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
-                    self.born_processes.extend(diroutput[4])
-                    self.born_processes_for_olp.append(diroutput[4][0])
+                    if six.PY2:
+                        self.born_processes.extend(diroutput[4])
+                        self.born_processes_for_olp.append(diroutput[4][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)
