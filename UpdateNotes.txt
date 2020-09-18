@@ -3,7 +3,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 3.0.4
      MZ+SC+ERN+CS: The code can be linked to PineAPPL (arXiv:2008.12789), making it possible
 	 to generate PDF-independent fast-interploation grids including EW corrections.
-	 This supersedes the interface to ApplGrid+aMCFast which was not working in v3.
+	 This supersedes the interface to ApplGrid+aMCFast which was not working in v3
+     MZ: Fixed behaviour with initial-state photons from anti-protons
 
 3.0.2
      include up to 2.6.5
