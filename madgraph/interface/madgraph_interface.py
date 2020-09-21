@@ -3050,7 +3050,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         existing amplitudes
         or merge two model
         """
-
+        
         args = self.split_arg(line)
 
         
@@ -5097,6 +5097,7 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new process
         self._done_export = False
+        self._curr_proc_defs.append(myprocdef)
 
         cpu_time2 = time.time()
 
