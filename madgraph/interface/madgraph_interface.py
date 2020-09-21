@@ -3329,9 +3329,13 @@ This implies that with decay chains:
         if answer != 'y':
             return 
         
-        #Object_library (.iteritems() -> .items())
+        #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
+        #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
+        # raise UFOError, "" -> raise UFOError()
+        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
+                      'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
