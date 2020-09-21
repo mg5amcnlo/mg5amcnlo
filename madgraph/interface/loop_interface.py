@@ -905,6 +905,8 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                       amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
             (cpu_time2 - cpu_time1))
+            
+        self._curr_proc_def.append(myprocdef)
 
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
