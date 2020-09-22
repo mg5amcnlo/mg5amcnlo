@@ -1,5 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.8.1.py2(22/09/22):
+      OM: Fix for the auto width for three body decay in presence of identical particles.
+      OM: add support for __header__ in UFO model
+      OM: allow restriction card to have auto-width
+      OM: fixing some html link (removed ajax link forbidden by major web browser)
+
 2.8.0.py2(21/08/20):
       OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the
           effective photon approximation. This mode behaves like the "3" one: The cut-off scale of the approximation

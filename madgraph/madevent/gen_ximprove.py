@@ -906,6 +906,7 @@ class gen_ximprove(object):
         logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
+        
         all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
                                                 x.get('luminosity') > 0 else -1) 
                           
@@ -991,7 +992,7 @@ class gen_ximprove_v4(gen_ximprove):
         f.close()
     
     def increase_precision(self, rate=3):
-        misc.sprint(rate)
+        #misc.sprint(rate)
         if rate < 3:
             self.max_event_in_iter = 20000
             self.min_events = 7500

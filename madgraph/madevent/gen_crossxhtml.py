@@ -65,19 +65,6 @@ function UrlExists(url) {
   }
   return http.status!=404;
 }
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-       if ( ! UrlExists(alt)){
-         obj.href = url;
-         return 1==1;
-        }
-       obj.href = alt;
-       return 1 == 2;
-    }
-    obj.href = url;
-    return 1==1;
-}
 </script>    
     <H2 align=center> Results in the %(model)s for %(process)s </H2> 
     <HR>
@@ -1011,14 +998,16 @@ class OneTagResults(dict):
     def special_link(self, link, level, name):
         
         id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
-        
-        return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        return " <a  id='%(id)s' href='%(link)s.gz'>%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
+        #return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        #      % {'link': link, 'id': id, 'name':name}
     
     def double_link(self, link1, link2, name, id):
-        
-         return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
-              % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
+        return " <a  id='%(id)s' href='%(link2)s'>%(name)s</a>" \
+              % {'link1': link1, 'link2':link2, 'id': id, 'name':name}
+        #return " <a  id='%(id)s' href='%(link2)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
+        #      % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
         
     def get_links(self, level):
         """ Get the links for a given level"""

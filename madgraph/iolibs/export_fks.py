@@ -14,7 +14,6 @@
 ################################################################################
 """Methods and classes to export matrix elements to fks format."""
 
-from distutils import dir_util
 import glob
 import logging
 import os
@@ -97,8 +96,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
             for card in ['plot_card']:
                 if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
@@ -3399,8 +3398,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)
             # Copy plot_card
             for card in ['plot_card']:
