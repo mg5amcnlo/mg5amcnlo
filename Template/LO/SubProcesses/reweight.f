@@ -417,6 +417,12 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(1,ida1)
         endif
+      else if (abs(get_color(idmo)).eq.8.and.abs(get_color(idda1)).eq.1.and.abs(get_color(idda2)).eq.8)then
+         ipart(1,imo)=ipart(1,ida2)
+         ipart(2,imo)=ipart(2,ida2)
+      else if (abs(get_color(idmo)).eq.8.and.abs(get_color(idda1)).eq.8.and.abs(get_color(idda2)).eq.1)then
+         ipart(1,imo)=ipart(1,ida1)
+         ipart(2,imo)=ipart(2,ida1)
       else
          write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
          write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
@@ -674,12 +680,12 @@ c     Reset chcluster to run_card value
 C   If we have fixed factorization scale, for ickkw>0 means central
 C   scale, i.e. last two scales (ren. scale for these vertices are
 C   anyway already set by "scale" above)
-      if(ickkw.gt.0) then
-         if(fixed_fac_scale.and.first)then
+      if (first) then
             q2bck(1)=q2fact(1)
             q2bck(2)=q2fact(2)
             first=.false.
-         else if(fixed_fac_scale) then
+      else if(ickkw.gt.0) then
+         if(fixed_fac_scale) then
             q2fact(1)=q2bck(1)
             q2fact(2)=q2bck(2)
          endif
@@ -1732,6 +1738,10 @@ c           fs sudakov weight
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))
+      else if (abs(lpp(1)).ge.2.and.abs(lpp(1)).le.4) then
+         q2fact(1)=q2bck(1)
+      else if (abs(lpp(2)).ge.2.or.abs(lpp(2)).le.4) then
+         q2fact(2)=q2bck(2)
       endif
 
       if (btest(mlevel,3)) then

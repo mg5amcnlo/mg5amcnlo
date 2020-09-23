@@ -1308,7 +1308,7 @@ class HwU(Histogram):
             use_lhapdf=False
             try:
                 lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                               stdout=subprocess.PIPE).stdout.read().strip()
+                                               stdout=subprocess.PIPE).stdout.read().decode().strip()
             except:
                 use_lhapdf=False
             else:

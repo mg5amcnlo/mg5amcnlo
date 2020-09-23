@@ -87,7 +87,7 @@ import subprocess
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py')) or options.web):
-        print 'launch in debug mode'
+        print( 'launch in debug mode')
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
 
@@ -100,7 +100,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print( "For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -131,7 +131,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print( 'Running MG5 in debug mode')
 
 
 # Set logging level according to the logging level given by options
@@ -183,10 +183,10 @@ try:
                 cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
-                    print parser_error
-                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                    print( parser_error)
+                    print( 'and %s  can not be interpreted as a valid command.' % args[0])
                 else:
-                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+                    print( 'ERROR: %s  not a valid command. Please retry' % args[0])
             else:
                 cmd_line.use_rawinput = False    
                 cmd_line.run_cmd(' '.join(args))
@@ -200,7 +200,7 @@ try:
                 cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
                 cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print 'writting history and directory and quit on KeyboardInterrupt' 
+    print( 'writting history and directory and quit on KeyboardInterrupt' )
     pass
 except cmd_interface.MadEventAlreadyRunning  as  error:
     logging.error(str(error))

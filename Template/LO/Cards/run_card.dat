@@ -28,7 +28,7 @@
 #*********************************************************************
 # Collider type and energy                                           *
 # lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
-#                                         3=photon from electron     *
+#                3=photon from electron, 4=photon from muon          *
 #*********************************************************************
      %(lpp1)s        = lpp1    ! beam 1 type 
      %(lpp2)s        = lpp2    ! beam 2 type
@@ -165,7 +165,8 @@ $ecut
  %(mmnl)s   = mmnl    ! min invariant mass for all letpons (l+- and vl) 
  %(mmnlmax)s  = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
 #IF(LL)# #*********************************************************************
-#IF(LL)# # Minimum and maximum pt for 4-momenta sum of leptons                *
+#IF(LL)# # Minimum and maximum pt for 4-momenta sum of leptons / neutrino     *
+#IF(LL)# #  for pair of lepton includes only same flavor, opposite charge
 #IF(LL)# #*********************************************************************
  %(ptllmin)s   = ptllmin  ! Minimum pt for 4-momenta sum of leptons(l and vl)
  %(ptllmax)s  = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)

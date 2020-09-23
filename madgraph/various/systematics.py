@@ -325,7 +325,7 @@ class Systematics(object):
         """remove the weight as requested by the user"""
         
         rwgt_data = event.parse_reweight()
-        for name in rwgt_data.keys():
+        for name in list(rwgt_data.keys()):
             if not self.is_wgt_kept(name):
                 del rwgt_data[name]
                 event.reweight_order.remove(name)
@@ -1103,7 +1103,7 @@ def call_systematics(args, result=sys.stdout, running=True,
 if __name__ == "__main__":
         
     sys_args = sys.argv[1:]
-    for i, arg in enumerate(sys_args) :
+    for i, arg in enumerate(list(sys_args)) :
         if arg.startswith('--lhapdf_config=') :
             lhapdf = misc.import_python_lhapdf(arg[len('--lhapdf_config='):])
             del sys_args[i]

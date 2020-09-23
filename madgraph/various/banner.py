@@ -30,6 +30,7 @@ if six.PY3:
     import io
     file = io.IOBase
 import itertools
+import time
 
 
 pjoin = os.path.join
@@ -1341,7 +1342,7 @@ class ConfigFile(dict):
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
-        if (six.PY2 and not isinstance(value, (str,unicode)) or (six.PY3 and  not isinstance(value, str))):
+        if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
@@ -2930,10 +2931,10 @@ class RunCardLO(RunCard):
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
-        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3],
-                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
-        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9],
-                       comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 9: PLUGIN MODE')
+        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3,4,-4],
+                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
+        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,4,-4],
+                       comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
@@ -2979,6 +2980,7 @@ class RunCardLO(RunCard):
         self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True, hidden=True)
+        #format output / boost
         self.add_param("lhe_version", 3.0, hidden=True)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
         self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate matrix-element [for non lorentz invariant matrix-element/polarization]:\n  - 0: partonic center of mass\n - 1: Multi boson frame\n - 2 : (multi) scalar frame\n - 3 : user custom")
@@ -3125,6 +3127,8 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
+        self.add_param('hard_survey', 0, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
+        self.add_param("second_refine_treshold", 0.9, hidden=True, include=False, comment="set a treshold to bypass the use of a second refine. if the ratio of cross-section after survey by the one of the first refine is above the treshold, the  second refine will not be done.")
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
@@ -3214,7 +3218,6 @@ class RunCardLO(RunCard):
         if self['xqcut'] > 0:
             if self['ickkw'] == 0:
                 logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
-                import time
                 time.sleep(5)
             if self['drjj'] != 0:
                 if 'drjj' in self.user_set:
@@ -3228,8 +3231,6 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-
-
     
         # check validity of the pdf set
         if self['pdlabel'] == 'lhapdf':
@@ -3244,6 +3245,35 @@ class RunCardLO(RunCard):
             if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")   
 
+        # check if lpp = 
+        for i in [1,2]:
+            if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
+                logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
+                time.sleep(5)
+        
+            if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+                time.sleep(5)
+                
+        # if both lpp1/2 are on PA mode -> force fixed factorization scale
+        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
+            raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
+
+        # check that ebeam is bigger than the associated mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+            if self['mass_ion%i' % i] == -1:
+                if self['ebeam%i' % i] < 0.938:
+                    if self['ebeam%i' %i] == 0:
+                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        self.set('ebeam%i' %i, 0.938)
+                    else:
+                        raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+            elif self['ebeam%i' % i] < self['mass_ion%i' % i]:    
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
+                    self.set('ebeam%i' %i, self['mass_ion%i' % i])
 
     def update_system_parameter_for_include(self):
         
@@ -3359,19 +3389,21 @@ class RunCardLO(RunCard):
                         self['ebeam1'] = '6500'  
                         self['ebeam2'] = '1k'  
             
-            elif 11 in beam_id or -11 in beam_id:
+            elif any(id in beam_id for id in [11,-11,13,-13]):
                 self['lpp1'] = 0
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
                 self['use_syst'] = False
+                if set([ abs(i) for i in beam_id_split[0]]) == set([ abs(i) for i in beam_id_split[1]]):
+                    self.display_block.append('ecut')
                 self.display_block.append('beam_pol')
-                self.display_block.append('ecut')
             else:
                 self['lpp1'] = 0
                 self['lpp2'] = 0    
                 self['use_syst'] = False   
-                self.display_block.append('beam_pol')         
+                self.display_block.append('beam_pol')  
+                self.display_block.append('ecut')       
             
             # automatic polarisation of the beam if neutrino beam  
             if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
@@ -3380,25 +3412,25 @@ class RunCardLO(RunCard):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = -100
-                    if not all(id  in beam_id_split[0] for id in [12,14,16]):
-                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')
+                    if not all(id  in [12,14,16] for id in beam_id_split[0]):
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1]. %s')
                 elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = 100
-                    if not all(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                    if not all(id  in [-12,-14,-16] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
                 if any(id  in beam_id_split[1] for id in [12,14,16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = -100
-                    if not all(id  in beam_id_split[1] for id in [12,14,16]):
+                    if not all(id  in [12,14,16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
                 if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
-                    if not all(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                    if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
         # Check if need matching
@@ -4095,7 +4127,7 @@ class RunCardNLO(RunCard):
         super(RunCardNLO, self).check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
-        if self['lpp1']!=1 or self['lpp2']!=1:
+        if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
             
@@ -4231,6 +4263,19 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
 
+        # check that ebeam is bigger than the proton mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+
+            if self['ebeam%i' % i] < 0.938:
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    self.set('ebeam%i' %i, 0.938)
+                else:
+                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+
+
     def update_system_parameter_for_include(self):
         
         # set the pdg_for_cut fortran parameter
@@ -4314,7 +4359,7 @@ class RunCardNLO(RunCard):
             maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
             self['maxjetflavor'] = maxjetflavor
             pass
-        elif 11 in beam_id or -11 in beam_id:
+        elif any(id in beam_id for id in [11,-11,13,-13]):
             self['lpp1'] = 0
             self['lpp2'] = 0
             self['ebeam1'] = 500

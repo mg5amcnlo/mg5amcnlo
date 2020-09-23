@@ -324,8 +324,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             pass
         # prepare for a local compilation
         import sys
-        subprocess.call([sys.executable,'write_param_card.py'], cwd=os.path.join(MG5DIR,'models','sm'),
+        returncode = subprocess.call([sys.executable,'write_param_card.py'], cwd=os.path.join(MG5DIR,'models','sm'),
                         stdout=subprocess.PIPE)
+        self.assertEqual(returncode, 0)
         files.cp(os.path.join(MG5DIR,'models','sm','param_card.dat'),
                  join('param_card.dat'))
         

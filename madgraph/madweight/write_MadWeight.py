@@ -444,9 +444,10 @@ class MG_diagram(diagram_class.MG_diagram):
             else:
                 line=' call class_' + ECS.chgt_var.lower() + '(x,'
             for particle in block.order_content:
-                if particle.MG < 0:
-                    self.use_propa.add(particle.MG)
+
                 if type(particle.MG) == int:
+                    if particle.MG < 0:
+                        self.use_propa.add(particle.MG)                    
                     line += str(particle.MG) + ','
                 elif isinstance(particle.MG, six.string_types):
                     if particle.MG in self.fuse_dict:

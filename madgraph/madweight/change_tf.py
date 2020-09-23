@@ -754,7 +754,7 @@ if(__name__=="__main__"):
     os.chdir('./Source/MadWeight/transfer_function')
     create_TF_main(name,made_make,MW_dir)
     
-##    file=raw_input("file: ")
+##    file=six.input("file: ")
 ##    ff=open(file,'r')
 ##    gg=open(file+'_70.f','w')
 ##    text=ff.read()

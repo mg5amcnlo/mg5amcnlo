@@ -117,14 +117,14 @@ class TestMECmdShell(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print("install MadAnalysis")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install MadAnalysis4')
+            out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
         if not misc.which('root'):
@@ -734,7 +734,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
@@ -810,7 +810,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
@@ -891,7 +891,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull

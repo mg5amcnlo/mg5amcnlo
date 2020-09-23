@@ -387,7 +387,7 @@ class MatrixElementEvaluator(object):
         else:
             energy = options['energy']
             events = options['events']
-            to_skip = 0
+            to_skip = options['skip_evt']
             
         if not (isinstance(process, base_objects.Process) and \
                 isinstance(energy, (float,int))):
@@ -824,7 +824,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, unicode)):
+        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode().split('\n')
@@ -1263,8 +1263,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         def check_disk_usage(path):
             return subprocess.Popen("du -shc -L "+str(path), \
-                stdout=subprocess.PIPE, shell=True).communicate()[0].split()[-2]
+                stdout=subprocess.PIPE, shell=True).communicate()[0].decode().split()[-2]
             # The above is compatible with python 2.6, not the neater version below
+            # -> need to check if need .decode for python3.7
             #return subprocess.check_output(["du -shc %s"%path],shell=True).\
             #                                                         split()[-2]
 

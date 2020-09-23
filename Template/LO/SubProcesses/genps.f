@@ -572,6 +572,8 @@ c        Set stot
             if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (abs(lpp(1)) .eq. 4) m1 = 0.105658d0
+            if (abs(lpp(2)) .eq. 4) m2 = 0.105658d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
             if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
@@ -666,7 +668,8 @@ c
 c      data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
-      double precision ma2,mb2,m12,mn2,s1
+      double precision ma2,mb2,m12,mn2,s1, mi2
+      double precision tmass(-max_branch:-1)
 c
 c     External
 c
@@ -864,7 +867,7 @@ c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0, -tmin/stot)
+     $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
 
       else
@@ -893,7 +896,14 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi,
+
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi, mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
@@ -1002,7 +1012,7 @@ c-----
       endif
       end
 
-      subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
+      subroutine gentcms(pa,pb,t,phi,ma2,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
 c     given the values t, and phi
@@ -1038,7 +1048,6 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-      ma2 = dot(pa,pa)
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c

@@ -295,7 +295,6 @@ class ML5EWTest(unittest.TestCase):
                 if os.path.exists(model_path):
                     break
 
-        
         cp(os.path.join(model_path,
                         '.restrict_parallel_test_WW.dat'),
            os.path.join(model_path,

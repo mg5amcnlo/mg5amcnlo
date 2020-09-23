@@ -54,7 +54,7 @@ except Exception as error:
 logger = logging.getLogger("madgraph.lhe_parser")
 
 if six.PY3:
-    unicode = str
+    six.text_type = str
 
 class Particle(object):
     """ """
@@ -206,7 +206,7 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
     
     allow_empty_event = False
-    encoding = 'ascii'
+    encoding = 'UTF-8'
 
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
@@ -451,7 +451,7 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, (str,unicode)):
+        elif isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -946,8 +946,7 @@ class MultiEventFile(EventFile):
         if across == 0:
             # No event linked to this channel -> so no need to include it
             return 
-        misc.gzip(path)
-        obj = EventFile(path+'.gz')
+        obj = EventFile(path)
         obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
@@ -1184,7 +1183,7 @@ class MultiEventFile(EventFile):
         """
 
 
-        if isinstance(get_wgt, (str,unicode)):
+        if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
@@ -1228,7 +1227,7 @@ class MultiEventFile(EventFile):
         """ """
         
         try:
-            str_type = (str,unicode)
+            str_type = (str,six.text_type)
         except NameError:
             str_type = (str)
         
@@ -1536,8 +1535,8 @@ class Event(list):
         if not hasattr(Event, 'loweight_pattern'):
             Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
                                     <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
             ''',re.X+re.I+re.M)
         
@@ -1555,13 +1554,22 @@ class Event(list):
             self.loweight['asrwt'] =[float(x) for x in info.group('asrwt').split()[1:]]
             self.loweight['tot_fact'] = float(info.group('totfact'))
             
-            args = info.group('beam1').split()
+            if info.group('idb1') == info.group('idb2'):
+                raise Exception('%s not parsed'% text)
+            
+            if info.group('idb1') =="1":
+                args = info.group('beam1').split()
+            else:
+                args = info.group('beam2').split()
             npdf = int(args[0])
             self.loweight['n_pdfrw1'] = npdf
             self.loweight['pdf_pdg_code1'] = [int(i) for i in args[1:1+npdf]]
             self.loweight['pdf_x1'] = [float(i) for i in args[1+npdf:1+2*npdf]]
             self.loweight['pdf_q1'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]
-            args = info.group('beam2').split()
+            if info.group('idb2') =="2":
+                args = info.group('beam2').split()
+            else:
+                args = info.group('beam1').split()
             npdf = int(args[0])
             self.loweight['n_pdfrw2'] = npdf
             self.loweight['pdf_pdg_code2'] = [int(i) for i in args[1:1+npdf]]
@@ -2219,6 +2227,8 @@ class Event(list):
         
         if other is None:
             return False
+        if len(self) != len(other):
+            return False
         
         for i,p in enumerate(self):
             if p.E != other[i].E:
@@ -2289,7 +2299,7 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, (str, unicode)):
+                if isinstance(k, (str, six.text_type)):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
@@ -2441,7 +2451,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, (str, unicode)):
+        elif  isinstance(obj, (str, six.text_type)):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -2648,7 +2658,7 @@ class OneNLOWeight(object):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, (str, unicode)):
+        if isinstance(input, (str, six.text_type)):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -3010,7 +3020,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, (str,unicode)):
+        if isinstance(input, (str,six.text_type)):
             self.parse(input)
         
             

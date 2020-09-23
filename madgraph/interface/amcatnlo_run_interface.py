@@ -179,7 +179,13 @@ def check_compiler(options, block=False):
             logger.warning(msg % compiler)
     else:
         curr_version = misc.get_gfortran_version(compiler)
-        if not ''.join(curr_version.split('.')) >= '46':
+        curr_version = curr_version.split('.')
+        if len(curr_version) == 1:
+            curr_version.append(0)
+
+        if int(curr_version[0]) < 5:
+            if int(curr_version[0]) == 4 and int(curr_version[1]) > 5:
+                return
             if block:
                 raise aMCatNLOError(msg % (compiler + ' ' + curr_version))
             else:
@@ -930,7 +936,8 @@ class AskRunNLO(cmd.ControlSwitch):
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
+                                           consistency='warning')
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
 
@@ -2789,7 +2796,7 @@ RESTART = %(mint_mode)s
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
 
-        command =  []
+        command =  [sys.executable]
         command.append(pjoin(self.me_dir, 'bin', 'internal','histograms.py'))
         for job in jobs:
             if job['dirname'].endswith('.HwU'):
@@ -3700,7 +3707,7 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 #remove the line break from output (last character)
-                output = output[:-1]
+                output = output.decode()[:-1]
                 # add lib/include paths
                 if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
                     logger.warning('Linking FastJet: updating EXTRAPATHS')
@@ -4522,7 +4529,6 @@ RESTART = %(mint_mode)s
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
-
         return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
     def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
@@ -4590,7 +4596,7 @@ RESTART = %(mint_mode)s
 
         # check if we can use LHAPDF to compute the PDF uncertainty
         if any(self.run_card['reweight_pdf']):
-            lhapdf = misc.import_python_lhapdf()
+            lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
             if lhapdf:
                 use_lhapdf = True
             else:

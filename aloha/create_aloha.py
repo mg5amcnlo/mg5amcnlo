@@ -198,7 +198,7 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        nb_fermion = len([1 for s in self.spins if s % 2 == 0])   
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])  
         if isinstance(pair, tuple):
             if len(pair) ==1 :
                 pair = pair[0]
@@ -450,7 +450,7 @@ in presence of majorana particle/flow violation"""
             denominator = propagator.denominator      
         elif propa == "1L":
             numerator = "EPSL(1,id) * EPSL(2,id)"
-            denominator = "-1*PVec(-2,id)*PVec(-2,id)*Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         elif propa == "1T":
             numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
             denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"

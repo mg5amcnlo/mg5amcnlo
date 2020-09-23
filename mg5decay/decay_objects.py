@@ -43,6 +43,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import array
 import cmath
+import collections
 import copy
 import itertools
 import logging
@@ -1034,6 +1035,7 @@ class DecayParticle(base_objects.Particle):
 
         # Group channels into amplitudes
         self.group_channels_2_amplitudes(clevel, model, min_br)
+
         
 
     def connect_channel_vertex(self, sub_channel, index, vertex, model):
@@ -1170,7 +1172,11 @@ class DecayParticle(base_objects.Particle):
                 # Do not include the first leg (initial id)
                 if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
                         == final_pid:
-                    amplt.add_std_diagram(channel)
+                    
+                    for symchan in channel.get_symmetric_channel():
+                        amplt.add_std_diagram(symchan)
+                    
+                    
                     found = True
                     break
 
@@ -1766,6 +1772,7 @@ class DecayModel(model_reader.ModelReader):
         interaction = self.get('interaction_dict')[vertex['id']]
         decay_parts = [p for p in interaction['particles']]
         
+        # avoid self decay
         if len([1 for p in decay_parts if abs(p['pdg_code'])==abs(initpart['pdg_code'])]) >1:
             self['invalid_Npoint'].append(vertex['id'])
             return False
@@ -1808,15 +1815,23 @@ class DecayModel(model_reader.ModelReader):
                 
                 #check that all substructure are valid
                 #remove if any radiation and two times the same particle in a vertex
+                # 2020: relaxed to avoid only twice initial particle in the vertex
                 for v in proc['vertices']:
                     if any([get_mass(l)==0 for l in v.get('legs')]):
                         self['invalid_Npoint'].append(vertex['id'])
                         return False
-
-                    ids = set(abs(l['id']) for l in v.get('legs'))
-                    if len(ids) != len(vertex.get('legs')):
+                    init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    nb_part = [1 for l in v.get('legs') if abs(l['id']) in [abs(init_pdg), abs(initpart.get('pdg_code'))]]
+                    if len(nb_part) > 1:
                         self['invalid_Npoint'].append(vertex['id'])
                         return False
+                    
+                    # before relaxation it was 
+                    #    seems to me to be always False
+                    #ids = set(abs(l['id']) for l in v.get('legs'))
+                    #if len(ids) != len(vertex.get('legs')):
+                    #    self['invalid_Npoint'].append(vertex['id'])
+                    #    return False
 
                 # check onshell/offshell status                
                 prev_mass = 0
@@ -3376,6 +3391,85 @@ class Channel(base_objects.Diagram):
         self['fermionfactor'] = 1
         
 
+    def get_symmetric_channel(self, ignore=[]):
+        
+        if self['s_factor'] == 1:
+            return [self]
+        elif len(self['vertices']) == 1:
+            return [self]
+        elif len(self['final_legs']) == len(set(l['id'] for l in self['final_legs'])):
+            return [self]
+
+        # check if all symetry are already handle:
+        if len(set(l['id'] for l in self['final_legs'] if l['id'] not in ignore)) ==\
+           len([   l['id'] for l in self['final_legs'] if l['id'] not in ignore]):
+            return [self]
+        
+        nb_id = collections.defaultdict(int)
+        for l in self['final_legs']:
+            nb_id[l['id']] += 1
+        
+        id_to_handle = [id for id in nb_id if nb_id[id] > 1 and id not in ignore]
+        
+        handling = id_to_handle[0]
+        remain_id = id_to_handle[1:]
+        out = []
+        
+        numbers = [l.get('number') for l in self['final_legs'] if l.get('id') == handling]
+        
+        for new_numbers in itertools.permutations(numbers):
+            mapping_id = dict([(o,n) for o,n in zip(numbers, new_numbers) if o!=n])        
+            if not mapping_id:
+                out.append(self)
+                continue
+            channel = copy.copy(self)
+            channel['vertices'] = base_objects.VertexList()
+                    # (real) DiagramTag
+            channel['tag'] = []
+            # IdentifyHelasTag
+            channel['helastag'] = []
+            # the number of the corresponding helas calls
+            channel['helas_number'] = None
+            # diagram written by IdentifyHelasTag
+            channel['std_diagram'] = None
+            for l,vertex in enumerate(self['vertices']):
+                new_vertex = copy.copy(vertex)
+                new_vertex['legs'] = base_objects.LegList()
+                min_id = 99
+                for leg in vertex['legs']:
+                    if leg['number'] in mapping_id:
+                        new_leg = copy.copy(leg)
+                        new_leg.set('number', mapping_id[leg['number']])
+                        new_vertex['legs'].append(new_leg)
+                    else:
+                        new_vertex['legs'].append(leg)
+                    min_id = min(min_id, leg['number'])
+                    
+                if min_id != new_vertex['legs'][-1]['number']:
+                    if l != len(self['vertices']) -1:
+                        mapping_id[new_vertex['legs'][-1]['number']] = min_id
+                        new_vertex['legs'][-1]['number'] = min_id
+                channel['vertices'].append(new_vertex)
+            out.append(channel)
+                        
+        
+        # do the recursion
+        if len(remain_id) > 1:
+            all_out = []
+            for d in out:
+                all_out += d.get_symmetric_channel(ignore=ignore)
+            return all_out
+        else:
+            return out
+        
+    
+        
+        
+
+    
+        
+
+
     def filter(self, name, value):
         """Filter for valid diagram property values."""
         
@@ -3494,6 +3588,7 @@ class Channel(base_objects.Diagram):
                     tmp.sort()
                     if base == tmp:
                         return False
+
         return True
             
 
@@ -4035,15 +4130,28 @@ class Channel(base_objects.Diagram):
                 # Evaluate the coupling strength
                 vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
                 lorentz_factor = 0
+
+                for fct in model['functions']:
+                    if ';' in fct.expr:
+                        raise Exception('; is not allowed in function_library')
+                    exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                    exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
                 for key, v in vertex['couplings'].items():
                     if not hasattr(model, 'lorentz_dict'):
                         model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
                         self.init_regular_expression()
+                    
+                    lorentz =  model.lorentz_dict[vertex['lorentz'][key[1]]]
+                    structure = lorentz.structure
+                    if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+                        for ff in lorentz.formfactors:
+                            structure = structure.replace(ff.name, '(%s)' % ff.value)
                         
-                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
-                    lor_value = eval(new_structure % q_dict_lor)
+
+                    lor_value = eval(new_structure % q_dict_lor, locals(), globals())
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
@@ -4080,6 +4188,12 @@ class Channel(base_objects.Diagram):
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
         else:
+            for fct in model['functions']:
+                if ';' in fct.expr:
+                    raise Exception('; is not allowed in function_library')
+                exec("mdl_%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))
+                exec("%s = lambda %s: %s" %(fct.name, ','.join( fct.arguments), fct.expr))                    
+
             M = abs(eval(ini_part.get('mass')))
             # The avg_E is lower by one more particle in the next-level.
             avg_E = (M/(len(self.get_final_legs())+1.))
@@ -4354,6 +4468,7 @@ class Channel(base_objects.Diagram):
             # of list.
             if count != 1:
                 self['s_factor'] = self['s_factor'] * math.factorial(count)
+                
             return math.sqrt((M ** 2+mass_list[0] ** 2-mass_list[1] ** 2) ** 2-\
                                  (2* M *mass_list[0]) ** 2)* \
                                  1./(8*math.pi*(M ** 2)*self['s_factor'])
@@ -4645,7 +4760,6 @@ class DecayAmplitude(diagram_generation.Amplitude):
         non_std_numbers = [(l.get('id'),l.get('number')) \
                                for l in new_dia.get_final_legs()]
 
-
         # initial leg
         non_std_numbers.append((new_dia.get_initial_id(model), 1))
         import operator
@@ -4661,7 +4775,6 @@ class DecayAmplitude(diagram_generation.Amplitude):
         if non_std_numbers == std_numbers:
             self['diagrams'].append(new_dia)
             return
-
         # Conversion from non_std_number to std_number
         converted_dict = dict([(num[1], std_numbers[i][1])\
                                    for i, num in enumerate(non_std_numbers)])
@@ -4709,6 +4822,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # Add this standard diagram into diagrams
         self['diagrams'].append(new_dia)
+        
 
 
     def reset_width_br(self):

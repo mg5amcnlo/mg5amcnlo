@@ -141,7 +141,7 @@ c
                fx =0d0
                wgt=0d0
             endif
-            call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
+            call sample_put_point(wgt,x(1),iter,ipole) !Store result
          endif
          if (wgt .ne. 0d0) kevent=kevent+1    
 c
@@ -318,7 +318,7 @@ c
             endif
             
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -453,6 +453,10 @@ c-----
       CUMULATED_TIMING = t_after - CUMULATED_TIMING
 
       if (N_EVALS.eq.0) then
+         write(outUnit,*) '<lo_statistics> '
+         write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     &        //'</cumulated_time>'
+         write(outUnit,*) '</lo_statistics>'
         return
       endif
       

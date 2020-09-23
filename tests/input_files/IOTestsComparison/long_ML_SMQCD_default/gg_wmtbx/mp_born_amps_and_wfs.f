@@ -102,11 +102,13 @@ C     But it is really not time consuming and I would rather be safe.
       CALL MP_UPDATE_AS_PARAM()
 
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR.
-     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.GOODHEL(H))))
+     $    THEN
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
           DO I=1,NEXTERNAL
@@ -649,71 +651,71 @@ C         Counter-term amplitude(s) for loop diagram number 122
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,14,H),R2_3GG,AMPL(1,236)
      $     )
 C         Amplitude(s) for UVCT diagram with ID 135
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(1,237))
-          AMPL(1,237)=AMPL(1,237)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(2,237))
+          AMPL(2,237)=AMPL(2,237)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 136
-          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(2,238))
-          AMPL(2,238)=AMPL(2,238)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(1,238))
+          AMPL(1,238)=AMPL(1,238)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 137
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(1,239))
-          AMPL(1,239)=AMPL(1,239)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(2,239))
+          AMPL(2,239)=AMPL(2,239)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 138
-          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(2,240))
-          AMPL(2,240)=AMPL(2,240)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(1,240))
+          AMPL(1,240)=AMPL(1,240)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 139
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(1,241))
-          AMPL(1,241)=AMPL(1,241)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(2,241))
+          AMPL(2,241)=AMPL(2,241)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 140
-          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(2,242))
-          AMPL(2,242)=AMPL(2,242)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(1,242))
+          AMPL(1,242)=AMPL(1,242)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 141
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(1,243))
-          AMPL(1,243)=AMPL(1,243)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(2,243))
+          AMPL(2,243)=AMPL(2,243)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 142
-          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(2,244))
-          AMPL(2,244)=AMPL(2,244)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(1,244))
+          AMPL(1,244)=AMPL(1,244)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 143
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(1,245)
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(2,245)
      $     )
-          AMPL(1,245)=AMPL(1,245)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          AMPL(2,245)=AMPL(2,245)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 144
-          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(2,246)
+          CALL MP_FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(1,246)
      $     )
-          AMPL(2,246)=AMPL(2,246)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          AMPL(1,246)=AMPL(1,246)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 145
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(1,247))
-          AMPL(1,247)=AMPL(1,247)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(2,247))
+          AMPL(2,247)=AMPL(2,247)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 146
-          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(2,248))
-          AMPL(2,248)=AMPL(2,248)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(1,248))
+          AMPL(1,248)=AMPL(1,248)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 147
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(1,249))
-          AMPL(1,249)=AMPL(1,249)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(2,249))
+          AMPL(2,249)=AMPL(2,249)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 148
-          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(2,250))
-          AMPL(2,250)=AMPL(2,250)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(1,250))
+          AMPL(1,250)=AMPL(1,250)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Amplitude(s) for UVCT diagram with ID 149
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(1,251))
-          AMPL(1,251)=AMPL(1,251)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
-     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(2,251))
+          AMPL(2,251)=AMPL(2,251)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
+     $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 150
-          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(2,252))
-          AMPL(2,252)=AMPL(2,252)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
-     $     *UVWFCT_G_1_1EPS)
+          CALL MP_FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(1,252))
+          AMPL(1,252)=AMPL(1,252)*(2.0D0*UVWFCT_G_2+1.0D0*UVWFCT_T_0
+     $     +1.0D0*UVWFCT_B_0+2.0D0*UVWFCT_G_1)
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS

@@ -204,7 +204,7 @@ class CmdExtended(cmd.Cmd):
             bzrname,_ = proc.communicate()
             proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrversion,_ = proc.communicate() 
-            bzrname, bzrversion = bzrname.strip(), bzrversion.strip() 
+            bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
             len_name = len(bzrname)
             len_version = len(bzrversion)            
             info_line += "#*         BZR %s %s %s         *\n" % \
@@ -464,7 +464,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
-        logger.info("      -noeps: no jpeg and eps diagrams will be generated.")
+        logger.info("      --noeps=True: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
@@ -535,6 +535,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
         logger.info("Example: check full p p > j j",'$MG:color:GREEN')
+        logger.info("Using leshouches file as input",'$MG:color:GREEN')
+        logger.info("    use the option --events=PATH")
+        logger.info("      zipped file are not supported")
+        logger.info("      to loop over the file use the option --skip_evt=X")
+        logger.info("")
         logger.info("Options for loop processes only:",'$MG:BOLD')
         logger.info("o timing:",'$MG:color:GREEN')
         logger.info("   Generate and output a process and returns detailed")
@@ -752,7 +757,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
@@ -783,14 +788,20 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-#        logger.info(" > (default '0') [Used for loop-induced outputs]")
-#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-#        logger.info(" > setting up the integration multichannels.") 
-#        logger.info(" > The default value of zero automatically picks the apparent")
-#        logger.info(" > appropriate choice which is to sometimes pick box loops")
-#        logger.info(" > but never higher n-points ones.")
-
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for loop-induced outputs with madevent]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+        logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
+        logger.info(" > Forbids the inclusion of channel of integration with more than X")
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
+        logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
+        logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -931,11 +942,13 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--reduction':'1|3|5|6','--CTModeRun':'-1',
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
                    '--collier_internal_stability_test':'False',
-                   '--collier_mode':'1'}  
+                   '--collier_mode':'1',
+                   '--events': None,
+                   '--skip_evt':0}  
 
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -1084,7 +1097,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process:
+            if 'noborn' in process or 'sqrvirt' in process:
                 valid = True
             else:
                 raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
@@ -1494,7 +1507,7 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout', 'max_npoint_for_channel']:
+        if args[0] in ['timeout', 'max_npoint_for_channel', 'max_t_for_channel']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
@@ -1509,8 +1522,8 @@ This will take effect only in a NEW terminal
                 if sys.version_info[0] == 2:
                     if  sys.version_info[1] == 6:
                         raise Exception('python2.6 does not support such functionalities please use python2.7')
-                else:
-                    raise Exception('python3.x does not support such functionalities please use python2.7')
+                #else:
+                #    raise Exception('python3.x does not support such functionalities please use python2.7')
         
 
 
@@ -1683,7 +1696,7 @@ This will take effect only in a NEW terminal
                     continue
                 elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
-                arg, value = arg.split('=')
+                arg, value = arg.split('=',1)
                 if arg[2:] not in options:
                     raise self.InvalidCmd('%s not valid options' % arg)
                 options[arg[2:]] = value
@@ -2859,8 +2872,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'Golem95', 'PJFry', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools']
+                     'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
+                     'looptools', 'MadSTR']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -2882,6 +2895,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel',
+                    'max_t_for_channel',
+                    'zerowidth_tchannel',
                     'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
@@ -2916,7 +2931,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
-                       'pjfry':'auto',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -2946,7 +2960,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
                           'max_npoint_for_channel': 0, # 0 means automaticly adapted
-                          'default_unset_couplings': 99 # 99 means infinity
+                          'default_unset_couplings': 99, # 99 means infinity
+                          'max_t_for_channel': 99, # means no restrictions
+                          'zerowidth_tchannel': True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3066,7 +3082,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         existing amplitudes
         or merge two model
         """
-
+        
         args = self.split_arg(line)
 
         
@@ -3152,48 +3168,66 @@ This implies that with decay chains:
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
+            #Check that we do not have situation like z{T} z
+            if not myprocdef.check_polarization():
+                logger.critical("Not Supported syntax:\n"+ \
+                                "   Syntax like p p  > Z{T} Z are ambiguious" +\
+                                "   Behavior is not guarantee to be stable within future version of the code." + \
+                                "   Furthemore, you can have issue with symmetry factor (we do not guarantee [differential] cross-section."+\
+                                "   We suggest you to abort this computation")
+                ans = self.ask('Do you want to continue', 'no',['yes','no'])
+                if ans == 'no':
+                    raise self.InvalidCmd("Not supported syntax of type p p  > Z{T} Z")
+                    
+                
+                
+
             self._curr_proc_defs.append(myprocdef)
-            
-            # Negative coupling order contraints can be given on at most one
-            # coupling order (and either in squared orders or orders, not both)
-            if len([1 for val in list(myprocdef.get('orders').values())+\
-                          list(myprocdef.get('squared_orders').values()) if val<0])>1:
-                raise MadGraph5Error("Negative coupling order constraints"+\
-                  " can only be given on one type of coupling and either on"+\
-                               " squared orders or amplitude orders, not both.")
 
-            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
-                logger.warning('''Computation of interference term with decay is not 100% validated.  
-                Please check carefully your result.
-                One suggestion is also to compare the generation of your process with and without
-                set group_subprocesses True
-                (to write Before the generate command)
-                ''')
-
-            cpu_time1 = time.time()
-
-            # Generate processes
-            if self.options['group_subprocesses'] == 'Auto':
-                    collect_mirror_procs = True
-            else:
-                collect_mirror_procs = self.options['group_subprocesses']
-            ignore_six_quark_processes = \
-                           self.options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self.options \
-                           else []
-
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                     collect_mirror_procs = collect_mirror_procs,
-                                     ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize, diagram_filter=diagram_filter)
-
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                elif warning_duplicate:
-                    raise self.InvalidCmd("Duplicate process %s found. Please check your processes." % \
-                                                amp.nice_string_processes())
+            try:
+                # Negative coupling order contraints can be given on at most one
+                # coupling order (and either in squared orders or orders, not both)
+                if len([1 for val in list(myprocdef.get('orders').values())+\
+                              list(myprocdef.get('squared_orders').values()) if val<0])>1:
+                    raise MadGraph5Error("Negative coupling order constraints"+\
+                      " can only be given on one type of coupling and either on"+\
+                                   " squared orders or amplitude orders, not both.")
+    
+                if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                    logger.warning('''Computation of interference term with decay is not 100% validated.  
+                    Please check carefully your result.
+                    One suggestion is also to compare the generation of your process with and without
+                    set group_subprocesses True
+                    (to write Before the generate command)
+                    ''')
+    
+                cpu_time1 = time.time()
+    
+                # Generate processes
+                if self.options['group_subprocesses'] == 'Auto':
+                        collect_mirror_procs = True
+                else:
+                    collect_mirror_procs = self.options['group_subprocesses']
+                ignore_six_quark_processes = \
+                               self.options['ignore_six_quark_processes'] if \
+                               "ignore_six_quark_processes" in self.options \
+                               else []
+    
+                myproc = diagram_generation.MultiProcess(myprocdef,
+                                         collect_mirror_procs = collect_mirror_procs,
+                                         ignore_six_quark_processes = ignore_six_quark_processes,
+                                         optimize=optimize, diagram_filter=diagram_filter)
+    
+    
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self._curr_amps:
+                        self._curr_amps.append(amp)
+                    elif warning_duplicate:
+                        raise self.InvalidCmd( "Duplicate process %s found. Please check your processes." % \
+                                                    amp.nice_string_processes())
+            except Exception:
+                self._curr_proc_defs.pop(-1)
+                raise
 
             # Reset _done_export, since we have new process
             self._done_export = False
@@ -3299,9 +3333,13 @@ This implies that with decay chains:
         if answer != 'y':
             return 
         
-        #Object_library (.iteritems() -> .items())
+        #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
+        #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
+        # raise UFOError, "" -> raise UFOError()
+        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
+                      'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
@@ -3831,7 +3869,7 @@ This implies that with decay chains:
             options.horizontal = True
             options.external = True  
             options.max_size = 0.3 
-            options.add_gap = 0.5    
+            options.add_gap = 0.5  
         options = draw_lib.DrawOption(options)
         start = time.time()
 
@@ -3927,7 +3965,6 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-        
         MLoptions={}
         i=-1
         CMS_options = {}
@@ -3935,6 +3972,15 @@ This implies that with decay chains:
             option = args[i].split('=')
             if option[0] =='--energy':
                 options['energy']=float(option[1])
+            elif option[0] == '--events' and option[1]:
+                if option[1] == 'None':
+                    options['events'] = None
+                elif not os.path.exists(option[1]):
+                    raise Exception('path %s does not exists' % option[1])
+                else:
+                    options['events'] = option[1]
+            elif option[0] == '--skip_evt':
+                options['skip_evt']=int(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
             elif option[0]=='--helicity':
@@ -4294,13 +4340,11 @@ This implies that with decay chains:
                     logger_check.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
 
-        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
-            TIR_dir['pjfry_dir']=self.options['pjfry']
-        else:
-            if "MLReductionLib" in MLoptions:
-                if 2 in MLoptions["MLReductionLib"]:
-                    logger_check.warning('PJFRY not available on your system; it will be skipped.')                    
-                    MLoptions["MLReductionLib"].remove(2)
+
+        if "MLReductionLib" in MLoptions:
+            if 2 in MLoptions["MLReductionLib"]:
+                logger_check.warning('PJFRY not supported anymore; it will be skipped.')                    
+                MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
             TIR_dir['golem_dir']=self.options['golem']
@@ -5130,6 +5174,7 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new process
         self._done_export = False
+        self._curr_proc_defs.append(myprocdef)
 
         cpu_time2 = time.time()
 
@@ -5336,20 +5381,20 @@ This implies that with decay chains:
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1)
             if proc_number_re.group(3):
-                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
                 order_line = proc_number_re.group(3)
                 order_re = order_pattern.match(order_line)
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)                
+                    order_re = order_pattern.match(order_line)            
             logger.info(line)
             
 
@@ -5675,7 +5720,7 @@ This implies that with decay chains:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd as why:
-                logger_stderr.warning('impossible to set default multiparticles %s because %s' %
+                logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
                 if self.history[-1] == 'define %s' % line.strip():
                     self.history.pop(-1)
@@ -5783,7 +5828,7 @@ This implies that with decay chains:
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            
+
         # Potential change in naming convention
         name_map = {'lhapdf6_py3': 'lhapdf6'}
         try:
@@ -5906,7 +5951,8 @@ This implies that with decay chains:
             # Make sure each otion in add_options appears only once
             add_options.append('--mg5_path=%s'%MG5DIR)
             add_options = list(set(add_options))
-            # And that the option '--force' is placed last.
+            add_options.append('--mg5_path=%s'%MG5DIR)
+             # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
@@ -5966,9 +6012,12 @@ This implies that with decay chains:
             if six.PY3:
                 self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py3' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py3']
             else:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py2']
+            
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6049,13 +6098,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm', 'maddump']
+    install_plugin = ['maddm', 'maddump', 'MadSTR']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
                           'SysCalc':['arXiv:1801.08401'],
                           'Golem95':['arXiv:0807.0605'],
-                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
                           'QCDLoop':['arXiv:0712.1851'],
                           'pythia8':['arXiv:1410.3012'],
                           'lhapdf6':['arXiv:1412.7420'],
@@ -6068,7 +6116,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716'],
                           'maddm':['arXiv:1804.00444'],
-                          'maddump':['arXiv:1812.06771']}
+                          'maddump':['arXiv:1812.06771'],
+                          'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.physics.illinois.edu/package_info.dat']
@@ -6077,9 +6126,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
                 'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
-                'maddm':'maddm',
-                'lhapdf6' : 'lhapdf6' if six.PY2 else 'lhapdf6_py3'
+                    'lhapdf6' : 'lhapdf6' if six.PY2 else 'lhapdf6_py3',
+                'QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5',
+                'maddm':'maddm'
                 }
 
     def do_install(self, line, paths=None, additional_options=[]):
@@ -6195,7 +6244,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             name = args[0]
         if args[0] == 'MadAnalysis4':
             args[0] = 'MadAnalysis'
-        
+        elif args[0] in ['madstr', 'madSTR']:
+            args[0] = 'MadSTR'
+            name = 'MadSTR'
+            
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -6213,10 +6265,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = add_options)
 
-        if args[0] == 'PJFry' and not os.path.exists(
-                                 pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
-            logger.info("Installing PJFRY's dependence QCDLoop...")
-            self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'        
@@ -6318,18 +6366,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # Run the configure script
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
-            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0].decode()
 
-        # For PJFry, use autotools.
-        if name == 'PJFry':
-            # Run the configure script
-            ld_path = misc.Popen(['./configure', 
-            '--prefix=%s'%str(pjoin(MG5DIR, name)),
-            '--enable-golem-mode', '--with-integrals=qcdloop1',
-            'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
-            'FC=%s'%os.environ['FC'],
-            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0]
 
         # For QCDLoop, use autotools.
         if name == 'QCDLoop':
@@ -6337,7 +6375,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC'],
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0]
+                                        stdout=subprocess.PIPE).communicate()[0].decode()
 
         # For Delphes edit the makefile to add the proper link to correct library
         if args[0] == 'Delphes3':
@@ -6355,7 +6393,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if name == 'SysCalc':
             if self.options['lhapdf']:
                 ld_path = misc.Popen([self.options['lhapdf'], '--libdir'],
-                                     stdout=subprocess.PIPE).communicate()[0]
+                                     stdout=subprocess.PIPE).communicate()[0].decode()
                 ld_path = ld_path.replace('\n','')
                 if 'LD_LIBRARY_PATH' not in os.environ:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
@@ -6428,11 +6466,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
                 status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
+            devnull.close()
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -6441,7 +6480,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name in ['golem95','QCDLoop','PJFry']:
+            if name in ['golem95','QCDLoop']:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
@@ -6481,18 +6520,18 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
+                target = 'https://home.fnal.gov/~parke/TD/td_mac_intel64.tar.gz'
                 misc.wget(target, 'td.tgz', cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
-                files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
+                files.mv(MG5DIR + '/td/td_intel_mac64',MG5DIR+'/td/td')
             else:
                 if sys.maxsize > 2**32:
                     logger.info('Downloading TD for Linux 64 bit')
-                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td64/td'
-                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
-                In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
-                instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                    target = 'https://home.fnal.gov/~parke/TD/td_linux_64bit.tar.gz'
+                    #logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
+                #In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
+                #instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
                 else:                    
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
@@ -6535,17 +6574,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
                            'pythia-pgs':'pythia-pgs_path',
-                           'Golem95': 'golem',
-                           'PJFry': 'pjfry'}
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)
-            elif opt=='pjfry':
-                self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)            
+                self.exec_cmd('save options %s' % opt, printcmd=False)           
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options %s' % opt, printcmd=False)
@@ -6612,7 +6647,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE,
                                                               cwd=MG5DIR)
-            p.communicate(text)
+            p.communicate(text.encode())
 
             # check file which are not move
             #=== modified file 'Template/LO/Cards/run_card.dat'
@@ -6778,7 +6813,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             data['last_check'] = time.time()
 
         #check if we need to update.
-        if time.time() - data['last_check'] < update_delay:
+        if time.time() - float(data['last_check']) < float(update_delay):
             return
 
         logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)
@@ -6990,7 +7025,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai']:
+            elif key in ['golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -7000,7 +7035,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95',
+                        local_install = { 'golem':'golem95',
                                          'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
@@ -7629,7 +7664,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja','collier'] and \
+        elif args[0] in ['golem','samurai','ninja','collier'] and \
              not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
@@ -7669,7 +7704,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
                             ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
-        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry', 'max_t_for_channel',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
@@ -7695,6 +7730,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning(message)
 
         elif args[0] == 'OLP':
+            if six.PY3 and self.options['low_mem_multicore_nlo_generation']:
+                raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
@@ -7720,9 +7757,16 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     tmp = args[1].lower()
                 else: 
                     raise
-            self.options[args[0]] = tmp        
+            self.options[args[0]] = tmp
+        elif args[0] in ['zerowidth_tchannel']:
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
+        elif args[0] in ['low_mem_multicore_nlo_generation']:	    
+            if six.PY3 and self.options['OLP'] != 'MadLoop':
+                raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+            else:
+                self.options[args[0]] = args[1]
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -7931,7 +7975,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3 
+            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)
@@ -7950,6 +7995,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+
         # Define the helas call  writer
         if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
@@ -7958,6 +8004,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
+            options = {'zerowidth_tchannel': True}
+            if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
+                options['zerowidth_tchannel'] = False
+            
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
@@ -8090,7 +8140,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     exporter = self._curr_exporter.generate_process_directory(\
                             me_group.get('matrix_elements'), self._curr_helas_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number,
+                            process_number = group_number+1,
                             version = version)
                     process_names.append(exporter.process_name)
             else:
@@ -8436,7 +8486,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd('output %s -f' % decay_dir,child=False)
+                self.exec_cmd('output madevent %s -f' % decay_dir,child=False)
                 
                 #modify some parameter of the default run_card
                 run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))
