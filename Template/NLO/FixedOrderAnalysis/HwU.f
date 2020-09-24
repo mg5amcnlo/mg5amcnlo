@@ -34,6 +34,16 @@ c and sets the number of weights that need to be included for each point.
       implicit none
       integer i,nweights
       character*(*) wgt_info(*)
+
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+
+C     Initialize the number of bins of the aMCfast grids
+      if(pineappl) appl_obs_nbins = 0
+
       call HwU_deallocate_all
       max_plots=0
       max_points=0
@@ -85,6 +95,43 @@ c plot range (from 'xmin' to 'xmax') should be given.
       integer label,nbin_l,i,j
       character*(*) title_l
       double precision xmin,xmax
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      double precision del
+
+c     Initialize the grids only if the switch "pineappl" is set to True
+c     and if the title  does not contain the word "Born". 
+      if(pineappl.and.index(title_l,"Born").eq.0)then
+c     Observable parameters
+c     Compute number of bins and edges only if they have not been given by the user.
+         if(appl_obs_nbins.eq.0)then
+            appl_obs_nbins = nbin_l
+            ! bin width
+            del = (xmax - xmin) / nbin_l
+c     compute bin edges
+            do i=0,appl_obs_nbins
+               appl_obs_bins(i) = xmin + i * del
+            enddo
+         endif
+         appl_obs_min = appl_obs_bins(0)
+         appl_obs_max = appl_obs_bins(appl_obs_nbins)
+         if(abs(appl_obs_max-xmax).gt.0.00000001d0)then
+            write(*,*) 'PineAPPL Histogram: ', 
+     1                 'Change of the upper limit:',xmax,'-->',
+     2                  appl_obs_max
+         endif
+c     Initialize PineAPPL routines
+         call APPL_init
+c     Keep track of the position of this histogram
+         nh_obs = nh_obs + 1
+         ih_obs(nh_obs) = label
+c     Reset number of bins to zero
+         appl_obs_nbins = 0
+      endif
+
 c     Allocate space for new histograms if needed      
       call HwU_allocate_histo(label,nbin_l)
 c     Setup the histogram
@@ -119,6 +166,24 @@ c the same number of weights.
       implicit none
       integer label,i,j,bin
       double precision x, wgts(*)
+
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      if(pineappl)then
+         do j=1,nh_obs
+            if(label.eq.ih_obs(j))then
+               appl_obs_num   = j
+               appl_obs_histo = x
+c     Fill the reference PineAPPL histograms
+c     Fill the PineAPPL files
+               call APPL_fill
+            endif
+         enddo
+      endif
+
 c     If central weight is zero do not add this point.
       if (wgts(1).eq.0d0) return
 c     Check if point is within plotting range

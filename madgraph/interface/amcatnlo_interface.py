@@ -843,9 +843,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     pass
             subproc_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'initial_states_map.dat')
-            self._curr_exporter.write_init_map(subproc_path,
+            nmaxpdf = self._curr_exporter.write_init_map(subproc_path,
                                 self._curr_matrix_elements.get('initial_states'))
-            
+            self._curr_exporter.write_maxproc_files(nmaxpdf, 
+                                os.path.join(path, os.path.pardir, 'SubProcesses'))
+
         cpu_time1 = time.time()
 
 
@@ -923,8 +925,6 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
 # 'name' entry of the options, not the run_name one
 _launch_parser.add_option("-n", "--name", default=False, dest='name',
                             help="Provide a name to the run")
-_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
-                            help="For use with APPLgrid only: start from existing grids")
 _launch_parser.add_option("-R", "--reweight", default=False, action='store_true',
                             help="Run the reweight module (reweighting by different model parameter")
 _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',

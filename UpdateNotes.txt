@@ -1,12 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
-
                         ** PARRALEL VERSION FOR EW branch **
 
 3.0.4 (21/08/20)
     ALL: include all changes up to 2.8.0 of the official release
     ALL: pass to python3 by defauult
+    MZ+SC+ERN+CS: The code can be linked to PineAPPL (arXiv:2008.12789), making it possible
+	 to generate PDF-independent fast-interploation grids including EW corrections.
+	 This supersedes the interface to ApplGrid+aMCFast which was not working in v3
 
 3.0.3 (06/07/20)
      include up to 2.7.3
