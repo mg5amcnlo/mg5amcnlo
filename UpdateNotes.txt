@@ -1,6 +1,17 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.8.1.py2(22/09/22):
+2.8.1.py2(24/09/22):
+      OM: Change user interface related to FxFx mode
+          - If you have multiple multiplicities at NLO,
+	    - the default run_card is modified accordingly
+	        - has icckw=3 and follow the official FxFx recomendation (i.e. for
+		  scale and jet algo)
+            - the shower card has two parameter that are dynamically set 
+                - njmax (default: -1) is automatically set depending of the process definition
+                - Qcut (default: -1) is now automatically set to twice ptj parameter
+            - the default parton-shower is automatically set to Pythia8
+          - The value of the cross-section after FxFx formalism (removing double counting) is
+	    now printed on the log and available on the HTML page
       OM: Fix for the auto width for three body decay in presence of identical particles.
       OM: add support for __header__ in UFO model
       OM: allow restriction card to have auto-width
