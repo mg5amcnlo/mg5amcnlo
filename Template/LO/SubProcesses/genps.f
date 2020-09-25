@@ -936,7 +936,7 @@ c
 
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
-         if (nt_channel.eq.2)then
+         if (nt_channel.ge.2)then
             tmin = max(tmin, tmin_for_channel*stot)
          endif
       if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
@@ -1145,7 +1145,7 @@ c         write(*,*) 'tmin, tmax',tmin,tmax
       else
 
 c     test of impact of low t part
-         if (nt_channel.eq.2)then
+         if (nt_channel.ge.2)then
             tmin = max(tmin,  tmin_for_channel*stot)
          endif
       if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
@@ -1687,7 +1687,7 @@ c      include 'run.inc'
       nb_tchannel=nbranch-ns_channel-1
 c      write(*,*) 'T-channel found: ',nb_tchannel
 
-      if (.true..and.nb_tchannel.ne.2)then
+      if (.true..and.nb_tchannel.lt.2)then
          get_channel_cut = 1.
          return
       endif
