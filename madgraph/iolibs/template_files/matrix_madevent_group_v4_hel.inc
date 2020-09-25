@@ -33,6 +33,8 @@ C
 C  
 C LOCAL VARIABLES 
 C  
+        INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+        INCLUDE 'config_subproc_map.inc'
         INTEGER NHEL(NEXTERNAL,NCOMB)
         REAL*8 T
         REAL*8 R,SUMHEL,TS(NCOMB)
@@ -40,6 +42,10 @@ C
         INTEGER JC(NEXTERNAL),II
         REAL*8 XTOT
         INTEGER  J, JJ
+
+      double precision get_channel_cut
+      external get_channel_cut
+
 C  
 C GLOBAL VARIABLES
 C  
@@ -120,8 +126,12 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO I=1,NDIAGS
-            XTOT=XTOT+AMP2(I)
+        DO I=1,LMAXCONFIGS
+	    J = CONFSUB(%(proc_id)s, I)
+	    if (J.ne.0)then
+	        AMP2(J) = AMP2(J) * GET_CHANNEL_CUT(P, I)
+                XTOT=XTOT+AMP2(J)
+	    endif
         ENDDO
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
@@ -192,8 +202,6 @@ C
 C FUNCTION
 C
       INTEGER SQSOINDEX%(proc_id)s
-      double precision get_channel_cut
-      external get_channel_cut
 
 C  
 C GLOBAL VARIABLES

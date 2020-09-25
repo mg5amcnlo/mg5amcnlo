@@ -40,7 +40,9 @@ c
 
 C  
 C LOCAL VARIABLES 
-C  
+C
+        INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+        INCLUDE 'config_subproc_map.inc'
         INTEGER NHEL(NEXTERNAL,NCOMB)
         INTEGER ISHEL(2)
         REAL*8 T,MATRIX%(proc_id)s
@@ -56,6 +58,8 @@ C
 	SAVE NB_FAIL
 	DATA THIS_NTRY /0,0/
 	DATA NB_FAIL /0/
+        double precision get_channel_cut
+        external get_channel_cut
 	
 c
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
@@ -218,8 +222,12 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO I=1,NDIAGS
-            XTOT=XTOT+AMP2(I)
+        DO I=1,LMAXCONFIGS
+	    J = CONFSUB(%(proc_id)s, I)
+	    if (J.ne.0) then
+	         AMP2(J) = AMP2(J) * GET_CHANNEL_CUT(P, I)
+                 XTOT=XTOT+AMP2(J)
+            endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
@@ -300,8 +308,6 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
-    double precision get_channel_cut
-    external get_channel_cut
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
