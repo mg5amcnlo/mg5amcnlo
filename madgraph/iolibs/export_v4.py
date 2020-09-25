@@ -1196,6 +1196,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     line += "(%s)*dconjg(%s)" % (amp, amp)
                 else:
                     line += "%s*dconjg(%s)" % (amp, amp)
+                line += " * get_channel_cut(p, %s) " % (config)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):

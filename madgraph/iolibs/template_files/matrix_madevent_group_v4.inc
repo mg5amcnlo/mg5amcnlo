@@ -300,6 +300,8 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
+    double precision get_channel_cut
+    external get_channel_cut
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment

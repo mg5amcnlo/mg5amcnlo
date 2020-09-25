@@ -45,6 +45,8 @@ C GLOBAL VARIABLES
 C  
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
+
+
 C
 C   INFORMATION TO WRITE THE HELICITY IN THE EVENT --not memory efficient--
 C   
@@ -190,6 +192,9 @@ C
 C FUNCTION
 C
       INTEGER SQSOINDEX%(proc_id)s
+      double precision get_channel_cut
+      external get_channel_cut
+
 C  
 C GLOBAL VARIABLES
 C  

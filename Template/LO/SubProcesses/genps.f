@@ -656,7 +656,7 @@ c
       integer tstrategy ! current strategy for t-channel
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
-      double precision pother(0:3), ptemp(0:3)
+      double precision pother(0:3), ptemp(0:3), pboost(0:3), ptemp2(0:3)
       double precision M(-max_branch:max_particles)
       double precision S(-max_branch:0)
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
@@ -936,7 +936,15 @@ c
 
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
-      if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
+         if (nt_channel.eq.2)then
+            tmin = max(tmin, tmin_for_channel*stot)
+         endif
+      if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, -tmin_for_channel)
+         t = stot*(-x(-ibranch))
+      
+      else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
@@ -1083,7 +1091,8 @@ c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
          if(.false.) then
-            ! NOT VALIDATED METHOD
+            ! NOT VALIDATED METHOD, momenta are ok but not jacobian
+            
             call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        0d0, 1d0)
             costh= 2d0*x(-ibranch)-1d0
@@ -1093,26 +1102,68 @@ c         write(*,*) 'tmin, tmax',tmin,tmax
             jac = jac * 4d0*pi
                      m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
-         call mom2cx(s1,m(itree(2,ibranch)),m(ibranch-1),costh,phi,
-     &        p(0,itree(2,ibranch)),p(0,ibranch))
+         call mom2cx(dsqrt(s1),m(itree(2,ibranch)),m(ibranch-1),costh,phi,
+     &        p(0,itree(2,ibranch)),pother)
 
+         I= itree(2,ibranch)
          DO I=0,3
-            ptemp(I) = P(I,tstrategy) + P(I,itree(1, ibranch))
+            pboost(I) = P(I,tstrategy) + P(I,itree(1, ibranch))
          ENDDO
-         call boostm(p(0,itree(2,ibranch)),ptemp,m(itree(2,ibranch)),p(0,itree(2,ibranch)))
-         call boostm(p(0,ibranch),ptemp,m(ibranch),p(0,ibranch))
-         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
-         cycle
-      endif
          
-      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+         call boostm(p(0,itree(2,ibranch)),pboost,m(itree(2,ibranch)),p(0,itree(2,ibranch)))
+         call boostm(pother,pboost,m(ibranch),pother)
+
+         do I=0,3
+            p(I,ibranch) = pother(i) - p(i, tstrategy)
+         enddo
+         if(.false.)then
+         write(*,*) 'input'
+         write(*,*) 'p(tstrategy=',tstrategy,')', p(0,tstrategy), p(1,tstrategy), p(2,tstrategy), p(3,tstrategy)
+         I=itree(1, ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'output'
+         I= itree(2,ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'pother', pother(0),pother(1),pother(2),pother(3)
+         write(*,*) 'check'
+         do i=0,3
+            ptemp(i) = p(i,tstrategy) + p(i, itree(1, ibranch))
+         enddo
+         write(*,*) 'pa+pb', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         do i=0,3
+            ptemp(i) = pother(i) + p(i,itree(2,ibranch))
+         enddo
+         write(*,*) 'p1+p2', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         
+         write(*,*) 'Tchannel'
+         I = ibranch
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i), dot(p(0,I), p(0,I))
+         endif
+         
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+
+      else
+
+c     test of impact of low t part
+         if (nt_channel.eq.2)then
+            tmin = max(tmin,  tmin_for_channel*stot)
+         endif
+      if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, -tmin_for_channel)
+         t = stot*(-x(-ibranch))
+c     if (dabs(tmax - tmin)/stot.gt.0.05d0) then
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0,  1d0)
+c     set tmax to 0 and tmin to -1 The idea is to avoid dimension correlation
+c     the condition ensure a minimum efficiency in the generation of events
+c         t = stot*(-x(-ibranch))
+      else if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
-c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
-
       else
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
@@ -1158,6 +1209,7 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
          endif
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      endif
       enddo
 c
 c     We need to get the momentum of the last external particle.
@@ -1575,6 +1627,96 @@ c     find the boost momenta --sum of particles--
       return
       end
 
+      double precision function get_channel_cut(p, config)
+      implicit none
 
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'maxamps.inc'
+c      include 'run.inc'
+
+      double precision p(0:3, nexternal)
+      integer config
+      
+
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
+
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
+       double precision tmin_for_channel
+       common/TO_CHANNEL_TMIN/tmin_for_channel
+      
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
+
+      double precision      spole(maxinvar),swidth(maxinvar),bwjac
+      common/to_brietwigner/spole          ,swidth          ,bwjac
+
+      double precision ptemp(0:3, -nexternal:nexternal)
+      integer i,j
+      integer d1, d2
+      double precision t
+      double precision dot
+      external dot
+      integer ns_channel
+      integer nb_tchannel
+      integer nbranch
+      
+      include 'configs.inc'
+      do i = 1, nexternal
+         do j =0,3
+            ptemp(j,i) = p(j,i)
+            ptemp(j,-i) = 0d0
+         enddo
+      enddo
+
+      nbranch = nexternal -2
+      ns_channel=1
+      do while((iforest(1,-ns_channel,config) .ne. 1.and.iforest(1,-ns_channel,config) .ne. 2).and.ns_channel.lt.nbranch)
+         ns_channel=ns_channel+1
+      enddo
+      ns_channel=ns_channel - 1
+      nb_tchannel=nbranch-ns_channel-1
+c      write(*,*) 'T-channel found: ',nb_tchannel
+
+      if (.true..and.nb_tchannel.ne.2)then
+         get_channel_cut = 1.
+         return
+      endif
+      
+      do i = 1, nexternal-2
+         d1 = iforest(1, -i, config)
+         d2 = iforest(2, -i, config)
+         do j=0,3
+            if (d1.gt.0.and.d1.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
+            endif
+            if (d2.gt.0.and.d2.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)
+            endif
+         enddo
+         if (tprid(-i,config).ne.0)then
+            t = dot(ptemp(0,-i), ptemp(0,-i))/stot
+            if (t.lt.tmin_for_channel)then
+               get_channel_cut = 0.
+               return
+            endif
+         endif
+      enddo
+      get_channel_cut = 1.
+      return
+      end
 
 

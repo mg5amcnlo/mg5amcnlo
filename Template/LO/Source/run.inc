@@ -98,3 +98,6 @@ c
 
        double precision small_width_treatment
        common/narrow_width/small_width_treatment
+
+       double precision tmin_for_channel
+       common/TO_CHANNEL_TMIN/tmin_for_channel
