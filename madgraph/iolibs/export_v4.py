@@ -1152,7 +1152,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         return ret_list
 
-    def get_amp2_lines(self, matrix_element, config_map = []):
+    def get_amp2_lines(self, matrix_element, config_map = [], replace_dict=None):
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
@@ -1193,9 +1193,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 # Not using \sum |M|^2 anymore since this creates troubles
                 # when ckm is not diagonal due to the JIM mechanism.
                 if '+' in amp:
-                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                    amp = "(%s)*dconjg(%s)" % (amp, amp)
                 else:
-                    line += "%s*dconjg(%s)" % (amp, amp)
+                    amp = "%s*dconjg(%s)" % (amp, amp)
+                
+                line =  line + " DMAX1(DBLE(%s), DABS(MATRIX%s))" % (amp, replace_dict['proc_id'])
+                #line += " * get_channel_cut(p, %s) " % (config)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
@@ -4193,7 +4196,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 6
 
         # Extract amp2 lines
-        amp2_lines = self.get_amp2_lines(matrix_element, config_map)
+        amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
         # The JAMP definition depends on the splitting order

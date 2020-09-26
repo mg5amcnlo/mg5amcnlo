@@ -479,6 +479,7 @@ class HelicityRecycler():
            Also update name of output variable.'''
         # Doesnt work if the AMP arguments contain brackets
         new_line = re.sub(r'\WAMP\(.*?\)', self.add_amp_index, line)
+        new_line = re.sub(r'MATRIX\d+', 'TS(K)', new_line)
         return new_line
 
     def jamp_finished(self, line):
