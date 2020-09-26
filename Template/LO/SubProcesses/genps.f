@@ -1687,7 +1687,8 @@ c      include 'run.inc'
       nb_tchannel=nbranch-ns_channel-1
 c      write(*,*) 'T-channel found: ',nb_tchannel
 
-      if (.true..and.nb_tchannel.lt.2)then
+      get_channel_cut = 1.
+      if (nb_tchannel.lt.2)then
          get_channel_cut = 1.
          return
       endif
@@ -1712,10 +1713,12 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             if (t.lt.tmin_for_channel)then
                get_channel_cut = 0.
                return
+            else if(t.gt.2*tmin_for_channel)then
+               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
             endif
          endif
       enddo
-      get_channel_cut = 1.
+
       return
       end
 
