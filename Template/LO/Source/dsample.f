@@ -453,6 +453,10 @@ c-----
       CUMULATED_TIMING = t_after - CUMULATED_TIMING
 
       if (N_EVALS.eq.0) then
+         write(outUnit,*) '<lo_statistics> '
+         write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     &        //'</cumulated_time>'
+         write(outUnit,*) '</lo_statistics>'
         return
       endif
       

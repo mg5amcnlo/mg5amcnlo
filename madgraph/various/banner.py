@@ -3259,6 +3259,21 @@ class RunCardLO(RunCard):
         if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
             raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
 
+        # check that ebeam is bigger than the associated mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+            if self['mass_ion%i' % i] == -1:
+                if self['ebeam%i' % i] < 0.938:
+                    if self['ebeam%i' %i] == 0:
+                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        self.set('ebeam%i' %i, 0.938)
+                    else:
+                        raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+            elif self['ebeam%i' % i] < self['mass_ion%i' % i]:    
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
+                    self.set('ebeam%i' %i, self['mass_ion%i' % i])
 
     def update_system_parameter_for_include(self):
         
@@ -4058,7 +4073,7 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
              
         #merging
-        self.add_param('ickkw', 0)
+        self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
         #cuts        
         self.add_param('jetalgo', 1.0)
@@ -4241,6 +4256,19 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
 
+        # check that ebeam is bigger than the proton mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+
+            if self['ebeam%i' % i] < 0.938:
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    self.set('ebeam%i' %i, 0.938)
+                else:
+                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+
+
     def update_system_parameter_for_include(self):
         
         # set the pdg_for_cut fortran parameter
@@ -4336,6 +4364,49 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+            
+        # Check if need matching
+        min_particle = 99
+        max_particle = 0
+        for proc in proc_def:
+            min_particle = min(len(proc['legs']), min_particle)
+            max_particle = max(len(proc['legs']), max_particle)
+        matching = False
+        if min_particle != max_particle:
+            #take one of the process with min_particle
+            for procmin in proc_def:
+                if len(procmin['legs']) != min_particle:
+                    continue
+                else:
+                    idsmin = [l['id'] for l in procmin['legs']]
+                    break
+            
+            for procmax in proc_def:
+                if len(procmax['legs']) != max_particle:
+                    continue
+                idsmax =  [l['id'] for l in procmax['legs']]
+                for i in idsmin:
+                    if i not in idsmax:
+                        continue
+                    else:
+                        idsmax.remove(i)
+                for j in idsmax:
+                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21]:
+                        break
+                else:
+                    # all are jet => matching is ON
+                    matching=True
+                    break 
+        
+        if matching: 
+            self['ickkw'] = 3
+            self['fixed_ren_scale'] = False
+            self["fixed_fac_scale"] = False
+            self["fixed_QES_scale"] = False
+            self["jetalgo"] = 1
+            self["jetradius"] = 1
+            self["parton_shower"] = "PYTHIA8"
+            
     
     
     

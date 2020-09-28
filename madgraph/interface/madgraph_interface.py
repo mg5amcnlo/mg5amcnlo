@@ -579,7 +579,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   orders to ensure maximum number of QCD vertices.")
         logger.info(" > Desired coupling orders combination can be specified directly for")
         logger.info("   the squared matrix element by appending '^2' to the coupling name.")
-        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^2==2' selects the QED-QCD")
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
@@ -3082,7 +3082,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         existing amplitudes
         or merge two model
         """
-
+        
         args = self.split_arg(line)
 
         
@@ -3183,47 +3183,51 @@ This implies that with decay chains:
                 
 
             self._curr_proc_defs.append(myprocdef)
-            
-            # Negative coupling order contraints can be given on at most one
-            # coupling order (and either in squared orders or orders, not both)
-            if len([1 for val in list(myprocdef.get('orders').values())+\
-                          list(myprocdef.get('squared_orders').values()) if val<0])>1:
-                raise MadGraph5Error("Negative coupling order constraints"+\
-                  " can only be given on one type of coupling and either on"+\
-                               " squared orders or amplitude orders, not both.")
 
-            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
-                logger.warning('''Computation of interference term with decay is not 100% validated.  
-                Please check carefully your result.
-                One suggestion is also to compare the generation of your process with and without
-                set group_subprocesses True
-                (to write Before the generate command)
-                ''')
-
-            cpu_time1 = time.time()
-
-            # Generate processes
-            if self.options['group_subprocesses'] == 'Auto':
-                    collect_mirror_procs = True
-            else:
-                collect_mirror_procs = self.options['group_subprocesses']
-            ignore_six_quark_processes = \
-                           self.options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self.options \
-                           else []
-
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                     collect_mirror_procs = collect_mirror_procs,
-                                     ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize, diagram_filter=diagram_filter)
-
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                elif warning_duplicate:
-                    raise self.InvalidCmd("Duplicate process %s found. Please check your processes." % \
-                                                amp.nice_string_processes())
+            try:
+                # Negative coupling order contraints can be given on at most one
+                # coupling order (and either in squared orders or orders, not both)
+                if len([1 for val in list(myprocdef.get('orders').values())+\
+                              list(myprocdef.get('squared_orders').values()) if val<0])>1:
+                    raise MadGraph5Error("Negative coupling order constraints"+\
+                      " can only be given on one type of coupling and either on"+\
+                                   " squared orders or amplitude orders, not both.")
+    
+                if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                    logger.warning('''Computation of interference term with decay is not 100% validated.  
+                    Please check carefully your result.
+                    One suggestion is also to compare the generation of your process with and without
+                    set group_subprocesses True
+                    (to write Before the generate command)
+                    ''')
+    
+                cpu_time1 = time.time()
+    
+                # Generate processes
+                if self.options['group_subprocesses'] == 'Auto':
+                        collect_mirror_procs = True
+                else:
+                    collect_mirror_procs = self.options['group_subprocesses']
+                ignore_six_quark_processes = \
+                               self.options['ignore_six_quark_processes'] if \
+                               "ignore_six_quark_processes" in self.options \
+                               else []
+    
+                myproc = diagram_generation.MultiProcess(myprocdef,
+                                         collect_mirror_procs = collect_mirror_procs,
+                                         ignore_six_quark_processes = ignore_six_quark_processes,
+                                         optimize=optimize, diagram_filter=diagram_filter)
+    
+    
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self._curr_amps:
+                        self._curr_amps.append(amp)
+                    elif warning_duplicate:
+                        raise self.InvalidCmd( "Duplicate process %s found. Please check your processes." % \
+                                                    amp.nice_string_processes())
+            except Exception:
+                self._curr_proc_defs.pop(-1)
+                raise
 
             # Reset _done_export, since we have new process
             self._done_export = False
@@ -3329,9 +3333,13 @@ This implies that with decay chains:
         if answer != 'y':
             return 
         
-        #Object_library (.iteritems() -> .items())
+        #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
+        #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
+        # raise UFOError, "" -> raise UFOError()
+        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
+                      'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
@@ -5166,6 +5174,7 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new process
         self._done_export = False
+        self._curr_proc_defs.append(myprocdef)
 
         cpu_time2 = time.time()
 
@@ -5372,20 +5381,20 @@ This implies that with decay chains:
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1)
             if proc_number_re.group(3):
-                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
                 order_line = proc_number_re.group(3)
                 order_re = order_pattern.match(order_line)
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)                
+                    order_re = order_pattern.match(order_line)            
             logger.info(line)
             
 
@@ -6003,9 +6012,12 @@ This implies that with decay chains:
             if six.PY3:
                 self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py3' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py3']
             else:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py2']
+            
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6801,7 +6813,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             data['last_check'] = time.time()
 
         #check if we need to update.
-        if time.time() - data['last_check'] < update_delay:
+        if time.time() - float(data['last_check']) < float(update_delay):
             return
 
         logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)

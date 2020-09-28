@@ -803,6 +803,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         """Generate an amplitude for a given process and add to
         existing amplitudes
         """
+
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
@@ -907,6 +908,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                       amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
             (cpu_time2 - cpu_time1))
+            
 
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass

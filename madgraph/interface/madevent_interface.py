@@ -3422,6 +3422,9 @@ Beware that this can be dangerous for local multicore runs.""")
         self.nb_refine += 1
         args = self.split_arg(line)
         treshold=None
+               
+
+        
         for a in args:
             if a.startswith('--treshold='):
                 treshold = float(a.split('=',1)[1])
@@ -4175,7 +4178,7 @@ already exists and is not a fifo file."""%fifo_path)
                         PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
             
             for scale in PY8_Card['SysCalc:tmsList']:
-                if scale<self.run_card[CKKW_cut]:
+                if float(scale)<float(self.run_card[CKKW_cut]):
                     logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\

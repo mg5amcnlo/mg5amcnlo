@@ -5968,6 +5968,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
                 self.do_set('run_card store_rwgt_info True')
         
+            #check relation between ickkw and shower_card
+            if 'run' in self.allow_arg and self.run_card['ickkw'] == 3 :
+                if 'shower' in self.allow_arg:
+                    if self.shower_card['qcut'] == -1:
+                        self.do_set('shower_card qcut %f' % (2*self.run_card['ptj'])) 
+                    elif self.shower_card['qcut'] < self.run_card['ptj']*2:
+                        logger.error("ptj cut [in run_card: %s] is more than half the value of QCUT [shower_card: %s] This is not recommended:\n see http://amcatnlo.web.cern.ch/amcatnlo/FxFx_merging.htm ",
+                                     self.run_card['ptj'], self.shower_card['qcut'])
+                        
+                if self.shower_card['njmax'] == -1:
+                    if not proc_charac: #shoud not happen in principle 
+                        raise Exception( "Impossible to setup njmax automatically. Please setup that value manually.")
+                    njmax = proc_charac['max_n_matched_jets']
+                    self.do_set('shower_card njmax %i' % njmax) 
+                if self.shower_card['njmax'] == 0:
+                    raise Exception("Invalid njmax parameter. Can not be set to 0")
+                    
+                
        
         
         # Check the extralibs flag.

@@ -20,7 +20,6 @@ from six.moves import zip
 
 import copy
 from six import StringIO
-from distutils import dir_util
 import itertools
 import fractions
 import glob
@@ -255,8 +254,8 @@ class ProcessExporterFortran(VirtualExporter):
                         os.path.basename(self.dir_path))
             shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # copy plot_card
             for card in ['plot_card']:
@@ -269,8 +268,8 @@ class ProcessExporterFortran(VirtualExporter):
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
 #            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
@@ -279,8 +278,8 @@ class ProcessExporterFortran(VirtualExporter):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
 #                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Copy plot_card
             for card in ['plot_card']:
@@ -903,7 +902,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if hasattr(self, 'aloha_model'):
             aloha_model = self.aloha_model
         else:
-            aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            try:
+                with misc.MuteLogger(['madgraph.models'], [60]):
+                    aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            except ImportError:
+                aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
