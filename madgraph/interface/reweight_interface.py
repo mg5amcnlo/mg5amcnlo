@@ -1768,7 +1768,6 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 nb_core = 1
             os.environ['MENUM'] = '2'
-            misc.sprint(pdir, nb_core, os.environ['MENUM'])
             misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
             if not (self.second_model or self.second_process or self.dedicated_path):
                 os.environ['MENUM'] = '3'
