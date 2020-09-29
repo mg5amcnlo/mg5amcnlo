@@ -731,7 +731,14 @@ class FKSHelasProcess(object):
                           optimized_output = loop_optimized)
             else: 
                 self.virt_matrix_element = None
+
+            self.sudakov_matrix_elements = fks_proc.sudakov_amps
+            for amp in fks_proc.sudakov_amps:
+                amp['matrix_element'] = helas_objects.HelasMatrixElement(amp('amplitude'), **opts)
+                amp.pop('amplitude')
+
             self.color_links = []
+
 
 
     def set_color_links(self):
@@ -789,6 +796,8 @@ class FKSHelasProcess(object):
             lorentz_list.extend(real.matrix_element.get_used_lorentz())
         if self.virt_matrix_element:
             lorentz_list.extend(self.virt_matrix_element.get_used_lorentz())
+        if for sud_me in self.sudakov_matrix_elements:
+            lorentz_list.extend(sud_me[['matrix_element'].get_used_lorentz())
 
         return list(set(lorentz_list))
     
@@ -802,6 +811,8 @@ class FKSHelasProcess(object):
                         real.matrix_element.get_used_couplings()])
         if self.virt_matrix_element:
             coupl_list.extend(self.virt_matrix_element.get_used_couplings())
+        if for sud_me in self.sudakov_matrix_elements:
+            coup_list.extend(sud_me[['matrix_element'].get_used_couplings())
         return coupl_list    
 
     def get_nexternal_ninitial(self):
