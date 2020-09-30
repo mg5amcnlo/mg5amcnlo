@@ -4176,10 +4176,12 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
                         PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
-            
-            for scale in PY8_Card['SysCalc:tmsList']:
-                if float(scale)<float(self.run_card[CKKW_cut]):
-                    logger.error(
+                #else:
+                #    PY8_Card.MadGraphSet('SysCalc:tmsList', [], force=True)
+            if PY8_Card['SysCalc:tmsList']!='auto':
+                for scale in PY8_Card['SysCalc:tmsList']:
+                    if float(scale)<float(self.run_card[CKKW_cut]):
+                        logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
