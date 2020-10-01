@@ -3139,6 +3139,7 @@ class RunCardLO(RunCard):
         self.add_param('hel_filtering', True,  hidden=True, include=False, comment='filter in advance the zero helicities when doing helicity per helicity optimization.')
         self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
         self.add_param('hel_zeroamp', True, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
+        self.add_param('single_diagram_enhancement_strategy', 2, allowed=[1,2], fortran_name="sde_strat", hidden=True, comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)

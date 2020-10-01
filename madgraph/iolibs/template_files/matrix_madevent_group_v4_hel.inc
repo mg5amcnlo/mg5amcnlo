@@ -63,8 +63,13 @@ C
     common /nb_hel_state/ nb_spin_state_in
     
     REAL*8 POL(2)
-    COMMON/TO_POLARIZATION/ POL
     
+    COMMON/TO_POLARIZATION/ POL
+       double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+       
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
@@ -129,9 +134,14 @@ c         Set right sign for ANS, based on sign of chosen helicity
         DO I=1,LMAXCONFIGS
 	    J = CONFSUB(%(proc_id)s, I)
 	    if (J.ne.0)then
-	        AMP2(J) = AMP2(J) * GET_CHANNEL_CUT(P, I)
-                XTOT=XTOT+AMP2(J)
-	    endif
+	      if (sde_strat.eq.1)then
+	         AMP2(J) = AMP2(J) * GET_CHANNEL_CUT(P, I)
+               else
+	     	         AMP2(J) = GET_CHANNEL_CUT(P, I)
+	       endif
+             XTOT=XTOT+AMP2(J)
+
+             endif
         ENDDO
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
@@ -210,6 +220,11 @@ C
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
 
+       double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
 C  
@@ -241,7 +256,9 @@ ${jamp_lines}
     		ENDDO
           ENDDO
     	ENDDO
+	if(sde_strat.eq.1) then
         ${amp2_lines}
+	endif
         Do I = 1, NCOLOR
     	  DO M = 1, NAMPSO
     		DO N = 1, NAMPSO

@@ -1634,7 +1634,8 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
-c      include 'run.inc'
+      include 'coupl.inc'
+c     include 'run.inc'
 
       double precision p(0:3, nexternal)
       integer config
@@ -1651,8 +1652,10 @@ c      include 'run.inc'
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
-       double precision tmin_for_channel
-       common/TO_CHANNEL_TMIN/tmin_for_channel
+      double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
       
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -1670,7 +1673,23 @@ c      include 'run.inc'
       integer nb_tchannel
       integer nbranch
       
+      double precision ZERO
+      parameter (ZERO=0d0)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      logical first_time
+      save prmass,prwidth,pow
+      data first_time /.true./
+
+      double precision Mass, Width
+      
       include 'configs.inc'
+
+      if (first_time) then
+      include 'props.inc'
+      endif
+      
       do i = 1, nexternal
          do j =0,3
             ptemp(j,i) = p(j,i)
@@ -1687,13 +1706,18 @@ c      include 'run.inc'
       nb_tchannel=nbranch-ns_channel-1
 c      write(*,*) 'T-channel found: ',nb_tchannel
 
+
+
+
+
+      
       get_channel_cut = 1.
-      if (nb_tchannel.lt.2)then
+      if (nb_tchannel.lt.2.and.sde_strat.eq.1)then
          get_channel_cut = 1.
          return
       endif
       
-      do i = 1, nexternal-2
+      do i = 1, nexternal-3
          d1 = iforest(1, -i, config)
          d2 = iforest(2, -i, config)
          do j=0,3
@@ -1709,16 +1733,30 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             endif
          enddo
          if (tprid(-i,config).ne.0)then
-            t = dot(ptemp(0,-i), ptemp(0,-i))/stot
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
+            endif
+c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
+            t = t/stot 
             if (t.lt.tmin_for_channel)then
                get_channel_cut = 0.
                return
             else if(t.gt.2*tmin_for_channel)then
                get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
             endif
+         else
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               Width = prwidth(-i, config)
+               get_channel_cut = get_channel_cut / (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2)
+            endif
+c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
          endif
       enddo
-
+c      write(*,*) 'final for config', config, get_channel_cut
       return
       end
 

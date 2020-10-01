@@ -80,7 +80,12 @@ C
     
     INTEGER IMIRROR
     COMMON/TO_MIRROR/ IMIRROR
- 
+
+       double precision tmin_for_channel	
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
 
@@ -225,8 +230,13 @@ c         Set right sign for ANS, based on sign of chosen helicity
         DO I=1,LMAXCONFIGS
 	    J = CONFSUB(%(proc_id)s, I)
 	    if (J.ne.0) then
+	    if(sde_strat.eq.1) then
 	         AMP2(J) = AMP2(J) * GET_CHANNEL_CUT(P, I)
                  XTOT=XTOT+AMP2(J)
+	    else
+	    	 AMP2(J) = GET_CHANNEL_CUT(P, I)
+                 XTOT=XTOT+AMP2(J)
+	    endif	
             endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
@@ -317,6 +327,12 @@ C
 
 	logical zeroamp_%(proc_id)s(NCOMB,NGRAPHS)
 	common/to_zeroamp_%(proc_id)s/zeroamp_%(proc_id)s
+
+       double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+       
 C  
 C COLOR DATA
 C  
@@ -360,7 +376,10 @@ endif
       ENDDO
 	ENDDO
 
+    if(sde_strat.eq.1)then
 %(amp2_lines)s
+    endif 
+
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
