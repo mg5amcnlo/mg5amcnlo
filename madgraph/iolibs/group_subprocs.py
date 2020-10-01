@@ -65,8 +65,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
-        if abs(part.get('pdg_code')) in [23,25] and (
-            leg.get('state') == False or leg.get('onshell') == False):
+        if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('mass')
@@ -93,8 +92,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
         else:
             leg = vertex.get('legs')[-1]
             part = model.get_particle(leg.get('id'))
-            if abs(part.get('pdg_code')) in [23,25] and (
-            leg.get('state') == False or leg.get('onshell') == False):
+            if abs(part.get('pdg_code')) in [23,25] and leg.get('onshell') == False:
                 part2 = model.get_particle(22)
                 mass = part2.get('mass')
                 width = part2.get('width')
