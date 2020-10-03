@@ -1197,7 +1197,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 else:
                     amp = "%s*dconjg(%s)" % (amp, amp)
                 
-                line =  line + " DMAX1(DBLE(%s), DABS(MATRIX%s))" % (amp, replace_dict['proc_id'])
+                line =  line + "%s" % (amp)
                 #line += " * get_channel_cut(p, %s) " % (config)
                 ret_lines.append(line)
         else:
