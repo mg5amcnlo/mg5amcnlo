@@ -174,9 +174,9 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
-      ncall =  ncall * max(1., min(3., (nb_tchannel+1.)/2.))
+c      ncall =  ncall * max(1., min(3., (nb_tchannel+1.)/2.))
       if (nb_tchannel.gt.1) then
-         itmin = itmin + 1
+c         itmin = itmin + 1
          itmax = itmax + 2
       endif
 

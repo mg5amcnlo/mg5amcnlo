@@ -681,8 +681,7 @@ class HelicityRecycler():
                     self.template_dict['helas_calls'] += self.unfold_helicities(
                         line, call_type)
 
-        self.template_dict['nwavefuncs'] = Internal.max_wav_num
-        
+        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num)
         # filter out uselless call
         for i in range(len(self.template_dict['helas_calls'])-1,-1,-1):
             obj = self.template_dict['helas_calls'][i]
