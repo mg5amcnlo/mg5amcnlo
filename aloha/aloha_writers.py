@@ -832,11 +832,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                 else:
                     if self.routine.denominator:
                         if 'P1N' not in self.tag:
-                            pass
-                        else:
-                            raise Exception('modify denominator are not compatible with complex mass scheme')                
-
-                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
+                            raise Exception('modify denominator are not compatible with complex mass scheme', self.tag)                
+                    if 'P1N' not in self.tag:
+                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
                 if 'P1N' not in self.tag:
                     self.declaration.add(('complex','denom'))
