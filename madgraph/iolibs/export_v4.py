@@ -3546,6 +3546,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             self.opt['hel_recycling'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['hel_recycling'], bool, 'hel_recycling')
 
+        if isinstance(opt['output_options'], dict) and \
+                                       't_strategy' in opt['output_options']:
+            self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['t_strategy'], int, 't_strategy')
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -4607,7 +4612,7 @@ c           This is dummy particle used in multiparticle vertices
         For s-channels, we need to output one PDG for each subprocess in
         the subprocess group, in order to be able to pick the right
         one for multiprocesses."""
-
+        
         lines = []
 
         s_and_t_channels = []
@@ -4653,7 +4658,8 @@ c           This is dummy particle used in multiparticle vertices
                  
             # pass to ping-pong strategy for t-channel for 3 ore more T-channel
             #  this is directly related to change in genps.f
-            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels)
+            tstrat = self.opt.get('t_strategy', 0)
+            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat)
             
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
@@ -4741,13 +4747,15 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     ordering = 0    
     @staticmethod
-    def reorder_tchannels(tchannels):
+    def reorder_tchannels(tchannels, tstrat):
         
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         ProcessExporterFortranME.ordering +=1
-        if len(tchannels) < 3:
+        if len(tchannels) < 3 or tstrat == 2:
             return tchannels, 2
+        elif tstrat == 1:
+            return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
         elif len(tchannels) < 4:
             #
             first = tchannels[0]['legs'][1]['number']
