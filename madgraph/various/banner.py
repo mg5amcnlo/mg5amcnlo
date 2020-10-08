@@ -3288,7 +3288,15 @@ class RunCardLO(RunCard):
                 if self['ebeam%i' %i] == 0:
                     logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
                     self.set('ebeam%i' %i, self['mass_ion%i' % i])
-
+                    
+                    
+        # check the tmin_for_channel is negative
+        if self['tmin_for_channel'] == 0:
+            raise InvalidRunCard('tmin_for_channel can not be set to 0.')
+        elif self['tmin_for_channel'] > 0:
+            logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
+            self.set('tmin_for_channel',  -self['tmin_for_channel'])
+            
     def update_system_parameter_for_include(self):
         
         # polarization
