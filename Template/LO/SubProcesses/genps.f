@@ -937,9 +937,7 @@ c
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
          if (nt_channel.ge.2)then
-            tmin = max(tmin, tmin_for_channel*m(-ns_channel-1)**2)
-c            write(*,*) m(-ns_channel-1) , stot
-c            stop 1
+            tmin = max(tmin, tmin_for_channel*stot)
          endif
       if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
             call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
@@ -1685,11 +1683,13 @@ c      	      	      	   2 means approximation by the	denominator of the propaga
       data first_time /.true./
 
       double precision Mass, Width
-      double precision shat
-      double precision ps(0:3)
       
       include 'configs.inc'
 
+      if (tmin_for_channel.le.-1.and.sde_strat.eq.-1)then
+         get_channel_cut = 1d0
+         return
+      endif
       if (first_time) then
       include 'props.inc'
       endif
@@ -1742,12 +1742,8 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
                Mass  = prmass(-i, config)
                get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
             endif
-c     write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
-            do j =0,3
-               ps(j) = p(j,1) + p(j,2)
-            enddo
-            shat = dot(ps,ps)
-            t = t/shat
+c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
+            t = t/stot 
             if (t.lt.tmin_for_channel)then
                get_channel_cut = 0.
                return
