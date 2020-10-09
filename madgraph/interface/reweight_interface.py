@@ -1069,7 +1069,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
                 w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
-                ratio_V = w_newV/w_origV
+                ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
