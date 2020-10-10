@@ -2227,6 +2227,8 @@ class Event(list):
         
         if other is None:
             return False
+        if len(self) != len(other):
+            return False
         
         for i,p in enumerate(self):
             if p.E != other[i].E:

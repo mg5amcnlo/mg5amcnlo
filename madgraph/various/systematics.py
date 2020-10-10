@@ -573,7 +573,7 @@ class Systematics(object):
                 
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
-                        text += "</weightgroup> # PDFSET -> PDFSET\n"
+                        text += "</weightgroup> # PDFSET to PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID]
                     descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
@@ -581,14 +581,14 @@ class Systematics(object):
                     in_pdf=pdf.lhapdfID 
                 elif pdf.memberID == 0 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
                     if in_pdf:
-                        text += "</weightgroup> # PDFSET -> PDFSET\n"
+                        text += "</weightgroup> # PDFSET to PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID - 1]
                     descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
-                    text += "</weightgroup> # PDFSET -> PDF\n"
+                    text += "</weightgroup> # PDFSET to PDF\n"
                     in_pdf = False 
             elif in_pdf:
                 text += "</weightgroup> PDF \n"

@@ -4124,6 +4124,47 @@ RESTART = %(mint_mode)s
             misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
                                                            cwd=run_dir_path)
             shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        
+        if self.run_card['ickkw'] >0 :
+            if self.run_card['ickkw'] != 3 or shower != 'PYTHIA8':
+                logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+            else:
+                pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
+                
+                pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
+                # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
+                                                         
+                for line in pythia_log:
+                    info = pythiare.search(line)
+                    if not info:
+                        continue
+                    try:
+                        # Pythia cross section in mb, we want pb
+                        sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                        sigma_err = float(info.group('xerr').replace('D','E')) *1e9
+                        Nacc = int(info.group('accepted'))
+                        #Ntry = int(info.group('accepted'))
+                    except:
+                        logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                        break
+                    
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('error_pythia', sigma_err)
+                    self.results.add_detail('shower_dir', os.path.basename(rundir))
+                    logger.info("\nFxFx  Cross-Section:\n"+\
+                                "======================\n"+\
+                                "    %f pb.\n"
+                                "    Number of events after merging: %s\n", sigma_m, Nacc, '$MG:BOLD')
+                    break
+                else:
+                    logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                                    
+                
+            
+            
+            
+            
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
             misc.gzip(f)
@@ -5408,7 +5449,7 @@ RESTART = %(mint_mode)s
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
-            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower']:
+            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower'] and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
@@ -5557,9 +5598,9 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
-               'Please upgrate your version of python.')
+    if sys.version_info[1] < 7:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.7 or python3.7 and later.\n'+\
+               'Please upgrade your version of python or specify a compatible version')
 
     import os
     import optparse
