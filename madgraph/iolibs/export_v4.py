@@ -6034,19 +6034,19 @@ class UFO_model_to_mg4(object):
                             if param.type == 'real'and 
                                is_valid(param.name)]
         
-        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
-
         # check the parameter is a CT parameter or not
         # if yes, just use the needed ones        
         real_parameters = [param for param in real_parameters \
                                            if self.check_needed_param(param)]
 
+        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
+        
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
             mp_fsock.writelines(self.mp_real_format+' '+','.join([\
                               self.mp_prefix+p for p in real_parameters])+'\n')
-            mp_fsock.writelines('common/MP_params_R/ '+','.join([\
+            mp_fsock.writelines('common/MP_T_params_R/ '+','.join([\
                             self.mp_prefix+p for p in real_parameters])+'\n\n')        
         
         complex_parameters = [param.name for param in self.params_dep + 
@@ -6408,7 +6408,9 @@ class UFO_model_to_mg4(object):
       PARAMETER  (PI=3.141592653589793D0)
 
       include '../alfas.inc'
-      INCLUDE '%(mp)sinput.inc'
+      include 'input.inc'
+      %(mpinput)s
+
       include '../cuts.inc'
       INCLUDE 'coupl.inc'
       double precision GMU
@@ -6465,7 +6467,8 @@ class UFO_model_to_mg4(object):
 
       include '../alfas.inc'
       include '../cuts.inc'
-      INCLUDE '%(mp)sinput.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
       INCLUDE 'coupl.inc'
       double precision GMU
 
@@ -6518,7 +6521,8 @@ class UFO_model_to_mg4(object):
       PARAMETER  (PI=3.141592653589793D0)
 
       include '../alfas.inc'
-      INCLUDE '%(mp)sinput.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
       INCLUDE 'coupl.inc'
       double precision GMU
 
@@ -6638,6 +6642,7 @@ class UFO_model_to_mg4(object):
         
         data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
         data['mat2'] = ",".join(["%e" % mat2[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mpinput'] =''
         if any(mat1[i][j] for i,j in zip(range(size),range(size))):
             template = self.template_running_gs_gs2
         else:
@@ -6646,6 +6651,7 @@ class UFO_model_to_mg4(object):
         text = template % data
         if self.opt['mp']:
             data['mp'] = 'MP_'
+            data['mpinput']="INCLUDE 'MP_input.inc'"
             data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
                                     for i, name in enumerate(runparams)])
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)

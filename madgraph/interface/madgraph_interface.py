@@ -24,6 +24,7 @@ import collections
 import cmath
 import glob
 import logging
+import operator
 import optparse
 import os
 import pydoc
@@ -3557,13 +3558,7 @@ This implies that with decay chains:
 
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
-            #self._curr_model.get_order_hierarchy().items()
-            def order(first, second):
-                if first[1] < second[1]:
-                    return -1
-                else:
-                    return 1
-            hierarchy.sort(order)
+            hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
 
