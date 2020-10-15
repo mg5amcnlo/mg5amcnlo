@@ -6289,24 +6289,42 @@ class UFO_model_to_mg4(object):
 
                             implicit none
                             double precision PI, ZERO
-                            logical READLHA
+                            logical READLHA, FIRST
+                            data first /.true./
+                            save first
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
-                            include \'model_functions.inc\'""")
+                            double precision Gother
+                            include \'model_functions.inc\'
+                            include \'../maxparticles.inc\'
+                            include \'../run.inc\'
+                            double precision alphas 
+                            external alphas
+                            """)
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
+                            
                          """)
         
         if self.model['running_elements']:
             running_block = self.model.get_running(self.used_running_key) 
             if running_block:
                 fsock.write_comments('calculate the running parameter')
-            for i in range(len(running_block)):
-                fsock.writelines(" call C_RUNNING_%s(G) ! %s \n" % (i+1,list(running_block[i])))   
-            
+                fsock.writelines(' if(fixed_other_scale.and.first) then')
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(SCALE_OTHER))') 
+                fsock.writelines(' first = .false.') 
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines(' elseif(.not.fixed_other_scale) then')
+                fsock.writelines(' Gother = G')
+                fsock.writelines(' if(ratio_muother.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(ratio_muother*scale))')
+                
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines('endif')
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 

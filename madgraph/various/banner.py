@@ -2918,7 +2918,19 @@ class RunCardLO(RunCard):
  %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
 """,
             template_off=''),    
-    
+              
+        runblock(name='RUNNING', fields=('fixed_additional_scale','scale_additional','ratio_muadd_mur'),
+                             template_on=\
+"""#***********************************************************************
+# CONTROL The additional running scale (not QCD)                       *
+#    Such running is NOT include in systematics computation            *
+#***********************************************************************
+ %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
+ %(scale_other)s  =  scale_other ! scale to use if fixed scale mode
+ %(ratio_muother)s   =  ratio_muother  ! ratio to mur if dynamical scale
+""",
+            template_off=''), 
+
     ]    
     
     
@@ -2960,11 +2972,14 @@ class RunCardLO(RunCard):
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
+        self.add_param("fixed_other_scale", False, hidden=True)
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
+        self.add_param("scale_other", 91.1880, fortran_name="scale_other", hidden=True)
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
                                                 allowed=[-1,0,1,2,3,4])
+        self.add_param("ratio_muother", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -3556,6 +3571,12 @@ class RunCardLO(RunCard):
                 cut_class[key] = max(cut_class[key], nb)
             self.cut_class = dict(cut_class)
             self.cut_class[''] = True #avoid empty
+            
+        # If model has running functionality add the additional parameter
+        model = proc_def[0][0].get('model')
+        if model['running_elements']:
+             self.display_block.append('RUNNING') 
+            
                                    
     def write(self, output_file, template=None, python_template=False,
               **opt):
