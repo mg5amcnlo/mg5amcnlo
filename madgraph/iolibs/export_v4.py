@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import division
 from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
@@ -19,8 +20,8 @@ from six.moves import zip
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+import math, cmath
 from six import StringIO
-from distutils import dir_util
 import itertools
 import fractions
 import glob
@@ -175,7 +176,6 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
-        
         self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
@@ -255,8 +255,8 @@ class ProcessExporterFortran(VirtualExporter):
                         os.path.basename(self.dir_path))
             shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # copy plot_card
             for card in ['plot_card']:
@@ -269,8 +269,8 @@ class ProcessExporterFortran(VirtualExporter):
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
 #            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
@@ -279,8 +279,8 @@ class ProcessExporterFortran(VirtualExporter):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
 #                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Copy plot_card
             for card in ['plot_card']:
@@ -671,7 +671,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
+
+        if self.opt['running']:
+            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
             text = open(path).read() % replace_dict
@@ -903,7 +908,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if hasattr(self, 'aloha_model'):
             aloha_model = self.aloha_model
         else:
-            aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            try:
+                with misc.MuteLogger(['madgraph.models'], [60]):
+                    aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            except ImportError:
+                aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
@@ -3559,6 +3568,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Copy the different python file in the Template
         self.copy_python_file()
         
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         
 
     
@@ -5589,7 +5602,26 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
+        self.scales = []
+        
+        if self.model.get('running_elements'):
+            all_elements = set()
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+                        add_scale.add(one_element.lhablock)
+            all_elements.union(set(self.PS_dependent_key))
+            self.PS_dependent_key = list(all_elements)
+            
+            try:
+                add_scale.remove('SMINPUTS')
+            except Exception:
+                pass
+            self.scales = add_scale
+
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -5661,9 +5693,10 @@ class UFO_model_to_mg4(object):
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
-        # Keep only separation in alphaS        
+        # Keep only separation in alphaS + running one        
         keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
+
         for key in keys:
             to_add = [o for o in self.model['parameters'][key] if o.name]
 
@@ -5673,19 +5706,25 @@ class UFO_model_to_mg4(object):
                 self.params_dep += to_add
             else:
                 self.params_indep += to_add
-        # same for couplings
+                
+        # same for couplings + tracking which running happens
         keys = list(self.model['couplings'].keys())
         keys.sort(key=len)
+        used_running_key = set()
         for key, coup_list in self.model['couplings'].items():
             if any([(k in key) for k in self.PS_dependent_key]):
-                self.coups_dep += [c for c in coup_list if
+                to_add = [c for c in coup_list if
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
+                if to_add:
+                    self.coups_dep += to_add
+                    used_running_key.update(set(key))
             else:
                 self.coups_indep += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings)]
-                
+        #store the running parameter that are used
+        self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -6011,18 +6050,20 @@ class UFO_model_to_mg4(object):
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]
-
+        
         # check the parameter is a CT parameter or not
         # if yes, just use the needed ones        
         real_parameters = [param for param in real_parameters \
                                            if self.check_needed_param(param)]
 
+        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
+        
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
             mp_fsock.writelines(self.mp_real_format+' '+','.join([\
                               self.mp_prefix+p for p in real_parameters])+'\n')
-            mp_fsock.writelines('common/MP_params_R/ '+','.join([\
+            mp_fsock.writelines('common/MP_T_params_R/ '+','.join([\
                             self.mp_prefix+p for p in real_parameters])+'\n\n')        
         
         complex_parameters = [param.name for param in self.params_dep + 
@@ -6240,11 +6281,11 @@ class UFO_model_to_mg4(object):
                                  %(mp_prefix)sgal(2) = 1e0_16
                              """%{'mp_prefix':self.mp_prefix})
 
-    
+    nb_def_by_file = 50
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
         
-        nb_def_by_file = 25
+        nb_def_by_file = self.nb_def_by_file
         
         self.create_couplings_main(nb_def_by_file)
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
@@ -6319,19 +6360,44 @@ class UFO_model_to_mg4(object):
 
                             implicit none
                             double precision PI, ZERO
-                            logical READLHA
+                            logical READLHA, FIRST
+                            data first /.true./
+                            save first
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
                             logical updateloop
                             common /to_updateloop/updateloop
-                            include \'model_functions.inc\'""")
+                            include \'model_functions.inc\'
+                            double precision Gother
+                            include \'../maxparticles.inc\'
+                            include \'../run.inc\'
+                            double precision alphas 
+                            external alphas
+                            """)
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
+                            
                          """)
-            
+        
+        if self.model['running_elements']:
+            running_block = self.model.get_running(self.used_running_key) 
+            if running_block:
+                fsock.write_comments('calculate the running parameter')
+                fsock.writelines(' if(fixed_other_scale.and.first) then')
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(muo_ref_fixed))') 
+                fsock.writelines(' first = .false.') 
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines(' elseif(.not.fixed_other_scale) then')
+                fsock.writelines(' Gother = G')
+                fsock.writelines(' if(muo_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(muo_over_ref*scale))')
+                
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines('endif')
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -6381,6 +6447,14 @@ class UFO_model_to_mg4(object):
             
             nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+
+            if self.model['running_elements']:
+                #running_block = self.model.get_running(self.used_running_key) 
+                if running_block:
+                    fsock.write_comments('calculate the running parameter')
+                    for i in range(len(running_block)):
+                        fsock.writelines(" call MP_C_RUNNING_%s(G) ! %s \n" % (i+1,list(running_block[i])))   
+            
                     
             fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
     
@@ -6388,6 +6462,276 @@ class UFO_model_to_mg4(object):
                         ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
+            
+        if running_block:
+            self.write_running_blocks(fsock, running_block)
+    
+    def write_running_blocks(self, fsock, running_block):
+        
+        for block_nb, runparams in enumerate(running_block):
+            text = self.write_one_running_block(block_nb, runparams)
+            fsock.writelines(text)
+            
+    
+    template_running_gs_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../alfas.inc'
+      include 'input.inc'
+      %(mpinput)s
+
+      include '../cuts.inc'
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat1(%(size)i,%(size)i), mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      data mat1 /%(mat1)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r1 = (1/GMU -1/G0)/ beta0
+      r2 = DLOG(G0/GMU)/beta0
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat1(j,i) *r1 + mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../alfas.inc'
+      include '../cuts.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r2 = DLOG(G0/GMU) / beta0 
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_x3 = """
+    SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../alfas.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat3
+      data mat3 /%(mat3)s/
+      double precision C0
+      data C0 /0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      if (first) then
+         C0 = %(mp)s%(initc0)s
+         first = .false.
+         %(check_scale)s
+      endif
+      
+      %(mp)s%(assignc)s =  1/DSQRT( 1/C0/C0 - 2*mat3 *DLOG(MU_R/mdl__%(scale)s__scale))
+      
+      return
+      end
+      """
+    
+    def write_one_running_block(self, block_nb, runparams):
+               
+        runparams = list(runparams)
+        
+        size = len(runparams) 
+        mat1=[[0]*size for _ in range(size)]
+        mat2=[[0]*size for _ in range(size)]
+        mat3=0
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+        
+        data = {}
+        data['block_nb'] = block_nb+1
+        data['size'] = size
+        data['mp'] = ''
+        if mat3:
+            template = self.template_running_x3
+            data['mat3']
+            data['initc0'] = "MDL_%s" % runparams[0]
+            data['assignc'] = "MDL_%s" % runparams[0]
+            text = template % data
+            if self.opt['mp']:
+                data['mp'] = 'MP_'
+                data['initc0'] = "MP__MDL_%s" % runparams[0]
+                data['assignc'] = "MP__MDL_%s" % runparams[0]
+                text += template % data 
+            return text
+        
+        data['initc0'] = "\n".join(["c0(%i) = MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+        data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+        data['mp'] = ''
+        
+        if len(scales) == 1:
+            data['scale'] = scales.pop()
+            data['check_scale'] = ''
+        else:
+            one_scale = scales.pop()
+            data['scale'] = one_scale
+            for scale in scales:
+                check_scale = """ if (%(1)s!=%(2)s) then
+                write(*,*) 'ERROR scale %(1)s and %(2)s need to be equal for the running'
+                stop 5
+                endif
+                """
+                data['check_scale'] += check_scale % {'1': one_scale, '2': scale}           
+            
+            
+            raise Exception
+        # need to compute the matrices
+        # carefull some component are proportional to aS
+        # need to convert those to G^2
+        # need to be carefull with prefactor included (none yet)
+
+        
+        
+        
+        
+        data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mat2'] = ",".join(["%e" % mat2[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mpinput'] =''
+        if any(mat1[i][j] for i,j in zip(range(size),range(size))):
+            template = self.template_running_gs_gs2
+        else:
+            template = self.template_running_gs2
+        
+        text = template % data
+        if self.opt['mp']:
+            data['mp'] = 'MP_'
+            data['mpinput']="INCLUDE 'MP_input.inc'"
+            data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+            data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+            text += template % data   
+            
+        return text
 
     def create_couplings_part(self, nb_file, data, dp=True, mp=False):
         """ create couplings[nb_file].f containing information coming from data.
@@ -6921,8 +7265,8 @@ class UFO_model_to_mg4(object):
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
         
-        nb_coup_indep = 1 + len(self.coups_dep) // 25 
-        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
@@ -7173,6 +7517,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         ExporterClass=None
         amcatnlo_options = dict(opt)
         amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['running'] = cmd._curr_model.get('running_elements')
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
@@ -7196,7 +7541,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'mp': False,  
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name'),
-               'v5_model': False if cmd._model_v4_path else True })
+               'v5_model': False if cmd._model_v4_path else True,
+               'running': cmd._curr_model.get('running_elements'),
+                })
 
         format = cmd._export_format #shortcut
 

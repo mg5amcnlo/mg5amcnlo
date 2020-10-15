@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from distutils import dir_util
 import glob
 import logging
 import os
@@ -83,7 +82,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -100,8 +99,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
             for card in ['plot_card']:
                 if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
@@ -224,6 +223,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We need to create the correct open_data for the pdf
         self.write_pdf_opendata()
+        
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
+        
         
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
@@ -3829,7 +3834,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -3845,8 +3850,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)
             # Copy plot_card
             for card in ['plot_card']:
@@ -4016,6 +4021,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         self.write_pdf_opendata()
 
 
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         # Return to original PWD
         os.chdir(cwd)
         

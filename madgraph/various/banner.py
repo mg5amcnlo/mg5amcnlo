@@ -2920,7 +2920,19 @@ class RunCardLO(RunCard):
  %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
 """,
             template_off=''),    
-    
+              
+        runblock(name='RUNNING', fields=('fixed_other_scale','muo_ref_fixed','muo_over_ref'),
+                             template_on=\
+"""#***********************************************************************
+# CONTROL The additional running scale (not QCD)                       *
+#    Such running is NOT include in systematics computation            *
+#***********************************************************************
+ %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
+ %(muo_ref_fixed)s  =  muo_ref_fixed ! scale to use if fixed scale mode
+ %(muo_over_ref)s   =  muo_over_ref  ! ratio to mur if dynamical scale
+""",
+            template_off=''), 
+
     ]    
     
     
@@ -2962,11 +2974,14 @@ class RunCardLO(RunCard):
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
+        self.add_param("fixed_other_scale", False, hidden=True)
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
+        self.add_param("muo_ref_fixed", 91.1880, hidden=True)
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
                                                 allowed=[-1,0,1,2,3,4])
+        self.add_param("muo_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -3261,6 +3276,21 @@ class RunCardLO(RunCard):
         if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
             raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
 
+        # check that ebeam is bigger than the associated mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+            if self['mass_ion%i' % i] == -1:
+                if self['ebeam%i' % i] < 0.938:
+                    if self['ebeam%i' %i] == 0:
+                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        self.set('ebeam%i' %i, 0.938)
+                    else:
+                        raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+            elif self['ebeam%i' % i] < self['mass_ion%i' % i]:    
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
+                    self.set('ebeam%i' %i, self['mass_ion%i' % i])
 
     def update_system_parameter_for_include(self):
         
@@ -3505,6 +3535,13 @@ class RunCardLO(RunCard):
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
             
+        if 'fix_scale' in proc_characteristic['limitations']:
+            self['fixed_ren_scale'] = 1
+            self['fixed_fac_scale'] = 1
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
+            
         # define class of particles present to hide all the cuts associated to 
         # not present class
         cut_class = collections.defaultdict(int)
@@ -3536,6 +3573,12 @@ class RunCardLO(RunCard):
                 cut_class[key] = max(cut_class[key], nb)
             self.cut_class = dict(cut_class)
             self.cut_class[''] = True #avoid empty
+            
+        # If model has running functionality add the additional parameter
+        model = proc_def[0][0].get('model')
+        if model['running_elements']:
+            self.display_block.append('RUNNING') 
+            
                                    
     def write(self, output_file, template=None, python_template=False,
               **opt):
@@ -4005,6 +4048,21 @@ class MadAnalysis5Card(dict):
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
     
+    blocks = [ runblock(name='RUNNING', fields=('fixed_other_scale','muo_ref_fixed','muo_over_ref'),
+                             template_on=\
+"""#***********************************************************************
+# CONTROL The additional running scale (not QCD)                       *
+#    Such running is NOT include in systematics computation            *
+#***********************************************************************
+ %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
+ %(muo_ref_fixed)s  =  muo_ref_fixed ! scale to use if fixed scale mode
+ %(muo_over_ref)s   =  muo_over_ref  ! ratio to mur if dynamical scale
+""",
+            template_off=''), 
+            
+            ]
+    
+    
     def default_setup(self):
         """define the default value"""
         
@@ -4033,10 +4091,12 @@ class RunCardNLO(RunCard):
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
+        self.add_param('fixed_other_scale', False, hidden=True)
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
+        self.add_param('muo_ref_fixed', 91.118, hidden=True)
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
@@ -4044,6 +4104,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
         self.add_param('muf2_over_ref', -1.0, hidden=True)
+        self.add_param('muo_over_ref', 1.0, hidden=True)
         self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', -1.0, hidden=True)        
@@ -4248,6 +4309,19 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
 
+        # check that ebeam is bigger than the proton mass.
+        for i in [1,2]:
+            if self['lpp%s' % i ] not in [1,2]:
+                continue
+
+            if self['ebeam%i' % i] < 0.938:
+                if self['ebeam%i' %i] == 0:
+                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    self.set('ebeam%i' %i, 0.938)
+                else:
+                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+
+
     def update_system_parameter_for_include(self):
         
         # set the pdg_for_cut fortran parameter
@@ -4343,6 +4417,11 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+            
+        # If model has running functionality add the additional parameter
+        model = proc_def[0].get('model')
+        if model['running_elements']:
+            self.display_block.append('RUNNING') 
     
     
     

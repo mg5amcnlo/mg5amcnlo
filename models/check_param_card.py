@@ -270,8 +270,8 @@ class Block(list):
                 self.name += ' %s' % data[2]
         elif len(data) == 4 and data[2] == 'q=':
             #the last part should be of the form Q=
-            self.scale = float(data[3])                
-            
+            self.scale = float(data[3])  
+                          
         return self
     
     def keys(self):
@@ -622,10 +622,16 @@ class ParamCard(dict):
         
     def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""
-        
+
         self.secure_slha2(identpath)
-        
-        
+        input_inc = pjoin(os.path.dirname(outpath),'MODEL', 'input.inc')
+
+        #check if we need to write the value of scale for some block
+        if os.path.exists(input_inc):
+            text = open(input_inc).read()
+            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+
+            
         fout = file_writers.FortranWriter(outpath)
         defaultcard = ParamCard(default)
         for line in open(identpath):
@@ -657,6 +663,10 @@ class ParamCard(dict):
             fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
+                
+        for block in scales:
+            value = self[block].scale
+            fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
       
     def convert_to_complex_mass_scheme(self):
         """ Convert this param_card to the convention used for the complex mass scheme:
@@ -872,29 +882,8 @@ class ParamCardMP(ParamCard):
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""
         
-        fout = file_writers.FortranWriter(outpath)
-        defaultcard = ParamCard(default)
-        for line in open(identpath):
-            if line.startswith('c  ') or line.startswith('ccccc'):
-                continue
-            split = line.split()
-            if len(split) < 3:
-                continue
-            block = split[0]
-            lhaid = [int(i) for i in split[1:-1]]
-            variable = split[-1]
-            if block in self:
-                try:
-                    value = self[block].get(tuple(lhaid)).value
-                except KeyError:
-                    value =defaultcard[block].get(tuple(lhaid)).value
-            else:
-                value =defaultcard[block].get(tuple(lhaid)).value
-            #value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
-            fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
-                variable, ('%e' % value)))
-
+        return super(ParamCardMP, self).write_inc_file(outpath, identpath, default, need_mp=True)
+        
 
   
     
@@ -1324,7 +1313,7 @@ class ParamCardRule(object):
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0), '$MG:BOLD')                            
                         elif log:
-                            logger.log(log,'For model consistency, update %s with id %s to value %s',
+                            logger.log(log,'For model consistency, update %s with id %s to value %s' %
                                         (block, id, 1.0))
 
         

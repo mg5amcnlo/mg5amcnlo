@@ -47,6 +47,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                              ** Main Branch (version 2.x) Update **
 
+2.8.1(22/09/22):
+      OM: Fix for the auto width for three body decay in presence of identical particles.
+      OM: add support for __header__ in UFO model
+      OM: allow restriction card to have auto-width
+      OM: fixing some html link (removed ajax link forbidden by major web browser)
+      OM: Various fix related to the python3 support
+          - including more efficient model conversion method
 2.8.0 (21/08/20):
       OM: pass to python3 by default
       OM: For LO process, you can now set lpp1 and lpp2 to "4" for process with initial photon in order to get the

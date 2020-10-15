@@ -1041,8 +1041,10 @@ class Model(PhysicsObject):
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
+        self['running_elements'] = []
         self['allow_pickle'] = True
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
+                                 # fix_scale means that the model should use fix_scale computation.
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1419,6 +1421,37 @@ class Model(PhysicsObject):
         return max([inter.get_WEIGHTED_order(self) for inter in \
                         self.get('interactions')])
             
+    def get_running(self, used_parameters):
+        """return a list of parameter which needs to be run together.
+           check also that at least one requested coupling is dependent of 
+           such running 
+        """
+        
+        correlated = []
+        
+        for key in self["running_elements"]:
+            for param_list in key.run_objects:
+                names = [k.name for k in param_list]
+                try:
+                    names.remove('aS')
+                except Exception:
+                    pass
+                # find all set of parameter where at least one paremeter are present
+                this_ones = set(names)
+                for subset in list(correlated):
+                    if any(n in subset for n in names):
+                        this_ones.update(subset)
+                        correlated.remove(subset)
+                correlated.append(this_ones)
+        
+        #filtering
+        for subset in list(correlated): 
+            if not any(n in subset for n in used_parameters):
+                correlated.remove(subset)
+        
+        return correlated   
+
+        
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1936,7 +1969,7 @@ class ParamCardVariable(ModelVariable):
     depend = ('external',)
     type = 'real'
     
-    def __init__(self, name, value, lhablock, lhacode):
+    def __init__(self, name, value, lhablock, lhacode, scale=None):
         """Initialize a new ParamCardVariable
         name: name of the variable
         value: default numerical value
@@ -1947,6 +1980,7 @@ class ParamCardVariable(ModelVariable):
         self.value = value 
         self.lhablock = lhablock
         self.lhacode = lhacode
+        self.scale = scale
 
 
 #===============================================================================

@@ -213,7 +213,7 @@ class ParamCardWriter(object):
                 if cur_lhablock in todo_block:
                     todo_block.remove(cur_lhablock)
                 # write the header of the new block
-                self.write_block(cur_lhablock)
+                self.write_block(cur_lhablock, param.scale)
             #write the parameter
             self.write_param(param, cur_lhablock)
         self.write_dep_param_block(cur_lhablock)
@@ -222,7 +222,7 @@ class ParamCardWriter(object):
             self.write_dep_param_block(cur_lhablock)
         self.write_qnumber()
         
-    def write_block(self, name):
+    def write_block(self, name, scale=None):
         """ write a comment for a block"""
         
         self.fsock.writelines(
@@ -231,7 +231,10 @@ class ParamCardWriter(object):
         """\n###################################\n"""
          )
         if name!='DECAY':
-            self.fsock.write("""Block %s \n""" % name.lower())
+            if scale:
+                self.fsock.write("""Block %s Q= %s \n""" % (name.lower(), scale))
+            else:
+                self.fsock.write("""Block %s \n""" % name.lower())
             
     def write_param(self, param, lhablock):
         """ write the line corresponding to a given parameter """
@@ -243,9 +246,8 @@ class ParamCardWriter(object):
         if info.startswith('mdl_'):
             info = info[4:]
     
-        if param.value.imag != 0:
+        if param.value != 'auto' and param.value.imag != 0:
             raise ParamCardWriterError('All External Parameter should be real (not the case for %s)'%param.name)
-    
 
         # avoid to keep special value used to avoid restriction
         if param.value == 9.999999e-1:
@@ -257,6 +259,8 @@ class ParamCardWriter(object):
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
             text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
+        elif param.value == 'auto':
+            text = '''DECAY %s auto # %s \n''' % (lhacode, info)
         else:
             text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
         self.fsock.write(text)             

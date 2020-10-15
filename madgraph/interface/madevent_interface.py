@@ -3422,6 +3422,9 @@ Beware that this can be dangerous for local multicore runs.""")
         self.nb_refine += 1
         args = self.split_arg(line)
         treshold=None
+               
+
+        
         for a in args:
             if a.startswith('--treshold='):
                 treshold = float(a.split('=',1)[1])

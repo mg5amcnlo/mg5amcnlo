@@ -4,11 +4,14 @@ c**************************************************************
 c
 c     Scales
 c
-      real*8          scale,scalefact,alpsfact
+      real*8          scale,scalefact,alpsfact,muo_ref_fixed,muo_over_ref
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
+      logical         fixed_other_scale
       integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
-      common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
-     $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor,
+      
+      common/to_scale/scale,scalefact,alpsfact, muo_ref_fixed, muo_over_ref,
+     $                fixed_ren_scale,fixed_fac_scale,
+     $                fixed_couplings, fixed_other_scale,ickkw,nhmult,hmult,asrwgtflavor,
      $                dynamical_scale_choice
 c
 c     Collider

@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import collections
 import fractions
 import logging
+import math
 import os
 import re
 import sys
@@ -159,7 +160,6 @@ def import_model_from_db(model_name, local_dir=False):
             import pwd
             username =pwd.getpwuid( os.getuid() )[ 0 ]  
         except Exception as error:
-            misc.sprint(str(error))
             username = ''
     if username in ['omatt', 'mattelaer', 'olivier', 'omattelaer'] and target is None and \
                                     'PYTHONPATH' in os.environ and not local_dir:
@@ -445,14 +445,33 @@ class UFOMG5Converter(object):
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
-       
-        if hasattr(model, '__arxiv__'):
-            logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
-       
+
+        if hasattr(model, '__header__'):
+            header = model.__header__
+            if len(header) > 500 or header.count('\n') > 5:
+                logger.debug("Too long header")
+            else:
+                logger.info("\n"+header)
+        else:
+            f =collections.defaultdict(lambda : 'n/a')
+            for key in ['author', 'version', 'email', 'arxiv']:
+                if hasattr(model, '__%s__' % key):
+                    val = getattr(model, '__%s__' % key)
+                    if 'Duhr' in val:
+                        continue
+                    f[key] = getattr(model, '__%s__' % key)
+                    
+            if len(f)>2:
+                logger.info("This model [version %(version)s] is provided by %(author)s (email: %(email)s). Please cite %(arxiv)s" % f, '$MG:color:BLACK')
+            elif hasattr(model, '__arxiv__'):
+                logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
+            
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
                                   # only trigger if all particles are of QCD type (not h>gg)
+        self.colored_scalar = False # in presence of color scalar particle the running of a_s is modified
+                                    # This is not supported by madevent/systematics
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -478,6 +497,9 @@ class UFOMG5Converter(object):
         self.ufomodel = model
         self.checked_lor = set()
 
+        if hasattr(self.ufomodel, 'all_running_elements'):
+            self.model.set('running_elements', self.ufomodel.all_running_elements)
+        
         if auto:
             self.load_model()
 
@@ -526,6 +548,11 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
+
+        if self.colored_scalar:
+            logger.critical("Model with scalar colored particles. The running of alpha_s does not support such model.\n" + \
+                             "You can ONLY run at fix scale")
+            self.model['limitations'].append('fix_scale')
 
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
@@ -854,6 +881,12 @@ class UFOMG5Converter(object):
                     particle.set('propagator', 0)
                
         assert(10 == nb_property) #basic check that all the information is there         
+
+        #check if we have scalar colored particle in the model -> issue with the running of alpha_s
+        if particle['spin'] == 1 and particle['color'] != 1:
+            if particle['type'] != 'ghost' and particle.get('mass').lower() == 'zero':
+                self.colored_scalar = True
+
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
@@ -1591,6 +1624,17 @@ class OrganizeModelExpression:
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
+        
+        if hasattr(self.model, 'all_running_elements'):
+            all_elements = set()
+            for runs in self.model.all_running_elements:
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+            all_elements.union(self.track_dependant)
+            self.track_dependant = list(all_elements)
+
+        
     
     def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
@@ -1658,14 +1702,16 @@ class OrganizeModelExpression:
         for param in self.model.all_parameters+additional_params:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
-                                               param.lhablock, param.lhacode)
+                                               param.lhablock, param.lhacode, 
+                                               param.scale if hasattr(param,'scale') else None)
                 
             else:
                 expr = self.shorten_expr(param.value)
                 depend_on = self.find_dependencies(expr)
                 parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
-            self.add_parameter(parameter)     
+            self.add_parameter(parameter)  
+           
             
     def add_parameter(self, parameter):
         """ add consistently the parameter in params and all_expr.
@@ -1736,7 +1782,8 @@ class OrganizeModelExpression:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
                 self.couplings[depend_on] = [parameter]
-            self.all_expr[coupling.value] = parameter                
+            self.all_expr[coupling.value] = parameter 
+        
 
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not
@@ -1749,6 +1796,7 @@ class OrganizeModelExpression:
         
         # Split the different part of the expression in order to say if a 
         #subexpression is dependent of one of tracked variable
+        sexpr = str(expr)
         expr = self.separator.split(expr)
         # look for each subexpression
         for subexpr in expr:
@@ -1758,6 +1806,7 @@ class OrganizeModelExpression:
             elif subexpr in self.all_expr and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
+
         if depend_on:
             return tuple(depend_on)
         else:
@@ -1872,6 +1921,11 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
         self.coupling_order_dict ={}
+        self.autowidth =  []
+     
+    def modify_autowidth(self, cards, id):
+        self.autowidth.append([int(id[0])])
+        return math.log10(2*len(self.autowidth))
      
     def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
                                                       complex_mass_scheme=None):
@@ -1891,7 +1945,8 @@ class RestrictModel(model_reader.ModelReader):
         # compute the value of all parameters
         # Get the list of definition of model functions, parameter values. 
         model_definitions = self.set_parameters_and_couplings(param_card, 
-                                        complex_mass_scheme=complex_mass_scheme)
+                                        complex_mass_scheme=complex_mass_scheme,
+                                        auto_width=self.modify_autowidth)
         
         # Simplify conditional statements
         logger.log(self.log_level, 'Simplifying conditional expressions')
@@ -1944,8 +1999,23 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
+                
+        #
+        # restore auto-width value 
+        #
+        #for lhacode in self.autowidth:
+        for parameter in self['parameters'][('external',)]:
+            if parameter.lhablock.lower() == 'decay' and parameter.lhacode in self.autowidth:
+                parameter.value = 'auto'
+                if parameter.name in self['parameter_dict']:
+                    self['parameter_dict'][parameter.name] = 'auto'
+                elif parameter.name.startswith('mdl_'):
+                    self['parameter_dict'][parameter.name[4:]] = 'auto'
+                else:
+                    raise Exception
 
-                    
+
+        
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
@@ -2492,6 +2562,7 @@ class RestrictModel(model_reader.ModelReader):
             logger_mod.log(self.log_level,'remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
+            
 
     def optimise_interaction(self, interaction):
         
