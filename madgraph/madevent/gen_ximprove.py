@@ -203,7 +203,8 @@ class gensym(object):
                                 "%s\n" % (' '.join(zero_gc)) +\
                                "This will slow down the computation. Please consider using restricted model:\n" +\
                                "https://answers.launchpad.net/mg5amcnlo/+faq/2312")
-                           
+            
+                
             all_good_hels = collections.defaultdict(list)
             for me_index, hel in all_hel:
                 all_good_hels[me_index].append(int(hel))                           
@@ -268,7 +269,13 @@ class gensym(object):
                 else:
                     bad_amps = [] 
                     bad_amps_perhel = []
-                logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s', len(good_hels),len(bad_amps),len(bad_amps_perhel))
+                if __debug__:
+                    mtext = open(matrix_file).read()
+                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
+                if len(good_hels) == 1:
+                    files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                    continue # avoid optimization if onlye one helicity
                 recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel)
                 # In case of bugs you can play around with these:
                 recycler.hel_filt = self.run_card['hel_filtering']
