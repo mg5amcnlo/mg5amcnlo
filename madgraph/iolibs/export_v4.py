@@ -6314,13 +6314,13 @@ class UFO_model_to_mg4(object):
             if running_block:
                 fsock.write_comments('calculate the running parameter')
                 fsock.writelines(' if(fixed_other_scale.and.first) then')
-                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(SCALE_OTHER))') 
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(muo_ref_fixed))') 
                 fsock.writelines(' first = .false.') 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
                 fsock.writelines(' elseif(.not.fixed_other_scale) then')
                 fsock.writelines(' Gother = G')
-                fsock.writelines(' if(ratio_muother.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(ratio_muother*scale))')
+                fsock.writelines(' if(muo_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(muo_over_ref*scale))')
                 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
