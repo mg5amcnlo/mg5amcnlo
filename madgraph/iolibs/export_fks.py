@@ -28,6 +28,7 @@ import copy
 import platform
 
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.base_objects as base_objects
 import madgraph.fks.fks_helas_objects as fks_helas_objects
@@ -1988,6 +1989,14 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                             nsqorders,
                             fortran_model)
 
+        # finally the matrix elements needed for the sudakov approximation
+        # of ew corrections
+        for j, sud_me in enumerate(matrix_element.sudakov_matrix_elements):
+            filename = "sudakov_me_%d.f" % (j + 1)
+            self.write_sudakov_me(writers.FortranWriter(filename),
+                         matrix_element, sud_me['matrix_element'], j,
+                         fortran_model)
+
 
 
     def generate_virtuals_from_OLP(self,process_list,export_path, OLP):
@@ -2561,6 +2570,121 @@ Parameters              %(params)s\n\
         Special sign conventions may be needed for initial/final state particles
         """
         return charge_list[n - 1] * charge_list[m - 1]
+
+
+
+    #===============================================================================
+    # write_sudakov_me
+    #===============================================================================
+    def write_sudakov_me(self, writer, fksborn, sudakov_me, ime, fortran_model):
+        """Create the sudakov_me_*.f file for the sudakov approximation of EW
+        corrections
+        """
+
+        matrix_element = copy.copy(fksborn.born_me)
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+        
+        replace_dict['ime'] = ime + 1
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines 
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(sudakov_me)
+        replace_dict['process_lines'] = "C  Sudakov approximation for the interference " + \
+        "of the Born with\n" + process_lines 
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
+        # Extract ngraphs
+        ngraphs1 = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs1'] = ngraphs1
+        ngraphs2 = sudakov_me.get_number_of_amplitudes()
+        replace_dict['ngraphs2'] = ngraphs2
+    
+        # Extract nwavefuncs (this is for the sudakov me)
+        nwavefuncs = sudakov_me.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor1 = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor1'] = ncolor1
+        ncolor2 = max(1, len(sudakov_me.get('color_basis')))
+        replace_dict['ncolor2'] = ncolor2
+
+        # compute the color matrix between basis of the Born and of the Sudakov
+        color_matrix= color_amp.ColorMatrix(matrix_element.get('color_basis'), sudakov_me.get('color_basis'))
+    
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines_from_color_matrix(color_matrix)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # Extract helas calls of the sudakov matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls).replace('AMP','AMP2')
+    
+        # Extract JAMP lines
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines).replace('AMP', 'AMP1')    
+
+        # now the jamp for the sudakov me
+        # NOTE: this ASSUMES that the splitorders of the sudakov and of the born me
+        # are the same
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(sudakov_me)
+        else:
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       sudakov_me,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('AMP','AMP2')
+    
+    
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_splitorders_fks.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 0 , ncolor1
 
     
     #===============================================================================

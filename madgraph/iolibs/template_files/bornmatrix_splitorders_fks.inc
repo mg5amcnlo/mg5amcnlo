@@ -48,6 +48,8 @@ C
       common/to_amps/  amp2,       jamp2
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
+      logical force_ijglu_zero
+      common /to_force_ijglu/ force_ijglu_zero
 C
 C     FUNCTIONS
 C
@@ -57,6 +59,8 @@ C
 C BEGIN CODE
 C
 C look for orders which match the born order constraint 
+
+force_ijglu_zero = .false.
 
 if (firsttime) then
  do i = 1, nsqampso
@@ -374,6 +378,8 @@ C
       common/c_nfksprocess/nfksprocess
       integer step_hel
       logical cond_ij
+      logical force_ijglu_zero
+      common /to_force_ijglu/ force_ijglu_zero
 
 C
 C FUNCTION
@@ -389,6 +395,8 @@ C ----------
 C BEGIN CODE
 C ----------
       glu_ij = ij_values(nfksprocess)
+      if (force_ijglu_zero) glu_ij = 0
+
       DO I = 1, NSQAMPSO
         ANS(1,I)=0D0
         ANS(2,I)=0D0

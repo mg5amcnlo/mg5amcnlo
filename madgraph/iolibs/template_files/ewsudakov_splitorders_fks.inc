@@ -1,0 +1,175 @@
+      SUBROUTINE EWSUDAKOV_ME_%(ime)d(P,HEL,ANS_SUMMED)
+C  
+%(info_lines)s
+C
+C
+C     Return the sum of the split orders which are required in orders.inc 
+C     With respect to those at the born, the QED power is increased by 2
+C     Note that helicities must be passed as an input argument.
+C
+C  
+%(process_lines)s
+C
+C  
+C CONSTANTS
+C 
+implicit none
+      include 'nexternal.inc'
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C 
+      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      integer hel(nexternal)
+C
+C VARIABLES
+C
+      INTEGER I,j
+      include 'orders.inc'
+      REAL*8 ANS(0:NSQAMPSO)
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
+      integer amp_orders(nsplitorders)
+      double precision tiny
+      parameter (tiny = 1d-12)
+      double precision max_val
+      double complex amp_split_ewsud(amp_split_size)
+      common /to_amp_split_ewsud/ amp_split_ewsud
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+      integer iden
+%(den_factor_lines)s
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B
+      integer orders_to_amp_split_pos
+C
+C BEGIN CODE
+C
+
+      iden=iden_values(nfksprocess)
+      CALL EWSUDAKOV_ME_%(ime)d_SPLITORDERS(P,HEL,ANS)
+      ans_summed = 0d0
+      max_val = 0d0
+
+C reset the amp_split_ewsud array
+amp_split_ewsud(1:amp_split_size) = dcmplx(0d0,0d0)
+
+
+do i = 1, nsqampso
+ max_val = max(max_val, abs(ans(I)))
+enddo
+
+      do i = 1, nsqampso
+        if (keep_order_cnt(qed_pos, i)) then
+         ANS_SUMMED = ans_summed + ANS(I)
+         do j = 1, nsplitorders
+          amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+C take into account the fact that this is for EW corrections (QED)
+          if (j.eq.qed_pos) amp_orders(j) = amp_orders(j) + 2
+         enddo
+         !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
+         if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
+        endif
+      enddo
+
+C this is to avoid fake non-zero contributions 
+if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
+
+return
+END
+
+
+       
+       
+      SUBROUTINE EWSUDAKOV_ME_%(ime)d_SPLITORDERS(p,HELL,ANS)
+C  
+%(info_lines)s
+C RETURNS THE INTERFERENCE OF THE BORN DIAGRAMS WITH THOSE
+C NEEDED FOR THE EVALUATION OF THE EW CORRECTIONS IN THE
+C SUDAKOV APPROCIMATION,
+C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
+
+%(process_lines)s
+C  
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER     NGRAPHS1, NGRAPHS2 ! graphs for the Born and Sudakov amplitude
+      PARAMETER ( NGRAPHS1=%(ngraphs1)d, NGRAPHS2=%(ngraphs2)d) 
+      INTEGER NCOLOR1, NCOLOR2
+      PARAMETER (NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+      complex*16 imag1
+      parameter (imag1 = (0d0,1d0))
+      include "nexternal.inc"
+      include "born_nhel.inc"
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER HELL
+      REAL*8 ANS(NSQAMPSO)
+C  
+C LOCAL VARIABLES 
+C  
+      INTEGER I,J,M,N
+      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
+C  
+C GLOBAL VARIABLES
+C  
+      double complex saveamp(ngraphs,max_bhel)
+      common/to_saveamp/saveamp
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+C
+C FUNCTION
+C
+      INTEGER SQSOINDEXB
+C  
+C COLOR DATA
+C  
+%(color_data_lines)s
+C ----------
+C BEGIN CODE
+C ----------
+C Use the diagrams calculated for the born to compute the borncolor stripped amplitudes and color basis
+      if (.not. calculatedBorn) then
+        write(*,*) 'Error in EW_sudakov_me: should be called only with calculatedborn = true'
+        stop
+      elseif (calculatedBorn) then
+      do i=1,ngraphs1
+         amp1(i)=saveamp(i,hell)
+      enddo
+      endif
+%(jamp1_lines)s
+
+C Now compute the helas calls and color basis for the Sudakov amplitude
+%(helas_calls)s
+%(jamp2_lines)s
+
+C Finally interfere the two sets of color-stripped amplitudes
+    DO I = 1, NSQAMPSO
+    ANS(I) = 0d0
+    ENDDO
+    DO M = 1, NAMPSO
+      DO I = 1, NCOLOR1
+          ZTEMP = (0.D0,0.D0)
+          DO J = 1, NCOLOR2
+              ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
+          ENDDO
+	  DO N = 1, NAMPSO
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
+          ENDDO
+      ENDDO
+    ENDDO
+    END
+       
+       
