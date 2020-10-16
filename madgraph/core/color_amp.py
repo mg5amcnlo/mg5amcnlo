@@ -23,6 +23,8 @@ import fractions
 import operator
 import re
 import array
+import math
+import six
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
@@ -733,8 +735,10 @@ class ColorMatrix(dict):
     @staticmethod
     def lcm(a, b):
         """Return lowest common multiple."""
-        return a * b // fractions.gcd(a, b)
-
+        if six.PY2:
+            return a * b // fractions.gcd(a, b)
+        else:
+            return a * b // math.gcd(a, b)
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""
