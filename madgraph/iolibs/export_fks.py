@@ -1948,6 +1948,24 @@ Parameters              %(params)s\n\
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
+            
+        # Add information relevant for FxFx matching:
+        # Maximum QCD power in all the contributions
+        max_qcd_order = 0
+        for diag in matrix_element.get('diagrams'):
+            orders = diag.calculate_orders()
+            if 'QCD' in orders:
+                max_qcd_order = max(max_qcd_order,orders['QCD'])  
+        max_n_light_final_partons = max(len([1 for id in proc.get_final_ids() 
+        if proc.get('model').get_particle(id).get('mass')=='ZERO' and
+               proc.get('model').get_particle(id).get('color')>1])
+                                    for proc in matrix_element.get('processes'))
+        # Maximum number of final state light jets to be matched
+        self.proc_characteristic['max_n_matched_jets'] = max(
+                               self.proc_characteristic['max_n_matched_jets'],
+                                   min(max_qcd_order,max_n_light_final_partons))    
+            
+            
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
     

@@ -580,7 +580,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   orders to ensure maximum number of QCD vertices.")
         logger.info(" > Desired coupling orders combination can be specified directly for")
         logger.info("   the squared matrix element by appending '^2' to the coupling name.")
-        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^2==2' selects the QED-QCD")
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
@@ -3517,16 +3517,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                        self._curr_model['parameters'].values()])
             keys = list(self._curr_model['parameters'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)

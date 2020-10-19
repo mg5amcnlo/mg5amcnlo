@@ -85,17 +85,17 @@ def generate_directories_fks_async(i):
     calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
     nexternal = curr_exporter.proc_characteristic['nexternal']
     ninitial = curr_exporter.proc_characteristic['ninitial']
+    max_n_matched_jets = curr_exporter.proc_characteristic['max_n_matched_jets']
     processes = me.born_matrix_element.get('processes')
     
     #only available after export has been done, so has to be returned from here
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-
     if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets]
     else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets]
 
 
 class CheckFKS(mg_interface.CheckValidForCmd):
@@ -722,6 +722,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 if len(ninitial_set) != 1:
                     raise MadGraph5Error("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
+                
+                #  max_n_matched_jets
+                njet_set = set([int(diroutput[6]) for diroutput in diroutputmap])
+                proc_charac['max_n_matched_jets'] = max(njet_set)
 
                 self.born_processes = []
                 self.born_processes_for_olp = []

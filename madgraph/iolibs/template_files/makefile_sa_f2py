@@ -22,7 +22,7 @@ all_matrix$(MENUM)py.so: $(LIBDIR)/$(LIBRARY) all_matrix.f
     
 allmatrix$(MENUM)py.so: $(patsubst %/matrix.f,%$(MENUM)py.so,$(wildcard */matrix.f)) all_matrix$(MENUM)py.so
 	for lib in $(patsubst %.so,%,$^); do \
-		echo "from $$lib import *" >> allmatrix$(MENUM)py.py; \
+		printf "try:\n    from $$lib import *\nexcept:\n    from .$$lib import *\n" >> allmatrix$(MENUM)py.py; \
 	done
 	
 	

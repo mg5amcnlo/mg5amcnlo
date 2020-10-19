@@ -4,11 +4,11 @@ c**************************************************************
 c
 c     Scales
 c
-      real*8          scale,scalefact,ellissextonfact,alpsfact, muo_ref_fixed, muo_over_ref
-      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult, fixed_other_scale
+      real*8          scale,scalefact,ellissextonfact,alpsfact, mue_ref_fixed, mue_over_ref
+      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult, fixed_extra_scale
       integer         ickkw,nhmult,dynamical_scale_choice
       common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
-     $                muo_ref_fixed, muo_over_ref, fixed_other_scale, 
+     $                mue_ref_fixed, mue_over_ref, fixed_extra_scale, 
      $                fixed_fac_scale,fixed_couplings,ickkw,nhmult,hmult,
      $                dynamical_scale_choice
 
