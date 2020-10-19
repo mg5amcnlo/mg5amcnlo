@@ -27,10 +27,12 @@ C VARIABLES
 C
       INTEGER I,j
       include 'orders.inc'
-      REAL*8 ANS(0:NSQAMPSO)
-      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
-      common /c_keep_order_cnt/ keep_order_cnt 
+      REAL*8 ANS(NSQAMPSO)
+      LOGICAL KEEP_ORDER(NSQAMPSO)
+      common /c_keep_order_sdk%(ime)d/ keep_order
       integer amp_orders(nsplitorders)
+      logical firsttime
+      data firsttime / .TRUE. /
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
@@ -41,11 +43,32 @@ C
 C
 C     FUNCTIONS
 C
-      integer GETORDPOWFROMINDEX_B
+      integer GETORDPOWFROMINDEX_SDK%(ime)d
       integer orders_to_amp_split_pos
 C
 C BEGIN CODE
 C
+
+if (firsttime) then
+ do i = 1, nsqampso
+  keep_order(i) = .true.
+C this is for the orders of the born to integrate
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX_SDK%(ime)d(j, i) .gt. born_orders(j)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+
+  if (keep_order(i)) then
+   write(*,*) 'SDK%(ime)d: keeping split order ', i
+  else
+   write(*,*) 'SDK%(ime)d: not keeping split order ', i
+  endif
+ enddo
+
+ firsttime = .false.
+endif
 
       CALL EWSDK_GOLD_ME_%(ime)d_SPLITORDERS(P,NHEL,ANS)
       ans_summed = 0d0
@@ -60,12 +83,10 @@ do i = 1, nsqampso
 enddo
 
       do i = 1, nsqampso
-        if (keep_order_cnt(qed_pos, i)) then
+        if (keep_order(i)) then
          ANS_SUMMED = ans_summed + ANS(I)
          do j = 1, nsplitorders
-          amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
-C take into account the fact that this is for EW corrections (QED)
-          if (j.eq.qed_pos) amp_orders(j) = amp_orders(j) + 2
+          amp_orders(j) = GETORDPOWFROMINDEX_SDK%(ime)d(j, i)
          enddo
          !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
          if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
@@ -129,7 +150,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB
+      INTEGER SQSOINDEXSDK%(ime)d
 C  
 C COLOR DATA
 C  
@@ -150,10 +171,148 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+              ANS(SQSOINDEXSDK%(ime)d(M,N))=ANS(SQSOINDEXSDK%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO
     END
        
        
+
+C
+C Helper functions to deal with the split orders.
+C
+
+      INTEGER FUNCTION SQSOINDEXSDK%(ime)d(AMPORDERA,AMPORDERB)
+C
+C This functions plays the role of the interference matrix. It can be hardcoded or 
+C made more elegant using hashtables if its execution speed ever becomes a relevant
+C factor. From two split order indices of the jamps, it return the corresponding
+C index in the squared order canonical ordering.
+C
+C CONSTANTS
+C      
+      implicit none
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER NSPLITORDERS
+	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
+C
+C ARGUMENTS
+C
+	  INTEGER AMPORDERA, AMPORDERB
+C
+C LOCAL VARIABLES
+C
+      INTEGER I, SQORDERS(NSPLITORDERS)
+      INTEGER AMPSPLITORDERS(NAMPSO,NSPLITORDERS)
+	  %(ampsplitorders)s
+C
+C FUNCTION
+C
+      INTEGER SQSOINDEXSDK%(ime)d_FROM_ORDERS
+C
+C BEGIN CODE
+C
+      DO I=1,NSPLITORDERS
+	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
+	  ENDDO
+	  SQSOINDEXSDK%(ime)d=SQSOINDEXSDK%(ime)d_FROM_ORDERS(SQORDERS)
+	  END
+
+
+
+      INTEGER FUNCTION SQSOINDEXSDK%(ime)d_FROM_ORDERS(ORDERS)
+C
+C From a list of values for the split orders, this function returns the
+c corresponding index in the squared orders canonical ordering.
+C
+      implicit none
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER NSPLITORDERS
+	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
+C
+C ARGUMENTS
+C
+	  INTEGER ORDERS(NSPLITORDERS)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
+%(sqsplitorders)s
+C
+C BEGIN CODE
+C
+      DO I=1,NSQAMPSO
+	    DO J=1,NSPLITORDERS
+		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
+		ENDDO
+		SQSOINDEXSDK%(ime)d_FROM_ORDERS = I
+		RETURN
+1009    CONTINUE
+	  ENDDO
+
+	  WRITE(*,*) 'ERROR:: Stopping function sqsoindex_from_orders'
+	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSPLITORDERS)
+	  STOP
+
+	  END
+
+
+
+      INTEGER FUNCTION GETORDPOWFROMINDEX_SDK%(ime)d(IORDER, INDX)
+C
+C Return the power of the IORDER-th order appearing at position INDX
+C in the split-orders output
+C
+      implicit none
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER NSPLITORDERS
+	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
+C
+C ARGUMENTS
+C
+	  INTEGER IORDER, INDX
+C
+C LOCAL VARIABLES
+C
+      integer i
+      INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
+%(sqsplitorders)s
+C
+C BEGIN CODE
+C
+      IF (IORDER.GT.NSPLITORDERS.OR.IORDER.LT.1) THEN
+      WRITE(*,*) "INVALID IORDER B", IORDER
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSPLITORDERS
+      STOP
+      ENDIF
+
+      IF (INDX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
+      WRITE(*,*) "INVALID INDX B", INDX
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
+      STOP
+      ENDIF
+
+      GETORDPOWFROMINDEX_SDK%(ime)d=SQSPLITORDERS(INDX, IORDER)
+      END
+
+
+      SUBROUTINE GET_NSQSO_SDK%(ime)d(NSQSO)
+C
+C     Simple subroutine returning the number of squared split order
+C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
+C
+      implicit none
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER NSQSO
+
+	  NSQSO=NSQAMPSO
+
+      END
+
+

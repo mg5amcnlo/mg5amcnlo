@@ -126,10 +126,14 @@ def get_sudakov_amps(born_amp):
     # now find all amplitudes that can be obtained from the born, replacing any 
     # possible combination of goldstone_legs with goldstones
     # (labeled by 'Goldstone : True')
+    # the "reversed" function is needed for the output
     for goldstone_comb in \
-       chain.from_iterable(combinations(goldstone_legs, r) for r in range(1, len(goldstone_legs)+1)):
+       chain.from_iterable(combinations(goldstone_legs, r) for r in reversed(range(1, len(goldstone_legs)+1))):
 
-        born_proc = copy.deepcopy(born_amp['process'])
+        ####born_proc = copy.deepcopy(born_amp['process'])
+        # MZ: NEVER deepcopy a process!!!
+        born_proc = copy.copy(born_amp['process'])
+        born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
         # replace all legs listed in goldstone_comb
         for ileg in goldstone_comb:
 
@@ -142,7 +146,7 @@ def get_sudakov_amps(born_amp):
         if not amp['diagrams'] : continue
 
         logger.info('Found Sudakov amplitude (goldstone) for process: %s' % born_proc.nice_string())
-        amplitudes.append({'goldstone': True, 'legs': [leg], 'base_amp': 0, 'amplitude': amp})
+        amplitudes.append({'goldstone': True, 'legs': goldstone_comb, 'base_amp': 0, 'amplitude': amp})
         # for these amplitudes, keep track in a separate list
         goldstone_amplitudes.append(amp)
 
@@ -160,7 +164,8 @@ def get_sudakov_amps(born_amp):
             if not iso_part_list: continue
 
             for part in iso_part_list:
-                born_proc = copy.deepcopy(base_amp['process'])
+                born_proc = copy.copy(born_amp['process'])
+                born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
                 newleg = copy.copy(leg)
                 newleg['id'] = part
                 born_proc['legs'][ileg] = newleg
@@ -193,7 +198,8 @@ def get_sudakov_amps(born_amp):
                 
                 for part1 in iso_part_list1:
                     for part2 in iso_part_list2:
-                        born_proc = copy.deepcopy(base_amp['process'])
+                        born_proc = copy.copy(born_amp['process'])
+                        born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
                         # replace leg1
                         newleg1 = copy.copy(leg1)
                         newleg1['id'] = part1

@@ -52,6 +52,9 @@ MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o
 
+# Files for check_sudakov
+EWSUD= $(RUN) check_sudakov.o BinothLHA.o
+
 # Files for tests
 TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o
 
@@ -95,6 +98,10 @@ test_soft_col_limits: $(TEST)
 	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
+
+check_sudakov: $(EWSUD) $(libmadloop)
+	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	strip check_sudakov
 
 check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)

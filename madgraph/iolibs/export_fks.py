@@ -615,6 +615,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         linkfiles = ['BinothLHADummy.f',
                      'check_poles.f',
+                     'check_sudakov.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -1803,6 +1804,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # Averaging initial state color, spin, and identical FS particles
         replace_dict['den_factor_line'] = self.get_den_factor_line(matrix_element)
 
+        # Extract den_factor_lines
+        den_factor = matrix_element.get_denominator_factor()
+        replace_dict['den_factor_sdk'] = den_factor
+    
+
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
         replace_dict['ngraphs'] = ngraphs
@@ -2009,6 +2015,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             self.write_sudakov_me(writers.FortranWriter(filename),
                          base_me, sud_me['matrix_element'], sud_me['base_amp'], j,
                          fortran_model)
+
+        # finally, the wrapper for all matrix elements needed
+        # for the Sudakov approximation
+        filename = "ewsudakov_wrapper.f"
+        self.write_sudakov_wrapper(writers.FortranWriter(filename), born_me,
+                                   matrix_element.sudakov_matrix_elements,
+                                   fortran_model)
 
 
 
@@ -2435,7 +2448,7 @@ Parameters              %(params)s\n\
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
+
         # Extract the number of FKS process
         replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()),1)
 
@@ -2583,6 +2596,44 @@ Parameters              %(params)s\n\
         Special sign conventions may be needed for initial/final state particles
         """
         return charge_list[n - 1] * charge_list[m - 1]
+
+
+    def write_sudakov_wrapper(self, writer, born_me, sudakov_list, fortran_model):
+        """Write the wrapper for the sudakov matrix elements
+        """
+        goldstone_mes = [sud for sud in sudakov_list if sud['goldstone']]
+        non_goldstone_mes = [sud for sud in sudakov_list if not sud['goldstone']]
+
+        replace_dict = {}
+
+        helicity_lines = self.get_helicity_lines(born_me)
+        replace_dict['helicity_lines'] = helicity_lines
+
+        # Extract ncomb
+        ncomb = born_me.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+
+        goldstone_calls = ""
+        for i, me in enumerate(goldstone_mes):
+            if i==0:
+                goldstone_calls += "if"
+            else:
+                goldstone_calls += "else if"
+
+            conditions = ["nhel(%d,ihel).eq.0" % (ileg+1) for ileg in me['legs']]
+            goldstone_calls += " (%s) then\n" % ".and.".join(conditions)
+            goldstone_calls += "call EWSDK_GOLD_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (i + 1)
+
+        replace_dict['calls_to_goldstones'] = goldstone_calls
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_wrapper.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
 
 
     #===============================================================================

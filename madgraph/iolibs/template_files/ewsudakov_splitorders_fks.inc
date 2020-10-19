@@ -27,7 +27,7 @@ C VARIABLES
 C
       INTEGER I,j
       include 'orders.inc'
-      REAL*8 ANS(0:NSQAMPSO)
+      REAL*8 ANS(NSQAMPSO)
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
       integer amp_orders(nsplitorders)

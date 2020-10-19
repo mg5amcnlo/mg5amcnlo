@@ -732,10 +732,30 @@ class FKSHelasProcess(object):
             else: 
                 self.virt_matrix_element = None
 
-            self.sudakov_matrix_elements = fksproc.sudakov_amps
+            self.sudakov_matrix_elements = []
             for amp in fksproc.sudakov_amps:
-                amp['matrix_element'] = helas_objects.HelasMatrixElement(amp['amplitude'], **opts)
-                amp.pop('amplitude')
+                sudakov_dict = {}
+                for key in amp.keys():
+                    if key == 'amplitude': 
+                        continue
+                    sudakov_dict[key] = amp[key]
+                print type(amp['amplitude'])
+                print 'SUDAKOV DICT', sudakov_dict.keys()
+                sudakov_dict['matrix_element'] = helas_objects.HelasMatrixElement(amp['amplitude'], gen_color=True)
+
+                self.sudakov_matrix_elements.append(sudakov_dict)
+
+                ##amp.pop('amplitude')
+
+                ##col_basis = color_amp.ColorBasis()
+                ##new_amp = amp['matrix_element'].get_base_amplitude()
+                ##amp['matrix_element'].set('base_amplitude', new_amp)
+                ##colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+                ##col_basis.build()
+                ##col_matrix = color_amp.ColorMatrix(col_basis)
+                ##amp['matrix_element'].set('color_basis', list_color_basis[col_index])
+                ##amp['matrix_element'].set('color_matrix', list_color_matrices[col_index])                    
 
             self.color_links = []
 
