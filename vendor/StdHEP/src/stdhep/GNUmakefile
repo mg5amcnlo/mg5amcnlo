@@ -6,7 +6,7 @@ include ../stdhep_arch
 STDHEP_DIR = ../..
 
 #this has been added by MZ
-FFLAGS+= -fd-lines-as-code
+FFLAGS+= -fd-lines-as-code -fPIE
 
 SLIB = $(STDHEP_DIR)/lib
 SBIN = $(STDHEP_DIR)/bin
