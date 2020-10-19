@@ -882,6 +882,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        self.opt['exporter'] = self.__class__
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -5577,7 +5578,8 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)   
+       
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -6912,7 +6914,7 @@ class UFO_model_to_mg4(object):
 
     @staticmethod
     def create_param_card_static(model, output_path, rule_card_path=False,
-                                 mssm_convert=True):
+                                 mssm_convert=True, write_special=True):
         """ create the param_card.dat for a givent model --static method-- """
         #1. Check if a default param_card is present:
         done = False
@@ -6924,7 +6926,7 @@ class UFO_model_to_mg4(object):
                 files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
                          output_path)
         if not done:
-            param_writer.ParamCardWriter(model, output_path)
+            param_writer.ParamCardWriter(model, output_path, write_special=write_special)
          
         if rule_card_path:   
             if hasattr(model, 'rule_card'):
@@ -6940,16 +6942,27 @@ class UFO_model_to_mg4(object):
                     translator.make_valid_param_card(output_path, rule_card_path)
                 translator.convert_to_slha1(output_path)        
     
-    def create_param_card(self):
+    def create_param_card(self, write_special=True):
         """ create the param_card.dat """
 
         rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
         if not hasattr(self.model, 'rule_card'):
             rule_card=False
+        write_special = True
+        if 'exporter' in self.opt:
+            import madgraph.loop.loop_exporters as loop_exporters
+            import madgraph.iolibs.export_fks as export_fks
+            write_special = False
+            if  issubclass(self.opt['exporter'], loop_exporters.LoopProcessExporterFortranSA):
+                write_special = True
+                if issubclass(self.opt['exporter'],(loop_exporters.LoopInducedExporterME,export_fks.ProcessExporterFortranFKS)):
+                     write_special = False
+                        
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 
                                       rule_card_path=rule_card, 
-                                      mssm_convert=True)
+                                      mssm_convert=True,
+                                      write_special=write_special)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 
