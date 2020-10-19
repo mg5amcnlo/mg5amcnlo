@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
+from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -5599,6 +5600,7 @@ class UFO_model_to_mg4(object):
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
         self.scales = []
+        self.MUE = None # extra parameter loop #2 which is running
         
         if self.model.get('running_elements'):
             all_elements = set()
@@ -5610,6 +5612,11 @@ class UFO_model_to_mg4(object):
                         add_scale.add(one_element.lhablock)
             all_elements.union(set(self.PS_dependent_key))
             self.PS_dependent_key = list(all_elements)
+            MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+            
+            if MUE:
+                self.MUE = MUE[0]
+                self.PS_dependent_key.append(MUE[0].name)
             
             try:
                 add_scale.remove('SMINPUTS')
@@ -6312,14 +6319,26 @@ class UFO_model_to_mg4(object):
         if self.model['running_elements']:
             running_block = self.model.get_running(self.used_running_key) 
             if running_block:
+                MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+
+                
+                
                 fsock.write_comments('calculate the running parameter')
                 fsock.writelines(' if(fixed_extra_scale.and.first) then')
+                if self.MUE:
+                    fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
                 fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
                 fsock.writelines(' first = .false.') 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
                 fsock.writelines(' elseif(.not.fixed_extra_scale) then')
                 fsock.writelines(' Gother = G')
+                
+                if self.MUE:
+                    fsock.writelines(' %s = mue_over_ref*scale' % self.MUE.name)
+                else:
+                    misc.sprint('NO MUE')
+                    #raise Exception
                 fsock.writelines(' if(mue_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*scale))')
                 
                 for i in range(len(running_block)):
@@ -6390,7 +6409,7 @@ class UFO_model_to_mg4(object):
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
             
-        if running_block:
+        if self.model['running_elements'] and running_block:
             self.write_running_blocks(fsock, running_block)
     
     def write_running_blocks(self, fsock, running_block):

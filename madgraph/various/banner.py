@@ -2919,7 +2919,7 @@ class RunCardLO(RunCard):
 """,
             template_off=''),    
               
-        runblock(name='RUNNING', fields=('fixed_other_scale','mue_ref_fixed','mue_over_ref'),
+        runblock(name='RUNNING', fields=('fixed_extra_scale','mue_ref_fixed','mue_over_ref'),
                              template_on=\
 """#***********************************************************************
 # CONTROL The extra running scale (not QCD)                       *
@@ -4046,15 +4046,15 @@ class MadAnalysis5Card(dict):
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
     
-    blocks = [ runblock(name='RUNNING', fields=('fixed_other_scale','muo_ref_fixed','muo_over_ref'),
+    blocks = [ runblock(name='RUNNING', fields=('fixed_extra_scale','mue_ref_fixed','mue_over_ref'),
                              template_on=\
 """#***********************************************************************
 # CONTROL The additional running scale (not QCD)                       *
 #    Such running is NOT include in systematics computation            *
 #***********************************************************************
- %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
- %(muo_ref_fixed)s  =  muo_ref_fixed ! scale to use if fixed scale mode
- %(muo_over_ref)s   =  muo_over_ref  ! ratio to mur if dynamical scale
+ %(fixed_extra_scale)s = fixed_extra_scale ! False means dynamical scale 
+ %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
+ %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
 """,
             template_off=''), 
             
@@ -4089,12 +4089,12 @@ class RunCardNLO(RunCard):
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
-        self.add_param('fixed_other_scale', False, hidden=True)
+        self.add_param('fixed_extra_scale', False, hidden=True)
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param('muo_ref_fixed', 91.118, hidden=True)
+        self.add_param('mue_ref_fixed', 91.118, hidden=True)
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
@@ -4102,7 +4102,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
         self.add_param('muf2_over_ref', -1.0, hidden=True)
-        self.add_param('muo_over_ref', 1.0, hidden=True)
+        self.add_param('mue_over_ref', 1.0, hidden=True)
         self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', -1.0, hidden=True)        

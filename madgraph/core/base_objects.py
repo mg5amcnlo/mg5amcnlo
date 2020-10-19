@@ -1393,6 +1393,7 @@ class Model(PhysicsObject):
             if not any(n in subset for n in used_parameters):
                 correlated.remove(subset)
         
+        misc.sprint(correlated)
         return correlated   
 
         
