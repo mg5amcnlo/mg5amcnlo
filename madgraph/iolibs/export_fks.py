@@ -1990,11 +1990,24 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                             fortran_model)
 
         # finally the matrix elements needed for the sudakov approximation
-        # of ew corrections
-        for j, sud_me in enumerate(matrix_element.sudakov_matrix_elements):
-            filename = "sudakov_me_%d.f" % (j + 1)
+        # of ew corrections. 
+        # First, the squared amplitudes involving the goldstones
+        for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['goldstone']]):
+            filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
+            self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
+                         sud_me['matrix_element'], j, fortran_model)
+
+        # Then, the interferences with the goldstones or with the born amplitudes
+        for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if not me['goldstone']]):
+            filename = "ewsudakov_me_%d.f" % (j + 1)
+            if sud_me['base_amp']:
+                # remember, base_amp ==0 means the born, from 1 onwards it refers
+                # to the sudakov matrix elements
+                base_me = matrix_element.sudakov_matrix_elements[sud_me['base_amp']-1]['matrix_element']
+            else:
+                base_me = matrix_element.born_me
             self.write_sudakov_me(writers.FortranWriter(filename),
-                         matrix_element, sud_me['matrix_element'], j,
+                         base_me, sud_me['matrix_element'], sud_me['base_amp'], j,
                          fortran_model)
 
 
@@ -2572,16 +2585,111 @@ Parameters              %(params)s\n\
         return charge_list[n - 1] * charge_list[m - 1]
 
 
+    #===============================================================================
+    # write_sudakov_goldstone_me
+    #===============================================================================
+    def write_sudakov_goldstone_me(self, writer, sudakov_me, ime, fortran_model):
+        """Create the sudakov_goldstone_me_*.f file with external goldstone bosones
+        for the sudakov approximation of EW corrections
+        """
+
+        matrix_element = copy.copy(sudakov_me)
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+        
+        replace_dict['ime'] = ime + 1
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines 
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(sudakov_me)
+        replace_dict['process_lines'] = self.get_process_info_lines(sudakov_me)
+
+        # Extract den_factor_lines
+        den_factor = matrix_element.get_denominator_factor()
+        replace_dict['den_factor'] = den_factor
+    
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+    
+        # Extract nwavefuncs (this is for the sudakov me)
+        nwavefuncs = sudakov_me.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # Extract helas calls of the base  matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls).replace('AMP','AMP')
+
+        # Extract JAMP lines
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines).replace('AMP', 'AMP')    
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_goldstone_splitorders_fks.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
+
+
 
     #===============================================================================
     # write_sudakov_me
     #===============================================================================
-    def write_sudakov_me(self, writer, fksborn, sudakov_me, ime, fortran_model):
+    def write_sudakov_me(self, writer, base_me, sudakov_me, ibase_me, ime, fortran_model):
         """Create the sudakov_me_*.f file for the sudakov approximation of EW
         corrections
         """
 
-        matrix_element = copy.copy(fksborn.born_me)
+        matrix_element = copy.copy(base_me)
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -2604,21 +2712,29 @@ Parameters              %(params)s\n\
         # Extract process info lines
         process_lines = self.get_process_info_lines(sudakov_me)
         replace_dict['process_lines'] = "C  Sudakov approximation for the interference " + \
-        "of the Born with\n" + process_lines 
+         "between\n" + self.get_process_info_lines(base_me) + \
+         "C and\n" + self.get_process_info_lines(sudakov_me)
 
         # Extract den_factor_lines
-        den_factor_lines = self.get_den_factor_lines(fksborn)
-        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+        den_factor = base_me.get_denominator_factor()
+        replace_dict['den_factor'] = den_factor
     
         # Extract ngraphs
         ngraphs1 = matrix_element.get_number_of_amplitudes()
         replace_dict['ngraphs1'] = ngraphs1
         ngraphs2 = sudakov_me.get_number_of_amplitudes()
         replace_dict['ngraphs2'] = ngraphs2
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
     
-        # Extract nwavefuncs (this is for the sudakov me)
-        nwavefuncs = sudakov_me.get_number_of_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
+        # Extract nwavefuncs (take the max of base_me and sudakov me)
+        nwavefuncs1 = matrix_element.get_number_of_wavefunctions()
+        nwavefuncs2 = sudakov_me.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = max([nwavefuncs1, nwavefuncs2])
     
         # Extract ncolor
         ncolor1 = max(1, len(matrix_element.get('color_basis')))
@@ -2633,10 +2749,15 @@ Parameters              %(params)s\n\
         color_data_lines = self.get_color_data_lines_from_color_matrix(color_matrix)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls of the sudakov matrix element
+        # Extract helas calls of the base  matrix element
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls).replace('AMP','AMP2')
+        replace_dict['helas_calls1'] = "\n".join(helas_calls).replace('AMP','AMP1')
+
+        # Extract helas calls of the sudakov matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    sudakov_me)
+        replace_dict['helas_calls2'] = "\n".join(helas_calls).replace('AMP','AMP2')
     
         # Extract JAMP lines
         # JAMP definition, depends on the number of independent split orders
@@ -2673,10 +2794,6 @@ Parameters              %(params)s\n\
 
         replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('AMP','AMP2')
     
-    
-        # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
-
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_splitorders_fks.inc')).read()
         file = file % replace_dict
@@ -2684,7 +2801,7 @@ Parameters              %(params)s\n\
         # Write the file
         writer.writelines(file)
     
-        return 0 , ncolor1
+        return
 
     
     #===============================================================================

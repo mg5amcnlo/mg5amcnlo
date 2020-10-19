@@ -1,4 +1,4 @@
-      SUBROUTINE EWSUDAKOV_ME_%(ime)d(P,NHEL,ANS_SUMMED)
+      SUBROUTINE EWSDK_GOLD_ME_%(ime)d(P,NHEL,ANS_SUMMED)
 C  
 %(info_lines)s
 C
@@ -47,7 +47,7 @@ C
 C BEGIN CODE
 C
 
-      CALL EWSUDAKOV_ME_%(ime)d_SPLITORDERS(P,NHEL,ANS)
+      CALL EWSDK_GOLD_ME_%(ime)d_SPLITORDERS(P,NHEL,ANS)
       ans_summed = 0d0
       max_val = 0d0
 
@@ -81,7 +81,7 @@ END
 
        
        
-      SUBROUTINE EWSUDAKOV_ME_%(ime)d_SPLITORDERS(p,NHEL,ANS)
+      SUBROUTINE EWSDK_GOLD_ME_%(ime)d_SPLITORDERS(p,NHEL,ANS)
 C  
 %(info_lines)s
 C RETURNS THE INTERFERENCE OF THE BORN DIAGRAMS WITH THOSE
@@ -97,12 +97,10 @@ C CONSTANTS
 C  
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
-      INTEGER     NGRAPHS1, NGRAPHS2 ! graphs for the Born and Sudakov amplitude
-      PARAMETER ( NGRAPHS1=%(ngraphs1)d, NGRAPHS2=%(ngraphs2)d) 
-      INTEGER NCOLOR1, NCOLOR2
-      PARAMETER (NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
-      INTEGER NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
+      INTEGER     NGRAPHS 
+      PARAMETER ( NGRAPHS=%(ngraphs)d) 
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       complex*16 imag1
@@ -123,8 +121,8 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
-      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
 C  
 C GLOBAL VARIABLES
 C  
@@ -139,28 +137,20 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-C Helas calls and color basis for the base amplitude
-%(helas_calls1)s
-%(jamp1_lines)s
+%(helas_calls)s
+%(jamp_lines)s
 
-C Reshuffle the momenta here
-
-C Helas calls and color basis for the Sudakov amplitude
-%(helas_calls2)s
-%(jamp2_lines)s
-
-C Finally interfere the two sets of color-stripped amplitudes
     DO I = 1, NSQAMPSO
     ANS(I) = 0d0
     ENDDO
     DO M = 1, NAMPSO
-      DO I = 1, NCOLOR1
+      DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR2
-              ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
+          DO J = 1, NCOLOR
+              ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO
