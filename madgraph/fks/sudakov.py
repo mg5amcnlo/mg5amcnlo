@@ -117,11 +117,11 @@ def get_sudakov_amps(born_amp):
 
     # first, find all the legs that have a corresponding Goldstone
     goldstone_legs = []
-    for ileg, leg in enumerate(born_amp['process']['legs']):
+    for leg in born_amp['process']['legs']:
         goldstone = get_goldstone(leg['id'], model) 
         # skip if no goldstone exist
         if goldstone is None: continue
-        goldstone_legs.append(ileg)
+        goldstone_legs.append(leg)
 
     # now find all amplitudes that can be obtained from the born, replacing any 
     # possible combination of goldstone_legs with goldstones
@@ -135,11 +135,11 @@ def get_sudakov_amps(born_amp):
         born_proc = copy.copy(born_amp['process'])
         born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
         # replace all legs listed in goldstone_comb
-        for ileg in goldstone_comb:
+        for leg in goldstone_comb:
 
-            newleg = copy.copy(born_amp['process']['legs'][ileg])
+            newleg = copy.copy(leg)
             newleg['id'] = get_goldstone(newleg['id'], model)
-            born_proc['legs'][ileg] = newleg
+            born_proc['legs'][born_proc['legs'].index(leg)] = newleg
         # now generate the amplitude
         amp = diagram_generation.Amplitude(born_proc)
         # skip amplitudes without diagrams

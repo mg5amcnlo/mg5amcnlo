@@ -739,8 +739,6 @@ class FKSHelasProcess(object):
                     if key == 'amplitude': 
                         continue
                     sudakov_dict[key] = amp[key]
-                print type(amp['amplitude'])
-                print 'SUDAKOV DICT', sudakov_dict.keys()
                 sudakov_dict['matrix_element'] = helas_objects.HelasMatrixElement(amp['amplitude'], gen_color=True)
 
                 self.sudakov_matrix_elements.append(sudakov_dict)

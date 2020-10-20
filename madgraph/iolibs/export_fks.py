@@ -616,6 +616,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         linkfiles = ['BinothLHADummy.f',
                      'check_poles.f',
                      'check_sudakov.f',
+                     'ewsudakov_functions.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -2613,18 +2614,57 @@ Parameters              %(params)s\n\
         ncomb = born_me.get_helicity_combinations()
         replace_dict['ncomb'] = ncomb
 
+        ifsign_dict = {True: 1, False: -1}
+        replace_dict['iflist'] = "iflist = (/%s/)" % ','.join([str(ifsign_dict[leg['state']]) for leg in born_me['processes'][0]['legs']])
+
         goldstone_calls = ""
+
+        # the calls to the goldstone matrix elements for linear polarisations
         for i, me in enumerate(goldstone_mes):
             if i==0:
                 goldstone_calls += "if"
             else:
                 goldstone_calls += "else if"
 
-            conditions = ["nhel(%d,ihel).eq.0" % (ileg+1) for ileg in me['legs']]
+            conditions = ["nhel(%d,ihel).eq.0" % (leg['number']) for leg in me['legs']]
             goldstone_calls += " (%s) then\n" % ".and.".join(conditions)
             goldstone_calls += "call EWSDK_GOLD_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (i + 1)
+            goldstone_calls += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
+            goldstone_calls += "C the LSC term\n" 
+            goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
 
-        replace_dict['calls_to_goldstones'] = goldstone_calls
+            # now the call to the same-charge sudakov amp
+            mes_same_charge = [me for me in non_goldstone_mes if me['base_amp'] == i+1 and len(me['legs']) == 1]
+            if mes_same_charge:
+                goldstone_calls += "C Z-gamma mixing"
+            for mesc in mes_same_charge:
+                idx = non_goldstone_mes.index['mesc']
+                goldstone_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                goldstone_calls += "C the LSC term\n"
+                goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants)\n"
+
+        replace_dict['calls_to_me'] = goldstone_calls
+
+        # now the calls to the born, for transverse polarisations
+        born_calls = "call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)\n"
+        born_calls += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in born_me['processes'][0]['legs']])
+        goldstone_calls += "C the LSC term\n" 
+        born_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
+
+        # now the call to the same-charge sudakov amp
+        mes_same_charge = [me for me in non_goldstone_mes if me['base_amp'] == 0 and len(me['legs']) == 1]
+        if mes_same_charge:
+            born_calls += "C Z-gamma mixing"
+        for mesc in mes_same_charge:
+            idx = non_born_mes.index['mesc']
+            born_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+            born_calls += "C the LSC term\n"
+            born_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants)\n"
+
+        if goldstone_calls:
+            born_calls = "else\n" + born_calls + "endif\n"
+
+        replace_dict['calls_to_me'] += born_calls
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_wrapper.inc')).read()
