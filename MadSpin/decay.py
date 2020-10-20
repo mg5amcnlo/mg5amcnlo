@@ -4037,9 +4037,18 @@ class decay_all_events(object):
                 pass
             else:
                 stdin_text="5 0 0 0 0"
-                external.stdin.write(stdin_text)
-                external.stdin.close()
-                external.stdout.close()
+                try:
+                    external.stdin.write(stdin_text)
+                except Exception:
+                    pass
+                try:
+                    external.stdin.close()
+                except Exception:
+                    pass
+                try:
+                    external.stdout.close()
+                except Exception:
+                    pass
                 external.terminate()       
                 del external
             

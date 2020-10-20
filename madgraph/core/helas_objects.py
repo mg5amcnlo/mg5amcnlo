@@ -3154,7 +3154,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
         nb_t = self.get_nb_t_channel()
-        if nb_t > max_tpropa:
+        if nb_t > int(max_tpropa):
             return [] * len(vertex_leg_numbers)
 
         return vertex_leg_numbers

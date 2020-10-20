@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
+from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -893,6 +894,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        self.opt['exporter'] = self.__class__
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -4104,8 +4106,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
-        
+        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
         for m, w in mass_width:
             if w == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
@@ -5604,6 +5605,7 @@ class UFO_model_to_mg4(object):
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
         self.scales = []
+        self.MUE = None # extra parameter loop #2 which is running
         
         if self.model.get('running_elements'):
             all_elements = set()
@@ -5615,6 +5617,11 @@ class UFO_model_to_mg4(object):
                         add_scale.add(one_element.lhablock)
             all_elements.union(set(self.PS_dependent_key))
             self.PS_dependent_key = list(all_elements)
+            MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+            
+            if MUE:
+                self.MUE = MUE[0]
+                self.PS_dependent_key.append(MUE[0].name)
             
             try:
                 add_scale.remove('SMINPUTS')
@@ -6385,15 +6392,27 @@ class UFO_model_to_mg4(object):
         if self.model['running_elements']:
             running_block = self.model.get_running(self.used_running_key) 
             if running_block:
+                MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+
+                
+                
                 fsock.write_comments('calculate the running parameter')
-                fsock.writelines(' if(fixed_other_scale.and.first) then')
-                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(muo_ref_fixed))') 
+                fsock.writelines(' if(fixed_extra_scale.and.first) then')
+                if self.MUE:
+                    fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
                 fsock.writelines(' first = .false.') 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
-                fsock.writelines(' elseif(.not.fixed_other_scale) then')
+                fsock.writelines(' elseif(.not.fixed_extra_scale) then')
                 fsock.writelines(' Gother = G')
-                fsock.writelines(' if(muo_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(muo_over_ref*scale))')
+                
+                if self.MUE:
+                    fsock.writelines(' %s = mue_over_ref*scale' % self.MUE.name)
+                else:
+                    misc.sprint('NO MUE')
+                    #raise Exception
+                fsock.writelines(' if(mue_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*scale))')
                 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
@@ -6463,7 +6482,7 @@ class UFO_model_to_mg4(object):
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
             
-        if running_block:
+        if self.model['running_elements'] and running_block:
             self.write_running_blocks(fsock, running_block)
     
     def write_running_blocks(self, fsock, running_block):
@@ -7170,7 +7189,7 @@ class UFO_model_to_mg4(object):
         if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
             fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
             input = pjoin(model_path,'Fortran','functions.f')
-            file.writelines(fsock, open(input).read())
+            fsock.writelines(open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
             
         # check for functions define in the UFO model
@@ -7392,7 +7411,7 @@ class UFO_model_to_mg4(object):
 
     @staticmethod
     def create_param_card_static(model, output_path, rule_card_path=False,
-                                 mssm_convert=True):
+                                 mssm_convert=True, write_special=True):
         """ create the param_card.dat for a givent model --static method-- """
         #1. Check if a default param_card is present:
         done = False
@@ -7404,7 +7423,7 @@ class UFO_model_to_mg4(object):
                 files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
                          output_path)
         if not done:
-            param_writer.ParamCardWriter(model, output_path)
+            param_writer.ParamCardWriter(model, output_path, write_special=write_special)
          
         if rule_card_path:   
             if hasattr(model, 'rule_card'):
@@ -7420,16 +7439,27 @@ class UFO_model_to_mg4(object):
                     translator.make_valid_param_card(output_path, rule_card_path)
                 translator.convert_to_slha1(output_path)        
     
-    def create_param_card(self):
+    def create_param_card(self, write_special=True):
         """ create the param_card.dat """
 
         rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
         if not hasattr(self.model, 'rule_card'):
             rule_card=False
+        write_special = True
+        if 'exporter' in self.opt:
+            import madgraph.loop.loop_exporters as loop_exporters
+            import madgraph.iolibs.export_fks as export_fks
+            write_special = False
+            if  issubclass(self.opt['exporter'], loop_exporters.LoopProcessExporterFortranSA):
+                write_special = True
+                if issubclass(self.opt['exporter'],(loop_exporters.LoopInducedExporterME,export_fks.ProcessExporterFortranFKS)):
+                     write_special = False
+                        
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 
                                       rule_card_path=rule_card, 
-                                      mssm_convert=True)
+                                      mssm_convert=True,
+                                      write_special=write_special)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 

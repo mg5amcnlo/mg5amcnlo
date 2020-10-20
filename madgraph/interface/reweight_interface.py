@@ -268,9 +268,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
-        elif order.startswith(('noborn=')):
+        elif order.startswith(('noborn')):
             # pass in sqrvirt=
-            return "add process %s [%s] %s;" % (process, order.replace('noborn=', 'sqrvirt='), final)
+            return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
         elif order.startswith('LOonly'):
             #remove [LOonly] flag
             return "add process %s %s;" % (process, final)
@@ -1069,7 +1069,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
                 w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
-                ratio_V = w_newV/w_origV
+                ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
@@ -1788,7 +1788,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
                     mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
                     if mod_name in list(sys.modules.keys()):
@@ -1797,17 +1797,24 @@ class ReweightInterface(extended_cmd.Cmd):
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        if True:#six.PY3:
-                            mymod = __import__(mod_name, globals(), locals(), [])
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1)  
-                    else:
-                        if True:#six.PY3:
-                            mymod = __import__(mod_name, globals(), locals(), [])    
+                        if six.PY3:
+                            import importlib
+                            mymod = importlib.import_module(mod_name,)
+                            #mymod = __import__(mod_name, globals(), locals(), [])
                         else:
                             mymod = __import__(mod_name, globals(), locals(), [],-1) 
-                    S = mymod.SubProcesses
-                    mymod = getattr(S, 'allmatrix%spy' % tag)
+                            S = mymod.SubProcesses
+                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                    else:
+                        if six.PY3:
+                            import importlib
+                            mymod = importlib.import_module(mod_name,)
+                            #mymod = __import__(mod_name, globals(), locals(), [])    
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1)
+                            S = mymod.SubProcesses
+                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                    
                 
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod

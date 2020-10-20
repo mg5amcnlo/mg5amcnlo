@@ -2921,15 +2921,15 @@ class RunCardLO(RunCard):
 """,
             template_off=''),    
               
-        runblock(name='RUNNING', fields=('fixed_other_scale','muo_ref_fixed','muo_over_ref'),
+        runblock(name='RUNNING', fields=('fixed_extra_scale','mue_ref_fixed','mue_over_ref'),
                              template_on=\
 """#***********************************************************************
-# CONTROL The additional running scale (not QCD)                       *
+# CONTROL The extra running scale (not QCD)                       *
 #    Such running is NOT include in systematics computation            *
 #***********************************************************************
- %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
- %(muo_ref_fixed)s  =  muo_ref_fixed ! scale to use if fixed scale mode
- %(muo_over_ref)s   =  muo_over_ref  ! ratio to mur if dynamical scale
+ %(fixed_extra_scale)s = fixed_extra_scale ! False means dynamical scale 
+ %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
+ %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
 """,
             template_off=''), 
 
@@ -2974,14 +2974,14 @@ class RunCardLO(RunCard):
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
-        self.add_param("fixed_other_scale", False, hidden=True)
+        self.add_param("fixed_extra_scale", False, hidden=True)
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("muo_ref_fixed", 91.1880, hidden=True)
+        self.add_param("mue_ref_fixed", 91.1880, hidden=True)
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
                                                 allowed=[-1,0,1,2,3,4])
-        self.add_param("muo_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
+        self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -4048,15 +4048,15 @@ class MadAnalysis5Card(dict):
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
     
-    blocks = [ runblock(name='RUNNING', fields=('fixed_other_scale','muo_ref_fixed','muo_over_ref'),
+    blocks = [ runblock(name='RUNNING', fields=('fixed_extra_scale','mue_ref_fixed','mue_over_ref'),
                              template_on=\
 """#***********************************************************************
 # CONTROL The additional running scale (not QCD)                       *
 #    Such running is NOT include in systematics computation            *
 #***********************************************************************
- %(fixed_other_scale)s = fixed_other_scale ! False means dynamical scale 
- %(muo_ref_fixed)s  =  muo_ref_fixed ! scale to use if fixed scale mode
- %(muo_over_ref)s   =  muo_over_ref  ! ratio to mur if dynamical scale
+ %(fixed_extra_scale)s = fixed_extra_scale ! False means dynamical scale 
+ %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
+ %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
 """,
             template_off=''), 
             
@@ -4091,12 +4091,12 @@ class RunCardNLO(RunCard):
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
-        self.add_param('fixed_other_scale', False, hidden=True)
+        self.add_param('fixed_extra_scale', False, hidden=True)
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param('muo_ref_fixed', 91.118, hidden=True)
+        self.add_param('mue_ref_fixed', 91.118, hidden=True)
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
@@ -4104,7 +4104,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
         self.add_param('muf2_over_ref', -1.0, hidden=True)
-        self.add_param('muo_over_ref', 1.0, hidden=True)
+        self.add_param('mue_over_ref', 1.0, hidden=True)
         self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', -1.0, hidden=True)        
@@ -4121,7 +4121,7 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
              
         #merging
-        self.add_param('ickkw', 0)
+        self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
         #cuts        
         self.add_param('jetalgo', 1.0)
@@ -4422,7 +4422,49 @@ class RunCardNLO(RunCard):
         model = proc_def[0].get('model')
         if model['running_elements']:
             self.display_block.append('RUNNING') 
-    
+
+        # Check if need matching
+        min_particle = 99
+        max_particle = 0
+        for proc in proc_def:
+            min_particle = min(len(proc['legs']), min_particle)
+            max_particle = max(len(proc['legs']), max_particle)
+        matching = False
+        if min_particle != max_particle:
+            #take one of the process with min_particle
+            for procmin in proc_def:
+                if len(procmin['legs']) != min_particle:
+                    continue
+                else:
+                    idsmin = [l['id'] for l in procmin['legs']]
+                    break
+            
+            for procmax in proc_def:
+                if len(procmax['legs']) != max_particle:
+                    continue
+                idsmax =  [l['id'] for l in procmax['legs']]
+                for i in idsmin:
+                    if i not in idsmax:
+                        continue
+                    else:
+                        idsmax.remove(i)
+                for j in idsmax:
+                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21]:
+                        break
+                else:
+                    # all are jet => matching is ON
+                    matching=True
+                    break 
+        
+        if matching: 
+            self['ickkw'] = 3
+            self['fixed_ren_scale'] = False
+            self["fixed_fac_scale"] = False
+            self["fixed_QES_scale"] = False
+            self["jetalgo"] = 1
+            self["jetradius"] = 1
+            self["parton_shower"] = "PYTHIA8"
+            
     
     
 class MadLoopParam(ConfigFile):

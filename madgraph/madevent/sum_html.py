@@ -765,6 +765,9 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
         logger.debug(str(error))
         pass
 
+    for x in all_channels:
+        x.timing = 0
+
     return all
 
 
