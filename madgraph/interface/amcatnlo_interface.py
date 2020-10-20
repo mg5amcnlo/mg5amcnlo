@@ -692,11 +692,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c
                 logger.info('Writing directories...')
+                if six.PY3:
+                    ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
+                else:
+                    ctx = multiprocessing
                 original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 if self.ncores_for_proc_gen < 0: # use all cores
-                    pool = multiprocessing.Pool(maxtasksperchild=1)
+                    pool = ctx.Pool(maxtasksperchild=1)
                 else:
-                    pool = multiprocessing.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
+                    pool = ctx.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
                 signal.signal(signal.SIGINT, original_sigint_handler)
                 try:
                     # the very large timeout passed to get is to be able to catch
