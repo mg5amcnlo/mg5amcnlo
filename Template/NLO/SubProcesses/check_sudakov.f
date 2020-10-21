@@ -101,6 +101,8 @@ c     Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
       ren_scale = energy/2.0d0
 
+      call sdk_test_functions()
+
       write(*,*)' Insert the number of points to test'
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'
