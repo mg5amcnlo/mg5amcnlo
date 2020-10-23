@@ -175,7 +175,7 @@ c find the jets
 
 c If we do not require a mimimum jet energy, there's no need to apply
 c jet clustering and all that.
-      if (ptj.ne.0d0.or.ptgmin.ne.0d0) then
+      if (ptj.gt.0d0.or.ptgmin.gt.0d0) then
 c Put all (light) QCD partons in momentum array for jet clustering.
 c From the run_card.dat, maxjetflavor defines if b quark should be
 c considered here (via the logical variable 'is_a_jet').  nQCD becomes
@@ -284,7 +284,7 @@ c find the photons
             is_a_ph(i)=.false.
          endif
       enddo
-      if (ptgmin.ne.0d0) then
+      if (ptgmin.gt.0d0) then
          nph=0
          do j=nincoming+1,nexternal
             if (is_a_ph(j)) then
