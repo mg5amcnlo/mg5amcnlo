@@ -4,7 +4,7 @@ C
 C 
 C MadGraph5_aMC@NLO for Madevent Version
 C 
-C Returns amplitude squared summed/avg over colors
+C Returns amplitude squared -- no average over initial state/symmetry factor
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
 C  
