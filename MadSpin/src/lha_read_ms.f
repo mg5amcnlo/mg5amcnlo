@@ -310,8 +310,10 @@ c
          i=i+1
       enddo
       if (.not.found) then
-         write (*,*) "Warning: parameter ",name," not found"
-         write (*,*) "         setting it to default value ",def_value_num
+         if (log) then
+            write (*,*) "Warning: parameter ",name," not found"
+            write (*,*) "         setting it to default value ",def_value_num
+         endif
          var=def_value_num
       endif
 
