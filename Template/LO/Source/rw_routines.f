@@ -311,17 +311,11 @@ c
           call firststring(c_name,name)
          found = (c_param .eq. c_name)
          if (found) read(value(i),*) var
-         write (*,*) name,var
+c         if (found) write (*,*) name,var
          i=i+1
       enddo
       if (.not.found) then
-         i=1
-         do while(.not.found.and.i.le.npara)
-         write(*,*) npara,param(i),value(i),name,var,def_value            
-            i=i+1
-         enddo
-
-         write (*,*) "Warning: parameter ",name," not found(real)"
+         write (*,*) "Warning: parameter ",name," not found"
          write (*,*) "         setting it to default value ",def_value
          var=def_value
       endif
@@ -362,7 +356,7 @@ c         if (found) write (*,*) name,var
          i=i+1
       enddo
       if (.not.found) then
-         write (*,*) "Warning: parameter ",name," not found(int)"
+         write (*,*) "Warning: parameter ",name," not found"
          write (*,*) "         setting it to default value ",def_value
          var=def_value
       endif
