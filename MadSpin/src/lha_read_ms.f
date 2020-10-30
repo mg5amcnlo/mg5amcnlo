@@ -261,7 +261,7 @@ c      close(iunit)
 
 
 
-      subroutine LHA_get_real(npara,param,value,name,var,def_value_num)
+      subroutine LHA_get_real_silent(npara,param,value,name,var,def_value_num)
 c----------------------------------------------------------------------------------
 c     finds the parameter named "name" in param and associate to "value" in value
 c----------------------------------------------------------------------------------
@@ -284,12 +284,17 @@ c
 c
 c     local
 c
-      logical found
+      logical found, log
       integer i
+
+      log = .false.
+      goto 10
+      entry LHA_get_real(npara,param,value,name,var,def_value_num)
 c
 c     start
 c
-      i=1
+      
+ 10   i=1
       found=.false.
       do while(.not.found.and.i.le.npara)
          ctemp=param(i)
