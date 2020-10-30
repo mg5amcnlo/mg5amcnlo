@@ -4074,7 +4074,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
         if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
-            logger.warning("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False")
+            logger.info("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False", '$MG:BOLD')
             ProcessExporterFortranME.done_warning_tchannel = True
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
@@ -6904,7 +6904,11 @@ class UFO_model_to_mg4(object):
                 ("\n call MP_LHA_get_real(npara,param,value,'%(name)s',"+
                  "%(mp_prefix)s%(name)s,%(value)s)") \
                 % {'name': parameter.name,'mp_prefix': self.mp_prefix,
-                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}    
+                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}
+
+            if parameter.lhablock.lower() == 'loop':
+                template = template.replace('LHA_get_real', 'LHA_get_real_silent') 
+                
             return template        
     
         fsock = self.open('param_read.inc', format='fortran')
