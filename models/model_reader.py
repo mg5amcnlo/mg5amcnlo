@@ -119,6 +119,10 @@ class ModelReader(loop_base_objects.LoopModel):
                              missing_block, unknow_block)
                 apply_conversion = []
                 
+                if 'loop' in missing_set:
+                    key.append('loop')
+                    fail =  False
+                
                 if not missing_block:
                     logger.warning("Unknow type of information in the card: %s" % unknow_block)
                     fail = False
@@ -174,27 +178,31 @@ class ModelReader(loop_base_objects.LoopModel):
                     try:
                         value = param_card[block].get(pid).value
                     except:
-                        raise MadGraph5Error('%s %s not define' % (block, pid))
-                    else:
-                        if isinstance(value, str) and value.lower() == 'auto':
-                            value = '0.0' 
-                        if scale and parameter_dict[block][pid].name == 'aS':
-                            runner = Alphas_Runner(value, nloop=2)
-                            try:
-                                value = runner(scale)
-                            except ValueError as err:
-                                if str(err) == 'math domain error' and scale < 1:
-                                    value = 0.0
-                                else:
-                                    raise
-                            except OverflowError as err:
-                                if scale < 1:
-                                    value = 0.0
-                                else:
-                                    raise
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
+                        if block == 'loop':
+                            value = param_card['mass'].get(23).value
+                        else:
+                            raise MadGraph5Error('%s %s not define' % (block, pid))
+
+                    if isinstance(value, str) and value.lower() == 'auto':
+                        value = '0.0' 
+                    if scale and parameter_dict[block][pid].name == 'aS':
+                        runner = Alphas_Runner(value, nloop=2)
+                        try:
+                            value = runner(scale)
+                        except ValueError as err:
+                            if str(err) == 'math domain error' and scale < 1:
+                                value = 0.0
+                            else:
+                                raise
+                        except OverflowError as err:
+                            if scale < 1:
+                                value = 0.0
+                            else:
+                                raise
+                            
+                    exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
                                           value))
-                        parameter_dict[block][pid].value = float(value)
+                    parameter_dict[block][pid].value = float(value)
            
         else:
             # No param_card, use default values

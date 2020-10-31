@@ -2096,7 +2096,7 @@ def import_python_lhapdf(lhapdfconfig):
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-        sprint(candidates, lhapdf_libdir+'64')
+
         for candidate in candidates:
             if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))

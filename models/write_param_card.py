@@ -66,7 +66,7 @@ class ParamCardWriter(object):
         4 %(antipart)d  # Particle/Antiparticle distinction (0=own anti)\n"""
 
 
-    def __init__(self, model, filepath=None):
+    def __init__(self, model, filepath=None, write_special=True):
         """ model is a valid MG5 model, filepath is the path were to write the
         param_card.dat """
 
@@ -87,7 +87,7 @@ class ParamCardWriter(object):
     
         if filepath:
             self.define_output_file(filepath)
-            self.write_card()
+            self.write_card(write_special=write_special)
     
     
     def create_param_dict(self):
@@ -193,11 +193,12 @@ class ParamCardWriter(object):
         
         self.fsock.write(self.header)
 
-    def write_card(self, path=None):
+    def write_card(self, path=None, write_special=True):
         """schedular for writing a card"""
-  
+    
         if path:
             self.define_input_file(path)
+
   
         # order the parameter in a smart way
         self.external.sort(key=cmp_to_key(self.order_param))
@@ -205,6 +206,8 @@ class ParamCardWriter(object):
         
         cur_lhablock = ''
         for param in self.external:
+            if not write_special and param.lhablock.lower() == 'loop':
+                continue
             #check if we change of lhablock
             if cur_lhablock != param.lhablock.upper(): 
                 # check if some dependent param should be written
@@ -251,6 +254,12 @@ class ParamCardWriter(object):
             param.value = 1
         elif param.value == 0.000001e-99:
             param.value = 0
+    
+        # If write_special is on False, activate special handling of special parameter
+        # like aS/MUR (fixed via run_card / lhapdf)
+        if param.lhablock.lower() == 'sminputs' and tuple(param.lhacode) == (3,):
+            info = "%s (Note that Parameter not used if you use a PDF set)" % info
+         
     
     
         lhacode=' '.join(['%3s' % key for key in param.lhacode])

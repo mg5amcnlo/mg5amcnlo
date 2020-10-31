@@ -6,7 +6,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     MadGraph5_aMC@NLO for Madevent Version
 C     
-C     Returns amplitude squared summed/avg over colors
+C     Returns amplitude squared -- no average over initial
+C      state/symmetry factor
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
@@ -311,10 +312,10 @@ C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 
-      DOUBLE PRECISION FK_WZ
       DOUBLE PRECISION FK_ZERO
-      SAVE FK_WZ
+      DOUBLE PRECISION FK_WZ
       SAVE FK_ZERO
+      SAVE FK_WZ
 
       LOGICAL FIRST
       DATA FIRST /.TRUE./
@@ -346,7 +347,8 @@ C     BEGIN CODE
 C     ----------
       IF (FIRST) THEN
         FIRST=.FALSE.
-        FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ*SMALL_WIDTH_TREATMENT)), WZ)
+        IF(WZ.NE.0D0) FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ
+     $   *SMALL_WIDTH_TREATMENT)), WZ)
         FK_ZERO = 0D0
       ENDIF
 

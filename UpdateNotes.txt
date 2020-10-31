@@ -1,6 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.8.1(22/09/28):
+
+2.8.2 (30/10/20):
+      OM: Fix a bug when setting width to zero where they were actually set to 1e-6 times the width
+          This can lead to bias in the cross-section if your process is very sensitive to the cross-section
+	  due to gauge cancelation. Bug introduced in version 2.6.4.
+      OM: Hide Block parameter loop from NLO model but for madloop run.
+          The factorization scale is still determine by the setup of the run_card as before
+      OM: Fix couple of python3 specific bug
+
+2.8.1(24/09/20):
       OM: Change user interface related to FxFx mode
           - If you have multiple multiplicities at NLO,
 	    - the default run_card is modified accordingly

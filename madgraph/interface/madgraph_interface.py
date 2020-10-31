@@ -3516,16 +3516,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                        self._curr_model['parameters'].values()])
             keys = list(self._curr_model['parameters'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)
@@ -6418,6 +6414,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 pass
             shutil.move(pjoin(os.path.join(MG5DIR, name)), os.path.join(MG5DIR, 'PLUGIN', name))
             # read the __init__.py to check if we need to add a new executable
+            pyvers=sys.version[0]
             try:
                 __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
                 plugin = sys.modules['PLUGIN.%s' % name] 
@@ -6427,29 +6424,43 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
                 maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
             except Exception as error:
-                raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
-                
+                if six.PY2:
+                    raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
+                elif six.PY3:
+                    logger.warning('Plugin not python3 compatible! It will run with python2')
+                    text = open(os.path.join(MG5DIR, 'PLUGIN', name, '__init__.py')).read()
+                    if re.search('^\s*new_interface\s*=\s*(?!None).', text, re.M):
+                        new_interface = True
+                        pyvers = 2
+                    else:
+                        misc.sprint(text)
+                new_output = []
+                latest_validated_version = ''
+                minimal_mg5amcnlo_version = ''
+                maximal_mg5amcnlo_version = ''
+                misc.sprint(pyvers)
+                    
             logger.info('Plugin %s correctly interfaced. Latest official validition for MG5aMC version %s.' % (name, '.'.join(repr(i) for i in latest_validated_version)))
             if new_interface:
                 ff = open(pjoin(MG5DIR, 'bin', '%s.py' % name) , 'w') 
                 if __debug__:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -tt %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                    
+'''.format(name,'' if pyvers == 2 else pyvers)                    
                 else:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                     
+'''.format(name,'' if pyvers == 2 else pyvers)                     
                 ff.write(text)
                 ff.close()
                 import stat
