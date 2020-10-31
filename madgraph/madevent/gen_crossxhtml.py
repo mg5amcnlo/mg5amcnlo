@@ -132,7 +132,7 @@ class AllResults(dict):
     
     _run_entries = ['cross', 'error','nb_event_pythia','run_mode','run_statistics',
                     'nb_event','cross_pythia','error_pythia',
-                    'nb_event_pythia8','cross_pythia8','error_pythia8']
+                    'nb_event_pythia8','cross_pythia8','error_pythia8', 'shower_dir']
 
     def __init__(self, model, process, path, recreateold=True):
         
@@ -361,6 +361,8 @@ class AllResults(dict):
         elif name in ['nb_event_pythia']:
             run[name] = int(value)
         elif name in ['run_mode','run_statistics']:
+            run[name] = value
+        elif name in ['shower_dir']:
             run[name] = value
         elif name == 'cross' and run[name] != 0:
             run['prev_' + name] = run[name]
@@ -1374,6 +1376,13 @@ class OneTagResults(dict):
         <td> %(action)s</td>
         </tr>"""
         
+        sub_part_template_fxfx = """
+        <td rowspan=%(cross_span)s><center><a href="./MCATNLO/%(shower_dir)s/mcatnlo_run.log"> %(cross).4g </a> </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s %(run_mode)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
+        
         # Compute the HTMl output for subpart
         nb_line = self.get_nb_line()
         if nb_line == 0:
@@ -1511,11 +1520,24 @@ class OneTagResults(dict):
                 # been done.
 
             elif ttype == 'shower':
-                template = sub_part_template_shower
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
                 else:
                     local_dico['cross_span'] = nb_line
+                
+                if self['cross_pythia']:
+                    if self['nb_event_pythia']:
+                        local_dico['nb_event'] = self['nb_event_pythia']
+                    else:
+                        local_dico['nb_event'] = 0
+                    local_dico['cross'] = self['cross_pythia']
+                    local_dico['err'] = self['error_pythia']
+                    local_dico['shower_dir'] = self['shower_dir']
+
+                    template = sub_part_template_fxfx
+                else:
+                    template = sub_part_template_shower
+
             else:
                 template = sub_part_template_pgs             
             
