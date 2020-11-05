@@ -171,7 +171,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             return 0
 
         # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
-        shutil.copy(os.path.join(self.mgme_dir,'SudGen','sudakov.f'), \
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
                     os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
 
         # We add here the user-friendly MadLoop option setter.
@@ -3531,7 +3531,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
                                        
         # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
-        shutil.copy(os.path.join(self.mgme_dir,'SudGen','sudakov.f'), \
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
                     os.path.join(self.dir_path,'SubProcesses','sudakov.f'))
 
         # We add here the user-friendly MadLoop option setter.
