@@ -1183,14 +1183,28 @@ c     final state clustering
                endif
             enddo
             call get_clustering_type(cl,itype)
-            if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
-     $          itype.eq.3 .or. itype.eq.7) then
-               cluster_scale=sqrt(dj_clus(pi,pj))
-            elseif (itype.eq.4) then
-               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
-            elseif (itype.eq.5) then
-               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
-            endif
+c Different scale depending on itype:
+c No low pT divergence, but very few Weak-Jet contributions
+c 
+c            if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
+c     $          itype.eq.3 .or. itype.eq.7) then
+c               cluster_scale=sqrt(dj_clus(pi,pj))
+c            elseif (itype.eq.4) then
+c               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
+c            elseif (itype.eq.5) then
+c               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
+c            endif
+c
+c Common scale geometrical average:
+c No low pT divergence, normal Weak-Jet contributions, but no smooth transition on merging scale point
+c            cluster_scale=sqrt( sqrt(dj_clus(pi,pj))*
+c     $                    sqrt(abs(dot(pi,pj)/2)) )
+c
+c Default scale for checks
+c Large Weak-Jet contributions, but low pT divergence and no smooth transition on merging scale point
+c Minimum ptj cut in cuts.f is put for divergence and checked that the no smooth transition is on the QCD-jets
+            cluster_scale=sqrt(dj_clus(pi,pj))
+c
          endif
       endif
       end
