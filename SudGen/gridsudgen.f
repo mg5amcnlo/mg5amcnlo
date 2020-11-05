@@ -70,7 +70,6 @@ c
       enddo
       include 'MCmasses_PYTHIA8.inc'
 c
-      call dire_init(mcmass)
       call pythia_init(mcmass)
       open(unit=iunit1,file='sudakov.log',status='unknown')
       open(unit=iunit2,file='sudakov.err',status='unknown')
@@ -599,17 +598,11 @@ c
       real*8 mcmass(21)
       double precision temp
 
-c
-c      call dire_get_no_emission_prob(temp, stupp,
-c     #     stlow, md, id, itype, iseed, min_py_sudakov)
       call pythia_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype, iseed, min_py_sudakov)
       py_compute_sudakov=temp
       write(iunit,*) 'md=', md, ' start=', stupp,
      #           ' stop=', stlow, ' --> sud=', temp
-c      write(*,*) 'md=', md, ' start=', stupp,
-c     #           ' stop=', stlow, ' --> sud=', temp
-c
       return
       end
 

@@ -163,6 +163,9 @@ extern "C" {
     pythia.mergingPtr->getDeadzones( dzone);
   }
 
-  void pythia_clear_() { pythia.mergingPtr->clear(); }
+  void pythia_clear_() {
+    // Currently, nothing necessary.
+    return;
+  }
 
 }

@@ -1,6 +1,5 @@
 #include <iostream>
 #include "Pythia8/Pythia.h"
-#include "Dire/Dire.h"
 #include "fstream"
 
 using namespace std;
