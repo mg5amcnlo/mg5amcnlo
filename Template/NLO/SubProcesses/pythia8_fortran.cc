@@ -93,39 +93,30 @@ extern "C" {
     cout<<"Using default initialization of Pythia8."<<endl;
     pythia.readString("Beams:frameType=5");
     pythia.readString("Check:epTolErr=1.0000000000e-02");
+    //pythia.readString("merging:doptlundmerging = on");
+    pythia.readString("Merging:doMerging = on");
+    pythia.readString("Merging:runtimeAMCATNLOInterface = on");
+    pythia.settings.word("Merging:Process", processString);
+    //pythia.readString("merging:tms = 1000000");
+    pythia.readString("merging:includeWeightInXSection = off");
+    //pythia.readString("merging:njetmax = 1000");
+    pythia.readString("merging:applyveto = off");
     // Disallow Pythia to overwrite parts of Les Houches input.
-    pythia.readString("LesHouches:setQuarkMass       = 0");
-    pythia.readString("LesHouches:setLeptonMass      = 0");
-    pythia.readString("LesHouches:mRecalculate       = -1.0");
-    pythia.readString("LesHouches:matchInOut         = off");
-    // Switch off most of Pythia
-    pythia.readString("ProcessLevel:resonanceDecays  = off");
-    pythia.readString("BeamRemnants:primordialKT     = off");
-    pythia.readString("TimeShower:QEDshowerByQ       = off");
-    pythia.readString("TimeShower:QEDshowerByL       = off");
-    pythia.readString("TimeShower:QEDshowerByGamma   = off");
-    pythia.readString("TimeShower:QEDshowerByOther   = off");
-    pythia.readString("SpaceShower:QEDshowerByQ      = off");
-    pythia.readString("SpaceShower:QEDshowerByL      = off");
-    pythia.readString("PartonLevel:MPI               = off");
-    pythia.readString("HadronLevel:all               = off");
-    pythia.readString("PartonLevel:Remnants          = off");
-    pythia.readString("Check:Event                   = off");
-    pythia.readString("PartonLevel:FSRinResonances   = off");
-    pythia.readString("PDF:lepton                    = off");
-    pythia.readString("Print:quiet                   = on");
+    pythia.readString("LesHouches:setQuarkMass = 0");
+    pythia.readString("LesHouches:setLeptonMass = 0");
+    pythia.readString("LesHouches:mRecalculate = -1.0");
+    pythia.readString("LesHouches:matchInOut = off");
+    pythia.readString("PartonLevel:MPI                 = off");
+    pythia.readString("Print:quiet = on");
+    pythia.readString("Merging:nRequested = 0");
     pythia.readString("Beams:setProductionScalesFromLHEF = off");
     pythia.readString("Check:abortIfVeto               = on");
-    // Merging settings to be able to use histories only.
-    pythia.readString("Merging:nRequested              = 0");
-    pythia.readString("Merging:mayRemoveDecayProducts  = on");
-    pythia.readString("merging:doptlundmerging         = on");
-    pythia.settings.word("Merging:Process", processString);
-    pythia.readString("merging:tms                     = 1000000");
-    pythia.readString("merging:includeWeightInXSection = off");
-    pythia.readString("merging:njetmax                 = 1000");
-    pythia.readString("merging:applyveto               = off");
+    //pythia.readString("Merging:mayRemoveDecayProducts  = on");
 
+    pythia.readString("HadronLevel:all = off");
+    pythia.readString("ProcessLevel:resonanceDecays = off");
+    pythia.readString("PartonLevel:Remnants         = off");
+    pythia.readString("Check:event                  = off");
 
     pythia.setLHAupPtr(& lhareader);
     pythia.init();
@@ -169,3 +160,4 @@ extern "C" {
   }
 
 }
+
