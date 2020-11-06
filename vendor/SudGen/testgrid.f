@@ -23,7 +23,7 @@ c
       include 'MCmasses_PYTHIA8.inc'
 
       stupp = 1000.0
-      call dire_init(mcmass)
+      call pythia_init(mcmass)
 
       call getalq0(26,1.d0,1.d0,100.d0,10.d0,alst,q0st)
       call getalq0(20,1.d0,2.d0,200.d0,10.d0,alxm,q0xm)
@@ -283,7 +283,7 @@ c
       real*8 mcmass(21)
       double precision temp
 
-      call dire_get_no_emission_prob(temp, stupp,
+      call pythia_get_no_emission_prob(temp, stupp,
      #     stlow, md, id, itype)
       py_compute_sudakov=temp
 
