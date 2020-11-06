@@ -1380,10 +1380,6 @@ c               cstlow <= smallptupp
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      logical usePythia,useDire
-      data usePythia/.true./
-      data useDire/.false./
-
 cSF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
       double precision noemProb, startingScale(2), stoppingScale(2), mDipole
@@ -1436,13 +1432,6 @@ c
       enddo
       pythia_cmd_file=''
       
-      if( (useDire.and.usePythia) .or.
-     $     ((.not.useDire).and.(.not.usePythia)) )then
-         write(*,*)'complete_xmcsubt: Dire or Pythia?'
-         write(*,*)useDire,usePythia
-         stop
-      endif
-
 c Given xmcxec,etc., returns jflow, wgt and fills emsca in common block:
       call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,MCsec
      $     ,lzone,jflow,wgt)
@@ -1583,23 +1572,13 @@ c
          idIn2 = idup_s(2)
          if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
          if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
-         if(useDire)call dire_init_default(idIn1, idIn2, idOut, masses_to_MC)
-         if(usePythia)call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
+         call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
       endif
-      if(useDire)then
-         call dire_setevent()
-         call dire_next()
-         call dire_get_stopping_info(xscales,xmasses)
-         call dire_get_dead_zones(dzones)
-         call dire_clear()
-      endif
-      if(usePythia)then
-         call pythia_setevent()
-         call pythia_next()
-         call pythia_get_stopping_info(xscales,xmasses)
-         call pythia_get_dead_zones(dzones)
-         call pythia_clear()
-      endif
+      call pythia_setevent()
+      call pythia_next()
+      call pythia_get_stopping_info(xscales,xmasses)
+      call pythia_get_dead_zones(dzones)
+      call pythia_clear()
 
 c     Check if the S-event state (as created from the H-event by Pythia)
 c     is consistent with the MG_aMC S-event state.
@@ -1928,73 +1907,7 @@ c Same comment on cstupp as above. Inserted here as a safety
 c measure, since Pythia might give very large scales. In those
 c case, the computed Sudakovs are actually discarded later
             stoppingScale0 = min(SCALUP_tmp_H2(i,j),cstupp)
-            if(useDire)then
-c Compute the anticollinear suppression factor
-              sref=dot(p(0,1),p(0,2))
-              acll1=dot(p_i_fks_ev(0),p(0,iBtoR(i)))
-              if(acll1.le.0.d0)then
-                if(acll1.gt.-1.d-3*sref)then
-                  acll1=0.d0
-                else
-                  write(*,*)'Error #9 in complete_xmcsubt: acll1'
-                  write(*,*)i,iBtoR(i),acll1
-                  stop
-                endif
-              endif
-              acll2=dot(p_i_fks_ev(0),p(0,iBtoR(j)))
-              if(acll2.le.0.d0)then
-                if(acll2.gt.-1.d-3*sref)then
-                  acll2=0.d0
-                else
-                  write(*,*)'Error #9 in complete_xmcsubt: acll2'
-                  write(*,*)i,iBtoR(i),acll2
-                  stop
-                endif
-              endif
-c With massless partons:
-c   acllfct(icount) -> 1  with i_fks||iBtoR(i)
-c   acllfct(icount) -> 0  with i_fks||iBtoR(j)
-c This is the ratio of the partial-fractioned eikonal (which is used
-c by Dire in a secondary hit and miss) over the full eikonal (which
-c serves as upper bound to the former).
-c We are computing the Delta contribution at given i, looping over j;
-c therefore, the argument of acllfct(*) identifies the end of the
-c line, ie the recoiler
-              acllfct(icount)=acll2/max(acll1+acll2,1.d-8)
-              if(acllfct(icount).gt.1.d0.or.acllfct(icount).lt.0.d0)then
-                write(*,*)'Error #8 in complete_xmcsubt'
-                write(*,*)i,j,acll1,acll2
-                stop
-              endif
-              if(acllfct(icount).lt.1.d-8)then
-                acllfct(icount)=1.d8
-              else
-                acllfct(icount)=1/acllfct(icount)
-              endif
-c Redefine startingScale0
-cSF Assumption: identify xscales2(i,j) with the Pythia-to-Dire translation
-cSF of qMC_a2(i,j). Then:
-              if(emscasharp_a(i,j))then
-                 if(xscales2(i,j).le.scalemax_a(i,j))then
-                    emscav_a2_tmp=emsca_bare_a2(i,j)
-                 else
-                    emscav_a2_tmp=scalemax_a(i,j)
-                 endif
-              else
-                 ptresc_a_tmp=(xscales2(i,j)-scalemin_a(i,j))/
-     &                        (scalemax_a(i,j)-scalemin_a(i,j))
-                 if(ptresc_a_tmp.lt.1d0)then 
-                    emscav_a2_tmp=emsca_bare_a2(i,j)
-                 else
-                    emscav_a2_tmp=scalemax_a(i,j)
-                 endif
-              endif
-              emscav_tmp_a2_tmp=emscav_a2_tmp
-              startingScale0=min(emscav_tmp_a2_tmp,cstupp)
-            endif
-            if(usePythia)then
-              acllfct(icount)=1.d0
-            endif
+            acllfct(icount)=1.d0
 c Passing the following if clause must be exceedingly rare
             if(startingScale0.le.smallptupp)then
               write(*,*)'Warning in xmcsubt: startingScale0, smallptupp'
@@ -2010,9 +1923,8 @@ c$$$              stop
             elseif(i.gt.2.and.j.gt.2)then
                isudtype(icount)=2
             elseif(i.le.2.and.j.gt.2)then
-               if(useDire)isudtype(icount)=3
 c For Pythia: IF is identical to II
-               if(usePythia)isudtype(icount)=1
+               isudtype(icount)=1
             elseif(i.gt.2.and.j.le.2)then
                isudtype(icount)=4
             endif
