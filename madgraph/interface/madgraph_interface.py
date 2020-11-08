@@ -6604,7 +6604,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         def apply_patch(filetext):
             """function to apply the patch"""
-            text = filetext.read()
+            text = filetext.read().decode()
             
             pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #=== renamed directory 'Template' => 'Template/LO'
