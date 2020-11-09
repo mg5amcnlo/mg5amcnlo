@@ -712,7 +712,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-                
+            with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
+                fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
                                    write_file=False, return_instance=True
@@ -880,7 +881,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):                    
                     if 'second' in path or tag == 3:
                         param_card = self.new_param_card
                     else:
@@ -955,7 +956,6 @@ class ReweightInterface(extended_cmd.Cmd):
     dynamical_scale_warning=True
     def change_kinematics(self, event):
  
-
         if isinstance(self.run_card, banner.RunCardLO):
             jac = event.change_ext_mass(self.new_param_card)
             new_event = event
