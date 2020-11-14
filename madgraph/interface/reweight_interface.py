@@ -554,6 +554,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
+
+                
             weight = self.calculate_weight(event)
             if not isinstance(weight, dict):
                 weight = {'':weight}
@@ -888,12 +890,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         param_card = check_param_card.ParamCard(self.orig_param_card_text)
                     
                     for block in param_card:
-
+                        if block.lower() == 'qnumbers':
+                            continue
                         for param   in param_card[block]:
                             lhacode = param.lhacode
                             value = param.value
                             name = '%s_%s' % (block.upper(), '_'.join([str(i) for i in lhacode]))
                             module.change_para(name, value)
+#                    misc.sprint("recompute module")
                     module.update_all_coup()
                         
         return param_card_iterator, tag_name
@@ -1020,7 +1024,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 nhel = 0
             misc.sprint(nhel, Pdir, hel_dict)                        
             raise Exception, "Invalid matrix element for original computation (weight=0)"
-
         return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
      
     def calculate_nlo_weight(self, event):
