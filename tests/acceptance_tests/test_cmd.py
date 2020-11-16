@@ -213,6 +213,8 @@ class TestCmdShell1(unittest.TestCase):
                     'low_mem_multicore_nlo_generation': False,
                     'ninja': './HEPTools/lib',
                     'samurai': None,
+                    'max_t_for_channel': 99,
+                    'zerowidth_tchannel': True
                     }
 
         self.assertEqual(config, expected)
@@ -889,7 +891,6 @@ C
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV2_3.f')).read()
         self.assertTrue('OM3' in text)
-        misc.sprint(text)
         self.assertEqual(ffv2.split('\n'), text.split('\n'))
         self.assertEqual(ffv2, text)        
         

@@ -282,10 +282,14 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # start the pool instance with a signal instance to catch ctr+c
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
-                pool = multiprocessing.Pool(maxtasksperchild=1)
+            if six.PY3:
+                ctx = multiprocessing.get_context('fork')
             else:
-                pool = multiprocessing.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
+                ctx = multiprocessing
+            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
+                pool = ctx.Pool(maxtasksperchild=1)
+            else:
+                pool = ctx.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             logger.info('Generating real matrix elements...')

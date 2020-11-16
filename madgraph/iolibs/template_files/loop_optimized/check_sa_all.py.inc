@@ -50,10 +50,10 @@ allmatrix2py.initialise(os.path.abspath(pjoin(root_path,os.pardir,'Cards','param
 allmatrix2py.set_madloop_path(os.path.abspath(pjoin(root_path,'MadLoop5_resources')))
 # List all processes available in this module
 
-all_procs_available = [[pdg for pdg in proc_pdgs if pdg!=0] for proc_pdgs in allmatrix2py.get_pdg_order()]
+all_procs_available = [[(pdg,pids[i]) for i, pdg in enumerate(proc_pdgs) if pdg!=0] for (proc_pdgs, pids) in allmatrix2py.get_pdg_order()]
 print( "Available processes are:")
 for process_pdgs in all_procs_available:
-    print( "   --> %s"%str(process_pdgs))
+    print( "   --> %s: process id: %i "%str(process_pdgs[0], process_pdgs[1]))
 
 def invert_momenta(p):
     """ fortran/C-python do not order table in the same order"""
@@ -63,7 +63,7 @@ def invert_momenta(p):
 
 # The kinematic configuration in the convention (E, px, py, pz) and with particles ordered as in the process definition.
 # This is the structure of this dictionary.
-p= dict( (tuple(process_pdgs),[[None,]*4]*len(process_pdgs)) for process_pdgs in all_procs_available)
+p= dict( (tuple(process_pdgs[0]),[[None,]*4]*len(process_pdgs[0])) for process_pdgs in all_procs_available)
 
 if (p.values()[0])[0][0] is None:
     if not os.path.isfile(pjoin(root_path,'PS.input')):
@@ -121,7 +121,7 @@ for iProc, (process_pdgs, kinematic_config) in enumerate(p.items()):
     # Choice of renormalization scale
     renormalization_scale = 91.188
 
-    finite_loop_me, return_code = allmatrix2py.smatrixhel(pdgs=list(process_pdgs),
+    finite_loop_me, return_code = allmatrix2py.smatrixhel(pdgs=list(process_pdgs), procid=-1,
 		                          p=P, alphas=alphas,scales2=renormalization_scale,nhel=nhel)
 
     print( '* %-108s *'%' MadLoop evaluation for the process ')

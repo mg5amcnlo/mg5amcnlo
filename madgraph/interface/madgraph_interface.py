@@ -581,7 +581,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   orders to ensure maximum number of QCD vertices.")
         logger.info(" > Desired coupling orders combination can be specified directly for")
         logger.info("   the squared matrix element by appending '^2' to the coupling name.")
-        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^2==2' selects the QED-QCD")
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
@@ -759,7 +759,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
@@ -790,14 +790,20 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-#        logger.info(" > (default '0') [Used for loop-induced outputs]")
-#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-#        logger.info(" > setting up the integration multichannels.") 
-#        logger.info(" > The default value of zero automatically picks the apparent")
-#        logger.info(" > appropriate choice which is to sometimes pick box loops")
-#        logger.info(" > but never higher n-points ones.")
-
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for loop-induced outputs with madevent]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+        logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
+        logger.info(" > Forbids the inclusion of channel of integration with more than X")
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
+        logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
+        logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1506,7 +1512,7 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout', 'max_npoint_for_channel']:
+        if args[0] in ['timeout', 'max_npoint_for_channel', 'max_t_for_channel']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
@@ -2900,6 +2906,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel',
+                    'max_t_for_channel',
+                    'zerowidth_tchannel',
                     'default_unset_couplings']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
@@ -2963,7 +2971,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'loop_optimized_output':True,
                           'loop_color_flows':False,
                           'max_npoint_for_channel': 0, # 0 means automaticly adapted
-                          'default_unset_couplings': 99 # 99 means infinity
+                          'default_unset_couplings': 99, # 99 means infinity
+                          'max_t_for_channel': 99, # means no restrictions
+                          'zerowidth_tchannel': True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3083,7 +3093,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         existing amplitudes
         or merge two model
         """
-
+        
         args = self.split_arg(line)
 
         
@@ -3184,47 +3194,51 @@ This implies that with decay chains:
                 
 
             self._curr_proc_defs.append(myprocdef)
-            
-            # Negative coupling order contraints can be given on at most one
-            # coupling order (and either in squared orders or orders, not both)
-            if len([1 for val in list(myprocdef.get('orders').values())+\
-                          list(myprocdef.get('squared_orders').values()) if val<0])>1:
-                raise MadGraph5Error("Negative coupling order constraints"+\
-                  " can only be given on one type of coupling and either on"+\
-                               " squared orders or amplitude orders, not both.")
 
-            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
-                logger.warning('''Computation of interference term with decay is not 100% validated.  
-                Please check carefully your result.
-                One suggestion is also to compare the generation of your process with and without
-                set group_subprocesses True
-                (to write Before the generate command)
-                ''')
-
-            cpu_time1 = time.time()
-
-            # Generate processes
-            if self.options['group_subprocesses'] == 'Auto':
-                    collect_mirror_procs = True
-            else:
-                collect_mirror_procs = self.options['group_subprocesses']
-            ignore_six_quark_processes = \
-                           self.options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self.options \
-                           else []
-
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                     collect_mirror_procs = collect_mirror_procs,
-                                     ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize, diagram_filter=diagram_filter)
-
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                elif warning_duplicate:
-                    raise self.InvalidCmd("Duplicate process %s found. Please check your processes." % \
-                                                amp.nice_string_processes())
+            try:
+                # Negative coupling order contraints can be given on at most one
+                # coupling order (and either in squared orders or orders, not both)
+                if len([1 for val in list(myprocdef.get('orders').values())+\
+                              list(myprocdef.get('squared_orders').values()) if val<0])>1:
+                    raise MadGraph5Error("Negative coupling order constraints"+\
+                      " can only be given on one type of coupling and either on"+\
+                                   " squared orders or amplitude orders, not both.")
+    
+                if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                    logger.warning('''Computation of interference term with decay is not 100% validated.  
+                    Please check carefully your result.
+                    One suggestion is also to compare the generation of your process with and without
+                    set group_subprocesses True
+                    (to write Before the generate command)
+                    ''')
+    
+                cpu_time1 = time.time()
+    
+                # Generate processes
+                if self.options['group_subprocesses'] == 'Auto':
+                        collect_mirror_procs = True
+                else:
+                    collect_mirror_procs = self.options['group_subprocesses']
+                ignore_six_quark_processes = \
+                               self.options['ignore_six_quark_processes'] if \
+                               "ignore_six_quark_processes" in self.options \
+                               else []
+    
+                myproc = diagram_generation.MultiProcess(myprocdef,
+                                         collect_mirror_procs = collect_mirror_procs,
+                                         ignore_six_quark_processes = ignore_six_quark_processes,
+                                         optimize=optimize, diagram_filter=diagram_filter)
+    
+    
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self._curr_amps:
+                        self._curr_amps.append(amp)
+                    elif warning_duplicate:
+                        raise self.InvalidCmd( "Duplicate process %s found. Please check your processes." % \
+                                                    amp.nice_string_processes())
+            except Exception:
+                self._curr_proc_defs.pop(-1)
+                raise
 
             # Reset _done_export, since we have new process
             self._done_export = False
@@ -3330,9 +3344,13 @@ This implies that with decay chains:
         if answer != 'y':
             return 
         
-        #Object_library (.iteritems() -> .items())
+        #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
+        #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
+        # raise UFOError, "" -> raise UFOError()
+        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
+                      'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
@@ -3509,16 +3527,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                        self._curr_model['parameters'].values()])
             keys = list(self._curr_model['parameters'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)
@@ -5167,6 +5181,7 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new process
         self._done_export = False
+        self._curr_proc_defs.append(myprocdef)
 
         cpu_time2 = time.time()
 
@@ -5373,20 +5388,20 @@ This implies that with decay chains:
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1)
             if proc_number_re.group(3):
-                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
                 order_line = proc_number_re.group(3)
                 order_re = order_pattern.match(order_line)
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)                
+                    order_re = order_pattern.match(order_line)            
             logger.info(line)
             
 
@@ -6004,9 +6019,12 @@ This implies that with decay chains:
             if six.PY3:
                 self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py3' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py3']
             else:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py2']
+            
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6407,6 +6425,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 pass
             shutil.move(pjoin(os.path.join(MG5DIR, name)), os.path.join(MG5DIR, 'PLUGIN', name))
             # read the __init__.py to check if we need to add a new executable
+            pyvers=sys.version[0]
             try:
                 __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
                 plugin = sys.modules['PLUGIN.%s' % name] 
@@ -6416,29 +6435,43 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
                 maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
             except Exception as error:
-                raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
-                
+                if six.PY2:
+                    raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
+                elif six.PY3:
+                    logger.warning('Plugin not python3 compatible! It will run with python2')
+                    text = open(os.path.join(MG5DIR, 'PLUGIN', name, '__init__.py')).read()
+                    if re.search('^\s*new_interface\s*=\s*(?!None).', text, re.M):
+                        new_interface = True
+                        pyvers = 2
+                    else:
+                        misc.sprint(text)
+                new_output = []
+                latest_validated_version = ''
+                minimal_mg5amcnlo_version = ''
+                maximal_mg5amcnlo_version = ''
+                misc.sprint(pyvers)
+                    
             logger.info('Plugin %s correctly interfaced. Latest official validition for MG5aMC version %s.' % (name, '.'.join(repr(i) for i in latest_validated_version)))
             if new_interface:
                 ff = open(pjoin(MG5DIR, 'bin', '%s.py' % name) , 'w') 
                 if __debug__:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -tt %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                    
+'''.format(name,'' if pyvers == 2 else pyvers)                    
                 else:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                     
+'''.format(name,'' if pyvers == 2 else pyvers)                     
                 ff.write(text)
                 ff.close()
                 import stat
@@ -6802,7 +6835,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             data['last_check'] = time.time()
 
         #check if we need to update.
-        if time.time() - data['last_check'] < update_delay:
+        if time.time() - float(data['last_check']) < float(update_delay):
             return
 
         logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)
@@ -7693,7 +7726,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
                             ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
-        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry', 'max_t_for_channel',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
@@ -7746,7 +7779,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     tmp = args[1].lower()
                 else: 
                     raise
-            self.options[args[0]] = tmp        
+            self.options[args[0]] = tmp
+        elif args[0] in ['zerowidth_tchannel']:
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in ['low_mem_multicore_nlo_generation']:	    
@@ -7963,7 +7998,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3 
+            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)
@@ -7982,6 +8018,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+
         # Define the helas call  writer
         if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
@@ -7992,6 +8029,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
+            options = {'zerowidth_tchannel': True}
+            if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
+                options['zerowidth_tchannel'] = False
+            
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
@@ -8470,7 +8511,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd('output %s -f' % decay_dir,child=False)
+                self.exec_cmd('output madevent %s -f' % decay_dir,child=False)
                 
                 #modify some parameter of the default run_card
                 run_card = banner_module.RunCard(pjoin(decay_dir,'Cards','run_card.dat'))

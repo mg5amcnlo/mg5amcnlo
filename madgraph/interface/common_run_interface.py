@@ -2457,7 +2457,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                      LoggerStream=logstream,forced=forced, 
                                                      no_compilation=not compilation)
         except Exception as e:
-            if six.PY3:
+            if six.PY3 and not __debug__:
                 logger.info('MadAnalysis5 instalation not python3 compatible')
                 return None
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
@@ -3739,16 +3739,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if isinstance(value, str):
                 madspin_cmd.mg5cmd.exec_cmd( 'set %s %s --no_save' %(key,value), errorhandling=False, printcmd=False, precmd=False, postcmd=True)
         madspin_cmd.cluster = self.cluster
+        madspin_cmd.mother = self
         
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
 
         madspin_cmd.import_command_file(path)
-        
-        misc.sprint(madspin_cmd.me_run_name)
         if not madspin_cmd.me_run_name:
-            
             # create a new run_name directory for this output
             i = 1
             while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
@@ -3761,7 +3759,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 while os.path.exists(pjoin(self.me_dir,'Events', '%s_%i' % (new_run,i))):
                     i+=1
                 new_run = '%s_%i' % (new_run,i)
-                
+
         evt_dir = pjoin(self.me_dir, 'Events')
 
         os.mkdir(pjoin(evt_dir, new_run))
@@ -5968,6 +5966,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
                 self.do_set('run_card store_rwgt_info True')
         
+            #check relation between ickkw and shower_card
+            if 'run' in self.allow_arg and self.run_card['ickkw'] == 3 :
+                if 'shower' in self.allow_arg:
+                    if self.shower_card['qcut'] == -1:
+                        self.do_set('shower_card qcut %f' % (2*self.run_card['ptj'])) 
+                    elif self.shower_card['qcut'] < self.run_card['ptj']*2:
+                        logger.error("ptj cut [in run_card: %s] is more than half the value of QCUT [shower_card: %s] This is not recommended:\n see http://amcatnlo.web.cern.ch/amcatnlo/FxFx_merging.htm ",
+                                     self.run_card['ptj'], self.shower_card['qcut'])
+                        
+                if self.shower_card['njmax'] == -1:
+                    if not proc_charac: #shoud not happen in principle 
+                        raise Exception( "Impossible to setup njmax automatically. Please setup that value manually.")
+                    njmax = proc_charac['max_n_matched_jets']
+                    self.do_set('shower_card njmax %i' % njmax) 
+                if self.shower_card['njmax'] == 0:
+                    raise Exception("Invalid njmax parameter. Can not be set to 0")
+                    
+                
        
         
         # Check the extralibs flag.

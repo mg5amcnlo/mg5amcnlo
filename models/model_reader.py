@@ -58,7 +58,8 @@ class ModelReader(loop_base_objects.LoopModel):
         super(ModelReader, self).default_setup()
 
     def set_parameters_and_couplings(self, param_card = None, scale=None,
-                                                      complex_mass_scheme=None):
+                                                      complex_mass_scheme=None,
+                                                      auto_width=None):
         """Read a param_card and calculate all parameters and
         couplings. Set values directly in the parameters and
         couplings, plus add new dictionary coupling_dict from
@@ -84,6 +85,9 @@ class ModelReader(loop_base_objects.LoopModel):
                     raise MadGraph5Error("No such file %s" % param_card)
                 param_card_text = param_card
                 param_card = card_reader.ParamCard(param_card)
+                for param in param_card.get('decay'):
+                    if str(param.value).lower() == 'auto':
+                        param.value = auto_width(param_card, param.lhacode)
             #misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
             #assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
             
@@ -114,6 +118,10 @@ class ModelReader(loop_base_objects.LoopModel):
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              missing_block, unknow_block)
                 apply_conversion = []
+                
+                if 'loop' in missing_set:
+                    key.append('loop')
+                    fail =  False
                 
                 if not missing_block:
                     logger.warning("Unknow type of information in the card: %s" % unknow_block)
@@ -170,27 +178,31 @@ class ModelReader(loop_base_objects.LoopModel):
                     try:
                         value = param_card[block].get(pid).value
                     except:
-                        raise MadGraph5Error('%s %s not define' % (block, pid))
-                    else:
-                        if isinstance(value, str) and value.lower() == 'auto':
-                            value = '0.0' 
-                        if scale and parameter_dict[block][pid].name == 'aS':
-                            runner = Alphas_Runner(value, nloop=2)
-                            try:
-                                value = runner(scale)
-                            except ValueError as err:
-                                if str(err) == 'math domain error' and scale < 1:
-                                    value = 0.0
-                                else:
-                                    raise
-                            except OverflowError as err:
-                                if scale < 1:
-                                    value = 0.0
-                                else:
-                                    raise
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
+                        if block == 'loop':
+                            value = param_card['mass'].get(23).value
+                        else:
+                            raise MadGraph5Error('%s %s not define' % (block, pid))
+
+                    if isinstance(value, str) and value.lower() == 'auto':
+                        value = '0.0' 
+                    if scale and parameter_dict[block][pid].name == 'aS':
+                        runner = Alphas_Runner(value, nloop=2)
+                        try:
+                            value = runner(scale)
+                        except ValueError as err:
+                            if str(err) == 'math domain error' and scale < 1:
+                                value = 0.0
+                            else:
+                                raise
+                        except OverflowError as err:
+                            if scale < 1:
+                                value = 0.0
+                            else:
+                                raise
+                            
+                    exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
                                           value))
-                        parameter_dict[block][pid].value = float(value)
+                    parameter_dict[block][pid].value = float(value)
            
         else:
             # No param_card, use default values

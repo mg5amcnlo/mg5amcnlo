@@ -456,6 +456,70 @@ C     Now the routines to update the wavefunctions
       ENDDO
       END
 
+      SUBROUTINE ML5_0_UPDATE_WL_2_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+      INTEGER I,J,K,L,M
+      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+      INTEGER NEW_POSITION
+      COMPLEX*16 UPDATER_COEF
+
+C     Welcome to the computational heart of MadLoop...
+      OUT(:,:,:)=(0.0D0,0.0D0)
+      DO J=1,OUT_SIZE
+        DO M=0,4
+          DO K=1,IN_SIZE
+            UPDATER_COEF = B(J,M,K)
+            IF (UPDATER_COEF.EQ.(0.0D0,0.0D0)) CYCLE
+            DO L=0,14
+              NEW_POSITION = COMB_COEF_POS(L,M)
+              DO I=1,LCUT_SIZE
+                OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)
+     $           *UPDATER_COEF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+
+      END
+
+      SUBROUTINE MP_ML5_0_UPDATE_WL_2_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+      INTEGER I,J,K,L,M
+      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+      INTEGER NEW_POSITION
+      COMPLEX*32 UPDATER_COEF
+
+C     Welcome to the computational heart of MadLoop...
+      OUT(:,:,:)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
+      DO J=1,OUT_SIZE
+        DO M=0,4
+          DO K=1,IN_SIZE
+            UPDATER_COEF = B(J,M,K)
+            IF (UPDATER_COEF.EQ.CMPLX(0.0E0_16,0.0E0_16,KIND=16)) CYCLE
+            DO L=0,14
+              NEW_POSITION = COMB_COEF_POS(L,M)
+              DO I=1,LCUT_SIZE
+                OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)
+     $           *UPDATER_COEF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+
+      END
+
       SUBROUTINE ML5_0_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       USE ML5_0_POLYNOMIAL_CONSTANTS
@@ -493,6 +557,146 @@ C     Now the routines to update the wavefunctions
           ENDDO
           DO K=1,IN_SIZE
             OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
+      SUBROUTINE ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,14
+            OUT(J,K,I)=(0.0D0,0.0D0)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+            OUT(J,1,I)=OUT(J,1,I)+A(K,0,I)*B(J,1,K)+A(K,1,I)*B(J,0,K)
+            OUT(J,2,I)=OUT(J,2,I)+A(K,0,I)*B(J,2,K)+A(K,2,I)*B(J,0,K)
+            OUT(J,3,I)=OUT(J,3,I)+A(K,0,I)*B(J,3,K)+A(K,3,I)*B(J,0,K)
+            OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
+            OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
+            OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
+      SUBROUTINE MP_ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,14
+            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+            OUT(J,1,I)=OUT(J,1,I)+A(K,0,I)*B(J,1,K)+A(K,1,I)*B(J,0,K)
+            OUT(J,2,I)=OUT(J,2,I)+A(K,0,I)*B(J,2,K)+A(K,2,I)*B(J,0,K)
+            OUT(J,3,I)=OUT(J,3,I)+A(K,0,I)*B(J,3,K)+A(K,3,I)*B(J,0,K)
+            OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
+            OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
+            OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
+      SUBROUTINE ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,14
+            OUT(J,K,I)=(0.0D0,0.0D0)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+            OUT(J,1,I)=OUT(J,1,I)+A(K,1,I)*B(J,0,K)
+            OUT(J,2,I)=OUT(J,2,I)+A(K,2,I)*B(J,0,K)
+            OUT(J,3,I)=OUT(J,3,I)+A(K,3,I)*B(J,0,K)
+            OUT(J,4,I)=OUT(J,4,I)+A(K,4,I)*B(J,0,K)
+            OUT(J,5,I)=OUT(J,5,I)+A(K,5,I)*B(J,0,K)
+            OUT(J,6,I)=OUT(J,6,I)+A(K,6,I)*B(J,0,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,7,I)*B(J,0,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,8,I)*B(J,0,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,9,I)*B(J,0,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,10,I)*B(J,0,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,11,I)*B(J,0,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,12,I)*B(J,0,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,13,I)*B(J,0,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,14,I)*B(J,0,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
+      SUBROUTINE MP_ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
+     $ ,OUT)
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,14
+            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+            OUT(J,1,I)=OUT(J,1,I)+A(K,1,I)*B(J,0,K)
+            OUT(J,2,I)=OUT(J,2,I)+A(K,2,I)*B(J,0,K)
+            OUT(J,3,I)=OUT(J,3,I)+A(K,3,I)*B(J,0,K)
+            OUT(J,4,I)=OUT(J,4,I)+A(K,4,I)*B(J,0,K)
+            OUT(J,5,I)=OUT(J,5,I)+A(K,5,I)*B(J,0,K)
+            OUT(J,6,I)=OUT(J,6,I)+A(K,6,I)*B(J,0,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,7,I)*B(J,0,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,8,I)*B(J,0,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,9,I)*B(J,0,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,10,I)*B(J,0,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,11,I)*B(J,0,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,12,I)*B(J,0,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,13,I)*B(J,0,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,14,I)*B(J,0,K)
           ENDDO
         ENDDO
       ENDDO
@@ -608,140 +812,6 @@ C     Now the routines to update the wavefunctions
       ENDDO
       END
 
-      SUBROUTINE ML5_0_UPDATE_WL_2_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      IMPLICIT NONE
-      INTEGER I,J,K,L,M
-      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-      INTEGER NEW_POSITION
-      COMPLEX*16 UPDATER_COEF
-
-C     Welcome to the computational heart of MadLoop...
-      OUT(:,:,:)=(0.0D0,0.0D0)
-      DO J=1,OUT_SIZE
-        DO M=0,4
-          DO K=1,IN_SIZE
-            UPDATER_COEF = B(J,M,K)
-            IF (UPDATER_COEF.EQ.(0.0D0,0.0D0)) CYCLE
-            DO L=0,14
-              NEW_POSITION = COMB_COEF_POS(L,M)
-              DO I=1,LCUT_SIZE
-                OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)
-     $           *UPDATER_COEF
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-
-      END
-
-      SUBROUTINE MP_ML5_0_UPDATE_WL_2_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      IMPLICIT NONE
-      INTEGER I,J,K,L,M
-      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-      INTEGER NEW_POSITION
-      COMPLEX*32 UPDATER_COEF
-
-C     Welcome to the computational heart of MadLoop...
-      OUT(:,:,:)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
-      DO J=1,OUT_SIZE
-        DO M=0,4
-          DO K=1,IN_SIZE
-            UPDATER_COEF = B(J,M,K)
-            IF (UPDATER_COEF.EQ.CMPLX(0.0E0_16,0.0E0_16,KIND=16)) CYCLE
-            DO L=0,14
-              NEW_POSITION = COMB_COEF_POS(L,M)
-              DO I=1,LCUT_SIZE
-                OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)
-     $           *UPDATER_COEF
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-
-      END
-
-      SUBROUTINE ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,14
-            OUT(J,K,I)=(0.0D0,0.0D0)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
-            OUT(J,1,I)=OUT(J,1,I)+A(K,1,I)*B(J,0,K)
-            OUT(J,2,I)=OUT(J,2,I)+A(K,2,I)*B(J,0,K)
-            OUT(J,3,I)=OUT(J,3,I)+A(K,3,I)*B(J,0,K)
-            OUT(J,4,I)=OUT(J,4,I)+A(K,4,I)*B(J,0,K)
-            OUT(J,5,I)=OUT(J,5,I)+A(K,5,I)*B(J,0,K)
-            OUT(J,6,I)=OUT(J,6,I)+A(K,6,I)*B(J,0,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,7,I)*B(J,0,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,8,I)*B(J,0,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,9,I)*B(J,0,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,10,I)*B(J,0,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,11,I)*B(J,0,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,12,I)*B(J,0,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,13,I)*B(J,0,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,14,I)*B(J,0,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
-      SUBROUTINE MP_ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,14
-            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
-            OUT(J,1,I)=OUT(J,1,I)+A(K,1,I)*B(J,0,K)
-            OUT(J,2,I)=OUT(J,2,I)+A(K,2,I)*B(J,0,K)
-            OUT(J,3,I)=OUT(J,3,I)+A(K,3,I)*B(J,0,K)
-            OUT(J,4,I)=OUT(J,4,I)+A(K,4,I)*B(J,0,K)
-            OUT(J,5,I)=OUT(J,5,I)+A(K,5,I)*B(J,0,K)
-            OUT(J,6,I)=OUT(J,6,I)+A(K,6,I)*B(J,0,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,7,I)*B(J,0,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,8,I)*B(J,0,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,9,I)*B(J,0,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,10,I)*B(J,0,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,11,I)*B(J,0,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,12,I)*B(J,0,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,13,I)*B(J,0,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,14,I)*B(J,0,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
       SUBROUTINE ML5_0_UPDATE_WL_1_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       USE ML5_0_POLYNOMIAL_CONSTANTS
@@ -787,76 +857,6 @@ C     Welcome to the computational heart of MadLoop...
             OUT(J,2,I)=OUT(J,2,I)+A(K,2,I)*B(J,0,K)
             OUT(J,3,I)=OUT(J,3,I)+A(K,3,I)*B(J,0,K)
             OUT(J,4,I)=OUT(J,4,I)+A(K,4,I)*B(J,0,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
-      SUBROUTINE ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,14
-            OUT(J,K,I)=(0.0D0,0.0D0)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
-            OUT(J,1,I)=OUT(J,1,I)+A(K,0,I)*B(J,1,K)+A(K,1,I)*B(J,0,K)
-            OUT(J,2,I)=OUT(J,2,I)+A(K,0,I)*B(J,2,K)+A(K,2,I)*B(J,0,K)
-            OUT(J,3,I)=OUT(J,3,I)+A(K,0,I)*B(J,3,K)+A(K,3,I)*B(J,0,K)
-            OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
-            OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
-            OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
-      SUBROUTINE MP_ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
-     $ ,OUT)
-      USE ML5_0_POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,14
-            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
-            OUT(J,1,I)=OUT(J,1,I)+A(K,0,I)*B(J,1,K)+A(K,1,I)*B(J,0,K)
-            OUT(J,2,I)=OUT(J,2,I)+A(K,0,I)*B(J,2,K)+A(K,2,I)*B(J,0,K)
-            OUT(J,3,I)=OUT(J,3,I)+A(K,0,I)*B(J,3,K)+A(K,3,I)*B(J,0,K)
-            OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
-            OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
-            OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO
         ENDDO
       ENDDO

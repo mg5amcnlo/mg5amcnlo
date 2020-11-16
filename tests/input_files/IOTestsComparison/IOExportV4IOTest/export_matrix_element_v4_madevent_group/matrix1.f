@@ -6,7 +6,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     MadGraph5_aMC@NLO for Madevent Version
 C     
-C     Returns amplitude squared summed/avg over colors
+C     Returns amplitude squared -- no average over initial
+C      state/symmetry factor
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
@@ -54,7 +55,11 @@ C
       INTEGER JHEL(2), J, JJ
       INTEGER THIS_NTRY(2)
       SAVE THIS_NTRY
+      INTEGER NB_FAIL
+      SAVE NB_FAIL
       DATA THIS_NTRY /0,0/
+      DATA NB_FAIL /0/
+
 C     
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
@@ -245,9 +250,14 @@ C           Set right sign for ANS, based on sign of chosen helicity
         IF (XTOT.NE.0D0) THEN
           ANS=ANS*AMP2(SUBDIAG(1))/XTOT
         ELSE IF(ANS.NE.0D0) THEN
-          WRITE(*,*) 'Problem in the multi-channeling. All amp2 are'
-     $     //' zero but not the total matrix-element'
-          STOP 1
+          IF(NB_FAIL.GE.10)THEN
+            WRITE(*,*) 'Problem in the multi-channeling. All amp2 are'
+     $       //' zero but not the total matrix-element'
+
+            STOP 1
+          ELSE
+            NB_FAIL = NB_FAIL +1
+          ENDIF
         ENDIF
       ENDIF
       ANS=ANS/DBLE(IDEN)
@@ -302,10 +312,10 @@ C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 
-      DOUBLE PRECISION FK_WZ
       DOUBLE PRECISION FK_ZERO
-      SAVE FK_WZ
+      DOUBLE PRECISION FK_WZ
       SAVE FK_ZERO
+      SAVE FK_WZ
 
       LOGICAL FIRST
       DATA FIRST /.TRUE./
@@ -337,7 +347,8 @@ C     BEGIN CODE
 C     ----------
       IF (FIRST) THEN
         FIRST=.FALSE.
-        FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ*SMALL_WIDTH_TREATMENT)), WZ)
+        IF(WZ.NE.0D0) FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ
+     $   *SMALL_WIDTH_TREATMENT)), WZ)
         FK_ZERO = 0D0
       ENDIF
 
@@ -361,7 +372,7 @@ C     Amplitude(s) for diagram number 4
       CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQED,AMP(5))
-      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, FK_WZ,W(1,5))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, ZERO,W(1,5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_2_0(W(1,4),W(1,2),W(1,5),GUZ1,GUZ2,AMP(6))
 C     JAMPs contributing to orders ALL_ORDERS=1

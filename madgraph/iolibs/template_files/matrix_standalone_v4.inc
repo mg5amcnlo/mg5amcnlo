@@ -151,7 +151,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
 C  
 %(info_lines)s
 C
-C Returns amplitude squared summed/avg over colors
+C Returns amplitude squared -- no average over initial state/symmetry factor
 c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s

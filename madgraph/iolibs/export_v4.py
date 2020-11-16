@@ -20,7 +20,6 @@ from six.moves import zip
 
 import copy
 from six import StringIO
-from distutils import dir_util
 import itertools
 import fractions
 import glob
@@ -255,8 +254,8 @@ class ProcessExporterFortran(VirtualExporter):
                         os.path.basename(self.dir_path))
             shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # copy plot_card
             for card in ['plot_card']:
@@ -269,8 +268,8 @@ class ProcessExporterFortran(VirtualExporter):
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
 #            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
@@ -279,8 +278,8 @@ class ProcessExporterFortran(VirtualExporter):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
 #                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Copy plot_card
             for card in ['plot_card']:
@@ -888,6 +887,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        self.opt['exporter'] = self.__class__
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -903,7 +903,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if hasattr(self, 'aloha_model'):
             aloha_model = self.aloha_model
         else:
-            aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            try:
+                with misc.MuteLogger(['madgraph.models'], [60]):
+                    aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            except ImportError:
+                aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
@@ -2074,17 +2078,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         template = """
 %(python_information)s
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in):: procid
 CF2PY integer, intent(in) :: npdg
 CF2PY double precision, intent(out) :: ANS
 CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALE2
   integer pdgs(*)
-  integer npdg, nhel
+  integer npdg, nhel, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
   include 'coupl.inc'
@@ -2136,12 +2141,16 @@ CF2PY intent(in) :: value
     end
       
 
-    subroutine get_pdg_order(PDG)
+    subroutine get_pdg_order(PDG, ALLPROC)
   IMPLICIT NONE
 CF2PY INTEGER, intent(out) :: PDG(%(nb_me)i,%(maxpart)i)  
+CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
   INTEGER PDG(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
   DATA PDGS/ %(pdgs)s /
+  DATA PIDS/ %(pids)s /
   PDG = PDGS
+  ALLPROC = PIDS
   RETURN
   END 
 
@@ -2159,31 +2168,33 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
          
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
-        min_nexternal = min([len(ids) for ids in allids])
-        max_nexternal = max([len(ids) for ids in allids])
+        min_nexternal = min([len(ids[0]) for ids in allids])
+        max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for key, (prefix, tag) in self.prefix_info.items():
-            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+        for (key, pid), (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
-            current = [ids for ids in allids if len(ids)==n_ext]
-            if not current:
+            current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
+            current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
+            if not current_id:
                 continue
             if min_nexternal != max_nexternal:
                 if n_ext == min_nexternal:
                     text.append('       if (npdg.eq.%i)then' % n_ext)
                 else:
                     text.append('       else if (npdg.eq.%i)then' % n_ext)
-            for ii,pdgs in enumerate(current):
+            for ii,pdgs in enumerate(current_id):
+                pid = current_pid[ii]
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
                 if ii==0:
-                    text.append( ' if(%s) then ! %i' % (condition, ii))
+                    text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, ii))
                 else:
-                    text.append( ' else if(%s) then ! %i' % (condition,ii))
-                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[pdgs][0])
+                    text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,ii))
+                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[(pdgs,pid)][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -2200,8 +2211,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'maxpart': max_nexternal,
                           'nb_me': len(allids),
                           'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
-                                             for i in range(max_nexternal) for pdg in allids),
+                                           for i in range(max_nexternal) for (pdg,pid) in allids),
                           'prefix':'\',\''.join(allprefix),
+                          'pids': ','.join(str(pid) for (pdg,pid) in allids),
                           'parameter_setup': '\n'.join(parameter_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
@@ -2319,7 +2331,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids)] = [proc_prefix, proc.get_tag()] 
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()] 
                 
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -3514,6 +3526,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     MadEvent format."""
 
     matrix_file = "matrix_madevent_v4.inc"
+    done_warning_tchannel = False
     
     # helper function for customise helas writter
     @staticmethod
@@ -4060,7 +4073,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
-        
+        if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
+            logger.info("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False", '$MG:BOLD')
+            ProcessExporterFortranME.done_warning_tchannel = True
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
@@ -4075,8 +4090,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
-        
+        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
         for m, w in mass_width:
             if w == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
@@ -5573,7 +5587,8 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)   
+       
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -6694,7 +6709,7 @@ class UFO_model_to_mg4(object):
         if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
             fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
             input = pjoin(model_path,'Fortran','functions.f')
-            file.writelines(fsock, open(input).read())
+            fsock.writelines(open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
             
         # check for functions define in the UFO model
@@ -6889,7 +6904,11 @@ class UFO_model_to_mg4(object):
                 ("\n call MP_LHA_get_real(npara,param,value,'%(name)s',"+
                  "%(mp_prefix)s%(name)s,%(value)s)") \
                 % {'name': parameter.name,'mp_prefix': self.mp_prefix,
-                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}    
+                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}
+
+            if parameter.lhablock.lower() == 'loop':
+                template = template.replace('LHA_get_real', 'LHA_get_real_silent') 
+                
             return template        
     
         fsock = self.open('param_read.inc', format='fortran')
@@ -6915,7 +6934,7 @@ class UFO_model_to_mg4(object):
 
     @staticmethod
     def create_param_card_static(model, output_path, rule_card_path=False,
-                                 mssm_convert=True):
+                                 mssm_convert=True, write_special=True):
         """ create the param_card.dat for a givent model --static method-- """
         #1. Check if a default param_card is present:
         done = False
@@ -6927,7 +6946,7 @@ class UFO_model_to_mg4(object):
                 files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
                          output_path)
         if not done:
-            param_writer.ParamCardWriter(model, output_path)
+            param_writer.ParamCardWriter(model, output_path, write_special=write_special)
          
         if rule_card_path:   
             if hasattr(model, 'rule_card'):
@@ -6943,16 +6962,27 @@ class UFO_model_to_mg4(object):
                     translator.make_valid_param_card(output_path, rule_card_path)
                 translator.convert_to_slha1(output_path)        
     
-    def create_param_card(self):
+    def create_param_card(self, write_special=True):
         """ create the param_card.dat """
 
         rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
         if not hasattr(self.model, 'rule_card'):
             rule_card=False
+        write_special = True
+        if 'exporter' in self.opt:
+            import madgraph.loop.loop_exporters as loop_exporters
+            import madgraph.iolibs.export_fks as export_fks
+            write_special = False
+            if  issubclass(self.opt['exporter'], loop_exporters.LoopProcessExporterFortranSA):
+                write_special = True
+                if issubclass(self.opt['exporter'],(loop_exporters.LoopInducedExporterME,export_fks.ProcessExporterFortranFKS)):
+                     write_special = False
+                        
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 
                                       rule_card_path=rule_card, 
-                                      mssm_convert=True)
+                                      mssm_convert=True,
+                                      write_special=write_special)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 
