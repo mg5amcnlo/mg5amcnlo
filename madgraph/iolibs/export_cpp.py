@@ -1406,7 +1406,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         super(OneProcessExporterGPU, self).generate_process_files()
 
         self.edit_check_sa()
-        
+        self.edit_mgonGPU()
         
     def edit_check_sa(self):
         
@@ -1417,8 +1417,30 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict['numproc'] = len(self.matrix_elements)
 
         ff = open(pjoin(self.path, 'check_sa.cu'),'w')
-        ff.write(template % replace_dict)
+        ff.write(template)
         ff.close()
+        
+    def edit_mgonGPU(self):
+        
+        template = open(pjoin(self.template_path,'gpu','mgOnGpuConfig.h'),'r').read()
+        replace_dict = {}
+        nexternal, nincoming = self.matrix_elements[0].get_nexternal_ninitial()
+        replace_dict['nincoming'] = nincoming
+        replace_dict['noutcoming'] = nexternal - nincoming
+        
+        # Number of helicity combinations
+        replace_dict['nbhel'] = \
+                            self.matrix_elements[0].get_helicity_combinations()
+        replace_dict['nwavefunc'] = \
+                          self.matrix_elements[0].get_number_of_wavefunctions()
+        replace_dict['wavefuncsize'] = 6
+        
+        
+        ff = open(pjoin(self.path, '..','..','src','mgOnGpuConfig.h'),'w')
+        misc.sprint(ff.name)
+        ff.write(template % replace_dict)
+        ff.close()        
+        
 
     def get_initProc_lines(self, matrix_element, color_amplitudes):
         """Get initProc_lines for function definition for Pythia 8 .cc file"""
@@ -1614,6 +1636,36 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                                                          class_name) \
                                 for i, me in enumerate(self.matrix_elements)])
         return "\n".join(ret_lines)
+
+    def write_process_h_file(self, writer):
+        """Write the class definition (.h) file for the process"""
+        
+        misc.sprint(self.path)
+        replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
+        replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.h')).read()
+        
+        if writer:
+            file = self.read_template_file(self.process_template_h) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+    
+    def write_process_cc_file(self, writer):
+        """Write the class member definition (.cc) file for the process
+        described by matrix_element"""
+        
+                
+        replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
+        replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
+        
+        if writer:
+            file = self.read_template_file(self.process_template_cc) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+
 
 class OneProcessExporterMatchbox(OneProcessExporterCPP):
     """Class to take care of exporting a set of matrix elements to
@@ -2404,6 +2456,7 @@ class ProcessExporterCPP(VirtualExporter):
             # Copy the needed src files
             for key in self.from_template:
                 for f in self.from_template[key]:
+                    misc.sprint(f,key)
                     cp(f, key)
 
             if self.template_src_make:
@@ -2668,8 +2721,11 @@ class ProcessExporterGPU(ProcessExporterCPP):
     
     oneprocessclass = OneProcessExporterGPU
     s= _file_path + 'iolibs/template_files/'
-    from_template = {'src': [s+'gpu/rambo.h', s+'gpu/rambo.cc', s+'read_slha.h', s+'read_slha.cc'],
-                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile']}
+    from_template = {'src': [s+'gpu/rambo.h', s+'gpu/rambo.cc', s+'read_slha.h', s+'read_slha.cc',
+                             s+'gpu/mgOnGpuTypes.h', s+'gpu/grambo.cu'],
+                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile',
+                                     s+'gpu/nvtx.h', s+'gpu/check.cc',
+                                     s+'gpu/timermap.h', 'gpu/profile.sh']}
     to_link_in_P = ['Makefile', 'timer.h']
 
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')

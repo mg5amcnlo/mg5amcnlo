@@ -3,15 +3,22 @@
 %(info_lines)s
 //==========================================================================
 
-#include "HelAmps_%(model_name)s.h"
-#include <complex>
 #include <cmath>
-#include <iostream>
+#include <cstring>
 #include <cstdlib>
-#include <thrust/complex.h>
-using namespace std;
+#include <iomanip>
+#include <iostream>
 
-namespace %(namespace)s_%(model_name)s {
+#include "mgOnGpuConfig.h"
+#include "mgOnGpuTypes.h"
 
+mgDebugDeclare();
+
+namespace MG5_sm
+{
+
+  using mgOnGpu::nw6;
 %(function_definitions)s
+
 } // end namespace $(namespace)s_%(model_name)s
+

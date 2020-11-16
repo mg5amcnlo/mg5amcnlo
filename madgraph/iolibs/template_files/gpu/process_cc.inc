@@ -3,6 +3,8 @@
 %(info_lines)s
 //==========================================================================
 
+%(hel_amps_def)s
+
 #include "CPPProcess.h"
 #include "../../src/HelAmps_%(model_name)s.h"
 

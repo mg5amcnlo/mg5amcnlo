@@ -3,6 +3,8 @@
 %(info_lines)s
 //==========================================================================
 
+%(helamps_h)s
+
 #ifndef MG5_%(process_file_name)s_H
 #define MG5_%(process_file_name)s_H
 
