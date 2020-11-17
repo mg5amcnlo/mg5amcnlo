@@ -267,9 +267,8 @@ c scale in 'cluster_one_step'.
          imo=cluster_pdg(0,ibr)
          ico=get_color(imo)
          mass=get_mass_from_id(imo)
-         call set_particle_type(cluster_type(iclus),ico,mass)
+         call set_particle_type(cluster_type(iclus),ico,mass) 
       enddo
-
       return
       end
 
@@ -462,6 +461,11 @@ c     the renormalisation scale.
      $     ,exponent_sudakov
       logical QCDvertex,QCDchangeline,skip_first,startQCDvertex
       external QCDvertex,QCDchangeline,startQCDvertex
+
+c Determine which particles need clustering and which do not
+      call matching_particles(next,nbr,ipdg,cluster_pdg,cluster_ij,iord
+     $     ,need_matching)
+
       nqcdrenscale=0       ! number of alpha-s needing reweighting
       nqcdrenscalecentral=0
       hard_qcd_scale=0d0   ! hardest scale in all clusterings so far.
@@ -490,7 +494,7 @@ c This is the first QCD cluster. Hence, it determines the lowest QCD
 c scale that enters all Sudakovs. No Sudakov reweighting required so
 c far. Just make sure that we have a valid QCD starting vertex.
                if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg
-     $              ,iord)) then
+     $              ,iord,next,need_matching)) then
                   lowest_qcd_scale=cluster_scales(i)
                   nqcdrenscale=nqcdrenscale+1
                   qcd_ren_scale(nqcdrenscale)=cluster_scales(i)
@@ -500,7 +504,7 @@ c far. Just make sure that we have a valid QCD starting vertex.
             elseif (nqcdrenscale.eq.0 .and. first.eq.0) then
 c Special case for real-emission FxFx: need to skip the first clustering.
                if (startQCDvertex(i,first,cluster_ij(i),nbr,cluster_pdg
-     $              ,iord)) then
+     $              ,iord,next,need_matching)) then
                   first=cluster_ij(i)
                endif
             else
@@ -597,9 +601,11 @@ c factorisation scale if need be)
          qcd_fac_scale=qcd_ren_scale(0)
       endif
 
-c Determine which particles need clustering and which do not
-      call matching_particles(next,nbr,ipdg,cluster_pdg,cluster_ij,iord
-     $     ,need_matching)
+c$$$      write (*,*) nqcdrenscale,skip_first
+c$$$      write (*,*) qcd_ren_scale(0:nqcdrenscale)
+c$$$      write (*,*) need_matching
+c$$$      write (*,*) '    sud:',sudakov,expanded_sudakov
+      
       return
       end
 
@@ -945,7 +951,7 @@ c final state clustering
       do i=jwin,nleft-1
          if (i.eq.jwin) then
             particle_type(i)=cl_type
-         else
+         elseif(i.ge.iwin) then
             particle_type(i)=particle_type(i+1)
          endif
       enddo
@@ -1186,14 +1192,14 @@ c     final state clustering
 c Different scale depending on itype:
 c No low pT divergence, but very few Weak-Jet contributions
 c 
-c            if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
-c     $          itype.eq.3 .or. itype.eq.7) then
-c               cluster_scale=sqrt(dj_clus(pi,pj))
-c            elseif (itype.eq.4) then
-c               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
-c            elseif (itype.eq.5) then
-c               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
-c            endif
+            if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
+     $          itype.eq.3 .or. itype.eq.7) then
+               cluster_scale=sqrt(dj_clus(pi,pj))
+            elseif (itype.eq.4) then
+               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
+            elseif (itype.eq.5) then
+               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
+            endif
 c
 c Common scale geometrical average:
 c No low pT divergence, normal Weak-Jet contributions, but no smooth transition on merging scale point
@@ -1203,7 +1209,7 @@ c
 c Default scale for checks
 c Large Weak-Jet contributions, but low pT divergence and no smooth transition on merging scale point
 c Minimum ptj cut in cuts.f is put for divergence and checked that the no smooth transition is on the QCD-jets
-            cluster_scale=sqrt(dj_clus(pi,pj))
+c            cluster_scale=sqrt(dj_clus(pi,pj))
 c
          endif
       endif
@@ -1249,6 +1255,7 @@ c
          itype=7
       else
          write (*,*) 'Unknown clustering type',cl
+         stop
       endif
       end
       
@@ -1412,7 +1419,7 @@ c Checks if all three particles involved are QCD particles.
 
       
       logical function startQCDvertex(iclus,first,cij,nbr,cluster_pdg
-     $     ,iord)
+     $     ,iord,next,need_matching)
 c Checks if cluster is associated with a valid starting vertex. For
 c this, the cluster must be associated with an IR divergence (if there
 c would be no cuts on the clustered partons). Hence, this cluster must
@@ -1429,28 +1436,46 @@ c***  be considered as a parton coming from the starting vertex. We do
 c***  not consider this currently
       implicit none
       integer iclus,cij,imo,da1,da2,nbr,cluster_pdg(0:2,0:2*nbr)
-     $     ,iord(0:nbr),first,pc
+     $     ,iord(0:nbr),first,pc,next,need_matching(next),nn,i
       logical final_state,IR_cluster
       external IR_cluster
-      startQCDvertex=.false.
-      pc=popcnt(cij)
+      pc=popcnt(cij) ! number of non-zero bits in cij
       if (pc.gt.3) then
 c The number of non-zero bits in cij corresponds to the total number of
 c external particles clustered into the cij cluster. We need to have
 c exactly 2 since we need to have the two daughters to be external
 c particles for a valid starting QCD vertex.
+         startQCDvertex=.false.
          return
       elseif (pc.eq.3) then
 c Special case for real-emission FxFx, where we skipped the first
 c clustering that was a startQCDvertex. Hence, we can have 3 particles
 c clustered. Explicitly check that the first cluster is contained in the
 c current cluster
-         if (iand(cij,first).ne.first) return
+         if (iand(cij,first).ne.first) then
+            startQCDvertex=.false.
+            return
+         endif
       elseif (pc.lt.2) then
          write (*,*) 'ERROR less than two external particles'/
      $        /' involved in the cluster',cij,popcnt(cij)
          stop 1
       endif
+c If pc=2, then at least one of the final state particles need to have
+c the 'need_matching' tag equal to 1. If pc=3, there need to be at least
+c two of them. Otherwise this cluster cannot be a startQCDvertex.
+      nn=0
+      do i=3,next
+         if (btest(cij,i-1) .and. need_matching(i).eq.1) then
+            nn=nn+1
+         endif
+      enddo
+      if (nn.lt.pc-1) then
+         startQCDvertex=.false.
+         return
+      endif
+c Finally, the cluster should be a cluster that could generate an IR
+c singularity.
       imo=cluster_pdg(0,iord(iclus))
       da1=cluster_pdg(1,iord(iclus))
       da2=cluster_pdg(2,iord(iclus))
@@ -1586,8 +1611,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
          matching_sum=matching_sum+need_matching(i)
       enddo
       if (matching_sum.gt.-80) then
-         do i = 3,next
-         enddo
          return
       endif
 c Second loop to assign the matching condition
@@ -1621,8 +1644,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                   matching_sum=matching_sum+need_matching(i)
                enddo
                if (matching_sum.gt.-80) then
-                  do i = 3,next
-                  enddo
                   return
                endif
                exit
@@ -1640,8 +1661,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                   matching_sum=matching_sum+need_matching(i)
                enddo
                if (matching_sum.gt.-80) then
-                  do i = 3,next
-                  enddo
                   return
                endif
             endif
@@ -1666,8 +1685,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                      matching_sum=matching_sum+need_matching(i)
                   enddo
                   if (matching_sum.gt.-80) then
-                     do i = 3,next
-                     enddo
                      return
                   endif
                   exit
@@ -1685,8 +1702,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                   matching_sum=matching_sum+need_matching(i)
                enddo
                if (matching_sum.gt.-80) then
-                  do i = 3,next
-                  enddo
                   return
                endif
             else
@@ -1703,8 +1718,6 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                   matching_sum=matching_sum+need_matching(i)
                enddo
                if (matching_sum.gt.-80) then
-                  do i = 3,next
-                  enddo
                   return
                endif
             endif
