@@ -312,26 +312,9 @@ c Apply the jet cut
            endif
 
 c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
-           if (nFxFx_ren_scales.eq.0 .and. FxFx_ren_scales(0).lt.ptj) then
+           if (minval(FxFx_ren_scales(0:nFxFx_ren_scales)).lt.ptj) then
               passcuts_user=.false.
               return
-           else if (nFxFx_ren_scales.eq.1 .and. 
-     &min(FxFx_ren_scales(0),FxFx_ren_scales(1)).lt.ptj  ) then
-              passcuts_user=.false.
-              return
-           else if (nFxFx_ren_scales.eq.2 .and. 
-     &min(FxFx_ren_scales(0),FxFx_ren_scales(1),
-     &FxFx_ren_scales(2)).lt.ptj  ) then
-              passcuts_user=.false.
-              return
-           else if (nFxFx_ren_scales.eq.3 .and.
-     &min(FxFx_ren_scales(0),FxFx_ren_scales(1),
-     &FxFx_ren_scales(2),FxFx_ren_scales(3)).lt.ptj  ) then
-              passcuts_user=.false.
-             return
-           else if (nFxFx_ren_scales.gt.3) then
-            write(*,*) 'Process 2->6, nFxFx > 3', nFxFx_ren_scales
-            stop
            endif
         endif
 
@@ -641,10 +624,10 @@ C
 C
     2 IF (N.EQ.1)            RETURN
       IF (MODE)    10,20,30
-   10 CALL SORTTI (A,INDEX,N)
+   10 CALL SORTTI (nint(A),INDEX,N)
       GO TO 40
 C
-   20 CALL SORTTC(A,INDEX,N)
+   20 CALL SORTTC(nint(A),INDEX,N)
       GO TO 40
 C
    30 CALL SORTTF (A,INDEX,N)
