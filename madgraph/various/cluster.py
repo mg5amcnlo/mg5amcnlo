@@ -1696,7 +1696,7 @@ class SLURMCluster(Cluster):
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
-            id = re.findall('Submitted batch job ([\d\.]+)', output[0])
+            id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
             
             if not id or len(id)>1:
                 raise ClusterManagmentError( 'fail to submit to the cluster: \n%s' \
