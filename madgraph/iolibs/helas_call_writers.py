@@ -1759,7 +1759,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                                     '%s%s[%s]' % (sign, name, alias[coup]))
             else:
                 call = call.replace('pars->%s%s' % (sign, coup), 
-                                    '%sthrust::complex<double>(cIPC[%s],cIPC[%s])' % 
+                                    '%scxtype(cIPC[%s],cIPC[%s])' % 
                                     (sign, 2*alias[coup],2*alias[coup]+1))
 
         return call
@@ -1952,7 +1952,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
 
         res = []
         # reset jamp:
-        res.append('for(int i=0;i<%s;i++){jamp[i] = thrust::complex<double> (0.,0.);}'
+        res.append('for(int i=0;i<%s;i++){jamp[i] = cxtype(0.,0.);}'
                    % len(color_amplitudes))
         
         for diagram in matrix_element.get('diagrams'):

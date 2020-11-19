@@ -514,7 +514,7 @@ class UFOModelConverterGPU(UFOModelConverterCPP):
     def write_process_h_file(self, writer):
         
         replace_dict = UFOModelConverterCPP.write_process_h_file(self, None)
-        replace_dict['include_for_complex'] = '#include <thrust/complex.h>'
+        replace_dict['include_for_complex'] = '#include "mgOnGpuTypes.h"'
         
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict
@@ -1472,12 +1472,12 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     
         if total_coeff == 1:
             if is_imaginary:
-                return '+thrust::complex<double>(0,1)*'
+                return '+cxtype(0,1)*'
             else:
                 return '+'
         elif total_coeff == -1:
             if is_imaginary:
-                return '-thrust::complex<double>(0,1)*'
+                return '-cxtype(0,1)*'
             else:
                 return '-'
     
@@ -1488,7 +1488,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             res_str = res_str + '/%i.' % total_coeff.denominator
     
         if is_imaginary:
-            res_str = res_str + '*thrust::complex<double>(0,1)'
+            res_str = res_str + '*cxtype(0,1)'
     
         return res_str + '*'
 
@@ -1510,7 +1510,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         params = [''] * len(self.params2order)
         for coup, pos in self.couplings2order.items():
             coupling[pos] = coup
-        coup_str = "static thrust::complex<double> tIPC[%s] = {pars->%s};\n"\
+        coup_str = "static cxtype tIPC[%s] = {pars->%s};\n"\
             %(len(self.couplings2order), ',pars->'.join(coupling))
         for para, pos in self.params2order.items():
             params[pos] = para            
@@ -1533,6 +1533,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
         replace_dict['nwavefuncs'] = replace_dict['wfct_size']
         replace_dict['namp'] = len(self.amplitudes.get_all_amplitudes())
+        replace_dict['model'] = self.model_name
         
         replace_dict['sizew'] = self.matrix_elements[0].get_number_of_wavefunctions()
         replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
@@ -1541,12 +1542,12 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
                           __device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3],
-                                        thrust::complex<double> amp[%(namp)d]
+                                        cxtype amp[%(namp)d]
   
                           const int ncolor =  %(ncolor)d;
-                          thrust::complex<double> jamp[ncolor];
+                          cxtype jamp[ncolor];
 
-                            thrust::complex<double> w[%(nwfct)d][%(sizew)d];
+                            cxtype w[%(nwfct)d][%(sizew)d];
                             """ % \
                           {'nwfct':len(self.wavefunctions),
                           'sizew': replace_dict['wfct_size'],
@@ -1600,9 +1601,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                 {'nexternal': self.nexternal}
                 )
 
-            ret_lines.append("thrust::complex<double> amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
+            ret_lines.append("cxtype amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
-            ret_lines.append("thrust::complex<double> jamp[ncolor];")
+            ret_lines.append("cxtype jamp[ncolor];")
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append("using namespace MG5_%s;" % self.model_name)
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
@@ -1614,7 +1615,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             self.params2order = self.helas_call_writer.params2order
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
             logger.debug("No spin2/3/2 supported?")
-            ret_lines.append("thrust::complex<double> w[%s][6];" %
+            ret_lines.append("cxtype w[%s][6];" %
                              (nwavefuncs)
                              )
 
@@ -2729,7 +2730,7 @@ class ProcessExporterGPU(ProcessExporterCPP):
     to_link_in_P = ['Makefile', 'timer.h']
 
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')
-    template_Sub_make = None
+    template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile')
     create_model_class =  UFOModelConverterGPU
     
 

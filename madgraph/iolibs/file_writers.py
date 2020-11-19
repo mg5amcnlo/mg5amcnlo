@@ -491,7 +491,8 @@ class CPPWriter(FileWriter):
                             '^private': standard_indent,
                             '^protected': standard_indent}
     
-    spacing_patterns = [('\s*\"\s*}', '\"'),
+    spacing_patterns = [
+                        ('\s*\"\s*}', '\"'),
                         ('\s*,\s*', ', '),
                         ('\s*-\s*', ' - '),
                         ('([{(,=])\s*-\s*', '\g<1> -'),
@@ -507,7 +508,7 @@ class CPPWriter(FileWriter):
                         ('\s*<\s*', ' < '),
                         ('\s*!\s*', ' !'),
                         ('\s*/\s*', '/'),
-                        ('(?<!\()\s*\*\s*', ' * '),
+                        ('(?<!\(|\*)\s*\*\s*(?!\*)', ' * '),
                         ('\s*-\s+-\s*', '-- '),
                         ('\s*\+\s+\+\s*', '++ '),
                         ('\s*-\s+=\s*', ' -= '),

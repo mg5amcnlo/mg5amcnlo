@@ -9,7 +9,7 @@
   //char *dps = devPtr + dim * slicePitch;
   double matrix_element[nprocesses];
 
-  thrust::complex<double> amp[1];// was %(nb_amp)i];
+  cxtype amp[1];// was %(nb_amp)i];
 
 
    double local_m[%(nexternal)i][3];

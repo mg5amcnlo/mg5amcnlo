@@ -18,7 +18,7 @@ public:
 
   virtual int code() const { return 1; }
 
-  const std::vector<double> &getMasses() const;
+  const std::vector<fptype> &getMasses() const;
 
   void setInitial(int inid1, int inid2) {
     id1 = inid1;
@@ -31,9 +31,9 @@ public:
 
 
   // Constants for array limits
-  static const int ninitial = %(ninitial)d;
-  static const int nexternal = %(nexternal)d;
-  static const int nprocesses = %(nprocesses)d;
+  static const int ninitial = mgOnGpu::npari;
+  static const int nexternal = mgOnGpu::npar;
+  //static const int nprocesses = %(nprocesses)d;
 
 private:
   int m_numiterations;
@@ -54,14 +54,14 @@ private:
   static const int wrows = %(sizew)d;
   //static const int nioparticles = %(nexternal)d;
 
-  thrust::complex<double> **amp;
+  cxtype** amp;
 
 
   // Pointer to the model parameters
-  Parameters_sm *pars;
+  Parameters_%(model)s *pars;
 
   // vector with external particle masses
-  std::vector<double> mME;
+  std::vector<fptype> mME;
 
   // Initial particle ids
   int id1, id2;

@@ -1873,12 +1873,12 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
     prefix ='__device__'
     realoperator = '.real()'
     imagoperator = '.imag()'
-    ci_definition = 'thrust::complex<double> cI = thrust::complex<double>(0., 1.);\n'
+    ci_definition = 'cxtype cI = cxtype(0., 1.);\n'
     
     type2def = {}    
     type2def['int'] = 'int '
-    type2def['double'] = 'double '
-    type2def['complex'] = 'thrust::complex<double> '
+    type2def['double'] = 'fptype '
+    type2def['complex'] = 'cxtype '
     type2def['pointer_vertex'] = '*' # using complex<double> * vertex)
     type2def['pointer_coup'] = ''
     
@@ -1900,7 +1900,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#ifndef '+ self.name + '_guard\n')
             h_string.write('#define ' + self.name + '_guard\n')
-            h_string.write('#include <thrust/complex.h>\n')
+            h_string.write('#include "mgOnGpuTypes.h"\n')
             h_string.write('using namespace std;\n\n')
 
         h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)

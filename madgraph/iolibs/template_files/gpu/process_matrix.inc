@@ -6,7 +6,7 @@
 
   // const int ngraphs = 2;
 
-  thrust::complex<double> ztemp;
+  cxtype ztemp;
   // The color matrix;
 %(color_matrix_lines)s
 

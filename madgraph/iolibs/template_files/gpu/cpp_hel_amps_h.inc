@@ -8,8 +8,8 @@
 #define HelAmps_%(model_name)s_H
 
 #include <cmath> 
-#include <thrust/complex.h>
-
+#include "mgOnGpuConfig.h"
+#include "mgOnGpuTypes.h"
 
 using namespace std;
 

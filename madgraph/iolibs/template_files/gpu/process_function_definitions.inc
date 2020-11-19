@@ -6,8 +6,8 @@ __constant__ int cHel[%(ncomb)i][%(nexternal)i];
 //__constant__ double cmME[%(nexternal)i]; value hardcoded now
 //extern __constant__ int cPerm[4];
 // %(coupling_list)s
-__constant__ double cIPC[%(ncouplingstimes2)i]; // coupling ?
-__constant__ double cIPD[%(nparams)i]; 
+__constant__ fptype cIPC[%(ncouplingstimes2)i]; // coupling ?
+__constant__ fptype cIPD[%(nparams)i]; 
 
 
 // Evaluate |M|^2 for each subprocess
@@ -31,7 +31,7 @@ CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
 
 CPPProcess::~CPPProcess() {}
 
-const std::vector<double> &CPPProcess::getMasses() const { return mME; }
+const std::vector<fptype> &CPPProcess::getMasses() const { return mME; }
 
 //--------------------------------------------------------------------------
 // Initialize process. 
@@ -50,14 +50,14 @@ void CPPProcess::initProc(string param_card_name) {
     pars->setDependentCouplings();
     %(initProc_lines)s
     %(assign_coupling)s
-    gpuErrchk3(cudaMemcpyToSymbol(cIPC, tIPC, %(ncouplings)i * sizeof(thrust::complex<double>)));
-    gpuErrchk3(cudaMemcpyToSymbol(cIPD, tIPD, %(nparams)i * sizeof(double)));
+    gpuErrchk3(cudaMemcpyToSymbol(cIPC, tIPC, %(ncouplings)i * sizeof(thrust::complex<fptype>)));
+    gpuErrchk3(cudaMemcpyToSymbol(cIPD, tIPD, %(nparams)i * sizeof(fptype)));
 } 
 
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-__global__ void sigmaKin(double * allmomenta, double * output) { 
+__global__ void sigmaKin(fptype * allmomenta, fptype * output) { 
     // Set the parameters which change event by event
     // Need to discuss this with Stefan
     //pars->setDependentParameters();

@@ -10,7 +10,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <thrust/complex.h>
+#include "mgOnGpuTypes.h"
 
 #include "../../src/HelAmps_%(model_name)s.cu"
 
