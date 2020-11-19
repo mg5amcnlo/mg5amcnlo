@@ -865,8 +865,14 @@ class Systematics(object):
 
         if dyn == -1:
             mur = loinfo['ren_scale']
-            muf1 = loinfo['pdf_q1'][-1]
-            muf2 = loinfo['pdf_q2'][-1]
+            if self.b1 != 0: 
+                muf1 = loinfo['pdf_q1'][-1]
+            else:
+                muf1 =0
+            if self.b2 != 0: 
+                muf2 = loinfo['pdf_q2'][-1]
+            else:
+                muf1 =0
         else:
             if dyn == 1: 
                 mur = event.get_et_scale(1.)
@@ -884,7 +890,6 @@ class Systematics(object):
             loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
             loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
             
-        
         # MUR part
         if self.b1 == 0 == self.b2:
             if loinfo['n_qcd'] != 0:
@@ -894,8 +899,10 @@ class Systematics(object):
         else:
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
-        wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1) 
-        wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
+        if self.b1:
+            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
+        if self.b2: 
+            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:
             if self.b1 == 0 == self.b2:

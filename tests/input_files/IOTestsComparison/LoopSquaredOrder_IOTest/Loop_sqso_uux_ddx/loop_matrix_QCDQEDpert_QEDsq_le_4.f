@@ -2136,8 +2136,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER BORNAMPORDERS(NBORNAMPS)
-      DATA (BORNAMPORDERS(I),I=  1,  5) /    1,    2,    2,    2,    2/
-      DATA (BORNAMPORDERS(I),I=  6,  7) /    2,    2/
+      DATA (BORNAMPORDERS(I),I=  1,  5) /    1,    3,    3,    3,    3/
+      DATA (BORNAMPORDERS(I),I=  6,  7) /    3,    3/
 C     -----------
 C     BEGIN CODE
 C     -----------
@@ -2166,12 +2166,12 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER LOOPAMPORDERS(NLOOPAMPS)
-      DATA (LOOPAMPORDERS(I),I=  1,  5) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=  6, 10) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 11, 15) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 16, 20) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 21, 25) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 26, 30) /    3,    3,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=  1,  5) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=  6, 10) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 11, 15) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 16, 20) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 21, 25) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 26, 30) /    2,    2,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 31, 35) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 36, 40) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 41, 45) /    4,    4,    4,    4,    4/
@@ -2211,11 +2211,11 @@ C
       DATA (LOOPAMPORDERS(I),I=211,215) /    5,    5,    5,    5,    5/
       DATA (LOOPAMPORDERS(I),I=216,220) /    5,    5,    5,    5,    5/
       DATA (LOOPAMPORDERS(I),I=221,225) /    5,    5,    5,    5,    5/
-      DATA (LOOPAMPORDERS(I),I=226,230) /    5,    5,    5,    3,    4/
+      DATA (LOOPAMPORDERS(I),I=226,230) /    5,    5,    5,    2,    4/
       DATA (LOOPAMPORDERS(I),I=231,235) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I=236,240) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=241,245) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=246,250) /    3,    3,    3,    3,    4/
+      DATA (LOOPAMPORDERS(I),I=236,240) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=241,245) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=246,250) /    2,    2,    2,    2,    4/
       DATA (LOOPAMPORDERS(I),I=251,255) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=256,260) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=261,265) /    4,    4,    4,    4,    4/
@@ -2412,8 +2412,8 @@ C
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
       DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    2,    0/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    0,    2/
-      DATA (AMPSPLITORDERS(  3,I),I=  1,  2) /    4,    0/
+      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    4,    0/
+      DATA (AMPSPLITORDERS(  3,I),I=  1,  2) /    0,    2/
       DATA (AMPSPLITORDERS(  4,I),I=  1,  2) /    2,    2/
       DATA (AMPSPLITORDERS(  5,I),I=  1,  2) /    0,    4/
       COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS

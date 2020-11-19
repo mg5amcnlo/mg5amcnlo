@@ -3263,7 +3263,7 @@ class RunCardLO(RunCard):
                 
         # if both lpp1/2 are on PA mode -> force fixed factorization scale
         if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
-            raise InvalidRunCard("Having both beam in elastic photon mode requires fixec_fac_scale to be on True [since this is use as cutoff]")
+            raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False

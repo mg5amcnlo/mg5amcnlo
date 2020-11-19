@@ -59,7 +59,7 @@ class grid_information(object):
         self.nb_sample += 1 
         if isinstance(path, str):
             finput = open(path)
-        elif isinstance(path, file):
+        elif hasattr(path, "read") and hasattr(path, 'name'):
             finput=path
         else:
             raise Exception("path should be a path or a file descriptor")
@@ -151,7 +151,7 @@ class grid_information(object):
         if isinstance(path, str):
             finput = open(path)
             fname = path
-        elif isinstance(path, file):
+        elif hasattr(path, 'read') and hasattr(path, 'name'):
             finput=path
             fname = finput.name
         else:
@@ -694,7 +694,7 @@ class DiscreteSamplerDimension(dict):
                     bin_ref.n_entries = self.min_bin_probing_points                 
 
         #remove bin if entry if zero
-        for key in self.keys():
+        for key in list(self.keys()):
             if not self[key].abs_weight:
                 del self[key]
     
@@ -740,13 +740,7 @@ class DiscreteSamplerDimension(dict):
         
         #order the bin from higest contribution to lowest
         bins = [o for o in self.items()]
-        def compare(x,y):
-            if x[1].weight - y[1].weight <0:
-                return 1
-            else:
-                return -1
-
-        bins.sort(cmp=compare)
+        bins.sort(key=lambda x: x[1].weight, reverse=True)
             
         data = {'name': self.name,
                 'min_bin_probing_points': self.min_bin_probing_points,

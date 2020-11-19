@@ -268,9 +268,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
-        elif order.startswith(('noborn=')):
+        elif order.startswith(('noborn')):
             # pass in sqrvirt=
-            return "add process %s [%s] %s;" % (process, order.replace('noborn=', 'sqrvirt='), final)
+            return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
         elif order.startswith('LOonly'):
             #remove [LOonly] flag
             return "add process %s %s;" % (process, final)
