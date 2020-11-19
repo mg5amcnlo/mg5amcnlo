@@ -1,8 +1,9 @@
 CUARCHNUM=70
 LIBDIR=../lib
-CXXFLAGS= -O3 -I.
+CXXFLAGS= -O3 -I. -DUSE_NVTX -Wall -Wshadow 
+###CXXFLAGS= -O2 -I. -DUSE_NVTX -Wall -Wshadow 
 CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
-CUFLAGS= $(CUARCHFLAGS) -use_fast_math -lineinfo
+CUFLAGS= -O3 -I. -DUSE_NVTX $(CUARCHFLAGS) -use_fast_math -lineinfo
 CUINC=/usr/local/cuda/targets/x86_64-linux/include
 NVCC=nvcc
 CXX=g++
@@ -13,10 +14,9 @@ ifeq ($(UNAME_P),ppc64le)
     CUFLAGS+= -Xcompiler -mno-float128
 endif
 
-
 target=$(LIBDIR)/libmodel_%(model)s.a
-cxx_objects=Parameters_%(model)s.o read_slha.o rambo.o
-cu_objects=
+cxx_objects=Parameters_%(model)s.o read_slha.o rambo.o 
+cu_objects= # NB grambo.cu must be included by gcheck.cu (no rdc)
 
 all: $(target)
 
@@ -26,15 +26,12 @@ debug: CXXFLAGS += -g -O0 -DDEBUG2
 debug: CUFLAGS += -G
 debug: $(target)
 
-# sr fixme #
-# not sure including the cuda includes here is a good idea...
-# ... needed for thrust/complex which in principal is a C++ class
-%%.o : %%.cc %%.h
+# NB: cuda includes are needed in the C++ code for curand.h
+%%.o : %%.cc *.h
 	$(CXX)  $(CPPFLAGS) $(CXXFLAGS) -I$(CUINC) -c $< -o $@
 
-%%.o : %%.cu %%.h
-	$(NVCC) $(CPPFLAGS) $(CXXFLAGS) $(CUFLAGS) -c $< -o $@
-
+#%%.o : %%.cu *.h
+#	$(NVCC) $(CPPFLAGS) $(CUFLAGS) -c $< -o $@
 
 $(target): $(cxx_objects) $(cu_objects)
 	if [ ! -d $(LIBDIR) ]; then mkdir $(LIBDIR); fi
