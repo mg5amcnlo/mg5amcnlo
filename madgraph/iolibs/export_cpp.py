@@ -1159,7 +1159,7 @@ class OneProcessExporterCPP(object):
         # Wavefunction and amplitude calls
         if self.single_helicities:
             replace_dict['matrix_args'] = ""
-            replace_dict['all_wavefunction_calls'] = "int i, j;"
+            replace_dict['all_wavefunction_calls'] = "" 
         else:
             replace_dict['matrix_args'] = "const int hel[]"
             wavefunctions = matrix_element.get_all_wavefunctions()
@@ -1437,7 +1437,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         
         
         ff = open(pjoin(self.path, '..','..','src','mgOnGpuConfig.h'),'w')
-        misc.sprint(ff.name)
         ff.write(template % replace_dict)
         ff.close()        
         
@@ -1596,11 +1595,13 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ret_lines = []
         if self.single_helicities:
             
+            
             ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3], double &matrix){" %
-                {'nexternal': self.nexternal}
+                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt,\n#endif\n                                )"
                 )
 
+            ret_lines.append(" using namespace MG5_%s" % self.model_name)
+            ret_lines.append("mgDebug( 0, __FUNCTION__ );")
             ret_lines.append("cxtype amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
             ret_lines.append("cxtype jamp[ncolor];")
@@ -1614,13 +1615,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             self.couplings2order = self.helas_call_writer.couplings2order
             self.params2order = self.helas_call_writer.params2order
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
-            logger.debug("No spin2/3/2 supported?")
-            ret_lines.append("cxtype w[%s][6];" %
-                             (nwavefuncs)
-                             )
+            ret_lines.append("cxtype w[nwf][nw6];")
+
 
             ret_lines += helas_calls
-            misc.sprint("\n".join(ret_lines))
             #ret_lines.append(self.get_calculate_wavefunctions(\
             #    self.wavefunctions, self.amplitudes))
             #ret_lines.append("}")

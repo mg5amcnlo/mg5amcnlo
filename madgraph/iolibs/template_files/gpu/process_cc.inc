@@ -5,13 +5,12 @@
 
 %(hel_amps_def)s
 
-#include "CPPProcess.h"
-#include "../../src/HelAmps_%(model_name)s.h"
 
 #include <algorithm>
 #include <iostream>
 #include "mgOnGpuTypes.h"
+#include "mgOnGpuConfig.h"
 
-#include "../../src/HelAmps_%(model_name)s.cu"
+#include "CPPProcess.h"
 
 %(process_function_definitions)s

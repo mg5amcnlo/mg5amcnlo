@@ -1764,8 +1764,22 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
 
         return call
             
-
-    def get_external(self, wf, argument):
+    
+    def get_external(self,wf, argument):
+    
+        text = """
+#ifdef __CUDACC__
+    %s    
+#else
+    %s
+#endif 
+"""
+        line =  self.get_external_line(wf, argument)
+        split_line = line.split(',')
+        split_line.insert(-1, ' ievt')
+        return text % (line, ','.join(split_line))
+    
+    def get_external_line(self, wf, argument):
 
         call = ''
         call = call + HelasCallWriter.mother_dict[\
@@ -1798,7 +1812,6 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                                  (-1) ** (wf.get('state') == 'initial'),
                                  wf.get('me_id')-1))
             else:
-                misc.sprint(call)
                 return self.format_coupling(call % \
                                 (wf.get('number_external')-1,
                                  wf.get('mass'),

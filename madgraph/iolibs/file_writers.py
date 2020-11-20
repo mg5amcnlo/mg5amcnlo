@@ -533,7 +533,8 @@ class CPPWriter(FileWriter):
                         ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
                         ('(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
                          '\g<1>e\g<2>\g<3>'),
-                        ('\s+',' ')]
+                        ('\s+',' '),
+                        ('^\s*#','#')]
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
 
@@ -803,6 +804,11 @@ class CPPWriter(FileWriter):
                 # If anything is left of myline, write it recursively
                 res_lines.extend(self.write_line(myline))
             return res_lines
+        
+        if line.startswith("#"):
+            res_lines.append('%s\n' % line)
+            return res_lines
+            
 
         # Write line(s) to file
         res_lines.append("\n".join(self.split_line(myline, \

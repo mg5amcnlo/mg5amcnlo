@@ -1,10 +1,54 @@
-__device__ void ixxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
-                       cxtype fi[6]) {
+  //--------------------------------------------------------------------------
+
+  __device__
+  inline const fptype& pIparIp4Ievt( const fptype* momenta1d, // input: momenta as AOSOA[npagM][npar][4][neppM]
+                                     const int ipar,
+                                     const int ip4,
+                                     const int ievt )
+  {
+    //mapping for the various scheme AOS, OSA, ...
+
+    using mgOnGpu::np4;
+    using mgOnGpu::npar;
+    const int neppM = mgOnGpu::neppM; // ASA layout: constant at compile-time
+    fptype (*momenta)[npar][np4][neppM] = (fptype (*)[npar][np4][neppM]) momenta1d; // cast to multiD array pointer (AOSOA)
+    const int ipagM = ievt/neppM; // #eventpage in this iteration
+    const int ieppM = ievt%neppM; // #event in the current eventpage in this iteration
+    //return allmomenta[ipagM*npar*np4*neppM + ipar*neppM*np4 + ip4*neppM + ieppM]; // AOSOA[ipagM][ipar][ip4][ieppM]
+    return momenta[ipagM][ipar][ip4][ieppM];
+  }
+
+  //--------------------------------------------------------------------------
+
+__device__ void ixxxxx(const fptype* allmomenta, fptype fmass, int nhel, int nsf,
+                       cxtype fi[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
+
+) {
+    mgDebug( 0, __FUNCTION__ );
+#ifndef __CUDACC__
+    // ** START LOOP ON IEVT **
+    //for (int ievt = 0; ievt < nevt; ++ievt)
+#endif
+    {
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+      //printf( "ixzxxxM0: ievt=%d threadId=%d\n", ievt, threadIdx.x );
+#endif
+
+      const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+      const fptype& pvec1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+      const fptype& pvec2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+      const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+
   cxtype chi[2];
   fptype sf[2], sfomega[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int ip, im, nh;
 
-  fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  fptype p[4] = {0, pvec0, pvec1, pvec2};
   p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
   fi[0] = cxtype(-p[0] * nsf, -p[3] * nsf);
   fi[1] = cxtype(-p[1] * nsf, -p[2] * nsf);
@@ -66,7 +110,8 @@ __device__ void ixxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
       fi[5] = cxtype(0.0, 0.0);
     }
   }
-
+    // ** END LOOP ON IEVT **
+    mgDebug( 1, __FUNCTION__ );
   return;
 }
 

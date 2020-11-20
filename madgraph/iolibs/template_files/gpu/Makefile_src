@@ -4,9 +4,12 @@ CXXFLAGS= -O3 -I. -DUSE_NVTX -Wall -Wshadow
 ###CXXFLAGS= -O2 -I. -DUSE_NVTX -Wall -Wshadow 
 CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
 CUFLAGS= -O3 -I. -DUSE_NVTX $(CUARCHFLAGS) -use_fast_math -lineinfo
-CUINC=/usr/local/cuda/targets/x86_64-linux/include
-NVCC=nvcc
-CXX=g++
+CXX?=g++
+CUDA_HOME?=/usr/local/cuda/targets/x86_64-linux/
+NVCC ?= ${CUDA_HOME}/bin/nvcc
+CUINC ?= -I${CUDA_HOME}/include
+CULINK ?= -L${CUDA_HOME}/lib64/ ...
+
 
 # Assuming uname is available, detect if architecture is power
 UNAME_P := $(shell uname -p)
