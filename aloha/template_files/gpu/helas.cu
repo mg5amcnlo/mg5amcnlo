@@ -204,7 +204,7 @@ __device__ void ixzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   return;
 }
 
-__device__ void vxxxxx(const fptype* allmomenta, const fptype& vmass, const int& nhel, const int& nsf,
+__device__ void vxxxxx(const fptype* allmomenta, const fptype& vmass, const int& nhel, const int& nsv,
                        cxtype vc[6],
 #ifndef __CUDACC__
                  const int ievt,
@@ -274,7 +274,7 @@ __device__ void vxxxxx(const fptype* allmomenta, const fptype& vmass, const int&
   return;
 }
 
-__device__ void sxxxxx(const fptype* allmomenta, const fptype& smass, const int& nhel, const int& nsf,
+__device__ void sxxxxx(const fptype* allmomenta, const fptype& smass, const int& nhel, const int& nss,
                        cxtype sc[3],
 #ifndef __CUDACC__
                  const int ievt,
@@ -463,7 +463,7 @@ __device__ void oxzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
 
   float sqp0p3 = sqrtf(p0 + p3) * nsf;
   cxtype chi0 = cxtype (sqp0p3, 0.00);
-  cxtype chi1 = cxtype (nh * p[1]/sqp0p3, -p[2]/sqp0p3);
+  cxtype chi1 = cxtype (nh * p1/sqp0p3, -p2/sqp0p3);
   cxtype zero = cxtype (0.00, 0.00);
 
   fo[2]=(nh== 1)*chi0 + (nh==-1)*zero;

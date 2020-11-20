@@ -16,7 +16,6 @@
 #include "mgOnGpuConfig.h"
 #include "mgOnGpuTypes.h"
 
-#%%(include_for_complex)s
 
 #include "Parameters_%(model_name)s.h"
 
@@ -27,8 +26,7 @@
 #define checkCuda( code )                       \
   { assertCuda( code, __FILE__, __LINE__ ); }
 
-inline void assertCuda( cudaError_t code, const char *file, int line, bool ab\
-ort = true )
+inline void assertCuda( cudaError_t code, const char *file, int line, bool abort = true )
 {
   if ( code != cudaSuccess )
   {
