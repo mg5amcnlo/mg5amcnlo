@@ -20,23 +20,16 @@
 
   //--------------------------------------------------------------------------
 
-__device__ void ixxxxx(const fptype* allmomenta, fptype fmass, int nhel, int nsf,
+__device__ void ixxxxx(const fptype* allmomenta, const fptype& fmass, const int& nhel, const int& nsf,
                        cxtype fi[6],
 #ifndef __CUDACC__
                  const int ievt,
 #endif
                  const int ipar )          // input: particle# out of npar
-
-) {
+ {
     mgDebug( 0, __FUNCTION__ );
-#ifndef __CUDACC__
-    // ** START LOOP ON IEVT **
-    //for (int ievt = 0; ievt < nevt; ++ievt)
-#endif
-    {
 #ifdef __CUDACC__
       const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
-      //printf( "ixzxxxM0: ievt=%d threadId=%d\n", ievt, threadIdx.x );
 #endif
 
       const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
@@ -115,17 +108,28 @@ __device__ void ixxxxx(const fptype* allmomenta, fptype fmass, int nhel, int nsf
   return;
 }
 
-__device__ void ipzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fi[6])
+
+__device__ void ipzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fi[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTION FMASS == 0
   // PX = PY = 0
   // E = P3 (E>0)
-
-  fi[0] = cxtype (-pvec[2] * nsf, -pvec[2] * nsf);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+  //const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+  const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+  
+  fi[0] = cxtype (-pvec3 * nsf, -pvec3 * nsf);
   fi[1] = cxtype (0.,0.);
   int nh = nhel * nsf;
 
-  cxtype sqp0p3 = cxtype(sqrt(2.* pvec[2]) * nsf, 0.);
+  cxtype sqp0p3 = cxtype(sqrt(2.* pvec3) * nsf, 0.);
 
   fi[2]=fi[1];
   fi[3]=(nh== 1)*fi[1]   + (nh==-1)*sqp0p3;
@@ -133,16 +137,25 @@ __device__ void ipzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fi[6])
   fi[5]=fi[1];
 }
 
-__device__ void imzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fi[6])
+__device__ void imzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fi[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTION FMASS == 0
   // PX = PY = 0
   // E = -P3 (E>0)
   //printf("p3 %f", pvec[2]);
-  fi[0] = cxtype (pvec[2] * nsf, -pvec[2] * nsf);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+  const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+  fi[0] = cxtype (pvec3 * nsf, -pvec3 * nsf);
   fi[1] = cxtype (0., 0.);
   int nh = nhel * nsf;
-  cxtype  chi = cxtype (-nhel * sqrt(-2.0 * pvec[2]), 0.0);
+  cxtype  chi = cxtype (-nhel * sqrt(-2.0 * pvec3), 0.0);
 
   fi[2]=(nh== 1)*fi[1]   + (nh==-1)*chi;
   fi[3]=fi[1];
@@ -150,7 +163,12 @@ __device__ void imzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fi[6])
   fi[5]=(nh== 1)*chi   + (nh==-1)*fi[1];
 }
 
-__device__ void ixzxxx(const fptype pvec[3],  int nhel, int nsf, cxtype fi[6])
+__device__ void ixzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fi[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTIONS: FMASS == 0
   // Px and Py are not zero
@@ -158,16 +176,25 @@ __device__ void ixzxxx(const fptype pvec[3],  int nhel, int nsf, cxtype fi[6])
   //cxtype chi[2];
   //fptype sf[2], sfomega[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   //int ip, im, nh;
-  float p[4] = {0, (float) pvec[0], (float) pvec[1], (float) pvec[2]};
-  p[0] = sqrtf(p[3] * p[3] + p[1] * p[1] + p[2] * p[2]);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+  const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+  const fptype& pvec1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+  const fptype& pvec2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+  const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
 
-  fi[0] = cxtype (-p[0] * nsf, -pvec[2] * nsf);
-  fi[1] = cxtype (-pvec[0] * nsf, -pvec[1] * nsf);
+
+  //fptype p[4] = {(float), (float) pvec[0], (float) pvec[1], (float) pvec[2]};
+  //p[0] = sqrtf(p[3] * p[3] + p[1] * p[1] + p[2] * p[2]);
+
+  fi[0] = cxtype (-pvec0 * nsf, -pvec2 * nsf);
+  fi[1] = cxtype (-pvec0 * nsf, -pvec1 * nsf);
   int nh = nhel * nsf;
 
-  float sqp0p3 = sqrtf(p[0] + p[3]) * nsf;
+  float sqp0p3 = sqrtf(pvec0 + pvec3) * nsf;
   cxtype chi0 = cxtype (sqp0p3, 0.0);
-  cxtype chi1 = cxtype (nh * p[1]/sqp0p3, p[2]/sqp0p3);
+  cxtype chi1 = cxtype (nh * pvec1/sqp0p3, pvec2/sqp0p3);
   cxtype CZERO = cxtype(0.,0.);
 
   fi[2]=(nh== 1)*CZERO   + (nh==-1)*chi1;
@@ -177,159 +204,34 @@ __device__ void ixzxxx(const fptype pvec[3],  int nhel, int nsf, cxtype fi[6])
   return;
 }
 
-
-/*
-__device__ void txxxxx(fptype pvec[3], fptype tmass, int nhel, int nst,
-                       cxtype tc[18]) {
-  cxtype ft[6][4], ep[4], em[4], e0[4];
-  fptype pt, pt2, pp, pzpt, emp, sqh, sqs;
-  int i, j;
-  
-  fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
-  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+tmass*tmass);
-  sqh = sqrt(0.5);
-  sqs = sqrt(0.5 / 3);
-
-  pt2 = p[1] * p[1] + p[2] * p[2];
-  pp = min(p[0], sqrt(pt2 + p[3] * p[3]));
-  pt = min(pp, sqrt(pt2));
-
-  ft[4][0] = cxtype(p[0] * nst, p[3] * nst);
-  ft[5][0] = cxtype(p[1] * nst, p[2] * nst);
-
-  // construct eps+
-  if (nhel >= 0) {
-    if (pp == 0) {
-      ep[0] = cxtype(0, 0);
-      ep[1] = cxtype(-sqh, 0);
-      ep[2] = cxtype(0, nst * sqh);
-      ep[3] = cxtype(0, 0);
-    } else {
-      ep[0] = cxtype(0, 0);
-      ep[3] = cxtype(pt / pp * sqh, 0);
-
-      if (pt != 0) {
-        pzpt = p[3] / (pp * pt) * sqh;
-        ep[1] = cxtype(-p[1] * pzpt, -nst * p[2] / pt * sqh);
-        ep[2] = cxtype(-p[2] * pzpt, nst * p[1] / pt * sqh);
-      } else {
-        ep[1] = cxtype(-sqh, 0);
-        ep[2] =
-            cxtype(0, nst * (p[3] < 0) ? -abs(sqh) : abs(sqh));
-      }
-    }
-  }
-
-  // construct eps-
-  if (nhel <= 0) {
-    if (pp == 0) {
-      em[0] = cxtype(0, 0);
-      em[1] = cxtype(sqh, 0);
-      em[2] = cxtype(0, nst * sqh);
-      em[3] = cxtype(0, 0);
-    } else {
-      em[0] = cxtype(0, 0);
-      em[3] = cxtype(-pt / pp * sqh, 0);
-
-      if (pt != 0) {
-        pzpt = -p[3] / (pp * pt) * sqh;
-        em[1] = cxtype(-p[1] * pzpt, -nst * p[2] / pt * sqh);
-        em[2] = cxtype(-p[2] * pzpt, nst * p[1] / pt * sqh);
-      } else {
-        em[1] = cxtype(sqh, 0);
-        em[2] =
-            cxtype(0, nst * (p[3] < 0) ? -abs(sqh) : abs(sqh));
-      }
-    }
-  }
-
-  // construct eps0
-  if (std::labs(nhel) <= 1) {
-    if (pp == 0) {
-      e0[0] = cxtype(0, 0);
-      e0[1] = cxtype(0, 0);
-      e0[2] = cxtype(0, 0);
-      e0[3] = cxtype(1, 0);
-    } else {
-      emp = p[0] / (tmass * pp);
-      e0[0] = cxtype(pp / tmass, 0);
-      e0[3] = cxtype(p[3] * emp, 0);
-
-      if (pt != 0) {
-        e0[1] = cxtype(p[1] * emp, 0);
-        e0[2] = cxtype(p[2] * emp, 0);
-      } else {
-        e0[1] = cxtype(0, 0);
-        e0[2] = cxtype(0, 0);
-      }
-    }
-  }
-
-  if (nhel == 2) {
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++)
-        ft[i][j] = ep[i] * ep[j];
-    }
-  } else if (nhel == -2) {
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++)
-        ft[i][j] = em[i] * em[j];
-    }
-  } else if (tmass == 0) {
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++)
-        ft[i][j] = 0;
-    }
-  } else if (tmass != 0) {
-    if (nhel == 1) {
-      for (j = 0; j < 4; j++) {
-        for (i = 0; i < 4; i++)
-          ft[i][j] = sqh * (ep[i] * e0[j] + e0[i] * ep[j]);
-      }
-    } else if (nhel == 0) {
-      for (j = 0; j < 4; j++) {
-        for (i = 0; i < 4; i++)
-          ft[i][j] =
-              sqs * (ep[i] * em[j] + em[i] * ep[j] + 2.0 * e0[i] * e0[j]);
-      }
-    } else if (nhel == -1) {
-      for (j = 0; j < 4; j++) {
-        for (i = 0; i < 4; i++)
-          ft[i][j] = sqh * (em[i] * e0[j] + e0[i] * em[j]);
-      }
-    } else {
-      // sr fixme // std::cerr << "Invalid helicity in txxxxx.\n";
-      // sr fixme // std::exit(1);
-    }
-  }
-
-  tc[0] = ft[4][0];
-  tc[1] = ft[5][0];
-
-  for (j = 0; j < 4; j++) {
-    for (i = 0; i < 4; i++)
-      tc[j * 4 + i + 2] = ft[j][i];
-  }
-}
-
-*/
-
-__device__ void vxxxxx(const fptype pvec[3], fptype vmass, int nhel, int nsv,
-                       cxtype vc[6]) {
+__device__ void vxxxxx(const fptype* allmomenta, const fptype& vmass, const int& nhel, const int& nsf,
+                       cxtype vc[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
+{		 
   fptype hel, hel0, pt, pt2, pp, pzpt, emp, sqh;
   int nsvahl;
 
-  fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
-  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+vmass*vmass);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif
+      const fptype& p0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+      const fptype& p1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+      const fptype& p2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+      const fptype& p3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+  //fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  //p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+vmass*vmass);
 
   sqh = sqrt(0.5);
   hel = fptype(nhel);
   nsvahl = nsv * std::abs(hel);
-  pt2 = (p[1] * p[1]) + (p[2] * p[2]);
-  pp = min(p[0], sqrt(pt2 + (p[3] * p[3])));
+  pt2 = (p1 * p1) + (p2 * p2);
+  pp = min(p0, sqrt(pt2 + (p3 * p3)));
   pt = min(pp, sqrt(pt2));
-  vc[0] = cxtype(p[0] * nsv, p[3] * nsv);
-  vc[1] = cxtype(p[1] * nsv, p[2] * nsv);
+  vc[0] = cxtype(p0 * nsv, p3 * nsv);
+  vc[1] = cxtype(p1 * nsv, p2 * nsv);
   if (vmass != 0.0) {
     hel0 = 1.0 - std::abs(hel);
     if (pp == 0.0) {
@@ -338,63 +240,90 @@ __device__ void vxxxxx(const fptype pvec[3], fptype vmass, int nhel, int nsv,
       vc[4] = cxtype(0.0, nsvahl * sqh);
       vc[5] = cxtype(hel0, 0.0);
     } else {
-      emp = p[0] / (vmass * pp);
+      emp = p0 / (vmass * pp);
       vc[2] = cxtype(hel0 * pp / vmass, 0.0);
       vc[5] =
-          cxtype(hel0 * p[3] * emp + hel * pt / pp * sqh, 0.0);
+          cxtype(hel0 * p3 * emp + hel * pt / pp * sqh, 0.0);
       if (pt != 0.0) {
-        pzpt = p[3] / (pp * pt) * sqh * hel;
-        vc[3] = cxtype(hel0 * p[1] * emp - p[1] * pzpt,
-                                        -nsvahl * p[2] / pt * sqh);
-        vc[4] = cxtype(hel0 * p[2] * emp - p[2] * pzpt,
-                                        nsvahl * p[1] / pt * sqh);
+        pzpt = p3 / (pp * pt) * sqh * hel;
+        vc[3] = cxtype(hel0 * p1 * emp - p1 * pzpt,
+                                        -nsvahl * p2 / pt * sqh);
+        vc[4] = cxtype(hel0 * p2 * emp - p2 * pzpt,
+                                        nsvahl * p1 / pt * sqh);
       } else {
         vc[3] = cxtype(-hel * sqh, 0.0);
-        vc[4] = cxtype(0.0, nsvahl * (p[3] < 0) ? -abs(sqh)
+        vc[4] = cxtype(0.0, nsvahl * (p3 < 0) ? -abs(sqh)
                                                                  : abs(sqh));
       }
     }
   } else {
-    pp = p[0];
-    pt = sqrt((p[1] * p[1]) + (p[2] * p[2]));
+    //pp = p0;
+    pt = sqrt((p1 * p1) + (p2 * p2));
     vc[2] = cxtype(0.0, 0.0);
-    vc[5] = cxtype(hel * pt / pp * sqh, 0.0);
+    vc[5] = cxtype(hel * pt / p0 * sqh, 0.0);
     if (pt != 0.0) {
-      pzpt = p[3] / (pp * pt) * sqh * hel;
-      vc[3] = cxtype(-p[1] * pzpt, -nsv * p[2] / pt * sqh);
-      vc[4] = cxtype(-p[2] * pzpt, nsv * p[1] / pt * sqh);
+      pzpt = p3 / (p0 * pt) * sqh * hel;
+      vc[3] = cxtype(-p1 * pzpt, -nsv * p2 / pt * sqh);
+      vc[4] = cxtype(-p2 * pzpt, nsv * p1 / pt * sqh);
     } else {
       vc[3] = cxtype(-hel * sqh, 0.0);
       vc[4] =
-          cxtype(0.0, nsv * (p[3] < 0) ? -abs(sqh) : abs(sqh));
+          cxtype(0.0, nsv * (p3 < 0) ? -abs(sqh) : abs(sqh));
     }
   }
   return;
 }
 
-__device__ void sxxxxx(const fptype pvec[3], fptype smass, int nss, cxtype sc[3]) {
-  fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
-  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+smass*smass);
+__device__ void sxxxxx(const fptype* allmomenta, const fptype& smass, const int& nhel, const int& nsf,
+                       cxtype sc[3],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )
+{
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif
+      const fptype& p0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+      const fptype& p1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+      const fptype& p2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+      const fptype& p3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+  //fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  //p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+smass*smass);
   sc[2] = cxtype(1.00, 0.00);
-  sc[0] = cxtype(p[0] * nss, p[3] * nss);
-  sc[1] = cxtype(p[1] * nss, p[2] * nss);
+  sc[0] = cxtype(p0 * nss, p3 * nss);
+  sc[1] = cxtype(p1 * nss, p2 * nss);
   return;
 }
 
-__device__ void oxxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
-                       cxtype fo[6]) {
+__device__ void oxxxxx(const fptype* allmomenta, const fptype& fmass, const int& nhel, const int& nsf,
+                       cxtype fo[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
+{
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif
+
   cxtype chi[2];
   fptype sf[2], sfomeg[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int nh, ip, im;
-  
-  fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
-  p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
 
-  fo[0] = cxtype(p[0] * nsf, p[3] * nsf);
-  fo[1] = cxtype(p[1] * nsf, p[2] * nsf);
+      const fptype& p0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+      const fptype& p1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+      const fptype& p2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+      const fptype& p3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+
+  //fptype p[4] = {0, pvec[0], pvec[1], pvec[2]};
+  //p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
+
+  fo[0] = cxtype(p0 * nsf, p3 * nsf);
+  fo[1] = cxtype(p1 * nsf, p2 * nsf);
   nh = nhel * nsf;
   if (fmass != 0.000) {
-    pp = min(p[0], sqrt((p[1] * p[1]) + (p[2] * p[2]) + (p[3] * p[3])));
+    pp = min(p0, sqrt((p1 * p1) + (p2 * p2) + (p3 * p3)));
     if (pp == 0.000) {
       sqm[0] = sqrt(std::abs(fmass));
       sqm[1] = (fmass < 0) ? -abs(sqm[0]) : abs(sqm[0]);
@@ -405,22 +334,21 @@ __device__ void oxxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
       fo[4] = im * nsf * sqm[std::abs(im)];
       fo[5] = ip * sqm[std::abs(im)];
     } else {
-      pp = min(p[0], sqrt((p[1] * p[1]) + (p[2] * p[2]) + (p[3] * p[3])));
       sf[0] = fptype(1 + nsf + (1 - nsf) * nh) * 0.5;
       sf[1] = fptype(1 + nsf - (1 - nsf) * nh) * 0.5;
-      omega[0] = sqrt(p[0] + pp);
+      omega[0] = sqrt(p0 + pp);
       omega[1] = fmass / omega[0];
       ip = (1 + nh) / 2;
       im = (1 - nh) / 2;
       sfomeg[0] = sf[0] * omega[ip];
       sfomeg[1] = sf[1] * omega[im];
-      pp3 = max(pp + p[3], 0.00);
+      pp3 = max(pp + p3, 0.00);
       chi[0] = cxtype(sqrt(pp3 * 0.5 / pp), 0.00);
       if (pp3 == 0.00) {
         chi[1] = cxtype(-nh, 0.00);
       } else {
         chi[1] =
-            cxtype(nh * p[1], -p[2]) / sqrt(2.0 * pp * pp3);
+            cxtype(nh * p1, -p2) / sqrt(2.0 * pp * pp3);
       }
       fo[2] = sfomeg[1] * chi[im];
       fo[3] = sfomeg[1] * chi[ip];
@@ -428,16 +356,16 @@ __device__ void oxxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
       fo[5] = sfomeg[0] * chi[ip];
     }
   } else {
-    if ((p[1] == 0.00) and (p[2] == 0.00) and (p[3] < 0.00)) {
+    if ((p1 == 0.00) and (p2 == 0.00) and (p3 < 0.00)) {
       sqp0p3 = 0.00;
     } else {
-      sqp0p3 = sqrt(max(p[0] + p[3], 0.00)) * nsf;
+      sqp0p3 = sqrt(max(p0 + p3, 0.00)) * nsf;
     }
     chi[0] = cxtype(sqp0p3, 0.00);
     if (sqp0p3 == 0.000) {
-      chi[1] = cxtype(-nhel, 0.00) * sqrt(2.0 * p[0]);
+      chi[1] = cxtype(-nhel, 0.00) * sqrt(2.0 * p0);
     } else {
-      chi[1] = cxtype(nh * p[1], -p[2]) / sqp0p3;
+      chi[1] = cxtype(nh * p1, -p2) / sqp0p3;
     }
     if (nh == 1) {
       fo[2] = chi[0];
@@ -454,16 +382,26 @@ __device__ void oxxxxx(const fptype pvec[3], fptype fmass, int nhel, int nsf,
   return;
 }
 
-__device__ void opzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fo[6])
+__device__ void opzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fo[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTIONS FMASS =0
   // PX = PY =0
   // E = PZ
-  fo[0] = cxtype (pvec[2] * nsf, pvec[2] * nsf);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+   const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+
+  fo[0] = cxtype (pvec3 * nsf, pvec3 * nsf);
   fo[1] = cxtype (0., 0.);
   int nh = nhel * nsf;
 
-  cxtype CSQP0P3 = cxtype (sqrt(2.* pvec[2]) * nsf, 0.00);
+  cxtype CSQP0P3 = cxtype (sqrt(2.* pvec3) * nsf, 0.00);
 
     fo[2]=(nh== 1)*CSQP0P3 + (nh==-1)*fo[1];
     fo[3]=fo[1];
@@ -471,16 +409,25 @@ __device__ void opzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fo[6])
     fo[5]=(nh== 1)*fo[1]   + (nh==-1)*CSQP0P3;
 }
 
-__device__ void omzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fo[6])
+
+__device__ void omzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fo[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTIONS FMASS =0
   // PX = PY =0
   // E = -PZ (E>0)
-
-  fo[0] = cxtype (-pvec[2] * nsf, pvec[2] * nsf);
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+  const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
+  fo[0] = cxtype (-pvec3 * nsf, pvec3 * nsf);
   fo[1] = cxtype (0., 0.);
   int nh = nhel * nsf;
-  cxtype chi = cxtype (-nhel, 0.00) * sqrt(-2.0 * pvec[2]);
+  cxtype chi = cxtype (-nhel, 0.00) * sqrt(-2.0 * pvec3);
 
   fo[2]=(nh== 1)*fo[1] + (nh==-1)*fo[1];
   fo[3]=(nh== 1)*chi + (nh==-1)*fo[1];;
@@ -490,19 +437,31 @@ __device__ void omzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fo[6])
   return;
 }
 
-__device__ void oxzxxx(const fptype pvec[3], int nhel, int nsf, cxtype fo[6])
+__device__ void oxzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
+                       cxtype fo[6],
+#ifndef __CUDACC__
+                 const int ievt,
+#endif
+                 const int ipar )          // input: particle# out of npar
 {
   // ASSUMPTIONS FMASS =0
   // PT > 0
+#ifdef __CUDACC__
+      const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#endif  
+      const fptype& p0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+      const fptype& p1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
+      const fptype& p2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
+      const fptype& p3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
 
-  float p[4] = {0, (float) pvec[0], (float) pvec[1], (float) pvec[2]};
-  p[0] = sqrtf(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]);
+  //float p[4] = {0, (float) pvec[0], (float) pvec[1], (float) pvec[2]};
+  //p[0] = sqrtf(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]);
 
-  fo[0] = cxtype (p[0] * nsf, pvec[2] * nsf);
-  fo[1] = cxtype (pvec[0] * nsf, pvec[1] * nsf);
+  fo[0] = cxtype (p0 * nsf, p3 * nsf);
+  fo[1] = cxtype (p1 * nsf, p2 * nsf);
   int nh = nhel * nsf;
 
-  float sqp0p3 = sqrtf(p[0] + p[3]) * nsf;
+  float sqp0p3 = sqrtf(p0 + p3) * nsf;
   cxtype chi0 = cxtype (sqp0p3, 0.00);
   cxtype chi1 = cxtype (nh * p[1]/sqp0p3, -p[2]/sqp0p3);
   cxtype zero = cxtype (0.00, 0.00);

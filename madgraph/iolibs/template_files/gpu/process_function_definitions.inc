@@ -156,7 +156,6 @@ __global__ void sigmaKin(fptype * allmomenta, fptype * allMEs
     %(sigmaKin_lines)s
 }
 
-}//end namespace
 //==========================================================================
 // Private class member functions
 
