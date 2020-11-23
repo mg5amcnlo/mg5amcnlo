@@ -15,8 +15,8 @@ namespace Proc
 
 #ifdef __CUDACC__
   __device__ __constant__ int cHel[ncomb][npar];
-  //__device__ __constant__ fptype cIPC[%(ncouplingstimes2)i];
-  //__device__ __constant__ fptype cIPD[%(nparams)i];
+  __device__ __constant__ fptype cIPC[%(ncouplingstimes2)i];
+  __device__ __constant__ fptype cIPD[%(nparams)i];
   __device__ __constant__ int cNGoodHel[1];
   __device__ __constant__ int cGoodHel[ncomb];
 #else
@@ -101,8 +101,10 @@ void CPPProcess::initProc(string param_card_name) {
     {
       // NB: calculate_wavefunctions ADDS |M|^2 for a given ihel to the running sum of |M|^2 over helicities for the given event
       calculate_wavefunctions( ihel, allmomenta, meHelSum[0] );
-      if ( meHelSum[0]>meHelSumLast ) isGoodHel[ihel] = true;
-      meHelSumLast = meHelSum[0];
+      if ( meHelSum[0]!=meHelSumLast ){
+         isGoodHel[ihel] = true;
+         meHelSumLast = meHelSum[0];
+      }
     }
   }
 #endif

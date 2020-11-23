@@ -1597,7 +1597,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             
             
             ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt,\n#endif\n                                )\n{"
+                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt\n#endif\n                                )\n{"
                 )
 
             ret_lines.append(" using namespace MG5_%s;" % self.model_name)
