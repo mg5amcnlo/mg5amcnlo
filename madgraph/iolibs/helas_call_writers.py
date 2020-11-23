@@ -1789,36 +1789,36 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
             ##call = call + "((double *)(dps + %d * dpt),"
-            call = call + "(local_mom[%d],"
+            call = call + "(allmomenta,"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "pars->%s, cHel[ihel][%d],"
             else:
                 call = call + "pars->%s,"
-            call = call + "%+d,w[%d]);"
+            call = call + "%+d,w[%d], %d);"
             if argument.get('spin') == 1:
                 return call % \
-                                (wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                (wf.get('mass'),
                                  # For boson, need initial/final here
                                  (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('me_id')-1)
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1)
             elif argument.is_boson():
                 return  self.format_coupling(call % \
-                                (wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                (wf.get('mass'),
                                  wf.get('number_external')-1,
                                  # For boson, need initial/final here
                                  (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('me_id')-1))
+                                 wf.get('me_id')-1),
+                                 wf.get('number_external')-1)
             else:
                 return self.format_coupling(call % \
-                                (wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                (wf.get('mass'),
                                  wf.get('number_external')-1,
                                  # For fermions, need particle/antiparticle
                                  - (-1) ** wf.get_with_flow('is_part'),
-                                 wf.get('me_id')-1))
+                                 wf.get('me_id')-1),
+                                 wf.get('number_external')-1)
         else:
             if wf.get('number_external') == 1:
                 call += 'pz'
@@ -1829,13 +1829,14 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             call = call + 'x' * (6 - len(call))
             # Specify namespace for Helas calls
             ##call = call + "((double *)(dps + %d * dpt),"
-            call = call + "(local_mom[%d], cHel[ihel][%d],%+d,w[%d]);"
+            call = call + "(allmomenta, cHel[ihel][%d],%+d,w[%d],%d);"
+            
             return self.format_coupling(call % \
                                 (wf.get('number_external')-1,
-                                 wf.get('number_external')-1,
                                  # For fermions, need particle/antiparticle
                                  - (-1) ** wf.get_with_flow('is_part'),
-                                 wf.get('me_id')-1))
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
                 
                 
         
