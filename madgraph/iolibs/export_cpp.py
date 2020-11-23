@@ -1643,7 +1643,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
         try:
             replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.h')).read()
-        except fileNotFoundError:
+        except FileNotFoundError:
             replace_dict['helamps_h'] = ""
         
         if writer:
