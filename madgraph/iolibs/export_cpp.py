@@ -1642,9 +1642,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         misc.sprint(self.path)
         replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
         try:
-            replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.h')).read()
+            replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.h' % self.model_name)).read()
         except FileNotFoundError:
-            replace_dict['helamps_h'] = ""
+            replace_dict['helamps_h'] = "\n#include ../../HelAmps_%s.h" % self.model_name
         
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict
@@ -1660,9 +1660,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                 
         replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
         try:
-            replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
+            replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.cu' % self.model_name)).read()
         except FileNotFoundError:
-            replace_dict['hel_amps_def'] = ""
+            replace_dict['hel_amps_def'] = "\n#include ../../src/HelAmps_%s.cu" % self.model_name
             
         if writer:
             file = self.read_template_file(self.process_template_cc) % replace_dict
