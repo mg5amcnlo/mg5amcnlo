@@ -1659,8 +1659,11 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         
                 
         replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
-        replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
-        
+        try:
+            replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_sm.cu')).read()
+        except FileNotFoundError:
+            replace_dict['hel_amps_def'] = ""
+            
         if writer:
             file = self.read_template_file(self.process_template_cc) % replace_dict
             # Write the file
