@@ -1541,8 +1541,8 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
                           __device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3],
-                                        cxtype amp[%(namp)d]
-  
+                                        cxtype amp[%(namp)d])
+                          {
                           const int ncolor =  %(ncolor)d;
                           cxtype jamp[ncolor];
 
@@ -1597,10 +1597,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             
             
             ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt,\n#endif\n                                )"
+                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt,\n#endif\n                                )\n{"
                 )
 
-            ret_lines.append(" using namespace MG5_%s" % self.model_name)
+            ret_lines.append(" using namespace MG5_%s;" % self.model_name)
             ret_lines.append("mgDebug( 0, __FUNCTION__ );")
             ret_lines.append("cxtype amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
             ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
