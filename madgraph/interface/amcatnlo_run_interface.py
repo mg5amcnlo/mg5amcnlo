@@ -5067,6 +5067,7 @@ RESTART = %(mint_mode)s
             exe = 'madevent_mintFO'
             tests = ['test_ME']
             self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
+            self.analyse_card.update_FO_extrapaths_ajob(pjoin(self.me_dir, 'SubProcesses', 'ajob_template'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
