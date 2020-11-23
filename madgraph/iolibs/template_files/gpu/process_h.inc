@@ -23,8 +23,7 @@
 
 #ifdef __CUDACC__
 
-#define checkCuda( code )                       \
-  { assertCuda( code, __FILE__, __LINE__ ); }
+#define checkCuda( code ) { assertCuda( code, __FILE__, __LINE__ ); }
 
 inline void assertCuda( cudaError_t code, const char *file, int line, bool abort = true )
 {
@@ -43,7 +42,7 @@ namespace gProc
 #else
 namespace Proc
 #endif
-
+{
 
 %(process_class_definitions)s
 
@@ -72,5 +71,6 @@ namespace Proc
                  );
 
   //--------------------------------------------------------------------------
+}
 
 #endif // MG5_%(process_file_name)s_H

@@ -23,7 +23,7 @@ __device__ void ixzxxx(const fptype p[3], const int& nhel, const int& nsf,
 //__device__ void txxxxx(fptype p[4], fptype tmass, int nhel, int nst,
 //                       cxtype fi[18]);
 
-__device__ void vxxxxx(const fptype p[3], const fptype& vmass, const int& nhel, const int& nsv
+__device__ void vxxxxx(const fptype p[3], const fptype& vmass, const int& nhel, const int& nsv,
                        cxtype v[6]);
 
 #else
