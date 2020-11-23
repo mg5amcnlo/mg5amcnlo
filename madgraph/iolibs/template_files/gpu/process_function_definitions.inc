@@ -37,7 +37,7 @@ namespace Proc
 
 
 CPPProcess::CPPProcess(int numiterations, int gpublocks, int gputhreads,
-                       bool verbose)
+                       bool verbose, bool debug)
     : m_numiterations(numiterations), gpu_nblocks(gpublocks),
       gpu_nthreads(gputhreads), m_verbose(verbose),
       dim(gpu_nblocks * gpu_nthreads) {
