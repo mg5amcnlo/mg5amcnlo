@@ -2632,34 +2632,66 @@ Parameters              %(params)s\n\
             goldstone_calls += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
             goldstone_calls += "C the LSC term\n" 
             goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
+            goldstone_calls += "C the SSC term (neutral/diagonal)\n" 
+            goldstone_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
 
             # now the call to the same-charge sudakov amp
             mes_same_charge = [me for me in non_goldstone_mes if me['base_amp'] == i+1 and len(me['legs']) == 1]
             if mes_same_charge:
-                goldstone_calls += "C Z-gamma mixing"
+                goldstone_calls += "C Z-gamma and Chi/H mixing\n"
             for mesc in mes_same_charge:
-                idx = non_goldstone_mes.index['mesc']
+                idx = non_goldstone_mes.index(mesc)
                 goldstone_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
-                goldstone_calls += "C the LSC term\n"
-                goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants)\n"
+                goldstone_calls += "C the non-diagonal LSC and SSC terms\n"
+                goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants,%d,%d)\n" % \
+                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0])
+                goldstone_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_nondiag(invariants,%d,%d)\n" % \
+                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0])
+
+            # SSC calls, charged
+            mes_ssc_charged = [me for me in non_goldstone_mes if me['base_amp'] == i+1 and len(me['legs']) == 2]
+            if mes_ssc_charged:
+                goldstone_calls += "C the SSC terms (charged)\n"
+            for messc in mes_ssc_charged:
+                idx = non_goldstone_mes.index(messc)
+                goldstone_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                goldstone_calls += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in messc['matrix_element']['processes'][0]['legs']])
+                goldstone_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_c(%d,%d,pdglist,%d,%d,nhel,iflist,invariants)\n" % \
+                                (messc['legs'][0]['number'], messc['legs'][1]['number'], messc['pdgs'][1][0], messc['pdgs'][1][1])
 
         replace_dict['calls_to_me'] = goldstone_calls
 
         # now the calls to the born, for transverse polarisations
         born_calls = "call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)\n"
         born_calls += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in born_me['processes'][0]['legs']])
-        goldstone_calls += "C the LSC term\n" 
+        born_calls += "C the LSC term\n" 
         born_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
+        born_calls += "C the SSC term (neutral/diagonal)\n" 
+        born_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
 
         # now the call to the same-charge sudakov amp
         mes_same_charge = [me for me in non_goldstone_mes if me['base_amp'] == 0 and len(me['legs']) == 1]
         if mes_same_charge:
-            born_calls += "C Z-gamma mixing"
+            born_calls += "C Z-gamma and Chi/H mixing\n"
         for mesc in mes_same_charge:
-            idx = non_born_mes.index['mesc']
+            idx = non_goldstone_mes.index(mesc)
             born_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
             born_calls += "C the LSC term\n"
-            born_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants)\n"
+            born_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants,%d,%d)\n" % \
+                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0])
+            born_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_nondiag(invariants,%d,%d)\n" % \
+                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0])
+
+        # SSC calls, charged
+        mes_ssc_charged = [me for me in non_goldstone_mes if me['base_amp'] == 0 and len(me['legs']) == 2]
+        if mes_ssc_charged:
+            born_calls += "C the SSC terms (charged)\n"
+        for messc in mes_ssc_charged:
+            idx = non_goldstone_mes.index(messc)
+            born_calls += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+            born_calls += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in messc['matrix_element']['processes'][0]['legs']])
+            born_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_c(%d,%d,pdglist,%d,%d,nhel,iflist,invariants)\n" % \
+                                (messc['legs'][0]['number'], messc['legs'][1]['number'], messc['pdgs'][1][0], messc['pdgs'][1][1])
 
         if goldstone_calls:
             born_calls = "else\n" + born_calls + "endif\n"

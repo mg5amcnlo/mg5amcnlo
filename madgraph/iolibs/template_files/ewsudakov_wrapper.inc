@@ -17,12 +17,14 @@ DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
 COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_LSC(AMP_SPLIT_SIZE)
+DOUBLE COMPLEX AMP_SPLIT_EWSUD_SSC(AMP_SPLIT_SIZE)
 
-integer iflist(nexternal-1), pdglist(nexternal-1)
+integer iflist(nexternal-1), pdglist(nexternal-1), pdglist_oth(nexternal-1)
 
 double precision invariants(nexternal-1, nexternal-1)
 
-double precision get_lsc_diag, get_lsc_nondiag
+double complex get_lsc_diag, get_lsc_nondiag
+double complex get_ssc_n_diag, get_ssc_n_nondiag, get_ssc_c
 
 LOGICAL CALCULATEDBORN
 COMMON/CCALCULATEDBORN/CALCULATEDBORN
@@ -30,6 +32,7 @@ COMMON/CCALCULATEDBORN/CALCULATEDBORN
 CALCULATEDBORN=.FALSE.
 
 AMP_SPLIT_EWSUD_LSC(:) = 0d0
+AMP_SPLIT_EWSUD_SSC(:) = 0d0
 
 %(iflist)s
 

@@ -1,4 +1,4 @@
-      SUBROUTINE EWSUDAKOV_ME_%(ime)d(P,NHEL,ANS_SUMMED)
+      SUBROUTINE EWSDK_ME_%(ime)d(P,NHEL,ANS_SUMMED)
 C  
 %(info_lines)s
 C

@@ -68,8 +68,8 @@ def get_isospin_partners_samecharge(pid, model):
 
     # iso dict should eventually become an attribute of the model, here we code
     # the case of the SM with goldsones
-    ##iso_dict = {22: [23], 23: [22], 25: [250], 250: [25]} 
-    iso_dict = {22: [23], 23: [22]} 
+    iso_dict = {22: [23], 23: [22], 25: [250], 250: [25]} 
+    ##iso_dict = {22: [23], 23: [22]} 
 
     try:
         return iso_dict[pid]
@@ -134,19 +134,22 @@ def get_sudakov_amps(born_amp):
         # MZ: NEVER deepcopy a process!!!
         born_proc = copy.copy(born_amp['process'])
         born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
+        pdgs = [[],[]] # old and new pdgs
         # replace all legs listed in goldstone_comb
         for leg in goldstone_comb:
 
             newleg = copy.copy(leg)
             newleg['id'] = get_goldstone(newleg['id'], model)
             born_proc['legs'][born_proc['legs'].index(leg)] = newleg
+            pdgs[0].append(leg['id'])
+            pdgs[1].append(newleg['id'])
         # now generate the amplitude
         amp = diagram_generation.Amplitude(born_proc)
         # skip amplitudes without diagrams
         if not amp['diagrams'] : continue
 
         logger.info('Found Sudakov amplitude (goldstone) for process: %s' % born_proc.nice_string())
-        amplitudes.append({'goldstone': True, 'legs': goldstone_comb, 'base_amp': 0, 'amplitude': amp})
+        amplitudes.append({'goldstone': True, 'legs': goldstone_comb, 'base_amp': 0, 'amplitude': amp, 'pdgs': pdgs})
         # for these amplitudes, keep track in a separate list
         goldstone_amplitudes.append(amp)
 
@@ -169,12 +172,13 @@ def get_sudakov_amps(born_amp):
                 newleg = copy.copy(leg)
                 newleg['id'] = part
                 born_proc['legs'][ileg] = newleg
+                pdgs = [[leg['id']],[newleg['id']]] # old and new pdgs
                 amp = diagram_generation.Amplitude(born_proc)
                 # skip amplitudes without diagrams
                 if not amp['diagrams'] : continue
 
                 logger.info('Found Sudakov amplitude (isospin same-charge) for process: %s' % born_proc.nice_string())
-                amplitudes.append({'goldstone': False, 'legs': [leg], 'base_amp': iamp, 'amplitude': amp})
+                amplitudes.append({'goldstone': False, 'legs': [leg], 'base_amp': iamp, 'amplitude': amp, 'pdgs': pdgs})
 
     # double loop over the born legs to find amplitudes where
     # two particles are switched for their isospin partner(s), in the case
@@ -182,6 +186,8 @@ def get_sudakov_amps(born_amp):
     # Note that one has to loop on the base amplitude and on those with the
     # goldstones
     for iamp, base_amp in enumerate([born_amp] + goldstone_amplitudes):
+        logger.info('Looking for isospin-partners of %s' % base_amp['process'].nice_string())
+        
         for ileg1, leg1 in enumerate(base_amp['process']['legs']):
             iso_part_list1 = get_isospin_partners_diffcharge(leg1['id'], model)
 
@@ -195,11 +201,11 @@ def get_sudakov_amps(born_amp):
 
                 # skip if no partners exist
                 if not iso_part_list2: continue
-                
+
                 for part1 in iso_part_list1:
                     for part2 in iso_part_list2:
-                        born_proc = copy.copy(born_amp['process'])
-                        born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
+                        born_proc = copy.copy(base_amp['process'])
+                        born_proc['legs'] = copy.deepcopy(base_amp['process']['legs'])
                         # replace leg1
                         newleg1 = copy.copy(leg1)
                         newleg1['id'] = part1
@@ -208,6 +214,7 @@ def get_sudakov_amps(born_amp):
                         newleg2 = copy.copy(leg2)
                         newleg2['id'] = part2
                         born_proc['legs'][ileg2] = newleg2
+                        pdgs = [[leg1['id'],leg2['id']], [newleg1['id'],newleg2['id']]] # old and new pdgs
                         # check charge conservation
                         if not is_charge_conserved(born_proc): continue
 
@@ -216,6 +223,6 @@ def get_sudakov_amps(born_amp):
                         if not amp['diagrams'] : continue
 
                         logger.info('Found Sudakov amplitude (isospin diff-charge) for process: %s' % born_proc.nice_string())
-                        amplitudes.append({'goldstone': False, 'legs': [leg1, leg2], 'base_amp': iamp, 'amplitude': amp})
+                        amplitudes.append({'goldstone': False, 'legs': [leg1, leg2], 'base_amp': iamp, 'amplitude': amp, 'pdgs': pdgs})
 
     return amplitudes
