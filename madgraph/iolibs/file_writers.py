@@ -64,7 +64,7 @@ class FileWriter(io.FileIO):
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
         for the language in question."""
-        return line.split('\n')
+        return ['%s\n' % l for l in line.split('\n')]
         pass
 
     def write_comment_line(self, line):
