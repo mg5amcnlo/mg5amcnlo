@@ -135,7 +135,7 @@ void CPPProcess::initProc(string param_card_name) {
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-__global__ void sigmaKin(fptype * allmomenta, fptype * allMEs
+__global__ void sigmaKin(const fptype * allmomenta, fptype * allMEs
 #ifndef __CUDACC__
                  , const int nevt          // input: #events (for cuda: nevt == ndim == gpublocks*gputhreads)
 #endif
