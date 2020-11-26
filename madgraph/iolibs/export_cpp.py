@@ -2731,7 +2731,7 @@ class ProcessExporterGPU(ProcessExporterCPP):
                     'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile',
                                      s+'gpu/nvtx.h', s+'gpu/check.cc',
                                      s+'gpu/timermap.h', 'gpu/profile.sh']}
-    to_link_in_P = ['Makefile', 'timer.h']
+    to_link_in_P = ['Makefile', 'timer.h', 'timermap.h']
 
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')
     template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile')
