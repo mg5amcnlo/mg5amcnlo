@@ -2728,7 +2728,7 @@ class ProcessExporterGPU(ProcessExporterCPP):
     s= _file_path + 'iolibs/template_files/'
     from_template = {'src': [s+'gpu/rambo.h', s+'gpu/rambo.cc', s+'read_slha.h', s+'read_slha.cc',
                              s+'gpu/mgOnGpuTypes.h', s+'gpu/grambo.cu'],
-                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile', s+'gpu/nvtx.h'
+                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile', s+'gpu/nvtx.h',
                                      s+'gpu/nvtx.h', s+'gpu/check.cc',
                                      s+'gpu/timermap.h', 'gpu/profile.sh']}
     to_link_in_P = ['Makefile', 'timer.h', 'timermap.h', 'nvtx.h']
