@@ -488,6 +488,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
+      include 'nFKSconfigs.inc'
       integer iterm,iterm_last_izero,iterm_last_mohdr,i,j
      &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
       double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
@@ -529,6 +530,11 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       common /c_need_matching/ need_matching_S,need_matching_H
       common /c_need_matching_cuts/need_matching_cuts
       save need_matching_izero
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
       call cpu_time(tBefore)
       ktscheme=1
 
@@ -564,6 +570,9 @@ c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
             need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
             need_matching_cuts(1:nexternal)=need_matching_izero(1:nexternal)
+c Update shower starting scale
+            shower_S_scale(nFKSprocess*2-1)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -620,6 +629,12 @@ c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
+c Update shower starting scale
+            shower_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)-
+     $           ref_H_scale(nFKSprocess*2)
+     $           +minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            ref_H_scale(nFKSprocess*2)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
@@ -2942,7 +2957,6 @@ c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
             endif
          enddo
       endif
-
       return
       end
 
