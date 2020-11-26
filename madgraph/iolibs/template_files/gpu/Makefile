@@ -1,29 +1,33 @@
-CUARCHNUM=70
-#CUARCHNUM=61 #(For Pascal Architecture Cards)
-LIBDIR=../../lib
+LIBDIR =../../lib
 INCDIRS=-I. -I../../src -I../../../../../tools/
 MODELLIB=model_%(model)s
-CXXFLAGS= -O3 $(INCDIRS) -DUSE_NVTX -Wall -Wshadow
-###CXXFLAGS= -O2 $(INCDIRS) -DUSE_NVTX -Wall -Wshadow
-CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
-# CUARCHFLAGS= -gencode arch=compute_$(CUARCHNUM),code=sm_$(CUARCHNUM)
-CUFLAGS= -O3 $(INCDIRS) -DUSE_NVTX $(CUARCHFLAGS) -use_fast_math -lineinfo
-# Without -maxrregcount: baseline throughput: 6.5E8 (16384 32 12) up to 7.3E8 (65536 128 12)
-###CUFLAGS+= --maxrregcount 160 # improves throughput: 6.9E8 (16384 32 12) up to 7.7E8 (65536 128 12)
-###CUFLAGS+= --maxrregcount 128 # improves throughput: 7.3E8 (16384 32 12) up to 7.6E8 (65536 128 12)
-###CUFLAGS+= --maxrregcount 96 # degrades throughput: 4.1E8 (16384 32 12) up to 4.5E8 (65536 128 12)
-###CUFLAGS+= --maxrregcount 64 # degrades throughput: 1.7E8 (16384 32 12) flat at 1.7E8 (65536 128 12)
-CUINC=/usr/local/cuda/targets/x86_64-linux/include
+CXXFLAGS= -O3 -std=c++11 $(INCDIRS) $(USE_NVTX) -Wall -Wshadow ${MGONGPU_CONFIG}
 LIBFLAGS= -L$(LIBDIR) -l$(MODELLIB)
-CULIBFLAGS= -L/usr/local/cuda/targets/x86_64-linux/lib
-NVCC=nvcc
 CXX=g++
+NVCC?=$(shell which nvcc)
+ifeq (, $(NVCC))
+	NVCC=@echo No nvcc to run nvcc
+else
+	USE_NVTX?=-DUSE_NVTX
+	CUARCHNUM=70
+	#CUARCHNUM=61 #(For Pascal Architecture Cards)
+	CUINC=-I/usr/local/cuda/targets/x86_64-linux/include
+	CULIBFLAGS= -L/usr/local/cuda/targets/x86_64-linux/lib -lcurand
+	CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
+	# CUARCHFLAGS= -gencode arch=compute_$(CUARCHNUM),code=sm_$(CUARCHNUM)
+	CUFLAGS= -O3 $(INCDIRS) $(USE_NVTX) $(CUARCHFLAGS) -use_fast_math -lineinfo ${MGONGPU_CONFIG}
+	# Without -maxrregcount: baseline throughput: 6.5E8 (16384 32 12) up to 7.3E8 (65536 128 12)
+	###CUFLAGS+= --maxrregcount 160 # improves throughput: 6.9E8 (16384 32 12) up to 7.7E8 (65536 128 12)
+	###CUFLAGS+= --maxrregcount 128 # improves throughput: 7.3E8 (16384 32 12) up to 7.6E8 (65536 128 12)
+	###CUFLAGS+= --maxrregcount 96 # degrades throughput: 4.1E8 (16384 32 12) up to 4.5E8 (65536 128 12)
+	###CUFLAGS+= --maxrregcount 64 # degrades throughput: 1.7E8 (16384 32 12) flat at 1.7E8 (65536 128 12)
+endif
 MAKEDEBUG=
 
 cu_main=gcheck.exe
 cxx_main=check.exe
 
-cu_objects=gCPPProcess.o check_sa.o
+cu_objects=CPPProcess.o gcheck.o
 cxx_objects=CPPProcess.o
 
 # Assuming uname is available, detect if architecture is power
@@ -48,20 +52,20 @@ debug: $(cu_main) $(cxx_main)
 $(LIBDIR)/lib$(MODELLIB).a:
 	@cd ../../src && make $(MAKEDEBUG)
 
-check_sa.o: check_sa.cu *.h ../../src/*.h ../../src/*.cu
+gcheck.o: gcheck.cu *.h ../../src/*.h ../../src/*.cu
 	$(NVCC) $(CPPFLAGS) $(CUFLAGS) -c $< -o $@
 
 %%.o : %%.cu *.h ../../src/*.h
 	$(NVCC) $(CPPFLAGS) $(CUFLAGS) -c $< -o $@
 
 %%.o : %%.cc *.h ../../src/*.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(CUINC) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(CUINC) -c $< -o $@
 
 $(cu_main): $(LIBDIR)/lib$(MODELLIB).a $(cu_objects)
 	$(NVCC) -o $@ $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) -lcuda -lcurand
 
 $(cxx_main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) check.o
-	$(CXX) -o $@ $(cxx_objects) check.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS) -lcurand
+	$(CXX) -o $@ $(cxx_objects) check.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
 
 .PHONY: clean
 
