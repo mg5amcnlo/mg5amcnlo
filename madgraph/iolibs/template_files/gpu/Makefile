@@ -27,7 +27,7 @@ MAKEDEBUG=
 cu_main=gcheck.exe
 cxx_main=check.exe
 
-cu_objects=CPPProcess.o gcheck.o
+cu_objects=CPPProcess.o check_sa.o
 cxx_objects=CPPProcess.o
 
 # Assuming uname is available, detect if architecture is power
