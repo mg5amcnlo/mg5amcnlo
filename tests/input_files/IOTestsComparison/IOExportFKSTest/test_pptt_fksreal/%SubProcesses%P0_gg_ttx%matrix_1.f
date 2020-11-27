@@ -9,7 +9,7 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: g g > t t~ g [ real = QCD QED ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -108,7 +108,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: g g > t t~ g [ real = QCD QED ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -232,7 +232,7 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > t t~ g [ real = QCD QED ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -347,17 +347,17 @@ C     Amplitude(s) for diagram number 16
       CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_11,AMP(18))
 C     JAMPs contributing to orders QCD=3 QED=0
       JAMP(1,1)=-AMP(1)+IMAG1*AMP(3)+IMAG1*AMP(5)-AMP(6)+AMP(15)
-     $ +AMP(16)-AMP(18)
+     $ -AMP(18)+AMP(16)
       JAMP(2,1)=-AMP(4)-IMAG1*AMP(5)+IMAG1*AMP(11)+AMP(12)-AMP(15)
-     $ -AMP(16)-AMP(17)
+     $ -AMP(17)-AMP(16)
       JAMP(3,1)=+AMP(1)-IMAG1*AMP(3)+IMAG1*AMP(10)-AMP(12)-AMP(13)
-     $ +AMP(17)+AMP(18)
+     $ +AMP(18)+AMP(17)
       JAMP(4,1)=-AMP(7)+IMAG1*AMP(8)-IMAG1*AMP(10)+AMP(12)-AMP(15)
-     $ -AMP(16)-AMP(17)
+     $ -AMP(17)-AMP(16)
       JAMP(5,1)=+AMP(1)+IMAG1*AMP(2)-IMAG1*AMP(11)-AMP(12)-AMP(14)
-     $ +AMP(17)+AMP(18)
+     $ +AMP(18)+AMP(17)
       JAMP(6,1)=-AMP(1)-IMAG1*AMP(2)-IMAG1*AMP(8)-AMP(9)+AMP(15)
-     $ +AMP(16)-AMP(18)
+     $ -AMP(18)+AMP(16)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
