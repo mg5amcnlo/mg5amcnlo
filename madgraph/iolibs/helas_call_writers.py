@@ -1804,21 +1804,28 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                                  wf.get('me_id')-1,
                                  wf.get('number_external')-1)
             elif argument.is_boson():
+                misc.sprint(call)
+                misc.sprint( (wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1) ** (wf.get('state') == 'initial'),
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
                 return  self.format_coupling(call % \
                                 (wf.get('mass'),
                                  wf.get('number_external')-1,
                                  # For boson, need initial/final here
                                  (-1) ** (wf.get('state') == 'initial'),
-                                 wf.get('me_id')-1),
-                                 wf.get('number_external')-1)
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
             else:
                 return self.format_coupling(call % \
                                 (wf.get('mass'),
                                  wf.get('number_external')-1,
                                  # For fermions, need particle/antiparticle
                                  - (-1) ** wf.get_with_flow('is_part'),
-                                 wf.get('me_id')-1),
-                                 wf.get('number_external')-1)
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
         else:
             if wf.get('number_external') == 1:
                 call += 'pz'
