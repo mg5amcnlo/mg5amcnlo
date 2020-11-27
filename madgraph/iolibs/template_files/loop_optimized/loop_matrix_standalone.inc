@@ -2785,11 +2785,14 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      %(get_nsqso_born)s
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+	  INTEGER ANS_DIMENSION
+	  PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  INTEGER HEL, USERHEL
 	  common/%(proc_prefix)sUSERCHOICE/USERHEL
 C ----------
@@ -2812,7 +2815,10 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+      %(get_nsqso_born)s
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  INTEGER HEL, RET_CODE
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C
@@ -2923,7 +2929,10 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+      %(get_nsqso_born)s
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 	  INTEGER RET_CODE	  
 C

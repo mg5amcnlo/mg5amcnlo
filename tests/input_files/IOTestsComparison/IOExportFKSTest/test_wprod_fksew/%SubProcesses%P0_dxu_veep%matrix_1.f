@@ -286,19 +286,19 @@ C     ----------
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FFV2P0_3(W(1,2),W(1,1),GC_67,DCMPLX(CMASS_MDL_MW),W(1,6))
-      CALL FFV2P0_3(W(1,4),W(1,3),GC_67,DCMPLX(CMASS_MDL_MW),W(1,7))
+      CALL FFV2P0_3(W(1,2),W(1,1),GC_124,DCMPLX(CMASS_MDL_MW),W(1,6))
+      CALL FFV2P0_3(W(1,4),W(1,3),GC_124,DCMPLX(CMASS_MDL_MW),W(1,7))
 C     Amplitude(s) for diagram number 1
-      CALL VVV1_0(W(1,5),W(1,6),W(1,7),GC_4,AMP(1))
-      CALL FFV1_2(W(1,4),W(1,5),-GC_4,DCMPLX(ZERO),W(1,8))
+      CALL VVV1_0(W(1,5),W(1,6),W(1,7),-GC_3,AMP(1))
+      CALL FFV1_2(W(1,4),W(1,5),GC_3,DCMPLX(ZERO),W(1,8))
 C     Amplitude(s) for diagram number 2
-      CALL FFV2_0(W(1,8),W(1,3),W(1,6),GC_67,AMP(2))
+      CALL FFV2_0(W(1,8),W(1,3),W(1,6),GC_124,AMP(2))
       CALL FFV1_1(W(1,1),W(1,5),GC_1,DCMPLX(ZERO),W(1,8))
 C     Amplitude(s) for diagram number 3
-      CALL FFV2_0(W(1,2),W(1,8),W(1,7),GC_67,AMP(3))
+      CALL FFV2_0(W(1,2),W(1,8),W(1,7),GC_124,AMP(3))
       CALL FFV1_2(W(1,2),W(1,5),GC_2,DCMPLX(ZERO),W(1,8))
 C     Amplitude(s) for diagram number 4
-      CALL FFV2_0(W(1,8),W(1,1),W(1,7),GC_67,AMP(4))
+      CALL FFV2_0(W(1,8),W(1,1),W(1,7),GC_124,AMP(4))
 C     JAMPs contributing to orders QCD=0 QED=3
       JAMP(1,1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)
 

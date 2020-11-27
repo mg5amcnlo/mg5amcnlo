@@ -14,6 +14,10 @@ from __future__ import generators
 # a basic preprocessor working.   Other modules may import these if they want
 # -----------------------------------------------------------------------------
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
 tokens = (
    'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT', 'CPP_POUND','CPP_DPOUND'
 )
@@ -176,7 +180,7 @@ class Preprocessor(object):
     # ----------------------------------------------------------------------
 
     def error(self,file,line,msg):
-        print >>sys.stderr,"%s:%d %s" % (file,line,msg)
+        print("%s:%d %s" % (file,line,msg), file=sys.stderr)
 
     # ----------------------------------------------------------------------
     # lexprobe()
@@ -193,7 +197,7 @@ class Preprocessor(object):
         self.lexer.input("identifier")
         tok = self.lexer.token()
         if not tok or tok.value != "identifier":
-            print "Couldn't determine identifier type"
+            print("Couldn't determine identifier type")
         else:
             self.t_ID = tok.type
 
@@ -201,7 +205,7 @@ class Preprocessor(object):
         self.lexer.input("12345")
         tok = self.lexer.token()
         if not tok or int(tok.value) != 12345:
-            print "Couldn't determine integer type"
+            print("Couldn't determine integer type")
         else:
             self.t_INTEGER = tok.type
             self.t_INTEGER_TYPE = type(tok.value)
@@ -210,7 +214,7 @@ class Preprocessor(object):
         self.lexer.input("\"filename\"")
         tok = self.lexer.token()
         if not tok or tok.value != "\"filename\"":
-            print "Couldn't determine string type"
+            print("Couldn't determine string type")
         else:
             self.t_STRING = tok.type
 
@@ -227,7 +231,7 @@ class Preprocessor(object):
         tok = self.lexer.token()
         if not tok or tok.value != "\n":
             self.t_NEWLINE = None
-            print "Couldn't determine token for newlines"
+            print("Couldn't determine token for newlines")
         else:
             self.t_NEWLINE = tok.type
 
@@ -239,7 +243,7 @@ class Preprocessor(object):
             self.lexer.input(c)
             tok = self.lexer.token()
             if not tok or tok.value != c:
-                print "Unable to lex '%s' required for preprocessor" % c
+                print("Unable to lex '%s' required for preprocessor" % c)
 
     # ----------------------------------------------------------------------
     # add_path()
@@ -262,7 +266,7 @@ class Preprocessor(object):
     def group_lines(self,input):
         lex = self.lexer.clone()
         lines = [x.rstrip() for x in input.splitlines()]
-        for i in xrange(len(lines)):
+        for i in range(len(lines)):
             j = i+1
             while lines[i].endswith('\\') and (j < len(lines)):
                 lines[i] = lines[i][:-1]+lines[j]
@@ -581,7 +585,7 @@ class Preprocessor(object):
         expr = expr.replace("!"," not ")
         try:
             result = eval(expr)
-        except StandardError:
+        except Exception:
             self.error(self.source,tokens[0].lineno,"Couldn't evaluate expression")
             result = 0
         return result
@@ -737,7 +741,7 @@ class Preprocessor(object):
                         break
                     i += 1
                 else:
-                    print "Malformed #include <...>"
+                    print("Malformed #include <...>")
                     return
                 filename = "".join([x.value for x in tokens[1:i]])
                 path = self.path + [""] + self.temp_path
@@ -745,7 +749,7 @@ class Preprocessor(object):
                 filename = tokens[0].value[1:-1]
                 path = self.temp_path + [""] + self.path
             else:
-                print "Malformed #include statement"
+                print("Malformed #include statement")
                 return
         for p in path:
             iname = os.path.join(p,filename)
@@ -759,10 +763,10 @@ class Preprocessor(object):
                 if dname:
                     del self.temp_path[0]
                 break
-            except IOError,e:
+            except IOError as e:
                 pass
         else:
-            print "Couldn't find '%s'" % filename
+            print("Couldn't find '%s'" % filename)
 
     # ----------------------------------------------------------------------
     # define()
@@ -771,7 +775,7 @@ class Preprocessor(object):
     # ----------------------------------------------------------------------
 
     def define(self,tokens):
-        if isinstance(tokens,(str,unicode)):
+        if isinstance(tokens,(str,six.text_type)):
             tokens = self.tokenize(tokens)
 
         linetok = tokens
@@ -794,7 +798,7 @@ class Preprocessor(object):
                 variadic = False
                 for a in args:
                     if variadic:
-                        print "No more arguments may follow a variadic argument"
+                        print("No more arguments may follow a variadic argument")
                         break
                     astr = "".join([str(_i.value) for _i in a])
                     if astr == "...":
@@ -813,7 +817,7 @@ class Preprocessor(object):
                             a[0].value = a[0].value[:-3]
                         continue
                     if len(a) > 1 or a[0].type != self.t_ID:
-                        print "Invalid macro argument"
+                        print("Invalid macro argument")
                         break
                 else:
                     mvalue = self.tokenstrip(linetok[1+tokcount:])
@@ -830,9 +834,9 @@ class Preprocessor(object):
                     self.macro_prescan(m)
                     self.macros[name.value] = m
             else:
-                print "Bad macro definition"
+                print("Bad macro definition")
         except LookupError:
-            print "Bad macro definition"
+            print("Bad macro definition")
 
     # ----------------------------------------------------------------------
     # undef()
@@ -864,7 +868,7 @@ class Preprocessor(object):
     def token(self):
         try:
             while True:
-                tok = self.parser.next()
+                tok = next(self.parser)
                 if tok.type not in self.ignore: return tok
         except StopIteration:
             self.parser = None
@@ -884,7 +888,7 @@ if __name__ == '__main__':
     while True:
         tok = p.token()
         if not tok: break
-        print p.source, tok
+        print(p.source, tok)
 
 
 

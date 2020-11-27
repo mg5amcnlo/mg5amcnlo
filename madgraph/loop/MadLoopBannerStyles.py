@@ -13,7 +13,9 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
 import random
+from six.moves import range
 if __name__=='__main__':
     # Make sure paths are accessible
     import os
@@ -267,7 +269,7 @@ r"""
                 color_end = "char(27)//'[0m"                    
         else:
             raise MadGraph5Error('Incorrect color in MadLoopBanner. Must be and'+\
-              ' intenger or one of the following: %s'%str(colors.keys()))
+              ' intenger or one of the following: %s'%str(list(colors.keys())))
 
         def format_banner(banner):
             """ Format the raw banner text to give it a frame, colors and a 

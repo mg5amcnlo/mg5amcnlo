@@ -22,6 +22,7 @@
 
 from __future__ import division
 
+from __future__ import absolute_import
 import os
 import pickle
 
@@ -32,6 +33,7 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
 
 import tests.unit_tests as unittest
+from six.moves import range
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _model = None
 
@@ -385,7 +387,7 @@ class TestFeynmanLine(unittest.TestCase):
 
         #special set for testing error machine problem
         my_line1 = self.def_line([1.0, 0], [0.8, 2 / 3])
-        my_line2 = self.def_line([0.8, 02 / 3], [1.0, 1])
+        my_line2 = self.def_line([0.8, 0o2 / 3], [1.0, 1])
 
         self.assertFalse(my_line1.has_intersection(my_line2))
 
@@ -541,7 +543,7 @@ class TestVertexPoint(unittest.TestCase):
         self.assertRaises(base_objects.PhysicsObject.PhysicsObjectError,
                           self.vertex.__getitem__, 'value')
         self.assertTrue(hasattr(my_vertex,'value'))
-        self.assertFalse('value' in self.vertex.keys())
+        self.assertFalse('value' in list(self.vertex.keys()))
 
         # Check that we have new attributes
         self.assertTrue(hasattr(my_vertex, 'lines'))
@@ -785,7 +787,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         #in order to ensure that those problem will not appear again. 
         #Those diagrams were keep in a pickle format"""
         filehandler = open(os.path.join(_file_path, \
-                                '../input_files/test_draw.obj'), 'r')
+                                '../input_files/test_draw.obj'), 'rb')
         cls.store_diagram = pickle.load(filehandler)
 
     def setUp(self):
@@ -1005,8 +1007,9 @@ class TestFeynmanDiagram(unittest.TestCase):
             self.assertFalse(vertex in level0)
 
         self.assertEquals(len(t_vertex), 4)
-        level1.sort()
-        t_vertex.sort()
+        import madgraph.various.misc as misc
+        level1.sort(key= lambda p:id(p))
+        t_vertex.sort(key= lambda p:id(p))
         self.assertEquals(level1, t_vertex)
 
 

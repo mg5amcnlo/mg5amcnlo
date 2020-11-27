@@ -17,6 +17,7 @@ from various ME generators (e.g., MadLoop v5 against v4, ...) and output nice
 reports in different formats (txt, tex, ...).
 """
 
+from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -30,6 +31,9 @@ import time
 import re
 import operator
 import math
+import six
+from six.moves import map
+from six.moves import range
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -49,7 +53,7 @@ import madgraph.various.process_checks as process_checks
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
 
-import me_comparator
+from . import me_comparator
 from madgraph.iolibs.files import mv
 
 from madgraph import MadGraph5Error, MG5DIR
@@ -322,7 +326,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
-                return LoopMG5Runner.parse_check_output(file(dir_name+'/result.dat'))  
+                return LoopMG5Runner.parse_check_output(open(dir_name+'/result.dat'))  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
@@ -571,14 +575,14 @@ class LoopMG4Runner(me_comparator.MERunner):
         
         replace_dict={}
         # QCD order, 99 by default
-        if 'QCD' in born_orders.keys():
+        if 'QCD' in list(born_orders.keys()):
             replace_dict['QCD']=born_orders['QCD']
         else:
             replace_dict['QCD']=99
             
         # The exact QED order at born level must be supplied. If it is not
         # present it is then assumed to be zero
-        if 'QED' in born_orders.keys():
+        if 'QED' in list(born_orders.keys()):
             replace_dict['QED']=born_orders['QED']
         else:
             replace_dict['QED']=0
@@ -588,13 +592,11 @@ class LoopMG4Runner(me_comparator.MERunner):
             incoming_parts=proc_parts[:proc_parts.index('>')]
             outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
         else:
-            raise self.LoopMG4RunnerError, \
-                        "The process %s is ill-formated."%proc
+            raise self.LoopMG4RunnerError("The process %s is ill-formated."%proc)
         
         for part in incoming_parts+outcoming_parts:
-            if part not in particle_dictionary.keys():
-                raise Exception, \
-                        "Particle %s is not recognized by MadLoop4."%part                
+            if part not in list(particle_dictionary.keys()):
+                raise Exception("Particle %s is not recognized by MadLoop4."%part)                
         
         proc_name ='P%i_'%procID+''.join([particle_dictionary[inc][1] for \
                                    inc in incoming_parts])+'_'+ \
@@ -668,7 +670,7 @@ class LoopMG4Runner(me_comparator.MERunner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
-                buff=self.parse_check_output(file(dir_name+'/result.dat'))
+                buff=self.parse_check_output(open(dir_name+'/result.dat'))
                 answer=[list(buff[0]),buff[1]]
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
@@ -687,7 +689,7 @@ class LoopMG4Runner(me_comparator.MERunner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
-                answer[0][2]=self.parse_check_output(file(dir_name+'/result.dat'))[0][2]  
+                answer[0][2]=self.parse_check_output(open(dir_name+'/result.dat'))[0][2]  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
@@ -744,8 +746,7 @@ class LoopMG4Runner(me_comparator.MERunner):
             incoming_parts=proc_parts[:proc_parts.index('>')]
             outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
         else:
-            raise self.LoopMG4RunnerError, \
-                        "The process %s is ill-formated."%proc
+            raise self.LoopMG4RunnerError("The process %s is ill-formated."%proc)
         
         # Check that the process only considers QCD perturbations
         if perturbation_orders!=['QCD']:
@@ -919,7 +920,7 @@ class GoSamRunner(me_comparator.MERunner):
                 logging.info("Could not find produced order file %s" %str(
                               os.path.join(dir_name,'myproc.in')))
                 self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
-            if 'QCD' not in born_orders.keys():
+            if 'QCD' not in list(born_orders.keys()):
                 logging.info("For GoSam run, the born QCD order must be provided.")
                 self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
                 
@@ -945,8 +946,7 @@ class GoSamRunner(me_comparator.MERunner):
             incoming_parts=proc_parts[:proc_parts.index('>')]
             outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
         else:
-            raise self.LoopGoSamRunnerError, \
-                        "The process %s is ill-formated."%proc
+            raise self.LoopGoSamRunnerError("The process %s is ill-formated."%proc)
                         
         for gluon in gluons:
             for part in incoming_parts+outcoming_parts:
@@ -989,15 +989,13 @@ class GoSamRunner(me_comparator.MERunner):
             incoming_parts=proc_parts[:proc_parts.index('>')]
             outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
         else:
-            raise self.LoopGoSamRunnerError, \
-                        "The process %s is ill-formated."%proc
+            raise self.LoopGoSamRunnerError("The process %s is ill-formated."%proc)
         try:
             proc_name = 'P'+str(procID)+'_'+''.join([particle_dictionary[p][1] \
               for p in incoming_parts])+'_'+''.join([particle_dictionary[p][1] \
               for p in outcoming_parts])
         except KeyError:
-            raise self.LoopGoSamRunnerError, \
-                        "Some particles in the process %s are not recognized."%proc
+            raise self.LoopGoSamRunnerError("Some particles in the process %s are not recognized."%proc)
         
         proc_card_out=""
         for line in proc_card:
@@ -1047,8 +1045,7 @@ class GoSamRunner(me_comparator.MERunner):
                 # amplitude level
                 for key, value in squared_orders.items():
                     if key=="WEIGHTED":
-                        raise self.LoopGoSamRunnerError, \
-                            "Squared order 'WEIGHTED' not supported by GoSam"
+                        raise self.LoopGoSamRunnerError("Squared order 'WEIGHTED' not supported by GoSam")
                     for order in orders_considered:
                         if key==order and value!=99:
                             if order in perturbation_orders:
@@ -1080,7 +1077,7 @@ class GoSamRunner(me_comparator.MERunner):
             elif line.find("# qgraf.options=")==0:
                 proc_card_out+="qgraf.options=nosnail ,notadpole ,onshell"+'\n'
             elif line.find("# qgraf.verbatim=")==0:
-                if 'QED' in born_orders.keys() and 'QED' in squared_orders.keys() and \
+                if 'QED' in list(born_orders.keys()) and 'QED' in list(squared_orders.keys()) and \
                    born_orders['QED']==0 and squared_orders['QED']==0:
                     # Forbid QED particles all together
                     proc_card_out+="qgraf.verbatim=\\\n"
@@ -1194,7 +1191,7 @@ class GoSamRunner(me_comparator.MERunner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(matrix_dir_name,'result.dat')):
-                return self.parse_check_output(proc,file(os.path.join(\
+                return self.parse_check_output(proc,open(os.path.join(\
                                                 matrix_dir_name,'result.dat')))  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
@@ -1372,7 +1369,7 @@ class LoopMEComparator(me_comparator.MEComparator):
         Notice that the proc list is a list of tuples formated like this:
         (process,born_orders,perturbation_orders,squared_orders)"""
 
-        if isinstance(model, basestring):
+        if isinstance(model, six.string_types):
             model= [model] * len(self.me_runners)
 
         self.results = []
@@ -1396,6 +1393,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 PSpoints=[PS[1] for PS in self.results[0]]
             else:
                 PSpoints=[]
+
             self.results.append(runner.run(proc_list, model[i], energy,
                                 PSpoints))
 
@@ -1444,7 +1442,7 @@ class LoopMEComparator(me_comparator.MEComparator):
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
               in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
-                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
+                if index==0:maxfin=max(max(list(map(abs,list_res))),1e-99)
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                     if skip_zero:
@@ -1467,7 +1465,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                                                  col_size) for res in list_res])
     
                 res_str += self._fixed_string_length("%1.10e" % diff, col_size)
-                if diff < tolerance or max(map(abs,list_res))/maxfin<tolerance and index>1:
+                if diff < tolerance or max(list(map(abs,list_res)))/maxfin<tolerance and index>1:
                     if index==3 and proc not in failed_proc_list:
                         pass_proc += 1
                     res_str += "Pass"
@@ -1507,7 +1505,7 @@ class LoopMEComparator(me_comparator.MEComparator):
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
                                                  in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
-                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
+                if index==0:maxfin=max(max(list(map(abs,list_res))),1e-99)
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                 else:
@@ -1515,7 +1513,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                            abs((max(list_res) + min(list_res)))
 
                 if diff >= tolerance and proc not in failed_proc_list and\
-                         (max(map(abs,list_res))/maxfin>=tolerance or index<=1):
+                         (max(list(map(abs,list_res)))/maxfin>=tolerance or index<=1):
                     failed_proc_list.append(proc)
                     fail_str += self._fixed_string_length(proc, col_size) + \
                                 ''.join([self._fixed_string_length("%1.10e" % res,
@@ -1541,7 +1539,7 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
         self.model=model
         PS = res_list[0][-1]
         if not decay:
-            PSinit = list(itertools.imap(operator.add,PS[0],PS[1]))
+            PSinit = list(map(operator.add,PS[0],PS[1]))
         else:
             PSinit = PS[0]
         energy = math.sqrt(PSinit[0]**2-PSinit[1]**2-PSinit[2]**2-PSinit[3]**2)
@@ -1549,8 +1547,7 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
 
     def run(self,proc_list, model, energy=1000, PSpoints=[]):
         if PSpoints!=[] and PSpoints!=self.res_list[0][-1]:
-            raise self.LoopHardCodedRefRunnerError,\
-                 "Phase space point is not provided !"
+            raise self.LoopHardCodedRefRunnerError("Phase space point is not provided !")
         return self.res_list
 
 class LoopMEComparatorGauge(LoopMEComparator):

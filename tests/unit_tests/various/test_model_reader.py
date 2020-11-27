@@ -15,6 +15,7 @@
 """Unit test Library for the objects in decay module."""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys

@@ -5,8 +5,11 @@
 # Add masses to charged leptons, fix kinematics
 # Insert W/Z when missing
 
+from __future__ import absolute_import
+from __future__ import print_function
 import math,sys,re
 from xml.dom import minidom
+from six.moves import range
 
 #tolerance for energy momentum conservation
 toler = 1e-4
@@ -70,7 +73,7 @@ class Momentum:
         self.pz = self.pz/pi*po
     def printMe(self):
         li = [self.px,self.py, self.pz, self.E, self.m]
-        print "| %18.10E %18.10E %18.10E %18.10E %18.10E |" % tuple(li)    
+        print("| %18.10E %18.10E %18.10E %18.10E %18.10E |" % tuple(li))    
 
 #useful class to describe a particle
 class Particle:
@@ -87,7 +90,7 @@ class Particle:
         self.polar = l[12]
     def printMe(self):
         li = [self.no, self.id, self.status,self.mo1, self.mo2, self.co1, self.co2, self.mom.px,self.mom.py, self.mom.pz, self.mom.E, self.mom.m, self.life, self.polar]
-        print "%2i | %9i | %4i | %4i %4i | %4i %4i | %18.10E %18.10E %18.10E %18.10E %18.10E | %1.0f. %2.0f" % tuple(li)
+        print("%2i | %9i | %4i | %4i %4i | %4i %4i | %18.10E %18.10E %18.10E %18.10E %18.10E | %1.0f. %2.0f" % tuple(li))
     def writeMe(self):
         li = [self.id, self.status,self.mo1, self.mo2, self.co1, self.co2, self.mom.px,self.mom.py, self.mom.pz, self.mom.E, self.mom.m, self.life, self.polar]
         return "%9i %4i %4i %4i %4i %4i %18.10E %18.10E %18.10E %18.10E %18.10E  %1.0f. %2.0f\n" % tuple(li)        
@@ -108,7 +111,7 @@ def add_masses(f,g):
         try:
             line=f.readline()
         except IOError:
-            print "Problem reading from file ",sys.argv[1]
+            print("Problem reading from file ",sys.argv[1])
             sys.exit(0)
         if line.find("<event>")==-1:
             g.write(line)
@@ -121,7 +124,7 @@ def add_masses(f,g):
     try:
         xmldoc = minidom.parse(sys.argv[1])
     except IOError:
-        print " could not open file for xml parsing ",sys.argv[1]
+        print(" could not open file for xml parsing ",sys.argv[1])
         sys.exit(0)
         
         
@@ -178,7 +181,7 @@ def add_masses(f,g):
             if len(noMotherList)==0:
                 pass
             elif len(noMotherList)%2 != 0:
-                print "single orphan; do not know how to process"
+                print("single orphan; do not know how to process")
             else:
                 ki=0
                 while ki<len(noMotherList)-1:
@@ -265,7 +268,7 @@ def add_masses(f,g):
                 pSum = pSum + p.mom
     
         if abs(pSum.px)>toler or abs(pSum.py)>toler or abs(pSum.pz)>toler or abs(pSum.E)>toler:
-            print "Event does not pass tolerance ",toler
+            print("Event does not pass tolerance ",toler)
             pSum.printMe()
     
         if 1:
@@ -286,28 +289,28 @@ if __name__ == "__main__":
 
     #main part of analysis
     if len(sys.argv)!=3:
-        print "Usage: addmasses.py <infile> <outfile>    "
-        print " Last modified: Fri Nov 21 10:49:14 CST 2008 "
+        print("Usage: addmasses.py <infile> <outfile>    ")
+        print(" Last modified: Fri Nov 21 10:49:14 CST 2008 ")
         sys.exit(1)
     else:
-        print "Running addmasses.py to add masses and correct kinematics of fixed particles"
+        print("Running addmasses.py to add masses and correct kinematics of fixed particles")
     
     #first print out leading information
     try:
         f=open(sys.argv[1],'r')
     except IOError:
-        print "need a file for reading"
+        print("need a file for reading")
         sys.exit(1)
 
     try:
         g=open(sys.argv[2],'w')
     except IOError:
-        print "need a file for writing"
+        print("need a file for writing")
         sys.exit(1)
     
     try:
         add_masses(f,g)
-    except Exception, error:
-        print "addmasses failed with error, %s" % error
+    except Exception as error:
+        print("addmasses failed with error, %s" % error)
         sys.exit(1)
     

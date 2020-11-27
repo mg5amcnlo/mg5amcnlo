@@ -124,11 +124,11 @@ C*************************************************************
 c     initialization
       IMPLICIT NONE
       include 'dbook.inc'
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
 c
 c     LOCAL
 c
@@ -139,8 +139,8 @@ C
       NHIST=0
       DO 1, I=1,NPLOTS             
    1  BOOK(I)=' NO'
-C     Initialize the number of bins of the aMCfast grids
-      if(iappl.ne.0) appl_obs_nbins = 0
+C     Initialize the number of bins of the amcblast grids
+      if(pineappl) appl_obs_nbins = 0
       END  
  
 
@@ -1001,20 +1001,19 @@ C*******************************************************************
       implicit none
       integer n,n_by4
       double precision var,www
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer j
-      if(iappl.ne.0)then
+      if(pineappl)then
          do j=1,nh_obs
             if(n.eq.ih_obs(j))then
                appl_obs_num   = j
                appl_obs_histo = var 
-c     Fill the reference APPLgrid histograms
-               call APPL_fill_ref
-c     Fill the APPLgrid files
+c     Fill the reference PineAPPL histograms
+c     Fill the PineAPPL files
                call APPL_fill
             endif
          enddo
@@ -1029,15 +1028,15 @@ c     Fill the APPLgrid files
       integer i,n,n_by4
       character*(*) string
       double precision del,xl,xu
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
-c     Initialize the grids only if the switch "iappl" is different from zero
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+c     Initialize the grids only if the switch "pineappl" is different from zero
 c     and if the title string containes the word "central" and does not contain
 c     the word "Born". 
-      if(iappl.ne.0.and.index(string,"central").ne.0.and.
+      if(pineappl.and.index(string,"central").ne.0.and.
      1                  index(string,"Born").eq.0)then
 c     Observable parameters
 c     Compute number of bins and edges only if they have not been given by the user.
@@ -1051,11 +1050,11 @@ c     compute bin edges
          appl_obs_min = appl_obs_bins(0)
          appl_obs_max = appl_obs_bins(appl_obs_nbins)
          if(abs(appl_obs_max-xu).gt.0.00000001d0)then
-            write(*,*) 'APPLgrid Histogram: ', 
+            write(*,*) 'PineAPPL Histogram: ', 
      1                 'Change of the upper limit:',xu,'-->',
      2                  appl_obs_max
          endif
-c     Initialize APPLgrid routines
+c     Initialize PineAPPL routines
          call APPL_init
 c     Keep track of the position of this histogram
          nh_obs = nh_obs + 1
@@ -1072,17 +1071,16 @@ c     Reset number of bins to zero
       implicit none
       integer n,n_by4,m_by4
       character*(*) string1,string2,string3
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer j
-      if(iappl.ne.0)then
+      if(pineappl)then
          do j=1,nh_obs
             if(n.eq.ih_obs(j))then
                appl_obs_num = j
-               call APPL_fill_ref_out
                call APPL_term
             endif
          enddo
@@ -1098,17 +1096,16 @@ c write the 'n' plots with the 'n+3' error bars
       implicit none
       integer n,n_by4,lr,lh,m_by4
       character*(*) string1,string2,string3
-c     APPLgrid commons
-      include "reweight_appl.inc"
-      include "appl_common.inc"
-      integer iappl
-      common /for_applgrid/ iappl
+c     PineAPPL commons
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer j
-      if(iappl.ne.0)then
+      if(pineappl)then
          do j=1,nh_obs
             if(n.eq.ih_obs(j))then
                appl_obs_num = j
-               call APPL_fill_ref_out
                call APPL_term
             endif
          enddo

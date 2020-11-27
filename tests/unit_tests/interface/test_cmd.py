@@ -14,6 +14,8 @@
 ################################################################################
 """ Basic test of the command interface """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import unittest
 import madgraph
 import madgraph.interface.master_interface as cmd
@@ -152,8 +154,8 @@ class TestValidCmd(unittest.TestCase):
         self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
         try:
             master.run_cmd('aa')
-        except Exception, error:
-            print error
+        except Exception as error:
+            print(error)
             self.assertTrue(False, 'error are not treated correctly')
         
         # Madspin
@@ -164,7 +166,7 @@ class TestValidCmd(unittest.TestCase):
         with misc.MuteLogger(['fatalerror'], [40],['/tmp/fatalerror.log'], keep=False):
             try:
                 master.run_cmd('define aa')
-            except Exception, error:
+            except Exception as error:
                 self.assertTrue(False, 'error are not treated correctly: %s' % error)
             text = open('/tmp/fatalerror.log').read()
             self.assertTrue('{' not in text)
@@ -195,7 +197,7 @@ class TestValidCmd(unittest.TestCase):
 
         target = set(['Not in help', 'Main commands', 'Documented commands'])
         self.assertEqual(target, category)
-        self.assertEqual(categories_nb['Not in help'], 25)
+        self.assertEqual(categories_nb['Not in help'], 29)
     
     
     

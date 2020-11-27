@@ -16,6 +16,7 @@
 """Unit test library for the routines of the core library related to writing
 color information for diagrams."""
 
+from __future__ import absolute_import
 import copy
 import fractions
 
@@ -26,6 +27,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
 import tests.unit_tests as unittest
+from six.moves import range
 
 class ColorAmpTest(unittest.TestCase):
     """Test class for the color_amp module"""
@@ -642,12 +644,12 @@ class ColorSquareTest(unittest.TestCase):
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
             # Check diagonal
-            for i in range(len(col_basis.items())):
+            for i in range(len(list(col_basis.items()))):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
 
             # Check first line
-            for i in range(len(col_basis.items())):
+            for i in range(len(list(col_basis.items()))):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(0, i)],
                                  (goal_line1[n][i], 0))
 
@@ -696,12 +698,12 @@ class ColorSquareTest(unittest.TestCase):
 
             col_matrix = color_amp.ColorMatrix(col_basis, Nc=3)
             # Check diagonal
-            for i in range(len(col_basis.items())):
+            for i in range(len(list(col_basis.items()))):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
 
             # Check first line
-            for i in range(len(col_basis.items())):
+            for i in range(len(list(col_basis.items()))):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(0, i)],
                                  (goal_line1[n][i], 0))
 
@@ -744,7 +746,7 @@ class ColorSquareTest(unittest.TestCase):
                                                   Nc_power_min=n,
                                                   Nc_power_max=2 * n)
 
-            for i in range(len(col_basis.items())):
+            for i in range(len(list(col_basis.items()))):
                 self.assertEqual(col_matrix.col_matrix_fixed_Nc[(i, i)],
                                  (goal[n], 0))
 

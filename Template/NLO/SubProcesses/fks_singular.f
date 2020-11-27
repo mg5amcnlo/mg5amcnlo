@@ -43,6 +43,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
@@ -62,6 +63,7 @@ C in the LO cross section
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
@@ -254,6 +256,7 @@ C to make sure that it cannot be incorrectly understood.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
@@ -278,6 +281,7 @@ c and not be part of the plots nor computation of the cross section.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
@@ -322,6 +326,7 @@ c its value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
@@ -385,6 +390,7 @@ c the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
@@ -478,6 +484,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
@@ -587,6 +594,7 @@ c value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
@@ -692,6 +700,7 @@ c respectively.
                 wgtcpower=0d0
                 if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 orders_tag=get_orders_tag(orders)
+                amp_pos=iamp
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
@@ -980,7 +989,7 @@ c bpower.
       include 'genps.inc'
       include 'timing_variables.inc'
       double precision pi,vegas_wgt
-      integer i
+      integer i,j
       logical firsttime
       data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
@@ -1002,16 +1011,17 @@ c bpower.
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       logical needrndec
       parameter (needrndec=.false.)
       real*8 ran2
       external ran2
       real*8 rndec(10)
       common/crndec/rndec
-      include "appl_common.inc" 
-      !!!include "orders.inc"
+      include "pineappl_common.inc" 
+      integer orders(nsplitorders)
+C
       call cpu_time(tBefore)
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
@@ -1021,7 +1031,15 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
-         if (iappl.ne.0) appl_amp_split_size = amp_split_size
+         if (pineappl) then 
+         ! PineAPPL stuff
+         appl_amp_split_size = amp_split_size
+           do j=1,amp_split_size
+             call amp_split_pos_to_orders(j, orders)
+             appl_qcdpower(j) = orders(qcd_pos)
+             appl_qedpower(j) = orders(qed_pos)
+           enddo
+         endif
 c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
          firsttime=.false.
@@ -1565,6 +1583,7 @@ C Secondly, the more advanced filter
       qcdpower(icontr)=QCD_power
       cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
+      amppos(icontr)=amp_pos
       ipr(icontr)=0
       call set_pdg(icontr,nFKSprocess)
 
@@ -2264,17 +2283,18 @@ c add the weights to the array
       return
       end
 
-      subroutine fill_applgrid_weights(vegas_wgt)
-c Fills the ApplGrid weights of appl_common.inc. This subroutine assumes
+      subroutine fill_pineappl_weights(vegas_wgt)
+c Fills the FineAPPL weights of pineappl_common.inc. This subroutine assumes
 c that there is an unique PS configuration: at most one Born, one real
 c and one set of counter terms. Among other things, this means that one
 c must do MC over FKS directories.
       use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'appl_common.inc'
+      include 'pineappl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
+      integer orders(nsplitorders)
       integer i,j 
       double precision final_state_rescaling,vegas_wgt
       integer              flavour_map(fks_configs)
@@ -2284,24 +2304,18 @@ c must do MC over FKS directories.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       integer lo_qcd_to_amp_pos, nlo_qcd_to_amp_pos
       integer pos
-      if (icontr.gt.8) then
-         write (*,*) 'ERROR: too many applgrid weights. '/
-     &        /'Should have at most one of each itype.',icontr
-         stop 1
-      endif
-      do j=1,amp_split_size
-        do i=1,4
+      do i=1,4
+        do j=1,amp_split_size
           appl_w0(i,j)=0d0
           appl_wR(i,j)=0d0
           appl_wF(i,j)=0d0
           appl_wB(i,j)=0d0
-          appl_x1(i,j)=0d0
-          appl_x2(i,j)=0d0
-          appl_QES2(i,j)=0d0
-          appl_muR2(i,j)=0d0
-          appl_muF2(i,j)=0d0
-          appl_qcdpower(i,j) = -1
         enddo
+        appl_x1(i)=0d0
+        appl_x2(i)=0d0
+        appl_QES2(i)=0d0
+        appl_muR2(i)=0d0
+        appl_muF2(i)=0d0
         appl_flavmap(i)=0
       enddo
       appl_event_weight = 0d0
@@ -2316,62 +2330,63 @@ c must do MC over FKS directories.
          else
             pos = nlo_qcd_to_amp_pos(qcdpower(i))
          endif
+         ! consistency check
+         if (appl_qcdpower(pos).ne.qcdpower(i)) then
+           write(*,*) 'ERROR in fill_pineappl_weights, QCDpower',
+     %        appl_qcdpower(pos), qcdpower(i)  
+           stop 1
+         endif
 
          if (itype(i).eq.1) then
 c     real
             appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(1,pos)=qcdpower(i)
-            appl_x1(1,pos)=bjx(1,i)
-            appl_x2(1,pos)=bjx(2,i)
+            appl_x1(1)=bjx(1,i)
+            appl_x2(1)=bjx(2,i)
             appl_flavmap(1) = flavour_map(nFKS(i))
-            appl_QES2(1,pos)=scales2(1,i)
-            appl_muR2(1,pos)=scales2(2,i)
-            appl_muF2(1,pos)=scales2(3,i)
+            appl_QES2(1)=scales2(1,i)
+            appl_muR2(1)=scales2(2,i)
+            appl_muF2(1)=scales2(3,i)
          elseif (itype(i).eq.2) then
 c     born
             appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
      &           .or. itype(i).eq.15)then
 c     virtual, soft-virtual or soft-counter
             appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)*final_state_rescaling
             appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)*final_state_rescaling
             appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.5) then
 c     collinear counter            
             appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(3,pos)=qcdpower(i)
-            appl_x1(3,pos)=bjx(1,i)
-            appl_x2(3,pos)=bjx(2,i)
+            appl_x1(3)=bjx(1,i)
+            appl_x2(3)=bjx(2,i)
             appl_flavmap(3) = flavour_map(nFKS(i))
-            appl_QES2(3,pos)=scales2(1,i)
-            appl_muR2(3,pos)=scales2(2,i)
-            appl_muF2(3,pos)=scales2(3,i)
+            appl_QES2(3)=scales2(1,i)
+            appl_muR2(3)=scales2(2,i)
+            appl_muF2(3)=scales2(3,i)
          elseif (itype(i).eq.6) then
 c     soft-collinear counter            
             appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(4,pos)=qcdpower(i)
-            appl_x1(4,pos)=bjx(1,i)
-            appl_x2(4,pos)=bjx(2,i)
+            appl_x1(4)=bjx(1,i)
+            appl_x2(4)=bjx(2,i)
             appl_flavmap(4) = flavour_map(nFKS(i))
-            appl_QES2(4,pos)=scales2(1,i)
-            appl_muR2(4,pos)=scales2(2,i)
-            appl_muF2(4,pos)=scales2(3,i)
+            appl_QES2(4)=scales2(1,i)
+            appl_muR2(4)=scales2(2,i)
+            appl_muF2(4)=scales2(3,i)
          endif
       enddo
       return
@@ -2516,6 +2531,8 @@ c to greatly reduce the calls to the analysis routines.
       ! stuff for plotting the different splitorders
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+      integer amp_pos_plot
+      common /campposplot/ amp_pos_plot
       save max_weight
       call cpu_time(tBefore)
       if (icontr.eq.0) return
@@ -2526,12 +2543,27 @@ c the momenta are identical.
          do j=1,iwgt
             plot_wgts(j,i)=0d0
          enddo
+         ! The following if lines have been changed with respect to the
+         ! usual (with just 3 plot ids: 20, 11 and 12):
+         !  The kinematics of soft and collinear counterterms may
+         !  be different, for those processes without soft singularities
+         !  from initial(final)-state configurations when the 
+         !  final(initial) confs are integrated (e.g. a a > e+ e-)
+         !  This gives no problem for normal histogramming (and in
+         !  fact plot_id 11 13 and 14 are merged into ibody=2 in
+         !  outfun, but it gives troubles e.g. with applgrid/pineappl. 
+         !  Note that the separation between soft and soft-virtual
+         !  may not be needed in reality
          if (itype(i).eq.2) then
             plot_id(i)=20 ! Born
          elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
+         elseif(itype(i).eq.5) then
+            plot_id(i)=13 ! collinear counter term
+         elseif(itype(i).eq.6) then
+            plot_id(i)=14 ! soft collinear counter term
          else
-            plot_id(i)=12 ! soft-virtual and counter terms
+            plot_id(i)=12 ! soft-virtual and soft counter term
          endif
 c Loop over all previous icontr. If the plot_id, PDGs and momenta are
 c equal to a previous icountr, add the current weight to the plot_wgts
@@ -2541,12 +2573,12 @@ c contribution makes sure that it is added as a new element.
          do ii=1,i
             if (orderstag(ii).ne.orderstag(i)) cycle
             if (plot_id(ii).ne.plot_id(i)) cycle
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.pdg_equal(pdg_uborn(1,ii),pdg_uborn(1,i))) cycle
             else
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
             endif
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.momenta_equal_uborn(momenta(0,1,ii),momenta(0,1
      $              ,i),fks_j_d(nFKS(ii)),fks_i_d(nFKS(ii))
      $                 ,fks_j_d(nFKS(i)) ,fks_i_d(nFKS(i)))) cycle
@@ -2576,6 +2608,7 @@ c contribution makes sure that it is added as a new element.
             enddo
 c call the analysis/histogramming routines
             orders_tag_plot=orderstag(i)
+            amp_pos_plot=amppos(i)
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo

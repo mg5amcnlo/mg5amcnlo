@@ -1,4 +1,5 @@
 
+from __future__ import print_function
 invisible_list = [12,14,16,18]
 invisible_list += [1000012,1000014,1000016,1000022,1000023,1000024,1000025,1000035]
 
@@ -23,7 +24,7 @@ class Particle:
 
     def def_twin(self):  #this routine is normaly not used any more#
         """ not use anymore: define the twin for the particle if not defined """
-        print 'WARNING: Particle.def_twin() is an old routine. This routine hasn\'t been updated since 1/2/08'
+        print('WARNING: Particle.def_twin() is an old routine. This routine hasn\'t been updated since 1/2/08')
         #but perhaps no update are needed
         
         if self.twin!=0:
@@ -160,7 +161,7 @@ class external_part(Particle):
             if total:
                 return part.level        
             else:
-                print part.level,self.level
+                print(part.level,self.level)
                 return part.level, 0, part.level-self.level
         #=======================================================================
         # try:

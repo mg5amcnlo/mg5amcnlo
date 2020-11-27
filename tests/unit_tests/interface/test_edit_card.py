@@ -14,6 +14,7 @@
 ################################################################################
 """ Basic test of the command interface """
 
+from __future__ import absolute_import
 import unittest
 import madgraph
 import madgraph.interface.master_interface as mgcmd

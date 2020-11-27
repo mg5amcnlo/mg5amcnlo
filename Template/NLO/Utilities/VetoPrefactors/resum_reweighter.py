@@ -9,6 +9,7 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
 import os
 import re
 import subprocess
@@ -107,7 +108,7 @@ except:
 
 # Detect the total number of event in an efficient way
 n_evts = int(subprocess.Popen('grep -rin "<event>" %s | wc -l'%os.path.realpath(eventFile),
-                        stdout=subprocess.PIPE, shell=True).communicate()[0])
+                              stdout=subprocess.PIPE, shell=True).communicate()[0].decode())
 
 logging.info("Writing out the reweighted event file on\n   %s"%outPath)
 # Write out the output event file

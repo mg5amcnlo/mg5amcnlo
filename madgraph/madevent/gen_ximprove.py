@@ -18,6 +18,7 @@
 """
 from __future__ import division
 
+from __future__ import absolute_import
 import collections
 import os
 import glob
@@ -28,6 +29,8 @@ import subprocess
 import shutil
 import stat
 import sys
+from six.moves import range
+from six.moves import zip
 
 try:
     import madgraph
@@ -151,14 +154,14 @@ class gensym(object):
             #compile gensym
             self.cmd.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
-                raise Exception, 'Error make gensym not successful'  
+                raise Exception('Error make gensym not successful')  
             
             # Launch gensym
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, _) = p.communicate('')
-            
+            (stdout, _) = p.communicate(''.encode())
+            stdout = stdout.decode('ascii')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)
@@ -181,11 +184,11 @@ class gensym(object):
                         continue
                     else:
                         if done:
-                            raise Exception, 'Parsing error in gensym: %s' % stdout 
+                            raise Exception('Parsing error in gensym: %s' % stdout) 
                         job_list[Pdir] = l.split()        
                         done = True
                 if not done:
-                    raise Exception, 'Parsing error in gensym: %s' % stdout
+                    raise Exception('Parsing error in gensym: %s' % stdout)
                      
             self.cmd.compile(['madevent'], cwd=Pdir)
             if to_submit:
@@ -222,7 +225,7 @@ class gensym(object):
                 for G in to_resub:
                     try:
                         shutil.rmtree(pjoin(P, 'G%s' % G))
-                    except Exception, error:
+                    except Exception as error:
                         misc.sprint(error)
                         pass
             misc.sprint(to_resub) 
@@ -246,7 +249,7 @@ class gensym(object):
                 for path, dirs in job_list.items():
                     self.submit_to_cluster({path:dirs})
                 return
-            path, value = job_list.items()[0]
+            path, value = list(job_list.items())[0]
             nexternal = self.cmd.proc_characteristics['nexternal']
             current = open(pjoin(path, "nexternal.inc")).read()
             ext = re.search(r"PARAMETER \(NEXTERNAL=(\d+)\)", current).group(1)
@@ -288,7 +291,7 @@ class gensym(object):
            This is the old mode which is still usefull in single core"""
      
         # write the template file for the parameter file   
-        self.write_parameter(parralelization=False, Pdirs=job_list.keys())
+        self.write_parameter(parralelization=False, Pdirs=list(job_list.keys()))
         
         
         # launch the job with the appropriate grouping
@@ -347,7 +350,7 @@ class gensym(object):
             self.lastoffset[(Pdir, G)] = 0 
         
         # resubmit the new jobs            
-        for i in xrange(int(nb_job)):
+        for i in range(int(nb_job)):
             name = "G%s_%s" % (G,i+1)
             self.lastoffset[(Pdir, G)] += 1
             offset = self.lastoffset[(Pdir, G)]            
@@ -415,7 +418,7 @@ class gensym(object):
             need_submit = False
         elif self.cmd.opts['accuracy'] < 0:
             #check for luminosity
-            raise Exception, "Not Implemented"
+            raise Exception("Not Implemented")
         elif self.abscross[(Pdir,G)] == 0:
             need_submit = False 
         else:   
@@ -621,7 +624,7 @@ For offline investigation, the problematic discarded events are stored in:
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
             try: 
                 os.remove(pjoin(path, 'grid_information'))
-            except OSError, oneerror:
+            except OSError as oneerror:
                 if oneerror.errno != 2:
                     raise
         return grid_calculator, cross, error
@@ -643,7 +646,7 @@ For offline investigation, the problematic discarded events are stored in:
              logger.warning(msg%(G,EPS_fraction))
         elif EPS_fraction > 0.01:
              logger.critical((msg%(G,EPS_fraction)).replace('might', 'can'))
-             raise Exception, (msg%(G,EPS_fraction)).replace('might', 'can')
+             raise Exception((msg%(G,EPS_fraction)).replace('might', 'can'))
     
     def get_current_axsec(self):
         
@@ -801,13 +804,13 @@ class gen_ximprove(object):
         """Choose in which type of refine we want to be"""
 
         if cmd.proc_characteristics['loop_induced']:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
         elif cmd.run_card["job_strategy"] == 2:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         else:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_v4)
             
             
     def __init__(self, cmd, opt=None):
@@ -878,7 +881,7 @@ class gen_ximprove(object):
                 targettype = type(getattr(self, key))
                 setattr(self, key, self.format_variable(value, targettype, key))
             else:
-                raise Exception, '%s not define' % key
+                raise Exception('%s not define' % key)
                         
             
         # special treatment always do outside the loop to avoid side effect
@@ -906,8 +909,7 @@ class gen_ximprove(object):
         logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
-        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
-                                                x.get('luminosity') > 0 else -1) 
+        all_channels.sort(key= lambda x:x.get('luminosity'), reverse=True) 
                           
         to_refine = []
         for C in all_channels:
@@ -1613,7 +1615,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
     max_event_in_iter = 4000
     min_event_in_iter = 500
-    combining_job = sys.maxint
+    combining_job = sys.maxsize
     gen_events_security = 1.00
 
     def __new__(cls, *args, **opts):

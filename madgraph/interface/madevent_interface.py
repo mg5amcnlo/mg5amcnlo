@@ -17,6 +17,8 @@
 """
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import collections
 import itertools
 import glob
@@ -31,10 +33,11 @@ import subprocess
 import sys
 import time
 import tarfile
-import StringIO
 import shutil
 import copy
-
+from six.moves import range
+import six
+StringIO = six
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -54,7 +57,7 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-except ImportError,error: 
+except ImportError as error: 
     # import from madevent directory
     MADEVENT = True
     import internal.extended_cmd as cmd
@@ -137,7 +140,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # and date, from the VERSION text file
         info = misc.get_pkg_info()
         info_line = ""
-        if info and info.has_key('version') and  info.has_key('date'):
+        if info and 'version' in info and  'date' in info:
             len_version = len(info['version'])
             len_date = len(info['date'])
             if len_version + len_date < 30:
@@ -997,7 +1000,7 @@ class CheckValidForCmd(object):
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
 
-        if args[0] not in self._set_options + self.options.keys():
+        if args[0] not in self._set_options + list(self.options.keys()):
             self.help_set()
             raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
@@ -1731,8 +1734,8 @@ class CompleteForCmd(CheckValidForCmd):
         return self.deal_multiple_categories(possibilites, formatting)
     
         
-       except Exception, error:
-           print error
+       except Exception as error:
+           print(error)
 
 
     def complete_history(self, text, line, begidx, endidx):
@@ -1787,7 +1790,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._set_options + self.options.keys() )
+            return self.list_completion(text, self._set_options + list(self.options.keys()) )
 
         if len(args) == 2:
             if args[1] == 'stdout_level':
@@ -1906,7 +1909,7 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) > 1:
             return self.list_completion(text, self._plot_mode)
         else:
-            return self.list_completion(text, self._plot_mode + self.results.keys())
+            return self.list_completion(text, self._plot_mode + list(self.results.keys()))
         
     def complete_syscalc(self, text, line, begidx, endidx, formatting=True):
         """ Complete the syscalc command """
@@ -1915,7 +1918,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False)
                 
         if len(args) <=1:
-            output['RUN_NAME'] = self.list_completion(self.results.keys())
+            output['RUN_NAME'] = self.list_completion(list(self.results.keys()))
         output['MODE'] =  self.list_completion(text, self._syscalc_mode)
         output['options'] = ['-f']
         if len(args) > 1 and (text.startswith('--t')):
@@ -2298,13 +2301,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         out[name].append(tag)
                     else:
                         out[name] = [tag]
-                print 'the runs available are:'
+                print('the runs available are:')
                 for run_name, tags in out.items():
-                    print '  run: %s' % run_name
-                    print '       tags: ', 
-                    print ', '.join(tags)
+                    print('  run: %s' % run_name)
+                    print('       tags: ', end=' ') 
+                    print(', '.join(tags))
             else:
-                print 'No run detected.'
+                print('No run detected.')
                 
         elif  args[0] == 'options':
             outstr = "                              Run Options    \n"
@@ -2592,7 +2595,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         
         if self.run_card['boost_event'].startswith('lambda'):
             if not isinstance(self, cmd.CmdShell):
-                raise Exception, "boost not allowed online"
+                raise Exception("boost not allowed online")
             filter = eval(self.run_card['boost_event'])
         else:
             raise Exception
@@ -2607,7 +2610,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 event_path = p
                 break
         else:
-            raise Exception, "fail to find event file for the boost"
+            raise Exception("fail to find event file for the boost")
             
             
         lhe = lhe_parser.EventFile(event_path)
@@ -3362,8 +3365,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
                 Pdir = pjoin(self.me_dir, 'SubProcesses',subproc[0].strip())
-                raise ZeroResult, '%s' % \
-                    open(pjoin(Pdir,'ajob.no_ps.log')).read()
+                raise ZeroResult('%s' % \
+                    open(pjoin(Pdir,'ajob.no_ps.log')).read())
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
@@ -3807,7 +3810,10 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(finput):
                 logger.debug("File %s exists BAAAAD. Not move anymore!" % pjoin(E_path, name))
             if os.path.exists(foutput):
-                misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
+                if os.path.exists("%s.gz" % foutput):
+                    os.remove(foutput)
+                else:
+                    misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
         #        if os.path.exists(pjoin(O_path, '%s.gz' % name)):
         #            os.remove(pjoin(O_path, '%s.gz' % name))
         #        input = pjoin(E_path, name)
@@ -3929,7 +3935,7 @@ Beware that this can be dangerous for local multicore runs.""")
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                              cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
-            out = out.replace('\n','')
+            out = out.decode().replace('\n','')
             PY8_curr_version = out
             # In order to test that the version is correctly formed, we try to cast
             # it to a float
@@ -4379,9 +4385,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                 else:
                     n_events = PY8_Card['Main:numberOfEvents']
                     if n_events > n_available_events:
-                        raise self.InvalidCmd, 'You specified more events (%d) in the PY8 parameter'%n_events+\
+                        raise self.InvalidCmd('You specified more events (%d) in the PY8 parameter'%n_events+\
                             "'Main:numberOfEvents' than the total number of events available (%d)"%n_available_events+\
-                            ' in the event file:\n %s'%pjoin(self.me_dir,'Events',self.run_name,PY8_Card.subruns[0]['Beams:LHEF'])
+                            ' in the event file:\n %s'%pjoin(self.me_dir,'Events',self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
 
                 # Implement a security to insure a minimum numbe of events per job
                 if self.options['run_mode']==2:
@@ -4407,9 +4413,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                     stdout.close()
                 if ret_code != 0:
-                    raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                    raise self.InvalidCmd('Pythia8 shower interrupted with return'+\
                         ' code %d.\n'%ret_code+\
-                        'You can find more information in this log file:\n%s'%pythia_log
+                        'You can find more information in this log file:\n%s'%pythia_log)
             else:
                 if self.run_card['event_norm']=='sum':
                     logger.error("")
@@ -4671,8 +4677,9 @@ tar -czf split_$1.tar.gz split_$1
                                 break
                         header.close()
                         tail = open(pjoin(tmp_dir,'tail.hepmc'),'w')
-                        n_tail = 0               
-                        for line in misc.BackRead(all_hepmc_files[-1]):
+                        n_tail = 0  
+                                     
+                        for line in misc.reverse_readline(all_hepmc_files[-1]):
                             if line.startswith('HepMC::'):
                                 n_tail += 1
                                 tail.write(line)
@@ -4680,7 +4687,7 @@ tar -czf split_$1.tar.gz split_$1
                                 break
                         tail.close()
                         if n_tail>1:
-                            raise MadGraph5Error,'HEPMC files should only have one trailing command.'
+                            raise MadGraph5Error('HEPMC files should only have one trailing command.')
                         ###################################################################### 
                         # This is the most efficient way of putting together HEPMC's, *BUT*  #
                         #    WARNING: NEED TO RENDER THE CODE BELOW SAFE TOWARDS INJECTION   #
@@ -4860,14 +4867,14 @@ tar -czf split_$1.tar.gz split_$1
                     if Ntry is None:
                         Ntry = int(info.group('tried'))
                     if Nacc==0:
-                        raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
-                          ' did not accept any event from the MG5aMC event file.'
+                        raise self.InvalidCmd('Pythia8 shower failed since it'+\
+                          ' did not accept any event from the MG5aMC event file.')
                     return sigma_m, Nacc, Ntry
                 except ValueError:
                     return None,None,None
 
-        raise self.InvalidCmd, "Could not find cross-section and event number information "+\
-                         "in Pythia8 log\n  '%s'."%log_file_path
+        raise self.InvalidCmd("Could not find cross-section and event number information "+\
+                         "in Pythia8 log\n  '%s'."%log_file_path)
     
     def extract_cross_sections_from_DJR(self,djr_output):
         """Extract cross-sections from a djr XML output."""
@@ -4975,10 +4982,11 @@ tar -czf split_$1.tar.gz split_$1
         # Find the matched cross-section
         if int(self.run_card['ickkw']):
             # read the line from the bottom of the file
-            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
-                                                         '%s_pythia.log' % tag))
+            #pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+            #                                             '%s_pythia.log' % tag))
             pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
-            for line in pythia_log:
+            for line in misc.reverse_readline(pjoin(self.me_dir,'Events', self.run_name, 
+                                                         '%s_pythia.log' % tag)):
                 info = pythiare.search(line)
                 if not info:
                     continue
@@ -5005,7 +5013,7 @@ tar -czf split_$1.tar.gz split_$1
                     self.results.add_detail('error_pythia', error_m)
                 break                 
 
-            pythia_log.close()
+            #pythia_log.close()
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -5035,7 +5043,7 @@ tar -czf split_$1.tar.gz split_$1
             # Calculate syscalc info based on syst.dat
             try:
                 self.run_syscalc('Pythia')
-            except SysCalcError, error:
+            except SysCalcError as error:
                 logger.error(str(error))
             else:
                 if os.path.exists(pjoin(self.me_dir,'Events', 'syst.dat')):
@@ -5085,7 +5093,7 @@ tar -czf split_$1.tar.gz split_$1
                         args.append('-f')
                     try:
                         self.exec_cmd('remove %s %s' % (run, ' '.join(args[1:]) ) )
-                    except self.InvalidCmd, error:
+                    except self.InvalidCmd as error:
                         logger.info(error)
                         pass # run already clear
                 return
@@ -5113,7 +5121,7 @@ tar -czf split_$1.tar.gz split_$1
             if 'parton' in mode or 'all' in mode:
                 try:
                     if self.results[run][0]['tag'] != tag:
-                        raise Exception, 'dummy'
+                        raise Exception('dummy')
                 except Exception:
                     pass
                 else:
@@ -5165,7 +5173,7 @@ tar -czf split_$1.tar.gz split_$1
         if 'all' in mode or 'channel' in mode:
             try:
                 if tag and self.results[run][0]['tag'] != tag:
-                    raise Exception, 'dummy'
+                    raise Exception('dummy')
             except Exception:
                 pass
             else:
@@ -5198,10 +5206,10 @@ tar -czf split_$1.tar.gz split_$1
                     return
             elif any(['banner' not in os.path.basename(p) for p in to_delete]):
                 if to_delete:
-                    raise MadGraph5Error, '''Some output still exists for this run. 
+                    raise MadGraph5Error('''Some output still exists for this run. 
                 Please remove those output first. Do for example: 
                 remove %s all banner
-                ''' % run
+                ''' % run)
             else:
                 shutil.rmtree(pjoin(self.me_dir, 'Events',run))
                 if run in self.results:
@@ -5323,7 +5331,7 @@ tar -czf split_$1.tar.gz split_$1
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
                 try:
                     self.run_syscalc('Pythia')
-                except SysCalcError, error:
+                except SysCalcError as error:
                     logger.warning(str(error))
                     return
                 misc.gzip(pjoin(self.me_dir, 'Events','syst.dat'), "%s.gz" % filename)
@@ -5365,7 +5373,7 @@ tar -czf split_$1.tar.gz split_$1
             t = tag
             self.to_store.remove('pythia')
             misc.gzip(pjoin(p,'pythia_events.hep'), 
-                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
+                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t),forceexternal=True)
 
         if 'pythia8' in self.to_store:
             p = pjoin(self.me_dir,'Events')
@@ -5408,7 +5416,7 @@ tar -czf split_$1.tar.gz split_$1
             status = misc.call([exe] + argument, cwd=cwd, stdout=stdout, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
             if status:
-                raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
+                raise MadGraph5Error('%s didn\'t stop properly. Stop all computation' % exe)
 
 
         elif mode in [1,2]:
@@ -5575,7 +5583,7 @@ tar -czf split_$1.tar.gz split_$1
                 update_first = None
             try:   
                 self.cluster.wait(self.me_dir, update_status, update_first=update_first)            
-            except Exception, error:
+            except Exception as error:
                 logger.info(error)
                 if not self.force:
                     ans = self.ask('Cluster Error detected. Do you want to clean the queue? ("c"=continue the run anyway)',
@@ -5587,7 +5595,7 @@ tar -czf split_$1.tar.gz split_$1
                 elif ans == 'c':
                     return self.monitor(run_type=run_type, mode=mode, html=html)
                 raise
-            except KeyboardInterrupt, error:
+            except KeyboardInterrupt as error:
                 self.cluster.remove()
                 raise                            
         
@@ -5713,9 +5721,9 @@ tar -czf split_$1.tar.gz split_$1
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-            if 'VALID' not in bias_module_valid.upper() or \
-               'INVALID' in bias_module_valid.upper():
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode()
+            if 'VALID' not in str(bias_module_valid).upper() or \
+               'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
                                                           (bias_name,bias_module_valid))
         
@@ -5760,9 +5768,9 @@ tar -czf split_$1.tar.gz split_$1
             if self.me_dir in self.Gdirs[0]:
                 if Pdir is None:
                     if not symfact:
-                        return list(itertools.chain(*self.Gdirs[0].values()))
+                        return list(itertools.chain(*list(self.Gdirs[0].values())))
                     else:
-                        return list(itertools.chain(*self.Gdirs[0].values())), self.Gdirs[1]
+                        return list(itertools.chain(*list(self.Gdirs[0].values()))), self.Gdirs[1]
                 else:
                     if not symfact:
                         return self.Gdirs[0][Pdir]
@@ -5910,8 +5918,7 @@ tar -czf split_$1.tar.gz split_$1
         
         self.random += 3
         if self.random > 30081*30081: # can't use too big random number
-            raise MadGraph5Error,\
-                  'Random seed too large ' + str(self.random) + ' > 30081*30081'
+            raise MadGraph5Error('Random seed too large ' + str(self.random) + ' > 30081*30081')
         if self.run_card['python_seed'] == -2: 
             import random
             random.seed(self.random)
@@ -6050,7 +6057,7 @@ tar -czf split_$1.tar.gz split_$1
             lhaid += [l for l in self.run_card['sys_pdf'].split() if not l.isdigit() or int(l) > 500]
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
-        except Exception, error:
+        except Exception as error:
             logger.debug(str(error))
             logger.warning('Systematic computation requires lhapdf to run. Bypass SysCalc')
             return
@@ -6119,21 +6126,21 @@ tar -czf split_$1.tar.gz split_$1
                         xqcut = abs(self.run_card['xqcut'])
                         for value in self.run_card['sys_matchscale'].split():
                             if float(value) < qcut:
-                                raise SysCalcError, 'qcut value for sys_matchscale lower than qcut in pythia_card. Bypass syscalc'
+                                raise SysCalcError('qcut value for sys_matchscale lower than qcut in pythia_card. Bypass syscalc')
                             if float(value) < xqcut:
-                                raise SysCalcError, 'qcut value for sys_matchscale lower than xqcut in run_card. Bypass syscalc'
+                                raise SysCalcError('qcut value for sys_matchscale lower than xqcut in run_card. Bypass syscalc')
                         
                         
                 event_path = pjoin(event_dir,'syst.dat')
                 output = pjoin(event_dir, 'syscalc.dat')
             else:
-                raise self.InvalidCmd, 'Invalid mode %s' % mode
+                raise self.InvalidCmd('Invalid mode %s' % mode)
             
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
                 misc.gunzip(event_path+'.gz')
             else:
-                raise SysCalcError, 'Events file %s does not exits' % event_path
+                raise SysCalcError('Events file %s does not exits' % event_path)
         
         self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
@@ -6144,7 +6151,7 @@ tar -czf split_$1.tar.gz split_$1
                             cwd=event_dir)
             # Wait 5 s to make sure file is finished writing
             time.sleep(5)            
-        except OSError, error:
+        except OSError as error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
             if not os.path.exists(output):
@@ -6416,9 +6423,8 @@ class GridPackCmd(MadEventCmd):
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
         else:
-            raise MadGraph5Error,\
-                  'Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
-                  str(seed)
+            raise MadGraph5Error('Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
+                  str(seed))
 
 
     def update_status(self, *args, **opts):
@@ -6450,7 +6456,7 @@ class GridPackCmd(MadEventCmd):
         """write the grid_card.dat file at appropriate location"""
         
         # first try to write grid_card within the gridpack.
-        print "WRITE GRIDCARD", self.me_dir
+        print("WRITE GRIDCARD", self.me_dir)
         if self.readonly:
             if not os.path.exists('Cards'):
                 os.mkdir('Cards')
@@ -6612,9 +6618,8 @@ class GridPackCmd(MadEventCmd):
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
                     if os.path.exists(pjoin(self.me_dir,'error')):
                         self.monitor(html=True)
-                        raise MadEventError, \
-                            'Error detected in dir %s: %s' % \
-                            (Pdir, open(pjoin(self.me_dir,'error')).read())
+                        raise MadEventError('Error detected in dir %s: %s' % \
+                            (Pdir, open(pjoin(self.me_dir,'error')).read()))
         self.monitor(run_type='All job submitted for refine number %s' % 
                                                                  self.nb_refine)
         
@@ -6856,8 +6861,8 @@ class MadLoopInitializer(object):
             infos={}
         
         if SubProc_dir is None and run_dir is None:
-            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
-                                           ' be provided in run_initialization.'
+            raise MadGraph5Error('At least one of [SubProc_dir,run_dir] must'+\
+                                           ' be provided in run_initialization.')
         
         # If the user does not specify where is check_sa.f, then it is assumed
         # to be one levels above run_dir
@@ -6870,8 +6875,8 @@ class MadLoopInitializer(object):
             if directories:
                 run_dir = directories[0]
             else:
-                raise MadGraph5Error, 'Could not find a valid running directory'+\
-                                                      ' in %s.'%str(SubProc_dir)
+                raise MadGraph5Error('Could not find a valid running directory'+\
+                                                      ' in %s.'%str(SubProc_dir))
 
         # Use the presence of the file born_matrix.f to decide if it is a 
         # loop-induced process or not. It's not crucial, but just that because
@@ -6889,8 +6894,8 @@ class MadLoopInitializer(object):
 
         MLCardPath = pjoin(SubProc_dir,'MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
-            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
-                                                                     %MLCardPath
+            raise MadGraph5Error('Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath)
         else:
             MLCard      = banner_mod.MadLoopParam(MLCardPath) 
             MLCard_orig = banner_mod.MadLoopParam(MLCard)
@@ -6960,7 +6965,7 @@ class MadLoopInitializer(object):
                 attempts = None
                 return None
             # Only set process_compilation time for the first compilation.
-            if 'Process_compilation' not in infos.keys() or \
+            if 'Process_compilation' not in list(infos.keys()) or \
                                              infos['Process_compilation']==None:
                 infos['Process_compilation'] = compile_time
             infos['Initialization'] = run_time
@@ -6982,8 +6987,8 @@ class MadLoopInitializer(object):
 
         MLCardPath = pjoin(proc_dir,'SubProcesses','MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
-            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
-                                                                     %MLCardPath        
+            raise MadGraph5Error('Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath)        
         MLCard      = banner_mod.MadLoopParam(MLCardPath) 
 
         req_files = ['HelFilter.dat','LoopFilter.dat']
@@ -7094,11 +7099,11 @@ class MadLoopInitializer(object):
         for v_folder in VirtualFolders:
             init = init_info[v_folder]
             if init['nPS'] is None:
-                raise MadGraph5Error, 'Failed the initialization of'+\
+                raise MadGraph5Error('Failed the initialization of'+\
                   " loop-induced matrix element '%s'%s."%\
                   (os.path.basename(v_folder),' (using default n_PS points)' if\
                     n_PS is None else ' (trying with a maximum of %d PS points)'\
-                                                               %(max_mult*n_PS))
+                                                               %(max_mult*n_PS)))
             if init['nPS']==0:
                 logger.debug("Nothing to be done in '%s', all filters already "%\
                              os.path.basename(v_folder)+\
@@ -7118,8 +7123,8 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+    if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6, 2.7 or python 3.7 or later).\n'+\
                'Please upgrate your version of python.')
 
     import os
@@ -7149,7 +7154,7 @@ if '__main__' == __name__:
         try:
             (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
             done = True
-        except MyOptParser.InvalidOption, error:
+        except MyOptParser.InvalidOption as error:
             pass
         else:
             args += sys.argv[len(sys.argv)-i:]
@@ -7157,8 +7162,8 @@ if '__main__' == __name__:
         # raise correct error:                                                                                                                                                                                  
         try:
             (options, args) = parser.parse_args()
-        except MyOptParser.InvalidOption, error:
-            print error
+        except MyOptParser.InvalidOption as error:
+            print(error)
             sys.exit(2)
 
     if len(args) == 0:
@@ -7196,17 +7201,17 @@ if '__main__' == __name__:
                 cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
-                    print parser_error
-                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                    print(parser_error)
+                    print('and %s  can not be interpreted as a valid command.' % args[0])
                 else:
-                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+                    print('ERROR: %s  not a valid command. Please retry' % args[0])
             else:
                 cmd_line.use_rawinput = False
                 cmd_line.run_cmd(' '.join(args))
                 cmd_line.run_cmd('quit')
 
     except KeyboardInterrupt:
-        print 'quit on KeyboardInterrupt'
+        print('quit on KeyboardInterrupt')
         pass
 
 

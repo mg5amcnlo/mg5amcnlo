@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u~ u > t t~ g [ real = QED QCD ] QCD^2<=4 QED^2<=2
-C     Process: c~ c > t t~ g [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: u~ u > t t~ a [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: c~ c > t t~ a [ real = QCD QED ] QCD^2=4 QED^2=2
 C     
 C     ****************************************************            
 C         
@@ -75,9 +75,9 @@ C
       ENDIF
       PD(0) = 0D0
       IPROC = 0
-      IPROC=IPROC+1  ! u~ u > t t~ g
+      IPROC=IPROC+1  ! u~ u > t t~ a
       PD(IPROC) = UX1*U2
-      IPROC=IPROC+1  ! c~ c > t t~ g
+      IPROC=IPROC+1  ! c~ c > t t~ a
       PD(IPROC) = CX1*C2
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN

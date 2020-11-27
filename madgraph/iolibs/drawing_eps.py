@@ -39,6 +39,7 @@ DrawDiagramsEPS:
 
 from __future__ import division
 
+from __future__ import absolute_import
 import os
 import math
 import madgraph.core.drawing as draw
@@ -425,6 +426,11 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
             self.text += self.line_format(line.end.pos_x,
                         line.end.pos_y, line.begin.pos_x,
                         line.begin.pos_y, '0 Fgluon%s' % type)
+    
+    def draw_curved_scurly(self, line, cercle, type=''):
+        
+        self.draw_curved_curly(line, cercle, type)
+        self.draw_curved_straight(line, cercle)
             
     def draw_curved_curly(self, line, cercle, type=''):
         """ADD the EPS code for this gluon line."""

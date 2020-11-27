@@ -4,10 +4,11 @@
 
 
 
-from object_library import all_parameters, Parameter
+from __future__ import absolute_import
+from .object_library import all_parameters, Parameter
 
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 cabi = Parameter(name = 'cabi',
                  nature = 'external',

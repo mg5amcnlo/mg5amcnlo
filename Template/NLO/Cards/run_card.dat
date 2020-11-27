@@ -179,7 +179,8 @@
   %(pt_max_pdg)s = pt_max_pdg ! Max pT for a massive particle
   %(mxx_min_pdg)s = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
-# For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
+# Use PineAPPL to generate PDF-independent fast-interpolationuse       *
+# grids (https://zenodo.org/record/3992765#.X2EWy5MzbVo)               *
 #***********************************************************************
- %(iappl)s = iappl ! aMCfast switch (0=OFF, 1=prepare grids, 2=fill grids)
+ %(pineappl)s = pineappl ! PineAPPL switch 
 #***********************************************************************

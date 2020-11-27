@@ -1,5 +1,8 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+from __future__ import absolute_import
+from six.moves import range
 inp = open('./MADatNLO.top', 'r')
 out = open('./MADatNLO_combined.top', 'w')
 
@@ -28,10 +31,10 @@ stopBorn=stop[len(startNLO):]
 
 stopNLO.insert(0,0)
 
-print startNLO
-print stopNLO
-print startBorn
-print stopBorn
+print(startNLO)
+print(stopNLO)
+print(startBorn)
+print(stopBorn)
 
 
 for j in range(len(startNLO)):

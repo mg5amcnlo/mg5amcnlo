@@ -126,7 +126,7 @@ c     parameter to allow to include run_card.inc
       include './cuts.inc'
       integer lhaid
       character*20 pdlabel
-      integer iappl
+      logical pineappl
       character*7 event_norm
       character*13 temp
 c     other parameter
