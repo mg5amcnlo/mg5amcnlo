@@ -32,7 +32,7 @@ __device__ void ixxxxx(const fptype* allmomenta, const fptype& fmass, const int&
       const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
 #endif
 
-      const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
+//      const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
       const fptype& pvec1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
       const fptype& pvec2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
       const fptype& pvec3 = pIparIp4Ievt( allmomenta, ipar, 3, ievt );
@@ -41,7 +41,7 @@ __device__ void ixxxxx(const fptype* allmomenta, const fptype& fmass, const int&
   fptype sf[2], sfomega[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int ip, im, nh;
 
-  fptype p[4] = {0, pvec0, pvec1, pvec2};
+  fptype p[4] = {0, pvec1, pvec2, pvec3};
   p[0] = sqrt(p[1] * p[1] + p[2] * p[2] + p[3] * p[3]+fmass*fmass);
   fi[0] = cxtype(-p[0] * nsf, -p[3] * nsf);
   fi[1] = cxtype(-p[1] * nsf, -p[2] * nsf);
