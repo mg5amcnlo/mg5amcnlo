@@ -27,7 +27,7 @@ MAKEDEBUG=
 cu_main=gcheck.exe
 cxx_main=check.exe
 
-cu_objects=CPPProcess.o check_sa.o
+cu_objects=gCPPProcess.o gcheck_sa.o
 cxx_objects=CPPProcess.o
 
 # Assuming uname is available, detect if architecture is power
@@ -52,7 +52,7 @@ debug: $(cu_main) $(cxx_main)
 $(LIBDIR)/lib$(MODELLIB).a:
 	@cd ../../src && make $(MAKEDEBUG)
 
-gcheck.o: gcheck.cu *.h ../../src/*.h ../../src/*.cu
+gcheck_sa.o: gcheck_sa.cu *.h ../../src/*.h ../../src/*.cu
 	$(NVCC) $(CPPFLAGS) $(CUFLAGS) -c $< -o $@
 
 %%.o : %%.cu *.h ../../src/*.h
@@ -65,7 +65,7 @@ $(cu_main): $(LIBDIR)/lib$(MODELLIB).a $(cu_objects)
 	$(NVCC) -o $@ $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) -lcuda -lcurand
 
 $(cxx_main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) check.o
-	$(CXX) -o $@ $(cxx_objects) check.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
+	$(CXX) -o $@ $(cxx_objects) check_sa.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
 
 .PHONY: clean
 

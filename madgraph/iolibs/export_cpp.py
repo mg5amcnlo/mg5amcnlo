@@ -1400,13 +1400,21 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     single_process_template = 'gpu/process_matrix.inc'
     cc_ext = 'cu'
 
+    def __init__(self, *args, **opts):
+        
+        super(OneProcessExporterGPU, self).__init__(*args, **opts)
+        self.process_class = "gCPPProcess"
+
     def generate_process_files(self):
         
-        misc.sprint(type(self))
         super(OneProcessExporterGPU, self).generate_process_files()
 
         self.edit_check_sa()
         self.edit_mgonGPU()
+        
+        # add symbolic link for C++
+        files.ln(pjoin(self.path, 'gcheck_sa.cu'), pjoin(self.path, 'check_sa.cc'))
+        files.ln(pjoin(self.path, 'gCPPProcess.cu'), pjoin(self.path, 'CPPProcess.cc'))
         
     def edit_check_sa(self):
         
@@ -1416,7 +1424,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         replace_dict['model'] = self.model_name
         replace_dict['numproc'] = len(self.matrix_elements)
 
-        ff = open(pjoin(self.path, 'check_sa.cu'),'w')
+        ff = open(pjoin(self.path, 'gcheck_sa.cu'),'w')
         ff.write(template)
         ff.close()
         
@@ -1659,10 +1667,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         
                 
         replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
-        try:
-            replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.cu' % self.model_name)).read()
-        except FileNotFoundError:
-            replace_dict['hel_amps_def'] = "\n#include \"../../src/HelAmps_%s.cu\"" % self.model_name
+        #try:
+        #    replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.cu' % self.model_name)).read()
+        #except FileNotFoundError:
+        replace_dict['hel_amps_def'] = "\n#include \"../../src/HelAmps_%s.cu\"" % self.model_name
             
         if writer:
             file = self.read_template_file(self.process_template_cc) % replace_dict
@@ -2738,6 +2746,7 @@ class ProcessExporterGPU(ProcessExporterCPP):
     template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile')
     create_model_class =  UFOModelConverterGPU
     
+
 
 #===============================================================================
 # UFOModelConverterPythia8

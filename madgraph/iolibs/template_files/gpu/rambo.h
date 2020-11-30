@@ -1,14 +1,15 @@
 #ifndef RAMBO_H
 #define RAMBO_H 1
 
-#include <cassert>
-
-#include "curand.h"
-
 #include "mgOnGpuConfig.h"
 #include "mgOnGpuTypes.h"
 
+#include <cassert>
+
 //--------------------------------------------------------------------------
+
+#if defined MGONGPU_CURAND_ONHOST or defined MGONGPU_CURAND_ONDEVICE
+#include "curand.h"
 
 #define checkCurand( code )                     \
   { assertCurand( code, __FILE__, __LINE__ ); }
@@ -21,6 +22,8 @@ inline void assertCurand( curandStatus_t code, const char *file, int line, bool 
     if ( abort ) assert( code == CURAND_STATUS_SUCCESS );
   }
 }
+
+#endif
 
 //--------------------------------------------------------------------------
 
@@ -60,6 +63,7 @@ namespace rambo2toNm0
 #endif
                         );
 
+#if defined MGONGPU_CURAND_ONHOST or defined MGONGPU_CURAND_ONDEVICE
   //--------------------------------------------------------------------------
 
   // Create and initialise a curand generator
@@ -85,6 +89,7 @@ namespace rambo2toNm0
                         const int nevt );      // input: #events
 
   //--------------------------------------------------------------------------
+#endif
 
 }
 
