@@ -142,7 +142,7 @@ __device__ void ipzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   if(nh==1){
 	fi[3] = fi[1];
 	fi[4] = sqp0p3;
-  else{
+  }else{
 	fi[3] = sqp0p3;
 	fi[4] = fi[1];
   }
