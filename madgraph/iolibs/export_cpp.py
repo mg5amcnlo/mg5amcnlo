@@ -1413,8 +1413,8 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         self.edit_mgonGPU()
         
         # add symbolic link for C++
-        files.ln(pjoin(self.path, 'gcheck_sa.cu'), pjoin(self.path, 'check_sa.cc'))
-        files.ln(pjoin(self.path, 'gCPPProcess.cu'), pjoin(self.path, 'CPPProcess.cc'))
+        files.ln(pjoin(self.path, 'gcheck_sa.cu'), self.path, 'check_sa.cc')
+        files.ln(pjoin(self.path, 'gCPPProcess.cu'), self.path, 'CPPProcess.cc')
         
     def edit_check_sa(self):
         
