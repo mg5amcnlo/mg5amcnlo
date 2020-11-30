@@ -64,7 +64,7 @@ gcheck_sa.o: gcheck_sa.cu *.h ../../src/*.h ../../src/*.cu
 $(cu_main): $(LIBDIR)/lib$(MODELLIB).a $(cu_objects)
 	$(NVCC) -o $@ $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) -lcuda -lcurand
 
-$(cxx_main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) check.o
+$(cxx_main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) check_sa.o
 	$(CXX) -o $@ $(cxx_objects) check_sa.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
 
 .PHONY: clean
