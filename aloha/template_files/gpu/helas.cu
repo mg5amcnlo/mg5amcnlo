@@ -337,6 +337,7 @@ __device__ void oxxxxx(const fptype* allmomenta, const fptype& fmass, const int&
 #endif
 #ifndef __CUDACC__
        using std::min;
+       using std::max;
 #endif
   cxtype chi[2];
   fptype sf[2], sfomeg[2], omega[2], pp, pp3, sqp0p3, sqm[2];
