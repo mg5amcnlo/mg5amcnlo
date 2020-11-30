@@ -11,6 +11,6 @@
 #include "mgOnGpuTypes.h"
 #include "mgOnGpuConfig.h"
 
-#include "CPPProcess.h"
+#include "gCPPProcess.h"
 
 %(process_function_definitions)s

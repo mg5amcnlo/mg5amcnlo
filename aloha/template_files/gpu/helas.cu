@@ -1,4 +1,5 @@
-  //--------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------
 
   __device__
   inline const fptype& pIparIp4Ievt( const fptype* momenta1d, // input: momenta as AOSOA[npagM][npar][4][neppM]
@@ -31,6 +32,12 @@ __device__ void ixxxxx(const fptype* allmomenta, const fptype& fmass, const int&
 #ifdef __CUDACC__
       const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
 #endif
+#ifndef __CUDACC__
+       using std::max;
+       using std::min;
+#endif
+
+
 
 //      const fptype& pvec0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
       const fptype& pvec1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
@@ -216,7 +223,10 @@ __device__ void vxxxxx(const fptype* allmomenta, const fptype& vmass, const int&
 
 #ifdef __CUDACC__
       const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
+#else
+       using std::min;
 #endif
+
       const fptype& p0 = pIparIp4Ievt( allmomenta, ipar, 0, ievt );
       const fptype& p1 = pIparIp4Ievt( allmomenta, ipar, 1, ievt );
       const fptype& p2 = pIparIp4Ievt( allmomenta, ipar, 2, ievt );
@@ -306,7 +316,9 @@ __device__ void oxxxxx(const fptype* allmomenta, const fptype& fmass, const int&
 #ifdef __CUDACC__
       const int ievt = blockDim.x * blockIdx.x + threadIdx.x; // index of event (thread) in grid
 #endif
-
+#ifndef __CUDACC__
+       using std::min;
+#endif
   cxtype chi[2];
   fptype sf[2], sfomeg[2], omega[2], pp, pp3, sqp0p3, sqm[2];
   int nh, ip, im;
