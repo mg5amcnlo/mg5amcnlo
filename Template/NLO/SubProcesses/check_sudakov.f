@@ -65,6 +65,13 @@ cc
       common /to_polecheck/force_polecheck, polecheck_passed
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
+
+      double complex amp_split_ewsud_lsc(amp_split_size)
+      common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
+      double complex amp_split_ewsud_ssc(amp_split_size)
+      common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+      double precision amp_split_born(amp_split_size)
+      integer iamp
       
 C-----
 C  BEGIN CODE
@@ -217,11 +224,18 @@ c initialization
 
           CALL UPDATE_AS_PARAM()
           call sborn(p_born, born)
-          write(*,*) 'BORNTT', born
+          amp_split_born(:) = amp_split(:)
           call sudakov_wrapper(p_born)
+          do iamp = 1, amp_split_size
+            if (amp_split_born(iamp).eq.0) cycle
+              write(*,*) 'SPLITORDER', iamp
+              write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
+              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+          enddo
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
+
           call BinothLHA(p_born, born, virt_wgt)
           if (npointsChecked.eq.0) then
              if (mod(ret_code_ml,100)/10.eq.3 .or.

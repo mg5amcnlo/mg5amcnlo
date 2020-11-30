@@ -17,7 +17,9 @@ DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
 COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_LSC(AMP_SPLIT_SIZE)
+common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_SSC(AMP_SPLIT_SIZE)
+common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
 
 integer iflist(nexternal-1), pdglist(nexternal-1), pdglist_oth(nexternal-1)
 
@@ -31,8 +33,8 @@ COMMON/CCALCULATEDBORN/CALCULATEDBORN
 
 CALCULATEDBORN=.FALSE.
 
-AMP_SPLIT_EWSUD_LSC(:) = 0d0
-AMP_SPLIT_EWSUD_SSC(:) = 0d0
+AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
+AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
 
 %(iflist)s
 
