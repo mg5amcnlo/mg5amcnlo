@@ -139,8 +139,13 @@ __device__ void ipzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   cxtype sqp0p3 = cxtype(sqrt(2.* pvec3) * nsf, 0.);
 
   fi[2]=fi[1];
-  fi[3]=(nh== 1)*fi[1]   + (nh==-1)*sqp0p3;
-  fi[4]=(nh== 1)*sqp0p3 + (nh==-1)*fi[1];
+  if(nh==1){
+	fi[3] = fi[1];
+	fi[4] = sqp0p3;
+  else{
+	fi[3] = sqp0p3;
+	fi[4] = fi[1];
+  }
   fi[5]=fi[1];
 }
 
@@ -164,10 +169,16 @@ __device__ void imzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   int nh = nhel * nsf;
   cxtype  chi = cxtype (-nhel * sqrt(-2.0 * pvec3), 0.0);
 
-  fi[2]=(nh== 1)*fi[1]   + (nh==-1)*chi;
+
   fi[3]=fi[1];
   fi[4]=fi[1];
-  fi[5]=(nh== 1)*chi   + (nh==-1)*fi[1];
+  if (nh ==1) {
+     fi[2] = fi[1];
+     fi[5] = chi;
+  }else{
+     fi[2] = chi;
+     fi[5] = fi[1]
+  }    
 }
 
 __device__ void ixzxxx(const fptype* allmomenta, const int& nhel, const int& nsf,
@@ -204,10 +215,18 @@ __device__ void ixzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   cxtype chi1 = cxtype (nh * pvec1/sqp0p3, pvec2/sqp0p3);
   cxtype CZERO = cxtype(0.,0.);
 
-  fi[2]=(nh== 1)*CZERO   + (nh==-1)*chi1;
-  fi[3]=(nh== 1)*CZERO   + (nh==-1)*chi0;
-  fi[4]=(nh== 1)*chi0    + (nh==-1)*CZERO;
-  fi[5]=(nh== 1)*chi1    + (nh==-1)*CZERO;
+  if (nh ==1){
+    fi[2]=CZERO;
+    fi[3]=CZERO;
+    fi[4]=chi0 ;
+    fi[5]=chi1 ;
+  }else{
+     fi[2]= chi1;
+     fi[3]= chi0;
+     fi[4]= CZERO;
+     fi[5]= CZERO;
+  }
+
   return;
 }
 
@@ -415,10 +434,16 @@ __device__ void opzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
 
   cxtype CSQP0P3 = cxtype (sqrt(2.* pvec3) * nsf, 0.00);
 
-    fo[2]=(nh== 1)*CSQP0P3 + (nh==-1)*fo[1];
+
     fo[3]=fo[1];
     fo[4]=fo[1];
-    fo[5]=(nh== 1)*fo[1]   + (nh==-1)*CSQP0P3;
+    if (nh==1){
+       fo[2]=CSQP0P3;
+       fo[5]=fo[1];
+    }else{
+       fo[2]=fo[1];
+       fo[5]=CSQP0P3;
+    }
 }
 
 
@@ -441,11 +466,17 @@ __device__ void omzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   int nh = nhel * nsf;
   cxtype chi = cxtype (-nhel, 0.00) * sqrt(-2.0 * pvec3);
 
-  fo[2]=(nh== 1)*fo[1] + (nh==-1)*fo[1];
-  fo[3]=(nh== 1)*chi + (nh==-1)*fo[1];;
-  fo[4]=(nh== 1)*fo[1] + (nh==-1)*chi;
-  fo[5]=(nh== 1)*fo[1] + (nh==-1)*chi;
-
+  if(nh==1){
+    fo[2]=fo[1];
+    fo[3]=chi;
+    fo[4]=fo[1];
+    fo[5]=fo[1];
+  }else{
+    fo[2]= fo[1];
+    fo[3]= fo[1];
+    fo[4]= chi;
+    fo[5]= chi;
+  }
   return;
 }
 
@@ -478,10 +509,16 @@ __device__ void oxzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
   cxtype chi1 = cxtype (nh * p1/sqp0p3, -p2/sqp0p3);
   cxtype zero = cxtype (0.00, 0.00);
 
-  fo[2]=(nh== 1)*chi0 + (nh==-1)*zero;
-  fo[3]=(nh== 1)*chi1 + (nh==-1)*zero;
-  fo[4]=(nh== 1)*zero + (nh==-1)*chi1;
-  fo[5]=(nh== 1)*zero + (nh==-1)*chi0;
-
+  if(nh==1){
+  fo[2]=chi0;
+  fo[3]=chi1;
+  fo[4]=zero;
+  fo[5]=zero;
+}else{
+  fo[2]=zero;
+  fo[3]=zero;
+  fo[4]=chi1;
+  fo[5]=chi0;
+}
   return;
 }
