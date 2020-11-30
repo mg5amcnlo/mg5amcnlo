@@ -177,7 +177,7 @@ __device__ void imzxxx(const fptype* allmomenta, const int& nhel, const int& nsf
      fi[5] = chi;
   }else{
      fi[2] = chi;
-     fi[5] = fi[1]
+     fi[5] = fi[1];
   }    
 }
 
