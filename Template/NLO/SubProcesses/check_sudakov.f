@@ -71,6 +71,10 @@ cc
       double complex amp_split_ewsud_ssc(amp_split_size)
       common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
       double precision amp_split_born(amp_split_size)
+      double complex amp_split_born_onehel(amp_split_size)
+      common /to_amp_born_onehel/amp_split_born_onehel
+      integer ewsud_helselect
+      common/to_ewsud_helselect/ewsud_helselect
       integer iamp
       
 C-----
