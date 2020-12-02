@@ -64,8 +64,6 @@ enddo
          ANS_SUMMED = ans_summed + ANS(I)
          do j = 1, nsplitorders
           amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
-C take into account the fact that this is for EW corrections (QED)
-          if (j.eq.qed_pos) amp_orders(j) = amp_orders(j) + 2
          enddo
          !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
          if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
