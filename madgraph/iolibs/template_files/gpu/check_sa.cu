@@ -288,7 +288,7 @@ int main(int argc, char **argv)
     std::vector<double> commonRnd = commonRandomPromises[iiter].get_future().get();
     assert( nRnarray == static_cast<int>( commonRnd.size() ) );
     // NB (PR #45): memcpy is strictly needed only in CUDA (copy to pinned memory), but keep it also in C++ for consistency
-    memcpy( hstRnarray, commonRandomNumbers.data(), nbytesRnarray );
+    memcpy( hstRnarray.get(), commonRnd.data(), nRnarray * sizeof(hstRnarray[0]) );
 #elif defined __CUDACC__
 #ifdef MGONGPU_CURAND_ONDEVICE
     grambo2toNm0::generateRnarray( rnGen, devRnarray.get(), nevt );

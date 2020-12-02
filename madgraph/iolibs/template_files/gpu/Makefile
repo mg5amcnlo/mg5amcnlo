@@ -1,33 +1,48 @@
-LIBDIR =../../lib
-INCDIRS=-I. -I../../src -I../../../../../tools/
-MODELLIB=model_%(model)s
-CXXFLAGS= -O3 -std=c++11 $(INCDIRS) $(USE_NVTX) -Wall -Wshadow ${MGONGPU_CONFIG}
-LIBFLAGS= -L$(LIBDIR) -l$(MODELLIB)
-CXX=g++
-NVCC?=$(shell which nvcc)
-ifeq (, $(NVCC))
-	NVCC=@echo No nvcc to run nvcc
-else
-	USE_NVTX?=-DUSE_NVTX
-	CUARCHNUM=70
-	#CUARCHNUM=61 #(For Pascal Architecture Cards)
-	CUINC=-I/usr/local/cuda/targets/x86_64-linux/include
-	CULIBFLAGS= -L/usr/local/cuda/targets/x86_64-linux/lib -lcurand
-	CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
-	# CUARCHFLAGS= -gencode arch=compute_$(CUARCHNUM),code=sm_$(CUARCHNUM)
-	CUFLAGS= -O3 $(INCDIRS) $(USE_NVTX) $(CUARCHFLAGS) -use_fast_math -lineinfo ${MGONGPU_CONFIG}
-	# Without -maxrregcount: baseline throughput: 6.5E8 (16384 32 12) up to 7.3E8 (65536 128 12)
-	###CUFLAGS+= --maxrregcount 160 # improves throughput: 6.9E8 (16384 32 12) up to 7.7E8 (65536 128 12)
-	###CUFLAGS+= --maxrregcount 128 # improves throughput: 7.3E8 (16384 32 12) up to 7.6E8 (65536 128 12)
-	###CUFLAGS+= --maxrregcount 96 # degrades throughput: 4.1E8 (16384 32 12) up to 4.5E8 (65536 128 12)
-	###CUFLAGS+= --maxrregcount 64 # degrades throughput: 1.7E8 (16384 32 12) flat at 1.7E8 (65536 128 12)
+LIBDIR   = ../../lib
+TOOLSDIR = ../../../../../tools/
+INCFLAGS = -I. -I../../src -I$(TOOLSDIR)
+MODELLIB = model_%(model)s
+OPTFLAGS = -O3
+CXXFLAGS = $(OPTFLAGS) -std=c++11 $(INCFLAGS) $(USE_NVTX) -Wall -Wshadow $(MGONGPU_CONFIG)
+LIBFLAGS = -L$(LIBDIR) -l$(MODELLIB)
+CXX     ?= g++
+
+#Export CUDA_HOME to select a cuda installation
+ifndef CUDA_HOME
+  NVCC ?= $(shell which nvcc 2>/dev/null)
+  ifneq ($(NVCC),)
+    # NVCC is in the PATH or set explicitly
+    CUDA_HOME  = $(patsubst %%bin/nvcc,%%,$(NVCC))
+    CUDA_HOME := $(warning No CUDA_HOME exported. Using "$(CUDA_HOME)") $(CUDA_HOME)
+  endif
 endif
+
+ifdef CUDA_HOME
+  NVCC = $(CUDA_HOME)/bin/nvcc
+  CUARCHNUM=70
+  USE_NVTX?=-DUSE_NVTX
+  CUARCHFLAGS= -arch=compute_$(CUARCHNUM)
+  CUINC       = -I$(CUDA_HOME)/include/
+  CULIBFLAGS  = -L$(CUDA_HOME)/lib64/ -lcuda -lcurand
+  CUFLAGS= $(OPTFLAGS) -std=c++14 $(INCFLAGS) $(CUINC) $(USE_NVTX) $(CUARCHFLAGS) -use_fast_math -lineinfo $(MGONGPU_CONFIG)
+
+  cu_main     = gcheck.exe
+  cu_objects  = gCPPProcess.o
+else
+  # No cuda. Switch cuda compilation off and go to common random numbers in C++
+  NVCC       := $(warning No cuda found. Export CUDA_HOME to compile with cuda)
+  USE_NVTX   :=
+  CULIBFLAGS :=
+  ifndef MGONGPU_CONFIG
+    export MGONGPU_CONFIG = -DMGONGPU_COMMONRAND_ONHOST
+  endif
+endif
+
+GTESTLIBDIR = $(TOOLSDIR)/googletest/build/lib/
+GTESTLIBS   = $(GTESTLIBDIR)/libgtest.a $(GTESTLIBDIR)/libgtest_main.a
 MAKEDEBUG=
 
-cu_main=gcheck.exe
 cxx_main=check.exe
-
-cu_objects=gCPPProcess.o gcheck_sa.o
 cxx_objects=CPPProcess.o
 
 # Assuming uname is available, detect if architecture is power
@@ -36,21 +51,16 @@ ifeq ($(UNAME_P),ppc64le)
     CUFLAGS+= -Xcompiler -mno-float128
 endif
 
-all:
-	cd ../../src && make
-	make $(cu_main)
-	make $(cxx_main)
+all: ../../src $(cu_main) $(cxx_main) runTest.exe
 
-debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
-debug: CXXFLAGS += -g -O0 -DDEBUG2
-debug: CUFLAGS:=$(filter-out -lineinfo,$(CUFLAGS))
-debug: CUFLAGS:=$(filter-out -O3,$(CUFLAGS))
-debug: CUFLAGS += -g -G
+debug: OPTFLAGS = -g -O0 -DDEBUG2
+debug: CUFLAGS := $(filter-out -lineinfo,$(CUFLAGS))
+debug: CUFLAGS += -G
 debug: MAKEDEBUG := debug
-debug: $(cu_main) $(cxx_main)
+debug: all
 
 $(LIBDIR)/lib$(MODELLIB).a:
-	@cd ../../src && make $(MAKEDEBUG)
+	$(MAKE) -C ../../src $(MAKEDEBUG)
 
 gcheck_sa.o: gcheck_sa.cu *.h ../../src/*.h ../../src/*.cu
 	$(NVCC) $(CPPFLAGS) $(CUFLAGS) -c $< -o $@
@@ -61,11 +71,32 @@ gcheck_sa.o: gcheck_sa.cu *.h ../../src/*.h ../../src/*.cu
 %%.o : %%.cc *.h ../../src/*.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(CUINC) -c $< -o $@
 
-$(cu_main): $(LIBDIR)/lib$(MODELLIB).a $(cu_objects)
-	$(NVCC) -o $@ $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) -lcuda -lcurand
+$(cu_main): gcheck_sa.o $(LIBDIR)/lib$(MODELLIB).a $(cu_objects)
+	$(NVCC) $< -o $@ $(cu_objects) $(LIBFLAGS) $(CUARCHFLAGS) $(CULIBFLAGS)
 
-$(cxx_main): $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) check_sa.o
-	$(CXX) -o $@ $(cxx_objects) check_sa.o -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
+$(cxx_main): check_sa.o $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects)
+	$(CXX) $< -o $@ $(cxx_objects) $(CPPFLAGS) $(CXXFLAGS) -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
+
+
+runTest.o:   $(GTESTLIBS)
+runTest.exe: $(GTESTLIBS)
+runTest.exe: INCFLAGS += -I$(TOOLSDIR)/googletest/googletest/include/
+runTest.exe: LIBFLAGS += -L$(GTESTLIBDIR)/ -lgtest -lgtest_main
+ifeq ($(NVCC),)
+runTest.exe: runTest.o $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) $(GTESTLIBS)
+	$(CXX) -o $@ $(cxx_objects) runTest.o $(CPPFLAGS) $(CXXFLAGS) -ldl -pthread $(LIBFLAGS) $(CULIBFLAGS)
+else
+runTest.exe: runTest.o $(LIBDIR)/lib$(MODELLIB).a $(cxx_objects) $(GTESTLIBS)
+	ln -sf runTest.cc runTest_tmp.cu
+	$(NVCC) -o $@ $(cxx_objects) runTest.o $(cu_objects) runTest_tmp.cu $(CPPFLAGS) $(CUFLAGS) -ldl $(LIBFLAGS) $(CULIBFLAGS) -lcuda
+	unlink runTest_tmp.cu
+endif
+
+$(GTESTLIBS):
+	$(MAKE) -C $(TOOLSDIR)
+
+check: runTest.exe
+	./runTest.exe
 
 .PHONY: clean
 
@@ -82,6 +113,13 @@ perf: force
 
 test: force
 	./gcheck.exe -v 1 32 1
+
+info:
+ifdef CUDA_HOME
+	$(NVCC) --version
+	echo ""
+endif
+	$(CXX) --version
 
 force:
 

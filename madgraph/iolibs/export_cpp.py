@@ -2739,13 +2739,15 @@ class ProcessExporterGPU(ProcessExporterCPP):
                     'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile', s+'gpu/nvtx.h',
                                      s+'gpu/nvtx.h', s+'gpu/check.cc',
                                      s+'gpu/timermap.h', s+'gpu/profile.sh',
-                                     s+'gpu/perf.py']}
-    to_link_in_P = ['Makefile', 'timer.h', 'timermap.h', 'nvtx.h', 'perf.py']
+                                     s+'gpu/perf.py', s+ 'gpu/Memory.h', s + 'gpu/runTest.cc']}
+    to_link_in_P = ['Makefile', 'timer.h', 'timermap.h', 'nvtx.h', 'perf.py', 'Memory.h', 'runTest.cc']
 
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')
     template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile')
     create_model_class =  UFOModelConverterGPU
     
+    def compile_model(self):
+        return 
 
 
 #===============================================================================

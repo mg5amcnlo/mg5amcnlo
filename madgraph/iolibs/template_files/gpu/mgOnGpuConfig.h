@@ -7,10 +7,14 @@
 // Memory layout for momenta: AOSOA, AOS, SOA (CHOOSE ONLY ONE)
 // AOSOA (ASA) layout is hardcoded: fine-tune it using the nepopR and neppM parameters below
 
+// Choose how random numbers are generated
+// If one of these macros has been set from outside with e.g. -DMGONGPU_CURAND_ONHOST, nothing happens.
+#if not defined MGONGPU_CURAND_ONDEVICE and not defined MGONGPU_CURAND_ONHOST and not defined MGONGPU_COMMONRAND_ONHOST
 // Curand random number generation (CHOOSE ONLY ONE)
 #define MGONGPU_CURAND_ONDEVICE 1 // default (curand: CUDA on device, C++ on host)
 //#define MGONGPU_CURAND_ONHOST 1 // (curand: CUDA on host, C++ on host)
 //#define MGONGPU_COMMONRAND_ONHOST 1 // (common rand: CUDA on host, C++ on host)
+#endif
 
 // Memory choice for wavefunctions: registries/"local", global, shared (CHOOSE ONLY ONE)
 // Local storage (registries plus spillover to local) is hardcoded: fine tune it using maxrregcount in the Makefile
