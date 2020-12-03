@@ -12,7 +12,7 @@ C
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
       integer npointsChecked
-      integer i, j, k
+      integer i, j, k, l
       integer return_code
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
@@ -71,19 +71,38 @@ cc
       double complex amp_split_ewsud_ssc(amp_split_size)
       common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
       double precision amp_split_born(amp_split_size)
-      double complex amp_split_born_onehel(amp_split_size)
-      common /to_amp_born_onehel/amp_split_born_onehel
-      integer ewsud_helselect
-      common/to_ewsud_helselect/ewsud_helselect
       integer iamp
-      
+      integer chosen_hel, total_hel
+       double complex amp_split_born_onehel(amp_split_size)
+       common /to_amp_born_onehel/amp_split_born_onehel
+       integer ewsud_helselect
+       common/to_ewsud_helselect/ewsud_helselect
+       INTEGER  SDK_GET_NCOMB
+       external SDK_GET_NCOMB
+       double complex BORN_HEL_MAX(amp_split_size) 
+       logical debug 
+       double precision s,t,u,invm2_04
+       external invm2_04
+       INTEGER HELS(NEXTERNAL-1)
+
+     
+
+
+
+
 C-----
 C  BEGIN CODE
 C-----  
+      
+      debug=.True.
+
       force_polecheck = .true.
       if (first_time) then
-          call get_nsqso_loop(nsqso)          
-          call get_answer_dimension(MLResArrayDim)
+
+!!!!!!!!!!!!!!!!!!!!!!  SPENTE DA ME PER LOONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+c          call get_nsqso_loop(nsqso)          
+c          call get_answer_dimension(MLResArrayDim)
           allocate(virt_wgts(0:3,0:MLResArrayDim))
           allocate(accuracies(0:nsqso))
           allocate(keep_order(nsqso))
@@ -107,12 +126,14 @@ c     Set the energy to be characteristic of the run
       do i=1,nexternal
         totmass = totmass + pmass(i)
       enddo
-      energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
+      energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
+
+      energy=1d3
 c     Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
       ren_scale = energy/2.0d0
 
-      call sdk_test_functions()
+c      call sdk_test_functions()
 
       write(*,*)' Insert the number of points to test'
       read(*,*) npoints
@@ -159,9 +180,15 @@ c need to be included, and we can simply quit the process.
 
 c Make sure that stability checks are always used by MadLoop, even for
 c initialization
-      CALL FORCE_STABILITY_CHECK(.TRUE.)
-      CALL COLLIER_COMPUTE_UV_POLES(.TRUE.)
-      CALL COLLIER_COMPUTE_IR_POLES(.TRUE.)
+
+
+!!!!!!!!!!!!!!!!!!!!!!  SPENTE DA ME PER LOONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+c      CALL FORCE_STABILITY_CHECK(.TRUE.)
+c      CALL COLLIER_COMPUTE_UV_POLES(.TRUE.)
+c      CALL COLLIER_COMPUTE_IR_POLES(.TRUE.)
 
 200   continue
           finite=0d0
@@ -226,16 +253,134 @@ c initialization
             enddo
           enddo
 
+c----------
+
+
+
+
+
+
+
+      s=invm2_04(p_born(0,1),p_born(0,2),1d0)
+c      if (pdg3.eq.24) then
+c      t=invm2_04(p_born(0,1),p_born(0,3),-1d0)
+c      u=invm2_04(p_born(0,1),p_born(0,4),-1d0)
+
+      WRITE (*,*) "s=",s 
+      do i=2,nexternal-1
+       do j=i+1, nexternal-1
+         WRITE (*,*) "(p_",i,"+p_",j,")^2/s=",invm2_04(p_born(0,i),p_born(0,j),1d0)/s
+         if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s/(dble(nexternal)-3d0+0.5d0)) then
+          WRITE (*,*) "(p_",i,"+p_",j,")^2 is too small compared to s, 
+     .    so regenerate momenta"
+          goto 200
+         endif
+       enddo
+      enddo   
+      
+
+      do l=1,nexternal-1
+       do k=0,3
+        if(debug) WRITE (*,*) "p(",k,",",l,")=",p_born(k,l)
+       enddo
+        if(debug) WRITE (*,*) " "
+      enddo
+
+
+
+
+
+
+
+c----------
+
+
           CALL UPDATE_AS_PARAM()
+          total_hel=SDK_GET_NCOMB()
+          chosen_hel=0
+c          write(*,*) 'total_hel=', total_hel
           call sborn(p_born, born)
           amp_split_born(:) = amp_split(:)
           call sudakov_wrapper(p_born)
           do iamp = 1, amp_split_size
             if (amp_split_born(iamp).eq.0) cycle
               write(*,*) 'SPLITORDER', iamp
+              write(*,*) 'BORN: ', amp_split_born(iamp)
+c               if (amp_split_born(iamp).eq.0) cycle
               write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
-              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+c              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
           enddo
+c          write(*,*) 'total_hel=', total_hel
+          write(*,*) 'NOW ALL THE HELICITIES'
+          do iamp = 1, amp_split_size
+            BORN_HEL_MAX(iamp)= (0D0,0D0)
+          enddo
+          do chosen_hel=1,total_hel
+             write(*,*) 'HELICITY CONFIGURATION NUMBER ', chosen_hel
+             EWSUD_HELSELECT=chosen_hel
+c             call sborn(p_born, born)             
+c             amp_split_born(:) = amp_split(:)
+             call sudakov_wrapper(p_born)
+             do iamp = 1, amp_split_size
+               if ( AMP_SPLIT_BORN_ONEHEL(iamp).eq.0) cycle
+                
+                 if(abs(BORN_HEL_MAX(iamp)).lt.abs(AMP_SPLIT_BORN_ONEHEL(iamp))) then
+                    BORN_HEL_MAX(iamp)=AMP_SPLIT_BORN_ONEHEL(iamp)
+                 endif
+
+                 write(*,*) 'SPLITORDER', iamp
+                 write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
+c               if (amp_split_born(iamp).eq.0) cycle
+                 write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+                 write(*,*) ' '
+             enddo
+          enddo
+
+          write(*,*) 'NOW ONLY DOMINANT HELICITIES'
+          write(*,*) ''
+       
+
+          OPEN(70, FILE='Lead_Hel.dat', ACTION='WRITE') 
+
+          WRITE (70,*) , s
+          WRITE (70,*) , nexternal-1
+          WRITE (70,*) , pdg_type
+
+
+          do iamp = 1, amp_split_size
+            write(*,*) 'DOMINANT HELICITIES FOR iamp=',iamp
+            write(*,*) ''
+            WRITE (70,*) , iamp       
+            do chosen_hel=1,total_hel
+              EWSUD_HELSELECT=chosen_hel
+              call sudakov_wrapper(p_born) 
+              if (abs(BORN_HEL_MAX(iamp)).NE.0d0.AND.
+     .            abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) then              
+                    write(*,*) 'BORN for HEL CONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
+c               if (amp_split_born(iamp).eq.0) cycle
+                 write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
+     .           ' = ',amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
+                 call sdk_get_hels(chosen_hel, hels)
+
+                 WRITE (70,*) , hels,
+     .            dble(amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp))
+
+c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+              endif
+            enddo
+          enddo
+
+          CLOSE(70)
+
+
+
+          write(*,*) 'blocco qui la cosa'
+          return          
+
+
+
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
