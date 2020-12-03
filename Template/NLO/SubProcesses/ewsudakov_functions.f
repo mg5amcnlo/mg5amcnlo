@@ -60,6 +60,8 @@
       double precision s, rij
 
       get_ssc_c = 0d0
+c exit and do nothing
+      return
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -86,6 +88,9 @@
       double precision s, rij
 
       get_ssc_n_diag = 0d0
+      return
+c exit and do nothing
+
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -121,6 +126,10 @@
       ! CHECK (does one need the matrix element where two H/chi are
       ! swapped????) !!!!!!!!!!!
       get_ssc_n_nondiag = 0d0
+      return
+c exit and do nothing
+
+
       if ((pdg_old.eq.25.and.pdg_new.eq.250).or.
      $    (pdg_old.eq.250.and.pdg_new.eq.25)) then
         lzow = dlog(mdl_mz**2/mdl_mw**2)
@@ -484,9 +493,10 @@ C right handed down quark / left handed antidown quark
 C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_cew_diag = (sw2+27*cw2) / (36*sw2*cw2) 
 
-C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
+C goldstones and Higgs, they behave like left handed leptons (charged) or neutrinos (neutrals)
       if (abs(s_pdg).eq.251) sdk_cew_diag = (1+2*cw2) / (4*sw2*cw2)
       if (abs(s_pdg).eq.250) sdk_cew_diag = (1+2*cw2) / (4*sw2*cw2)
+      if (abs(s_pdg).eq.25) sdk_cew_diag = (1+2*cw2) / (4*sw2*cw2)
 
 C transverse W boson
       if (abs(s_pdg).eq.24) sdk_cew_diag = 2 / sw2
