@@ -142,7 +142,8 @@ c     be saved
       else if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron
             pdg2pdf=epa_lepton(x,xmu*xmu, ih)
       else if(ih.eq.2) then ! photon from a proton without breaking
-          pdg2pdf = epa_proton(x,xmu*xmu)
+          pdg2pdf = epa_proton(x,xmu*xmu, beamid)
+
       else
          write (*,*) 'beam type not supported in lhadpf'
          stop 1
