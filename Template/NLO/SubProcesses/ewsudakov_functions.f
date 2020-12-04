@@ -10,7 +10,7 @@
       include 'coupl.inc'
       double precision lzow
       double complex bigL, smallL, sdk_cew_diag, sdk_iz2_diag
-
+      external sdk_iz2_diag
       integer i
 
       get_lsc_diag = 0d0
@@ -20,7 +20,7 @@
       do i = 1, nexternal-1
         get_lsc_diag = get_lsc_diag - 0.5d0 * 
      %   (sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * bigL(invariants(1,2))
-     %    - 2d0*lzow*sdk_iz2_diag*smallL(invariants(1,2)))
+     %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2)))
       enddo
       return
       end
@@ -440,9 +440,9 @@ C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_iz2_diag = (3*cw2+sw2)**2 / (36*sw2*cw2) 
 
 C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
-      if (abs(s_pdg).eq.251) write(*,*) 'IZ2DIAG not implemented' 
-      if (abs(s_pdg).eq.250) write(*,*) 'IZ2DIAG not implemented'
-      if (abs(s_pdg).eq.25) write(*,*) 'IZ2DIAG not implemented'
+      if (abs(s_pdg).eq.251) sdk_iz2_diag = (cw2-sw2)**2 / (4*sw2*cw2) 
+      if (abs(s_pdg).eq.250) sdk_iz2_diag =1d0 / (4*sw2*cw2)
+      if (abs(s_pdg).eq.25)  sdk_iz2_diag =1d0 / (4*sw2*cw2)  
 
 C transverse W boson
       if (abs(s_pdg).eq.24) sdk_iz2_diag = cw2 / sw2
