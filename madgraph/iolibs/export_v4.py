@@ -1112,6 +1112,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                              ','.join([".true." for i in range(configs)])))
             return ret_list
 
+
         # There is a color basis - create a list showing which JAMPs have
         # contributions to which configs
 
@@ -1137,6 +1138,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     # Add this JAMP number to this diag_num
                     diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
                                           [ijamp+1]
+                else:
+                    self.proc_characteristic['single_color'] = False
 
         colamps = ijamp + 1
         for iconfig, num_diag in enumerate(mapconfigs):        

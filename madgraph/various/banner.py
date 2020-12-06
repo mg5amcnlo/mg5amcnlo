@@ -1502,7 +1502,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
         self.add_param('limitations', [], typelist=str)  
-        self.add_param('hel_recycling', False)      
+        self.add_param('hel_recycling', False)  
+        self.add_param('single_color', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -3297,6 +3298,9 @@ class RunCardLO(RunCard):
             logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
             self.set('tmin_for_channel',  -self['tmin_for_channel'])
             
+
+            
+            
     def update_system_parameter_for_include(self):
         
         # polarization
@@ -3370,6 +3374,7 @@ class RunCardLO(RunCard):
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """
+
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
