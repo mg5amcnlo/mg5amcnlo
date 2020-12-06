@@ -2126,9 +2126,13 @@ CF2PY intent(in) :: value
 
       character*512 name
       double precision value
+      
+      %(helreset_def)s
 
       include '../Source/MODEL/input.inc'
       include '../Source/MODEL/coupl.inc'
+
+      %(helreset_setup)s
 
       SELECT CASE (name)
          %(parameter_setup)s
@@ -2211,6 +2215,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
                                    % (key, var))
 
+        # part for the resetting of the helicity
+        helreset_def = []
+        helreset_setup = []
+        for prefix in set(allprefix):
+            helreset_setup.append(' %shelreset = .true. ' % prefix)
+            helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
+        
+
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
                           'maxpart': max_nexternal,
@@ -2220,6 +2232,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'prefix':'\',\''.join(allprefix),
                           'pids': ','.join(str(pid) for (pdg,pid) in allids),
                           'parameter_setup': '\n'.join(parameter_setup),
+                          'helreset_def' : '\n'.join(helreset_def),
+                          'helreset_setup' : '\n'.join(helreset_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
