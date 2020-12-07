@@ -15,6 +15,9 @@
 
       get_lsc_diag = 0d0
 
+c exit and do nothing
+      return
+
       lzow = dlog(mdl_mz**2/mdl_mw**2)
 
       do i = 1, nexternal-1
@@ -37,6 +40,10 @@
 
       ! this function is non zero only for Z/gamma mixing)
       get_lsc_nondiag = 0d0
+
+c exit and do nothing
+      return
+
       if ((pdg_old.eq.24.and.pdg_new.eq.22).or.
      $    (pdg_old.eq.22.and.pdg_new.eq.24)) then
         lzow = dlog(mdl_mz**2/mdl_mw**2)
@@ -67,7 +74,7 @@ c exit and do nothing
       s = invariants(1,2)
 
       rij = invariants(ileg1,ileg2)
-      get_ssc_c = get_ssc_c + 2d0*smallL(s) * dlog(rij/s) 
+      get_ssc_c = get_ssc_c + 2d0*smallL(s) * dlog(dabs(rij)/s) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
@@ -88,9 +95,11 @@ c exit and do nothing
       double precision s, rij
 
       get_ssc_n_diag = 0d0
-      return
+c      return
 c exit and do nothing
 
+
+c      print*,"CI ENTRO"
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -99,14 +108,24 @@ c exit and do nothing
         do j = 1, i-1
           rij = invariants(i,j)
           ! photon, Lambda = MW
-          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(rij/s) 
+          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(dabs(rij/s)) 
      %      * sdk_ia_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_ia_diag(pdglist(j),hels(j),iflist(j))
 
+c      print*,"sdk_ia_diag(pdglist(,",i,"),hels(",i,"),iflist(",i,"))=", sdk_ia_diag(pdglist(i),hels(i),iflist(i))
+c      print*,"sdk_ia_diag(pdglist(,",j,"),hels(",j,"),iflist(",j,"))=", sdk_ia_diag(pdglist(j),hels(j),iflist(j))
+c      print*,"get_ssc_n_diag=",get_ssc_n_diag
           ! Z
-          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(rij/s) 
+          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(dabs(rij/s)) 
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
+
+c      print*,"sdk_iz_diag(pdglist(,",i,"),hels(",i,"),iflist(",i,"))=", sdk_iz_diag(pdglist(i),hels(i),iflist(i))
+c      print*,"sdk_iz_diag(pdglist(,",j,"),hels(",j,"),iflist(",j,"))=", sdk_iz_diag(pdglist(j),hels(j),iflist(j))
+c      print*,"get_ssc_n_diag=",get_ssc_n_diag
+
+
+
         enddo
       enddo
       return
