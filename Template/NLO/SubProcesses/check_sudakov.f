@@ -84,7 +84,7 @@ cc
        double precision s,t,u,invm2_04
        external invm2_04
        INTEGER HELS(NEXTERNAL-1)
-
+       double precision invariants((NEXTERNAL-1)*(NEXTERNAL-2)/2)
      
 
 
@@ -265,11 +265,18 @@ c----------
 c      if (pdg3.eq.24) then
 c      t=invm2_04(p_born(0,1),p_born(0,3),-1d0)
 c      u=invm2_04(p_born(0,1),p_born(0,4),-1d0)
+      k=0
 
       WRITE (*,*) "s=",s 
-      do i=2,nexternal-1
+      do i=1,nexternal-1
        do j=i+1, nexternal-1
          WRITE (*,*) "(p_",i,"+p_",j,")^2/s=",invm2_04(p_born(0,i),p_born(0,j),1d0)/s
+         k=k+1         
+         if(i.le.2.and.j.ge.3) then
+          invariants(k)=invm2_04(p_born(0,i),p_born(0,j),-1d0)
+          else
+          invariants(k)=invm2_04(p_born(0,i),p_born(0,j),1d0)
+         endif       
          if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s/(dble(nexternal)-3d0+0.5d0)) then
           WRITE (*,*) "(p_",i,"+p_",j,")^2 is too small compared to s, 
      .    so regenerate momenta"
@@ -308,7 +315,7 @@ c          write(*,*) 'total_hel=', total_hel
               write(*,*) 'BORN: ', amp_split_born(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
               write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
-c              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
           enddo
 c          write(*,*) 'total_hel=', total_hel
           write(*,*) 'NOW ALL THE HELICITIES'
@@ -332,7 +339,7 @@ c             amp_split_born(:) = amp_split(:)
                  write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
                  write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
                  write(*,*) ' '
              enddo
           enddo
@@ -342,16 +349,30 @@ c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_
        
 
           OPEN(70, FILE='Lead_Hel.dat', ACTION='WRITE') 
+          OPEN(71, FILE='Born_Sud.dat', ACTION='WRITE')
 
-          WRITE (70,*) , s
+
+          WRITE (70,*) , invariants
+          WRITE (71,*) , s
+
           WRITE (70,*) , nexternal-1
+          WRITE (71,*) , nexternal-1
+
           WRITE (70,*) , pdg_type
+          WRITE (71,*) , pdg_type
+
 
 
           do iamp = 1, amp_split_size
             write(*,*) 'DOMINANT HELICITIES FOR iamp=',iamp
             write(*,*) ''
             WRITE (70,*) , iamp       
+            WRITE (71,*) , iamp
+
+
+                 write(71,*) AMP_SPLIT_BORN_ONEHEL(iamp)
+                 write(71,*) (amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
+
             do chosen_hel=1,total_hel
               EWSUD_HELSELECT=chosen_hel
               call sudakov_wrapper(p_born) 
@@ -360,20 +381,21 @@ c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_
                     write(*,*) 'BORN for HEL CONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
                  write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
-     .           ' = ',amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+     .           ' = ',(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
                  call sdk_get_hels(chosen_hel, hels)
 
                  WRITE (70,*) , hels,
-     .            dble(amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp))
+     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+     .            dble(AMP_SPLIT_BORN_ONEHEL(iamp))
 
-c                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+
               endif
             enddo
           enddo
 
           CLOSE(70)
-
+          CLOSE(71)
 
 
           write(*,*) 'blocco qui la cosa'
