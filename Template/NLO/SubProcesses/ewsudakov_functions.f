@@ -328,7 +328,7 @@ C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_t3_diag = -sign(0.5d0,dble(ifsign*pdg))
 
 C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
-      if (abs(s_pdg).eq.251) sdk_t3_diag = -sign(0.5d0,dble(s_pdg)) 
+      if (abs(s_pdg).eq.251) sdk_t3_diag = sign(0.5d0,dble(s_pdg)) 
       if (abs(s_pdg).eq.250) sdk_t3_diag = sign(0.5d0,dble(s_pdg))
       if (abs(s_pdg).eq.25) sdk_t3_diag = sign(0.5d0,dble(s_pdg))
 
@@ -381,7 +381,7 @@ C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_yo2_diag = sign(1d0/6d0,dble(ifsign*pdg))
 
 C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
-      if (abs(s_pdg).eq.251) sdk_yo2_diag = -sign(0.5d0,dble(s_pdg))
+      if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
       if (abs(s_pdg).eq.250) sdk_yo2_diag = -sign(0.5d0,dble(s_pdg))
       if (abs(s_pdg).eq.25) sdk_yo2_diag = -sign(0.5d0,dble(s_pdg))
 
