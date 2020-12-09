@@ -177,7 +177,7 @@ C         LOCAL
             P(2,2)=0d0
             P(3,2)=-mom
              
-            call rambo(nexternal-2,energy,pmass(3),prambo,WGT)
+            call rambo(nexternal-2,energy,pmass(nincoming+1),prambo,WGT)
             DO I=3, NEXTERNAL
                P(0,I)=PRAMBO(4,I-2)	
                P(1,I)=PRAMBO(1,I-2)
