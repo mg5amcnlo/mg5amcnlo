@@ -5925,14 +5925,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
                 
         # 
-        if not 'single_diagram_enhancement_strategy' in self.run_card.user_set:
+        if not 'SDE_strategy' in self.run_card.user_set:
             if proc_charac['single_color']:
-                self.run_card['single_diagram_enhancement_strategy'] = 2
+                self.run_card['SDE_strategy'] = 2
             else:
-                self.run_card['single_diagram_enhancement_strategy'] = 1
-            logger.debug("set SDE to ", self.run_card['single_diagram_enhancement_strategy'])
+                self.run_card['SDE_strategy'] = 1
+            logger.debug("set SDE to %s", self.run_card['SDE_strategy'])
         else:
-             logger.debug("keep SDE to ", self.run_card['single_diagram_enhancement_strategy'])
+             logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
         ########################################################################
         #       NLO specific check
