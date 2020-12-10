@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
+from fractions import Fraction
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -33,6 +34,7 @@ import subprocess
 import sys
 import time
 import traceback
+import  collections
 
 import aloha
 
@@ -1366,7 +1368,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_lines")
 
-
+        all_element = {}
         res_list = []
         for i, coeff_list in enumerate(color_amplitudes):
             # It might happen that coeff_list is empty if this function was
@@ -1401,6 +1403,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for (coefficient, amp_number) in coefs:
                     if not coefficient:
                         continue
+                    value = (1j if coefficient[2] else 1)* coefficient[0] * coefficient[1] * fractions.Fraction(3)**coefficient[3]
+                    all_element[(i+1, amp_number)] = value
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1419,8 +1423,134 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     res = res + ')'
     
                 res_list.append(res)
-                    
+        misc.sprint(res_list) 
+        #return res_list
+    
+    
+        res_list = []
+        misc.sprint(len(all_element))  
+        
+        new_mat, defs = self.optimise_jamp(all_element)
+        
+        def format(frac):
+            if isinstance(frac, Fraction):
+                if frac.denominator == 1:
+                    return str(frac.numerator)
+                else:
+                    return "%id0/%id0" % (frac.numerator, frac.denominator)
+            elif frac.real == frac:
+                misc.sprint(frac.real, frac)
+                return str(float(frac.real)).replace('e','d')
+            else:
+                return str(frac).replace('e','d').replace('j','*imag1')
+                
+        
+        
+        for i, amp1, amp2, frac, nb in defs:
+            if amp1 > 0:
+                amp1 = "AMP(%d)" % amp1
+            else:
+                amp1 = "LOCAL(%d)" % -amp1
+            if amp2 > 0:
+                amp2 = "AMP(%d)" % amp2
+            else:
+                amp2 = "LOCAL(%d)" % -amp2
+                
+            res_list.append(' LOCAL(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
+                 
+
+        misc.sprint(new_mat)
+        jamp_res = collections.defaultdict(list)
+        max_jamp=0
+        for (jamp, var), factor in new_mat.items():
+            if var > 0:
+                name = "AMP(%d)" % var
+            else:
+                name = "LOCAL(%d)" % -var
+            jamp_res[jamp].append("(%s)*%s" % (format(factor), name))
+            max_jamp = max(max_jamp, jamp)
+        
+        
+        for i in range(1,max_jamp+1):
+            #res_list.append(" write(*,*) %d, JAMP(%d)" % (i,i))
+            res_list.append(" JAMP(%d,1) = %s" %(i, '+'.join(jamp_res[i])))
+            #res_list.append(" write(*,*) %d, JAMP(%d)" % (i,i))            
+        misc.sprint(defs)   
+        misc.sprint(len(defs))
+        nb_op = 0
+        for d in defs:
+            nb_op += d[-1]
+        misc.sprint(nb_op)
+        nb_remaining = 0  
+        for v in new_mat:
+            if new_mat[v]:
+                nb_remaining +=1
+        misc.sprint(nb_remaining)
+        misc.sprint(len(defs))
+        misc.sprint(res_list)
+        
+        misc.sprint(JAMP_format)
         return res_list
+
+    def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
+        """ optimise problem of type Y = A X
+                A is a matrix (all_element)
+                X is the fortran name of the input.
+            The code iteratively add sub-expression jtemp[sub_add]
+            and recall itself (this is add to the X size)
+        """
+        
+        if not nb_line:
+            for i,j in all_element:
+                if i > nb_line:
+                    nb_line = i+1
+                if j> nb_col:
+                    nb_col = j+1
+        
+        misc.sprint(nb_line, nb_col)
+        
+
+        max_count = 0
+        index = ()
+        operation = collections.defaultdict(lambda: collections.defaultdict(int))
+        for i in range(nb_line):
+            for j1 in range(-added, nb_col):
+                v1 = all_element.get((i,j1), 0)
+                if not v1: 
+                    continue                    
+                for j2 in range(j1+1, nb_col):
+                    R = all_element.get((i,j2), 0)/v1
+                    if not R:
+                        continue
+                    
+                    #misc.sprint(j1,j2)
+                    operation[(j1,j2)][R] +=1 
+                    if operation[(j1,j2)][R] > max_count:
+                        max_count = operation[(j1,j2)][R]
+                        index = (j1,j2, R)
+        if max_count == 1:
+            return all_element, []
+        added += 1
+        #misc.sprint(operation)
+        misc.sprint(max_count, index)
+        j1,j2,R = index
+        for i in range(nb_line):
+            v1 = all_element.get((i,j1), 0)
+            v2 = all_element.get((i,j2), 0)
+            if not v1 or not v2: 
+                continue
+            if v2/v1 == R:
+                all_element[(i,-added)] = v1
+                del all_element[(i,j1)] #= 0
+                del all_element[(i,j2)] #= 0
+        
+        new_element, new_def =  self.optimise_jamp(all_element, nb_line=nb_line, nb_col=nb_col, added=added)
+        new_def.insert(0, (added,j1,j2,R, max_count))
+        return new_element, new_def   
+           
+           
+            
+            
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
         """Generate the PDF lines for the auto_dsig.f file"""
