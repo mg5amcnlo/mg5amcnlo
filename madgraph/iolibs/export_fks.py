@@ -617,6 +617,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_poles.f',
                      'check_sudakov.f',
                      'ewsudakov_functions.f',
+                     'momentum_reshuflling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -2014,8 +2015,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             else:
                 base_me = matrix_element.born_me
             self.write_sudakov_me(writers.FortranWriter(filename),
-                         base_me, sud_me['matrix_element'], sud_me['base_amp'], j,
-                         fortran_model)
+                         base_me, sud_me, j, fortran_model)
 
         # finally, the wrapper for all matrix elements needed
         # for the Sudakov approximation
@@ -2807,12 +2807,18 @@ Parameters              %(params)s\n\
     #===============================================================================
     # write_sudakov_me
     #===============================================================================
-    def write_sudakov_me(self, writer, base_me, sudakov_me, ibase_me, ime, fortran_model):
+    def write_sudakov_me(self, writer, base_me, sudakov, ime, fortran_model):
         """Create the sudakov_me_*.f file for the sudakov approximation of EW
         corrections
         """
 
+        sudakov_me = sudakov['matrix_element']
+        ibase_me = sudakov['base_amp']
+        pdgs = sudakov['pdgs']
+        legs = sudakov['legs']
+
         matrix_element = copy.copy(base_me)
+        model = matrix_element.get('processes')[0].get('model')
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -2835,7 +2841,7 @@ Parameters              %(params)s\n\
         # Extract process info lines
         process_lines = self.get_process_info_lines(sudakov_me)
         replace_dict['process_lines'] = "C  Sudakov approximation for the interference " + \
-         "between\n" + self.get_process_info_lines(base_me) + \
+         "between\n" + self.get_process_info_lines(base_me) + "\nC" + \
          "C and\n" + self.get_process_info_lines(sudakov_me)
 
         # Extract den_factor_lines
@@ -2916,6 +2922,15 @@ Parameters              %(params)s\n\
                        sudakov_me,amp_orders,split_order_names=split_orders)
 
         replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('AMP','AMP2')
+
+        # the calls for the momentum reshuffling
+        replace_dict['reshuffle_calls'] = 'pass_reshuffle = .true.\n'
+        for leg, pdg_old, pdg_new in zip(legs, pdgs[0], pdgs[1]):
+            # call the reshuffling function only if the masses are different
+            if model['particle_dict'][pdg_old]['mass'] != model['particle_dict'][pdg_new]['mass']:
+                replace_dict['reshuffle_calls'] += "call reshuffle_momenta(p,p_resh,%d,%d,%d,pass_reshuffle)\n" \
+                                                % (leg['number'],pdg_old,pdg_new)
+                replace_dict['reshuffle_calls'] += "p(:,:)=p_resh(:,:)\n"
     
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_splitorders_fks.inc')).read()

@@ -123,6 +123,8 @@ C
       DATA IC /NMO*1/
       REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      real*8 p_save(0:3, nexternal-1), p_resh(0:3, nexternal-1)
+      logical pass_reshuffle
 C  
 C GLOBAL VARIABLES
 C  
@@ -141,16 +143,24 @@ C Helas calls and color basis for the base amplitude
 %(helas_calls1)s
 %(jamp1_lines)s
 
+    DO I = 1, NSQAMPSO
+    ANS(I) = 0d0
+    ENDDO
+
 C Reshuffle the momenta here
+p_save(:,:) = p(:,:)
+%(reshuffle_calls)s
+if (.not.pass_reshuffle) then
+C restore the momenta and just quit the function
+p(:,:) = p_save(:,:)
+return
+endif
 
 C Helas calls and color basis for the Sudakov amplitude
 %(helas_calls2)s
 %(jamp2_lines)s
 
 C Finally interfere the two sets of color-stripped amplitudes
-    DO I = 1, NSQAMPSO
-    ANS(I) = 0d0
-    ENDDO
     DO M = 1, NAMPSO
       DO I = 1, NCOLOR1
           ZTEMP = (0.D0,0.D0)
@@ -162,6 +172,7 @@ C Finally interfere the two sets of color-stripped amplitudes
           ENDDO
       ENDDO
     ENDDO
+    p(:,:) = p_save(:,:)
     END
        
        
