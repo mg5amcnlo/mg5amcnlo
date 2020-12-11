@@ -169,10 +169,10 @@ def get_sudakov_amps(born_amp):
             if not iso_part_list: continue
 
             for part in iso_part_list:
-                born_proc = copy.copy(born_amp['process'])
+                born_proc = copy.copy(base_amp['process'])
                 # copy the legs as a LegList (not FKSLegList) in order 
                 # not to have them re-ordered
-                born_proc['legs'] = MG.LegList(copy.deepcopy(born_amp['process']['legs']))
+                born_proc['legs'] = MG.LegList(copy.deepcopy(base_amp['process']['legs']))
                 newleg = copy.copy(leg)
                 newleg['id'] = part
                 born_proc['legs'][ileg] = newleg
@@ -211,7 +211,7 @@ def get_sudakov_amps(born_amp):
                         born_proc = copy.copy(base_amp['process'])
                         # copy the legs as a LegList (not FKSLegList) in order 
                         # not to have them re-ordered
-                        born_proc['legs'] = MG.LegList(copy.deepcopy(born_amp['process']['legs']))
+                        born_proc['legs'] = MG.LegList(copy.deepcopy(base_amp['process']['legs']))
                         # replace leg1
                         newleg1 = copy.copy(leg1)
                         newleg1['id'] = part1

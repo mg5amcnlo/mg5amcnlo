@@ -2842,7 +2842,7 @@ Parameters              %(params)s\n\
         process_lines = self.get_process_info_lines(sudakov_me)
         replace_dict['process_lines'] = "C  Sudakov approximation for the interference " + \
          "between\n" + self.get_process_info_lines(base_me) + "\nC" + \
-         "C and\n" + self.get_process_info_lines(sudakov_me)
+         " and\n" + self.get_process_info_lines(sudakov_me)
 
         # Extract den_factor_lines
         den_factor = base_me.get_denominator_factor()
