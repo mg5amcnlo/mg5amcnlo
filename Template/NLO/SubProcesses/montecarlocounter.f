@@ -455,6 +455,9 @@ c -- call to MC counterterm functions
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if(dampMCsubt) then
+            if (.not.mcatnlo_delta) then
+               factor=emscwgt(npartner)
+            else
 c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
 c define 'factor'.  This damping 'factor' is used only here, and not in
 c the following.  A subsequent call to assign_emsca_array, in
@@ -463,9 +466,10 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+               call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
 c min(i_fks,j_fks) is the mother of the FKS pair
-            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
+               factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
+            endif
          else
             factor=1d0
          endif

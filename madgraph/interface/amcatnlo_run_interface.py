@@ -4998,7 +4998,7 @@ PYTHIA8LINKLIBS=""")
             # Write entries accoridng to the pythia8_path
             # Probably need to do something a bit more careful to asses when '-lz' really is necessary
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
-"""PYTHIA8INCLUDE=-I%(pythia8_prefix)s/include -I%(pythia8_prefix)s/../../Dire/dire-src/include
+"""PYTHIA8INCLUDE=-I%(pythia8_prefix)s/include
 PYTHIA8TARGETS=pythia8_wrapper.o
 PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
             # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
