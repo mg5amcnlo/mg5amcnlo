@@ -1961,21 +1961,20 @@ c
             if(stoppingScale(icount).le.smallptlow)then
 c Still inside the j loop, but the information is sufficient to 
 c compute deltaden(*) and deltanum(*,*)
-              deltanum(icount,icount)=0.d0
+               deltanum(icount,icount)=0.d0
             elseif( stoppingScale(icount).gt.smallptlow .and.
-     #              stoppingScale(icount).le.smallptupp )then
-              deltanum(icount,icount)=
-     #             pysudakov(smallptupp,xmasses2(i,j),
-     #                       idup_s(i),isudtype(icount),mcmass)
-              deltanum(icount,icount)=deltanum(icount,icount)*
-     #                 get_to_zero(stoppingScale(icount),smallptlow,smallptupp)
+     $              stoppingScale(icount).le.smallptupp )then
+               deltanum(icount,icount)= pysudakov(smallptupp,xmasses2(i
+     $              ,j), idup_s(i),isudtype(icount),mcmass)
+               deltanum(icount,icount)=deltanum(icount,icount)*
+     $              get_to_zero(stoppingScale(icount),smallptlow
+     $              ,smallptupp)
             else
-              deltanum(icount,icount)=
-     #             pysudakov(stoppingScale(icount),xmasses2(i,j),
-     #                       idup_s(i),isudtype(icount),mcmass)
+               deltanum(icount,icount)= pysudakov(stoppingScale(icount)
+     $              ,xmasses2(i,j), idup_s(i),isudtype(icount),mcmass)
             endif
-            deltaden(icount)=pysudakov(startingScale(icount),xmasses2(i,j),
-     &                                 idup_s(i),isudtype(icount),mcmass)
+            deltaden(icount)=pysudakov(startingScale(icount),xmasses2(i
+     $           ,j),idup_s(i),isudtype(icount),mcmass)
 c End of primary loop over j
          enddo
 
@@ -2037,17 +2036,19 @@ c A gluon with two partners corresponding to a live zone
 c Start by computing deltanum(1,2) and deltanum(2,1)
              if(stoppingScale(jcount).le.smallptlow)then
                deltanum(jcount,iflip(jcount))=0.d0
-             elseif( stoppingScale(jcount).gt.smallptlow .and.
-     #               stoppingScale(jcount).le.smallptupp )then
-               deltanum(jcount,iflip(jcount))=
-     #              pysudakov(smallptupp,xmasses2(i,jindex(iflip(jcount))),
-     #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
-               deltanum(jcount,iflip(jcount))=deltanum(jcount,iflip(jcount))*
-     #                  get_to_zero(stoppingScale(jcount),smallptlow,smallptupp)
+            elseif( stoppingScale(jcount).gt.smallptlow .and.
+     $              stoppingScale(jcount).le.smallptupp )then
+                deltanum(jcount,iflip(jcount))= pysudakov(smallptupp
+     $               ,xmasses2(i,jindex(iflip(jcount))), idup_s(i)
+     $               ,isudtype(iflip(jcount)),mcmass)
+               deltanum(jcount,iflip(jcount))=deltanum(jcount
+     $              ,iflip(jcount))*get_to_zero(stoppingScale(jcount)
+     $              ,smallptlow,smallptupp)
              else
-               deltanum(jcount,iflip(jcount))=
-     #              pysudakov(stoppingScale(jcount),xmasses2(i,jindex(iflip(jcount))),
-     #                        idup_s(i),isudtype(iflip(jcount)),mcmass)
+                deltanum(jcount,iflip(jcount))=
+     $               pysudakov(stoppingScale(jcount),xmasses2(i
+     $               ,jindex(iflip(jcount))), idup_s(i)
+     $               ,isudtype(iflip(jcount)),mcmass)
              endif
            enddo
 c Here, deltaden(*) and deltanum(*,*) must be filled with sensible values.
@@ -2061,8 +2062,8 @@ c (each of the latter is responsible for CA/2)
              else
                do kcount=1,icount
                  if(stoppingScale(kcount).lt.startingScale(jcount))then
-                   deltarat(kcount,jcount)=deltanum(kcount,jcount)/
-     #                                     deltaden(jcount)
+                    deltarat(kcount,jcount)=deltanum(kcount,jcount)/
+     $                   deltaden(jcount)
                  else
                    deltarat(kcount,jcount)=1.d0
                  endif
@@ -2453,7 +2454,8 @@ c the same method
       include "born_nhel.inc"
 
       double precision p(0:3,nexternal)
-      double precision y_ij_fks,bornbars(max_bcol),bornbarstilde(max_bcol)
+      double precision y_ij_fks,bornbars(max_bcol)
+     $     ,bornbarstilde(max_bcol)
 
       double precision zero
       parameter (zero=0.d0)
@@ -2712,8 +2714,8 @@ c
 
 
 
-      subroutine kinematics_driver(xi_i_fks,y_ij_fks,sh,pp,ileg,
-     &                             xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,extra)
+      subroutine kinematics_driver(xi_i_fks,y_ij_fks,sh,pp,ileg,xm12
+     $     ,xm22,xtk,xuk,xq1q,xq2q,qMC,extra)
 c Determines Mandelstam invariants and assigns ileg and shower-damping
 c variable qMC
       implicit none
@@ -2922,7 +2924,8 @@ c azimuth = irrelevant (hence set = 0)
                write(*,*)'PYTHIA6PT not available for FSR'
                stop
             elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $              ,xuk,xq1q,xq2q)
                qMC=sqrt(z*(1-z)*w1)
             endif
          endif
@@ -2955,7 +2958,8 @@ c azimuth = irrelevant (hence set = 0)
                write(*,*)'PYTHIA6PT not available for FSR'
                stop
             elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $              ,xuk,xq1q,xq2q)
                qMC=sqrt(z*(1-z)*w2)
             endif
          endif
@@ -2972,7 +2976,8 @@ c Checks on invariants
 
 
 
-      subroutine check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22)
+      subroutine check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12
+     $     ,xm22)
       implicit none
       integer ileg
 
@@ -3050,8 +3055,9 @@ c Herwig6
 c Shower energy variable
       implicit none
       integer ileg
-      double precision zHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
-     &ss,w1,w2,tbeta1,zeta1,tbeta2,zeta2,get_zeta,beta,betae0,betad,betas
+      double precision zHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
+     $     ,tiny,ss,w1,w2,tbeta1,zeta1,tbeta2,zeta2,get_zeta,beta,betae0
+     $     ,betad,betas
       parameter (tiny=1d-5)
 
       w1=-xq1q+xq2q-xtk
@@ -3130,8 +3136,8 @@ c
 c Shower evolution variable
       implicit none
       integer ileg
-      double precision xiHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z,
-     &zHW6,w1,w2,beta,betae0,betad,betas
+      double precision xiHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
+     $     ,tiny,z,zHW6,w1,w2,beta,betae0,betad,betas
       parameter (tiny=1d-5)
 
       z=zHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
@@ -3196,14 +3202,16 @@ c
 
 
 
-      function xjacHW6_xiztoxy(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      function xjacHW6_xiztoxy(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
+     $     ,xq1q,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
       integer ileg
-      double precision xjacHW6_xiztoxy,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
-     &xq2q,tiny,tmp,z,zHW6,xi,xiHW6,w1,w2,tbeta1,zeta1,dw1dx,dw2dx,dw1dy,dw2dy,
-     &tbeta2,get_zeta,beta,betae0,betad,betas,eps1,eps2,beta1,beta2,zmo
+      double precision xjacHW6_xiztoxy,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
+     $     ,xq1q,xq2q,tiny,tmp,z,zHW6,xi,xiHW6,w1,w2,tbeta1,zeta1,dw1dx
+     $     ,dw2dx,dw1dy,dw2dy,tbeta2,get_zeta,beta,betae0,betad,betas
+     $     ,eps1,eps2,beta1,beta2,zmo
       parameter (tiny=1d-5)
 
       tmp=0d0
@@ -3246,8 +3254,10 @@ c
             eps2=1-(xm12-xm22)/(s-w1)
             beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
             tbeta1=sqrt(1-(w1+xm12)/e0sq)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta1/(2*e0sq*z*(1-z)*(s-w1)*beta2)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta1/(2*e0sq*z*(1-z)*(s-w1)
+     $           *beta2)
          endif
 c
       elseif(ileg.eq.4)then
@@ -3261,8 +3271,10 @@ c
             eps1=1+xm12/(s-w2)
             beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
             tbeta2=sqrt(1-w2/e0sq)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta2/(2*e0sq*z*(1-z)*(s-w2)*beta1)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta2/(2*e0sq*z*(1-z)*(s-w2)
+     $           *beta1)
          endif
 c
       else
@@ -3386,7 +3398,8 @@ c
 
 
 
-      function xjacHWPP_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      function xjacHWPP_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
+     $     ,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
@@ -3416,7 +3429,8 @@ c
          else
             eps2=1-(xm12-xm22)/(s-w1)
             beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w1)*beta2)
          endif
 c
@@ -3428,7 +3442,8 @@ c
          else
             eps1=1+xm12/(s-w2)
             beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w2)*beta1)
          endif
 c
@@ -3552,7 +3567,8 @@ c
 
 
 
-      function xjacPY6Q_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      function xjacPY6Q_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
+     $     ,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
@@ -3579,7 +3595,8 @@ c
             betas=1+(xm12-xm22)/s
             tmp=xm12*betad/betas/(betas-betad*yj)
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy)
             tmp=s*(xm12+w1)/w1/(s+w1+xm12-xm22)*dw1dy
          endif
 c
@@ -3589,7 +3606,8 @@ c
          elseif(1-yj.lt.tiny)then
             tmp=-s*(1-x)*(s*x-xm12)/( 2*(s-xm12) )
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy) 
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
+     $           ,dw2dx,dw2dy) 
             tmp=s/(s+w2-xm12)*dw2dy
          endif
 c
@@ -4021,12 +4039,13 @@ c Consistency check
          stop
       endif
 
-      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
+      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
+     $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
       if(dampMCsubt)then
-         call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
+         call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
+     $        ,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
          if(emscasharp)then
             emsca_bare=scalemax
@@ -4077,6 +4096,9 @@ c Consistency check
       integer iBtoR(nexternal-1)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
 c Consistency check
       shattmp=2d0*dot(pp(0,1),pp(0,2))
@@ -4086,16 +4108,33 @@ c Consistency check
          stop
       endif
 
-      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
-      call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a,ileg,xm12)
+      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
+     $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
+      call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a
+     $     ,ileg,xm12)
       emsca_a=-1d0
       emscwgt_a=0d0
-      
+c
+      do i=1,nexternal
+        if(i.lt.i_fks)then
+          iBtoR(i)=i
+        elseif(i.eq.i_fks)then
+          if(i.lt.nexternal)iBtoR(i)=i+1
+        elseif(i.gt.i_fks)then
+          if(i.lt.nexternal)iBtoR(i)=i+1
+        endif
+      enddo
+c      
       call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
       do i=1,nexternal-1
+c     skip if not QCD dipole (safety)
+         if(.not.(pdg_type(iBtoR(i)).eq.21 .or.
+     $            abs(pdg_type(iBtoR(i))).le.6))cycle
          do j=1,nexternal-1
             if(j.eq.i)cycle
+c     skip if not QCD dipole (safety)
+            if(.not.(pdg_type(iBtoR(j)).eq.21 .or.
+     $               abs(pdg_type(iBtoR(j))).le.6))cycle
             if(dampMCsubt)then
                emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
      #                           (1d-3*scalemax_a(i,j))
@@ -4122,6 +4161,7 @@ c Consistency check
                      emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
                      emsca_a(i,j)=emsca_bare_a(i,j)
                   else
+                     emscwgt_a(i,j)=0d0
                      emsca_a(i,j)=scalemax_a(i,j)
                   endif
                endif
@@ -4134,7 +4174,8 @@ c Consistency check
 
 
 
-      subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg,xm12)
+      subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg
+     $     ,xm12)
       implicit none
       include "nexternal.inc"
       include "run.inc"
@@ -4153,7 +4194,8 @@ c Consistency check
       xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
       xscalemin=min(xscalemin,xscalemax)
 c
-      if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+      if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
+     $     ileg.eq.3)then
          xscalemin=max(xscalemin,sqrt(xm12))
          xscalemax=max(xscalemin,xscalemax)
       endif
@@ -4162,28 +4204,36 @@ c
       end
 
 
-      subroutine assign_scaleminmax_array(shat,xi,xscalemin_a,xscalemax_a,ileg,xm12)
+      subroutine assign_scaleminmax_array(shat,xi,xscalemin_a
+     $     ,xscalemax_a,ileg,xm12)
       implicit none
       include "nexternal.inc"
       include "run.inc"
       include "madfks_mcatnlo.inc"
       integer i,j,ileg
       double precision shat,xi,ref_scale_a(nexternal,nexternal),xm12
-      double precision xscalemax_a(nexternal,nexternal),xscalemin_a(nexternal,nexternal)
+      double precision xscalemax_a(nexternal,nexternal)
+     $     ,xscalemin_a(nexternal,nexternal)
       character*4 abrv
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
+      xscalemax_a=-1d0
+      xscalemin_a=-1d0
       call assign_ref_scale_array(p_born,xi,shat,ref_scale_a)
       do i=1,nexternal-2
          do j=i+1,nexternal-1
-            xscalemin_a(i,j)=max(shower_scale_factor*frac_low*ref_scale_a(i,j),scaleMClow)
-            xscalemax_a(i,j)=max(shower_scale_factor*frac_upp*ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
-            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0*sqrt(ebeam(1)*ebeam(2)))
+            xscalemin_a(i,j)=max(shower_scale_factor*frac_low
+     $           *ref_scale_a(i,j),scaleMClow)
+            xscalemax_a(i,j)=max(shower_scale_factor*frac_upp
+     $           *ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
+            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0
+     $           *sqrt(ebeam(1)*ebeam(2)))
             xscalemin_a(i,j)=min(xscalemin_a(i,j),xscalemax_a(i,j))
 c
-            if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+            if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
+     $           ileg.eq.3)then
                xscalemin_a(i,j)=max(xscalemin_a(i,j),sqrt(xm12))
                xscalemax_a(i,j)=max(xscalemin_a(i,j),xscalemax_a(i,j))
             endif
@@ -4242,7 +4292,7 @@ c
      &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
 c$$$            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
 c$$$            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
-            ref_sc_a(j,i)=ref_sc_a(i,j)
+            ref_sc_a(j,i)=ref_sc_a(i,j)/2d0
          enddo
       enddo
 c
@@ -4745,7 +4795,8 @@ c azimuth = irrelevant (hence set = 0)
                write(*,*)'PYTHIA6PT not available for FSR'
                stop
             elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $              ,xuk,xq1q,xq2q)
                qMC_a(ipart)=sqrt(z*(1-z)*w1)
             endif
          endif
@@ -4778,7 +4829,8 @@ c azimuth = irrelevant (hence set = 0)
                write(*,*)'PYTHIA6PT not available for FSR'
                stop
             elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk,xuk,xq1q,xq2q)
+               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $              ,xuk,xq1q,xq2q)
                qMC_a(ipart)=sqrt(z*(1-z)*w2)
             endif
          endif
@@ -4795,7 +4847,7 @@ c   all filled (thus, the conventions are the same as those relevant e.g.
 c   to xscales and xscales2);
 c - a conversion from an array to a matrix, where the first index represents 
 c   the emitter of i_fks, and the second one is the recoiler (connected with
-c   a colour line to the emitter). Since in PY8 the dependence of the shower 
+c   a colour line to the emitter). Since in PY8 the dependence on the shower 
 c   variable is immaterial (or negligible), all columns are filled with
 c   the same value. In more realistic cases, only one (two) column(s) per
 c   row must be non-zero in the case of quarks (gluons)
@@ -4812,6 +4864,8 @@ c   row must be non-zero in the case of quarks (gluons)
          if(i.eq.i_fks)cycle
          do j=1,nexternal
             if(j.eq.i_fks)cycle
+            if(j.eq.i)cycle
+            if(.not.(pdg_type(j).eq.21.or.abs(pdg_type(j)).le.6))cycle
             qMC_a2(iRtoB(i),iRtoB(j))=qMC_a(i)
          enddo
       enddo
