@@ -133,7 +133,9 @@ def get_sudakov_amps(born_amp):
         ####born_proc = copy.deepcopy(born_amp['process'])
         # MZ: NEVER deepcopy a process!!!
         born_proc = copy.copy(born_amp['process'])
-        born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
+        # copy the legs as a LegList (not FKSLegList) in order 
+        # not to have them re-ordered
+        born_proc['legs'] = MG.LegList(copy.deepcopy(born_amp['process']['legs']))
         pdgs = [[],[]] # old and new pdgs
         # replace all legs listed in goldstone_comb
         for leg in goldstone_comb:
@@ -168,7 +170,9 @@ def get_sudakov_amps(born_amp):
 
             for part in iso_part_list:
                 born_proc = copy.copy(born_amp['process'])
-                born_proc['legs'] = copy.deepcopy(born_amp['process']['legs'])
+                # copy the legs as a LegList (not FKSLegList) in order 
+                # not to have them re-ordered
+                born_proc['legs'] = MG.LegList(copy.deepcopy(born_amp['process']['legs']))
                 newleg = copy.copy(leg)
                 newleg['id'] = part
                 born_proc['legs'][ileg] = newleg
@@ -205,7 +209,9 @@ def get_sudakov_amps(born_amp):
                 for part1 in iso_part_list1:
                     for part2 in iso_part_list2:
                         born_proc = copy.copy(base_amp['process'])
-                        born_proc['legs'] = copy.deepcopy(base_amp['process']['legs'])
+                        # copy the legs as a LegList (not FKSLegList) in order 
+                        # not to have them re-ordered
+                        born_proc['legs'] = MG.LegList(copy.deepcopy(born_amp['process']['legs']))
                         # replace leg1
                         newleg1 = copy.copy(leg1)
                         newleg1['id'] = part1
