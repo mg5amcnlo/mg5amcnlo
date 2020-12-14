@@ -414,12 +414,12 @@ C mix
       sw2 = 1d0 - cw2
 
       ! only works for the mixing chi/H
-      sdk_iz_diag = 0d0
+      sdk_iz_nondiag = 0d0
       if (pdg.eq.250.or.pdg.eq.25) then
           ! pdg (new) = 25
-        if (pdg.eq.25) sdk_iz_diag = iflist * dcmplx(0d0,-1d0) / 2d0
-        if (pdg.eq.250) sdk_iz_diag = iflist * dcmplx(0d0,1d0) / 2d0
-        sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
+        if (pdg.eq.25) sdk_iz_nondiag = ifsign * dcmplx(0d0,-1d0) / 2d0
+        if (pdg.eq.250) sdk_iz_nondiag = ifsign * dcmplx(0d0,1d0) / 2d0
+        sdk_iz_nondiag = sdk_iz_nondiag / sqrt(sw2*cw2)
       endif
 
       return
