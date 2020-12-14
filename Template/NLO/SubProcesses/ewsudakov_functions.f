@@ -44,8 +44,8 @@ c exit and do nothing
 c exit and do nothing
       return
 
-      if ((pdg_old.eq.24.and.pdg_new.eq.22).or.
-     $    (pdg_old.eq.22.and.pdg_new.eq.24)) then
+      if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
+     $    (pdg_old.eq.22.and.pdg_new.eq.23)) then
         lzow = dlog(mdl_mz**2/mdl_mw**2)
         get_lsc_nondiag = -0.5d0 * sdk_cew_nondiag() * bigL(invariants(1,2))
       endif
@@ -139,7 +139,7 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
       integer pdg_old, pdg_new
       include 'coupl.inc'
       double precision lzow
-      double complex bigL, smallL, sdk_cew_nondiag
+      double complex bigL, smallL, sdk_iz_nondiag
 
       ! this function is non zero only for H/Chi mixing)
       ! CHECK (does one need the matrix element where two H/chi are
@@ -153,7 +153,7 @@ c exit and do nothing
      $    (pdg_old.eq.250.and.pdg_new.eq.25)) then
         lzow = dlog(mdl_mz**2/mdl_mw**2)
         write(*,*) 'get_ssc_n_nondiag not implemented!'
-        get_ssc_n_nondiag = -0.5d0 * sdk_cew_nondiag() * bigL(invariants(1,2))
+        get_ssc_n_nondiag = sdk_iz_nondiag(pdg_new) * 2d0*smallL(invariants(1,2))
       endif
 
       return
@@ -327,10 +327,9 @@ C left handed up quark / right handed antiup quark
 C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_t3_diag = -sign(0.5d0,dble(ifsign*pdg))
 
-C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
+C goldstones, they behave like left handed leptons (charged); neutrals
+C mix
       if (abs(s_pdg).eq.251) sdk_t3_diag = sign(0.5d0,dble(s_pdg)) 
-      if (abs(s_pdg).eq.250) sdk_t3_diag = sign(0.5d0,dble(s_pdg))
-      if (abs(s_pdg).eq.25) sdk_t3_diag = sign(0.5d0,dble(s_pdg))
 
 C transverse W boson
       if (abs(s_pdg).eq.24) sdk_t3_diag = sign(1d0,dble(ifsign*pdg))
@@ -380,10 +379,9 @@ C right handed down quark / left handed antidown quark
 C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_yo2_diag = sign(1d0/6d0,dble(ifsign*pdg))
 
-C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
+C goldstones, they behave like left handed leptons (charged); neutrals
+C mix
       if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
-      if (abs(s_pdg).eq.250) sdk_yo2_diag = -sign(0.5d0,dble(s_pdg))
-      if (abs(s_pdg).eq.25) sdk_yo2_diag = -sign(0.5d0,dble(s_pdg))
 
       return
       end
@@ -401,6 +399,28 @@ C goldstones, they behave like left handed leptons (charged) or neutrinos (neutr
 
       sdk_iz_diag = sdk_t3_diag(pdg,hel,ifsign) - sw2*sdk_charge(pdg,hel,ifsign)
       sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
+
+      return
+      end
+
+
+      double complex function sdk_iz_nondiag(pdg, hel, ifsign)
+      implicit none
+      integer pdg, hel, ifsign
+      include "coupl.inc"
+      double precision sw2, cw2
+
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
+      ! only works for the mixing chi/H
+      sdk_iz_diag = 0d0
+      if (pdg.eq.250.or.pdg.eq.25) then
+          ! pdg (new) = 25
+        if (pdg.eq.25) sdk_iz_diag = iflist * dcmplx(0d0,-1d0) / 2d0
+        if (pdg.eq.250) sdk_iz_diag = iflist * dcmplx(0d0,1d0) / 2d0
+        sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
+      endif
 
       return
       end
