@@ -800,38 +800,38 @@ c
                write(ifile,'(a)') '  </rwgt>'
             endif
          endif
-         if (mcatnlo_delta) then
+      endif
+      if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
-            are_col_conn=.false.
-            scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
-            do i=1,NUP
-               if (abs(ISTUP(i)).ne.1) cycle
-               do j=1,NUP
-                  if (abs(ISTUP(j)).ne.1) cycle
-                  if(i.eq.j)cycle
-                  are_col_conn(i,j)=
-     &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
-     &            (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
-     &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
-     &            (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
-                  if(are_col_conn(i,j) .and. SCALUP_a(i,j)
-     $                 .lt.scaleMCcut)then
-                     write(*,*)'Colour error in write_lhef_event',i,j
-                     do ii=1,NUP
-                        write (*,*) scalup_a(ii,1:NUP)
-                     enddo
-                     stop
-                  endif
-                  if(are_col_conn(i,j))then
-                     write(str_tmp,701)
-     &                    " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
-                     scale_str=trim(scale_str)//trim(str_tmp)
-                  endif
-               enddo
+         are_col_conn=.false.
+         scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+         do i=1,NUP
+            if (abs(ISTUP(i)).ne.1) cycle
+            do j=1,NUP
+               if (abs(ISTUP(j)).ne.1) cycle
+               if(i.eq.j)cycle
+               are_col_conn(i,j)=
+     &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
+     &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
+     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
+     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
+               if(are_col_conn(i,j) .and. SCALUP_a(i,j)
+     $              .lt.scaleMCcut)then
+                  write(*,*)'Colour error in write_lhef_event',i,j
+                  do ii=1,NUP
+                     write (*,*) scalup_a(ii,1:NUP)
+                  enddo
+                  stop
+               endif
+               if(are_col_conn(i,j))then
+                  write(str_tmp,701)
+     &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+                  scale_str=trim(scale_str)//trim(str_tmp)
+               endif
             enddo
-            write(ifile,'(a)')"  "//trim(scale_str)//">"
-            write(ifile,'(a)') "  </scales>"
-         endif
+         enddo
+         write(ifile,'(a)')"  "//trim(scale_str)//">"
+         write(ifile,'(a)') "  </scales>"
       endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
@@ -978,34 +978,39 @@ c
                read(ifile,'(a)')string
             endif
          endif
-         if (mcatnlo_delta) then
-c Read the <scales> block
-            do i=1,NUP
-               do j=1,NUP
-                  SCALUP_a(i,j)=-1d0
-               enddo
-            enddo
-            read(ifile,'(a)')string
-            do i=1,len(trim(string))-6
-               if(string(i:i+5).eq.'scalup' .or.
-     &              string(i:i+5).eq.'SCALUP')then
-                  read(string(i+7:i+7),*)ii
-                  read(string(i+9:i+9),*)jj
-                  read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-               endif
-            enddo
-            read(ifile,'(a)')string
-            if(index(string,'</scales').eq.0)then
-               write(*,*)'In read_lhef_event:'
-               write(*,*)'Could not find the end of scales block:'
-               write(*,*)string(1:len_trim(string))
-               stop
-            endif
-         endif
-         read(ifile,'(a)')string
       else
-         string=buff(1:len_trim(buff))
          buff=' '
+         backspace(ifile)
+      endif
+      if (mcatnlo_delta) then
+c Read the <scales> block
+         do i=1,NUP
+            do j=1,NUP
+               SCALUP_a(i,j)=-1d0
+            enddo
+         enddo
+         read(ifile,'(a)')string
+         do i=1,len(trim(string))-6
+            if(string(i:i+5).eq.'scalup' .or.
+     &           string(i:i+5).eq.'SCALUP')then
+               read(string(i+7:i+7),*)ii
+               read(string(i+9:i+9),*)jj
+               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+            endif
+         enddo
+         read(ifile,'(a)')string
+         if(index(string,'</scales').eq.0)then
+            write(*,*)'In read_lhef_event:'
+            write(*,*)'Could not find the end of scales block:'
+            write(*,*)string(1:len_trim(string))
+            stop
+         endif
+      endif
+      read(ifile,'(a)')string
+      if(index(string,'</event').eq.0) then
+         write (*,*) 'ERROR #3: Cannot find end of event in'/
+     $        /' handling_lhe_event.f'
+         stop 1
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -1159,34 +1164,39 @@ c
                read(ifile,'(a)')string
             endif
          endif
-         if (mcatnlo_delta) then
-c Read the <scales> block
-            do i=1,NUP
-               do j=1,NUP
-                  SCALUP_a(i,j)=-1d0
-               enddo
-            enddo
-            read(ifile,'(a)')string
-            do i=1,len(trim(string))-6
-               if(string(i:i+5).eq.'scalup' .or.
-     &              string(i:i+5).eq.'SCALUP')then
-                  read(string(i+7:i+7),*)ii
-                  read(string(i+9:i+9),*)jj
-                  read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-               endif
-            enddo
-            read(ifile,'(a)')string
-            if(index(string,'</scales').eq.0)then
-               write(*,*)'In read_lhef_event:'
-               write(*,*)'Could not find the end of scales block:'
-               write(*,*)string(1:len_trim(string))
-               stop
-            endif
-         endif
-         read(ifile,'(a)')string
       else
-         string=buff(1:len_trim(buff))
          buff=' '
+         backspace(ifile)
+      endif
+      if (mcatnlo_delta) then
+c Read the <scales> block
+         do i=1,NUP
+            do j=1,NUP
+               SCALUP_a(i,j)=-1d0
+            enddo
+         enddo
+         read(ifile,'(a)')string
+         do i=1,len(trim(string))-6
+            if(string(i:i+5).eq.'scalup' .or.
+     &           string(i:i+5).eq.'SCALUP')then
+               read(string(i+7:i+7),*)ii
+               read(string(i+9:i+9),*)jj
+               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+            endif
+         enddo
+         read(ifile,'(a)')string
+         if(index(string,'</scales').eq.0)then
+            write(*,*)'In read_lhef_event:'
+            write(*,*)'Could not find the end of scales block:'
+            write(*,*)string(1:len_trim(string))
+            stop
+         endif
+      endif
+      read(ifile,'(a)')string
+      if(index(string,'</event').eq.0) then
+         write (*,*) 'ERROR #3: Cannot find end of event in'/
+     $        /' handling_lhe_event.f'
+         stop 1
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
