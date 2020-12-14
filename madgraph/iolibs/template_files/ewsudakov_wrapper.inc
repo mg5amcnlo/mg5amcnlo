@@ -36,6 +36,10 @@ COMMON/CCALCULATEDBORN/CALCULATEDBORN
 integer ewsud_helselect
 common/to_ewsud_helselect/ewsud_helselect
 
+double precision compensate_identical_factor
+external compensate_identical_factor
+double precision comp_idfac
+
 CALCULATEDBORN=.FALSE.
 
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
@@ -92,3 +96,26 @@ hels(:) = NHEL(:, ihel)
 
 return
 end
+
+
+double precision function compensate_identical_factor(igold_me)
+C     provides the multiplicative factor for the result of the
+C      sudakov MEs so that they have the same identical-particle
+C      factor as the Born in the specific FKS configuration
+implicit none
+integer igold_me
+C 
+integer sdk_ident_goldstone(%(ngoldstone_me)d)
+data sdk_ident_goldstone / %(sdk_ident_goldstone)s / 
+C
+integer nfksprocess
+common/c_nfksprocess/nfksprocess
+%(den_factor_lines)s
+integer bornspincol
+data bornspincol / %(bornspincol)d /
+
+  compensate_identical_factor = dble(sdk_ident_goldstone(igold_me))/dble(iden_values(nfksprocess)/bornspincol)
+
+return
+end
+

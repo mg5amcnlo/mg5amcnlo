@@ -227,9 +227,11 @@ C
       double complex amp_split_ewsud(amp_split_size)
       common /to_amp_split_ewsud/ amp_split_ewsud
       integer iden
-      parameter (iden = %(den_factor_sdk)d)
       logical force_ijglu_zero
       common /to_force_ijglu/ force_ijglu_zero
+      %(den_factor_lines)s
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
 C
 C     FUNCTIONS
 C
@@ -240,6 +242,7 @@ C BEGIN CODE
 C
 C look for orders which match the born order constraint 
 
+      iden=iden_values(nfksprocess)
 force_ijglu_zero = .true.
 
 CALL BORN(P,NHEL,HELL,ANS,borns)

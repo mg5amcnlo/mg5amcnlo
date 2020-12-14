@@ -1806,11 +1806,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # Averaging initial state color, spin, and identical FS particles
         replace_dict['den_factor_line'] = self.get_den_factor_line(matrix_element)
 
-        # Extract den_factor_lines
-        den_factor = matrix_element.get_denominator_factor()
-        replace_dict['den_factor_sdk'] = den_factor
-    
-
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
         replace_dict['ngraphs'] = ngraphs
@@ -2020,9 +2015,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # finally, the wrapper for all matrix elements needed
         # for the Sudakov approximation
         filename = "ewsudakov_wrapper.f"
-        self.write_sudakov_wrapper(writers.FortranWriter(filename), born_me,
-                                   matrix_element.sudakov_matrix_elements,
-                                   fortran_model)
+        self.write_sudakov_wrapper(writers.FortranWriter(filename),
+                                   matrix_element,fortran_model)
 
 
 
@@ -2599,13 +2593,28 @@ Parameters              %(params)s\n\
         return charge_list[n - 1] * charge_list[m - 1]
 
 
-    def write_sudakov_wrapper(self, writer, born_me, sudakov_list, fortran_model):
+    def write_sudakov_wrapper(self, writer, matrix_element, fortran_model):
         """Write the wrapper for the sudakov matrix elements
         """
+
+        born_me = matrix_element.born_me
+        sudakov_list = matrix_element.sudakov_matrix_elements
+
         goldstone_mes = [sud for sud in sudakov_list if sud['goldstone']]
         non_goldstone_mes = [sud for sud in sudakov_list if not sud['goldstone']]
 
         replace_dict = {}
+
+        # number of matrix elmenets
+        replace_dict['ngoldstone_me'] = len(goldstone_mes)
+        # identical particle factors
+        replace_dict['sdk_ident_goldstone'] = ",".join(
+                [str(me['matrix_element']['identical_particle_factor']) for me in goldstone_mes])
+
+        den_factor_lines = self.get_den_factor_lines(matrix_element)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+        replace_dict['bornspincol'] = born_me.get_denominator_factor() / born_me['identical_particle_factor']
+
 
         helicity_lines = self.get_helicity_lines(born_me)
         replace_dict['helicity_lines'] = helicity_lines
@@ -2629,6 +2638,7 @@ Parameters              %(params)s\n\
             conditions = ["nhel(%d,ihel).eq.0" % (leg['number']) for leg in me['legs']]
             goldstone_calls += " (%s) then\n" % ".and.".join(conditions)
             goldstone_calls += "call EWSDK_GOLD_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (i + 1)
+            goldstone_calls += "comp_idfac = compensate_identical_factor(%d)\n" % (i + 1)
             goldstone_calls += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
             goldstone_calls += "C the LSC term\n" 
             goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
@@ -2658,6 +2668,9 @@ Parameters              %(params)s\n\
                 goldstone_calls += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in messc['matrix_element']['processes'][0]['legs']])
                 goldstone_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_c(%d,%d,pdglist,%d,%d,nhel,iflist,invariants)\n" % \
                                 (messc['legs'][0]['number'], messc['legs'][1]['number'], messc['pdgs'][1][0], messc['pdgs'][1][1])
+            # finally compensate for the identical factor
+            goldstone_calls += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)*comp_idfac\n"
+            goldstone_calls += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)*comp_idfac\n"
 
         replace_dict['calls_to_me'] = goldstone_calls
 
