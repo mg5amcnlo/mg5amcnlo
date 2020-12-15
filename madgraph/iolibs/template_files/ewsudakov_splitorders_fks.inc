@@ -28,9 +28,11 @@ C
       INTEGER I,j
       include 'orders.inc'
       REAL*8 ANS(NSQAMPSO)
-      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
-      common /c_keep_order_cnt/ keep_order_cnt 
+      LOGICAL KEEP_ORDER(NSQAMPSO)
+      save KEEP_ORDER
       integer amp_orders(nsplitorders)
+      logical firsttime
+      data firsttime / .TRUE. /
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
@@ -47,6 +49,27 @@ C
 C BEGIN CODE
 C
 
+if (firsttime) then
+ do i = 1, nsqampso
+  keep_order(i) = .true.
+C this is for the orders of the born to integrate
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+
+  if (keep_order(i)) then
+   write(*,*) 'SDK%(ime)d: keeping split order ', i
+  else
+   write(*,*) 'SDK%(ime)d: not keeping split order ', i
+  endif
+ enddo
+
+ firsttime = .false.
+endif
+
       CALL EWSUDAKOV_ME_%(ime)d_SPLITORDERS(P,NHEL,ANS)
       ans_summed = 0d0
       max_val = 0d0
@@ -60,7 +83,7 @@ do i = 1, nsqampso
 enddo
 
       do i = 1, nsqampso
-        if (keep_order_cnt(qed_pos, i)) then
+        if (keep_order(i)) then
          ANS_SUMMED = ans_summed + ANS(I)
          do j = 1, nsplitorders
           amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)

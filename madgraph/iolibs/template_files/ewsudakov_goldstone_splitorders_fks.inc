@@ -29,7 +29,7 @@ C
       include 'orders.inc'
       REAL*8 ANS(NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO)
-      common /c_keep_order_sdk%(ime)d/ keep_order
+      common /c_keep_order_sdkg%(ime)d/ keep_order
       integer amp_orders(nsplitorders)
       logical firsttime
       data firsttime / .TRUE. /
@@ -43,7 +43,7 @@ C
 C
 C     FUNCTIONS
 C
-      integer GETORDPOWFROMINDEX_SDK%(ime)d
+      integer GETORDPOWFROMINDEX_SDKG%(ime)d
       integer orders_to_amp_split_pos
 C
 C BEGIN CODE
@@ -54,16 +54,16 @@ if (firsttime) then
   keep_order(i) = .true.
 C this is for the orders of the born to integrate
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_SDK%(ime)d(j, i) .gt. born_orders(j)) then
+   if(GETORDPOWFROMINDEX_SDKG%(ime)d(j, i) .gt. born_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif
   enddo
 
   if (keep_order(i)) then
-   write(*,*) 'SDK%(ime)d: keeping split order ', i
+   write(*,*) 'SDK_GOLDSTONE%(ime)d: keeping split order ', i
   else
-   write(*,*) 'SDK%(ime)d: not keeping split order ', i
+   write(*,*) 'SDK_GOLDSTONE%(ime)d: not keeping split order ', i
   endif
  enddo
 
@@ -86,7 +86,7 @@ enddo
         if (keep_order(i)) then
          ANS_SUMMED = ans_summed + ANS(I)
          do j = 1, nsplitorders
-          amp_orders(j) = GETORDPOWFROMINDEX_SDK%(ime)d(j, i)
+          amp_orders(j) = GETORDPOWFROMINDEX_SDKG%(ime)d(j, i)
          enddo
          !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
          if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
@@ -150,7 +150,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXSDK%(ime)d
+      INTEGER SQSOINDEXSDKG%(ime)d
 C  
 C COLOR DATA
 C  
@@ -171,7 +171,7 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXSDK%(ime)d(M,N))=ANS(SQSOINDEXSDK%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+              ANS(SQSOINDEXSDKG%(ime)d(M,N))=ANS(SQSOINDEXSDKG%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO
@@ -183,7 +183,7 @@ C
 C Helper functions to deal with the split orders.
 C
 
-      INTEGER FUNCTION SQSOINDEXSDK%(ime)d(AMPORDERA,AMPORDERB)
+      INTEGER FUNCTION SQSOINDEXSDKG%(ime)d(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -210,19 +210,19 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXSDK%(ime)d_FROM_ORDERS
+      INTEGER SQSOINDEXSDKG%(ime)d_FROM_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSPLITORDERS
 	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
 	  ENDDO
-	  SQSOINDEXSDK%(ime)d=SQSOINDEXSDK%(ime)d_FROM_ORDERS(SQORDERS)
+	  SQSOINDEXSDKG%(ime)d=SQSOINDEXSDKG%(ime)d_FROM_ORDERS(SQORDERS)
 	  END
 
 
 
-      INTEGER FUNCTION SQSOINDEXSDK%(ime)d_FROM_ORDERS(ORDERS)
+      INTEGER FUNCTION SQSOINDEXSDKG%(ime)d_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -249,7 +249,7 @@ C
 	    DO J=1,NSPLITORDERS
 		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		SQSOINDEXSDK%(ime)d_FROM_ORDERS = I
+		SQSOINDEXSDKG%(ime)d_FROM_ORDERS = I
 		RETURN
 1009    CONTINUE
 	  ENDDO
@@ -262,7 +262,7 @@ C
 
 
 
-      INTEGER FUNCTION GETORDPOWFROMINDEX_SDK%(ime)d(IORDER, INDX)
+      INTEGER FUNCTION GETORDPOWFROMINDEX_SDKG%(ime)d(IORDER, INDX)
 C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
@@ -297,11 +297,11 @@ C
       STOP
       ENDIF
 
-      GETORDPOWFROMINDEX_SDK%(ime)d=SQSPLITORDERS(INDX, IORDER)
+      GETORDPOWFROMINDEX_SDKG%(ime)d=SQSPLITORDERS(INDX, IORDER)
       END
 
 
-      SUBROUTINE GET_NSQSO_SDK%(ime)d(NSQSO)
+      SUBROUTINE GET_NSQSO_SDKG%(ime)d(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
