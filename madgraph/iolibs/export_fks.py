@@ -2606,10 +2606,13 @@ Parameters              %(params)s\n\
         replace_dict = {}
 
         # number of matrix elmenets
-        replace_dict['ngoldstone_me'] = len(goldstone_mes)
+        replace_dict['ngoldstone_me'] = max(len(goldstone_mes),1)
         # identical particle factors
-        replace_dict['sdk_ident_goldstone'] = ",".join(
-                [str(me['matrix_element']['identical_particle_factor']) for me in goldstone_mes])
+        if goldstone_mes:
+            replace_dict['sdk_ident_goldstone'] = ",".join(
+                    [str(me['matrix_element']['identical_particle_factor']) for me in goldstone_mes])
+        else:
+            replace_dict['sdk_ident_goldstone'] = "0"
 
         den_factor_lines = self.get_den_factor_lines(matrix_element)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
