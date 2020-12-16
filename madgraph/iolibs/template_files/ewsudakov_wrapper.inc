@@ -20,6 +20,8 @@ DOUBLE COMPLEX AMP_SPLIT_EWSUD_LSC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_SSC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+DOUBLE COMPLEX AMP_SPLIT_EWSUD_XXC(AMP_SPLIT_SIZE)
+common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
 DOUBLE COMPLEX AMP_SPLIT_BORN_ONEHEL(AMP_SPLIT_SIZE)
 common /to_amp_born_onehel/amp_split_born_onehel
 
@@ -31,6 +33,8 @@ double complex get_lsc_diag, get_lsc_nondiag
 external get_lsc_diag, get_lsc_nondiag
 double complex get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc_c
 external get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc_c
+double complex get_xxc_diag, get_xxc_nondiag
+external get_xxc_diag, get_xxc_nondiag
 
 LOGICAL CALCULATEDBORN
 COMMON/CCALCULATEDBORN/CALCULATEDBORN
@@ -46,6 +50,7 @@ CALCULATEDBORN=.FALSE.
 
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
+AMP_SPLIT_EWSUD_XXC(:) = dcmplx(0d0,0d0)
 
 %(iflist)s
 

@@ -2658,20 +2658,24 @@ Parameters              %(params)s\n\
 
             # here the calls to all contributions where the particles of base_amp are not changed
             calls_to_me += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
-            calls_to_me += "C the LSC term\n" 
+            calls_to_me += "C the LSC term (diagonal)\n" 
             calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
             calls_to_me += "C the SSC term (neutral/diagonal)\n" 
             calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
 
-            # now the call to the LSC non-diagonal
+            calls_to_me += "C the C term (diagonal)\n" 
+            calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
+            # now the call to the LSC and C non-diagonal
             mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]
             if mes_same_charge_lsc:
-                calls_to_me += "C LSC non diag\n"
+                calls_to_me += "C LSC and C non diag\n"
             for mesc in mes_same_charge_lsc:
                 idx = non_goldstone_mes.index(mesc)
                 calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
                 calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in mesc['matrix_element']['processes'][0]['legs']])
                 calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants,%d,%d)\n" % \
+                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
+                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_nondiag(invariants,%d,%d)\n" % \
                                         (mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
 
             # now the calls to the SSC non-diagonal, with one particle different wrt base amp

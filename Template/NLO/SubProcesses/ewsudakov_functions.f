@@ -193,6 +193,50 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
 
       return
       end
+
+
+      double complex function get_xxc_diag(pdglist, hels, iflist, invariants)
+      implicit none
+      include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
+      double precision invariants(nexternal-1, nexternal-1)
+      include 'coupl.inc'
+      double precision lzow
+      double complex bigL, smallL, sdk_cew_diag, sdk_iz2_diag
+      external sdk_iz2_diag
+      integer i
+
+      get_xxc_diag = 0d0
+
+c exit and do nothing
+      return
+
+      return
+      end
+
+
+      double complex function get_xxc_nondiag(invariants, pdg_old, pdg_new)
+      implicit none
+      include 'nexternal.inc'
+      double precision invariants(nexternal-1, nexternal-1)
+      integer pdg_old, pdg_new
+      include 'coupl.inc'
+      double precision lzow
+      double complex bigL, smallL, sdk_cew_nondiag
+
+      ! this function is non zero only for Z/gamma mixing)
+      get_xxc_nondiag = 0d0
+
+c exit and do nothing
+      return
+
+      if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
+     $    (pdg_old.eq.22.and.pdg_new.eq.23)) then
+        continue
+      endif
+
+      return
+      end
       
       
       double complex function bigL(s)
