@@ -297,9 +297,14 @@ c
 c  a "diffractive" photon
 c      
       q2max=xmu*xmu
-      if(abs(ih) .eq. 3.or.abs(ih) .eq. 4) then  !from the electron
-          fx(7)=epa_lepton(x,q2max, ih)
-      elseif(ih .eq. 2) then  !from a proton without breaking
+      if(abs(ih) .eq. 3.or.abs(ih) .eq. 4) then !from the electron
+         write(*,*) 'impossible call (or was it) to pdf-> please reporrt'
+         stop 23
+         fx(7)=epa_lepton(x,q2max, ih)
+      elseif(ih .eq. 2) then    !from a proton without breaking
+         write(*,*) 'impossible call (or was it) to pdf-> please reporrt'
+         stop 23
+         ! isssue with next call since this function takes now a third argument (beamid not define here)
           fx(7)=epa_proton(x,q2max)
       endif      
       
