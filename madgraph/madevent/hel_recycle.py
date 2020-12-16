@@ -454,9 +454,9 @@ class HelicityRecycler():
             return None
         # What if [-1] is garbage? Then I'm relying on needs changing.
         # Is that OK?
-        if (len(matches) in [2, 3]) and (function.split('_')[-1] != '0'):
+        if (function.split('_')[-1] != '0'):
             return 'internal'
-        elif (len(matches) in [3, 4] and (function.split('_')[-1] == '0')):
+        elif (function.split('_')[-1] == '0'):
             return 'amplitude'
         else:
             print(f'Ahhhh what is going on here?\n{line}')
