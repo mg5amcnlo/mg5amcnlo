@@ -132,28 +132,63 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
       end
 
 
-      double complex function get_ssc_n_nondiag(invariants, pdg_old, pdg_new)
+      double complex function get_ssc_n_nondiag_1(pdglist, hels, iflist,
+     $                              invariants, ileg, pdg_old, pdg_new)
       implicit none
       include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
       double precision invariants(nexternal-1, nexternal-1)
-      integer pdg_old, pdg_new
-      include 'coupl.inc'
-      double precision lzow
-      double complex bigL, smallL, sdk_iz_nondiag
+      integer ileg, pdg_old, pdg_new
+      double complex bigL, smallL, sdk_iz_nondiag, sdk_iz_diag
+      integer i
+      double precision s
 
-      ! this function is non zero only for H/Chi mixing)
-      ! CHECK (does one need the matrix element where two H/chi are
-      ! swapped????) !!!!!!!!!!!
-      get_ssc_n_nondiag = 0d0
-      return
-c exit and do nothing
-
+      ! this function corresponds to the case when *one* out of the two particles
+      ! that enters the SSC contributions mixes as Chi <--> H (mediated
+      ! by the Z).
+      get_ssc_n_nondiag_1 = 0d0
+      s = invariants(1,2)
 
       if ((pdg_old.eq.25.and.pdg_new.eq.250).or.
      $    (pdg_old.eq.250.and.pdg_new.eq.25)) then
-        lzow = dlog(mdl_mz**2/mdl_mw**2)
-        write(*,*) 'get_ssc_n_nondiag not implemented!'
-        get_ssc_n_nondiag = sdk_iz_nondiag(pdg_new) * 2d0*smallL(invariants(1,2))
+        do i = 1, nexternal-1
+          if (i.eq.ileg) cycle
+          get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 + 
+     $              sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
+     $              sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg)) 
+     $              * 2d0 * smallL(s) * dlog(abs(invariants(i,ileg))/s)
+        enddo
+      endif
+
+      return
+      end
+
+
+      double complex function get_ssc_n_nondiag_2(pdglist, hels, iflist,
+     $                          invariants, ileg1, pdg_old1,pdg_new1,
+     $                                      ileg2, pdg_old2,pdg_new2)
+      implicit none
+      include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
+      double precision invariants(nexternal-1, nexternal-1)
+      integer ileg1, pdg_old1, pdg_new1, ileg2, pdg_old2, pdg_new2
+      double complex bigL, smallL, sdk_iz_nondiag, sdk_iz_diag
+      double precision s
+
+      ! this function corresponds to the case when both the two particles
+      ! that enters the SSC contributions mixes as Chi <--> H (mediated
+      ! by the Z).
+      get_ssc_n_nondiag_2 = 0d0
+      s = invariants(1,2)
+
+      if (((pdg_old1.eq.25.and.pdg_new1.eq.250).or.
+     $     (pdg_old1.eq.250.and.pdg_new1.eq.25)).and.
+     $    ((pdg_old2.eq.25.and.pdg_new2.eq.250).or.
+     $     (pdg_old2.eq.250.and.pdg_new2.eq.25))) then
+        get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 + 
+     $              sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
+     $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2)) 
+     $              * 2d0 * smallL(s) * dlog(abs(invariants(ileg1,ileg2))/s)
       endif
 
       return

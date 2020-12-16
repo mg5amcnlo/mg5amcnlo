@@ -28,7 +28,9 @@ integer iflist(nexternal-1), pdglist(nexternal-1), pdglist_oth(nexternal-1)
 double precision invariants(nexternal-1, nexternal-1)
 
 double complex get_lsc_diag, get_lsc_nondiag
-double complex get_ssc_n_diag, get_ssc_n_nondiag, get_ssc_c
+external get_lsc_diag, get_lsc_nondiag
+double complex get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc_c
+external get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc_c
 
 LOGICAL CALCULATEDBORN
 COMMON/CCALCULATEDBORN/CALCULATEDBORN
@@ -58,7 +60,7 @@ C call the born amplitude and store the result
 call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)
 amp_split_born_onehel(:) = amp_split_ewsud(:) 
 
-C call the amplitudes with the goldstones for the longitudinally-polarised legs
+C call the amplitudes with the goldstones for the longitudinally-polarised legs and the born for all-transverse
 %(calls_to_me)s
 enddo
 
