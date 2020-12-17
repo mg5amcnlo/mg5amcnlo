@@ -2638,8 +2638,9 @@ Parameters              %(params)s\n\
         # the calls to the goldstone matrix elements (for longitudinal polarisations and the born
         for i, me in enumerate(goldstone_mes+[{'matrix_element': born_me}]):
             if i==len(goldstone_mes):
-                # the last one, will use the born
-                calls_to_me += "else\n"
+                # the last one (or only one if no MEs with goldstones exists), will use the born
+                if goldstone_mes:
+                    calls_to_me += "else\n"
                 calls_to_me += "call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)\n"
                 calls_to_me += "comp_idfac = 1d0\n"
                 i = -1 # so that i+1 is 0
@@ -2715,8 +2716,12 @@ Parameters              %(params)s\n\
             # finally compensate for the identical factor
             calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)*comp_idfac\n"
             calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)*comp_idfac\n"
+            calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)*comp_idfac\n"
 
-        replace_dict['calls_to_me'] = calls_to_me + "endif\n"
+        if goldstone_mes:
+            calls_to_me += "endif\n"
+            
+        replace_dict['calls_to_me'] = calls_to_me
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_wrapper.inc')).read()
