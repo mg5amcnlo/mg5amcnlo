@@ -27,6 +27,7 @@ C----------------------------------------------------------------------
       SUBROUTINE PYABEG(nnn,wwwi)
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
 c
@@ -43,7 +44,7 @@ c
       integer j,jpr
       integer nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
      $     ,wwwi(max_weight_shower)
       integer nsingle,ncorr,nlepton,nplots,ncuts
       common/cplots/nsingle,ncorr,nlepton,nplots,ncuts

@@ -3163,6 +3163,8 @@ c momenta_str array. If not, add it.
             endif
          enddo
          if (.not. Hevents) then
+
+             ! MZ write also orderstag!!
 c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
             ipro=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
@@ -3200,6 +3202,7 @@ c iproc_picked:
      &              //trim(adjustl(procid))
 
                write (str_temp,30)
+     &              orderstag(ict),
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -3251,6 +3254,7 @@ c H-event
      &           //trim(adjustl(procid))
 
             write (str_temp,30)
+     &           orderstag(ict),
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
@@ -3271,7 +3275,7 @@ c H-event
          endif
       enddo
       return
- 30   format(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
@@ -5910,22 +5914,19 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-               if (use_poly_virtual) then
-                  virt_wgt=virt_wgt-polyfit(0)*born_wgt
-               else
-                  virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
-               endif
+               virt_wgt = 0d0
                do iamp=1,amp_split_size
                   if (amp_split_virt(iamp).eq.0d0) cycle
                   if (use_poly_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
      $                    polyfit(iamp)
      $                    *amp_split_born_for_virt(iamp)
-               else
-                  amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                 average_virtual(iamp,ichan)
-     $                 *amp_split_born_for_virt(iamp)
+                  else
+                     amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $                    average_virtual(iamp,ichan)
+     $                     *amp_split_born_for_virt(iamp)
                   endif
+                  virt_wgt = virt_wgt + amp_split_virt(iamp)
                enddo
             endif
             if (abrv.ne.'virt') then

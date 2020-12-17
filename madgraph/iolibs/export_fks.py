@@ -674,6 +674,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_powers.inc',
                      'fks_singular.f',
                      'splitorders_stuff.f',
+                     'orderstags_glob.f',
                      'chooser_functions.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',

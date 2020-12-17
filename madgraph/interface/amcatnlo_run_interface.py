@@ -2015,7 +2015,42 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
+            # gather the various orders tag and write include files
+            self.write_orders_tag_info()
+
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def write_orders_tag_info(self):
+        """Collects the informations on the orders_tag variable from the 
+        different channels and writes a file, linked to the P0 dirs
+        """
+        log = pjoin(self.me_dir, 'Events', self.run_name, 'alllogs_0.html')
+        content = open(log).read()
+        taglines = [l for l in content.split('\n') if 'orders_tag_plot=' in l]
+        orderstags = []
+        for l in taglines:
+            tag = int(l.split()[1])
+            if not tag in orderstags:
+                orderstags.append(tag)
+        # now write a fortran include file with all the informations
+        content = '%d\n' % len(orderstags)
+        content+= '%s\n' % ' '.join(['%d' % v for v in orderstags])
+        outfile = open(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
+        outfile.write(content)
+        outfile.close()
+
+        # finally link it into the p dirs
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+
+        for p_dir in p_dirs:
+            if not os.path.isfile(pjoin(self.me_dir, 'SubProcesses', p_dir, 'orderstags_glob.dat')):
+                files.ln(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'),
+                         pjoin(self.me_dir, 'SubProcesses', p_dir))
+
+        return
+
 
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
