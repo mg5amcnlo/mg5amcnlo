@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
+from fractions import Fraction
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
@@ -33,6 +34,7 @@ import subprocess
 import sys
 import time
 import traceback
+import  collections
 
 import aloha
 
@@ -1326,6 +1328,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # construct the list of color_amplitudes for JAMP to be constructed
         # accordingly.
         res_list=[]
+        max_tmp = 0
         for i, amp_order in enumerate(split_order_amps):
             col_amps_order = []
             for jamp in color_amplitudes:
@@ -1337,12 +1340,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if self.opt['export_format'] in ['madloop_matchbox']:
                 res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format="JAMP(%s,{0})".format(str(i+1)),
-                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
+                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1)))[0])
             else:
-                res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
+                toadd, nb_tmp = self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)))
+                res_list.extend(toadd)
+                max_tmp = max(max_tmp, nb_tmp)         
 
-        return res_list
+        return res_list, max_tmp
 
 
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", 
@@ -1366,7 +1371,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_lines")
 
-
+        all_element = {}
         res_list = []
         for i, coeff_list in enumerate(color_amplitudes):
             # It might happen that coeff_list is empty if this function was
@@ -1401,6 +1406,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for (coefficient, amp_number) in coefs:
                     if not coefficient:
                         continue
+                    value = (1j if coefficient[2] else 1)* coefficient[0] * coefficient[1] * fractions.Fraction(3)**coefficient[3]
+                    all_element[(i+1, amp_number)] = value
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1419,8 +1426,138 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     res = res + ')'
     
                 res_list.append(res)
+           
+        if not 'jamp_optim' in self.cmd_options:
+            return res_list, 0
+                
+        logger.info("Computing Color-Flow optimization [%s term]", len(all_element))
+        start_time = time.time()
+        
+        res_list = []
+        #misc.sprint(len(all_element))  
+        
+        self.myjamp_count = 0
+        new_mat, defs = self.optimise_jamp(all_element)
+        logger.info("Color-Flow passed to %s term in %ss. Introduce %i contraction", len(new_mat), int(time.time()-start_time), len(defs))
+        
+        
+        #misc.sprint("number of iteration", self.myjamp_count)
+        def format(frac):
+            if isinstance(frac, Fraction):
+                if frac.denominator == 1:
+                    return str(frac.numerator)
+                else:
+                    return "%id0/%id0" % (frac.numerator, frac.denominator)
+            elif frac.real == frac:
+                #misc.sprint(frac.real, frac)
+                return str(float(frac.real)).replace('e','d')
+            else:
+                return str(frac).replace('e','d').replace('j','*imag1')
+                
+        
+        
+        for i, amp1, amp2, frac, nb in defs:
+            if amp1 > 0:
+                amp1 = AMP_format % amp1
+            else:
+                amp1 = "TMP_JAMP(%d)" % -amp1
+            if amp2 > 0:
+                amp2 = AMP_format % amp2
+            else:
+                amp2 = "TMP_JAMP(%d)" % -amp2
+                
+            res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
+                 
+
+#        misc.sprint(new_mat)
+        jamp_res = collections.defaultdict(list)
+        max_jamp=0
+        for (jamp, var), factor in new_mat.items():
+            if var > 0:
+                name = AMP_format % var
+            else:
+                name = "TMP_JAMP(%d)" % -var
+            jamp_res[jamp].append("(%s)*%s" % (format(factor), name))
+            max_jamp = max(max_jamp, jamp)
+        
+        
+        for i in range(1,max_jamp+1):
+            name = JAMP_format % i
+            res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
+
+        return res_list, len(defs)
+
+    def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
+        """ optimise problem of type Y = A X
+                A is a matrix (all_element)
+                X is the fortran name of the input.
+            The code iteratively add sub-expression jtemp[sub_add]
+            and recall itself (this is add to the X size)
+        """
+        self.myjamp_count +=1
+        
+        if not nb_line:
+            for i,j in all_element:
+                if i > nb_line:
+                    nb_line = i+1
+                if j> nb_col:
+                    nb_col = j+1
+        
+        #misc.sprint(nb_line, nb_col)
+        
+
+        max_count = 0
+        all_index = []
+        operation = collections.defaultdict(lambda: collections.defaultdict(int))
+        for i in range(nb_line):
+            for j1 in range(-added, nb_col):
+                v1 = all_element.get((i,j1), 0)
+                if not v1: 
+                    continue                    
+                for j2 in range(j1+1, nb_col):
+                    R = all_element.get((i,j2), 0)/v1
+                    if not R:
+                        continue
                     
-        return res_list
+                    #misc.sprint(j1,j2)
+                    operation[(j1,j2)][R] +=1 
+                    if operation[(j1,j2)][R] > max_count:
+                        max_count = operation[(j1,j2)][R]
+                        all_index = [(j1,j2, R)]
+                    elif operation[(j1,j2)][R] == max_count:
+                        all_index.append((j1,j2, R))
+        if max_count <= 1:
+            return all_element, []
+        #added += 1
+        #misc.sprint(max_count, len(all_index))
+        #misc.sprint(operation)
+        to_add = []
+        for index in all_index:
+            j1,j2,R = index
+            first = True
+            for i in range(nb_line):
+                v1 = all_element.get((i,j1), 0)
+                v2 = all_element.get((i,j2), 0)
+                if not v1 or not v2: 
+                    continue
+                if v2/v1 == R:
+                    if first:
+                        first = False
+                        added +=1
+                        to_add.append((added,j1,j2,R, max_count))
+                        
+                    all_element[(i,-added)] = v1
+                    del all_element[(i,j1)] #= 0
+                    del all_element[(i,j2)] #= 0     
+        misc.sprint(len(to_add))
+        new_element, new_def =  self.optimise_jamp(all_element, nb_line=nb_line, nb_col=nb_col, added=added)
+        for one_def in to_add:
+            new_def.insert(0, one_def)
+        return new_element, new_def   
+           
+           
+            
+            
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
         """Generate the PDF lines for the auto_dsig.f file"""
@@ -2540,7 +2677,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
             # Consider the output of a dummy order 'ALL_ORDERS' for which we
             # set all amplitude order to weight 1 and only one squared order
             # contribution which is of course ALL_ORDERS=2.
@@ -2549,6 +2686,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             replace_dict['chosen_so_configs'] = '.TRUE.'
             replace_dict['nSqAmpSplitOrders']=1
             replace_dict['split_order_str_list']=''
+            replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
@@ -2560,9 +2699,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
-            
+            replace_dict['nb_temp_jamp'] = nb_tmp_jamp
             # Now setup the array specifying what squared split order is chosen
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
                               matrix_element.get('processes')[0],squared_orders)
@@ -2574,7 +2713,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
             self.write_check_sa_splitOrders(squared_orders,split_orders,
               nexternal,ninitial,proc_prefix,check_sa_writer)
-
+        misc.sprint(nb_tmp_jamp)
         if write:
             writers.FortranWriter('nsqso_born.inc').writelines(
                 """INTEGER NSQSO_BORN
@@ -4253,10 +4392,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
-        jamp_lines = self.get_JAMP_lines_split_order(\
+        jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
                              matrix_element,amp_orders,split_order_names=
                         split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_temp
 
         replace_dict['template_file'] = pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)

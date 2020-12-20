@@ -466,6 +466,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
         logger.info("      --noeps=True: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
+        logger.info("      --jamp_optim: [madevent|standalone] allows a more efficient code computing the color-factor.")
+        logger.info("      --t_strategy: [madevent] allows to change ordering strategy for t-channel.")
+        logger.info("      --hel_recycling=False: [madevent] forbids helicity recycling optimization")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
@@ -2461,7 +2464,8 @@ class CompleteForCmd(cmd.CompleteCmd):
     @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
-                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False']):
+                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
+                                                 '--jamp_optim', '--t_strategy=']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -7835,7 +7839,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if '--hel_recycling=False' in args:
             flaglist.append('no_helrecycling')
                     
-        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
+        line_options = dict( (arg[2:].split('=')  if "=" in arg else (arg[2:], True))
+                             for arg in args if arg.startswith('--'))
+#        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' not in arg)
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
