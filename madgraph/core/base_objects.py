@@ -3177,7 +3177,7 @@ class Process(PhysicsObject):
 
         return mystr
 
-    def input_string(self, overall=True):
+    def input_string(self):
         """Returns a process string corresponding to the input string
         in the command line interface."""
 
@@ -3262,19 +3262,22 @@ class Process(PhysicsObject):
         # Remove last space
         mystr = mystr[:-1]
 
+        if self.get('overall_orders'):
+            mystr += " @%d" % self.get('id')
+            if self.get('overall_orders'):
+                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
+                       for key in sorted(self['orders'])]) + ' '
+        
+        if not self.get('decay_chains'):
+            return mystr
+
         for decay in self['decay_chains']:
             paren1 = ''
             paren2 = ''
             if decay.get('decay_chains'):
                 paren1 = '('
                 paren2 = ')'
-            mystr += ', ' + paren1 + decay.input_string(overall=False) + paren2
-
-        if overall and self.get('overall_orders'):
-            mystr += " @%d" % self.get('id')
-            if self.get('overall_orders'):
-                mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in sorted(self['orders'])]) + ' '
+            mystr += ', ' + paren1 + decay.input_string() + paren2
 
         return mystr
 
